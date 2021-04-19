@@ -220,12 +220,12 @@ test-e2e:
 .PHONY: test-e2e
 
 # Sets up a local kind cluster and runs E2E tests against this local cluster.
-test-e2e-local: export KUBECONFIG=$(KIND_KUBECONFIG)
+test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 test-e2e-local: | setup-e2e-kind test-e2e
 .PHONY: test-e2e-local
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
-setup-e2e-kind: export KUBECONFIG=$(KIND_KUBECONFIG)
+setup-e2e-kind: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 setup-e2e-kind: | \
 	create-kind-cluster \
 	apply-olm \
