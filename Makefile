@@ -224,6 +224,9 @@ test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 test-e2e-local: | setup-e2e-kind test-e2e
 .PHONY: test-e2e-local
 
+# Run the E2E testsuite after installing the AddonOperator into the cluster.
+test-e2e-ci: | apply-ao test-e2e
+
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
 setup-e2e-kind: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 setup-e2e-kind: | \
