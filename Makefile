@@ -11,6 +11,7 @@ OLM_VERSION:=v0.17.0
 KIND_VERSION:=v0.10.0
 YQ_VERSION:=v4@v4.7.0
 GOIMPORTS_VERSION:=v0.1.0
+GOLANGCI_LINT_VERSION:=v1.39.0
 
 SHELL=/bin/bash
 .SHELLFLAGS=-euo pipefail -c
@@ -34,6 +35,9 @@ DEPENDENCIES:=bin/dependencies/$(UNAME_OS)/$(UNAME_ARCH)
 export GOBIN?=$(abspath bin/dependencies/bin)
 export PATH:=$(GOBIN):$(PATH)
 
+# E2E
+export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
+
 # -------
 # Compile
 # -------
@@ -50,6 +54,11 @@ bin/%: generate manifests FORCE
 	@echo
 
 FORCE:
+
+# prints the version as used by build commands.
+version:
+	@echo $(VERSION)
+.PHONY: version
 
 clean:
 	rm -rf bin/$*
@@ -102,7 +111,7 @@ $(YQ):
 		&& echo
 
 # setup goimports
-GOIMPORTS:=$(DEPENDENCIES)/GOIMPORTS/$(GOIMPORTS_VERSION)
+GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
 	@echo "installing GOIMPORTS $(GOIMPORTS_VERSION)..."
 	$(eval GOIMPORTS_TMP := $(shell mktemp -d))
@@ -113,6 +122,20 @@ $(GOIMPORTS):
 	@rm -rf "$(GOIMPORTS_TMP)" "$(dir $(GOIMPORTS))" \
 		&& mkdir -p "$(dir $(GOIMPORTS))" \
 		&& touch "$(GOIMPORTS)" \
+		&& echo
+
+# setup golangci-lint
+GOLANGCI_LINT:=$(DEPENDENCIES)/golangci-lint/$(GOLANGCI_LINT_VERSION)
+$(GOLANGCI_LINT):
+	@echo "installing GOLANGCI_LINT $(GOLANGCI_LINT_VERSION)..."
+	$(eval GOLANGCI_LINT_TMP := $(shell mktemp -d))
+	@(cd "$(GOLANGCI_LINT_TMP)" \
+		&& go mod init tmp \
+		&& go get "github.com/golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)" \
+	) 2>&1 | sed 's/^/  /'
+	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))" \
+		&& mkdir -p "$(dir $(GOLANGCI_LINT))" \
+		&& touch "$(GOLANGCI_LINT)" \
 		&& echo
 
 setup-dependencies: \
@@ -164,24 +187,10 @@ endif
 # Testing and Linting
 # -------------------
 
-test: generate fmt vet manifests
-	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
-.PHONY: test
-
-ci-test: test
-	hack/validate-directory-clean.sh
-.PHONY: ci-test
-
-e2e-test:
-	@echo "running e2e tests..."
-	@export KUBECONFIG=$(abspath $(KIND_KUBECONFIG)) \
-		&& kubectl get pod -A \
-		&& echo \
-		&& go test -v ./e2e/...
-.PHONY: e2e-test
-
-e2e: | setup-e2e-kind e2e-test
-.PHONY: e2e
+pre-commit-install:
+	@echo "installing pre-commit hooks using https://pre-commit.com/"
+	@pre-commit install
+.PHONY: pre-commit-install
 
 fmt:
 	go fmt ./...
@@ -191,10 +200,37 @@ vet:
 	go vet ./...
 .PHONY: vet
 
-pre-commit-install:
-	@echo "installing pre-commit hooks using https://pre-commit.com/"
-	@pre-commit install
-.PHONY: pre-commit-install
+# Runs code-generators, checks for clean directory and lints the source code.
+lint: generate fmt vet manifests $(GOLANGCI_LINT)
+	@hack/validate-directory-clean.sh
+	golangci-lint run ./... --deadline=15m
+.PHONY: lint
+
+# Runs unittests
+test-unit: generate fmt vet manifests
+	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
+.PHONY: test-unit
+
+# Runs the E2E testsuite against the currently selected cluster.
+test-e2e:
+	@echo "running e2e tests..."
+	@kubectl get pod -A \
+		&& echo \
+		&& go test -v ./e2e/...
+.PHONY: test-e2e
+
+# Sets up a local kind cluster and runs E2E tests against this local cluster.
+test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
+test-e2e-local: | setup-e2e-kind test-e2e
+.PHONY: test-e2e-local
+
+# make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
+setup-e2e-kind: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
+setup-e2e-kind: | \
+	create-kind-cluster \
+	apply-olm \
+	apply-openshift-console \
+	apply-ao
 
 create-kind-cluster: $(KIND)
 	@echo "creating kind cluster addon-operator-e2e..."
@@ -217,16 +253,10 @@ delete-kind-cluster: $(KIND)
 		&& echo) 2>&1 | sed 's/^/  /'
 .PHONY: delete-kind-cluster
 
-setup-e2e-kind: | \
-	create-kind-cluster \
-	apply-olm \
-	apply-openshift-console \
-	apply-ao
-
+# Installs OLM (Operator Lifecycle Manager) into the currently selected cluster.
 apply-olm:
 	@echo "installing OLM $(OLM_VERSION)..."
-	@(export KUBECONFIG=$(KIND_KUBECONFIG) \
-		&& kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/crds.yaml \
+	@(kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/crds.yaml \
 		&& kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/olm.yaml \
 		&& echo -e "\nwaiting for deployment/olm-operator..." \
 		&& kubectl wait --for=condition=available deployment/olm-operator -n olm --timeout=240s \
@@ -235,17 +265,17 @@ apply-olm:
 		&& echo) 2>&1 | sed 's/^/  /'
 .PHONY: apply-olm
 
+# Installs the OpenShift/OKD console into the currently selected cluster.
 apply-openshift-console:
 	@echo "installing OpenShift console :latest..."
-	@(export KUBECONFIG=$(KIND_KUBECONFIG) \
-		&& kubectl apply -f hack/openshift-console.yaml \
+	@(kubectl apply -f hack/openshift-console.yaml \
 		&& echo) 2>&1 | sed 's/^/  /'
 .PHONY: apply-openshift-console
 
+# Installs the Addon Operator into the currently selected cluster.
 apply-ao: $(YQ) build-image-addon-operator-manager
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh \
-		&& export KUBECONFIG=$(KIND_KUBECONFIG) \
 		&& $$KIND_COMMAND load image-archive \
 			bin/image/addon-operator-manager.tar \
 			--name addon-operator-e2e \
