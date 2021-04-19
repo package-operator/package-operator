@@ -131,7 +131,7 @@ $(GOLANGCI_LINT):
 	$(eval GOLANGCI_LINT_TMP := $(shell mktemp -d))
 	@(cd "$(GOLANGCI_LINT_TMP)" \
 		&& go mod init tmp \
-		&& go get "github.com/golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)" \
+		&& go get "github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)" \
 	) 2>&1 | sed 's/^/  /'
 	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))" \
 		&& mkdir -p "$(dir $(GOLANGCI_LINT))" \
