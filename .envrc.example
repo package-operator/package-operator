@@ -1,0 +1,6 @@
+if [[ -f "bin/e2e/kubeconfig" ]]; then
+	export KUBECONFIG=$PWD/bin/e2e/kubeconfig
+fi
+
+# possible values are: podman | docker
+export CONTAINER_RUNTIME="docker"
