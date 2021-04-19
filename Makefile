@@ -113,7 +113,7 @@ $(YQ):
 # setup goimports
 GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
-	@echo "installing GOIMPORTS $(GOIMPORTS_VERSION)..."
+	@echo "installing goimports $(GOIMPORTS_VERSION)..."
 	$(eval GOIMPORTS_TMP := $(shell mktemp -d))
 	@(cd "$(GOIMPORTS_TMP)" \
 		&& go mod init tmp \
@@ -142,7 +142,8 @@ setup-dependencies: \
 	$(KIND) \
 	$(CONTROLLER_GEN) \
 	$(YQ) \
-	$(GOIMPORTS)
+	$(GOIMPORTS) \
+	$(GOLANGCI_LINT)
 
 # ----------
 # Deployment
