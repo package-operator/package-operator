@@ -5,7 +5,18 @@ import (
 )
 
 // AddonSpec defines the desired state of Addon.
-type AddonSpec struct{}
+type AddonSpec struct {
+	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
+}
+
+type AddonNamespace struct {
+	Name string `json:"name"`
+}
+
+const (
+	// Available condition indicates that all resources for the Addon are reconciled and healthy
+	Available = "Available"
+)
 
 // AddonStatus defines the observed state of Addon
 type AddonStatus struct {
@@ -13,9 +24,19 @@ type AddonStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Human readable status aggregated from conditions.
-	Phase string `json:"phase,omitempty"`
+	// DEPRECATED: This field is not part of any API contract
+	// it will go away as soon as kubectl can print conditions!
+	// Human readable status - please use .Conditions from code
+	Phase AddonPhase `json:"phase,omitempty"`
 }
+
+type AddonPhase string
+
+// These are the valid phases of an Addon
+const (
+	Pending AddonPhase = "Pending"
+	Ready   AddonPhase = "Ready"
+)
 
 // Addon is the Schema for the Addons API
 // +kubebuilder:object:root=true

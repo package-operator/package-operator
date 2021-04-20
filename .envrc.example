@@ -1,4 +1,5 @@
 # https://direnv.net/
+# alternative: you can also `source .envrc
 
 if [[ -f ".cache/e2e/kubeconfig" ]]; then
 	export KUBECONFIG=$PWD/.cache/e2e/kubeconfig
