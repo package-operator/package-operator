@@ -1,6 +1,9 @@
-if [[ -f "bin/e2e/kubeconfig" ]]; then
-	export KUBECONFIG=$PWD/bin/e2e/kubeconfig
+# https://direnv.net/
+
+if [[ -f ".cache/e2e/kubeconfig" ]]; then
+	export KUBECONFIG=$PWD/.cache/e2e/kubeconfig
 fi
 
 # possible values are: podman | docker
+# if unset, a script will auto-detect your runtime
 export CONTAINER_RUNTIME="docker"
