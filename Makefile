@@ -3,7 +3,7 @@
 
 IMAGE_ORG?=quay.io/openshift
 MODULE:=github.com/openshift/addon-operator
-KIND_KUBECONFIG:=bin/e2e/kubeconfig
+KIND_KUBECONFIG:=.cache/e2e/kubeconfig
 
 # Dependency Versions
 CONTROLLER_GEN_VERSION:=v0.5.0
@@ -31,12 +31,13 @@ UNAME_OS:=$(shell uname -s)
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
-DEPENDENCIES:=bin/dependencies/$(UNAME_OS)/$(UNAME_ARCH)
-export GOBIN?=$(abspath bin/dependencies/bin)
+DEPENDENCIES:=.cache/dependencies/$(UNAME_OS)/$(UNAME_ARCH)
+export GOBIN?=$(abspath .cache/dependencies/bin)
 export PATH:=$(GOBIN):$(PATH)
 
-# E2E
+# Config
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
+export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
 
 # -------
 # Compile
@@ -61,7 +62,7 @@ version:
 .PHONY: version
 
 clean:
-	rm -rf bin/$*
+	@rm -rf bin .cache
 .PHONY: clean
 
 # ------------
@@ -127,7 +128,7 @@ $(GOIMPORTS):
 # setup golangci-lint
 GOLANGCI_LINT:=$(DEPENDENCIES)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
-	@echo "installing GOLANGCI_LINT $(GOLANGCI_LINT_VERSION)..."
+	@echo "installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
 	$(eval GOLANGCI_LINT_TMP := $(shell mktemp -d))
 	@(cd "$(GOLANGCI_LINT_TMP)" \
 		&& go mod init tmp \
@@ -238,7 +239,7 @@ setup-e2e-kind: | \
 
 create-kind-cluster: $(KIND)
 	@echo "creating kind cluster addon-operator-e2e..."
-	@mkdir -p bin/e2e
+	@mkdir -p .cache/e2e
 	@(source hack/determine-container-runtime.sh \
 		&& $$KIND_COMMAND create cluster \
 			--kubeconfig=$(KIND_KUBECONFIG) \
@@ -281,7 +282,7 @@ apply-ao: $(YQ) build-image-addon-operator-manager
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh \
 		&& $$KIND_COMMAND load image-archive \
-			bin/image/addon-operator-manager.tar \
+			.cache/image/addon-operator-manager.tar \
 			--name addon-operator-e2e \
 		&& kubectl apply -f config/deploy \
 		&& yq eval '.spec.template.spec.containers[0].image = "$(IMAGE_ORG)/addon-operator-manager:$(VERSION)"' \
@@ -308,14 +309,14 @@ push-images: \
 build-image-%: bin/linux_amd64/$$*
 	@echo "building image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh \
-		&& rm -rf "bin/image/$*" "bin/image/$*.tar" \
-		&& mkdir -p "bin/image/$*" \
-		&& cp -a "bin/linux_amd64/$*" "bin/image/$*" \
-		&& cp -a "config/docker/$*.Dockerfile" "bin/image/$*/Dockerfile" \
-		&& cp -a "config/docker/passwd" "bin/image/$*/passwd" \
+		&& rm -rf ".cache/image/$*" ".cache/image/$*.tar" \
+		&& mkdir -p ".cache/image/$*" \
+		&& cp -a "bin/linux_amd64/$*" ".cache/image/$*" \
+		&& cp -a "config/docker/$*.Dockerfile" ".cache/image/$*/Dockerfile" \
+		&& cp -a "config/docker/passwd" ".cache/image/$*/passwd" \
 		&& echo "building ${IMAGE_ORG}/$*:${VERSION}" \
-		&& $$CONTAINER_COMMAND build -t "${IMAGE_ORG}/$*:${VERSION}" "bin/image/$*" \
-		&& $$CONTAINER_COMMAND image save -o "bin/image/$*.tar" "${IMAGE_ORG}/$*:${VERSION}" \
+		&& $$CONTAINER_COMMAND build -t "${IMAGE_ORG}/$*:${VERSION}" ".cache/image/$*" \
+		&& $$CONTAINER_COMMAND image save -o ".cache/image/$*.tar" "${IMAGE_ORG}/$*:${VERSION}" \
 		&& echo) 2>&1 | sed 's/^/  /'
 
 push-image-%: build-image-$$*
