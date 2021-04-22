@@ -24,7 +24,7 @@ repos:
   hooks:
   - id: goimports
     name: goimports
-    entry: bin/dependencies/bin/goimports -local github.com/openshift/addon-operator -w
+    entry: .cache/dependencies/bin/goimports -local github.com/openshift/addon-operator -w
     language: system
     types: [go]
 
