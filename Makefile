@@ -4,6 +4,7 @@
 IMAGE_ORG?=quay.io/openshift
 MODULE:=github.com/openshift/addon-operator
 KIND_KUBECONFIG:=.cache/e2e/kubeconfig
+API_BASE:=addons.managed.openshift.io
 
 # Dependency Versions
 CONTROLLER_GEN_VERSION:=v0.5.0
@@ -292,6 +293,12 @@ apply-ao: $(YQ) build-image-addon-operator-manager
 		&& kubectl wait --for=condition=available deployment/addon-operator -n addon-operator --timeout=240s \
 		&& echo) 2>&1 | sed 's/^/  /'
 .PHONY: apply-ao
+
+apply-ao-crds-only: manifests
+	@for file in $(shell find config -name '$(API_BASE)_*.yaml'); do \
+		kubectl apply -f "$$file"; \
+	done
+.PHONY: apply-ao-crds-only
 
 # ----------------
 # Container Images
