@@ -189,7 +189,7 @@ endif
 # Testing and Linting
 # -------------------
 
-pre-commit-install:
+pre-commit-install: $(GOIMPORTS)
 	@echo "installing pre-commit hooks using https://pre-commit.com/"
 	@pre-commit install
 .PHONY: pre-commit-install
