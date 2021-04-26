@@ -33,6 +33,7 @@ export PATH:=$(GOBIN):$(PATH)
 KIND_KUBECONFIG:=.cache/e2e/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
+API_BASE:=addons.managed.openshift.io
 
 # Container
 IMAGE_ORG?=quay.io/app-sre
