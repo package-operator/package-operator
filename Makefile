@@ -293,7 +293,7 @@ config/deploy/deployment.yaml: FORCE
 	@yq eval '.spec.template.spec.containers[0].image = "$(IMAGE_ORG)/addon-operator-manager:$(VERSION)"' \
 			config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
-# Installs the Addon Operator into the currently selected cluster.
+# Installs the Addon Operator into the kind e2e cluster.
 apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh \
