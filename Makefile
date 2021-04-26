@@ -34,6 +34,7 @@ KIND_KUBECONFIG:=.cache/e2e/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
 API_BASE:=addons.managed.openshift.io
+export SKIP_TEARDOWN?=
 
 # Container
 IMAGE_ORG?=quay.io/app-sre
@@ -215,11 +216,13 @@ test-unit: generate fmt vet manifests
 .PHONY: test-unit
 
 # Runs the E2E testsuite against the currently selected cluster.
-test-e2e:
+test-e2e: config/deploy/deployment.yaml
 	@echo "running e2e tests..."
 	@kubectl get pod -A \
 		&& echo \
-		&& go test -v ./e2e/...
+		&& go test -v ./e2e/0_setup/... \
+		&& if [ -z "$$SKIP_TEARDOWN" ]; \
+			then go test -v ./e2e/9_teardown/...; fi;
 .PHONY: test-e2e
 
 # Sets up a local kind cluster and runs E2E tests against this local cluster.
@@ -236,7 +239,7 @@ setup-e2e-kind: | \
 	create-kind-cluster \
 	apply-olm \
 	apply-openshift-console \
-	apply-ao
+	load-ao
 
 create-kind-cluster: $(KIND)
 	@echo "creating kind cluster addon-operator-e2e..."
@@ -278,17 +281,23 @@ apply-openshift-console:
 		&& echo) 2>&1 | sed 's/^/  /'
 .PHONY: apply-openshift-console
 
-# Installs the Addon Operator into the currently selected cluster.
-apply-ao: $(YQ) build-image-addon-operator-manager
-	@echo "installing Addon Operator $(VERSION)..."
-	@(source hack/determine-container-runtime.sh \
+# Load Addon Operator Image into kind
+load-ao: build-image-addon-operator-manager
+	@source hack/determine-container-runtime.sh \
 		&& $$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
-			--name addon-operator-e2e \
+			--name addon-operator-e2e
+
+# Template deployment
+config/deploy/deployment.yaml: FORCE
+	@yq eval '.spec.template.spec.containers[0].image = "$(IMAGE_ORG)/addon-operator-manager:$(VERSION)"' \
+			config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
+
+# Installs the Addon Operator into the currently selected cluster.
+apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
+	@echo "installing Addon Operator $(VERSION)..."
+	@(source hack/determine-container-runtime.sh \
 		&& kubectl apply -f config/deploy \
-		&& yq eval '.spec.template.spec.containers[0].image = "$(IMAGE_ORG)/addon-operator-manager:$(VERSION)"' \
-			config/deploy/deployment.yaml.tpl \
-			| kubectl apply -f - \
 		&& echo -e "\nwaiting for deployment/addon-operator..." \
 		&& kubectl wait --for=condition=available deployment/addon-operator -n addon-operator --timeout=240s \
 		&& echo) 2>&1 | sed 's/^/  /'
