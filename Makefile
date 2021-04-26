@@ -1,10 +1,5 @@
-# TODOs
-# relocate IMAGE_ORG
-
-IMAGE_ORG?=quay.io/openshift
-MODULE:=github.com/openshift/addon-operator
-KIND_KUBECONFIG:=.cache/e2e/kubeconfig
-API_BASE:=addons.managed.openshift.io
+SHELL=/bin/bash
+.SHELLFLAGS=-euo pipefail -c
 
 # Dependency Versions
 CONTROLLER_GEN_VERSION:=v0.5.0
@@ -14,15 +9,13 @@ YQ_VERSION:=v4@v4.7.0
 GOIMPORTS_VERSION:=v0.1.0
 GOLANGCI_LINT_VERSION:=v1.39.0
 
-SHELL=/bin/bash
-.SHELLFLAGS=-euo pipefail -c
-
 # Build Flags
 export CGO_ENABLED:=0
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 SHORT_SHA=$(shell git rev-parse --short HEAD)
 VERSION?=${BRANCH}-${SHORT_SHA}
 BUILD_DATE=$(shell date +%s)
+MODULE:=github.com/openshift/addon-operator
 LD_FLAGS=-X $(MODULE)/internal/version.Version=$(VERSION) \
 			-X $(MODULE)/internal/version.Branch=$(BRANCH) \
 			-X $(MODULE)/internal/version.Commit=$(SHORT_SHA) \
@@ -37,8 +30,13 @@ export GOBIN?=$(abspath .cache/dependencies/bin)
 export PATH:=$(GOBIN):$(PATH)
 
 # Config
+KIND_KUBECONFIG:=.cache/e2e/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
+API_BASE:=addons.managed.openshift.io
+
+# Container
+IMAGE_ORG?=quay.io/app-sre
 
 # -------
 # Compile
@@ -140,12 +138,14 @@ $(GOLANGCI_LINT):
 		&& touch "$(GOLANGCI_LINT)" \
 		&& echo
 
-setup-dependencies: \
+# installs all project dependencies
+dependencies: \
 	$(KIND) \
 	$(CONTROLLER_GEN) \
 	$(YQ) \
 	$(GOIMPORTS) \
 	$(GOLANGCI_LINT)
+.PHONY: dependencies
 
 # ----------
 # Deployment
