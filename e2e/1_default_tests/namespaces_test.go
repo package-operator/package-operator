@@ -80,21 +80,9 @@ func TestNamespaceCreation(t *testing.T) {
 	err = e2e.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 	require.NoError(t, err, "delete Addon: %v", addon)
 
-	// wait until Addon is really gone
-	currentAddon = &addonsv1alpha1.Addon{}
-	err = wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
-		err = e2e.Client.Get(ctx, types.NamespacedName{
-			Name: addon.Name,
-		}, currentAddon)
-		if k8sApiErrors.IsNotFound(err) {
-			return true, nil
-		}
-		if err != nil {
-			t.Logf("error getting Addon: %v", err)
-		}
-		return false, nil
-	})
-	require.NoError(t, err, "wait for Addon to be deleted: %+v", currentAddon)
+	// wait until Addon is gone
+	err = e2e.WaitToBeGone(t, 30*time.Second, currentAddon)
+	require.NoError(t, err, "wait for Addon to be deleted")
 
 	wasAlreadyDeleted = true
 
