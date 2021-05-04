@@ -45,7 +45,12 @@ func (r *AddonReconciler) Reconcile(
 	if !addon.DeletionTimestamp.IsZero() {
 		// Addon was already deleted and we don't need to do any cleanup for now
 		// since kubernetes will garbage collect our child objects
-		return ctrl.Result{}, nil
+
+		if addon.Status.Phase == addonsv1alpha1.Terminating {
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, r.ensureTerminationSignals(ctx, addon)
 	}
 
 	// Phase 1.
@@ -85,5 +90,19 @@ func (r *AddonReconciler) ensureReadinessSignals(
 	})
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.Ready
+	return r.Status().Update(ctx, addon)
+}
+
+// Ensure that the given addon resource's status communicates that the Addon is terminating
+func (r *AddonReconciler) ensureTerminationSignals(
+	ctx context.Context, addon *addonsv1alpha1.Addon) error {
+	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
+		Type:               addonsv1alpha1.Available,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Terminating",
+		ObservedGeneration: addon.Generation,
+	})
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.Terminating
 	return r.Status().Update(ctx, addon)
 }
