@@ -216,13 +216,15 @@ test-unit: generate fmt vet manifests
 .PHONY: test-unit
 
 # Runs the E2E testsuite against the currently selected cluster.
+# FORCE_FLAGS ensures that the tests will not be cached
+FORCE_FLAGS = -count=1
 test-e2e: config/deploy/deployment.yaml
 	@echo "running e2e tests..."
 	@kubectl get pod -A \
 		&& echo \
-		&& go test -v ./e2e/0_setup/... \
+		&& go test -v $(FORCE_FLAGS) ./e2e/0_setup/... \
 		&& if [ -z "$$SKIP_TEARDOWN" ]; \
-			then go test -v ./e2e/9_teardown/...; fi;
+			then go test -v $(FORCE_FLAGS) ./e2e/9_teardown/...; fi;
 .PHONY: test-e2e
 
 # Sets up a local kind cluster and runs E2E tests against this local cluster.
