@@ -3,9 +3,12 @@ package teardown
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/openshift/addon-operator/e2e"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTeardown(t *testing.T) {
@@ -25,4 +28,12 @@ func TestTeardown(t *testing.T) {
 		t.Log("deleted: ", obj.GroupVersionKind().String(),
 			obj.GetNamespace()+"/"+obj.GetName())
 	}
+
+	t.Run("everything is gone", func(t *testing.T) {
+		for _, obj := range objs {
+			// Namespaces can take a long time to be cleaned up and
+			// there is no need to be specific about the object kind here
+			assert.NoError(t, e2e.WaitToBeGone(t, 2*time.Minute, &obj))
+		}
+	})
 }

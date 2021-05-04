@@ -3,21 +3,26 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
-	aoapis "github.com/openshift/addon-operator/apis"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	aoapis "github.com/openshift/addon-operator/apis"
 )
 
 const (
@@ -99,4 +104,28 @@ func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
 	}
 
 	return objects
+}
+
+// Default Interval in which to recheck wait conditions.
+const defaultWaitPollInterval = time.Second
+
+// WaitToBeGone blocks until the given object is gone from the kubernetes API server.
+func WaitToBeGone(t *testing.T, timeout time.Duration, object client.Object) error {
+	key := client.ObjectKeyFromObject(object)
+	t.Logf("waiting %s for %s %s to be gone...",
+		timeout, object.GetObjectKind().GroupVersionKind().Kind, key)
+
+	return wait.PollImmediate(defaultWaitPollInterval, timeout, func() (done bool, err error) {
+		err = Client.Get(context.Background(), key, object)
+
+		if errors.IsNotFound(err) {
+			return true, nil
+		}
+
+		if err != nil {
+			t.Logf("error waiting for %s %s to be gone: %v",
+				object.GetObjectKind().GroupVersionKind().Kind, key, err)
+		}
+		return false, nil
+	})
 }
