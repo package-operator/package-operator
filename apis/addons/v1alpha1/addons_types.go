@@ -48,7 +48,8 @@ type Addon struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AddonSpec   `json:"spec,omitempty"`
+	Spec AddonSpec `json:"spec,omitempty"`
+	// +kubebuilder:default={phase:Pending}
 	Status AddonStatus `json:"status,omitempty"`
 }
 
