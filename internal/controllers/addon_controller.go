@@ -46,7 +46,7 @@ func (r *AddonReconciler) Reconcile(
 		// Addon was already deleted and we don't need to do any cleanup for now
 		// since kubernetes will garbage collect our child objects
 
-		if addon.Status.Phase == addonsv1alpha1.Terminating {
+		if addon.Status.Phase == addonsv1alpha1.PhaseTerminating {
 			return ctrl.Result{}, nil
 		}
 
@@ -89,7 +89,7 @@ func (r *AddonReconciler) reportReadinessSignals(
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.Ready
+	addon.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addon)
 }
 
@@ -103,6 +103,6 @@ func (r *AddonReconciler) reportTerminationSignals(
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.Terminating
+	addon.Status.Phase = addonsv1alpha1.PhaseTerminating
 	return r.Status().Update(ctx, addon)
 }

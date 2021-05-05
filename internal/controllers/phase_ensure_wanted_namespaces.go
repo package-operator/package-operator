@@ -48,7 +48,7 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 			ObservedGeneration: addon.Generation,
 		})
 		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.Pending
+		addon.Status.Phase = addonsv1alpha1.PhasePending
 		err := r.Status().Update(ctx, addon)
 		if err != nil {
 			return false, err
@@ -76,7 +76,7 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 			ObservedGeneration: addon.Generation,
 		})
 		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.Pending
+		addon.Status.Phase = addonsv1alpha1.PhasePending
 		return false, r.Status().Update(ctx, addon)
 	}
 

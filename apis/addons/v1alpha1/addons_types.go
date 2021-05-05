@@ -39,9 +39,9 @@ type AddonPhase string
 
 // These are the valid phases of an Addon
 const (
-	Pending     AddonPhase = "Pending"
-	Ready       AddonPhase = "Ready"
-	Terminating AddonPhase = "Terminating"
+	PhasePending     AddonPhase = "Pending"
+	PhaseReady       AddonPhase = "Ready"
+	PhaseTerminating AddonPhase = "Terminating"
 )
 
 // Addon is the Schema for the Addons API
