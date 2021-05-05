@@ -5,7 +5,23 @@ import (
 )
 
 // AddonSpec defines the desired state of Addon.
-type AddonSpec struct{}
+type AddonSpec struct {
+	// Defines a list of Kubernetes Namespaces that belong to this Addon.
+	// Namespaces listed here will be created prior to installation of the Addon and
+	// will be removed from the cluster when the Addon is deleted.
+	// Collisions with existing Namespaces are NOT allowed.
+	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
+}
+
+type AddonNamespace struct {
+	// Name of the KubernetesNamespace.
+	Name string `json:"name"`
+}
+
+const (
+	// Available condition indicates that all resources for the Addon are reconciled and healthy
+	Available = "Available"
+)
 
 // AddonStatus defines the observed state of Addon
 type AddonStatus struct {
@@ -13,9 +29,21 @@ type AddonStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Human readable status aggregated from conditions.
-	Phase string `json:"phase,omitempty"`
+	// DEPRECATED: This field is not part of any API contract
+	// it will go away as soon as kubectl can print conditions!
+	// Human readable status - please use .Conditions from code
+	Phase AddonPhase `json:"phase,omitempty"`
 }
+
+type AddonPhase string
+
+// Well-known Addon Phases for printing a Status in kubectl,
+// see deprecation notice in AddonStatus for details.
+const (
+	PhasePending     AddonPhase = "Pending"
+	PhaseReady       AddonPhase = "Ready"
+	PhaseTerminating AddonPhase = "Terminating"
+)
 
 // Addon is the Schema for the Addons API
 // +kubebuilder:object:root=true
@@ -27,7 +55,8 @@ type Addon struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AddonSpec   `json:"spec,omitempty"`
+	Spec AddonSpec `json:"spec,omitempty"`
+	// +kubebuilder:default={phase:Pending}
 	Status AddonStatus `json:"status,omitempty"`
 }
 

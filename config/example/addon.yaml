@@ -1,0 +1,11 @@
+apiVersion: addons.managed.openshift.io/v1alpha1
+kind: Addon
+metadata:
+  name: example-addon
+spec:
+  namespaces:
+  - name: foo
+  - name: collision
+  - name: bar
+  - name: additional
+  - name: to-be-removed

@@ -223,6 +223,7 @@ test-e2e: config/deploy/deployment.yaml
 	@kubectl get pod -A \
 		&& echo \
 		&& go test -v $(FORCE_FLAGS) ./e2e/0_setup/... \
+		&& go test -v $(FORCE_FLAGS) ./e2e/1_default_tests/... \
 		&& if [ -z "$$SKIP_TEARDOWN" ]; \
 			then go test -v $(FORCE_FLAGS) ./e2e/9_teardown/...; fi;
 .PHONY: test-e2e
