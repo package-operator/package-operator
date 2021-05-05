@@ -37,7 +37,8 @@ type AddonStatus struct {
 
 type AddonPhase string
 
-// These are the valid phases of an Addon
+// Well-known Addon Phases for printing a Status in kubectl,
+// see deprecation notice in AddonStatus for details.
 const (
 	PhasePending     AddonPhase = "Pending"
 	PhaseReady       AddonPhase = "Ready"
