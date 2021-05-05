@@ -50,7 +50,7 @@ func (r *AddonReconciler) Reconcile(
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, r.reportTerminationSignals(ctx, addon)
+		return ctrl.Result{}, r.reportTerminationStatus(ctx, addon)
 	}
 
 	// Phase 1.
@@ -76,11 +76,11 @@ func (r *AddonReconciler) Reconcile(
 
 	// After last phase and if everything is healthy
 	r.Log.Info("Successfully reconciled Addon", "name", req.Name)
-	return ctrl.Result{}, r.reportReadinessSignals(ctx, addon)
+	return ctrl.Result{}, r.reportReadinessStatus(ctx, addon)
 }
 
 // Report Addon status to communicate that everything is alright
-func (r *AddonReconciler) reportReadinessSignals(
+func (r *AddonReconciler) reportReadinessStatus(
 	ctx context.Context, addon *addonsv1alpha1.Addon) error {
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
@@ -94,7 +94,7 @@ func (r *AddonReconciler) reportReadinessSignals(
 }
 
 // Report Addon status to communicate that the Addon is terminating
-func (r *AddonReconciler) reportTerminationSignals(
+func (r *AddonReconciler) reportTerminationStatus(
 	ctx context.Context, addon *addonsv1alpha1.Addon) error {
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
