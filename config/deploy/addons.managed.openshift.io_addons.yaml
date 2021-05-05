@@ -40,9 +40,11 @@ spec:
             description: AddonSpec defines the desired state of Addon.
             properties:
               namespaces:
+                description: Defines a list of Kubernetes Namespaces that belong to this Addon. Namespaces listed here will be created prior to installation of the Addon and will be removed from the cluster when the Addon is deleted. Collisions with existing Namespaces are NOT allowed.
                 items:
                   properties:
                     name:
+                      description: Name of the KubernetesNamespace.
                       type: string
                   required:
                   - name

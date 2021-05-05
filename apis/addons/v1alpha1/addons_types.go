@@ -6,10 +6,15 @@ import (
 
 // AddonSpec defines the desired state of Addon.
 type AddonSpec struct {
+	// Defines a list of Kubernetes Namespaces that belong to this Addon.
+	// Namespaces listed here will be created prior to installation of the Addon and
+	// will be removed from the cluster when the Addon is deleted.
+	// Collisions with existing Namespaces are NOT allowed.
 	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
 }
 
 type AddonNamespace struct {
+	// Name of the KubernetesNamespace.
 	Name string `json:"name"`
 }
 
