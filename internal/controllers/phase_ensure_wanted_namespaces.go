@@ -20,7 +20,7 @@ import (
 // returns a bool that signals the caller to stop reconilation and retry later
 func (r *AddonReconciler) ensureWantedNamespaces(
 	ctx context.Context, addon *addonsv1alpha1.Addon) (stopAndRetry bool, err error) {
-	var ensuredNamespaces []*corev1.Namespace
+	var unreadyNamespaces []string
 	var collidedNamespaces []string
 
 	for _, namespace := range addon.Spec.Namespaces {
@@ -34,7 +34,9 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 			return false, err
 		}
 
-		ensuredNamespaces = append(ensuredNamespaces, ensuredNamespace)
+		if ensuredNamespace.Status.Phase != corev1.NamespaceActive {
+			unreadyNamespaces = append(unreadyNamespaces, ensuredNamespace.Name)
+		}
 	}
 
 	if len(collidedNamespaces) > 0 {
@@ -55,14 +57,6 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 		}
 		// collisions occured: signal caller to stop and retry
 		return true, nil
-	}
-
-	var unreadyNamespaces []string
-
-	for _, ensuredNamespace := range ensuredNamespaces {
-		if ensuredNamespace.Status.Phase != corev1.NamespaceActive {
-			unreadyNamespaces = append(unreadyNamespaces, ensuredNamespace.Name)
-		}
 	}
 
 	if len(unreadyNamespaces) > 0 {
