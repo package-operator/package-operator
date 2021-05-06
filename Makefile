@@ -221,9 +221,7 @@ test-unit: generate fmt vet manifests
 FORCE_FLAGS = -count=1
 test-e2e: config/deploy/deployment.yaml
 	@echo "running e2e tests..."
-	@kubectl get pod -A \
-		&& echo \
-		&& go test -v $(FORCE_FLAGS) ./e2e/0_setup/... \
+	@go test -v $(FORCE_FLAGS) ./e2e/0_setup/... \
 		&& go test -v $(FORCE_FLAGS) ./e2e/1_default_tests/... \
 		&& if [ -z "$$SKIP_TEARDOWN" ]; \
 			then go test -v $(FORCE_FLAGS) ./e2e/9_teardown/...; fi;
