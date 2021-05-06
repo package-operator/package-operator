@@ -38,6 +38,7 @@ export SKIP_TEARDOWN?=
 
 # Container
 IMAGE_ORG?=quay.io/app-sre
+ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 
 # -------
 # Compile
@@ -293,7 +294,7 @@ load-ao: build-image-addon-operator-manager
 
 # Template deployment
 config/deploy/deployment.yaml: FORCE
-	@yq eval '.spec.template.spec.containers[0].image = "$(IMAGE_ORG)/addon-operator-manager:$(VERSION)"' \
+	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 			config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
 # Installs the Addon Operator into the kind e2e cluster.
