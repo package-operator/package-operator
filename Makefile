@@ -293,7 +293,7 @@ load-ao: build-image-addon-operator-manager
 			--name addon-operator-e2e
 
 # Template deployment
-config/deploy/deployment.yaml: FORCE
+config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 			config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
