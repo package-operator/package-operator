@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="190mm"
+   height="80mm"
+   viewBox="0 0 190 80.000001"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="addon-operator.svg">
+  <defs
+     id="defs2">
+    <style
+       id="style833">.cls-1{fill:#e00;}</style>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter1001"
+       x="-9.3389241e-07"
+       width="1.0000019"
+       y="-1.6781917e-06"
+       height="1.0000035">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="4.1846173e-05"
+         id="feGaussianBlur1003" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter1001-8"
+       x="-9.3389241e-07"
+       width="1.0000019"
+       y="-1.6781917e-06"
+       height="1.0000035">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="4.1846173e-05"
+         id="feGaussianBlur1003-3" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.9899495"
+     inkscape:cx="139.99869"
+     inkscape:cy="214.93153"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer2"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="2161"
+     inkscape:window-height="1205"
+     inkscape:window-x="26"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
+     showguides="true"
+     inkscape:guide-bbox="true" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline"
+     transform="translate(-14.346677,-40.336989)" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 2"
+     style="display:inline"
+     transform="translate(-14.346677,-40.336989)">
+    <path
+       d="m 26.390213,85.865393 c 2.051049,0 2.745217,-1.099 3.581997,-1.93366 1.705014,-1.71129 3.802208,-0.98357 3.802208,1.77632 v 12.74046 h 12.740421 c 2.757805,0 3.487626,-2.09723 1.776319,-3.80219 -0.834681,-0.83679 -1.933602,-1.53098 -1.933602,-3.58202 0,-2.27962 2.323684,-5.19891 6.29157,-5.19891 3.967875,0 6.291567,2.91929 6.291567,5.19891 0,2.05104 -1.09893,2.74523 -1.933611,3.58202 -1.711306,1.70496 -0.983583,3.80219 1.77632,3.80219 h 12.740427 v -12.74046 c 0,-2.75782 -2.097196,-3.48761 -3.802206,-1.77632 -0.836781,0.83466 -1.530952,1.93366 -3.581997,1.93366 -2.279647,0 -5.198933,-2.3237 -5.198933,-6.29157 0,-3.96795 2.919286,-6.29157 5.198933,-6.29157 2.051045,0 2.745216,1.09892 3.581997,1.93357 1.70501,1.71129 3.802206,0.98358 3.802206,-1.77632 V 60.699113 H 58.783402 c -2.757804,0 -3.487626,-2.09724 -1.77632,-3.80221 0.834681,-0.83678 1.933611,-1.53098 1.933611,-3.58201 0,-2.27962 -2.323692,-5.1989 -6.291567,-5.1989 -3.967886,0 -6.29157,2.91928 -6.29157,5.1989 0,2.05103 1.098921,2.74523 1.933602,3.58201 1.711307,1.70497 0.983584,3.80221 -1.776319,3.80221 H 33.774418 v 12.74039 c 0,2.75784 -2.097194,3.48761 -3.802208,1.77632 -0.83678,-0.83465 -1.530948,-1.93357 -3.581997,-1.93357 -2.279644,0 -5.198931,2.32362 -5.198931,6.29157 0,3.96787 2.919287,6.29157 5.198931,6.29157 z"
+       id="path910"
+       style="fill:#ee0000;fill-opacity:1;stroke-width:2.09719" />
+    <text
+       xml:space="preserve"
+       style="font-size:25.4693px;line-height:1;font-family:sans-serif;letter-spacing:0px;stroke-width:0.684796;filter:url(#filter1001-8)"
+       x="88.011635"
+       y="72.471756"
+       id="text923"
+       transform="matrix(1.066536,0,0,1.066536,-12.629429,2.930061)"><tspan
+         sodipodi:role="line"
+         id="tspan921"
+         x="88.011635"
+         y="72.471756"
+         style="font-style:normal;font-variant:normal;font-weight:900;font-stretch:normal;font-size:26.4616px;font-family:'Red Hat Display';-inkscape-font-specification:'Red Hat Display Heavy';stroke-width:0.684796">Addon</tspan><tspan
+         sodipodi:role="line"
+         x="88.011635"
+         y="97.941055"
+         style="font-style:normal;font-variant:normal;font-weight:900;font-stretch:normal;font-size:25.4693px;font-family:'Red Hat Display';-inkscape-font-specification:'Red Hat Display Heavy';stroke-width:0.684796"
+         id="tspan991" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:28.2222px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;stroke-width:0.264583"
+       x="79.345642"
+       y="109.07771"
+       id="text912"><tspan
+         sodipodi:role="line"
+         id="tspan910"
+         x="79.345642"
+         y="109.07771"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:28.2222px;font-family:'Red Hat Display';-inkscape-font-specification:'Red Hat Display Medium';stroke-width:0.264583">Operator</tspan></text>
+  </g>
+</svg>

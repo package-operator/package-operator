@@ -1,7 +1,7 @@
 # Addon Operator
 
 <p align="center">
-  <b>Logo goes here</b>
+  <img src="docs/logo/addon-operator.png" width=400px>
 </p>
 
 <p align="center">
