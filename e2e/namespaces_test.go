@@ -1,4 +1,4 @@
-package default_tests
+package e2e_test
 
 import (
 	"context"
