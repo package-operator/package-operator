@@ -1,22 +1,34 @@
-package setup
+package e2e_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/e2e"
 )
 
-func TestSetup(t *testing.T) {
+func Setup(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	ctx := context.Background()
 	objs := e2e.LoadObjectsFromDeploymentFiles(t)
+
+	var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
@@ -25,6 +37,10 @@ func TestSetup(t *testing.T) {
 
 		t.Log("created: ", obj.GroupVersionKind().String(),
 			obj.GetNamespace()+"/"+obj.GetName())
+
+		if obj.GetKind() == "Deployment" {
+			deployments = append(deployments, obj)
+		}
 	}
 
 	t.Run("API available", func(t *testing.T) {
@@ -56,4 +72,35 @@ func TestSetup(t *testing.T) {
 		err = e2e.Client.List(ctx, addonList)
 		require.NoError(t, err)
 	})
+
+	for _, deploy := range deployments {
+		t.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func(t *testing.T) {
+
+			deployment := &appsv1.Deployment{}
+			err := wait.PollImmediate(
+				time.Second, 5*time.Minute, func() (done bool, err error) {
+					err = e2e.Client.Get(
+						ctx, client.ObjectKey{
+							Name:      deploy.GetName(),
+							Namespace: deploy.GetNamespace(),
+						}, deployment)
+					if errors.IsNotFound(err) {
+						return false, err
+					}
+					if err != nil {
+						// retry on transient errors
+						return false, nil
+					}
+
+					for _, cond := range deployment.Status.Conditions {
+						if cond.Type == appsv1.DeploymentAvailable &&
+							cond.Status == corev1.ConditionTrue {
+							return true, nil
+						}
+					}
+					return false, nil
+				})
+			require.NoError(t, err, "wait for Addon Operator Deployment")
+		})
+	}
 }

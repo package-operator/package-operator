@@ -1,4 +1,4 @@
-package teardown
+package e2e_test
 
 import (
 	"context"
@@ -11,7 +11,11 @@ import (
 	"github.com/openshift/addon-operator/e2e"
 )
 
-func TestTeardown(t *testing.T) {
+func Teardown(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	ctx := context.Background()
 	objs := e2e.LoadObjectsFromDeploymentFiles(t)
 
