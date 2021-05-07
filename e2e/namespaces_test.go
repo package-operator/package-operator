@@ -51,7 +51,7 @@ func TestNamespaceCreation(t *testing.T) {
 
 	// wait until reconcilation happened
 	currentAddon := &addonsv1alpha1.Addon{}
-	err = wait.PollImmediate(time.Second, 10*time.Second, func() (done bool, err error) {
+	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
 		err = e2e.Client.Get(ctx, types.NamespacedName{
 			Name: addon.Name,
 		}, currentAddon)
