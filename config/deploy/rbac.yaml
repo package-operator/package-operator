@@ -46,6 +46,7 @@ rules:
   resources:
   - addons
   - addons/status
+  - addons/finalizers
   verbs:
   - get
   - list
