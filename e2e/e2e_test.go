@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 
 func runTests(m *testing.M) int {
 	defer func() {
-		if err := e2e.PrintPodStatusAndLogs("addon-operator", os.Stdout); err != nil {
+		if err := e2e.PrintPodStatusAndLogs("addon-operator"); err != nil {
 			log.Fatal(err)
 		}
 	}()

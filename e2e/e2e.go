@@ -118,7 +118,7 @@ func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
 }
 
 // Prints the phase of a pod together with the logs of every container.
-func PrintPodStatusAndLogs(namespace string, w io.Writer) error {
+func PrintPodStatusAndLogs(namespace string) error {
 	ctx := context.Background()
 
 	pods := &corev1.PodList{}
@@ -127,20 +127,20 @@ func PrintPodStatusAndLogs(namespace string, w io.Writer) error {
 	}
 
 	for _, pod := range pods.Items {
-		if err := reportPodStatus(ctx, &pod, w); err != nil {
+		if err := reportPodStatus(ctx, &pod); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func reportPodStatus(ctx context.Context, pod *corev1.Pod, w io.Writer) error {
-	fmt.Fprintln(w, "-----------------------------------------------------------")
-	fmt.Fprintf(w, "Pod %s: %s\n", client.ObjectKeyFromObject(pod), pod.Status.Phase)
-	fmt.Fprintln(w, "-----------------------------------------------------------")
+func reportPodStatus(ctx context.Context, pod *corev1.Pod) error {
+	fmt.Println("-----------------------------------------------------------")
+	fmt.Printf("Pod %s: %s\n", client.ObjectKeyFromObject(pod), pod.Status.Phase)
+	fmt.Println("-----------------------------------------------------------")
 
 	for _, container := range pod.Spec.Containers {
-		fmt.Fprintf(w, "Container logs for: %s\n", container.Name)
+		fmt.Printf("Container logs for: %s\n", container.Name)
 
 		req := CoreV1Client.Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
 			Container: container.Name,
@@ -150,10 +150,10 @@ func reportPodStatus(ctx context.Context, pod *corev1.Pod, w io.Writer) error {
 			return err
 		}
 		defer logs.Close()
-		if _, err := io.Copy(w, logs); err != nil {
+		if _, err := io.Copy(os.Stdout, logs); err != nil {
 			return err
 		}
-		fmt.Fprintln(w, "-----------------------------------------------------------")
+		fmt.Println("-----------------------------------------------------------")
 	}
 	return nil
 }
