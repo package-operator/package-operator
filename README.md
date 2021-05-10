@@ -1,13 +1,13 @@
 # Addon Operator
 
 <p align="center">
-  <img src="docs/logo/addon-operator-github.png" width=400px>
+	<img src="docs/logo/addon-operator-github.png" width=400px>
 </p>
 
 <p align="center">
 	<img src="https://prow.ci.openshift.org/badge.svg?jobs=pull-ci-openshift-addon-operator-main*">
-  <img src="https://img.shields.io/github/license/openshift/addon-operator"/>
-  <img src="https://img.shields.io/badge/Cool%20Factor-Over%209000!-blue"/>
+	<img src="https://img.shields.io/github/license/openshift/addon-operator"/>
+	<img src="https://img.shields.io/badge/Coolness%20Factor-Over%209000!-blue"/>
 </p>
 
 ---
