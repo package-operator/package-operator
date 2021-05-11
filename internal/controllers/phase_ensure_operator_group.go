@@ -19,28 +19,25 @@ import (
 // Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
 func (r *AddonReconciler) ensureOperatorGroup(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (stop bool, err error) {
+	var targetNamespace string
 	switch addon.Spec.Install.Type {
+	case addonsv1alpha1.OwnNamespace:
+		if addon.Spec.Install.OwnNamespace == nil ||
+			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
+			// invalid/missing configuration
+			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
+			return true, r.reportConfigurationError(ctx, addon)
+		}
+		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
+
 	case addonsv1alpha1.AllNamespaces:
-		// No OperatorGroup needed, Operator is installed for the whole cluster
-		// Ensure that we have no left over OperatorGroup.
-		operatorGroupList := &operatorsv1.OperatorGroupList{}
-		err := r.List(ctx, operatorGroupList, client.MatchingLabelsSelector{
-			Selector: commonLabelsAsLabelSelector(addon),
-		})
-		if err != nil {
-			return false, err
+		if addon.Spec.Install.AllNamespaces == nil ||
+			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
+			// invalid/missing configuration
+			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
+			return true, r.reportConfigurationError(ctx, addon)
 		}
-
-		for _, operatorGroup := range operatorGroupList.Items {
-			if err := client.IgnoreNotFound(r.Delete(ctx, &operatorGroup)); err != nil {
-				return false, err
-			}
-		}
-
-		return false, nil
-
-	case addonsv1alpha1.OwnNamespaces:
-		// continue
+		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
 
 	default:
 		// Unsupported Install Type
@@ -50,37 +47,35 @@ func (r *AddonReconciler) ensureOperatorGroup(
 		return true, nil
 	}
 
-	if addon.Spec.Install.OwnNamespace == nil ||
-		len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
-		// invalid/missing configuration
-		// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.PhaseError
-		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-			Type:    addonsv1alpha1.Available,
-			Status:  metav1.ConditionFalse,
-			Reason:  "ConfigurationError",
-			Message: ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace",
-		})
-		return true, r.Status().Update(ctx, addon)
-	}
-
 	desiredOperatorGroup := &operatorsv1.OperatorGroup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      addon.Name,
-			Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+			Namespace: targetNamespace,
 			Labels:    map[string]string{},
 		},
-		Spec: operatorsv1.OperatorGroupSpec{
-			TargetNamespaces: []string{addon.Spec.Install.OwnNamespace.Namespace},
-		},
 	}
+	if addon.Spec.Install.Type == addonsv1alpha1.OwnNamespace {
+		desiredOperatorGroup.Spec.TargetNamespaces = []string{targetNamespace}
+	}
+
 	addCommonLabels(desiredOperatorGroup.Labels, addon)
 	if err := controllerutil.SetControllerReference(addon, desiredOperatorGroup, r.Scheme); err != nil {
 		return false, fmt.Errorf("setting controller reference: %w", err)
 	}
 
 	return false, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
+}
+
+func (r *AddonReconciler) reportConfigurationError(ctx context.Context, addon *addonsv1alpha1.Addon) error {
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhaseError
+	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
+		Type:    addonsv1alpha1.Available,
+		Status:  metav1.ConditionFalse,
+		Reason:  "ConfigurationError",
+		Message: ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace",
+	})
+	return r.Status().Update(ctx, addon)
 }
 
 // Reconciles the Spec of the given OperatorGroup if needed by updating or creating the OperatorGroup.

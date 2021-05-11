@@ -20,71 +20,112 @@ import (
 
 func TestEnsureOperatorGroup(t *testing.T) {
 	t.Run("ensures OperatorGroup", func(t *testing.T) {
-		addon := &addonsv1alpha1.Addon{
+		addonOwnNamespace := &addonsv1alpha1.Addon{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "addon-1",
 			},
 			Spec: addonsv1alpha1.AddonSpec{
 				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.OwnNamespaces,
-					OwnNamespace: &addonsv1alpha1.AddonInstallSpecOwnNamespace{
-						Namespace: "addon-system",
+					Type: addonsv1alpha1.OwnNamespace,
+					OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
+						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+							Namespace: "addon-system",
+						},
 					},
 				},
 			},
 		}
 
-		log := testutil.NewLogger(t)
-		c := testutil.NewClient()
-		r := AddonReconciler{
-			Client: c,
-			Scheme: newTestSchemeWithAddonsv1alpha1(),
-		}
-
-		// Mock Setup
-		c.
-			On(
-				"Get",
-				mock.Anything,
-				client.ObjectKey{
-					Name:      addon.Name,
-					Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+		addonAllNamespaces := &addonsv1alpha1.Addon{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "addon-1",
+			},
+			Spec: addonsv1alpha1.AddonSpec{
+				Install: addonsv1alpha1.AddonInstallSpec{
+					Type: addonsv1alpha1.AllNamespaces,
+					AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
+						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+							Namespace: "addon-system",
+						},
+					},
 				},
-				mock.Anything,
-			).
-			Return(errors.NewNotFound(schema.GroupResource{}, ""))
-		var createdOpeatorGroup *operatorsv1.OperatorGroup
-		c.
-			On(
-				"Create",
-				mock.Anything,
-				mock.IsType(&operatorsv1.OperatorGroup{}),
-				mock.Anything,
-			).
-			Run(func(args mock.Arguments) {
-				createdOpeatorGroup = args.Get(1).(*operatorsv1.OperatorGroup)
-			}).
-			Return(nil)
-
-		// Test
-		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addon)
-		require.NoError(t, err)
-		assert.False(t, stop)
-
-		if c.AssertCalled(
-			t, "Create",
-			mock.Anything,
-			mock.IsType(&operatorsv1.OperatorGroup{}),
-			mock.Anything,
-		) {
-			assert.Equal(t, addon.Name, createdOpeatorGroup.Name)
-			assert.Equal(t, addon.Spec.Install.OwnNamespace.Namespace, createdOpeatorGroup.Namespace)
-
-			assert.Equal(t, []string{
-				addon.Spec.Install.OwnNamespace.Namespace,
-			}, createdOpeatorGroup.Spec.TargetNamespaces)
+			},
 		}
+
+		tests := []struct {
+			name                     string
+			addon                    *addonsv1alpha1.Addon
+			targetNamespace          string
+			expectedTargetNamespaces []string
+		}{
+			{
+				name:                     "OwnNamespace",
+				addon:                    addonOwnNamespace,
+				targetNamespace:          addonOwnNamespace.Spec.Install.OwnNamespace.Namespace,
+				expectedTargetNamespaces: []string{addonOwnNamespace.Spec.Install.OwnNamespace.Namespace},
+			},
+			{
+				name:            "AllNamespaces",
+				addon:           addonAllNamespaces,
+				targetNamespace: addonAllNamespaces.Spec.Install.AllNamespaces.Namespace,
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				log := testutil.NewLogger(t)
+				c := testutil.NewClient()
+				r := AddonReconciler{
+					Client: c,
+					Scheme: newTestSchemeWithAddonsv1alpha1(),
+				}
+				addon := test.addon
+
+				// Mock Setup
+				c.
+					On(
+						"Get",
+						mock.Anything,
+						client.ObjectKey{
+							Name:      addon.Name,
+							Namespace: test.targetNamespace,
+						},
+						mock.Anything,
+					).
+					Return(errors.NewNotFound(schema.GroupResource{}, ""))
+				var createdOpeatorGroup *operatorsv1.OperatorGroup
+				c.
+					On(
+						"Create",
+						mock.Anything,
+						mock.IsType(&operatorsv1.OperatorGroup{}),
+						mock.Anything,
+					).
+					Run(func(args mock.Arguments) {
+						createdOpeatorGroup = args.Get(1).(*operatorsv1.OperatorGroup)
+					}).
+					Return(nil)
+
+				// Test
+				ctx := context.Background()
+				stop, err := r.ensureOperatorGroup(ctx, log, addon)
+				require.NoError(t, err)
+				assert.False(t, stop)
+
+				if c.AssertCalled(
+					t, "Create",
+					mock.Anything,
+					mock.IsType(&operatorsv1.OperatorGroup{}),
+					mock.Anything,
+				) {
+					assert.Equal(t, addon.Name, createdOpeatorGroup.Name)
+					assert.Equal(t, test.targetNamespace, createdOpeatorGroup.Namespace)
+
+					assert.Equal(t, test.expectedTargetNamespaces, createdOpeatorGroup.Spec.TargetNamespaces)
+				}
+			})
+		}
+
 	})
 
 	t.Run("guards against invalid configuration", func(t *testing.T) {
@@ -100,7 +141,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type: addonsv1alpha1.OwnNamespaces,
+							Type: addonsv1alpha1.OwnNamespace,
 						},
 					},
 				},
@@ -113,8 +154,35 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type:         addonsv1alpha1.OwnNamespaces,
-							OwnNamespace: &addonsv1alpha1.AddonInstallSpecOwnNamespace{},
+							Type:         addonsv1alpha1.OwnNamespace,
+							OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{},
+						},
+					},
+				},
+			},
+			{
+				name: "allNamespaces is nil",
+				addon: &addonsv1alpha1.Addon{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "addon-1",
+					},
+					Spec: addonsv1alpha1.AddonSpec{
+						Install: addonsv1alpha1.AddonInstallSpec{
+							Type: addonsv1alpha1.AllNamespaces,
+						},
+					},
+				},
+			},
+			{
+				name: "allNamespaces.namespace is empty",
+				addon: &addonsv1alpha1.Addon{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "addon-1",
+					},
+					Spec: addonsv1alpha1.AddonSpec{
+						Install: addonsv1alpha1.AddonInstallSpec{
+							Type:          addonsv1alpha1.AllNamespaces,
+							AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{},
 						},
 					},
 				},
@@ -156,63 +224,6 @@ func TestEnsureOperatorGroup(t *testing.T) {
 				}
 			})
 		}
-	})
-
-	t.Run("ensures OperatorGroups are gone", func(t *testing.T) {
-		addonAllNamespaces := &addonsv1alpha1.Addon{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "addon-1",
-			},
-			Spec: addonsv1alpha1.AddonSpec{
-				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.AllNamespaces,
-				},
-			},
-		}
-
-		log := testutil.NewLogger(t)
-		c := testutil.NewClient()
-		r := AddonReconciler{
-			Client: c,
-			Scheme: newTestSchemeWithAddonsv1alpha1(),
-		}
-
-		// Mock Setup
-		operatorGroup := operatorsv1.OperatorGroup{
-			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test-ns"},
-		}
-		c.
-			On(
-				"List",
-				mock.Anything,
-				mock.IsType(&operatorsv1.OperatorGroupList{}),
-				mock.Anything,
-			).
-			Run(func(args mock.Arguments) {
-				ogList := args.Get(1).(*operatorsv1.OperatorGroupList)
-				*ogList = operatorsv1.OperatorGroupList{
-					Items: []operatorsv1.OperatorGroup{
-						operatorGroup,
-					},
-				}
-			}).
-			Return(nil)
-		c.
-			On(
-				"Delete",
-				mock.Anything,
-				mock.IsType(&operatorsv1.OperatorGroup{}),
-				mock.Anything,
-			).
-			Return(nil)
-
-		// Test
-		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addonAllNamespaces)
-		require.NoError(t, err)
-		assert.False(t, stop)
-
-		c.AssertCalled(t, "Delete", mock.Anything, &operatorGroup, mock.Anything)
 	})
 
 	t.Run("unsupported install type", func(t *testing.T) {

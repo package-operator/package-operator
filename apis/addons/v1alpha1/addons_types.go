@@ -21,14 +21,26 @@ type AddonInstallSpec struct {
 	// Type of installation.
 	// +kubebuilder:validation:Enum={"OwnNamespace","AllNamespaces"}
 	Type AddonInstallType `json:"type"`
-	// OwnNamespace config parameters. Present only if Type = OwnNamespace
-	OwnNamespace *AddonInstallSpecOwnNamespace `json:"ownNamespace,omitempty"`
+	// AllNamespaces config parameters. Present only if Type = AllNamespaces.
+	AllNamespaces *AddonInstallAllNamespaces `json:"allNamespaces,omitempty"`
+	// OwnNamespace config parameters. Present only if Type = OwnNamespace.
+	OwnNamespace *AddonInstallOwnNamespace `json:"ownNamespace,omitempty"`
 }
 
-// AddonInstallSpecOwnNamespace defines parameters for the OwnNamespace installation type.
-type AddonInstallSpecOwnNamespace struct {
+// Common Addon installation parameters.
+type AddonInstallCommon struct {
 	// Namespace the operator is to be installed into.
 	Namespace string `json:"namespace"`
+}
+
+// AllNamespaces specific Addon installation parameters.
+type AddonInstallAllNamespaces struct {
+	AddonInstallCommon `json:",inline"`
+}
+
+// OwnNamespace specific Addon installation parameters.
+type AddonInstallOwnNamespace struct {
+	AddonInstallCommon `json:",inline"`
 }
 
 type AddonInstallType string
@@ -42,7 +54,7 @@ const (
 	// Installs the operator into a specific namespace.
 	// The Operator will only watch and be made available for use in this single namespace.
 	// Maps directly to the OLM install mode "specific namespace"
-	OwnNamespaces AddonInstallType = "OwnNamespace"
+	OwnNamespace AddonInstallType = "OwnNamespace"
 )
 
 type AddonNamespace struct {
