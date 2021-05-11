@@ -75,6 +75,7 @@ const (
 	PhasePending     AddonPhase = "Pending"
 	PhaseReady       AddonPhase = "Ready"
 	PhaseTerminating AddonPhase = "Terminating"
+	PhaseError       AddonPhase = "Error"
 )
 
 // Addon is the Schema for the Addons API
