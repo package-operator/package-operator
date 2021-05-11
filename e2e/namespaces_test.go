@@ -20,6 +20,8 @@ import (
 )
 
 func TestNamespaceCreation(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	addon := &addonsv1alpha1.Addon{
@@ -30,6 +32,9 @@ func TestNamespaceCreation(t *testing.T) {
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-oibabdsoi"},
 				{Name: "namespace-kuikojsag"},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.AllNamespaces,
 			},
 		},
 	}

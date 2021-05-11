@@ -178,20 +178,32 @@ func TestEnsureOperatorGroup(t *testing.T) {
 		}
 
 		// Mock Setup
-		var deleteAllOfOptions client.DeleteAllOfOptions
+		operatorGroup := operatorsv1.OperatorGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test-ns"},
+		}
 		c.
 			On(
-				"DeleteAllOf",
+				"List",
+				mock.Anything,
+				mock.IsType(&operatorsv1.OperatorGroupList{}),
+				mock.Anything,
+			).
+			Run(func(args mock.Arguments) {
+				ogList := args.Get(1).(*operatorsv1.OperatorGroupList)
+				*ogList = operatorsv1.OperatorGroupList{
+					Items: []operatorsv1.OperatorGroup{
+						operatorGroup,
+					},
+				}
+			}).
+			Return(nil)
+		c.
+			On(
+				"Delete",
 				mock.Anything,
 				mock.IsType(&operatorsv1.OperatorGroup{}),
 				mock.Anything,
 			).
-			Run(func(args mock.Arguments) {
-				opts := args.Get(2).([]client.DeleteAllOfOption)
-				for _, opt := range opts {
-					opt.ApplyToDeleteAllOf(&deleteAllOfOptions)
-				}
-			}).
 			Return(nil)
 
 		// Test
@@ -200,14 +212,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, stop)
 
-		// If this function is called multiple times,
-		// the deleteOptions check will only assert on the last call made.
-		if c.AssertNumberOfCalls(t, "DeleteAllOf", 1) &&
-			assert.NotNil(t, deleteAllOfOptions.LabelSelector) {
-			assert.Equal(t,
-				commonLabelsAsLabelSelector(addonAllNamespaces).String(),
-				deleteAllOfOptions.LabelSelector.String())
-		}
+		c.AssertCalled(t, "Delete", mock.Anything, &operatorGroup, mock.Anything)
 	})
 
 	t.Run("unsupported install type", func(t *testing.T) {

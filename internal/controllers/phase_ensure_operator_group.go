@@ -23,9 +23,21 @@ func (r *AddonReconciler) ensureOperatorGroup(
 	case addonsv1alpha1.AllNamespaces:
 		// No OperatorGroup needed, Operator is installed for the whole cluster
 		// Ensure that we have no left over OperatorGroup.
-		return false, r.DeleteAllOf(ctx, &operatorsv1.OperatorGroup{}, client.MatchingLabelsSelector{
+		operatorGroupList := &operatorsv1.OperatorGroupList{}
+		err := r.List(ctx, operatorGroupList, client.MatchingLabelsSelector{
 			Selector: commonLabelsAsLabelSelector(addon),
 		})
+		if err != nil {
+			return false, err
+		}
+
+		for _, operatorGroup := range operatorGroupList.Items {
+			if err := client.IgnoreNotFound(r.Delete(ctx, &operatorGroup)); err != nil {
+				return false, err
+			}
+		}
+
+		return false, nil
 
 	case addonsv1alpha1.OwnNamespaces:
 		// continue
