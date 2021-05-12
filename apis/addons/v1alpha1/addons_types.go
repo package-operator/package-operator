@@ -12,7 +12,7 @@ type AddonSpec struct {
 	// Collisions with existing Namespaces are NOT allowed.
 	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
 
-	// Defines how an Addon is to be installed on a cluster.
+	// Defines how an Addon is installed.
 	Install AddonInstallSpec `json:"install"`
 }
 
@@ -29,7 +29,7 @@ type AddonInstallSpec struct {
 
 // Common Addon installation parameters.
 type AddonInstallCommon struct {
-	// Namespace the operator is to be installed into.
+	// Namespace to install the Addon into.
 	Namespace string `json:"namespace"`
 }
 
@@ -46,9 +46,9 @@ type AddonInstallOwnNamespace struct {
 type AddonInstallType string
 
 const (
-	// All namespaces on the cluster (default) installs the Operator in the
-	// default openshift-operators namespace to watch and be made available
-	// to all namespaces in the cluster.
+	// All namespaces on the cluster (default)
+	// installs the Operator in the default openshift-operators namespace to
+	// watch and be made available to all namespaces in the cluster.
 	// Maps directly to the OLM default install mode "all namespaces".
 	AllNamespaces AddonInstallType = "AllNamespaces"
 	// Installs the operator into a specific namespace.

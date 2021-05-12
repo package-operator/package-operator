@@ -247,7 +247,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 		// Test
 		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addonUnsupported)
+		stop, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
 		require.NoError(t, err)
 		assert.True(t, stop)
 
@@ -283,12 +283,12 @@ func TestReconcileOperatorGroup(t *testing.T) {
 			).
 			Run(func(args mock.Arguments) {
 				og := args.Get(2).(*operatorsv1.OperatorGroup)
-				*og = *operatorGroup
+				operatorGroup.DeepCopyInto(og)
 			}).
 			Return(nil)
 
 		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup)
+		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
 		require.NoError(t, err)
 	})
 
@@ -318,7 +318,7 @@ func TestReconcileOperatorGroup(t *testing.T) {
 			Return(nil)
 
 		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup)
+		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
 		require.NoError(t, err)
 
 		c.AssertCalled(t,

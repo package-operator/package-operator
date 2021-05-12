@@ -58,7 +58,6 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 1.
 	// Ensure wanted namespaces
-	log.Info("Ensuring wanted Namespaces for Addon", "name", req.Name)
 	stopAndRetry, err := r.ensureWantedNamespaces(ctx, addon)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure wanted namespaces: %w", err)
@@ -71,7 +70,6 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 2.
 	// Ensure unwanted namespaces are removed
-	log.Info("Ensuring deletion of unwanted Namespaces for Addon", "name", req.Name)
 	err = r.ensureDeletionOfUnwantedNamespaces(ctx, addon)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure deletion of unwanted Namespaces: %w", err)
@@ -88,7 +86,6 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	// After last phase and if everything is healthy
-	r.Log.Info("Successfully reconciled Addon", "name", req.Name)
 	return ctrl.Result{}, r.reportReadinessStatus(ctx, addon)
 }
 
