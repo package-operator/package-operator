@@ -40,13 +40,13 @@ spec:
             description: AddonSpec defines the desired state of Addon.
             properties:
               install:
-                description: Defines how an Addon is to be installed on a cluster.
+                description: Defines how an Addon is installed.
                 properties:
                   allNamespaces:
                     description: AllNamespaces config parameters. Present only if Type = AllNamespaces.
                     properties:
                       namespace:
-                        description: Namespace the operator is to be installed into.
+                        description: Namespace to install the Addon into.
                         type: string
                     required:
                     - namespace
@@ -55,7 +55,7 @@ spec:
                     description: OwnNamespace config parameters. Present only if Type = OwnNamespace.
                     properties:
                       namespace:
-                        description: Namespace the operator is to be installed into.
+                        description: Namespace to install the Addon into.
                         type: string
                     required:
                     - namespace
