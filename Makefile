@@ -113,6 +113,7 @@ $(YQ):
 		&& echo
 
 # setup goimports
+goimports: $(GOIMPORTS)
 GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
 	@echo "installing goimports $(GOIMPORTS_VERSION)..."

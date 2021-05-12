@@ -1,4 +1,8 @@
-exclude: "vendor/ | *.deepcopy.go"
+exclude: |
+  (?x)(
+    (^vendor/)|
+    (.deepcopy.go$)
+  )
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.4.0
@@ -24,7 +28,7 @@ repos:
   hooks:
   - id: goimports
     name: goimports
-    entry: .cache/dependencies/bin/goimports -local github.com/openshift/addon-operator -w
+    entry: hack/ensure-and-run-goimports.sh
     language: system
     types: [go]
 
