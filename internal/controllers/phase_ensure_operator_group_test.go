@@ -210,7 +210,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, test.addon)
+				stop, err := r.ensureOperatorGroup(ctx, log, test.addon.DeepCopy())
 				require.NoError(t, err)
 				assert.True(t, stop)
 
