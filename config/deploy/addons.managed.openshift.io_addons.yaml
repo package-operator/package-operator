@@ -39,6 +39,36 @@ spec:
           spec:
             description: AddonSpec defines the desired state of Addon.
             properties:
+              install:
+                description: Defines how an Addon is installed.
+                properties:
+                  allNamespaces:
+                    description: AllNamespaces config parameters. Present only if Type = AllNamespaces.
+                    properties:
+                      namespace:
+                        description: Namespace to install the Addon into.
+                        type: string
+                    required:
+                    - namespace
+                    type: object
+                  ownNamespace:
+                    description: OwnNamespace config parameters. Present only if Type = OwnNamespace.
+                    properties:
+                      namespace:
+                        description: Namespace to install the Addon into.
+                        type: string
+                    required:
+                    - namespace
+                    type: object
+                  type:
+                    description: Type of installation.
+                    enum:
+                    - OwnNamespace
+                    - AllNamespaces
+                    type: string
+                required:
+                - type
+                type: object
               namespaces:
                 description: Defines a list of Kubernetes Namespaces that belong to this Addon. Namespaces listed here will be created prior to installation of the Addon and will be removed from the cluster when the Addon is deleted. Collisions with existing Namespaces are NOT allowed.
                 items:
@@ -50,6 +80,8 @@ spec:
                   - name
                   type: object
                 type: array
+            required:
+            - install
             type: object
           status:
             default:

@@ -13,7 +13,7 @@ GOLANGCI_LINT_VERSION:=v1.39.0
 export CGO_ENABLED:=0
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 SHORT_SHA=$(shell git rev-parse --short HEAD)
-VERSION?=${BRANCH}-${SHORT_SHA}
+VERSION?=$(shell echo ${BRANCH} | tr / -)-${SHORT_SHA}
 BUILD_DATE=$(shell date +%s)
 MODULE:=github.com/openshift/addon-operator
 LD_FLAGS=-X $(MODULE)/internal/version.Version=$(VERSION) \

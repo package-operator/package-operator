@@ -25,8 +25,9 @@ func WaitToBeGone(t *testing.T, timeout time.Duration, object client.Object) err
 	t.Logf("waiting %s for %s %s to be gone...",
 		timeout, gvk, key)
 
+	ctx := context.Background()
 	return wait.PollImmediate(defaultWaitPollInterval, timeout, func() (done bool, err error) {
-		err = Client.Get(context.Background(), key, object)
+		err = Client.Get(ctx, key, object)
 
 		if errors.IsNotFound(err) {
 			return true, nil
@@ -37,5 +38,31 @@ func WaitToBeGone(t *testing.T, timeout time.Duration, object client.Object) err
 				object.GetObjectKind().GroupVersionKind().Kind, key, err)
 		}
 		return false, nil
+	})
+}
+
+// Wait that something happens with an object.
+func WaitForObject(
+	t *testing.T, timeout time.Duration,
+	object client.Object, reason string,
+	checkFn func(obj client.Object) (done bool, err error),
+) error {
+	gvk, err := apiutil.GVKForObject(object, Scheme)
+	if err != nil {
+		return err
+	}
+
+	key := client.ObjectKeyFromObject(object)
+	t.Logf("waiting %s on %s %s %s...",
+		timeout, gvk, key, reason)
+
+	ctx := context.Background()
+	return wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
+		err = Client.Get(ctx, client.ObjectKeyFromObject(object), object)
+		if err != nil {
+			return false, nil
+		}
+
+		return checkFn(object)
 	})
 }

@@ -11,7 +11,51 @@ type AddonSpec struct {
 	// will be removed from the cluster when the Addon is deleted.
 	// Collisions with existing Namespaces are NOT allowed.
 	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
+
+	// Defines how an Addon is installed.
+	Install AddonInstallSpec `json:"install"`
 }
+
+// AddonInstallSpec defines the desired Addon installation type.
+type AddonInstallSpec struct {
+	// Type of installation.
+	// +kubebuilder:validation:Enum={"OwnNamespace","AllNamespaces"}
+	Type AddonInstallType `json:"type"`
+	// AllNamespaces config parameters. Present only if Type = AllNamespaces.
+	AllNamespaces *AddonInstallAllNamespaces `json:"allNamespaces,omitempty"`
+	// OwnNamespace config parameters. Present only if Type = OwnNamespace.
+	OwnNamespace *AddonInstallOwnNamespace `json:"ownNamespace,omitempty"`
+}
+
+// Common Addon installation parameters.
+type AddonInstallCommon struct {
+	// Namespace to install the Addon into.
+	Namespace string `json:"namespace"`
+}
+
+// AllNamespaces specific Addon installation parameters.
+type AddonInstallAllNamespaces struct {
+	AddonInstallCommon `json:",inline"`
+}
+
+// OwnNamespace specific Addon installation parameters.
+type AddonInstallOwnNamespace struct {
+	AddonInstallCommon `json:",inline"`
+}
+
+type AddonInstallType string
+
+const (
+	// All namespaces on the cluster (default)
+	// installs the Operator in the default openshift-operators namespace to
+	// watch and be made available to all namespaces in the cluster.
+	// Maps directly to the OLM default install mode "all namespaces".
+	AllNamespaces AddonInstallType = "AllNamespaces"
+	// Installs the operator into a specific namespace.
+	// The Operator will only watch and be made available for use in this single namespace.
+	// Maps directly to the OLM install mode "specific namespace"
+	OwnNamespace AddonInstallType = "OwnNamespace"
+)
 
 type AddonNamespace struct {
 	// Name of the KubernetesNamespace.
@@ -43,6 +87,7 @@ const (
 	PhasePending     AddonPhase = "Pending"
 	PhaseReady       AddonPhase = "Ready"
 	PhaseTerminating AddonPhase = "Terminating"
+	PhaseError       AddonPhase = "Error"
 )
 
 // Addon is the Schema for the Addons API

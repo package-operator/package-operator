@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,12 +30,14 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.Addon{}).
 		Owns(&corev1.Namespace{}).
+		Owns(&operatorsv1.OperatorGroup{}).
 		Complete(r)
 }
 
 // AddonReconciler/Controller entrypoint
 func (r *AddonReconciler) Reconcile(
 	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("addon", req.NamespacedName.String())
 
 	addon := &addonsv1alpha1.Addon{}
 	err := r.Get(ctx, req.NamespacedName, addon)
@@ -55,7 +58,6 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 1.
 	// Ensure wanted namespaces
-	r.Log.Info("Ensuring wanted Namespaces for Addon", "name", req.Name)
 	stopAndRetry, err := r.ensureWantedNamespaces(ctx, addon)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure wanted namespaces: %w", err)
@@ -68,14 +70,22 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 2.
 	// Ensure unwanted namespaces are removed
-	r.Log.Info("Ensuring deletion of unwanted Namespaces for Addon", "name", req.Name)
 	err = r.ensureDeletionOfUnwantedNamespaces(ctx, addon)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure deletion of unwanted Namespaces: %w", err)
 	}
 
+	// Phase 3.
+	// Ensure OperatorGroup
+	stop, err := r.ensureOperatorGroup(ctx, log, addon)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure OperatorGroup: %w", err)
+	}
+	if stop {
+		return ctrl.Result{}, nil
+	}
+
 	// After last phase and if everything is healthy
-	r.Log.Info("Successfully reconciled Addon", "name", req.Name)
 	return ctrl.Result{}, r.reportReadinessStatus(ctx, addon)
 }
 

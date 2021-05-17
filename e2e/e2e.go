@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -57,6 +58,11 @@ func init() {
 	}
 
 	err = apiextensionsv1.AddToScheme(Scheme)
+	if err != nil {
+		panic(err)
+	}
+
+	err = operatorsv1.AddToScheme(Scheme)
 	if err != nil {
 		panic(err)
 	}
