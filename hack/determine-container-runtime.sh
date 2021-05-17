@@ -53,4 +53,6 @@ case "$CONTAINER_RUNTIME" in
 		echo "Unknown container runtime: $CONTAINER_RUNTIME"
 		echo "Please use either docker or podman"
 esac
+
+echo "detected container runtime: $CONTAINER_RUNTIME"
 echo
