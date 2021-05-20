@@ -79,10 +79,10 @@ $(KIND):
 		go mod init tmp; \
 		go get "sigs.k8s.io/kind@$(KIND_VERSION)"; \
 	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(KIND_TMP)" "$(dir $(KIND))"; \
-		mkdir -p "$(dir $(KIND))"; \
-		touch "$(KIND)"; \
-		echo;
+	@rm -rf "$(KIND_TMP)" "$(dir $(KIND))"
+	@mkdir -p "$(dir $(KIND))"
+	@touch "$(KIND)"
+	@echo
 
 # setup controller-gen
 CONTROLLER_GEN:=$(DEPENDENCIES)/controller-gen/$(CONTROLLER_GEN_VERSION)
@@ -93,10 +93,10 @@ $(CONTROLLER_GEN):
 		go mod init tmp; \
 		go get "sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)"; \
 	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(CONTROLLER_GEN_TMP)" "$(dir $(CONTROLLER_GEN))"; \
-		mkdir -p "$(dir $(CONTROLLER_GEN))"; \
-		touch "$(CONTROLLER_GEN)"; \
-		echo;
+	@rm -rf "$(CONTROLLER_GEN_TMP)" "$(dir $(CONTROLLER_GEN))"
+	@mkdir -p "$(dir $(CONTROLLER_GEN))"
+	@touch "$(CONTROLLER_GEN)"
+	@echo
 
 # setup yq
 YQ:=$(DEPENDENCIES)/yq/$(YQ_VERSION)
@@ -107,10 +107,10 @@ $(YQ):
 		go mod init tmp; \
 		go get "github.com/mikefarah/yq/$(YQ_VERSION)"; \
 	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(YQ_TMP)" "$(dir $(YQ))"; \
-		mkdir -p "$(dir $(YQ))"; \
-		touch "$(YQ)"; \
-		echo;
+	@rm -rf "$(YQ_TMP)" "$(dir $(YQ))"
+	@mkdir -p "$(dir $(YQ))"
+	@touch "$(YQ)"
+	@echo
 
 # setup goimports
 GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
@@ -121,10 +121,10 @@ $(GOIMPORTS):
 		go mod init tmp; \
 		go get "golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)"; \
 	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOIMPORTS_TMP)" "$(dir $(GOIMPORTS))"; \
-		mkdir -p "$(dir $(GOIMPORTS))"; \
-		touch "$(GOIMPORTS)"; \
-		echo;
+	@rm -rf "$(GOIMPORTS_TMP)" "$(dir $(GOIMPORTS))"
+	@mkdir -p "$(dir $(GOIMPORTS))"
+	@touch "$(GOIMPORTS)"
+	@echo
 
 # alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
 goimports: $(GOIMPORTS)
@@ -139,10 +139,10 @@ $(GOLANGCI_LINT):
 		go mod init tmp; \
 		go get "github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
 	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))"; \
-		mkdir -p "$(dir $(GOLANGCI_LINT))"; \
-		touch "$(GOLANGCI_LINT)"; \
-		echo;
+	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))"
+	@mkdir -p "$(dir $(GOLANGCI_LINT))"
+	@touch "$(GOLANGCI_LINT)"
+	@echo
 
 # installs all project dependencies
 dependencies: \
