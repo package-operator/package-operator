@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -47,28 +48,17 @@ var (
 
 func init() {
 	// Client/Scheme setup.
-	err := clientgoscheme.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = aoapis.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = apiextensionsv1.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = operatorsv1.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
+	addAPIsToScheme(Scheme, []func(s *runtime.Scheme) error{
+		clientgoscheme.AddToScheme,
+		aoapis.AddToScheme,
+		apiextensionsv1.AddToScheme,
+		operatorsv1.AddToScheme,
+		operatorsv1alpha1.AddToScheme,
+	})
 
 	Config = ctrl.GetConfigOrDie()
 
+	var err error
 	Client, err = client.New(Config, client.Options{
 		Scheme: Scheme,
 	})
@@ -138,6 +128,15 @@ func PrintPodStatusAndLogs(namespace string) error {
 		}
 	}
 	return nil
+}
+
+func addAPIsToScheme(scheme *runtime.Scheme, schemeAdders []func(s *runtime.Scheme) error) {
+	for _, addToScheme := range schemeAdders {
+		err := addToScheme(scheme)
+		if err != nil {
+			panic(fmt.Errorf("could not load scheme: %w", err))
+		}
+	}
 }
 
 func reportPodStatus(ctx context.Context, pod *corev1.Pod) error {

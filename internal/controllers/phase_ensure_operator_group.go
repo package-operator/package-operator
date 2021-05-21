@@ -8,7 +8,6 @@ import (
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,7 +25,7 @@ func (r *AddonReconciler) ensureOperatorGroup(
 			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, r.reportConfigurationError(ctx, addon)
+			return true, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
 		}
 		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
 
@@ -35,7 +34,7 @@ func (r *AddonReconciler) ensureOperatorGroup(
 			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, r.reportConfigurationError(ctx, addon)
+			return true, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
 		}
 		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
 
@@ -64,18 +63,6 @@ func (r *AddonReconciler) ensureOperatorGroup(
 	}
 
 	return false, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
-}
-
-func (r *AddonReconciler) reportConfigurationError(ctx context.Context, addon *addonsv1alpha1.Addon) error {
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseError
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:    addonsv1alpha1.Available,
-		Status:  metav1.ConditionFalse,
-		Reason:  "ConfigurationError",
-		Message: ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace",
-	})
-	return r.Status().Update(ctx, addon)
 }
 
 // Reconciles the Spec of the given OperatorGroup if needed by updating or creating the OperatorGroup.

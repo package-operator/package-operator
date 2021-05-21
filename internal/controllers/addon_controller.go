@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&addonsv1alpha1.Addon{}).
 		Owns(&corev1.Namespace{}).
 		Owns(&operatorsv1.OperatorGroup{}).
+		Owns(&operatorsv1alpha1.CatalogSource{}).
 		Complete(r)
 }
 
@@ -58,35 +60,60 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 1.
 	// Ensure wanted namespaces
-	stopAndRetry, err := r.ensureWantedNamespaces(ctx, addon)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure wanted namespaces: %w", err)
-	}
-	if stopAndRetry {
-		return ctrl.Result{
-			RequeueAfter: defaultRetryAfterTime,
-		}, nil
+	{
+		stopAndRetry, err := r.ensureWantedNamespaces(ctx, addon)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to ensure wanted Namespaces: %w", err)
+		}
+		if stopAndRetry {
+			return ctrl.Result{
+				RequeueAfter: defaultRetryAfterTime,
+			}, nil
+		}
 	}
 
 	// Phase 2.
 	// Ensure unwanted namespaces are removed
-	err = r.ensureDeletionOfUnwantedNamespaces(ctx, addon)
-	if err != nil {
+	if err := r.ensureDeletionOfUnwantedNamespaces(ctx, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure deletion of unwanted Namespaces: %w", err)
 	}
 
 	// Phase 3.
 	// Ensure OperatorGroup
-	stop, err := r.ensureOperatorGroup(ctx, log, addon)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure OperatorGroup: %w", err)
+	{
+		stop, err := r.ensureOperatorGroup(ctx, log, addon)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to ensure OperatorGroup: %w", err)
+		}
+		if stop {
+			return ctrl.Result{}, nil
+		}
 	}
-	if stop {
-		return ctrl.Result{}, nil
+
+	// Phase 4.
+	// Ensure CatalogSource for this Addon
+	{
+		stop, retry, err := r.ensureCatalogSource(ctx, log, addon)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to ensure CatalogSource: %w", err)
+		}
+		if stop {
+			if retry {
+				return ctrl.Result{
+					RequeueAfter: defaultRetryAfterTime,
+				}, nil
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// After last phase and if everything is healthy
-	return ctrl.Result{}, r.reportReadinessStatus(ctx, addon)
+	err = r.reportReadinessStatus(ctx, addon)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to repor readiness status: %w", err)
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // Report Addon status to communicate that everything is alright
@@ -114,5 +141,20 @@ func (r *AddonReconciler) reportTerminationStatus(
 	})
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseTerminating
+	return r.Status().Update(ctx, addon)
+}
+
+// Report Addon status to communicate that the resource is misconfigured
+func (r *AddonReconciler) reportConfigurationError(ctx context.Context, addon *addonsv1alpha1.Addon, message string) error {
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhaseError
+	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
+		Type:    addonsv1alpha1.Available,
+		Status:  metav1.ConditionFalse,
+		Reason:  "ConfigurationError",
+		Message: message,
+	})
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhaseError
 	return r.Status().Update(ctx, addon)
 }

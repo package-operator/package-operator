@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -19,25 +20,26 @@ import (
 	"github.com/openshift/addon-operator/e2e"
 )
 
-func TestNamespaceCreation(t *testing.T) {
+func TestAddon_CatalogSource(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
 	addon := &addonsv1alpha1.Addon{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "addon-c01m94lbi",
+			Name:      "addon-oisafbo12",
+			Namespace: "default",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
 			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{Name: "namespace-oibabdsoi"},
-				{Name: "namespace-kuikojsag"},
+				{Name: "namespace-onbgdions"},
+				{Name: "namespace-pioghfndb"},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.AllNamespaces,
-				AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
+				Type: addonsv1alpha1.OwnNamespace,
+				OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
 					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-						Namespace:          "namespace-oibabdsoi",
+						Namespace:          "namespace-onbgdions",
 						CatalogSourceImage: testCatalogSourceImage,
 					},
 				},
@@ -60,7 +62,7 @@ func TestNamespaceCreation(t *testing.T) {
 		}
 	}()
 
-	// wait until reconcilation happened
+	// wait until reconciliation happened
 	currentAddon := &addonsv1alpha1.Addon{}
 	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
 		err = e2e.Client.Get(ctx, types.NamespacedName{
@@ -76,15 +78,16 @@ func TestNamespaceCreation(t *testing.T) {
 	})
 	require.NoError(t, err, "wait for Addon to be available: %+v", currentAddon)
 
-	// validate Namespaces
-	for _, namespace := range addon.Spec.Namespaces {
-		currentNamespace := &corev1.Namespace{}
+	// validate CatalogSource
+	{
+		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
 		err := e2e.Client.Get(ctx, types.NamespacedName{
-			Name: namespace.Name,
-		}, currentNamespace)
-		assert.NoError(t, err, "could not get Namespace %s", namespace.Name)
-
-		assert.Equal(t, currentNamespace.Status.Phase, corev1.NamespaceActive)
+			Name:      addon.Name,
+			Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+		}, currentCatalogSource)
+		assert.NoError(t, err, "could not get CatalogSource %s", addon.Name)
+		assert.Equal(t, addon.Spec.Install.OwnNamespace.CatalogSourceImage, currentCatalogSource.Spec.Image)
+		assert.Equal(t, addon.Spec.DisplayName, currentCatalogSource.Spec.DisplayName)
 	}
 
 	// delete Addon

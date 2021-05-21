@@ -6,6 +6,9 @@ import (
 
 // AddonSpec defines the desired state of Addon.
 type AddonSpec struct {
+	// Human readable name for this addon
+	DisplayName string `json:"displayName"`
+
 	// Defines a list of Kubernetes Namespaces that belong to this Addon.
 	// Namespaces listed here will be created prior to installation of the Addon and
 	// will be removed from the cluster when the Addon is deleted.
@@ -13,6 +16,8 @@ type AddonSpec struct {
 	Namespaces []AddonNamespace `json:"namespaces,omitempty"`
 
 	// Defines how an Addon is installed.
+	// This field is immutable.
+	// TODO: enfore immutablity in webhook
 	Install AddonInstallSpec `json:"install"`
 }
 
@@ -31,6 +36,10 @@ type AddonInstallSpec struct {
 type AddonInstallCommon struct {
 	// Namespace to install the Addon into.
 	Namespace string `json:"namespace"`
+
+	// Defines the CatalogSource image.
+	// Please only use hashes and no tags here!
+	CatalogSourceImage string `json:"catalogSourceImage"`
 }
 
 // AllNamespaces specific Addon installation parameters.

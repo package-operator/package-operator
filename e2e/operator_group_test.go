@@ -25,7 +25,8 @@ func TestAddon_OperatorGroup(t *testing.T) {
 				Type: addonsv1alpha1.OwnNamespace,
 				OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
 					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-						Namespace: "default",
+						Namespace:          "default",
+						CatalogSourceImage: testCatalogSourceImage,
 					},
 				},
 			},
@@ -41,7 +42,8 @@ func TestAddon_OperatorGroup(t *testing.T) {
 				Type: addonsv1alpha1.AllNamespaces,
 				AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
 					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-						Namespace: "default",
+						Namespace:          "default",
+						CatalogSourceImage: testCatalogSourceImage,
 					},
 				},
 			},

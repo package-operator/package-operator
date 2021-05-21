@@ -39,25 +39,36 @@ spec:
           spec:
             description: AddonSpec defines the desired state of Addon.
             properties:
+              displayName:
+                description: Human readable name for this addon
+                type: string
               install:
-                description: Defines how an Addon is installed.
+                description: 'Defines how an Addon is installed. This field is immutable. TODO: enfore immutablity in webhook'
                 properties:
                   allNamespaces:
                     description: AllNamespaces config parameters. Present only if Type = AllNamespaces.
                     properties:
+                      catalogSourceImage:
+                        description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        type: string
                       namespace:
                         description: Namespace to install the Addon into.
                         type: string
                     required:
+                    - catalogSourceImage
                     - namespace
                     type: object
                   ownNamespace:
                     description: OwnNamespace config parameters. Present only if Type = OwnNamespace.
                     properties:
+                      catalogSourceImage:
+                        description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        type: string
                       namespace:
                         description: Namespace to install the Addon into.
                         type: string
                     required:
+                    - catalogSourceImage
                     - namespace
                     type: object
                   type:
@@ -81,6 +92,7 @@ spec:
                   type: object
                 type: array
             required:
+            - displayName
             - install
             type: object
           status:
