@@ -49,7 +49,7 @@ all: \
 
 bin/linux_amd64/%: GOARGS = GOOS=linux GOARCH=amd64
 
-bin/%: generate manifests FORCE
+bin/%: generate FORCE
 	$(eval COMPONENT=$(shell basename $*))
 	@echo -e -n "compiling cmd/$(COMPONENT)...\n  "
 	$(GOARGS) go build -ldflags "-w $(LD_FLAGS)" -o bin/$* cmd/$(COMPONENT)/main.go
@@ -158,7 +158,7 @@ dependencies: \
 # ----------
 
 # Run against the configured Kubernetes cluster in ~/.kube/config or $KUBECONFIG
-run: generate fmt vet manifests
+run: generate
 	go run -ldflags "-w $(LD_FLAGS)" \
 		./cmd/addon-operator-manager/main.go \
 			-pprof-addr="127.0.0.1:8065"
@@ -168,18 +168,14 @@ run: generate fmt vet manifests
 # Generators
 # ----------
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: $(CONTROLLER_GEN)
+# Generate code and manifests e.g. CRD, RBAC etc.
+generate: $(CONTROLLER_GEN)
 	@echo "generating kubernetes manifests..."
 	@controller-gen crd:crdVersions=v1 \
 		rbac:roleName=addon-operator-manager \
 		paths="./..." \
 		output:crd:artifacts:config=config/deploy 2>&1 | sed 's/^/  /'
 	@echo
-.PHONY: manifests
-
-# Generate code
-generate: $(CONTROLLER_GEN)
 	@echo "generating code..."
 	@controller-gen object paths=./apis/... 2>&1 | sed 's/^/  /'
 	@echo
@@ -199,27 +195,15 @@ endif
 # Testing and Linting
 # -------------------
 
-pre-commit-install: $(GOIMPORTS)
-	@echo "installing pre-commit hooks using https://pre-commit.com/"
-	@pre-commit install
-.PHONY: pre-commit-install
-
-fmt:
-	go fmt ./...
-.PHONY: fmt
-
-vet:
-	go vet ./...
-.PHONY: vet
-
 # Runs code-generators, checks for clean directory and lints the source code.
-lint: generate fmt vet manifests $(GOLANGCI_LINT)
+lint: generate $(GOLANGCI_LINT)
+	go fmt ./...
 	@hack/validate-directory-clean.sh
 	golangci-lint run ./... --deadline=15m
 .PHONY: lint
 
 # Runs unittests
-test-unit: generate fmt vet manifests
+test-unit: generate
 	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
 .PHONY: test-unit
 
@@ -256,7 +240,9 @@ create-kind-cluster: $(KIND)
 		$$KIND_COMMAND create cluster \
 			--kubeconfig=$(KIND_KUBECONFIG) \
 			--name="addon-operator-e2e"; \
-		sudo chown $$USER: $(KIND_KUBECONFIG); \
+		if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
+			sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
+		fi; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster
@@ -295,8 +281,8 @@ apply-openshift-console:
 
 # Load Addon Operator Image into kind
 load-ao: build-image-addon-operator-manager
-	@source hack/determine-container-runtime.sh \
-		&& $$KIND_COMMAND load image-archive \
+	@source hack/determine-container-runtime.sh; \
+		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
 			--name addon-operator-e2e;
 .PHONY: load-ao
@@ -304,7 +290,7 @@ load-ao: build-image-addon-operator-manager
 # Template deployment
 config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
-			config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
+		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
 # Installs the Addon Operator into the kind e2e cluster.
 apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
@@ -316,12 +302,6 @@ apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: apply-ao
-
-apply-ao-crds-only: manifests
-	@for file in $(shell find config -name '$(API_BASE)_*.yaml'); do \
-		kubectl apply -f "$$file"; \
-	done
-.PHONY: apply-ao-crds-only
 
 # ----------------
 # Container Images
