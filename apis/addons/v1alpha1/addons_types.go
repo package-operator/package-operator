@@ -17,7 +17,7 @@ type AddonSpec struct {
 
 	// Defines how an Addon is installed.
 	// This field is immutable.
-	// TODO: enfore immutablity in webhook
+	// TODO: enforce immutablity in webhook
 	Install AddonInstallSpec `json:"install"`
 }
 
