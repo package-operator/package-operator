@@ -43,7 +43,7 @@ spec:
                 description: Human readable name for this addon
                 type: string
               install:
-                description: 'Defines how an Addon is installed. This field is immutable. TODO: enfore immutablity in webhook'
+                description: 'Defines how an Addon is installed. This field is immutable. TODO: enforce immutablity in webhook'
                 properties:
                   allNamespaces:
                     description: AllNamespaces config parameters. Present only if Type = AllNamespaces.
