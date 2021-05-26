@@ -29,7 +29,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					Type: addonsv1alpha1.OwnNamespace,
 					OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
 						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-							Namespace: "addon-system",
+							CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
+							Namespace:          "addon-system",
 						},
 					},
 				},
@@ -45,7 +46,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					Type: addonsv1alpha1.AllNamespaces,
 					AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
 						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-							Namespace: "addon-system",
+							CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
+							Namespace:          "addon-system",
 						},
 					},
 				},
@@ -125,7 +127,6 @@ func TestEnsureOperatorGroup(t *testing.T) {
 				}
 			})
 		}
-
 	})
 
 	t.Run("guards against invalid configuration", func(t *testing.T) {
