@@ -18,31 +18,11 @@ import (
 // Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
 func (r *AddonReconciler) ensureOperatorGroup(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (stop bool, err error) {
-	var targetNamespace string
-	switch addon.Spec.Install.Type {
-	case addonsv1alpha1.OwnNamespace:
-		if addon.Spec.Install.OwnNamespace == nil ||
-			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
-		}
-		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
-
-	case addonsv1alpha1.AllNamespaces:
-		if addon.Spec.Install.AllNamespaces == nil ||
-			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
-		}
-		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
-
-	default:
-		// Unsupported Install Type
-		// This should never happen, unless the schema validation is wrong.
-		// The .install.type property is set to only allow known enum values.
-		log.Error(fmt.Errorf("invalid Addon install type: %q", addon.Spec.Install.Type), "stopping Addon reconcilation")
+	targetNamespace, _, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
+	if err != nil {
+		return false, err
+	}
+	if stop {
 		return true, nil
 	}
 

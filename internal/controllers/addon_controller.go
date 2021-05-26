@@ -9,8 +9,6 @@ import (
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -114,47 +112,4 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// Report Addon status to communicate that everything is alright
-func (r *AddonReconciler) reportReadinessStatus(
-	ctx context.Context, addon *addonsv1alpha1.Addon) error {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:               addonsv1alpha1.Available,
-		Status:             metav1.ConditionTrue,
-		Reason:             "FullyReconciled",
-		ObservedGeneration: addon.Generation,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseReady
-	return r.Status().Update(ctx, addon)
-}
-
-// Report Addon status to communicate that the Addon is terminating
-func (r *AddonReconciler) reportTerminationStatus(
-	ctx context.Context, addon *addonsv1alpha1.Addon) error {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:               addonsv1alpha1.Available,
-		Status:             metav1.ConditionFalse,
-		Reason:             "Terminating",
-		ObservedGeneration: addon.Generation,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseTerminating
-	return r.Status().Update(ctx, addon)
-}
-
-// Report Addon status to communicate that the resource is misconfigured
-func (r *AddonReconciler) reportConfigurationError(ctx context.Context, addon *addonsv1alpha1.Addon, message string) error {
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseError
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:    addonsv1alpha1.Available,
-		Status:  metav1.ConditionFalse,
-		Reason:  "ConfigurationError",
-		Message: message,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseError
-	return r.Status().Update(ctx, addon)
 }

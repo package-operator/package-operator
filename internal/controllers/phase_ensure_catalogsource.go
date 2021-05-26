@@ -31,44 +31,11 @@ const (
 // stop or retry reconciliation of the surrounding Addon resource
 func (r *AddonReconciler) ensureCatalogSource(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (ensureCatalogSourceResult, error) {
-	var targetNamespace, catalogSourceImage string
-
-	switch addon.Spec.Install.Type {
-	case addonsv1alpha1.OwnNamespace:
-		if addon.Spec.Install.OwnNamespace == nil ||
-			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
-		}
-		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
-		if len(addon.Spec.Install.OwnNamespace.CatalogSourceImage) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
-		}
-		catalogSourceImage = addon.Spec.Install.OwnNamespace.CatalogSourceImage
-
-	case addonsv1alpha1.AllNamespaces:
-		if addon.Spec.Install.AllNamespaces == nil ||
-			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
-		}
-		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
-		if len(addon.Spec.Install.AllNamespaces.CatalogSourceImage) == 0 {
-			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
-		}
-		catalogSourceImage = addon.Spec.Install.AllNamespaces.CatalogSourceImage
-
-	default:
-		// Unsupported Install Type
-		// This should never happen, unless the schema validation is wrong.
-		// The .install.type property is set to only allow known enum values.
-		log.Error(fmt.Errorf("invalid Addon install type: %q", addon.Spec.Install.Type), "stopping Addon reconcilation")
+	targetNamespace, catalogSourceImage, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
+	if err != nil {
+		return ensureCatalogSourceResultNil, err
+	}
+	if stop {
 		return ensureCatalogSourceResultStop, nil
 	}
 
