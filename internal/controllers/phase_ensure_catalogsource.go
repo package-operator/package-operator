@@ -21,9 +21,9 @@ const catalogSourcePublisher = "OSD Red Hat Addons"
 type ensureCatalogSourceResult int
 
 const (
-	ensureCatalogSourceResultNil = iota
-	ensureCatalogSourceResultStop
-	ensureCatalogSourceResultRetry
+	ensureCatalogSourceResultNil   ensureCatalogSourceResult = iota
+	ensureCatalogSourceResultStop  ensureCatalogSourceResult = iota
+	ensureCatalogSourceResultRetry ensureCatalogSourceResult = iota
 )
 
 // Ensure existence of the CatalogSource specified in the given Addon resource
