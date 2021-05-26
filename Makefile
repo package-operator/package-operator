@@ -30,7 +30,8 @@ export GOBIN?=$(abspath .cache/dependencies/bin)
 export PATH:=$(GOBIN):$(PATH)
 
 # Config
-KIND_KUBECONFIG:=.cache/e2e/kubeconfig
+KIND_KUBECONFIG_DIR:=.cache/e2e
+KIND_KUBECONFIG:=$(KIND_KUBECONFIG_DIR)/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
 API_BASE:=addons.managed.openshift.io
@@ -237,6 +238,7 @@ create-kind-cluster: $(KIND)
 	@echo "creating kind cluster addon-operator-e2e..."
 	@mkdir -p .cache/e2e
 	@(source hack/determine-container-runtime.sh; \
+		mkdir -p $(KIND_KUBECONFIG_DIR); \
 		$$KIND_COMMAND create cluster \
 			--kubeconfig=$(KIND_KUBECONFIG) \
 			--name="addon-operator-e2e"; \
