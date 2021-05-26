@@ -133,10 +133,9 @@ func TestEnsureCatalogSource_Create(t *testing.T) {
 	log := testutil.NewLogger(t)
 
 	ctx := context.Background()
-	stop, retry, err := r.ensureCatalogSource(ctx, log, addon)
+	ensureResult, err := r.ensureCatalogSource(ctx, log, addon)
 	assert.NoError(t, err)
-	assert.False(t, stop)
-	assert.False(t, retry)
+	assert.Equal(t, ensureCatalogSourceResultNil, ensureResult)
 	c.AssertExpectations(t)
 }
 
@@ -169,10 +168,9 @@ func TestEnsureCatalogSource_Update(t *testing.T) {
 	log := testutil.NewLogger(t)
 
 	ctx := context.Background()
-	stop, retry, err := r.ensureCatalogSource(ctx, log, addon)
+	ensureResult, err := r.ensureCatalogSource(ctx, log, addon)
 	assert.NoError(t, err)
-	assert.False(t, stop)
-	assert.False(t, retry)
+	assert.Equal(t, ensureCatalogSourceResultNil, ensureResult)
 	c.AssertExpectations(t)
 	c.AssertNumberOfCalls(t, "Get", 1)
 	c.AssertNumberOfCalls(t, "Update", 1)

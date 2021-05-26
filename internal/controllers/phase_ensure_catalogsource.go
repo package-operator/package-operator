@@ -18,10 +18,19 @@ import (
 
 const catalogSourcePublisher = "OSD Red Hat Addons"
 
-// Ensure existence of the CatalogSource specified in the given addon resource
-// returns a bool that signals the caller to stop reconciliation and retry later
+type ensureCatalogSourceResult int
+
+const (
+	ensureCatalogSourceResultNil = iota
+	ensureCatalogSourceResultStop
+	ensureCatalogSourceResultRetry
+)
+
+// Ensure existence of the CatalogSource specified in the given Addon resource
+// returns an ensureCatalogSourceResult that signals the caller if they have to
+// stop or retry reconciliation of the surrounding Addon resource
 func (r *AddonReconciler) ensureCatalogSource(
-	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (stop, retry bool, err error) {
+	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (ensureCatalogSourceResult, error) {
 	var targetNamespace, catalogSourceImage string
 
 	switch addon.Spec.Install.Type {
@@ -30,13 +39,13 @@ func (r *AddonReconciler) ensureCatalogSource(
 			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, false, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
+			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
 		}
 		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
 		if len(addon.Spec.Install.OwnNamespace.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, false, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
+			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
 		}
 		catalogSourceImage = addon.Spec.Install.OwnNamespace.CatalogSourceImage
 
@@ -45,13 +54,13 @@ func (r *AddonReconciler) ensureCatalogSource(
 			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, false, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
+			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
 		}
 		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
 		if len(addon.Spec.Install.AllNamespaces.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
-			return true, false, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
+			return ensureCatalogSourceResultStop, r.reportConfigurationError(ctx, addon, ".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
 		}
 		catalogSourceImage = addon.Spec.Install.AllNamespaces.CatalogSourceImage
 
@@ -60,7 +69,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 		// This should never happen, unless the schema validation is wrong.
 		// The .install.type property is set to only allow known enum values.
 		log.Error(fmt.Errorf("invalid Addon install type: %q", addon.Spec.Install.Type), "stopping Addon reconcilation")
-		return true, false, nil
+		return ensureCatalogSourceResultStop, nil
 	}
 
 	catalogSource := &operatorsv1alpha1.CatalogSource{
@@ -79,7 +88,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 	addCommonLabels(catalogSource.Labels, addon)
 
 	if err := controllerutil.SetControllerReference(addon, catalogSource, r.Scheme); err != nil {
-		return false, false, err
+		return ensureCatalogSourceResultNil, err
 	}
 
 	var observedCatalogSource *operatorsv1alpha1.CatalogSource
@@ -87,16 +96,16 @@ func (r *AddonReconciler) ensureCatalogSource(
 		var err error
 		observedCatalogSource, err = reconcileCatalogSource(ctx, r.Client, catalogSource)
 		if err != nil {
-			return false, false, err
+			return ensureCatalogSourceResultNil, err
 		}
 	}
 
 	if observedCatalogSource.Status.GRPCConnectionState == nil {
 		err := r.reportCatalogSourceUnreadinessStatus(ctx, addon, observedCatalogSource, ".Status.GRPCConnectionState is nil")
 		if err != nil {
-			return false, false, err
+			return ensureCatalogSourceResultNil, err
 		}
-		return true, true, nil
+		return ensureCatalogSourceResultRetry, nil
 	}
 	if observedCatalogSource.Status.GRPCConnectionState.LastObservedState != "READY" {
 		err := r.reportCatalogSourceUnreadinessStatus(
@@ -109,12 +118,12 @@ func (r *AddonReconciler) ensureCatalogSource(
 			),
 		)
 		if err != nil {
-			return false, false, err
+			return ensureCatalogSourceResultNil, err
 		}
-		return true, true, err
+		return ensureCatalogSourceResultRetry, err
 	}
 
-	return false, false, nil
+	return ensureCatalogSourceResultNil, nil
 }
 
 // Marks Addon as unavailable because the CatalogSource is unready

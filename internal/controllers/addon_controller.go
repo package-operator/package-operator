@@ -93,16 +93,16 @@ func (r *AddonReconciler) Reconcile(
 	// Phase 4.
 	// Ensure CatalogSource for this Addon
 	{
-		stop, retry, err := r.ensureCatalogSource(ctx, log, addon)
+		ensureResult, err := r.ensureCatalogSource(ctx, log, addon)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to ensure CatalogSource: %w", err)
 		}
-		if stop {
-			if retry {
-				return ctrl.Result{
-					RequeueAfter: defaultRetryAfterTime,
-				}, nil
-			}
+		switch ensureResult {
+		case ensureCatalogSourceResultRetry:
+			return ctrl.Result{
+				RequeueAfter: defaultRetryAfterTime,
+			}, nil
+		case ensureCatalogSourceResultStop:
 			return ctrl.Result{}, nil
 		}
 	}
