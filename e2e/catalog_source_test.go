@@ -8,7 +8,6 @@ import (
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,13 +52,10 @@ func TestAddon_CatalogSource(t *testing.T) {
 
 	// clean up addon resource in case it
 	// was leaked because of a failed test
-	wasAlreadyDeleted := false
 	defer func() {
-		if !wasAlreadyDeleted {
-			err := e2e.Client.Delete(ctx, addon)
-			if err != nil {
-				t.Logf("could not clean up object %s: %v", addon.Name, err)
-			}
+		err = e2e.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+		if client.IgnoreNotFound(err) != nil {
+			t.Logf("could not clean up Addon %s: %v", addon.Name, err)
 		}
 	}()
 
@@ -99,14 +95,11 @@ func TestAddon_CatalogSource(t *testing.T) {
 	err = e2e.WaitToBeGone(t, 30*time.Second, currentAddon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
-	wasAlreadyDeleted = true
-
-	// assert that all Namespaces are gone
-	for _, namespace := range addon.Spec.Namespaces {
-		currentNamespace := &corev1.Namespace{}
-		err := e2e.Client.Get(ctx, types.NamespacedName{
-			Name: namespace.Name,
-		}, currentNamespace)
-		assert.True(t, k8sApiErrors.IsNotFound(err), "Namespace not deleted: %s", namespace.Name)
-	}
+	// assert that CatalogSource is gone
+	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
+	err = e2e.Client.Get(ctx, types.NamespacedName{
+		Name:      addon.Name,
+		Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+	}, currentCatalogSource)
+	assert.True(t, k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
 }
