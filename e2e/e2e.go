@@ -48,13 +48,16 @@ var (
 
 func init() {
 	// Client/Scheme setup.
-	addAPIsToScheme(Scheme, []func(s *runtime.Scheme) error{
+	AddToSchemes := runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,
 		aoapis.AddToScheme,
 		apiextensionsv1.AddToScheme,
 		operatorsv1.AddToScheme,
 		operatorsv1alpha1.AddToScheme,
-	})
+	}
+	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
+		panic(fmt.Errorf("could not load schemes: %w", err))
+	}
 
 	Config = ctrl.GetConfigOrDie()
 
@@ -128,15 +131,6 @@ func PrintPodStatusAndLogs(namespace string) error {
 		}
 	}
 	return nil
-}
-
-func addAPIsToScheme(scheme *runtime.Scheme, schemeAdders []func(s *runtime.Scheme) error) {
-	for _, addToScheme := range schemeAdders {
-		err := addToScheme(scheme)
-		if err != nil {
-			panic(fmt.Errorf("could not load scheme: %w", err))
-		}
-	}
 }
 
 func reportPodStatus(ctx context.Context, pod *corev1.Pod) error {
