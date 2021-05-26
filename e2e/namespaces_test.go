@@ -29,6 +29,7 @@ func TestNamespaceCreation(t *testing.T) {
 			Name: "addon-c01m94lbi",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-c01m94lbi",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-oibabdsoi"},
 				{Name: "namespace-kuikojsag"},

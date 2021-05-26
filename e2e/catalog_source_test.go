@@ -31,6 +31,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-oisafbo12",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-onbgdions"},
 				{Name: "namespace-pioghfndb"},

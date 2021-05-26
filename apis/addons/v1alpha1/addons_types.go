@@ -6,7 +6,8 @@ import (
 
 // AddonSpec defines the desired state of Addon.
 type AddonSpec struct {
-	// Human readable name for this addon
+	// Human readable name for this addon.
+	// +kubebuilder:validation:MinLength=1
 	DisplayName string `json:"displayName"`
 
 	// Defines a list of Kubernetes Namespaces that belong to this Addon.
@@ -39,6 +40,7 @@ type AddonInstallCommon struct {
 
 	// Defines the CatalogSource image.
 	// Please only use hashes and no tags here!
+	// +kubebuilder:validation:MinLength=1
 	CatalogSourceImage string `json:"catalogSourceImage"`
 }
 

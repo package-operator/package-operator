@@ -40,7 +40,8 @@ spec:
             description: AddonSpec defines the desired state of Addon.
             properties:
               displayName:
-                description: Human readable name for this addon
+                description: Human readable name for this addon.
+                minLength: 1
                 type: string
               install:
                 description: 'Defines how an Addon is installed. This field is immutable. TODO: enforce immutablity in webhook'
@@ -50,6 +51,7 @@ spec:
                     properties:
                       catalogSourceImage:
                         description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        minLength: 1
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
@@ -63,6 +65,7 @@ spec:
                     properties:
                       catalogSourceImage:
                         description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        minLength: 1
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
