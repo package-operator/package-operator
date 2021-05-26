@@ -36,6 +36,7 @@ type AddonInstallSpec struct {
 // Common Addon installation parameters.
 type AddonInstallCommon struct {
 	// Namespace to install the Addon into.
+	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace"`
 
 	// Defines the CatalogSource image.
@@ -70,6 +71,7 @@ const (
 
 type AddonNamespace struct {
 	// Name of the KubernetesNamespace.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
 

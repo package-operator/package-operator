@@ -55,6 +55,7 @@ spec:
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
+                        minLength: 1
                         type: string
                     required:
                     - catalogSourceImage
@@ -69,6 +70,7 @@ spec:
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
+                        minLength: 1
                         type: string
                     required:
                     - catalogSourceImage
@@ -89,6 +91,7 @@ spec:
                   properties:
                     name:
                       description: Name of the KubernetesNamespace.
+                      minLength: 1
                       type: string
                   required:
                   - name
