@@ -29,6 +29,7 @@ func TestNamespaceCreation(t *testing.T) {
 			Name: "addon-c01m94lbi",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-c01m94lbi",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-oibabdsoi"},
 				{Name: "namespace-kuikojsag"},
@@ -37,7 +38,8 @@ func TestNamespaceCreation(t *testing.T) {
 				Type: addonsv1alpha1.AllNamespaces,
 				AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
 					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
-						Namespace: "namespace-oibabdsoi",
+						Namespace:          "namespace-oibabdsoi",
+						CatalogSourceImage: testCatalogSourceImage,
 					},
 				},
 			},

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -47,28 +48,20 @@ var (
 
 func init() {
 	// Client/Scheme setup.
-	err := clientgoscheme.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
+	AddToSchemes := runtime.SchemeBuilder{
+		clientgoscheme.AddToScheme,
+		aoapis.AddToScheme,
+		apiextensionsv1.AddToScheme,
+		operatorsv1.AddToScheme,
+		operatorsv1alpha1.AddToScheme,
 	}
-
-	err = aoapis.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = apiextensionsv1.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = operatorsv1.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
+	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
+		panic(fmt.Errorf("could not load schemes: %w", err))
 	}
 
 	Config = ctrl.GetConfigOrDie()
 
+	var err error
 	Client, err = client.New(Config, client.Options{
 		Scheme: Scheme,
 	})

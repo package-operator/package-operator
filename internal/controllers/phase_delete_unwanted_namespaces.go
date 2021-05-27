@@ -12,7 +12,7 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-// Ensure cleanup of namespaces that are not needed anymore for the given addon resource
+// Ensure cleanup of Namespaces that are not needed anymore for the given Addon resource
 func (r *AddonReconciler) ensureDeletionOfUnwantedNamespaces(
 	ctx context.Context, addon *addonsv1alpha1.Addon) error {
 	currentNamespaces, err := getOwnedNamespacesViaCommonLabels(ctx, r.Client, addon)
@@ -41,7 +41,7 @@ func (r *AddonReconciler) ensureDeletionOfUnwantedNamespaces(
 	return nil
 }
 
-// Ensure that the given namespace is deleted
+// Ensure that the given Namespace is deleted
 func ensureNamespaceDeletion(ctx context.Context, c client.Client, name string) error {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -49,14 +49,14 @@ func ensureNamespaceDeletion(ctx context.Context, c client.Client, name string) 
 		},
 	}
 	err := c.Delete(ctx, namespace)
-	// don't propagate error if the namespace is already gone
+	// don't propagate error if the Namespace is already gone
 	if !k8sApiErrors.IsNotFound(err) {
 		return err
 	}
 	return nil
 }
 
-// Get all namespaces that have common labels matching the given addon resource
+// Get all Namespaces that have common labels matching the given Addon resource
 func getOwnedNamespacesViaCommonLabels(
 	ctx context.Context, c client.Client, addon *addonsv1alpha1.Addon) ([]corev1.Namespace, error) {
 	selector := commonLabelsAsLabelSelector(addon)

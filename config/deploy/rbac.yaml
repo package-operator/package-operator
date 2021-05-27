@@ -69,6 +69,7 @@ rules:
   - operators.coreos.com
   resources:
   - operatorgroups
+  - catalogsources
   verbs:
   - create
   - delete

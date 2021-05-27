@@ -8,6 +8,7 @@ import (
 	"os"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,6 +28,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = aoapis.AddToScheme(scheme)
 	_ = operatorsv1.AddToScheme(scheme)
+	_ = operatorsv1alpha1.AddToScheme(scheme)
 }
 
 func main() {
