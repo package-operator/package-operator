@@ -16,8 +16,8 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-// Ensure existence of namespaces specified in the given addon resource
-// returns a bool that signals the caller to stop reconilation and retry later
+// Ensure existence of Namespaces specified in the given Addon resource
+// returns a bool that signals the caller to stop reconciliation and retry later
 func (r *AddonReconciler) ensureWantedNamespaces(
 	ctx context.Context, addon *addonsv1alpha1.Addon) (stopAndRetry bool, err error) {
 	var unreadyNamespaces []string
@@ -77,7 +77,7 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 	return false, nil
 }
 
-// Ensure a single namespace for the given addon resource
+// Ensure a single Namespace for the given Addon resource
 func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1alpha1.Addon, name string) (*corev1.Namespace, error) {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,7 +96,7 @@ func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1al
 }
 
 // reconciles a Namespace and returns the current object as observed.
-// prevents adoption of namespaces (unowned or owned by something else)
+// prevents adoption of Namespaces (unowned or owned by something else)
 func reconcileNamespace(ctx context.Context, c client.Client, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	currentNamespace := &corev1.Namespace{}
 
