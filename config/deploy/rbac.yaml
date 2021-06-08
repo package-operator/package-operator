@@ -11,6 +11,12 @@ metadata:
   namespace: addon-operator
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
