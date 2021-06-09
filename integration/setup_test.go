@@ -1,4 +1,4 @@
-package e2e_test
+package integration_test
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	"github.com/openshift/addon-operator/e2e"
+	"github.com/openshift/addon-operator/integration"
 )
 
 func Setup(t *testing.T) {
@@ -26,13 +26,13 @@ func Setup(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	objs := e2e.LoadObjectsFromDeploymentFiles(t)
+	objs := integration.LoadObjectsFromDeploymentFiles(t)
 
 	var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
-		err := e2e.Client.Create(ctx, &obj)
+		err := integration.Client.Create(ctx, &obj)
 		require.NoError(t, err)
 
 		t.Log("created: ", obj.GroupVersionKind().String(),
@@ -46,7 +46,7 @@ func Setup(t *testing.T) {
 	t.Run("API available", func(t *testing.T) {
 		addonCRD := &apiextensionsv1.CustomResourceDefinition{}
 		err := wait.PollImmediate(time.Second, 10*time.Second, func() (done bool, err error) {
-			err = e2e.Client.Get(ctx, types.NamespacedName{
+			err = integration.Client.Get(ctx, types.NamespacedName{
 				Name: "addons.addons.managed.openshift.io",
 			}, addonCRD)
 			if err != nil {
@@ -69,7 +69,7 @@ func Setup(t *testing.T) {
 
 		// check CRD API
 		addonList := &addonsv1alpha1.AddonList{}
-		err = e2e.Client.List(ctx, addonList)
+		err = integration.Client.List(ctx, addonList)
 		require.NoError(t, err)
 	})
 
@@ -79,7 +79,7 @@ func Setup(t *testing.T) {
 			deployment := &appsv1.Deployment{}
 			err := wait.PollImmediate(
 				time.Second, 5*time.Minute, func() (done bool, err error) {
-					err = e2e.Client.Get(
+					err = integration.Client.Get(
 						ctx, client.ObjectKey{
 							Name:      deploy.GetName(),
 							Namespace: deploy.GetNamespace(),

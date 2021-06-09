@@ -1,4 +1,4 @@
-package e2e_test
+package integration_test
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	"github.com/openshift/addon-operator/e2e"
+	"github.com/openshift/addon-operator/integration"
 )
 
 func TestAddon_OperatorGroup(t *testing.T) {
@@ -73,16 +73,16 @@ func TestAddon_OperatorGroup(t *testing.T) {
 			ctx := context.Background()
 			addon := test.addon
 
-			err := e2e.Client.Create(ctx, addon)
+			err := integration.Client.Create(ctx, addon)
 			require.NoError(t, err)
 			t.Cleanup(func() {
-				err := e2e.Client.Delete(ctx, addon)
+				err := integration.Client.Delete(ctx, addon)
 				if client.IgnoreNotFound(err) != nil {
 					t.Logf("could not clean up Addon %s: %v", addon.Name, err)
 				}
 			})
 
-			err = e2e.WaitForObject(
+			err = integration.WaitForObject(
 				t, 1*time.Minute, addon, "to be Available",
 				func(obj client.Object) (done bool, err error) {
 					a := obj.(*addonsv1alpha1.Addon)
@@ -93,7 +93,7 @@ func TestAddon_OperatorGroup(t *testing.T) {
 
 			// check that there is an OperatorGroup in the target namespace.
 			operatorGroup := &operatorsv1.OperatorGroup{}
-			require.NoError(t, e2e.Client.Get(ctx, client.ObjectKey{
+			require.NoError(t, integration.Client.Get(ctx, client.ObjectKey{
 				Name:      addon.Name,
 				Namespace: test.targetNamespace,
 			}, operatorGroup))
