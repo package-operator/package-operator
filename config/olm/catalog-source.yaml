@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: addon-operator
+  namespace: olm
+spec:
+  sourceType: grpc
+  publisher: Red Hat
+  displayName: MTSRE
+  image: quay.io/app-sre/addon-operator-index:main

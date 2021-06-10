@@ -8,6 +8,7 @@ KIND_VERSION:=v0.10.0
 YQ_VERSION:=v4@v4.7.0
 GOIMPORTS_VERSION:=v0.1.0
 GOLANGCI_LINT_VERSION:=v1.39.0
+OPM_VERSION:=v1.17.2
 
 # Build Flags
 export CGO_ENABLED:=0
@@ -144,6 +145,21 @@ $(GOLANGCI_LINT):
 	@mkdir -p "$(dir $(GOLANGCI_LINT))"
 	@touch "$(GOLANGCI_LINT)"
 	@echo
+
+OPM:=$(DEPENDENCIES)/opm/$(OPM_VERSION)
+$(OPM):
+	@echo "installing opm $(OPM_VERSION)..."
+	$(eval OPM_TMP := $(shell mktemp -d))
+	@(cd "$(OPM_TMP)"; \
+		curl -L --fail \
+		https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/linux-amd64-opm -o opm; \
+		chmod +x opm; \
+		mv opm $(GOBIN); \
+	) 2>&1 | sed 's/^/  /'
+	@rm -rf "$(OPM_TMP)" "$(dir $(OPM))" \
+		&& mkdir -p "$(dir $(OPM))" \
+		&& touch "$(OPM)" \
+		&& echo
 
 # installs all project dependencies
 dependencies: \
@@ -305,6 +321,53 @@ apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
 	) 2>&1 | sed 's/^/  /'
 .PHONY: apply-ao
 
+# ------
+# OLM
+# ------
+
+# Template Cluster Service Version / CSV
+# By setting the container image to deploy.
+config/olm/addon-operator.csv.yaml: FORCE $(YQ)
+	@yq eval '.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)" | .metadata.annotations.containerImage = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
+	config/olm/addon-operator.csv.tpl.yaml > config/olm/addon-operator.csv.yaml
+
+# Bundle image contains the manifests and CSV for a single version of this operator.
+# The first few lines of the CRD file need to be removed:
+# https://github.com/operator-framework/operator-registry/issues/222
+build-image-addon-operator-bundle: \
+	clean-image-cache-addon-operator-bundle \
+	config/olm/addon-operator.csv.yaml
+	$(eval IMAGE_NAME := addon-operator-bundle)
+	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@(source hack/determine-container-runtime.sh; \
+		mkdir -p ".cache/image/${IMAGE_NAME}/manifests"; \
+		mkdir -p ".cache/image/${IMAGE_NAME}/metadata"; \
+		cp -a "config/olm/addon-operator.csv.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
+		cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata"; \
+		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
+		tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml"; \
+		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" ".cache/image/${IMAGE_NAME}"; \
+		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
+		echo) 2>&1 | sed 's/^/  /'
+.PHONY: build-image-addon-operator-bundle
+
+# Index image contains a list of bundle images for use in a CatalogSource.
+# Warning!
+# The bundle image needs to be pushed so the opm CLI can create the index image.
+build-image-addon-operator-index: $(OPM) \
+	clean-image-cache-addon-operator-index \
+	| build-image-addon-operator-bundle \
+	push-image-addon-operator-bundle
+	$(eval IMAGE_NAME := addon-operator-index)
+	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@(source hack/determine-container-runtime.sh; \
+		opm index add --container-tool $$CONTAINER_COMMAND \
+		--bundles ${IMAGE_ORG}/addon-operator-bundle:${VERSION} \
+		--tag ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}; \
+		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
+		echo) 2>&1 | sed 's/^/  /'
+.PHONY: build-image-addon-operator-index
+
 # ----------------
 # Container Images
 # ----------------
@@ -318,6 +381,11 @@ push-images: \
 .PHONY: push-images
 
 .SECONDEXPANSION:
+# cleans the built image .tar and image build directory
+clean-image-cache-%:
+	@rm -rf ".cache/image/$*" ".cache/image/$*.tar"
+	@mkdir -p ".cache/image/$*"
+
 build-image-%: bin/linux_amd64/$$*
 	@echo "building image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
@@ -326,7 +394,6 @@ build-image-%: bin/linux_amd64/$$*
 		cp -a "bin/linux_amd64/$*" ".cache/image/$*"; \
 		cp -a "config/docker/$*.Dockerfile" ".cache/image/$*/Dockerfile"; \
 		cp -a "config/docker/passwd" ".cache/image/$*/passwd"; \
-		echo "building ${IMAGE_ORG}/$*:${VERSION}"; \
 		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/$*:${VERSION}" ".cache/image/$*"; \
 		$$CONTAINER_COMMAND image save -o ".cache/image/$*.tar" "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
