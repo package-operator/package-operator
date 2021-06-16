@@ -288,7 +288,6 @@ run-%: generate
 		./cmd/$*/main.go \
 			-pprof-addr="127.0.0.1:8065" \
 			-metrics-addr="0"
-.PHONY: run
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
 dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
@@ -359,7 +358,7 @@ load-addon-operator: build-image-addon-operator-manager
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
-			--name addon-operator-e2e;
+			--name=$(KIND_CLUSTER_NAME);
 .PHONY: load-addon-operator
 
 # Template deployment
