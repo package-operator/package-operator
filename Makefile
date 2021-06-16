@@ -87,12 +87,10 @@ clean:
 # ---------
 
 ## Forces GOOS=linux GOARCH=amd64. For bin/%.
-bin/linux_amd64/%: \
-	GOARGS = GOOS=linux GOARCH=amd64
+bin/linux_amd64/%: GOARGS = GOOS=linux GOARCH=amd64
 
 ## Builds binaries from cmd/%.
-bin/%: \
-	generate FORCE
+bin/%: generate FORCE
 	$(eval COMPONENT=$(shell basename $*))
 	@echo -e -n "compiling cmd/$(COMPONENT)...\n  "
 	$(GOARGS) go build -ldflags "-w $(LD_FLAGS)" -o bin/$* cmd/$(COMPONENT)/main.go
