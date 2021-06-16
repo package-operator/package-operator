@@ -275,7 +275,7 @@ test-e2e-short: config/deploy/deployment.yaml
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
 test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 ## Setup a local dev environment and execute the full e2e testsuite against it.
-test-e2e-local: | dev-setup test-e2e
+test-e2e-local: | dev-setup load-addon-operator test-e2e
 .PHONY: test-e2e-local
 
 # -------------------------
