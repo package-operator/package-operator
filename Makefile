@@ -26,9 +26,10 @@ UNAME_OS:=$(shell uname -s)
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
-DEPENDENCIES:=.cache/dependencies/$(UNAME_OS)/$(UNAME_ARCH)
-export GOBIN?=$(abspath .cache/dependencies/bin)
-export PATH:=$(GOBIN):$(PATH)
+DEPENDENCIES:=.cache/dependencies
+DEPENDENCY_BIN:=$(abspath $(DEPENDENCIES)/bin)
+DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/versions)
+export PATH:=$(DEPENDENCY_BIN):$(PATH)
 
 # Config
 KIND_KUBECONFIG_DIR:=.cache/e2e
@@ -99,98 +100,49 @@ bin/%: generate FORCE
 # empty force target to ensure a target always executes.
 FORCE:
 
-# ------------------------------
-##@ Dependencies (project local)
-# ------------------------------
+# ----------------------------
+# Dependencies (project local)
+# ----------------------------
 
-KIND:=$(DEPENDENCIES)/kind/$(KIND_VERSION)
+# go-get-tool will 'go get' any package $1 if file $2 does not exist.
+define go-get-tool
+@[ -f "$(2)" ] || { \
+	TMP_DIR=$$(mktemp -d); \
+	cd $$TMP_DIR; \
+	go mod init tmp; \
+	echo "Downloading $(1) to $(DEPENDENCIES)/bin"; \
+	GOBIN="$(DEPENDENCY_BIN)" go get "$(1)"; \
+	rm -rf $$TMP_DIR; \
+	touch "$(2)"; \
+}
+endef
+
+KIND:=$(DEPENDENCY_VERSIONS)/kind/$(KIND_VERSION)
 $(KIND):
-	@echo "installing kind $(KIND_VERSION)..."
-	$(eval KIND_TMP := $(shell mktemp -d))
-	@(cd "$(KIND_TMP)"; \
-		go mod init tmp; \
-		go get "sigs.k8s.io/kind@$(KIND_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(KIND_TMP)" "$(dir $(KIND))"
-	@mkdir -p "$(dir $(KIND))"
-	@touch "$(KIND)"
-	@echo
+	@$(call go-get-tool, sigs.k8s.io/kind@$(KIND_VERSION), $(KIND))
 
-## Setup kind (kubernetes in docker).
-kind: $(KIND)
-.PHONY: kind
-
-CONTROLLER_GEN:=$(DEPENDENCIES)/controller-gen/$(CONTROLLER_GEN_VERSION)
+CONTROLLER_GEN:=$(DEPENDENCY_VERSIONS)/controller-gen/$(CONTROLLER_GEN_VERSION)
 $(CONTROLLER_GEN):
-	@echo "installing controller-gen $(CONTROLLER_GEN_VERSION)..."
-	$(eval CONTROLLER_GEN_TMP := $(shell mktemp -d))
-	@(cd "$(CONTROLLER_GEN_TMP)"; \
-		go mod init tmp; \
-		go get "sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(CONTROLLER_GEN_TMP)" "$(dir $(CONTROLLER_GEN))"
-	@mkdir -p "$(dir $(CONTROLLER_GEN))"
-	@touch "$(CONTROLLER_GEN)"
-	@echo
+	@$(call go-get-tool, sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION), $(CONTROLLER_GEN))
 
-## Setup controller-gen.
-controller-gen:
-.PHONY: controller-gen
-
-YQ:=$(DEPENDENCIES)/yq/$(YQ_VERSION)
+YQ:=$(DEPENDENCY_VERSIONS)/yq/$(YQ_VERSION)
 $(YQ):
-	@echo "installing yq $(YQ_VERSION)..."
-	$(eval YQ_TMP := $(shell mktemp -d))
-	@(cd "$(YQ_TMP)"; \
-		go mod init tmp; \
-		go get "github.com/mikefarah/yq/$(YQ_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(YQ_TMP)" "$(dir $(YQ))"
-	@mkdir -p "$(dir $(YQ))"
-	@touch "$(YQ)"
-	@echo
+	@$(call go-get-tool, github.com/mikefarah/yq/$(YQ_VERSION), $(YQ))
 
-## Setup yq.
-yq:
-.PHONY: yq
-
-GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
+GOIMPORTS:=$(DEPENDENCY_VERSIONS)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
-	@echo "installing goimports $(GOIMPORTS_VERSION)..."
-	$(eval GOIMPORTS_TMP := $(shell mktemp -d))
-	@(cd "$(GOIMPORTS_TMP)"; \
-		go mod init tmp; \
-		go get "golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOIMPORTS_TMP)" "$(dir $(GOIMPORTS))"
-	@mkdir -p "$(dir $(GOIMPORTS))"
-	@touch "$(GOIMPORTS)"
-	@echo
+	@$(call go-get-tool, golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION), $(GOIMPORTS))
 
+# Setup goimports.
 # alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
-## Setup goimports.
 goimports: $(GOIMPORTS)
 .PHONY: goimports
 
-# setup golangci-lint
-GOLANGCI_LINT:=$(DEPENDENCIES)/golangci-lint/$(GOLANGCI_LINT_VERSION)
+GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
-	@echo "installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
-	$(eval GOLANGCI_LINT_TMP := $(shell mktemp -d))
-	@(cd "$(GOLANGCI_LINT_TMP)"; \
-		go mod init tmp; \
-		go get "github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))"
-	@mkdir -p "$(dir $(GOLANGCI_LINT))"
-	@touch "$(GOLANGCI_LINT)"
-	@echo
+	@$(call go-get-tool, github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION), $(GOLANGCI_LINT))
 
-## Setup golangci-lint.
-golangci-lint: $(GOLANGCI_LINT)
-.PHONY: golangci-lint
-
-OPM:=$(DEPENDENCIES)/opm/$(OPM_VERSION)
+OPM:=$(DEPENDENCY_VERSIONS)/opm/$(OPM_VERSION)
 $(OPM):
 	@echo "installing opm $(OPM_VERSION)..."
 	$(eval OPM_TMP := $(shell mktemp -d))
@@ -204,19 +156,6 @@ $(OPM):
 		&& mkdir -p "$(dir $(OPM))" \
 		&& touch "$(OPM)" \
 		&& echo
-
-## Setup opm (OLM registry tool).
-opm: $(OPM)
-.PHONY: opm
-
-## Installs all project dependencies.
-dependencies: \
-	$(KIND) \
-	$(CONTROLLER_GEN) \
-	$(YQ) \
-	$(GOIMPORTS) \
-	$(GOLANGCI_LINT)
-.PHONY: dependencies
 
 # ------------
 ##@ Generators
@@ -281,6 +220,15 @@ test-e2e-local: | dev-setup load-addon-operator test-e2e
 # -------------------------
 ##@ Development Environment
 # -------------------------
+
+## Installs all project dependencies into $(PWD)/.cache/bin
+dependencies: \
+	$(KIND) \
+	$(CONTROLLER_GEN) \
+	$(YQ) \
+	$(GOIMPORTS) \
+	$(GOLANGCI_LINT)
+.PHONY: dependencies
 
 ## Run cmd/% against $KUBECONFIG.
 run-%: generate
