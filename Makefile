@@ -113,25 +113,26 @@ define go-get-tool
 	echo "Downloading $(1) to $(DEPENDENCIES)/bin"; \
 	GOBIN="$(DEPENDENCY_BIN)" go get "$(1)"; \
 	rm -rf $$TMP_DIR; \
+	mkdir -p "$(dir $(2))"; \
 	touch "$(2)"; \
 }
 endef
 
 KIND:=$(DEPENDENCY_VERSIONS)/kind/$(KIND_VERSION)
 $(KIND):
-	@$(call go-get-tool, sigs.k8s.io/kind@$(KIND_VERSION), $(KIND))
+	@$(call go-get-tool,sigs.k8s.io/kind@$(KIND_VERSION),$(KIND))
 
 CONTROLLER_GEN:=$(DEPENDENCY_VERSIONS)/controller-gen/$(CONTROLLER_GEN_VERSION)
 $(CONTROLLER_GEN):
-	@$(call go-get-tool, sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION), $(CONTROLLER_GEN))
+	@$(call go-get-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN))
 
 YQ:=$(DEPENDENCY_VERSIONS)/yq/$(YQ_VERSION)
 $(YQ):
-	@$(call go-get-tool, github.com/mikefarah/yq/$(YQ_VERSION), $(YQ))
+	@$(call go-get-tool,github.com/mikefarah/yq/$(YQ_VERSION),$(YQ))
 
 GOIMPORTS:=$(DEPENDENCY_VERSIONS)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
-	@$(call go-get-tool, golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION), $(GOIMPORTS))
+	@$(call go-get-tool,golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION),$(GOIMPORTS))
 
 # Setup goimports.
 # alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
@@ -140,7 +141,7 @@ goimports: $(GOIMPORTS)
 
 GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
-	@$(call go-get-tool, github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION), $(GOLANGCI_LINT))
+	@$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT))
 
 OPM:=$(DEPENDENCY_VERSIONS)/opm/$(OPM_VERSION)
 $(OPM):
