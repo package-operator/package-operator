@@ -43,6 +43,64 @@ Before making your first commit, please consider installing [pre-commit](https:/
 
 Pre-commit is running some basic checks for every commit and makes our code reviews easier and prevents wasting CI resources.
 
-### New Features
+### Quickstart / Develop Integration tests
 
-### New Tests
+Just wanting to play with the operator deployed on a cluster?
+
+```shell
+# In checkout directory:
+make test-setup
+```
+
+This command will:
+1. Setup a cluster via kind
+2. Install OLM and OpenShift Console
+3. Compile your checkout
+4. Build containers
+5. Load them into the kind cluster (no registry needed)
+6. Install the Addon Operator
+
+This will give you a quick environment for playing with the operator.
+
+You can also use it to develop integration tests, against a complete setup of the Addon Operator:
+
+```shell
+# edit tests
+
+# Run all e2e tests and skip setup and teardown,
+# as the operator is already installed by: make test-setup
+make test-e2e-short
+
+# repeat!
+```
+
+### Iterate fast!
+
+To iterate fast on code changes and experiment, the operator can also run out-of-cluster. This way we don't have to rebuild images, load them into the cluster and redeploy the operator for every code change.
+
+Prepare the environment:
+
+```shell
+make dev-setup
+```
+
+This command will:
+1. Setup a cluster via kind
+2. Install OLM and OpenShift Console
+
+```shell
+# just install Addon Operator CRDs
+# into the cluster.
+make setup-addon-operator-crds
+
+# Make sure we run against the new kind cluster.
+export KUBECONFIG=$PWD/.cache/e2e/kubeconfig
+
+# run the operator out-of-cluster:
+# Mind your `KUBECONFIG` environment variable!
+make run-addon-operator-manager
+```
+
+**Warning:**
+- Your code runs as `cluster-admin`, you might run into permission errors when running in-cluster.
+- Code-Generators need to be re-run and CRDs re-applied via `make setup-addon-operator-crds` when code under `./apis` is changed.

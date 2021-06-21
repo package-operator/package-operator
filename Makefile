@@ -36,7 +36,6 @@ KIND_KUBECONFIG_DIR:=.cache/e2e
 KIND_KUBECONFIG:=$(KIND_KUBECONFIG_DIR)/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
-API_BASE:=addons.managed.openshift.io
 export SKIP_TEARDOWN?=
 KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
 
@@ -325,6 +324,13 @@ setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-addon-operator
+
+## Installs Addon Operator CRDs in to the currently selected cluster.
+setup-addon-operator-crds: generate
+	@for crd in $(wildcard config/deploy/*.openshift.io_*.yaml); do \
+		kubectl apply -f $$crd; \
+	done
+.PHONY: setup-addon-operator-crds
 
 # ---
 # OLM
