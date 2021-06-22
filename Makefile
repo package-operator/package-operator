@@ -247,7 +247,7 @@ dev-setup: | \
 .PHONY: dev-setup
 
 ## Setup a local env for integration/e2e test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-e2e-short.
-test-setup: |
+test-setup: | \
 	dev-setup \
 	setup-addon-operator
 .PHONY: test-setup
