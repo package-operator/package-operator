@@ -104,3 +104,17 @@ make run-addon-operator-manager
 **Warning:**
 - Your code runs as `cluster-admin`, you might run into permission errors when running in-cluster.
 - Code-Generators need to be re-run and CRDs re-applied via `make setup-addon-operator-crds` when code under `./apis` is changed.
+
+## Troubleshooting
+
+**[Set `nf_conntrack_max`](https://github.com/kubernetes-sigs/kind/issues/2240)**
+
+When using docker to spin a new Kind cluster, `kube-proxy` would not start throwing this error:
+
+```
+I0511 11:47:28.965997       1 conntrack.go:100] Set sysctl 'net/netfilter/nf_conntrack_max' to XXXXXX
+F0511 11:47:28.966114       1 server.go:495] open /proc/sys/net/netfilter/nf_conntrack_max: permission denied
+```
+
+Make sure to:
+`sudo sysctl net/netfilter/nf_conntrack_max=<value>`, and add a drop-in file to `/etc/sysctl.d/99-custom.conf` to set the kernel parameters permanently.
