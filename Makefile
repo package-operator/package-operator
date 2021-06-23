@@ -78,7 +78,7 @@ version:
 .PHONY: version
 
 ## Cleans cached binaries, dependencies and container image tars.
-clean:
+clean: delete-kind-cluster
 	@rm -rf bin .cache
 .PHONY: clean
 
