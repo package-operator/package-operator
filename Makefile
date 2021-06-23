@@ -26,127 +26,123 @@ UNAME_OS:=$(shell uname -s)
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
-DEPENDENCIES:=.cache/dependencies/$(UNAME_OS)/$(UNAME_ARCH)
-export GOBIN?=$(abspath .cache/dependencies/bin)
-export PATH:=$(GOBIN):$(PATH)
+DEPENDENCIES:=.cache/dependencies
+DEPENDENCY_BIN:=$(abspath $(DEPENDENCIES)/bin)
+DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/versions)
+export PATH:=$(DEPENDENCY_BIN):$(PATH)
 
 # Config
 KIND_KUBECONFIG_DIR:=.cache/e2e
 KIND_KUBECONFIG:=$(KIND_KUBECONFIG_DIR)/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
-API_BASE:=addons.managed.openshift.io
 export SKIP_TEARDOWN?=
+KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
 
 # Container
 IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 
-# -------
-# Compile
-# -------
+# COLORS
+GREEN  := $(shell tput -Txterm setaf 2)
+YELLOW := $(shell tput -Txterm setaf 3)
+RESET  := $(shell tput -Txterm sgr0)
 
+# ---------
+##@ General
+# ---------
+
+# Default build target - must be first!
 all: \
 	bin/linux_amd64/addon-operator-manager
 
+## Display this help.
+help:
+	@echo 'Usage:'
+	@echo '  ${YELLOW}make${RESET} ${GREEN}<target>${RESET}'
+	@awk \
+	'/^[^[:space:]]+:/ { \
+		helpMessage = match(lastLine, /^## (.*)/); \
+		if (helpMessage) { \
+			helpCommand = substr($$1, 0, index($$1, ":")-1); \
+			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
+			printf "  ${GREEN}%-22s${RESET}%s\n", helpCommand, helpMessage; \
+		} \
+	} \
+	/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } \
+	{ lastLine = $$0 }' $(MAKEFILE_LIST)
+
+## Prints version as used by build commands.
+version:
+	@echo $(VERSION)
+.PHONY: version
+
+## Cleans cached binaries, dependencies and container image tars.
+clean: delete-kind-cluster
+	@rm -rf bin .cache
+.PHONY: clean
+
+# ---------
+##@ Compile
+# ---------
+
+## Forces GOOS=linux GOARCH=amd64. For bin/%.
 bin/linux_amd64/%: GOARGS = GOOS=linux GOARCH=amd64
 
+## Builds binaries from cmd/%.
 bin/%: generate FORCE
 	$(eval COMPONENT=$(shell basename $*))
 	@echo -e -n "compiling cmd/$(COMPONENT)...\n  "
 	$(GOARGS) go build -ldflags "-w $(LD_FLAGS)" -o bin/$* cmd/$(COMPONENT)/main.go
 	@echo
 
+# empty force target to ensure a target always executes.
 FORCE:
 
-# prints the version as used by build commands.
-version:
-	@echo $(VERSION)
-.PHONY: version
+# ----------------------------
+# Dependencies (project local)
+# ----------------------------
 
-clean:
-	@rm -rf bin .cache
-.PHONY: clean
+# go-get-tool will 'go get' any package $1 if file $2 does not exist.
+define go-get-tool
+@[ -f "$(2)" ] || { \
+	TMP_DIR=$$(mktemp -d); \
+	cd $$TMP_DIR; \
+	go mod init tmp; \
+	echo "Downloading $(1) to $(DEPENDENCIES)/bin"; \
+	GOBIN="$(DEPENDENCY_BIN)" go get "$(1)"; \
+	rm -rf $$TMP_DIR; \
+	mkdir -p "$(dir $(2))"; \
+	touch "$(2)"; \
+}
+endef
 
-# ------------
-# Dependencies
-# ------------
-
-# setup kind
-KIND:=$(DEPENDENCIES)/kind/$(KIND_VERSION)
+KIND:=$(DEPENDENCY_VERSIONS)/kind/$(KIND_VERSION)
 $(KIND):
-	@echo "installing kind $(KIND_VERSION)..."
-	$(eval KIND_TMP := $(shell mktemp -d))
-	@(cd "$(KIND_TMP)"; \
-		go mod init tmp; \
-		go get "sigs.k8s.io/kind@$(KIND_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(KIND_TMP)" "$(dir $(KIND))"
-	@mkdir -p "$(dir $(KIND))"
-	@touch "$(KIND)"
-	@echo
+	@$(call go-get-tool,sigs.k8s.io/kind@$(KIND_VERSION),$(KIND))
 
-# setup controller-gen
-CONTROLLER_GEN:=$(DEPENDENCIES)/controller-gen/$(CONTROLLER_GEN_VERSION)
+CONTROLLER_GEN:=$(DEPENDENCY_VERSIONS)/controller-gen/$(CONTROLLER_GEN_VERSION)
 $(CONTROLLER_GEN):
-	@echo "installing controller-gen $(CONTROLLER_GEN_VERSION)..."
-	$(eval CONTROLLER_GEN_TMP := $(shell mktemp -d))
-	@(cd "$(CONTROLLER_GEN_TMP)"; \
-		go mod init tmp; \
-		go get "sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(CONTROLLER_GEN_TMP)" "$(dir $(CONTROLLER_GEN))"
-	@mkdir -p "$(dir $(CONTROLLER_GEN))"
-	@touch "$(CONTROLLER_GEN)"
-	@echo
+	@$(call go-get-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN))
 
-# setup yq
-YQ:=$(DEPENDENCIES)/yq/$(YQ_VERSION)
+YQ:=$(DEPENDENCY_VERSIONS)/yq/$(YQ_VERSION)
 $(YQ):
-	@echo "installing yq $(YQ_VERSION)..."
-	$(eval YQ_TMP := $(shell mktemp -d))
-	@(cd "$(YQ_TMP)"; \
-		go mod init tmp; \
-		go get "github.com/mikefarah/yq/$(YQ_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(YQ_TMP)" "$(dir $(YQ))"
-	@mkdir -p "$(dir $(YQ))"
-	@touch "$(YQ)"
-	@echo
+	@$(call go-get-tool,github.com/mikefarah/yq/$(YQ_VERSION),$(YQ))
 
-# setup goimports
-GOIMPORTS:=$(DEPENDENCIES)/goimports/$(GOIMPORTS_VERSION)
+GOIMPORTS:=$(DEPENDENCY_VERSIONS)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
-	@echo "installing goimports $(GOIMPORTS_VERSION)..."
-	$(eval GOIMPORTS_TMP := $(shell mktemp -d))
-	@(cd "$(GOIMPORTS_TMP)"; \
-		go mod init tmp; \
-		go get "golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOIMPORTS_TMP)" "$(dir $(GOIMPORTS))"
-	@mkdir -p "$(dir $(GOIMPORTS))"
-	@touch "$(GOIMPORTS)"
-	@echo
+	@$(call go-get-tool,golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION),$(GOIMPORTS))
 
+# Setup goimports.
 # alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
 goimports: $(GOIMPORTS)
 .PHONY: goimports
 
-# setup golangci-lint
-GOLANGCI_LINT:=$(DEPENDENCIES)/golangci-lint/$(GOLANGCI_LINT_VERSION)
+GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
-	@echo "installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
-	$(eval GOLANGCI_LINT_TMP := $(shell mktemp -d))
-	@(cd "$(GOLANGCI_LINT_TMP)"; \
-		go mod init tmp; \
-		go get "github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(GOLANGCI_LINT_TMP)" "$(dir $(GOLANGCI_LINT))"
-	@mkdir -p "$(dir $(GOLANGCI_LINT))"
-	@touch "$(GOLANGCI_LINT)"
-	@echo
+	@$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT))
 
-OPM:=$(DEPENDENCIES)/opm/$(OPM_VERSION)
+OPM:=$(DEPENDENCY_VERSIONS)/opm/$(OPM_VERSION)
 $(OPM):
 	@echo "installing opm $(OPM_VERSION)..."
 	$(eval OPM_TMP := $(shell mktemp -d))
@@ -161,31 +157,11 @@ $(OPM):
 		&& touch "$(OPM)" \
 		&& echo
 
-# installs all project dependencies
-dependencies: \
-	$(KIND) \
-	$(CONTROLLER_GEN) \
-	$(YQ) \
-	$(GOIMPORTS) \
-	$(GOLANGCI_LINT)
-.PHONY: dependencies
+# ------------
+##@ Generators
+# ------------
 
-# ----------
-# Deployment
-# ----------
-
-# Run against the configured Kubernetes cluster in ~/.kube/config or $KUBECONFIG
-run: generate
-	go run -ldflags "-w $(LD_FLAGS)" \
-		./cmd/addon-operator-manager/main.go \
-			-pprof-addr="127.0.0.1:8065"
-.PHONY: run
-
-# ----------
-# Generators
-# ----------
-
-# Generate code and manifests e.g. CRD, RBAC etc.
+## Generate deepcopy code and kubernetes manifests.
 generate: $(CONTROLLER_GEN)
 	@echo "generating kubernetes manifests..."
 	@controller-gen crd:crdVersions=v1 \
@@ -208,48 +184,75 @@ else
 endif
 .PHONY: sandwich
 
-# -------------------
-# Testing and Linting
-# -------------------
+# ---------------------
+##@ Testing and Linting
+# ---------------------
 
-# Runs code-generators, checks for clean directory and lints the source code.
+## Runs code-generators, checks for clean directory and lints the source code.
 lint: generate $(GOLANGCI_LINT)
 	go fmt ./...
 	@hack/validate-directory-clean.sh
 	golangci-lint run ./... --deadline=15m
 .PHONY: lint
 
-# Runs unittests
+## Runs code-generators and unittests.
 test-unit: generate
 	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
 .PHONY: test-unit
 
-# Runs the E2E testsuite against the currently selected cluster.
-# FORCE_FLAGS ensures that the tests will not be cached
-FORCE_FLAGS = -count=1
+## Runs the E2E testsuite against the current $KUBECONFIG cluster.
 test-e2e: config/deploy/deployment.yaml
 	@echo "running e2e tests..."
-	@go test -v $(FORCE_FLAGS) ./e2e/...
+	@go test -v -count=1 ./e2e/...
 .PHONY: test-e2e
 
-# Sets up a local kind cluster and runs E2E tests against this local cluster.
-test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
-test-e2e-local: | setup-e2e-kind test-e2e
-.PHONY: test-e2e-local
-
-# Run the E2E testsuite after installing the AddonOperator into the cluster.
-test-e2e-ci: | apply-ao test-e2e
-.PHONY: test-e2e-ci
+## Runs the E2E testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
+test-e2e-short: config/deploy/deployment.yaml
+	@echo "running [short] e2e tests..."
+	@go test -v -count=1 -short ./e2e/...
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
-setup-e2e-kind: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
-setup-e2e-kind: | \
-	create-kind-cluster \
-	apply-olm \
-	apply-openshift-console \
-	load-ao
-.PHONY: setup-e2e-kind
+test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
+## Setup a local dev environment and execute the full e2e testsuite against it.
+test-e2e-local: | dev-setup load-addon-operator test-e2e
+.PHONY: test-e2e-local
 
+# -------------------------
+##@ Development Environment
+# -------------------------
+
+## Installs all project dependencies into $(PWD)/.cache/bin
+dependencies: \
+	$(KIND) \
+	$(CONTROLLER_GEN) \
+	$(YQ) \
+	$(GOIMPORTS) \
+	$(GOLANGCI_LINT)
+.PHONY: dependencies
+
+## Run cmd/% against $KUBECONFIG.
+run-%: generate
+	go run -ldflags "-w $(LD_FLAGS)" \
+		./cmd/$*/main.go \
+			-pprof-addr="127.0.0.1:8065" \
+			-metrics-addr="0"
+
+# make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
+dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
+## Setup a local env for feature development. (Kind, OLM, OKD Console)
+dev-setup: | \
+	create-kind-cluster \
+	setup-olm \
+	setup-okd-console
+.PHONY: dev-setup
+
+## Setup a local env for integration/e2e test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-e2e-short.
+test-setup: | \
+	dev-setup \
+	setup-addon-operator
+.PHONY: test-setup
+
+## Creates an empty kind cluster to be used for local development.
 create-kind-cluster: $(KIND)
 	@echo "creating kind cluster addon-operator-e2e..."
 	@mkdir -p .cache/e2e
@@ -257,7 +260,7 @@ create-kind-cluster: $(KIND)
 		mkdir -p $(KIND_KUBECONFIG_DIR); \
 		$$KIND_COMMAND create cluster \
 			--kubeconfig=$(KIND_KUBECONFIG) \
-			--name="addon-operator-e2e"; \
+			--name=$(KIND_CLUSTER_NAME); \
 		if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
 			sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
 		fi; \
@@ -265,19 +268,20 @@ create-kind-cluster: $(KIND)
 	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster
 
+## Deletes the previously created kind cluster.
 delete-kind-cluster: $(KIND)
 	@echo "deleting kind cluster addon-operator-e2e..."
 	@(source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND delete cluster \
 			--kubeconfig="$(KIND_KUBECONFIG)" \
-			--name "addon-operator-e2e"; \
+			--name=$(KIND_CLUSTER_NAME); \
 		rm -rf "$(KIND_KUBECONFIG)"; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: delete-kind-cluster
 
-# Installs OLM (Operator Lifecycle Manager) into the currently selected cluster.
-apply-olm:
+## Setup OLM into the currently selected cluster.
+setup-olm:
 	@echo "installing OLM $(OLM_VERSION)..."
 	@(kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/crds.yaml; \
 		kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$(OLM_VERSION)/olm.yaml; \
@@ -287,31 +291,31 @@ apply-olm:
 		kubectl wait --for=condition=available deployment/catalog-operator -n olm --timeout=240s; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
-.PHONY: apply-olm
+.PHONY: setup-olm
 
-# Installs the OpenShift/OKD console into the currently selected cluster.
-apply-openshift-console:
+## Setup the OpenShift/OKD console into the currently selected cluster.
+setup-okd-console:
 	@echo "installing OpenShift console :latest..."
 	@(kubectl apply -f hack/openshift-console.yaml; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
-.PHONY: apply-openshift-console
+.PHONY: setup-okd-console
 
-# Load Addon Operator Image into kind
-load-ao: build-image-addon-operator-manager
+## Load Addon Operator images into kind
+load-addon-operator: build-image-addon-operator-manager
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
-			--name addon-operator-e2e;
-.PHONY: load-ao
+			--name=$(KIND_CLUSTER_NAME);
+.PHONY: load-addon-operator
 
 # Template deployment
 config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
-# Installs the Addon Operator into the kind e2e cluster.
-apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
+## Loads and installs the Addon Operator into the currently selected cluster.
+setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh; \
 		kubectl apply -f config/deploy; \
@@ -319,11 +323,18 @@ apply-ao: $(YQ) load-ao config/deploy/deployment.yaml
 		kubectl wait --for=condition=available deployment/addon-operator -n addon-operator --timeout=240s; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
-.PHONY: apply-ao
+.PHONY: setup-addon-operator
 
-# ------
+## Installs Addon Operator CRDs in to the currently selected cluster.
+setup-addon-operator-crds: generate
+	@for crd in $(wildcard config/deploy/*.openshift.io_*.yaml); do \
+		kubectl apply -f $$crd; \
+	done
+.PHONY: setup-addon-operator-crds
+
+# ---
 # OLM
-# ------
+# ---
 
 # Template Cluster Service Version / CSV
 # By setting the container image to deploy.
@@ -368,14 +379,16 @@ build-image-addon-operator-index: $(OPM) \
 		echo) 2>&1 | sed 's/^/  /'
 .PHONY: build-image-addon-operator-index
 
-# ----------------
-# Container Images
-# ----------------
+# ------------------
+##@ Container Images
+# ------------------
 
+## Build all images.
 build-images: \
 	build-image-addon-operator-manager
 .PHONY: build-images
 
+## Build and push all images.
 push-images: \
 	push-image-addon-operator-manager
 .PHONY: push-images
@@ -386,6 +399,7 @@ clean-image-cache-%:
 	@rm -rf ".cache/image/$*" ".cache/image/$*.tar"
 	@mkdir -p ".cache/image/$*"
 
+## Builds config/docker/%.Dockerfile using a binary build from cmd/%.
 build-image-%: bin/linux_amd64/$$*
 	@echo "building image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
@@ -399,6 +413,7 @@ build-image-%: bin/linux_amd64/$$*
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 
+## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
 push-image-%: build-image-$$*
 	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
