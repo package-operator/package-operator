@@ -66,7 +66,7 @@ help:
 		if (helpMessage) { \
 			helpCommand = substr($$1, 0, index($$1, ":")-1); \
 			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-			printf "  ${GREEN}%-22s${RESET}%s\n", helpCommand, helpMessage; \
+			printf "  ${GREEN}%-30s${RESET}%s\n", helpCommand, helpMessage; \
 		} \
 	} \
 	/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } \
@@ -229,6 +229,9 @@ dependencies: \
 	$(GOIMPORTS) \
 	$(GOLANGCI_LINT)
 .PHONY: dependencies
+
+## run addon operator manager built from current codebase
+run-addon-operator-manager: run-addon-operator-manager
 
 ## Run cmd/% against $KUBECONFIG.
 run-%: generate
