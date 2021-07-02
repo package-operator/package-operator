@@ -230,8 +230,9 @@ dependencies: \
 	$(GOLANGCI_LINT)
 .PHONY: dependencies
 
-## run addon operator manager built from current codebase
-run-addon-operator-manager: run-addon-operator-manager
+## Run cmd/addon-operator-manager against $KUBECONFIG.
+run-addon-operator-manager:
+.PHONY: run-addon-operator-manager
 
 ## Run cmd/% against $KUBECONFIG.
 run-%: generate
