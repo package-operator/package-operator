@@ -238,26 +238,6 @@ func TestReconcileNamespace_CreateWithCollisionWithOtherOwner(t *testing.T) {
 	}, testutil.IsCoreV1NamespacePtr)
 }
 
-func TestReconcileNamespace_Update(t *testing.T) {
-	c := testutil.NewClient()
-	c.On("Get", testutil.IsContext, testutil.IsObjectKey, testutil.IsCoreV1NamespacePtr).Run(func(args mock.Arguments) {
-		arg := args.Get(2).(*corev1.Namespace)
-		newTestNamespace().DeepCopyInto(arg)
-	}).Return(nil)
-	c.On("Update", testutil.IsContext, testutil.IsCoreV1NamespacePtr, mock.Anything).Return(nil)
-
-	ctx := context.Background()
-	reconciledNamespace, err := reconcileNamespace(ctx, c, newTestNamespace())
-	require.NoError(t, err)
-	assert.NotNil(t, reconciledNamespace)
-	assert.Equal(t, newTestNamespace(), reconciledNamespace)
-	c.AssertExpectations(t)
-	c.AssertCalled(t, "Get", testutil.IsContext, client.ObjectKey{
-		Name: "namespace-1",
-	}, testutil.IsCoreV1NamespacePtr)
-	c.AssertCalled(t, "Update", testutil.IsContext, testutil.IsCoreV1NamespacePtr, mock.Anything)
-}
-
 func TestReconcileNamespace_CreateWithClientError(t *testing.T) {
 	timeoutErr := k8sApiErrors.NewTimeoutError("for testing", 1)
 

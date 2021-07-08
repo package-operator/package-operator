@@ -97,7 +97,10 @@ func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1al
 
 // reconciles a Namespace and returns the current object as observed.
 // prevents adoption of Namespaces (unowned or owned by something else)
+// reconciling a Namespace means: creating it when it is not present
+// and erroring if our controller is not the owner of said Namespace
 func reconcileNamespace(ctx context.Context, c client.Client, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+
 	currentNamespace := &corev1.Namespace{}
 
 	{
@@ -117,14 +120,7 @@ func reconcileNamespace(ctx context.Context, c client.Client, namespace *corev1.
 		return nil, errNotOwnedByUs
 	}
 
-	{
-		ensuredNamespace := namespace.DeepCopy()
-		err := c.Update(ctx, ensuredNamespace)
-		if err != nil {
-			return nil, err
-		}
-		return ensuredNamespace, nil
-	}
+	return currentNamespace, nil
 }
 
 // Tests if the controller reference on `wanted` matches the one on `current`
