@@ -33,7 +33,7 @@ func (r *AddonReconciler) ensureOperatorGroup(
 			Labels:    map[string]string{},
 		},
 	}
-	if addon.Spec.Install.Type == addonsv1alpha1.OwnNamespace {
+	if addon.Spec.Install.Type == addonsv1alpha1.OlmOwnNamespace {
 		desiredOperatorGroup.Spec.TargetNamespaces = []string{targetNamespace}
 	}
 

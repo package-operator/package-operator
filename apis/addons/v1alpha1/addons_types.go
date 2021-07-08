@@ -25,12 +25,12 @@ type AddonSpec struct {
 // AddonInstallSpec defines the desired Addon installation type.
 type AddonInstallSpec struct {
 	// Type of installation.
-	// +kubebuilder:validation:Enum={"OwnNamespace","AllNamespaces"}
+	// +kubebuilder:validation:Enum={"olmOwnNamespace","olmAllNamespaces"}
 	Type AddonInstallType `json:"type"`
-	// AllNamespaces config parameters. Present only if Type = AllNamespaces.
-	AllNamespaces *AddonInstallAllNamespaces `json:"allNamespaces,omitempty"`
-	// OwnNamespace config parameters. Present only if Type = OwnNamespace.
-	OwnNamespace *AddonInstallOwnNamespace `json:"ownNamespace,omitempty"`
+	// AllNamespaces config parameters. Present only if Type = olmAllNamespaces.
+	OlmAllNamespaces *AddonInstallAllNamespaces `json:"olmAllNamespaces,omitempty"`
+	// OwnNamespace config parameters. Present only if Type = olmOwnNamespace.
+	OlmOwnNamespace *AddonInstallOwnNamespace `json:"olmOwnNamespace,omitempty"`
 }
 
 // Common Addon installation parameters.
@@ -62,11 +62,11 @@ const (
 	// installs the Operator in the default openshift-operators namespace to
 	// watch and be made available to all namespaces in the cluster.
 	// Maps directly to the OLM default install mode "all namespaces".
-	AllNamespaces AddonInstallType = "AllNamespaces"
+	OlmAllNamespaces AddonInstallType = "olmAllNamespaces"
 	// Installs the operator into a specific namespace.
 	// The Operator will only watch and be made available for use in this single namespace.
 	// Maps directly to the OLM install mode "specific namespace"
-	OwnNamespace AddonInstallType = "OwnNamespace"
+	OlmOwnNamespace AddonInstallType = "olmOwnNamespace"
 )
 
 type AddonNamespace struct {

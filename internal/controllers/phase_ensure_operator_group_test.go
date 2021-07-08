@@ -26,8 +26,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 			},
 			Spec: addonsv1alpha1.AddonSpec{
 				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.OwnNamespace,
-					OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
+					Type: addonsv1alpha1.OlmOwnNamespace,
+					OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
 						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
 							CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
 							Namespace:          "addon-system",
@@ -43,8 +43,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 			},
 			Spec: addonsv1alpha1.AddonSpec{
 				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.AllNamespaces,
-					AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
+					Type: addonsv1alpha1.OlmAllNamespaces,
+					OlmAllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
 						AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
 							CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
 							Namespace:          "addon-system",
@@ -63,13 +63,13 @@ func TestEnsureOperatorGroup(t *testing.T) {
 			{
 				name:                     "OwnNamespace",
 				addon:                    addonOwnNamespace,
-				targetNamespace:          addonOwnNamespace.Spec.Install.OwnNamespace.Namespace,
-				expectedTargetNamespaces: []string{addonOwnNamespace.Spec.Install.OwnNamespace.Namespace},
+				targetNamespace:          addonOwnNamespace.Spec.Install.OlmOwnNamespace.Namespace,
+				expectedTargetNamespaces: []string{addonOwnNamespace.Spec.Install.OlmOwnNamespace.Namespace},
 			},
 			{
 				name:            "AllNamespaces",
 				addon:           addonAllNamespaces,
-				targetNamespace: addonAllNamespaces.Spec.Install.AllNamespaces.Namespace,
+				targetNamespace: addonAllNamespaces.Spec.Install.OlmAllNamespaces.Namespace,
 			},
 		}
 
@@ -142,7 +142,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type: addonsv1alpha1.OwnNamespace,
+							Type: addonsv1alpha1.OlmOwnNamespace,
 						},
 					},
 				},
@@ -155,8 +155,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type:         addonsv1alpha1.OwnNamespace,
-							OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{},
+							Type:            addonsv1alpha1.OlmOwnNamespace,
+							OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{},
 						},
 					},
 				},
@@ -169,7 +169,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type: addonsv1alpha1.AllNamespaces,
+							Type: addonsv1alpha1.OlmAllNamespaces,
 						},
 					},
 				},
@@ -182,8 +182,8 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					},
 					Spec: addonsv1alpha1.AddonSpec{
 						Install: addonsv1alpha1.AddonInstallSpec{
-							Type:          addonsv1alpha1.AllNamespaces,
-							AllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{},
+							Type:             addonsv1alpha1.OlmAllNamespaces,
+							OlmAllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{},
 						},
 					},
 				},

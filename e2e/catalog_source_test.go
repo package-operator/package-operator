@@ -36,8 +36,8 @@ func TestAddon_CatalogSource(t *testing.T) {
 				{Name: "namespace-pioghfndb"},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OwnNamespace,
-				OwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
+				Type: addonsv1alpha1.OlmOwnNamespace,
+				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
 					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
 						Namespace:          "namespace-onbgdions",
 						CatalogSourceImage: testCatalogSourceImage,
@@ -80,10 +80,10 @@ func TestAddon_CatalogSource(t *testing.T) {
 		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
 		err := e2e.Client.Get(ctx, types.NamespacedName{
 			Name:      addon.Name,
-			Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+			Namespace: addon.Spec.Install.OlmOwnNamespace.Namespace,
 		}, currentCatalogSource)
 		assert.NoError(t, err, "could not get CatalogSource %s", addon.Name)
-		assert.Equal(t, addon.Spec.Install.OwnNamespace.CatalogSourceImage, currentCatalogSource.Spec.Image)
+		assert.Equal(t, addon.Spec.Install.OlmOwnNamespace.CatalogSourceImage, currentCatalogSource.Spec.Image)
 		assert.Equal(t, addon.Spec.DisplayName, currentCatalogSource.Spec.DisplayName)
 	}
 
@@ -99,7 +99,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
 	err = e2e.Client.Get(ctx, types.NamespacedName{
 		Name:      addon.Name,
-		Namespace: addon.Spec.Install.OwnNamespace.Namespace,
+		Namespace: addon.Spec.Install.OlmOwnNamespace.Namespace,
 	}, currentCatalogSource)
 	assert.True(t, k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
 }
