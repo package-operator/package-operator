@@ -28,13 +28,13 @@ type AddonInstallSpec struct {
 	// +kubebuilder:validation:Enum={"olmOwnNamespace","olmAllNamespaces"}
 	Type AddonInstallType `json:"type"`
 	// AllNamespaces config parameters. Present only if Type = olmAllNamespaces.
-	OlmAllNamespaces *AddonInstallAllNamespaces `json:"olmAllNamespaces,omitempty"`
+	OlmAllNamespaces *AddonInstallOlmAllNamespaces `json:"olmAllNamespaces,omitempty"`
 	// OwnNamespace config parameters. Present only if Type = olmOwnNamespace.
-	OlmOwnNamespace *AddonInstallOwnNamespace `json:"olmOwnNamespace,omitempty"`
+	OlmOwnNamespace *AddonInstallOlmOwnNamespace `json:"olmOwnNamespace,omitempty"`
 }
 
 // Common Addon installation parameters.
-type AddonInstallCommon struct {
+type AddonInstallOlmCommon struct {
 	// Namespace to install the Addon into.
 	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace"`
@@ -46,13 +46,13 @@ type AddonInstallCommon struct {
 }
 
 // AllNamespaces specific Addon installation parameters.
-type AddonInstallAllNamespaces struct {
-	AddonInstallCommon `json:",inline"`
+type AddonInstallOlmAllNamespaces struct {
+	AddonInstallOlmCommon `json:",inline"`
 }
 
 // OwnNamespace specific Addon installation parameters.
-type AddonInstallOwnNamespace struct {
-	AddonInstallCommon `json:",inline"`
+type AddonInstallOlmOwnNamespace struct {
+	AddonInstallOlmCommon `json:",inline"`
 }
 
 type AddonInstallType string

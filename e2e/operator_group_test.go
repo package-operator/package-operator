@@ -24,8 +24,8 @@ func TestAddon_OperatorGroup(t *testing.T) {
 			DisplayName: "addon-fuccniy3l4",
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OlmOwnNamespace,
-				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
-					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOlmOwnNamespace{
+					AddonInstallOlmCommon: addonsv1alpha1.AddonInstallOlmCommon{
 						Namespace:          "default",
 						CatalogSourceImage: testCatalogSourceImage,
 					},
@@ -42,8 +42,8 @@ func TestAddon_OperatorGroup(t *testing.T) {
 			DisplayName: "addon-7dfn114yv1",
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OlmAllNamespaces,
-				OlmAllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
-					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+				OlmAllNamespaces: &addonsv1alpha1.AddonInstallOlmAllNamespaces{
+					AddonInstallOlmCommon: addonsv1alpha1.AddonInstallOlmCommon{
 						Namespace:          "default",
 						CatalogSourceImage: testCatalogSourceImage,
 					},

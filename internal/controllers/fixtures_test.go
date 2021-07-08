@@ -144,8 +144,8 @@ func newTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 		Spec: addonsv1alpha1.AddonSpec{
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OlmOwnNamespace,
-				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
-					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOlmOwnNamespace{
+					AddonInstallOlmCommon: addonsv1alpha1.AddonInstallOlmCommon{
 						CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
 						Namespace:          "addon-1",
 					},

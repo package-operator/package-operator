@@ -36,8 +36,8 @@ func TestNamespaceCreation(t *testing.T) {
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OlmAllNamespaces,
-				OlmAllNamespaces: &addonsv1alpha1.AddonInstallAllNamespaces{
-					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+				OlmAllNamespaces: &addonsv1alpha1.AddonInstallOlmAllNamespaces{
+					AddonInstallOlmCommon: addonsv1alpha1.AddonInstallOlmCommon{
 						Namespace:          "namespace-oibabdsoi",
 						CatalogSourceImage: testCatalogSourceImage,
 					},

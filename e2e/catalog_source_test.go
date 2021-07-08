@@ -37,8 +37,8 @@ func TestAddon_CatalogSource(t *testing.T) {
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OlmOwnNamespace,
-				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOwnNamespace{
-					AddonInstallCommon: addonsv1alpha1.AddonInstallCommon{
+				OlmOwnNamespace: &addonsv1alpha1.AddonInstallOlmOwnNamespace{
+					AddonInstallOlmCommon: addonsv1alpha1.AddonInstallOlmCommon{
 						Namespace:          "namespace-onbgdions",
 						CatalogSourceImage: testCatalogSourceImage,
 					},
