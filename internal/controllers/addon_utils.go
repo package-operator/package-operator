@@ -61,39 +61,39 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 	targetNamespace, catalogSourceImage string, stop bool, err error,
 ) {
 	switch addon.Spec.Install.Type {
-	case addonsv1alpha1.OwnNamespace:
-		if addon.Spec.Install.OwnNamespace == nil ||
-			len(addon.Spec.Install.OwnNamespace.Namespace) == 0 {
+	case addonsv1alpha1.OLMOwnNamespace:
+		if addon.Spec.Install.OLMOwnNamespace == nil ||
+			len(addon.Spec.Install.OLMOwnNamespace.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
 		}
-		targetNamespace = addon.Spec.Install.OwnNamespace.Namespace
-		if len(addon.Spec.Install.OwnNamespace.CatalogSourceImage) == 0 {
+		targetNamespace = addon.Spec.Install.OLMOwnNamespace.Namespace
+		if len(addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
 		}
-		catalogSourceImage = addon.Spec.Install.OwnNamespace.CatalogSourceImage
+		catalogSourceImage = addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage
 
-	case addonsv1alpha1.AllNamespaces:
-		if addon.Spec.Install.AllNamespaces == nil ||
-			len(addon.Spec.Install.AllNamespaces.Namespace) == 0 {
+	case addonsv1alpha1.OLMAllNamespaces:
+		if addon.Spec.Install.OLMAllNamespaces == nil ||
+			len(addon.Spec.Install.OLMAllNamespaces.Namespace) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
 		}
-		targetNamespace = addon.Spec.Install.AllNamespaces.Namespace
-		if len(addon.Spec.Install.AllNamespaces.CatalogSourceImage) == 0 {
+		targetNamespace = addon.Spec.Install.OLMAllNamespaces.Namespace
+		if len(addon.Spec.Install.OLMAllNamespaces.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
 			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
 		}
-		catalogSourceImage = addon.Spec.Install.AllNamespaces.CatalogSourceImage
+		catalogSourceImage = addon.Spec.Install.OLMAllNamespaces.CatalogSourceImage
 
 	default:
 		// Unsupported Install Type
