@@ -27,9 +27,9 @@ type AddonInstallSpec struct {
 	// Type of installation.
 	// +kubebuilder:validation:Enum={"OLMOwnNamespace","OLMAllNamespaces"}
 	Type AddonInstallType `json:"type"`
-	// AllNamespaces config parameters. Present only if Type = OLMAllNamespaces.
+	// OLMAllNamespaces config parameters. Present only if Type = OLMAllNamespaces.
 	OLMAllNamespaces *AddonInstallOLMAllNamespaces `json:"olmAllNamespaces,omitempty"`
-	// OwnNamespace config parameters. Present only if Type = OLMOwnNamespace.
+	// OLMOwnNamespace config parameters. Present only if Type = OLMOwnNamespace.
 	OLMOwnNamespace *AddonInstallOLMOwnNamespace `json:"olmOwnNamespace,omitempty"`
 }
 
