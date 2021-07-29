@@ -11,8 +11,8 @@ spec:
   - name: additional
   - name: to-be-removed
   install:
-    type: OwnNamespace
-    ownNamespace:
+    type: OLMOwnNamespace
+    olmOwnNamespace:
       namespace: "foo"
   catalogSource:
     # This is the operathub catalog source because (at least for now)
