@@ -67,9 +67,9 @@ You can also use it to develop integration tests, against a complete setup of th
 ```shell
 # edit tests
 
-# Run all e2e tests and skip setup and teardown,
+# Run all integration tests and skip setup and teardown,
 # as the operator is already installed by: make test-setup
-make test-e2e-short
+make test-integration-short
 
 # repeat!
 ```
@@ -94,7 +94,7 @@ This command will:
 make setup-addon-operator-crds
 
 # Make sure we run against the new kind cluster.
-export KUBECONFIG=$PWD/.cache/e2e/kubeconfig
+export KUBECONFIG=$PWD/.cache/integration/kubeconfig
 
 # run the operator out-of-cluster:
 # Mind your `KUBECONFIG` environment variable!

@@ -1,4 +1,4 @@
-package e2e_test
+package integration_test
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	"github.com/openshift/addon-operator/e2e"
+	"github.com/openshift/addon-operator/integration"
 )
 
 func TestNamespaceCreation(t *testing.T) {
@@ -46,7 +46,7 @@ func TestNamespaceCreation(t *testing.T) {
 		},
 	}
 
-	err := e2e.Client.Create(ctx, addon)
+	err := integration.Client.Create(ctx, addon)
 	require.NoError(t, err)
 
 	// clean up addon resource in case it
@@ -54,7 +54,7 @@ func TestNamespaceCreation(t *testing.T) {
 	wasAlreadyDeleted := false
 	defer func() {
 		if !wasAlreadyDeleted {
-			err := e2e.Client.Delete(ctx, addon)
+			err := integration.Client.Delete(ctx, addon)
 			if err != nil {
 				t.Logf("could not clean up object %s: %v", addon.Name, err)
 			}
@@ -64,7 +64,7 @@ func TestNamespaceCreation(t *testing.T) {
 	// wait until reconcilation happened
 	currentAddon := &addonsv1alpha1.Addon{}
 	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
-		err = e2e.Client.Get(ctx, types.NamespacedName{
+		err = integration.Client.Get(ctx, types.NamespacedName{
 			Name: addon.Name,
 		}, currentAddon)
 		if err != nil {
@@ -80,7 +80,7 @@ func TestNamespaceCreation(t *testing.T) {
 	// validate Namespaces
 	for _, namespace := range addon.Spec.Namespaces {
 		currentNamespace := &corev1.Namespace{}
-		err := e2e.Client.Get(ctx, types.NamespacedName{
+		err := integration.Client.Get(ctx, types.NamespacedName{
 			Name: namespace.Name,
 		}, currentNamespace)
 		assert.NoError(t, err, "could not get Namespace %s", namespace.Name)
@@ -89,11 +89,11 @@ func TestNamespaceCreation(t *testing.T) {
 	}
 
 	// delete Addon
-	err = e2e.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+	err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = e2e.WaitToBeGone(t, 30*time.Second, currentAddon)
+	err = integration.WaitToBeGone(t, 30*time.Second, currentAddon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	wasAlreadyDeleted = true
@@ -101,7 +101,7 @@ func TestNamespaceCreation(t *testing.T) {
 	// assert that all Namespaces are gone
 	for _, namespace := range addon.Spec.Namespaces {
 		currentNamespace := &corev1.Namespace{}
-		err := e2e.Client.Get(ctx, types.NamespacedName{
+		err := integration.Client.Get(ctx, types.NamespacedName{
 			Name: namespace.Name,
 		}, currentNamespace)
 		assert.True(t, k8sApiErrors.IsNotFound(err), "Namespace not deleted: %s", namespace.Name)

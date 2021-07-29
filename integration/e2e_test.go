@@ -1,4 +1,4 @@
-package e2e_test
+package integration_test
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/openshift/addon-operator/e2e"
+	"github.com/openshift/addon-operator/integration"
 )
 
 func TestMain(m *testing.M) {
@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 
 func runTests(m *testing.M) int {
 	defer func() {
-		if err := e2e.PrintPodStatusAndLogs("addon-operator"); err != nil {
+		if err := integration.PrintPodStatusAndLogs("addon-operator"); err != nil {
 			log.Fatal(err)
 		}
 	}()

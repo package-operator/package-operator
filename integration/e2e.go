@@ -1,5 +1,5 @@
-// Package e2e contains the Addon Operator E2E tests.
-package e2e
+// Package integration contains the Addon Operator integration tests.
+package integration
 
 import (
 	"bytes"

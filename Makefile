@@ -32,7 +32,7 @@ DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/version
 export PATH:=$(DEPENDENCY_BIN):$(PATH)
 
 # Config
-KIND_KUBECONFIG_DIR:=.cache/e2e
+KIND_KUBECONFIG_DIR:=.cache/integration
 KIND_KUBECONFIG:=$(KIND_KUBECONFIG_DIR)/kubeconfig
 export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
@@ -205,22 +205,26 @@ test-unit: generate
 	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
 .PHONY: test-unit
 
-## Runs the E2E testsuite against the current $KUBECONFIG cluster.
-test-e2e: config/deploy/deployment.yaml
-	@echo "running e2e tests..."
-	@go test -v -count=1 ./e2e/...
+## Runs the Integration testsuite against the current $KUBECONFIG cluster
+test-integration: config/deploy/deployment.yaml
+	@echo "running integration tests..."
+	@go test -v -count=1 ./integration/...
+.PHONY: test-integration
+
+# legacy alias for CI/CD
+test-e2e: test-integration
 .PHONY: test-e2e
 
-## Runs the E2E testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
-test-e2e-short: config/deploy/deployment.yaml
-	@echo "running [short] e2e tests..."
-	@go test -v -count=1 -short ./e2e/...
+## Runs the Integration testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
+test-integration-short: config/deploy/deployment.yaml
+	@echo "running [short] integration tests..."
+	@go test -v -count=1 -short ./integration/...
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
-test-e2e-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
-## Setup a local dev environment and execute the full e2e testsuite against it.
-test-e2e-local: | dev-setup load-addon-operator test-e2e
-.PHONY: test-e2e-local
+test-integration-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
+## Setup a local dev environment and execute the full integration testsuite against it.
+test-integration-local: | dev-setup load-addon-operator test-integration
+.PHONY: test-integration-local
 
 # -------------------------
 ##@ Development Environment
@@ -255,7 +259,7 @@ dev-setup: | \
 	setup-okd-console
 .PHONY: dev-setup
 
-## Setup a local env for integration/e2e test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-e2e-short.
+## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
 test-setup: | \
 	dev-setup \
 	setup-addon-operator
@@ -263,8 +267,8 @@ test-setup: | \
 
 ## Creates an empty kind cluster to be used for local development.
 create-kind-cluster: $(KIND)
-	@echo "creating kind cluster addon-operator-e2e..."
-	@mkdir -p .cache/e2e
+	@echo "creating kind cluster addon-operator..."
+	@mkdir -p .cache/integration
 	@(source hack/determine-container-runtime.sh; \
 		mkdir -p $(KIND_KUBECONFIG_DIR); \
 		$$KIND_COMMAND create cluster \
@@ -279,7 +283,7 @@ create-kind-cluster: $(KIND)
 
 ## Deletes the previously created kind cluster.
 delete-kind-cluster: $(KIND)
-	@echo "deleting kind cluster addon-operator-e2e..."
+	@echo "deleting kind cluster addon-operator..."
 	@(source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND delete cluster \
 			--kubeconfig="$(KIND_KUBECONFIG)" \

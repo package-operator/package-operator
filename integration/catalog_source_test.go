@@ -1,4 +1,4 @@
-package e2e_test
+package integration_test
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	"github.com/openshift/addon-operator/e2e"
+	"github.com/openshift/addon-operator/integration"
 )
 
 func TestAddon_CatalogSource(t *testing.T) {
@@ -47,13 +47,13 @@ func TestAddon_CatalogSource(t *testing.T) {
 		},
 	}
 
-	err := e2e.Client.Create(ctx, addon)
+	err := integration.Client.Create(ctx, addon)
 	require.NoError(t, err)
 
 	// clean up addon resource in case it
 	// was leaked because of a failed test
 	defer func() {
-		err = e2e.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+		err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 		if client.IgnoreNotFound(err) != nil {
 			t.Logf("could not clean up Addon %s: %v", addon.Name, err)
 		}
@@ -62,7 +62,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 	// wait until reconciliation happened
 	currentAddon := &addonsv1alpha1.Addon{}
 	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
-		err = e2e.Client.Get(ctx, types.NamespacedName{
+		err = integration.Client.Get(ctx, types.NamespacedName{
 			Name: addon.Name,
 		}, currentAddon)
 		if err != nil {
@@ -78,7 +78,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 	// validate CatalogSource
 	{
 		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
-		err := e2e.Client.Get(ctx, types.NamespacedName{
+		err := integration.Client.Get(ctx, types.NamespacedName{
 			Name:      addon.Name,
 			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
 		}, currentCatalogSource)
@@ -88,16 +88,16 @@ func TestAddon_CatalogSource(t *testing.T) {
 	}
 
 	// delete Addon
-	err = e2e.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+	err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = e2e.WaitToBeGone(t, 30*time.Second, currentAddon)
+	err = integration.WaitToBeGone(t, 30*time.Second, currentAddon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	// assert that CatalogSource is gone
 	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
-	err = e2e.Client.Get(ctx, types.NamespacedName{
+	err = integration.Client.Get(ctx, types.NamespacedName{
 		Name:      addon.Name,
 		Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
 	}, currentCatalogSource)
