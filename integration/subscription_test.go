@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,36 +13,38 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
 )
 
-func TestAddon_CatalogSource(t *testing.T) {
+func TestAddon_Subscription(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
+	uuid := "9c4a3192-6a79-4782-93dd-636e4d308852"
+	addonName := fmt.Sprintf("addon-%s", uuid)
+	addonNamespace := fmt.Sprintf("namespace-%s", uuid)
+
 	addon := &addonsv1alpha1.Addon{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "addon-oisafbo12",
+			Name: addonName,
 		},
 		Spec: addonsv1alpha1.AddonSpec{
-			DisplayName: "addon-oisafbo12",
+			DisplayName: addonName,
 			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{Name: "namespace-onbgdions"},
-				{Name: "namespace-pioghfndb"},
+				{Name: addonNamespace},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          "namespace-onbgdions",
+						Namespace:          addonNamespace,
 						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-						Channel:            "alpha",
 						PackageName:        "reference-addon",
+						Channel:            "alpha",
 					},
 				},
 			},
@@ -51,41 +54,46 @@ func TestAddon_CatalogSource(t *testing.T) {
 	err := integration.Client.Create(ctx, addon)
 	require.NoError(t, err)
 
-	// clean up addon resource in case it
-	// was leaked because of a failed test
-	defer func() {
-		err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+	t.Cleanup(func() {
+		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 		if client.IgnoreNotFound(err) != nil {
 			t.Logf("could not clean up Addon %s: %v", addon.Name, err)
 		}
-	}()
-
-	// wait until reconciliation happened
-	currentAddon := &addonsv1alpha1.Addon{}
-	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
-		err = integration.Client.Get(ctx, types.NamespacedName{
-			Name: addon.Name,
-		}, currentAddon)
-		if err != nil {
-			t.Logf("error getting Addon: %v", err)
-			return false, nil
-		}
-
-		isAvailable := meta.IsStatusConditionTrue(currentAddon.Status.Conditions, addonsv1alpha1.Available)
-		return isAvailable, nil
 	})
-	require.NoError(t, err, "wait for Addon to be available: %+v", currentAddon)
 
-	// validate CatalogSource
+	err = integration.WaitForObject(
+		t, 2*time.Minute, addon, "to be Available",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return meta.IsStatusConditionTrue(
+				a.Status.Conditions, addonsv1alpha1.Available), nil
+		})
+	require.NoError(t, err)
+
+	subscription := &operatorsv1alpha1.Subscription{}
 	{
-		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
-		err := integration.Client.Get(ctx, types.NamespacedName{
-			Name:      addon.Name,
+		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
-		}, currentCatalogSource)
-		assert.NoError(t, err, "could not get CatalogSource %s", addon.Name)
-		assert.Equal(t, addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage, currentCatalogSource.Spec.Image)
-		assert.Equal(t, addon.Spec.DisplayName, currentCatalogSource.Spec.DisplayName)
+			Name:      addon.Name,
+		}, subscription)
+		require.NoError(t, err)
+
+		var subscriptionAtLatest operatorsv1alpha1.SubscriptionState = operatorsv1alpha1.SubscriptionStateAtLatest
+		assert.Equal(t, subscriptionAtLatest, subscription.Status.State)
+		assert.NotEmpty(t, subscription.Status.Install)
+		assert.Equal(t, "reference-addon.v0.1.0", subscription.Status.CurrentCSV)
+		assert.Equal(t, "reference-addon.v0.1.0", subscription.Status.InstalledCSV)
+	}
+
+	{
+		csv := &operatorsv1alpha1.ClusterServiceVersion{}
+		err := integration.Client.Get(ctx, client.ObjectKey{
+			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
+			Name:      subscription.Status.CurrentCSV,
+		}, csv)
+		require.NoError(t, err)
+
+		assert.Equal(t, operatorsv1alpha1.CSVPhaseSucceeded, csv.Status.Phase)
 	}
 
 	// delete Addon
@@ -93,7 +101,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, addonDeletionTimeout, currentAddon)
+	err = integration.WaitToBeGone(t, addonDeletionTimeout, addon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	// assert that CatalogSource is gone

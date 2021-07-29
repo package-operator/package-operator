@@ -27,7 +27,9 @@ func TestAddon_OperatorGroup(t *testing.T) {
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
 						Namespace:          "default",
-						CatalogSourceImage: testCatalogSourceImage,
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
@@ -40,12 +42,19 @@ func TestAddon_OperatorGroup(t *testing.T) {
 		},
 		Spec: addonsv1alpha1.AddonSpec{
 			DisplayName: "addon-7dfn114yv1",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{
+					Name: "namespace-7dfn114yv1",
+				},
+			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMAllNamespaces,
 				OLMAllNamespaces: &addonsv1alpha1.AddonInstallOLMAllNamespaces{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          "default",
-						CatalogSourceImage: testCatalogSourceImage,
+						Namespace:          "namespace-7dfn114yv1",
+						PackageName:        "reference-addon",
+						Channel:            "alpha",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
 					},
 				},
 			},

@@ -32,14 +32,15 @@ func TestNamespaceCreation(t *testing.T) {
 			DisplayName: "addon-c01m94lbi",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-oibabdsoi"},
-				{Name: "namespace-kuikojsag"},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OLMAllNamespaces,
-				OLMAllNamespaces: &addonsv1alpha1.AddonInstallOLMAllNamespaces{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
 						Namespace:          "namespace-oibabdsoi",
-						CatalogSourceImage: testCatalogSourceImage,
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
@@ -93,7 +94,7 @@ func TestNamespaceCreation(t *testing.T) {
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, 30*time.Second, currentAddon)
+	err = integration.WaitToBeGone(t, addonDeletionTimeout, currentAddon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	wasAlreadyDeleted = true

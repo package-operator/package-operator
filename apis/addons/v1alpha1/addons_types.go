@@ -40,9 +40,18 @@ type AddonInstallOLMCommon struct {
 	Namespace string `json:"namespace"`
 
 	// Defines the CatalogSource image.
-	// Please only use hashes and no tags here!
+	// Please only use digests and no tags here!
 	// +kubebuilder:validation:MinLength=1
 	CatalogSourceImage string `json:"catalogSourceImage"`
+
+	// Channel for the Subscription object.
+	// +kubebuilder:validation:MinLength=1
+	Channel string `json:"channel"`
+
+	// Name of the package to install via OLM.
+	// OLM will resove this package name to install the matching bundle.
+	// +kubebuilder:validation:MinLength=1
+	PackageName string `json:"packageName"`
 }
 
 // AllNamespaces specific Addon installation parameters.

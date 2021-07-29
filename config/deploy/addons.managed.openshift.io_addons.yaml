@@ -50,31 +50,51 @@ spec:
                     description: OLMAllNamespaces config parameters. Present only if Type = OLMAllNamespaces.
                     properties:
                       catalogSourceImage:
-                        description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        description: Defines the CatalogSource image. Please only use digests and no tags here!
+                        minLength: 1
+                        type: string
+                      channel:
+                        description: Channel for the Subscription object.
                         minLength: 1
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
                         minLength: 1
                         type: string
+                      packageName:
+                        description: Name of the package to install via OLM. OLM will resove this package name to install the matching bundle.
+                        minLength: 1
+                        type: string
                     required:
                     - catalogSourceImage
+                    - channel
                     - namespace
+                    - packageName
                     type: object
                   olmOwnNamespace:
                     description: OLMOwnNamespace config parameters. Present only if Type = OLMOwnNamespace.
                     properties:
                       catalogSourceImage:
-                        description: Defines the CatalogSource image. Please only use hashes and no tags here!
+                        description: Defines the CatalogSource image. Please only use digests and no tags here!
+                        minLength: 1
+                        type: string
+                      channel:
+                        description: Channel for the Subscription object.
                         minLength: 1
                         type: string
                       namespace:
                         description: Namespace to install the Addon into.
                         minLength: 1
                         type: string
+                      packageName:
+                        description: Name of the package to install via OLM. OLM will resove this package name to install the matching bundle.
+                        minLength: 1
+                        type: string
                     required:
                     - catalogSourceImage
+                    - channel
                     - namespace
+                    - packageName
                     type: object
                   type:
                     description: Type of installation.
