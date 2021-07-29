@@ -211,7 +211,7 @@ test-e2e: test-integration
 .PHONY: test-e2e
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
-test-e2e-short: config/deploy/deployment.yaml
+test-integration-short: config/deploy/deployment.yaml
 	@echo "running [short] integration tests..."
 	@go test -v -count=1 -short ./integration/...
 
@@ -254,7 +254,7 @@ dev-setup: | \
 	setup-okd-console
 .PHONY: dev-setup
 
-## Setup a local env for integration/e2e test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-e2e-short.
+## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
 test-setup: | \
 	dev-setup \
 	setup-addon-operator
