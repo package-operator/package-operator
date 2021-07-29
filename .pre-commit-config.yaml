@@ -32,6 +32,13 @@ repos:
     language: system
     types: [go]
 
+  - id: golangci-lint
+    name: golangci-lint
+    entry: hack/ensure-and-run-golangci-lint.sh
+    language: script
+    pass_filenames: false
+    types: [go]
+
   - id: go-mod-tidy
     name: go-mod-tidy
     entry: go mod tidy

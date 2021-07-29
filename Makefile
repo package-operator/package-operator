@@ -142,6 +142,11 @@ GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
 	@$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT))
 
+# Setup golangci-lint.
+# alias for golangci-lint to use from `ensure-and-run-golangci-lint.sh` via pre-commit.
+golangci-lint: $(GOLANGCI_LINT)
+.PHONY: golangci-lint
+
 OPM:=$(DEPENDENCY_VERSIONS)/opm/$(OPM_VERSION)
 $(OPM):
 	@echo "installing opm $(OPM_VERSION)..."
