@@ -1,8 +1,8 @@
 # https://direnv.net/
 # alternative: you can also `source .envrc
 
-if [[ -f ".cache/e2e/kubeconfig" ]]; then
-	export KUBECONFIG=$PWD/.cache/e2e/kubeconfig
+if [[ -f ".cache/integration/kubeconfig" ]]; then
+	export KUBECONFIG=$PWD/.cache/integration/kubeconfig
 fi
 
 # possible values are: podman | docker
