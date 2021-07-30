@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +61,7 @@ func TestAddon_Subscription(t *testing.T) {
 	})
 
 	err = integration.WaitForObject(
-		t, 2*time.Minute, addon, "to be Available",
+		t, defaultAddonAvailabilityTimeout, addon, "to be Available",
 		func(obj client.Object) (done bool, err error) {
 			a := obj.(*addonsv1alpha1.Addon)
 			return meta.IsStatusConditionTrue(

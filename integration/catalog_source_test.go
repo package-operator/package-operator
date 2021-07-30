@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -53,28 +51,22 @@ func TestAddon_CatalogSource(t *testing.T) {
 
 	// clean up addon resource in case it
 	// was leaked because of a failed test
-	defer func() {
-		err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+	t.Cleanup(func() {
+		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 		if client.IgnoreNotFound(err) != nil {
 			t.Logf("could not clean up Addon %s: %v", addon.Name, err)
 		}
-	}()
-
-	// wait until reconciliation happened
-	currentAddon := &addonsv1alpha1.Addon{}
-	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
-		err = integration.Client.Get(ctx, types.NamespacedName{
-			Name: addon.Name,
-		}, currentAddon)
-		if err != nil {
-			t.Logf("error getting Addon: %v", err)
-			return false, nil
-		}
-
-		isAvailable := meta.IsStatusConditionTrue(currentAddon.Status.Conditions, addonsv1alpha1.Available)
-		return isAvailable, nil
 	})
-	require.NoError(t, err, "wait for Addon to be available: %+v", currentAddon)
+
+	// wait until Addon is available
+	err = integration.WaitForObject(
+		t, defaultAddonAvailabilityTimeout, addon, "to be Available",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return meta.IsStatusConditionTrue(
+				a.Status.Conditions, addonsv1alpha1.Available), nil
+		})
+	require.NoError(t, err)
 
 	// validate CatalogSource
 	{
@@ -93,7 +85,7 @@ func TestAddon_CatalogSource(t *testing.T) {
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, addonDeletionTimeout, currentAddon)
+	err = integration.WaitToBeGone(t, addonDeletionTimeout, addon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	// assert that CatalogSource is gone
