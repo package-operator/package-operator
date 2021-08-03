@@ -91,6 +91,7 @@ spec:
           resources:
           - operatorgroups
           - catalogsources
+          - subscriptions
           verbs:
           - create
           - delete
@@ -99,6 +100,14 @@ spec:
           - get
           - list
           - patch
+        - apiGroups:
+          - operators.coreos.com
+          resources:
+          - clusterserviceversions
+          verbs:
+          - watch
+          - get
+          - list
         serviceAccountName: addon-operator
       permissions:
       - rules:
