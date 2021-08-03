@@ -208,7 +208,7 @@ test-unit: generate
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster
 test-integration: config/deploy/deployment.yaml
 	@echo "running integration tests..."
-	@go test -v -count=1 ./integration/...
+	@go test -v -count=1 -timeout=20m ./integration/...
 .PHONY: test-integration
 
 # legacy alias for CI/CD
