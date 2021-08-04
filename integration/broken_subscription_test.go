@@ -18,6 +18,9 @@ import (
 	"github.com/openshift/addon-operator/integration"
 )
 
+// This test deploys a version of our addon where InstallPlan and
+// CSV never succeed because the deployed operator pod is deliberately
+// broken through invalid readiness and liveness probes.
 func TestAddon_BrokenSubscription(t *testing.T) {
 	t.Parallel()
 
