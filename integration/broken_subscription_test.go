@@ -79,9 +79,7 @@ func TestAddon_BrokenSubscription(t *testing.T) {
 	require.NoError(t, err)
 
 	{
-		observedAddon := &addonsv1alpha1.Addon{
-			ObjectMeta: addon.ObjectMeta,
-		}
+		observedAddon := &addonsv1alpha1.Addon{}
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Name: addon.Name,
 		}, observedAddon)
