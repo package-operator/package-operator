@@ -84,6 +84,8 @@ func (r *AddonReconciler) ensureSubscription(
 
 	changed := r.csvEventHandler.ReplaceMap(addon, installedCSVKey, currentCSVKey)
 	if changed {
+		// Mapping changes need to requeue, because we could have lost events before or during
+		// setting up the mapping, see csvEventHandler implementation for a longer description.
 		log.Info("requeue", "reason", "csv-addon mapping changed")
 		return client.ObjectKey{}, true, nil
 	}
