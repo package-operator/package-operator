@@ -13,10 +13,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	"github.com/openshift/addon-operator/internal/handler"
+	internalhandler "github.com/openshift/addon-operator/internal/handler"
 )
 
 // Default timeout when we do a manual RequeueAfter
@@ -30,17 +31,17 @@ type AddonReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 
-	csvEventHandler csvEventHandlerInterface
+	csvEventHandler csvEventHandler
 }
 
-type csvEventHandlerInterface interface {
+type csvEventHandler interface {
+	handler.EventHandler
 	Free(addon *addonsv1alpha1.Addon)
 	ReplaceMap(addon *addonsv1alpha1.Addon, csvKeys ...client.ObjectKey) (changed bool)
 }
 
 func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	csvEventHandler := handler.NewCSVEventHandler()
-	r.csvEventHandler = csvEventHandler
+	r.csvEventHandler = internalhandler.NewCSVEventHandler()
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.Addon{}).
@@ -50,7 +51,7 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&operatorsv1alpha1.Subscription{}).
 		Watches(&source.Kind{
 			Type: &operatorsv1alpha1.ClusterServiceVersion{},
-		}, csvEventHandler).
+		}, r.csvEventHandler).
 		Complete(r)
 }
 

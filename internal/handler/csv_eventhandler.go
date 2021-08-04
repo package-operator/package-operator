@@ -12,24 +12,24 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-var _ handler.EventHandler = (*csvEventHandler)(nil)
+var _ handler.EventHandler = (*CSVEventHandler)(nil)
 
 // CSV event handler mapping CSV events to registered watching Addons.
-type csvEventHandler struct {
+type CSVEventHandler struct {
 	addonKeytoCSVKeys map[client.ObjectKey][]client.ObjectKey
 	csvKeyToAddon     map[client.ObjectKey]client.ObjectKey
 	mux               sync.RWMutex
 }
 
-func NewCSVEventHandler() *csvEventHandler {
-	return &csvEventHandler{
+func NewCSVEventHandler() *CSVEventHandler {
+	return &CSVEventHandler{
 		addonKeytoCSVKeys: map[client.ObjectKey][]client.ObjectKey{},
 		csvKeyToAddon:     map[client.ObjectKey]client.ObjectKey{},
 	}
 }
 
 // Free removes all event mappings associated with the given Addon.
-func (h *csvEventHandler) Free(addon *addonsv1alpha1.Addon) {
+func (h *CSVEventHandler) Free(addon *addonsv1alpha1.Addon) {
 	h.mux.Lock()
 	defer h.mux.Unlock()
 
@@ -46,7 +46,7 @@ func (h *csvEventHandler) Free(addon *addonsv1alpha1.Addon) {
 // This method is potentially racy when the Addon object is not reenqueued by the calling reconcile loop when the mapping changes,
 // as incomming events might be dropped before this method completes and the event mapping is updated.
 // Calling code needs to make sure to reenqueue the Addon object for _every_ mapping change or CSV events might not be processed.
-func (h *csvEventHandler) ReplaceMap(
+func (h *CSVEventHandler) ReplaceMap(
 	addon *addonsv1alpha1.Addon, csvKeys ...client.ObjectKey,
 ) (changed bool) {
 	h.mux.Lock()
@@ -78,27 +78,27 @@ func (h *csvEventHandler) ReplaceMap(
 }
 
 // Create is called in response to an create event.
-func (h *csvEventHandler) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (h *CSVEventHandler) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	h.enqueueObject(evt.Object, q)
 }
 
 // Update is called in response to an update event.
-func (h *csvEventHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (h *CSVEventHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	h.enqueueObject(evt.ObjectNew, q)
 }
 
 // Delete is called in response to a delete event.
-func (h *csvEventHandler) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (h *CSVEventHandler) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	h.enqueueObject(evt.Object, q)
 }
 
 // Generic is called in response to an event of an unknown type or a synthetic event triggered as a cron or
 // external trigger request - e.g. reconcile Autoscaling, or a Webhook.
-func (h *csvEventHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (h *CSVEventHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	h.enqueueObject(evt.Object, q)
 }
 
-func (h *csvEventHandler) enqueueObject(obj client.Object, q workqueue.RateLimitingInterface) {
+func (h *CSVEventHandler) enqueueObject(obj client.Object, q workqueue.RateLimitingInterface) {
 	h.mux.RLock()
 	defer h.mux.RUnlock()
 
