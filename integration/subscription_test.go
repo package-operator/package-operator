@@ -102,7 +102,7 @@ func TestAddon_Subscription(t *testing.T) {
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, addonDeletionTimeout, addon)
+	err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	// assert that CatalogSource is gone
