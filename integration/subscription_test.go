@@ -77,6 +77,8 @@ func TestAddon_Subscription(t *testing.T) {
 		}, subscription)
 		require.NoError(t, err)
 
+		// Force type of `operatorsv1alpha1.SubscriptionStateAtLatest` to `operatorsv1alpha1.SubscriptionState`
+		// because it is an untyped string const otherwise.
 		var subscriptionAtLatest operatorsv1alpha1.SubscriptionState = operatorsv1alpha1.SubscriptionStateAtLatest
 		assert.Equal(t, subscriptionAtLatest, subscription.Status.State)
 		assert.NotEmpty(t, subscription.Status.Install)
