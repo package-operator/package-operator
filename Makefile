@@ -241,7 +241,6 @@ dependencies: \
 
 ## Run cmd/addon-operator-manager against $KUBECONFIG.
 run-addon-operator-manager:
-.PHONY: run-addon-operator-manager
 
 ## Run cmd/% against $KUBECONFIG.
 run-%: generate

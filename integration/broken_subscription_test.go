@@ -2,13 +2,14 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,29 +18,35 @@ import (
 	"github.com/openshift/addon-operator/integration"
 )
 
-func TestAddon_CatalogSource(t *testing.T) {
+// This test deploys a version of our addon where InstallPlan and
+// CSV never succeed because the deployed operator pod is deliberately
+// broken through invalid readiness and liveness probes.
+func TestAddon_BrokenSubscription(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
+	uuid := "c24cd15c-4353-4036-bd86-384046eb4ff8"
+	addonName := fmt.Sprintf("addon-%s", uuid)
+	addonNamespace := fmt.Sprintf("namespace-%s", uuid)
+
 	addon := &addonsv1alpha1.Addon{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "addon-oisafbo12",
+			Name: addonName,
 		},
 		Spec: addonsv1alpha1.AddonSpec{
-			DisplayName: "addon-oisafbo12",
+			DisplayName: addonName,
 			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{Name: "namespace-onbgdions"},
-				{Name: "namespace-pioghfndb"},
+				{Name: addonNamespace},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          "namespace-onbgdions",
-						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-						Channel:            "alpha",
+						Namespace:          addonNamespace,
+						CatalogSourceImage: referenceAddonCatalogSourceImageBroken,
 						PackageName:        "reference-addon",
+						Channel:            "alpha",
 					},
 				},
 			},
@@ -49,8 +56,6 @@ func TestAddon_CatalogSource(t *testing.T) {
 	err := integration.Client.Create(ctx, addon)
 	require.NoError(t, err)
 
-	// clean up addon resource in case it
-	// was leaked because of a failed test
 	t.Cleanup(func() {
 		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 		if client.IgnoreNotFound(err) != nil {
@@ -58,26 +63,46 @@ func TestAddon_CatalogSource(t *testing.T) {
 		}
 	})
 
-	// wait until Addon is available
+	observedCSV := &operatorsv1alpha1.ClusterServiceVersion{
+		ObjectMeta: v1.ObjectMeta{
+			Namespace: fmt.Sprintf("namespace-%s", uuid),
+			Name:      "reference-addon.v0.1.3",
+		},
+	}
+
 	err = integration.WaitForObject(
-		t, defaultAddonAvailabilityTimeout, addon, "to be Available",
+		t, 10*time.Minute, observedCSV, "to be Failed",
 		func(obj client.Object) (done bool, err error) {
-			a := obj.(*addonsv1alpha1.Addon)
-			return meta.IsStatusConditionTrue(
-				a.Status.Conditions, addonsv1alpha1.Available), nil
+			csv := obj.(*operatorsv1alpha1.ClusterServiceVersion)
+			return csv.Status.Phase == operatorsv1alpha1.CSVPhaseFailed, nil
 		})
 	require.NoError(t, err)
 
-	// validate CatalogSource
 	{
-		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
-		err := integration.Client.Get(ctx, types.NamespacedName{
-			Name:      addon.Name,
+		observedAddon := &addonsv1alpha1.Addon{}
+		err := integration.Client.Get(ctx, client.ObjectKey{
+			Name: addon.Name,
+		}, observedAddon)
+		require.NoError(t, err)
+
+		assert.Equal(t, addon.Status.Phase, addonsv1alpha1.PhasePending)
+	}
+
+	{
+		subscription := &operatorsv1alpha1.Subscription{}
+		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
-		}, currentCatalogSource)
-		assert.NoError(t, err, "could not get CatalogSource %s", addon.Name)
-		assert.Equal(t, addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage, currentCatalogSource.Spec.Image)
-		assert.Equal(t, addon.Spec.DisplayName, currentCatalogSource.Spec.DisplayName)
+			Name:      addon.Name,
+		}, subscription)
+		require.NoError(t, err)
+
+		// Force type of `operatorsv1alpha1.SubscriptionStateAtLatest` to `operatorsv1alpha1.SubscriptionState`
+		// because it is an untyped string const otherwise.
+		var subscriptionAtLatest operatorsv1alpha1.SubscriptionState = operatorsv1alpha1.SubscriptionStateAtLatest
+		assert.Equal(t, subscriptionAtLatest, subscription.Status.State)
+		assert.NotEmpty(t, subscription.Status.Install)
+		assert.Equal(t, "reference-addon.v0.1.3", subscription.Status.CurrentCSV)
+		assert.Equal(t, "reference-addon.v0.1.3", subscription.Status.InstalledCSV)
 	}
 
 	// delete Addon

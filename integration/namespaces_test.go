@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -32,14 +30,15 @@ func TestNamespaceCreation(t *testing.T) {
 			DisplayName: "addon-c01m94lbi",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-oibabdsoi"},
-				{Name: "namespace-kuikojsag"},
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OLMAllNamespaces,
-				OLMAllNamespaces: &addonsv1alpha1.AddonInstallOLMAllNamespaces{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
 						Namespace:          "namespace-oibabdsoi",
-						CatalogSourceImage: testCatalogSourceImage,
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
@@ -61,21 +60,15 @@ func TestNamespaceCreation(t *testing.T) {
 		}
 	}()
 
-	// wait until reconcilation happened
-	currentAddon := &addonsv1alpha1.Addon{}
-	err = wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
-		err = integration.Client.Get(ctx, types.NamespacedName{
-			Name: addon.Name,
-		}, currentAddon)
-		if err != nil {
-			t.Logf("error getting Addon: %v", err)
-			return false, nil
-		}
-
-		isAvailable := meta.IsStatusConditionTrue(currentAddon.Status.Conditions, addonsv1alpha1.Available)
-		return isAvailable, nil
-	})
-	require.NoError(t, err, "wait for Addon to be available: %+v", currentAddon)
+	// wait until Addon is available
+	err = integration.WaitForObject(
+		t, defaultAddonAvailabilityTimeout, addon, "to be Available",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return meta.IsStatusConditionTrue(
+				a.Status.Conditions, addonsv1alpha1.Available), nil
+		})
+	require.NoError(t, err)
 
 	// validate Namespaces
 	for _, namespace := range addon.Spec.Namespaces {
@@ -93,7 +86,7 @@ func TestNamespaceCreation(t *testing.T) {
 	require.NoError(t, err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, 30*time.Second, currentAddon)
+	err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
 	require.NoError(t, err, "wait for Addon to be deleted")
 
 	wasAlreadyDeleted = true

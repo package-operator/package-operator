@@ -57,7 +57,7 @@ func WaitForObject(
 		timeout, gvk, key, reason)
 
 	ctx := context.Background()
-	return wait.PollImmediate(time.Second, 1*time.Minute, func() (done bool, err error) {
+	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
 		err = Client.Get(ctx, client.ObjectKeyFromObject(object), object)
 		if err != nil {
 			return false, nil

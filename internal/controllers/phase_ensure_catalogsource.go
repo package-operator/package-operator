@@ -30,13 +30,14 @@ const (
 // returns an ensureCatalogSourceResult that signals the caller if they have to
 // stop or retry reconciliation of the surrounding Addon resource
 func (r *AddonReconciler) ensureCatalogSource(
-	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (ensureCatalogSourceResult, error) {
+	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon,
+) (ensureCatalogSourceResult, *operatorsv1alpha1.CatalogSource, error) {
 	targetNamespace, catalogSourceImage, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
 	if err != nil {
-		return ensureCatalogSourceResultNil, err
+		return ensureCatalogSourceResultNil, nil, err
 	}
 	if stop {
-		return ensureCatalogSourceResultStop, nil
+		return ensureCatalogSourceResultStop, nil, nil
 	}
 
 	catalogSource := &operatorsv1alpha1.CatalogSource{
@@ -55,7 +56,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 	addCommonLabels(catalogSource.Labels, addon)
 
 	if err := controllerutil.SetControllerReference(addon, catalogSource, r.Scheme); err != nil {
-		return ensureCatalogSourceResultNil, err
+		return ensureCatalogSourceResultNil, nil, err
 	}
 
 	var observedCatalogSource *operatorsv1alpha1.CatalogSource
@@ -63,16 +64,16 @@ func (r *AddonReconciler) ensureCatalogSource(
 		var err error
 		observedCatalogSource, err = reconcileCatalogSource(ctx, r.Client, catalogSource)
 		if err != nil {
-			return ensureCatalogSourceResultNil, err
+			return ensureCatalogSourceResultNil, nil, err
 		}
 	}
 
 	if observedCatalogSource.Status.GRPCConnectionState == nil {
 		err := r.reportCatalogSourceUnreadinessStatus(ctx, addon, observedCatalogSource, ".Status.GRPCConnectionState is nil")
 		if err != nil {
-			return ensureCatalogSourceResultNil, err
+			return ensureCatalogSourceResultNil, nil, err
 		}
-		return ensureCatalogSourceResultRetry, nil
+		return ensureCatalogSourceResultRetry, nil, nil
 	}
 	if observedCatalogSource.Status.GRPCConnectionState.LastObservedState != "READY" {
 		err := r.reportCatalogSourceUnreadinessStatus(
@@ -85,12 +86,12 @@ func (r *AddonReconciler) ensureCatalogSource(
 			),
 		)
 		if err != nil {
-			return ensureCatalogSourceResultNil, err
+			return ensureCatalogSourceResultNil, nil, err
 		}
-		return ensureCatalogSourceResultRetry, err
+		return ensureCatalogSourceResultRetry, nil, err
 	}
 
-	return ensureCatalogSourceResultNil, nil
+	return ensureCatalogSourceResultNil, observedCatalogSource, nil
 }
 
 // Marks Addon as unavailable because the CatalogSource is unready

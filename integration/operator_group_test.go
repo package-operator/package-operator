@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,9 @@ func TestAddon_OperatorGroup(t *testing.T) {
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
 						Namespace:          "default",
-						CatalogSourceImage: testCatalogSourceImage,
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
@@ -40,12 +41,19 @@ func TestAddon_OperatorGroup(t *testing.T) {
 		},
 		Spec: addonsv1alpha1.AddonSpec{
 			DisplayName: "addon-7dfn114yv1",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{
+					Name: "namespace-7dfn114yv1",
+				},
+			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMAllNamespaces,
 				OLMAllNamespaces: &addonsv1alpha1.AddonInstallOLMAllNamespaces{
 					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          "default",
-						CatalogSourceImage: testCatalogSourceImage,
+						Namespace:          "namespace-7dfn114yv1",
+						PackageName:        "reference-addon",
+						Channel:            "alpha",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
 					},
 				},
 			},
@@ -83,7 +91,7 @@ func TestAddon_OperatorGroup(t *testing.T) {
 			})
 
 			err = integration.WaitForObject(
-				t, 1*time.Minute, addon, "to be Available",
+				t, defaultAddonAvailabilityTimeout, addon, "to be Available",
 				func(obj client.Object) (done bool, err error) {
 					a := obj.(*addonsv1alpha1.Addon)
 					return meta.IsStatusConditionTrue(
