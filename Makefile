@@ -38,10 +38,13 @@ export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
 export SKIP_TEARDOWN?=
 KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
+ENABLE_WEBHOOK?="false"
+WEBHOOK_PORT?=8080
 
 # Container
 IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
+ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
 
 # COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -220,7 +223,8 @@ test-unit: generate
 .PHONY: test-unit
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster
-test-integration: config/deploy/deployment.yaml
+test-integration: config/deploy/deployment.yaml \
+	config/deploy/webhook/deployment.yaml
 	@echo "running integration tests..."
 	@go test -v -count=1 -timeout=20m ./integration/...
 .PHONY: test-integration
@@ -230,14 +234,16 @@ test-e2e: test-integration
 .PHONY: test-e2e
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
-test-integration-short: config/deploy/deployment.yaml
+test-integration-short: config/deploy/deployment.yaml \
+	config/deploy/webhook/deployment.yaml
 	@echo "running [short] integration tests..."
 	@go test -v -count=1 -short ./integration/...
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
 test-integration-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 ## Setup a local dev environment and execute the full integration testsuite against it.
-test-integration-local: | dev-setup load-addon-operator test-integration
+test-integration-local: | dev-setup load-addon-operator \
+	load-addon-operator-webhook test-integration
 .PHONY: test-integration-local
 
 # -------------------------
@@ -335,10 +341,26 @@ load-addon-operator: build-image-addon-operator-manager
 			--name=$(KIND_CLUSTER_NAME);
 .PHONY: load-addon-operator
 
-# Template deployment
+## Load Addon Operator Webhook images into kind
+load-addon-operator-webhook: build-image-addon-operator-webhook
+	@source hack/determine-container-runtime.sh; \
+		$$KIND_COMMAND load image-archive \
+			.cache/image/addon-operator-webhook.tar \
+			--name=$(KIND_CLUSTER_NAME);
+.PHONY: load-addon-operator-webhook
+
+# Template deployment for Addon Operator
 config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
+
+# Template deployment for Addon Operator Webhook
+config/deploy/webhook/deployment.yaml: FORCE $(YQ)
+	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_WEBHOOK_IMAGE)" | .spec.template.spec.containers[0].ports[0].containerPort = $(WEBHOOK_PORT)' \
+		config/deploy/webhook/deployment.yaml.tpl > config/deploy/webhook/deployment.yaml;
+	@yq eval '.spec.ports[0].targetPort = $(WEBHOOK_PORT)' \
+	config/deploy/webhook/service.yaml.tpl > config/deploy/webhook/service.yaml
+
 
 ## Loads and installs the Addon Operator into the currently selected cluster.
 setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
@@ -349,7 +371,27 @@ setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
 		kubectl wait --for=condition=available deployment/addon-operator -n addon-operator --timeout=240s; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
+ifneq ($(ENABLE_WEBHOOK), "false")
+	@make setup-addon-operator-webhook
+endif
 .PHONY: setup-addon-operator
+
+
+## Loads and installs the Addon Operator Webhook into the currently selected cluster.
+setup-addon-operator-webhook: $(YQ) load-addon-operator-webhook \
+	config/deploy/webhook/deployment.yaml
+	@echo "setting up TLS cert..."
+	@kubectl apply -f \
+		config/deploy/webhook/00-tls-secret.yaml
+	@echo "installing Addon Operator $(VERSION)..."
+	@(source hack/determine-container-runtime.sh; \
+		kubectl apply -f config/deploy/webhook/deployment.yaml; \
+		echo -e "\nwaiting for deployment/addon-operator-webhook..."; \
+		kubectl wait --for=condition=available deployment/addon-operator-webhook -n addon-operator --timeout=240s; \
+		kubectl apply -f config/deploy/webhook/service.yaml; \
+		kubectl apply -f config/deploy/webhook/validatingwebhookconfig.yaml; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
 
 ## Installs Addon Operator CRDs in to the currently selected cluster.
 setup-addon-operator-crds: generate
@@ -411,12 +453,14 @@ build-image-addon-operator-index: $(OPM) \
 
 ## Build all images.
 build-images: \
-	build-image-addon-operator-manager
+	build-image-addon-operator-manager \
+	build-image-addon-operator-webhook
 .PHONY: build-images
 
 ## Build and push all images.
 push-images: \
-	push-image-addon-operator-manager
+	push-image-addon-operator-manager \
+	push-image-addon-operator-webhook
 .PHONY: push-images
 
 .SECONDEXPANSION:

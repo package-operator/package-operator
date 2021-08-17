@@ -66,14 +66,12 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 		if addon.Spec.Install.OLMOwnNamespace == nil ||
 			len(addon.Spec.Install.OLMOwnNamespace.Namespace) == 0 {
 			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
 		}
 		targetNamespace = addon.Spec.Install.OLMOwnNamespace.Namespace
 		if len(addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
 		}
@@ -83,14 +81,12 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 		if addon.Spec.Install.OLMAllNamespaces == nil ||
 			len(addon.Spec.Install.OLMAllNamespaces.Namespace) == 0 {
 			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
 		}
 		targetNamespace = addon.Spec.Install.OLMAllNamespaces.Namespace
 		if len(addon.Spec.Install.OLMAllNamespaces.CatalogSourceImage) == 0 {
 			// invalid/missing configuration
-			// TODO: Move error reporting into webhook and reduce this code to a sanity check.
 			return "", "", true, r.reportConfigurationError(ctx, addon,
 				".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
 		}
