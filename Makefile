@@ -273,11 +273,14 @@ create-kind-cluster: $(KIND)
 		$$KIND_COMMAND create cluster \
 			--kubeconfig=$(KIND_KUBECONFIG) \
 			--name=$(KIND_CLUSTER_NAME); \
-		if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
-			sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
-		fi; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
+	@if [[ ! -O "$(dir KIND_KUBECONFIG)" ]]; then \
+		sudo chown -R $$USER: "$(KIND_KUBECONFIG)"; \
+	fi
+	@if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
+		sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
+	fi
 .PHONY: create-kind-cluster
 
 ## Deletes the previously created kind cluster.
