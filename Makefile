@@ -155,7 +155,7 @@ $(OPM):
 		curl -L --fail \
 		https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/linux-amd64-opm -o opm; \
 		chmod +x opm; \
-		mv opm $(GOBIN); \
+		mv opm $(DEPENDENCY_BIN); \
 	) 2>&1 | sed 's/^/  /'
 	@rm -rf "$(OPM_TMP)" "$(dir $(OPM))" \
 		&& mkdir -p "$(dir $(OPM))" \
