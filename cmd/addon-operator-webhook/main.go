@@ -4,5 +4,5 @@ import "log"
 
 func main() {
 	// Placeholder for the actual webhook stuff
-	log.Panicln("running webhook...")
+	log.Println("running webhook...")
 }
