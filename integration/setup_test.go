@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,7 +30,11 @@ func Setup(t *testing.T) {
 	ctx := context.Background()
 	objs := integration.LoadObjectsFromDeploymentFiles(t)
 
-	var deployments []unstructured.Unstructured
+	var (
+		deployments    []unstructured.Unstructured
+		services       []unstructured.Unstructured
+		webhookConfigs []unstructured.Unstructured
+	)
 
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
@@ -38,8 +44,15 @@ func Setup(t *testing.T) {
 		t.Log("created: ", obj.GroupVersionKind().String(),
 			obj.GetNamespace()+"/"+obj.GetName())
 
-		if obj.GetKind() == "Deployment" {
+		switch obj.GetKind() {
+		case "Deployment":
 			deployments = append(deployments, obj)
+		case "Service":
+			services = append(services, obj)
+		case "ValidatingWebhookConfiguration":
+			webhookConfigs = append(webhookConfigs, obj)
+		default:
+			continue
 		}
 	}
 
@@ -103,4 +116,75 @@ func Setup(t *testing.T) {
 			require.NoError(t, err, "wait for Addon Operator Deployment")
 		})
 	}
+
+	// This test ensures that the Webhook Service and ValidatingWebhookConfiguration are
+	// actually present in your cluster and ready to accept webhook requests.
+	// Without this, you'd see a lot of flakiness in webhook_test.go
+	t.Run("Webhook Available", func(t *testing.T) {
+
+		for _, wc := range webhookConfigs {
+			webhookObj := admissionv1.ValidatingWebhookConfiguration{}
+			err := wait.PollImmediate(
+				time.Second, 5*time.Minute, func() (done bool, err error) {
+					err = integration.Client.Get(ctx, types.NamespacedName{
+						Name: wc.GetName(),
+					}, &webhookObj)
+
+					if err != nil {
+						return false, err
+					}
+					return true, nil
+				})
+			require.NoError(t, err, "wait for ValidatingWebhookConfiguration")
+		}
+
+		for _, svc := range services {
+			webhookSvc := v1.Service{}
+			err := wait.PollImmediate(
+				time.Second, 5*time.Minute, func() (done bool, err error) {
+					err = integration.Client.Get(ctx, types.NamespacedName{
+						Name:      svc.GetName(),
+						Namespace: svc.GetNamespace(),
+					}, &webhookSvc)
+
+					if err != nil {
+						return false, err
+					}
+
+					return true, nil
+				})
+			require.NoError(t, err, "wait for Service")
+		}
+
+		testAddon := newAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
+			Type: addonsv1alpha1.OLMOwnNamespace,
+			OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+				AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+					Namespace:          "reference-addon",
+					PackageName:        ADDON_NAME,
+					Channel:            "alpha",
+					CatalogSourceImage: CATALOG_SOURCE_URL,
+				},
+			},
+		})
+
+		err := wait.PollImmediate(
+			time.Second, 5*time.Minute, func() (done bool, err error) {
+				err = integration.Client.Create(ctx, testAddon)
+
+				if err != nil {
+					return false, nil
+				}
+
+				return true, nil
+			})
+		require.NoError(t, err, "wait for Addon to be created")
+
+		// cleanup
+		err = integration.Client.Delete(ctx, testAddon)
+		require.NoError(t, err)
+
+		err = integration.WaitToBeGone(t, 5*time.Minute, testAddon)
+		require.NoError(t, err, "wait for Addon to be deleted")
+	})
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"reflect"
 	"testing"
+	"time"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
@@ -16,10 +17,12 @@ import (
 
 const (
 	CATALOG_SOURCE_URL = "quay.io/osd-addons/reference-addon-index@sha256:58cb1c4478a150dc44e6c179d709726516d84db46e4e130a5227d8b76456b5bd"
-	ADDON_NAME         = "reference-addon"
+	ADDON_NAME         = "reference-addon-test-install-spec"
 )
 
 func TestAddonInstallSpec(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	testCases := []struct {
@@ -84,9 +87,11 @@ func TestAddonInstallSpec(t *testing.T) {
 			}
 
 			// clean-up addon
-			if err := integration.Client.Delete(ctx, tc.addon); err != nil {
-				log.Fatalf("failed to delete addon object: %v", err)
-			}
+			err := integration.Client.Delete(ctx, tc.addon)
+			require.NoError(t, err)
+
+			err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
+			require.NoError(t, err, "wait for Addon to be deleted")
 		}
 	}
 }
@@ -135,6 +140,9 @@ func TestAddonSpecImmutability(t *testing.T) {
 	// cleanup
 	err = integration.Client.Delete(ctx, addon)
 	require.NoError(t, err)
+
+	err = integration.WaitToBeGone(t, 5*time.Minute, addon)
+	require.NoError(t, err, "wait for Addon to be deleted")
 }
 
 func newStatusError(msg string) *k8sApiErrors.StatusError {
