@@ -4,14 +4,15 @@ import (
 	"flag"
 	"os"
 
-	aoapis "github.com/openshift/addon-operator/apis"
-	"github.com/openshift/addon-operator/internal/webhooks"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	aoapis "github.com/openshift/addon-operator/apis"
+	"github.com/openshift/addon-operator/internal/webhooks"
 )
 
 var (
