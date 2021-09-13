@@ -75,18 +75,18 @@ func RetryUntilNoError(retryFor, sleep time.Duration, f func() error) (err error
 
 	log.Printf("retrying function every %s, for %s", sleep, retryFor)
 	for {
+		e = f()
+		if e == nil {
+			return nil
+		}
+
 		now := time.Now()
 		if now.Sub(start) >= retryFor {
 			log.Println("retry deadline reached")
 			return e
 		}
 
-		e = f()
-		if e == nil {
-			return nil
-		}
-
-		time.Sleep(sleep)
 		log.Println("retrying after error:", e)
+		time.Sleep(sleep)
 	}
 }
