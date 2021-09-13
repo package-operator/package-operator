@@ -2,24 +2,26 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
-const addonName = "reference-addon-test-install-spec"
-
 func TestAddonInstallSpec(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	addonName := "reference-addon-test-install-spec"
 
 	testCases := []struct {
 		addon *addonsv1alpha1.Addon
@@ -69,24 +71,32 @@ func TestAddonInstallSpec(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		tc := tc // pin
+		t.Run(fmt.Sprintf("test case: %d", i), func(t *testing.T) {
+			err := integration.Client.Create(ctx, tc.addon)
 
-		err := integration.Client.Create(ctx, tc.addon)
-		assert.EqualValues(t, tc.err, err)
+			if err == nil {
+				require.NoError(t, err)
 
-		// clean-up addon
-		err = integration.Client.Delete(ctx, tc.addon)
-		require.NoError(t, err)
+				// clean-up addon
+				err = integration.Client.Delete(ctx, tc.addon)
+				require.NoError(t, err)
 
-		err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
-		require.NoError(t, err, "wait for Addon to be deleted")
-
+				err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
+				require.NoError(t, err, "wait for Addon to be deleted")
+			} else {
+				assert.EqualValues(t, tc.err, err)
+			}
+		})
 	}
 }
 
 func TestAddonSpecImmutability(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
+	addonName := "reference-addon-test-install-spec-immutability"
 
 	addon := testutil.NewAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
 		Type: addonsv1alpha1.OLMOwnNamespace,
@@ -104,25 +114,37 @@ func TestAddonSpecImmutability(t *testing.T) {
 	require.NoError(t, err)
 
 	// try to update immutable spec
+	// retry every 10 seconds for 5 minutes
+	err = integration.RetryUntilNoError(time.Minute*5,
+		time.Second*10, func() error {
 
-	resourceVersion := addon.GetResourceVersion()
-	addon = testutil.NewAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
-		Type: addonsv1alpha1.OLMOwnNamespace,
-		OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-			AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-				Namespace:          "reference-addon",
-				PackageName:        addonName,
-				Channel:            "beta", // changed
-				CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-			},
-		},
-	}, addonName)
-	addon.SetResourceVersion(resourceVersion)
+			addon := &addonsv1alpha1.Addon{}
+			err := integration.Client.Get(ctx, client.ObjectKey{
+				Name: addonName,
+			}, addon)
+			if err != nil {
+				return err
+			}
 
-	err = integration.Client.Update(ctx, addon)
-	expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
+			// update field
+			addon.Spec.Install.
+				OLMOwnNamespace.
+				AddonInstallOLMCommon.
+				Channel = "beta"
 
-	assert.EqualValues(t, expectedErr, err)
+			err = integration.Client.Update(ctx, addon)
+			expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
+
+			// explicitly check error type as
+			// `Update` can return many different kinds of errors
+			if !reflect.DeepEqual(err, expectedErr) {
+				return err
+			}
+
+			return nil
+		})
+
+	require.NoError(t, err)
 
 	// cleanup
 	err = integration.Client.Delete(ctx, addon)

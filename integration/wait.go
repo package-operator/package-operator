@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"log"
 	"testing"
 	"time"
 
@@ -65,4 +66,27 @@ func WaitForObject(
 
 		return checkFn(object)
 	})
+}
+
+// RetryUntilNoError retries a function for a specified duration until it returns no error
+func RetryUntilNoError(retryFor, sleep time.Duration, f func() error) (err error) {
+	var e error
+	start := time.Now()
+
+	log.Printf("retrying function every %s, for %s", sleep, retryFor)
+	for {
+		now := time.Now()
+		if now.Sub(start) >= retryFor {
+			log.Println("retry deadline reached")
+			return e
+		}
+
+		e = f()
+		if e == nil {
+			return nil
+		}
+
+		time.Sleep(sleep)
+		log.Println("retrying after error:", e)
+	}
 }
