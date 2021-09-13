@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aoapis "github.com/openshift/addon-operator/apis"
+	"github.com/openshift/addon-operator/internal/testutil"
 )
 
 const (
@@ -134,7 +135,11 @@ func getFileInfoFromPath(paths []string) ([]fileInfoMap, error) {
 // Load all k8s objects from .yaml files in config/deploy.
 // File/Object order is preserved.
 func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
-	fileInfoMap, err := getFileInfoFromPath([]string{PathConfigDeploy, PathWebhookConfigDeploy})
+	paths := []string{PathConfigDeploy}
+	if testutil.IsWebhookServerEnabled() {
+		paths = append(paths, PathWebhookConfigDeploy)
+	}
+	fileInfoMap, err := getFileInfoFromPath(paths)
 	require.NoError(t, err)
 
 	var objects []unstructured.Unstructured

@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"os"
 
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,4 +39,9 @@ func NewAddonWithInstallSpec(installSpec addonsv1alpha1.AddonInstallSpec,
 			Install: installSpec,
 		},
 	}
+}
+
+func IsWebhookServerEnabled() bool {
+	value, exists := os.LookupEnv("ENABLE_WEBHOOK")
+	return exists && value != "false"
 }
