@@ -230,6 +230,7 @@ test-integration: config/deploy/deployment.yaml \
 .PHONY: test-integration
 
 # legacy alias for CI/CD
+test-e2e: ENABLE_WEBHOOK?=true
 test-e2e: test-integration
 .PHONY: test-e2e
 
