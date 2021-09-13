@@ -2,11 +2,10 @@ package integration_test
 
 import (
 	"context"
-	"log"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -71,25 +70,18 @@ func TestAddonInstallSpec(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc // pin
+
 		err := integration.Client.Create(ctx, tc.addon)
+		assert.EqualValues(t, tc.err, err)
 
-		if tc.err != nil {
-			if !reflect.DeepEqual(err, tc.err) {
-				log.Fatalf("unexpected error: %v\nexpected: %v",
-					err, tc.err)
-			}
-		} else {
-			if err != nil {
-				log.Fatalf("expected nil error, got: %v", err)
-			}
+		// clean-up addon
+		err = integration.Client.Delete(ctx, tc.addon)
+		require.NoError(t, err)
 
-			// clean-up addon
-			err := integration.Client.Delete(ctx, tc.addon)
-			require.NoError(t, err)
+		err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
+		require.NoError(t, err, "wait for Addon to be deleted")
 
-			err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
-			require.NoError(t, err, "wait for Addon to be deleted")
-		}
 	}
 }
 
@@ -130,9 +122,7 @@ func TestAddonSpecImmutability(t *testing.T) {
 	err = integration.Client.Update(ctx, addon)
 	expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
 
-	if !reflect.DeepEqual(err, expectedErr) {
-		log.Fatalf("unexpected error: %v\nexpected:%v", err, expectedErr)
-	}
+	assert.EqualValues(t, expectedErr, err)
 
 	// cleanup
 	err = integration.Client.Delete(ctx, addon)
