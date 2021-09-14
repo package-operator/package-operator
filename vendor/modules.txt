@@ -58,9 +58,9 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/operator-framework/api v0.8.1
 ## explicit
-github.com/operator-framework/api/pkg/operators/v1
 github.com/operator-framework/api/pkg/lib/version
 github.com/operator-framework/api/pkg/operators
+github.com/operator-framework/api/pkg/operators/v1
 github.com/operator-framework/api/pkg/operators/v1alpha1
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
@@ -347,6 +347,7 @@ k8s.io/client-go/util/connrotation
 k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
+k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
 # k8s.io/component-base v0.20.2
 k8s.io/component-base/config
