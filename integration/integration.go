@@ -6,10 +6,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
@@ -27,11 +29,29 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aoapis "github.com/openshift/addon-operator/apis"
+	"github.com/openshift/addon-operator/internal/testutil"
 )
 
 const (
-	relativeConfigDeployPath = "../config/deploy"
+	relativeConfigDeployPath        = "../config/deploy"
+	relativeWebhookConfigDeployPath = "../config/deploy/webhook"
 )
+
+type fileInfosByName []fs.FileInfo
+
+type fileInfoMap struct {
+	absPath  string
+	fileInfo []os.FileInfo
+}
+
+func (x fileInfosByName) Len() int { return len(x) }
+
+func (x fileInfosByName) Less(i, j int) bool {
+	iName := path.Base(x[i].Name())
+	jName := path.Base(x[j].Name())
+	return iName < jName
+}
+func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 var (
 	// Client pointing to the e2e test cluster.
@@ -44,6 +64,9 @@ var (
 
 	// Path to the deployment configuration directory.
 	PathConfigDeploy string
+
+	// Path to the webhook deployment configuration directory.
+	PathWebhookConfigDeploy string
 )
 
 func init() {
@@ -77,39 +100,73 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	PathWebhookConfigDeploy, err = filepath.Abs(relativeWebhookConfigDeployPath)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getFileInfoFromPath(paths []string) ([]fileInfoMap, error) {
+	fileInfo := []fileInfoMap{}
+
+	for _, path := range paths {
+		config, err := os.Open(path)
+		if err != nil {
+			return fileInfo, err
+		}
+
+		files, err := config.Readdir(-1)
+		if err != nil {
+			return fileInfo, err
+		}
+
+		sort.Sort(fileInfosByName(files))
+
+		fileInfo = append(fileInfo, fileInfoMap{
+			absPath:  path,
+			fileInfo: files,
+		})
+	}
+
+	return fileInfo, nil
 }
 
 // Load all k8s objects from .yaml files in config/deploy.
 // File/Object order is preserved.
 func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
-	configDeploy, err := os.Open(PathConfigDeploy)
-	require.NoError(t, err)
-
-	files, err := configDeploy.Readdir(-1)
+	paths := []string{PathConfigDeploy}
+	if testutil.IsWebhookServerEnabled() {
+		paths = append(paths, PathWebhookConfigDeploy)
+	}
+	fileInfoMap, err := getFileInfoFromPath(paths)
 	require.NoError(t, err)
 
 	var objects []unstructured.Unstructured
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-		if path.Ext(f.Name()) != ".yaml" {
-			continue
-		}
 
-		fileYaml, err := ioutil.ReadFile(path.Join(
-			PathConfigDeploy, f.Name()))
-		require.NoError(t, err)
+	for _, m := range fileInfoMap {
+		for _, f := range m.fileInfo {
+			if f.IsDir() {
+				continue
+			}
+			if path.Ext(f.Name()) != ".yaml" {
+				continue
+			}
 
-		// Trim empty starting and ending objects
-		fileYaml = bytes.Trim(fileYaml, "---\n")
+			fileYaml, err := ioutil.ReadFile(path.Join(
+				m.absPath, f.Name()))
+			require.NoError(t, err)
 
-		// Split for every included yaml document.
-		for _, yamlDocument := range bytes.Split(fileYaml, []byte("---\n")) {
-			obj := unstructured.Unstructured{}
-			require.NoError(t, yaml.Unmarshal(yamlDocument, &obj))
+			// Trim empty starting and ending objects
+			fileYaml = bytes.Trim(fileYaml, "---\n")
 
-			objects = append(objects, obj)
+			// Split for every included yaml document.
+			for _, yamlDocument := range bytes.Split(fileYaml, []byte("---\n")) {
+				obj := unstructured.Unstructured{}
+				require.NoError(t, yaml.Unmarshal(yamlDocument, &obj))
+
+				objects = append(objects, obj)
+			}
 		}
 	}
 

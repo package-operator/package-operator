@@ -1,0 +1,31 @@
+# This manifest is only for testing and should be used with `00-tls-secret.yaml`
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: addon-validating-webhook-configuration
+  annotations:
+    cert-manager.io/inject-ca-from: addon-operator/serving-cert
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    # Should be used with `00-tls-secret.yaml`
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURORENDQWh5Z0F3SUJBZ0lSQU5EUHl2YTVTT1ZXSVQrY1Ztd3lCdXN3RFFZSktvWklodmNOQVFFTEJRQXcKTFRFck1Da0dBMVVFQXhNaWQyVmlhRzl2YXkxelpYSjJhV05sTG1Ga1pHOXVMVzl3WlhKaGRHOXlMbk4yWXpBZQpGdzB5TVRBNE16QXhNVE15TWpWYUZ3MHpNVEE0TWpneE1UTXlNalZhTUMweEt6QXBCZ05WQkFNVEluZGxZbWh2CmIyc3RjMlZ5ZG1salpTNWhaR1J2YmkxdmNHVnlZWFJ2Y2k1emRtTXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRQ3dRQ2pETDRJY3NURTlCRkpOWUtQNllyOUhMcWdqejFyMWVTcktnNDJXRzFKRgo1OGE0Tmt5Y0hiaVBKcFozWUtXNnR6dVNnTlNqdEhJMitZYXFWYm1UOXdGR2ZabS9EUnI5VjkrQXhHWWdpTVhlClFaWC9tU1NqZ0ZrR3Z6U2xtL1gvbWxKN0FoK1dMQmF5ejN5M3o5czFvUURpdThCN1ZGMjE1c3Yyc3RkS3ZseVYKZTNhSGJSM25VNFRIWHdQeklJOExnZU12MUR6d3hjZlp3azBuQnBzcU0rUlRldXh2aTVCcUkydGczK0QwNGFmdQoxR3g3WkZlSGRMTTllOUsybG0vYWVSY0c2ak1UVVQ0SWcycDI3Z1V0OCtDcU4xVkp6UVNTNnJydmhUZEdzM0RkCmNjbFQzbFdhbW53TUxVZFVkTEpYMnUvalAyTHYwWkI5YVd5YW9ZYTNBZ01CQUFHalR6Qk5NQTRHQTFVZER3RUIKL3dRRUF3SUZvREFNQmdOVkhSTUJBZjhFQWpBQU1DMEdBMVVkRVFRbU1DU0NJbmRsWW1odmIyc3RjMlZ5ZG1sagpaUzVoWkdSdmJpMXZjR1Z5WVhSdmNpNXpkbU13RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQURzd3krS3BaaHM5CkdsUWlvM1FTVlVFeUdmdFZaSndVS3MrS05vaTNpMUZtRmloMkdaVnNaTVBQTHU3dU5NblU2czJDdXp0RFdRdDcKNG9GNm8zcTQ1WkRkRVdJK1AwSVFJK2RUcjZZem9rNEdVR1pVcENpK0F2S3VDRG1OVHFEeGl4QWxKQ3FObVBZYQoxVndwa2xQMkVhMDh2QVRjQmpaTlgrSDJ2MWg2NlZQVitjZW5RemFXdkZpSFY3VTJWNVFCbmNZbU9HUThiVEFZCmVNWUxoR3VzWW4yQUIwNFBCRVRBK043VHNpczJqKzFDRjQwUHZEZSs3Z0F6ajE3SGpBQ3VlTDl1K3YreVM5KzkKbm5TZUM1a0JES2krdmx3bTdqWE1zbXdoQmhMSUNLOFVMbWw3UXRyOXRxdmNvcElVODlHMFhlc1czZWtuMUQvbwoybEQzTFUwVml1RT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: webhook-service
+      namespace: addon-operator
+      path: /validate-addon
+  failurePolicy: Fail
+  name: vaddons.managed.openshift.io
+  rules:
+  - apiGroups:
+    - addons.managed.openshift.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - addons
+  sideEffects: None
