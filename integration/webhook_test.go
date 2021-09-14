@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -121,36 +122,31 @@ func TestAddonSpecImmutability(t *testing.T) {
 	err := integration.Client.Create(ctx, addon)
 	require.NoError(t, err)
 
-	// try to update immutable spec
-	// retry every 10 seconds for 5 minutes
-	err = integration.RetryUntilNoError(time.Minute*5,
-		time.Second*10, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		addon := &addonsv1alpha1.Addon{}
+		err := integration.Client.Get(ctx, client.ObjectKey{
+			Name: addonName,
+		}, addon)
+		if err != nil {
+			return err
+		}
 
-			addon := &addonsv1alpha1.Addon{}
-			err := integration.Client.Get(ctx, client.ObjectKey{
-				Name: addonName,
-			}, addon)
-			if err != nil {
-				return err
-			}
+		// update field
+		addon.Spec.Install.
+			OLMOwnNamespace.
+			AddonInstallOLMCommon.
+			Channel = "beta"
 
-			// update field
-			addon.Spec.Install.
-				OLMOwnNamespace.
-				AddonInstallOLMCommon.
-				Channel = "beta"
+		err = integration.Client.Update(ctx, addon)
+		expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
 
-			err = integration.Client.Update(ctx, addon)
-			expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
-
-			// explicitly check error type as
-			// `Update` can return many different kinds of errors
-			if !reflect.DeepEqual(err, expectedErr) {
-				return err
-			}
-
-			return nil
-		})
+		// explicitly check error type as
+		// `Update` can return many different kinds of errors
+		if !reflect.DeepEqual(err, expectedErr) {
+			return err
+		}
+		return nil
+	})
 
 	require.NoError(t, err)
 
