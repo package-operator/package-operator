@@ -7,9 +7,31 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
+
+// Handle the deletion of an Addon.
+func (r *AddonReconciler) handleAddonDeletion(
+	ctx context.Context, addon *addonsv1alpha1.Addon,
+) error {
+	if err := r.reportTerminationStatus(ctx, addon); err != nil {
+		return fmt.Errorf("failed reporting terminiation status: %w", err)
+	}
+
+	// Clear from CSV Event Handler
+	r.csvEventHandler.Free(addon)
+
+	if controllerutil.ContainsFinalizer(addon, cacheFinalizer) {
+		controllerutil.RemoveFinalizer(addon, cacheFinalizer)
+		if err := r.Update(ctx, addon); err != nil {
+			return fmt.Errorf("failed to remove finalizer: %w", err)
+		}
+	}
+
+	return nil
+}
 
 // Report Addon status to communicate that everything is alright
 func (r *AddonReconciler) reportReadinessStatus(
