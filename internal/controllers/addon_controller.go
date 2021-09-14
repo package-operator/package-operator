@@ -67,21 +67,7 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	if !addon.DeletionTimestamp.IsZero() {
-		// Clear from CSV Event Handler
-		r.csvEventHandler.Free(addon)
-
-		if controllerutil.ContainsFinalizer(addon, cacheFinalizer) {
-			controllerutil.RemoveFinalizer(addon, cacheFinalizer)
-			if err := r.Update(ctx, addon); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-			}
-		}
-
-		if addon.Status.Phase == addonsv1alpha1.PhaseTerminating {
-			return ctrl.Result{}, nil
-		}
-
-		return ctrl.Result{}, r.reportTerminationStatus(ctx, addon)
+		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
 	}
 
 	// Phase 0.
