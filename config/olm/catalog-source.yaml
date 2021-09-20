@@ -6,5 +6,5 @@ metadata:
 spec:
   sourceType: grpc
   publisher: Red Hat
-  displayName: MTSRE
+  displayName: MTSRE Addon Operator
   image: quay.io/app-sre/addon-operator-index:main
