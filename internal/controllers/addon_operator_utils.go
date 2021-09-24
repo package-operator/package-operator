@@ -17,9 +17,6 @@ func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
 		ObjectMeta: metav1.ObjectMeta{
 			Name: addonsv1alpha1.DefaultAddonOperator,
 		},
-		Spec: addonsv1alpha1.AddonOperatorSpec{
-			Pause: false,
-		},
 	}
 
 	log.Info("creating default AddonOperator object")

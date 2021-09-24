@@ -49,8 +49,6 @@ func (r *AddonOperatorReconciler) Reconcile(
 
 	log := r.Log.WithValues("addon-operator", req.NamespacedName.String())
 
-	log.Info("test")
-
 	addonOperator := &addonsv1alpha1.AddonOperator{}
 	err := r.Get(ctx, client.ObjectKey{
 		Name: addonsv1alpha1.DefaultAddonOperator,

@@ -10,8 +10,6 @@ const (
 
 // AddonOperatorSpec defines the desired state of Addon operator.
 type AddonOperatorSpec struct {
-	// Pause addon operator operations
-	Pause bool `json:"pause"`
 }
 
 // AddonOperatorStatus defines the observed state of Addon
