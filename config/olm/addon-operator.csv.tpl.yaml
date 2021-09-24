@@ -78,6 +78,11 @@ spec:
         path: conditions
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
+    - kind: AddonOperator
+      version: v1alpha1
+      name: addonoperators.addons.managed.openshift.io
+      displayName: Addon Operator
+      description: Represents the overall status of the Addon Operator
   install:
     strategy: deployment
     spec:
@@ -89,12 +94,23 @@ spec:
           - addons
           - addons/status
           - addons/finalizers
+          - addonoperators
+          - addonoperators/status
+          - addonoperators/finalizers
           verbs:
           - get
           - list
           - watch
           - update
           - patch
+        - apiGroups:
+          - "addons.managed.openshift.io"
+          resources:
+          - addonoperators
+          - addonoperators/status
+          - addonoperators/finalizers
+          verbs:
+          - create
         - apiGroups:
           - ""
           resources:

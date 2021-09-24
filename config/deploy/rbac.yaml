@@ -53,12 +53,23 @@ rules:
   - addons
   - addons/status
   - addons/finalizers
+  - addonoperators
+  - addonoperators/status
+  - addonoperators/finalizers
   verbs:
   - get
   - list
   - watch
   - update
   - patch
+- apiGroups:
+  - "addons.managed.openshift.io"
+  resources:
+  - addonoperators
+  - addonoperators/status
+  - addonoperators/finalizers
+  verbs:
+  - create
 - apiGroups:
   - ""
   resources:

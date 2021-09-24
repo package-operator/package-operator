@@ -11,9 +11,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -43,35 +45,52 @@ func Setup(t *testing.T) {
 		}
 	}
 
-	t.Run("API available", func(t *testing.T) {
-		addonCRD := &apiextensionsv1.CustomResourceDefinition{}
-		err := wait.PollImmediate(time.Second, 10*time.Second, func() (done bool, err error) {
-			err = integration.Client.Get(ctx, types.NamespacedName{
-				Name: "addons.addons.managed.openshift.io",
-			}, addonCRD)
-			if err != nil {
-				t.Logf("error getting Addons CRD: %v", err)
-				return false, nil
-			}
+	crds := []struct {
+		crdName string
+		objList client.ObjectList
+	}{
+		{
+			crdName: "addons.addons.managed.openshift.io",
+			objList: &addonsv1alpha1.AddonList{},
+		},
+		{
+			crdName: "addonoperators.addons.managed.openshift.io",
+			objList: &addonsv1alpha1.AddonOperatorList{},
+		},
+	}
 
-			// check CRD Established Condition
-			var establishedCond *apiextensionsv1.CustomResourceDefinitionCondition
-			for _, c := range addonCRD.Status.Conditions {
-				if c.Type == apiextensionsv1.Established {
-					establishedCond = &c
-					break
+	for _, crd := range crds {
+		crd := crd // pin
+		t.Run(fmt.Sprintf("API %s established", crd.crdName), func(t *testing.T) {
+			crdObj := &apiextensionsv1.CustomResourceDefinition{}
+
+			err := wait.PollImmediate(time.Second, 10*time.Second, func() (done bool, err error) {
+				err = integration.Client.Get(ctx, types.NamespacedName{
+					Name: crd.crdName,
+				}, crdObj)
+				if err != nil {
+					t.Logf("error getting CRD: %v", err)
+					return false, nil
 				}
-			}
 
-			return establishedCond != nil && establishedCond.Status == apiextensionsv1.ConditionTrue, nil
+				// check CRD Established Condition
+				var establishedCond *apiextensionsv1.CustomResourceDefinitionCondition
+				for _, c := range crdObj.Status.Conditions {
+					if c.Type == apiextensionsv1.Established {
+						establishedCond = &c
+						break
+					}
+				}
+
+				return establishedCond != nil && establishedCond.Status == apiextensionsv1.ConditionTrue, nil
+			})
+			require.NoError(t, err, "waiting for %s to be Established", crd.crdName)
+
+			// check CRD API
+			err = integration.Client.List(ctx, crd.objList)
+			require.NoError(t, err)
 		})
-		require.NoError(t, err, "waiting for Addons CRD to be Established")
-
-		// check CRD API
-		addonList := &addonsv1alpha1.AddonList{}
-		err = integration.Client.List(ctx, addonList)
-		require.NoError(t, err)
-	})
+	}
 
 	for _, deploy := range deployments {
 		t.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func(t *testing.T) {
@@ -103,4 +122,26 @@ func Setup(t *testing.T) {
 			require.NoError(t, err, "wait for Addon Operator Deployment")
 		})
 	}
+
+	t.Run("Addon Operator available", func(t *testing.T) {
+		addonOperator := addonsv1alpha1.AddonOperator{}
+
+		// Wait for API to be created
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := integration.Client.Get(ctx, client.ObjectKey{
+				Name: addonsv1alpha1.DefaultAddonOperatorName,
+			}, &addonOperator)
+			return err
+		})
+		require.NoError(t, err)
+
+		err = integration.WaitForObject(
+			t, defaultAddonAvailabilityTimeout, &addonOperator, "to be Available",
+			func(obj client.Object) (done bool, err error) {
+				a := obj.(*addonsv1alpha1.AddonOperator)
+				return meta.IsStatusConditionTrue(
+					a.Status.Conditions, addonsv1alpha1.Available), nil
+			})
+		require.NoError(t, err)
+	})
 }
