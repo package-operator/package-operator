@@ -80,7 +80,7 @@ spec:
         - urn:alm:descriptor:io.kubernetes.conditions
     - kind: AddonOperator
       version: v1alpha1
-      name: addons.addons.managed.openshift.io
+      name: addonoperators.addons.managed.openshift.io
       displayName: Addon Operator
       description: Represents the overall status of the Addon Operator
   install:
