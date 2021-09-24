@@ -119,7 +119,7 @@ spec:
                   - type
                   type: object
                 type: array
-              lastHeartBeatTime:
+              lastHeartbeatTime:
                 description: Timestamp of the last reported status check
                 format: date-time
                 type: string

@@ -20,7 +20,7 @@ type AddonOperatorStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Timestamp of the last reported status check
 	// +optional
-	LastHeartBeatTime metav1.Time `json:"lastHeartBeatTime"`
+	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime"`
 	// DEPRECATED: This field is not part of any API contract
 	// it will go away as soon as kubectl can print conditions!
 	// Human readable status - please use .Conditions from code
@@ -52,8 +52,4 @@ type AddonOperatorList struct {
 
 func init() {
 	SchemeBuilder.Register(&AddonOperator{}, &AddonOperatorList{})
-}
-
-func (s *AddonOperatorStatus) UpdateLastHeartBeatTimeNow() {
-	s.LastHeartBeatTime = metav1.Now()
 }

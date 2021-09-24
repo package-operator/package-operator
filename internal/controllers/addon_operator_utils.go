@@ -37,6 +37,6 @@ func (r *AddonOperatorReconciler) reportAddonOperatorReadinessStatus(
 	})
 	addonOperator.Status.ObservedGeneration = addonOperator.Generation
 	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
-	addonOperator.Status.UpdateLastHeartBeatTimeNow()
+	addonOperator.Status.LastHeartbeatTime = metav1.Now()
 	return r.Status().Update(ctx, addonOperator)
 }
