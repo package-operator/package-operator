@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,7 +22,7 @@ type AddonOperatorStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Timestamp of the last reported status check
 	// +optional
-	Timestamp string `json:"timestamp"`
+	LastHeartBeatTime metav1.Time `json:"lastHeartBeatTime"`
 	// DEPRECATED: This field is not part of any API contract
 	// it will go away as soon as kubectl can print conditions!
 	// Human readable status - please use .Conditions from code
@@ -59,5 +57,5 @@ func init() {
 }
 
 func (s *AddonOperatorStatus) UpdateTimestampNow() {
-	s.Timestamp = time.Now().Format(time.RFC3339)
+	s.LastHeartBeatTime = metav1.Now()
 }
