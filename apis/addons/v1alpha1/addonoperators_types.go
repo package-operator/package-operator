@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	DefaultAddonOperator = "addon-operator"
+	DefaultAddonOperatorName = "addon-operator"
 )
 
 // AddonOperatorSpec defines the desired state of Addon operator.
@@ -54,6 +54,6 @@ func init() {
 	SchemeBuilder.Register(&AddonOperator{}, &AddonOperatorList{})
 }
 
-func (s *AddonOperatorStatus) UpdateTimestampNow() {
+func (s *AddonOperatorStatus) UpdateLastHeartBeatTimeNow() {
 	s.LastHeartBeatTime = metav1.Now()
 }

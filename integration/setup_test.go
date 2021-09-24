@@ -129,7 +129,7 @@ func Setup(t *testing.T) {
 		// Wait for API to be created
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			err := integration.Client.Get(ctx, client.ObjectKey{
-				Name: addonsv1alpha1.DefaultAddonOperator,
+				Name: addonsv1alpha1.DefaultAddonOperatorName,
 			}, &addonOperator)
 			return err
 		})

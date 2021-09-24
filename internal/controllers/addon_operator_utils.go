@@ -15,7 +15,7 @@ func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
 
 	defaultAddonOperator := &addonsv1alpha1.AddonOperator{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: addonsv1alpha1.DefaultAddonOperator,
+			Name: addonsv1alpha1.DefaultAddonOperatorName,
 		},
 	}
 
@@ -37,6 +37,6 @@ func (r *AddonOperatorReconciler) reportAddonOperatorReadinessStatus(
 	})
 	addonOperator.Status.ObservedGeneration = addonOperator.Generation
 	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
-	addonOperator.Status.UpdateTimestampNow()
+	addonOperator.Status.UpdateLastHeartBeatTimeNow()
 	return r.Status().Update(ctx, addonOperator)
 }

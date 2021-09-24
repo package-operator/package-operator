@@ -42,12 +42,6 @@ spec:
             type: object
           spec:
             description: AddonOperatorSpec defines the desired state of Addon operator.
-            properties:
-              pause:
-                description: Pause addon operator operations
-                type: boolean
-            required:
-            - pause
             type: object
           status:
             default:
@@ -125,6 +119,10 @@ spec:
                   - type
                   type: object
                 type: array
+              lastHeartBeatTime:
+                description: Timestamp of the last reported status check
+                format: date-time
+                type: string
               observedGeneration:
                 description: The most recent generation observed by the controller.
                 format: int64
@@ -133,9 +131,6 @@ spec:
                 description: 'DEPRECATED: This field is not part of any API contract
                   it will go away as soon as kubectl can print conditions! Human readable
                   status - please use .Conditions from code'
-                type: string
-              timestamp:
-                description: Timestamp of the last reported status check
                 type: string
             type: object
         type: object

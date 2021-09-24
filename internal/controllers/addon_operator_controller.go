@@ -21,6 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	defaultAddonOperatorRequeueTime = time.Minute
+)
+
 type AddonOperatorReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -31,15 +35,15 @@ func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.AddonOperator{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Watches(source.Func(r.enqueueAddonOperator),
+		Watches(source.Func(enqueueAddonOperator),
 			&handler.EnqueueRequestForObject{}). // initial enqueue for creating the object
 		Complete(r)
 }
 
-func (r *AddonOperatorReconciler) enqueueAddonOperator(ctx context.Context, h handler.EventHandler,
+func enqueueAddonOperator(ctx context.Context, h handler.EventHandler,
 	q workqueue.RateLimitingInterface, p ...predicate.Predicate) error {
 	q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-		Name: addonsv1alpha1.DefaultAddonOperator,
+		Name: addonsv1alpha1.DefaultAddonOperatorName,
 	}})
 	return nil
 }
@@ -51,7 +55,7 @@ func (r *AddonOperatorReconciler) Reconcile(
 
 	addonOperator := &addonsv1alpha1.AddonOperator{}
 	err := r.Get(ctx, client.ObjectKey{
-		Name: addonsv1alpha1.DefaultAddonOperator,
+		Name: addonsv1alpha1.DefaultAddonOperatorName,
 	}, addonOperator)
 
 	if err != nil {
@@ -71,5 +75,5 @@ func (r *AddonOperatorReconciler) Reconcile(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Minute}, nil
+	return ctrl.Result{RequeueAfter: defaultAddonOperatorRequeueTime}, nil
 }
