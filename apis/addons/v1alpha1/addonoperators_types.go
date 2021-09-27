@@ -10,6 +10,10 @@ const (
 
 // AddonOperatorSpec defines the desired state of Addon operator.
 type AddonOperatorSpec struct {
+	// Pause reconciliation on all Addons in the cluster
+	// when set to True
+	// +optional
+	Paused bool `json:"pause"`
 }
 
 // AddonOperatorStatus defines the observed state of Addon

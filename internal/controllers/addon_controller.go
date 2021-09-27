@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	internalhandler "github.com/openshift/addon-operator/internal/handler"
 )
@@ -32,6 +34,14 @@ type AddonReconciler struct {
 	Scheme *runtime.Scheme
 
 	csvEventHandler csvEventHandler
+	globalPause     bool
+	globalPauseMux  sync.RWMutex
+}
+
+func (r *AddonReconciler) SetGlobalPause(paused bool) {
+	r.globalPauseMux.Lock()
+	defer r.globalPauseMux.Unlock()
+	r.globalPause = paused
 }
 
 type csvEventHandler interface {
@@ -64,6 +74,25 @@ func (r *AddonReconciler) Reconcile(
 	err := r.Get(ctx, req.NamespacedName, addon)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// check for global pause.
+	// addon status reporting handled by AddonOperator reconciler
+	r.globalPauseMux.RLock()
+	defer r.globalPauseMux.RUnlock()
+	if r.globalPause {
+		// TODO: figure out how we can continue to report status
+		return ctrl.Result{}, nil
+	}
+
+	// check for Addon pause
+	if addon.Spec.Paused {
+		err = reportAddonPauseStatus(ctx, apis.AddonReasonPaused,
+			r.Client, addon)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	if !addon.DeletionTimestamp.IsZero() {

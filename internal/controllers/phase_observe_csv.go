@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
@@ -36,7 +37,7 @@ func (r *AddonReconciler) observeCurrentCSV(
 		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 			Type:   addonsv1alpha1.Available,
 			Status: metav1.ConditionFalse,
-			Reason: "UnreadyCSV",
+			Reason: apis.AddonReasonUnreadyCSV,
 			Message: fmt.Sprintf(
 				"ClusterServiceVersion is not ready: %s",
 				message),
