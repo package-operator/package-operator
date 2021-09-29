@@ -95,6 +95,11 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	// Make sure Pause condition is removed
+	if err := removeAddonPauseCondition(ctx, r.Client, addon); err != nil {
+		return ctrl.Result{}, nil
+	}
+
 	if !addon.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
 	}
