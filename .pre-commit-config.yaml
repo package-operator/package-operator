@@ -45,3 +45,9 @@ repos:
     language: system
     exclude: ".*"
     always_run: true
+
+  - id: make-generate
+    name: make-generate
+    entry: make generate
+    language: system
+    always_run: true
