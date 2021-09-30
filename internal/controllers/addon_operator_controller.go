@@ -54,7 +54,7 @@ func enqueueAddonOperator(ctx context.Context, h handler.EventHandler,
 
 func (r *AddonOperatorReconciler) getAllAddons(ctx context.Context) ([]addonsv1alpha1.Addon, error) {
 	addonList := addonsv1alpha1.AddonList{}
-	err := r.List(ctx, &addonList, &client.ListOptions{})
+	err := r.List(ctx, &addonList)
 	if err != nil {
 		return []addonsv1alpha1.Addon{}, err
 	}

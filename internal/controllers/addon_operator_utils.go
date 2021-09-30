@@ -16,6 +16,7 @@ import (
 // and AddopOperatorReconciler
 type sharedAddonReconciler interface {
 	SetGlobalPause(bool)
+	IsPaused() bool
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
