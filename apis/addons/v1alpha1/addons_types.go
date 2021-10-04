@@ -80,6 +80,34 @@ const (
 	OLMOwnNamespace AddonInstallType = "OLMOwnNamespace"
 )
 
+// Addon condition reasons
+
+const (
+	// Addon as fully reconciled
+	AddonReasonFullyReconciled = "FullyReconciled"
+
+	// Addon is terminating
+	AddonReasonTerminating = "Terminating"
+
+	// Addon has a configurtion error
+	AddonReasonConfigError = "ConfigurationError"
+
+	// Addon has paused reconciliation
+	AddonReasonPaused = "AddonPaused"
+
+	// Addon has an unready Catalog source
+	AddonReasonUnreadyCatalogSource = "UnreadyCatalogSource"
+
+	// Addon has colliding namespaces
+	AddonReasonCollidedNamespaces = "CollidedNamespaces"
+
+	// Addon has unready namespaces
+	AddonReasonUnreadyNamespaces = "UnreadyNamespaces"
+
+	// Addon has unready CSV
+	AddonReasonUnreadyCSV = "UnreadyCSV"
+)
+
 type AddonNamespace struct {
 	// Name of the KubernetesNamespace.
 	// +kubebuilder:validation:MinLength=1

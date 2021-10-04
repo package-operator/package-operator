@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
@@ -104,7 +103,7 @@ func (r *AddonReconciler) reportCatalogSourceUnreadinessStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:   addonsv1alpha1.Available,
 		Status: metav1.ConditionFalse,
-		Reason: apis.AddonReasonUnreadyCatalogSource,
+		Reason: addonsv1alpha1.AddonReasonUnreadyCatalogSource,
 		Message: fmt.Sprintf(
 			"CatalogSource connection is not ready: %s",
 			message),

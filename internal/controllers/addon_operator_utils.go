@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
@@ -40,7 +39,7 @@ func (r *AddonOperatorReconciler) reportAddonOperatorReadinessStatus(
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionTrue,
-		Reason:             apis.AddonOperatorReasonReady,
+		Reason:             addonsv1alpha1.AddonOperatorReasonReady,
 		Message:            "Addon Operator is ready",
 		ObservedGeneration: addonOperator.Generation,
 	})
@@ -57,7 +56,7 @@ func (r *AddonOperatorReconciler) reportAddonOperatorPauseStatus(
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Paused,
 		Status:             metav1.ConditionTrue,
-		Reason:             apis.AddonOperatorReasonPaused,
+		Reason:             addonsv1alpha1.AddonOperatorReasonPaused,
 		Message:            "Addon operator is paused",
 		ObservedGeneration: addonOperator.Generation,
 	})

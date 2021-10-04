@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
@@ -41,7 +40,7 @@ func (r *AddonReconciler) reportReadinessStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionTrue,
-		Reason:             apis.AddonReasonFullyReconciled,
+		Reason:             addonsv1alpha1.AddonReasonFullyReconciled,
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
@@ -55,7 +54,7 @@ func (r *AddonReconciler) reportTerminationStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionFalse,
-		Reason:             apis.AddonReasonTerminating,
+		Reason:             addonsv1alpha1.AddonReasonTerminating,
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
@@ -71,7 +70,7 @@ func (r *AddonReconciler) reportConfigurationError(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:    addonsv1alpha1.Available,
 		Status:  metav1.ConditionFalse,
-		Reason:  apis.AddonReasonConfigError,
+		Reason:  addonsv1alpha1.AddonReasonConfigError,
 		Message: message,
 	})
 	addon.Status.ObservedGeneration = addon.Generation

@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	internalhandler "github.com/openshift/addon-operator/internal/handler"
 )
@@ -92,7 +91,7 @@ func (r *AddonReconciler) Reconcile(
 
 	// check for Addon pause
 	if addon.Spec.Paused {
-		err = reportAddonPauseStatus(ctx, apis.AddonReasonPaused,
+		err = reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
 			r.Client, addon)
 		if err != nil {
 			return ctrl.Result{}, err

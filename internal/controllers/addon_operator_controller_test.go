@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/openshift/addon-operator/apis"
 	"github.com/openshift/addon-operator/internal/testutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -31,7 +30,7 @@ func setPauseConditionOnAddonOperator(addonOperator *addonsv1alpha1.AddonOperato
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Paused,
 		Status:             metav1.ConditionTrue,
-		Reason:             apis.AddonOperatorReasonPaused,
+		Reason:             addonsv1alpha1.AddonOperatorReasonPaused,
 		Message:            "Addon operator is paused",
 		ObservedGeneration: addonOperator.Generation,
 	})

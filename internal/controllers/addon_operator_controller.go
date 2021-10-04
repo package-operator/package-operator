@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/openshift/addon-operator/apis"
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -114,7 +113,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 
 		// Update condition on all Addons
 		for _, addon := range addons {
-			err := reportAddonPauseStatus(ctx, apis.AddonOperatorReasonPaused,
+			err := reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
 				r.Client, &addon)
 			if err != nil {
 				return false, err
