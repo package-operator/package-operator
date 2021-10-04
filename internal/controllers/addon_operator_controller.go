@@ -78,10 +78,8 @@ func (r *AddonOperatorReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	if requeue, err := r.handleGlobalPause(ctx, addonOperator); err != nil {
+	if err := r.handleGlobalPause(ctx, addonOperator); err != nil {
 		return ctrl.Result{}, fmt.Errorf("handling global pause: %w", err)
-	} else if requeue {
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// TODO: This is where all the checking / validation happens
@@ -95,20 +93,20 @@ func (r *AddonOperatorReconciler) Reconcile(
 }
 
 func (r *AddonOperatorReconciler) handleGlobalPause(
-	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) (requeue bool, err error) {
+	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
 	// Check if addonoperator.spec.paused == true
 	if addonOperator.Spec.Paused {
 		// Check if Paused condition has already been reported
 		if meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
 			addonsv1alpha1.Paused) {
-			return false, nil
+			return nil
 		}
 		r.GlobalPauseManager.SetGlobalPause(true) // pause
 
 		// Get all Addons
 		addons, err := r.getAllAddons(ctx)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		// Update condition on all Addons
@@ -116,44 +114,42 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 			err := reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
 				r.Client, &addon)
 			if err != nil {
-				return false, err
+				return err
 			}
 		}
 
 		// Finally report Pause condition back to AddonOperator
 		err = r.reportAddonOperatorPauseStatus(ctx, addonOperator)
 		if err != nil {
-			return false, err
+			return err
 		}
-
-		// Requeue object so it can continue reporting health checks
-		return true, nil
+		return nil
 	}
 
 	// Unpause only if the current reported condition is Paused
 	if !meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
 		addonsv1alpha1.Paused) {
-		return false, nil
+		return nil
 	}
 	r.GlobalPauseManager.SetGlobalPause(false) // unpause
 
 	// Get all Addons
 	addons, err := r.getAllAddons(ctx)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	for _, addon := range addons {
 		err := removeAddonPauseCondition(ctx, r.Client, &addon)
 		if err != nil {
-			return false, err
+			return err
 		}
 	}
 
 	// Finally remove Paused condition from AddonOperator
 	err = r.removeAddonOperatorPauseCondition(ctx, addonOperator)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return false, nil
+	return nil
 }

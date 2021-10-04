@@ -71,12 +71,11 @@ func testHandlePause(t *testing.T, paused bool) {
 	isPaused := pauseManager.globalPause
 
 	ctx := context.Background()
-	requeue, err := r.handleGlobalPause(ctx, addonOperator)
+	err := r.handleGlobalPause(ctx, addonOperator)
 	addonOperatorPaused := checkStatusCondition(addonOperator.Status.Conditions,
 		addonsv1alpha1.Paused)
 
 	require.NoError(t, err)
-	assertFunc(t, requeue)
 	assertFunc(t, isPaused)
 	assertFunc(t, addonOperatorPaused)
 	c.AssertExpectations(t)
