@@ -10,12 +10,11 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-// This interface is used for coordinating
+// globalPauseManager is an interface used for coordinating
 // the global pause mutex between AddonReconciler
 // and AddopOperatorReconciler
-type sharedAddonReconciler interface {
+type globalPauseManager interface {
 	SetGlobalPause(bool)
-	IsPaused() bool
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(

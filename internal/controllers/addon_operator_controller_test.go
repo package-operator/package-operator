@@ -64,7 +64,11 @@ func testHandlePause(t *testing.T, paused bool) {
 		mock.Anything).
 		Return(nil)
 
-	r := newAddonOperatorReconciler(c, testutil.NewLogger(t))
+	r, pauseManager := newAddonOperatorReconciler(c, testutil.NewLogger(t))
+
+	pauseManager.globalPauseMux.RLock()
+	defer pauseManager.globalPauseMux.RUnlock()
+	isPaused := pauseManager.globalPause
 
 	ctx := context.Background()
 	requeue, err := r.handleGlobalPause(ctx, addonOperator)
@@ -73,7 +77,7 @@ func testHandlePause(t *testing.T, paused bool) {
 
 	require.NoError(t, err)
 	assertFunc(t, requeue)
-	assertFunc(t, r.AddonReconciler.IsPaused())
+	assertFunc(t, isPaused)
 	assertFunc(t, addonOperatorPaused)
 	c.AssertExpectations(t)
 }

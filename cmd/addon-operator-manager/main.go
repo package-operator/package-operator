@@ -122,10 +122,10 @@ func main() {
 	}
 
 	if err = (&controllers.AddonOperatorReconciler{
-		Client:          mgr.GetClient(),
-		Log:             ctrl.Log.WithName("controllers").WithName("AddonOperator"),
-		Scheme:          mgr.GetScheme(),
-		AddonReconciler: addonReconciler,
+		Client:             mgr.GetClient(),
+		Log:                ctrl.Log.WithName("controllers").WithName("AddonOperator"),
+		Scheme:             mgr.GetScheme(),
+		GlobalPauseManager: addonReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
 		os.Exit(1)

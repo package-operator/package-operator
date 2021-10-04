@@ -29,9 +29,9 @@ const (
 
 type AddonOperatorReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	AddonReconciler sharedAddonReconciler
+	Log                logr.Logger
+	Scheme             *runtime.Scheme
+	GlobalPauseManager globalPauseManager
 }
 
 func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -103,7 +103,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 			addonsv1alpha1.Paused) {
 			return false, nil
 		}
-		r.AddonReconciler.SetGlobalPause(true) // pause
+		r.GlobalPauseManager.SetGlobalPause(true) // pause
 
 		// Get all Addons
 		addons, err := r.getAllAddons(ctx)
@@ -135,7 +135,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		addonsv1alpha1.Paused) {
 		return false, nil
 	}
-	r.AddonReconciler.SetGlobalPause(false) // unpause
+	r.GlobalPauseManager.SetGlobalPause(false) // unpause
 
 	// Get all Addons
 	addons, err := r.getAllAddons(ctx)

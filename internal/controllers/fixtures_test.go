@@ -157,18 +157,19 @@ func newTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 	}
 }
 
-func newAddonOperatorReconciler(c client.Client, logger logr.Logger) *AddonOperatorReconciler {
-	sharedAddonReconciler := &AddonReconciler{
+func newAddonOperatorReconciler(c client.Client, logger logr.Logger) (*AddonOperatorReconciler,
+	*AddonReconciler) {
+	addonReconciler := &AddonReconciler{
 		Client: c,
 		Log:    logger,
 		Scheme: newTestSchemeWithAddonsv1alpha1(),
 	}
 	return &AddonOperatorReconciler{
-		Client:          c,
-		Log:             logger,
-		Scheme:          newTestSchemeWithAddonsv1alpha1(),
-		AddonReconciler: sharedAddonReconciler,
-	}
+		Client:             c,
+		Log:                logger,
+		Scheme:             newTestSchemeWithAddonsv1alpha1(),
+		GlobalPauseManager: addonReconciler,
+	}, addonReconciler
 }
 
 func newAddonOperatorWithPause(paused bool) *addonsv1alpha1.AddonOperator {

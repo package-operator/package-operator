@@ -43,12 +43,6 @@ func (r *AddonReconciler) SetGlobalPause(paused bool) {
 	r.globalPause = paused
 }
 
-func (r *AddonReconciler) IsPaused() bool {
-	r.globalPauseMux.RLock()
-	defer r.globalPauseMux.RUnlock()
-	return r.globalPause
-}
-
 type csvEventHandler interface {
 	handler.EventHandler
 	Free(addon *addonsv1alpha1.Addon)
@@ -83,8 +77,9 @@ func (r *AddonReconciler) Reconcile(
 
 	// check for global pause.
 	// addon status reporting handled by AddonOperator reconciler
-	isPaused := r.IsPaused()
-	if isPaused {
+	r.globalPauseMux.RLock()
+	defer r.globalPauseMux.RUnlock()
+	if r.globalPause {
 		// TODO: figure out how we can continue to report status
 		return ctrl.Result{}, nil
 	}
