@@ -66,14 +66,14 @@ func testHandlePause(t *testing.T, paused bool) {
 
 	r, pauseManager := newAddonOperatorReconciler(c, testutil.NewLogger(t))
 
-	pauseManager.globalPauseMux.RLock()
-	defer pauseManager.globalPauseMux.RUnlock()
-	isPaused := pauseManager.globalPause
-
 	ctx := context.Background()
 	err := r.handleGlobalPause(ctx, addonOperator)
 	addonOperatorPaused := checkStatusCondition(addonOperator.Status.Conditions,
 		addonsv1alpha1.Paused)
+
+	pauseManager.globalPauseMux.RLock()
+	defer pauseManager.globalPauseMux.RUnlock()
+	isPaused := pauseManager.globalPause
 
 	require.NoError(t, err)
 	assertFunc(t, isPaused)
