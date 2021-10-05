@@ -51,15 +51,6 @@ func enqueueAddonOperator(ctx context.Context, h handler.EventHandler,
 	return nil
 }
 
-func (r *AddonOperatorReconciler) getAllAddons(ctx context.Context) ([]addonsv1alpha1.Addon, error) {
-	addonList := addonsv1alpha1.AddonList{}
-	err := r.List(ctx, &addonList)
-	if err != nil {
-		return []addonsv1alpha1.Addon{}, err
-	}
-	return addonList.Items, nil
-}
-
 func (r *AddonOperatorReconciler) Reconcile(
 	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
@@ -101,27 +92,11 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 			addonsv1alpha1.Paused) {
 			return nil
 		}
-		r.GlobalPauseManager.SetGlobalPause(true) // pause
-
-		// Get all Addons
-		addons, err := r.getAllAddons(ctx)
-		if err != nil {
-			return err
+		if err := r.GlobalPauseManager.EnableGlobalPause(ctx); err != nil {
+			return fmt.Errorf("setting global pause: %w", err)
 		}
-
-		// Update condition on all Addons
-		for _, addon := range addons {
-			err := reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
-				r.Client, &addon)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Finally report Pause condition back to AddonOperator
-		err = r.reportAddonOperatorPauseStatus(ctx, addonOperator)
-		if err != nil {
-			return err
+		if err := r.reportAddonOperatorPauseStatus(ctx, addonOperator); err != nil {
+			return fmt.Errorf("report AddonOperator paused: %w", err)
 		}
 		return nil
 	}
@@ -131,25 +106,11 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		addonsv1alpha1.Paused) {
 		return nil
 	}
-	r.GlobalPauseManager.SetGlobalPause(false) // unpause
-
-	// Get all Addons
-	addons, err := r.getAllAddons(ctx)
-	if err != nil {
-		return err
+	if err := r.GlobalPauseManager.DisableGlobalPause(ctx); err != nil {
+		return fmt.Errorf("removing global pause: %w", err)
 	}
-
-	for _, addon := range addons {
-		err := removeAddonPauseCondition(ctx, r.Client, &addon)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Finally remove Paused condition from AddonOperator
-	err = r.removeAddonOperatorPauseCondition(ctx, addonOperator)
-	if err != nil {
-		return err
+	if err := r.removeAddonOperatorPauseCondition(ctx, addonOperator); err != nil {
+		return fmt.Errorf("remove AddonOperator paused: %w", err)
 	}
 	return nil
 }

@@ -14,7 +14,8 @@ import (
 // the global pause mutex between AddonReconciler
 // and AddopOperatorReconciler
 type globalPauseManager interface {
-	SetGlobalPause(bool)
+	EnableGlobalPause(ctx context.Context) error
+	DisableGlobalPause(ctx context.Context) error
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(

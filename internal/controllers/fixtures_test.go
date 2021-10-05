@@ -3,14 +3,12 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/go-logr/logr"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilpointer "k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
@@ -153,29 +151,6 @@ func newTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 					},
 				},
 			},
-		},
-	}
-}
-
-func newAddonOperatorReconciler(c client.Client, logger logr.Logger) (*AddonOperatorReconciler,
-	*AddonReconciler) {
-	addonReconciler := &AddonReconciler{
-		Client: c,
-		Log:    logger,
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
-	}
-	return &AddonOperatorReconciler{
-		Client:             c,
-		Log:                logger,
-		Scheme:             newTestSchemeWithAddonsv1alpha1(),
-		GlobalPauseManager: addonReconciler,
-	}, addonReconciler
-}
-
-func newAddonOperatorWithPause(paused bool) *addonsv1alpha1.AddonOperator {
-	return &addonsv1alpha1.AddonOperator{
-		Spec: addonsv1alpha1.AddonOperatorSpec{
-			Paused: paused,
 		},
 	}
 }

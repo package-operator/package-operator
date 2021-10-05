@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,72 +10,139 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/openshift/addon-operator/internal/testutil"
-
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/testutil"
 )
 
-func TestHandleAddonOperatorPause(t *testing.T) {
-	for i, tc := range []bool{true, false} {
-		tc := tc //pin
-		t.Run(fmt.Sprintf("test case %d: addonoperator.spec.paused: %v", i, tc),
-			func(t *testing.T) {
-				testHandlePause(t, tc)
-			})
-	}
-}
+func TestHandleAddonOperatorPause_(t *testing.T) {
+	t.Run("enables global pause", func(t *testing.T) {
+		c := testutil.NewClient()
+		gpm := &globalPauseManagerMock{}
+		r := &AddonOperatorReconciler{
+			Client:             c,
+			GlobalPauseManager: gpm,
+		}
+		ctx := context.Background()
+		ao := &addonsv1alpha1.AddonOperator{
+			Spec: addonsv1alpha1.AddonOperatorSpec{
+				Paused: true,
+			},
+		}
 
-func setPauseConditionOnAddonOperator(addonOperator *addonsv1alpha1.AddonOperator) {
-	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
-		Type:               addonsv1alpha1.Paused,
-		Status:             metav1.ConditionTrue,
-		Reason:             addonsv1alpha1.AddonOperatorReasonPaused,
-		Message:            "Addon operator is paused",
-		ObservedGeneration: addonOperator.Generation,
+		gpm.On("EnableGlobalPause", mock.Anything).Return(nil)
+		c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		err := r.handleGlobalPause(ctx, ao)
+		require.NoError(t, err)
+
+		gpm.AssertCalled(t, "EnableGlobalPause", mock.Anything)
+
+		pausedCond := meta.FindStatusCondition(ao.Status.Conditions, addonsv1alpha1.Paused)
+		if assert.NotNil(t, pausedCond, "Paused condition should be present on AddonOperator object") {
+			assert.Equal(t, metav1.ConditionTrue, pausedCond.Status)
+		}
+	})
+
+	t.Run("does not enable pause twice when status is already reported", func(t *testing.T) {
+		c := testutil.NewClient()
+		gpm := &globalPauseManagerMock{}
+		r := &AddonOperatorReconciler{
+			Client:             c,
+			GlobalPauseManager: gpm,
+		}
+		ctx := context.Background()
+		ao := &addonsv1alpha1.AddonOperator{
+			Spec: addonsv1alpha1.AddonOperatorSpec{
+				Paused: true,
+			},
+			Status: addonsv1alpha1.AddonOperatorStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:   addonsv1alpha1.Paused,
+						Status: metav1.ConditionTrue,
+					},
+				},
+			},
+		}
+
+		gpm.On("EnableGlobalPause", mock.Anything).Return(nil)
+		c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		err := r.handleGlobalPause(ctx, ao)
+		require.NoError(t, err)
+
+		// When status is already reported, don't EnableGlobalPause again.
+		gpm.AssertNotCalled(t, "EnableGlobalPause", mock.Anything)
+	})
+
+	t.Run("disables global pause", func(t *testing.T) {
+		c := testutil.NewClient()
+		gpm := &globalPauseManagerMock{}
+		r := &AddonOperatorReconciler{
+			Client:             c,
+			GlobalPauseManager: gpm,
+		}
+		ctx := context.Background()
+		ao := &addonsv1alpha1.AddonOperator{
+			Spec: addonsv1alpha1.AddonOperatorSpec{
+				Paused: false,
+			},
+			Status: addonsv1alpha1.AddonOperatorStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:   addonsv1alpha1.Paused,
+						Status: metav1.ConditionTrue,
+					},
+				},
+			},
+		}
+
+		gpm.On("DisableGlobalPause", mock.Anything).Return(nil)
+		c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		err := r.handleGlobalPause(ctx, ao)
+		require.NoError(t, err)
+
+		gpm.AssertCalled(t, "DisableGlobalPause", mock.Anything)
+		pausedCond := meta.FindStatusCondition(ao.Status.Conditions, addonsv1alpha1.Paused)
+		assert.Nil(t, pausedCond, "Paused condition should be removed on AddonOperator object")
+	})
+
+	t.Run("does not disable twice when status is already reported", func(t *testing.T) {
+		c := testutil.NewClient()
+		gpm := &globalPauseManagerMock{}
+		r := &AddonOperatorReconciler{
+			Client:             c,
+			GlobalPauseManager: gpm,
+		}
+		ctx := context.Background()
+		ao := &addonsv1alpha1.AddonOperator{
+			Spec: addonsv1alpha1.AddonOperatorSpec{
+				Paused: false,
+			},
+		}
+
+		gpm.On("DisableGlobalPause", mock.Anything).Return(nil)
+		c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		err := r.handleGlobalPause(ctx, ao)
+		require.NoError(t, err)
+
+		// When status is gone, don't DisableGlobalPause again.
+		gpm.AssertNotCalled(t, "DisableGlobalPause", mock.Anything)
 	})
 }
 
-func testHandlePause(t *testing.T, paused bool) {
-	c := testutil.NewClient()
-	assertFunc := assert.True
-	checkStatusCondition := meta.IsStatusConditionTrue
+type globalPauseManagerMock struct {
+	mock.Mock
+}
 
-	addonOperator := newAddonOperatorWithPause(paused)
-	if !paused {
-		// the reconciler tries to unpause only
-		// when spec.paused is set to `false` and
-		// Paused condition is being reported
-		setPauseConditionOnAddonOperator(addonOperator)
-		assertFunc = assert.False
-		checkStatusCondition = meta.IsStatusConditionFalse
-	}
+func (r *globalPauseManagerMock) EnableGlobalPause(ctx context.Context) error {
+	args := r.Called(ctx)
+	return args.Error(0)
+}
 
-	c.On("List", testutil.IsContext,
-		testutil.IsAddonsv1alpha1AddonListPtr,
-		mock.Anything).
-		Return(nil)
-	c.StatusMock.On("Update", testutil.IsContext,
-		testutil.IsAddonsv1alpha1AddonPtr,
-		mock.Anything).
-		Return(nil)
-	c.StatusMock.On("Update", testutil.IsContext,
-		testutil.IsAddonsv1alpha1AddonOperatorPtr,
-		mock.Anything).
-		Return(nil)
-
-	r, pauseManager := newAddonOperatorReconciler(c, testutil.NewLogger(t))
-
-	ctx := context.Background()
-	err := r.handleGlobalPause(ctx, addonOperator)
-	addonOperatorPaused := checkStatusCondition(addonOperator.Status.Conditions,
-		addonsv1alpha1.Paused)
-
-	pauseManager.globalPauseMux.RLock()
-	defer pauseManager.globalPauseMux.RUnlock()
-	isPaused := pauseManager.globalPause
-
-	require.NoError(t, err)
-	assertFunc(t, isPaused)
-	assertFunc(t, addonOperatorPaused)
-	c.AssertExpectations(t)
+func (r *globalPauseManagerMock) DisableGlobalPause(ctx context.Context) error {
+	args := r.Called(ctx)
+	return args.Error(0)
 }
