@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -79,8 +78,8 @@ func (r *AddonReconciler) reportConfigurationError(
 }
 
 // Marks Addon as paused
-func reportAddonPauseStatus(
-	ctx context.Context, reason string, c client.Client,
+func (r *AddonReconciler) reportAddonPauseStatus(
+	ctx context.Context, reason string,
 	addon *addonsv1alpha1.Addon) error {
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Paused,
@@ -91,16 +90,16 @@ func reportAddonPauseStatus(
 	})
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseReady
-	return c.Status().Update(ctx, addon)
+	return r.Status().Update(ctx, addon)
 }
 
 // remove Paused condition from Addon
-func removeAddonPauseCondition(ctx context.Context,
-	c client.Client, addon *addonsv1alpha1.Addon) error {
+func (r *AddonReconciler) removeAddonPauseCondition(ctx context.Context,
+	addon *addonsv1alpha1.Addon) error {
 	meta.RemoveStatusCondition(&addon.Status.Conditions, addonsv1alpha1.Paused)
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseReady
-	return c.Status().Update(ctx, addon)
+	return r.Status().Update(ctx, addon)
 }
 
 // Validate addon.Spec.Install then extract

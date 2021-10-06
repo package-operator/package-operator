@@ -107,13 +107,12 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// check for global pause.
-	// addon status reporting handled by AddonOperator reconciler
+	// check for global pause
 	r.globalPauseMux.RLock()
 	defer r.globalPauseMux.RUnlock()
 	if r.globalPause {
-		err = reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
-			r.Client, addon)
+		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
+			addon)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -123,8 +122,8 @@ func (r *AddonReconciler) Reconcile(
 
 	// check for Addon pause
 	if addon.Spec.Paused {
-		err = reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
-			r.Client, addon)
+		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
+			addon)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -132,7 +131,7 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	// Make sure Pause condition is removed
-	if err := removeAddonPauseCondition(ctx, r.Client, addon); err != nil {
+	if err := r.removeAddonPauseCondition(ctx, addon); err != nil {
 		return ctrl.Result{}, nil
 	}
 
