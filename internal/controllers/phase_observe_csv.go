@@ -36,7 +36,7 @@ func (r *AddonReconciler) observeCurrentCSV(
 		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 			Type:   addonsv1alpha1.Available,
 			Status: metav1.ConditionFalse,
-			Reason: "UnreadyCSV",
+			Reason: addonsv1alpha1.AddonReasonUnreadyCSV,
 			Message: fmt.Sprintf(
 				"ClusterServiceVersion is not ready: %s",
 				message),

@@ -10,6 +10,14 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
+// globalPauseManager is an interface used for coordinating
+// the global pause mutex between AddonReconciler
+// and AddopOperatorReconciler
+type globalPauseManager interface {
+	EnableGlobalPause(ctx context.Context) error
+	DisableGlobalPause(ctx context.Context) error
+}
+
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
 	ctx context.Context, log logr.Logger) error {
 
@@ -31,12 +39,38 @@ func (r *AddonOperatorReconciler) reportAddonOperatorReadinessStatus(
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionTrue,
-		Reason:             "AddonOperatorReady",
+		Reason:             addonsv1alpha1.AddonOperatorReasonReady,
 		Message:            "Addon Operator is ready",
 		ObservedGeneration: addonOperator.Generation,
 	})
 	addonOperator.Status.ObservedGeneration = addonOperator.Generation
 	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
 	addonOperator.Status.LastHeartbeatTime = metav1.Now()
+	return r.Status().Update(ctx, addonOperator)
+}
+
+// Marks AddonOperator as paused
+func (r *AddonOperatorReconciler) reportAddonOperatorPauseStatus(
+	ctx context.Context,
+	addonOperator *addonsv1alpha1.AddonOperator) error {
+	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
+		Type:               addonsv1alpha1.Paused,
+		Status:             metav1.ConditionTrue,
+		Reason:             addonsv1alpha1.AddonOperatorReasonPaused,
+		Message:            "Addon operator is paused",
+		ObservedGeneration: addonOperator.Generation,
+	})
+	addonOperator.Status.ObservedGeneration = addonOperator.Generation
+	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
+	addonOperator.Status.LastHeartbeatTime = metav1.Now()
+	return r.Status().Update(ctx, addonOperator)
+}
+
+// remove Paused condition from AddonOperator
+func (r *AddonOperatorReconciler) removeAddonOperatorPauseCondition(
+	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
+	meta.RemoveStatusCondition(&addonOperator.Status.Conditions, addonsv1alpha1.Paused)
+	addonOperator.Status.ObservedGeneration = addonOperator.Generation
+	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addonOperator)
 }

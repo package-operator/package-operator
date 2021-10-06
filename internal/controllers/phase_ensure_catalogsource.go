@@ -103,7 +103,7 @@ func (r *AddonReconciler) reportCatalogSourceUnreadinessStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:   addonsv1alpha1.Available,
 		Status: metav1.ConditionFalse,
-		Reason: "UnreadyCatalogSource",
+		Reason: addonsv1alpha1.AddonReasonUnreadyCatalogSource,
 		Message: fmt.Sprintf(
 			"CatalogSource connection is not ready: %s",
 			message),

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -13,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -32,6 +34,42 @@ type AddonReconciler struct {
 	Scheme *runtime.Scheme
 
 	csvEventHandler csvEventHandler
+	globalPause     bool
+	globalPauseMux  sync.RWMutex
+	addonRequeueCh  chan event.GenericEvent
+}
+
+// Pauses reconcilation of all Addon objects. Concurrency safe.
+func (r *AddonReconciler) EnableGlobalPause(ctx context.Context) error {
+	return r.setGlobalPause(ctx, true)
+}
+
+// Unpauses reconcilation of all Addon objects. Concurrency safe.
+func (r *AddonReconciler) DisableGlobalPause(ctx context.Context) error {
+	return r.setGlobalPause(ctx, false)
+}
+
+func (r *AddonReconciler) setGlobalPause(ctx context.Context, paused bool) error {
+	r.globalPauseMux.Lock()
+	defer r.globalPauseMux.Unlock()
+	r.globalPause = paused
+
+	if err := r.requeueAllAddons(ctx); err != nil {
+		return fmt.Errorf("requeue all Addons: %w", err)
+	}
+	return nil
+}
+
+// requeue all addons that are currently in the local cache.
+func (r *AddonReconciler) requeueAllAddons(ctx context.Context) error {
+	addonList := &addonsv1alpha1.AddonList{}
+	if err := r.List(ctx, addonList); err != nil {
+		return fmt.Errorf("listing Addons, %w", err)
+	}
+	for i := range addonList.Items {
+		r.addonRequeueCh <- event.GenericEvent{Object: &addonList.Items[i]}
+	}
+	return nil
 }
 
 type csvEventHandler interface {
@@ -42,7 +80,7 @@ type csvEventHandler interface {
 
 func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.csvEventHandler = internalhandler.NewCSVEventHandler()
-
+	r.addonRequeueCh = make(chan event.GenericEvent)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.Addon{}).
 		Owns(&corev1.Namespace{}).
@@ -52,6 +90,9 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&source.Kind{
 			Type: &operatorsv1alpha1.ClusterServiceVersion{},
 		}, r.csvEventHandler).
+		Watches(&source.Channel{ // Requeue everything when entering/leaving global pause.
+			Source: r.addonRequeueCh,
+		}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
@@ -64,6 +105,34 @@ func (r *AddonReconciler) Reconcile(
 	err := r.Get(ctx, req.NamespacedName, addon)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// check for global pause
+	r.globalPauseMux.RLock()
+	defer r.globalPauseMux.RUnlock()
+	if r.globalPause {
+		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
+			addon)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		// TODO: figure out how we can continue to report status
+		return ctrl.Result{}, nil
+	}
+
+	// check for Addon pause
+	if addon.Spec.Paused {
+		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
+			addon)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Make sure Pause condition is removed
+	if err := r.removeAddonPauseCondition(ctx, addon); err != nil {
+		return ctrl.Result{}, nil
 	}
 
 	if !addon.DeletionTimestamp.IsZero() {

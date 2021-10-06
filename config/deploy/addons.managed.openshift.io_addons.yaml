@@ -130,6 +130,9 @@ spec:
                   - name
                   type: object
                 type: array
+              pause:
+                description: Pause reconciliation of Addon when set to True
+                type: boolean
             required:
             - displayName
             - install

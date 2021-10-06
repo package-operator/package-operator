@@ -39,7 +39,7 @@ func (r *AddonReconciler) reportReadinessStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionTrue,
-		Reason:             "FullyReconciled",
+		Reason:             addonsv1alpha1.AddonReasonFullyReconciled,
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
@@ -53,7 +53,7 @@ func (r *AddonReconciler) reportTerminationStatus(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:               addonsv1alpha1.Available,
 		Status:             metav1.ConditionFalse,
-		Reason:             "Terminating",
+		Reason:             addonsv1alpha1.AddonReasonTerminating,
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
@@ -69,11 +69,36 @@ func (r *AddonReconciler) reportConfigurationError(
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:    addonsv1alpha1.Available,
 		Status:  metav1.ConditionFalse,
-		Reason:  "ConfigurationError",
+		Reason:  addonsv1alpha1.AddonReasonConfigError,
 		Message: message,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseError
+	return r.Status().Update(ctx, addon)
+}
+
+// Marks Addon as paused
+func (r *AddonReconciler) reportAddonPauseStatus(
+	ctx context.Context, reason string,
+	addon *addonsv1alpha1.Addon) error {
+	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
+		Type:               addonsv1alpha1.Paused,
+		Status:             metav1.ConditionTrue,
+		Reason:             reason,
+		Message:            "",
+		ObservedGeneration: addon.Generation,
+	})
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhaseReady
+	return r.Status().Update(ctx, addon)
+}
+
+// remove Paused condition from Addon
+func (r *AddonReconciler) removeAddonPauseCondition(ctx context.Context,
+	addon *addonsv1alpha1.Addon) error {
+	meta.RemoveStatusCondition(&addon.Status.Conditions, addonsv1alpha1.Paused)
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addon)
 }
 
