@@ -36,15 +36,13 @@ func TestAddonInstallSpec(t *testing.T) {
 			addon: testutil.NewAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
 			}, addonName),
-			err: testutil.NewStatusError(".spec.install.ownNamespace is required " +
-				"when .spec.install.type = OwnNamespace"),
+			err: testutil.NewStatusError(".spec.install.olmOwnNamespace is required when .spec.install.type = OLMOwnNamespace"),
 		},
 		{
 			addon: testutil.NewAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMAllNamespaces,
 			}, addonName),
-			err: testutil.NewStatusError(".spec.install.allNamespaces is required " +
-				"when .spec.install.type = AllNamespaces"),
+			err: testutil.NewStatusError(".spec.install.olmAllNamespaces is required when .spec.install.type = OLMAllNamespaces"),
 		},
 		{
 			addon: testutil.NewAddonWithInstallSpec(addonsv1alpha1.AddonInstallSpec{
@@ -138,7 +136,7 @@ func TestAddonSpecImmutability(t *testing.T) {
 			Channel = "beta"
 
 		err = integration.Client.Update(ctx, addon)
-		expectedErr := testutil.NewStatusError(".spec.install is an immutable field and cannot be updated")
+		expectedErr := testutil.NewStatusError(".spec.install.type is immutable")
 
 		// explicitly check error type as
 		// `Update` can return many different kinds of errors

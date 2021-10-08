@@ -60,18 +60,18 @@ func (r *AddonWebhookHandler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (r *AddonWebhookHandler) validateCreate(addon *addonsv1alpha1.Addon) admission.Response {
-	if err := validateInstallSpec(*addon); err != nil {
+	if err := validateAddon(addon); err != nil {
 		return admission.Denied(err.Error())
 	}
 	return admission.Allowed("operation allowed")
 }
 
 func (r *AddonWebhookHandler) validateUpdate(addon, oldAddon *addonsv1alpha1.Addon) admission.Response {
-	if err := validateInstallSpec(*addon); err != nil {
+	if err := validateAddon(addon); err != nil {
 		return admission.Denied(err.Error())
 	}
 
-	if err := validateAddonInstallImmutability(*addon, *oldAddon); err != nil {
+	if err := validateAddonImmutability(addon, oldAddon); err != nil {
 		return admission.Denied(err.Error())
 	}
 	return admission.Allowed("operation allowed")
