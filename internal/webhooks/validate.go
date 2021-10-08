@@ -2,63 +2,84 @@ package webhooks
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
+
+	"k8s.io/apimachinery/pkg/api/equality"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-func validateInstallSpec(addon addonsv1alpha1.Addon) error {
-	switch addon.Spec.Install.Type {
+var (
+	errSpecInstallTypeInvalid             = errors.New("invalid Addon .spec.install.type")
+	errSpecInstallOwnNamespaceRequired    = errors.New(".spec.install.olmOwnNamespace is required when .spec.install.type = OLMOwnNamespace")
+	errSpecInstallAllNamespacesRequired   = errors.New(".spec.install.olmAllNamespaces is required when .spec.install.type = OLMAllNamespaces")
+	errSpecInstallConfigMutuallyExclusive = errors.New(".spec.install.olmAllNamespaces is mutually exclusive with .spec.install.olmOwnNamespace")
+)
+
+func validateAddon(addon *addonsv1alpha1.Addon) error {
+	return validateInstallSpec(addon.Spec.Install)
+}
+
+func validateInstallSpec(addonSpecInstall addonsv1alpha1.AddonInstallSpec) error {
+	if addonSpecInstall.OLMAllNamespaces != nil &&
+		addonSpecInstall.OLMOwnNamespace != nil {
+		return errSpecInstallConfigMutuallyExclusive
+	}
+
+	switch addonSpecInstall.Type {
 	case addonsv1alpha1.OLMOwnNamespace:
-		if addon.Spec.Install.OLMOwnNamespace == nil {
+		if addonSpecInstall.OLMOwnNamespace == nil {
 			// missing configuration
-			return errors.New(".spec.install.ownNamespace is required when .spec.install.type = OwnNamespace")
+			return errSpecInstallOwnNamespaceRequired
 		}
 
-		// The two conditions below are usually never evaluated at the webhook
-		// because schema validation should handle it for us
-		if len(addon.Spec.Install.OLMOwnNamespace.Namespace) == 0 {
-			// invalid/missing configuration
-			return errors.New(".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
-		}
-
-		if len(addon.Spec.Install.OLMOwnNamespace.CatalogSourceImage) == 0 {
-			// invalid/missing configuration
-			return errors.New(".spec.install.ownNamespacee.catalogSourceImage is required when .spec.install.type = OwnNamespace")
-		}
 		return nil
 
 	case addonsv1alpha1.OLMAllNamespaces:
-		if addon.Spec.Install.OLMAllNamespaces == nil {
+		if addonSpecInstall.OLMAllNamespaces == nil {
 			// missing configuration
-			return errors.New(".spec.install.allNamespaces is required when .spec.install.type = AllNamespaces")
+			return errSpecInstallAllNamespacesRequired
 		}
 
-		// The two conditions below are usually never evaluated at the webhook
-		// because schema validation should handle it for us
-		if len(addon.Spec.Install.OLMAllNamespaces.Namespace) == 0 {
-			// invalid/missing configuration
-			return errors.New(".spec.install.allNamespaces.namespace is required when .spec.install.type = AllNamespaces")
-		}
-
-		if len(addon.Spec.Install.OLMAllNamespaces.CatalogSourceImage) == 0 {
-			// invalid/missing configuration
-			return errors.New(".spec.install.allNamespaces.catalogSourceImage is required when .spec.install.type = AllNamespaces")
-		}
 		return nil
 
 	default:
 		// Unsupported Install Type
 		// This should never happen, unless the schema validation is wrong.
 		// The .install.type property is set to only allow known enum values.
-		return fmt.Errorf("invalid Addon install type: %q", addon.Spec.Install.Type)
+		return errSpecInstallTypeInvalid
 	}
 }
 
-func validateAddonInstallImmutability(addon, oldAddon addonsv1alpha1.Addon) error {
-	if !reflect.DeepEqual(addon.Spec.Install, oldAddon.Spec.Install) {
-		return errors.New(".spec.install is an immutable field and cannot be updated")
+var (
+	errInstallTypeImmutable = errors.New(".spec.install.type is immutable")
+	errInstallImmutable     = errors.New(".spec.install is immutable, except for .catalogSourceImage")
+)
+
+func validateAddonImmutability(addon, oldAddon *addonsv1alpha1.Addon) error {
+	if addon.Spec.Install.Type != oldAddon.Spec.Install.Type {
+		return errInstallTypeImmutable
+	}
+
+	// empty fields that we don't want to compare
+	oldSpecInstall := oldAddon.Spec.Install.DeepCopy()
+	if oldSpecInstall.OLMAllNamespaces != nil {
+		oldSpecInstall.OLMAllNamespaces.CatalogSourceImage = ""
+	}
+	if oldSpecInstall.OLMOwnNamespace != nil {
+		oldSpecInstall.OLMOwnNamespace.CatalogSourceImage = ""
+	}
+
+	specInstall := addon.Spec.Install.DeepCopy()
+	if specInstall.OLMAllNamespaces != nil {
+		specInstall.OLMAllNamespaces.CatalogSourceImage = ""
+	}
+	if specInstall.OLMOwnNamespace != nil {
+		specInstall.OLMOwnNamespace.CatalogSourceImage = ""
+	}
+
+	// Do semantic DeepEqual instead of reflect.DeepEqual
+	if !equality.Semantic.DeepEqual(oldSpecInstall, specInstall) {
+		return errInstallImmutable
 	}
 	return nil
 }
