@@ -131,14 +131,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AddonInstanceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
-		os.Exit(1)
-	}
+	// commenting this as currently, it's not serving any purpose but might end up with some use case later on where, say, dedicated reconciliation of AddonInstance is resource ends up being required
+	// if err = (&controllers.AddonInstanceReconciler{
+	// 	Client: mgr.GetClient(),
+	// 	Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
+	// 	Scheme: mgr.GetScheme(),
+	// }).SetupWithManager(mgr); err != nil {
+	// 	setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
+	// 	os.Exit(1)
+	// }
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

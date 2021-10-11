@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -15,13 +14,16 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-// Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
+// Ensures the presence of an AddonInstance well-compliant with the provided Addon object
 func (r *AddonReconciler) ensureAddonInstance(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (err error) {
 	// not capturing "stop" because it won't ever be reached due to the guard rails of CRD Enum-Validation Markers
-	targetNamespace, _, _, err := r.parseAddonInstallConfig(ctx, log, addon)
+	targetNamespace, _, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
 	if err != nil {
 		return err
+	}
+	if stop {
+		return fmt.Errorf("failed to create addonInstance due to misconfigured install.spec.type")
 	}
 
 	desiredAddonInstance := &addonsv1alpha1.AddonInstance{
@@ -29,9 +31,7 @@ func (r *AddonReconciler) ensureAddonInstance(
 			Name:      addonsv1alpha1.DefaultAddonInstanceName,
 			Namespace: targetNamespace,
 		},
-		Spec: addonsv1alpha1.AddonInstanceSpec{
-			HeartbeatUpdatePeriod: int64(10 * time.Second),
-		},
+		Spec: addonsv1alpha1.DefaultAddonInstanceSpec,
 	}
 
 	if err := controllerutil.SetControllerReference(addon, desiredAddonInstance, r.Scheme); err != nil {
@@ -41,8 +41,8 @@ func (r *AddonReconciler) ensureAddonInstance(
 	return r.reconcileAddonInstance(ctx, desiredAddonInstance)
 }
 
-// Reconciles the Spec of the given OperatorGroup if needed by updating or creating the OperatorGroup.
-// The given OperatorGroup is updated to reflect the latest state from the kube-apiserver.
+// Reconciles the reality to have the desired AddonInstance resource by creating it if it does not exist,
+// or updating if it exists with a different spec.
 func (r *AddonReconciler) reconcileAddonInstance(
 	ctx context.Context, addonInstance *addonsv1alpha1.AddonInstance) error {
 	currentAddonInstance := &addonsv1alpha1.AddonInstance{}

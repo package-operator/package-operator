@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,7 +39,6 @@ type AddonInstanceStatus struct {
 
 // AddonInstance is the Schema for the AddonInstance API
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
@@ -60,6 +61,13 @@ type AddonInstanceList struct {
 
 const (
 	DefaultAddonInstanceName = "addon-instance"
+)
+
+var (
+	DefaultAddonInstanceSpec AddonInstanceSpec = AddonInstanceSpec{
+		HeartbeatUpdatePeriod: int64(10 * time.Second),
+		//TODO: add more stuff later on
+	}
 )
 
 func init() {

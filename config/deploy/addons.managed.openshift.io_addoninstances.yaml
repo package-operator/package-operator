@@ -14,7 +14,7 @@ spec:
     listKind: AddonInstanceList
     plural: addoninstances
     singular: addoninstance
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.phase
