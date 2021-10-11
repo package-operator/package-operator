@@ -69,6 +69,7 @@ func (r *AddonReconciler) reportTerminationStatus(
 // Report Addon status to communicate that the resource is misconfigured
 func (r *AddonReconciler) reportConfigurationError(
 	ctx context.Context, addon *addonsv1alpha1.Addon, message string) error {
+	// TODO: remove the following 2 lines of code
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseError
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{

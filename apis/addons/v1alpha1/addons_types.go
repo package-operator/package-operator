@@ -57,6 +57,7 @@ type AddonInstallOLMCommon struct {
 
 	// Defines the CatalogSource image.
 	// Please only use digests and no tags here!
+	// TODO: add validation for ensuring SHA digests only and NOT tags/anything else
 	// +kubebuilder:validation:MinLength=1
 	CatalogSourceImage string `json:"catalogSourceImage"`
 
