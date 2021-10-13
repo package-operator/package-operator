@@ -137,6 +137,10 @@ const (
 	Paused = "Paused"
 )
 
+var (
+	SupportedInstallTypes []AddonInstallType = []AddonInstallType{OLMOwnNamespace, OLMAllNamespaces}
+)
+
 // AddonStatus defines the observed state of Addon
 type AddonStatus struct {
 	// The most recent generation observed by the controller.
