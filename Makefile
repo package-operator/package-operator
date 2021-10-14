@@ -464,7 +464,8 @@ build-images: \
 ## Build and push all images.
 push-images: \
 	push-image-addon-operator-manager \
-	push-image-addon-operator-webhook
+	push-image-addon-operator-webhook \
+	push-image-addon-operator-index
 .PHONY: push-images
 
 .SECONDEXPANSION:
