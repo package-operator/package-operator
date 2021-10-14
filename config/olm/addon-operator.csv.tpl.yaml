@@ -20,7 +20,7 @@ spec:
   maintainers:
   - email: sd-mt-sre@redhat.com
     name: Red Hat Service Delivery - Managed Tenants Team
-  maturity: alpha
+  maturity: stable
   provider:
     name: Red Hat
     url: www.redhat.com

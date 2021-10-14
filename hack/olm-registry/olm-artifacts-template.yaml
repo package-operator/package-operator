@@ -6,9 +6,6 @@ metadata:
 parameters:
   - name: REGISTRY_IMG
     required: true
-  - name: CHANNEL
-    value: staging
-    required: true
   - name: IMAGE_TAG
     required: true
   - name: IMAGE_DIGEST
@@ -69,7 +66,7 @@ objects:
             name: addon-operator
             namespace: openshift-addon-operator
           spec:
-            channel: ${CHANNEL}
+            channel: stable
             name: addon-operator
             source: addon-operator-catalog
             sourceNamespace: openshift-addon-operator
