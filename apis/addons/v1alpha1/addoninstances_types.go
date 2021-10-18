@@ -14,17 +14,6 @@ type AddonInstanceSpec struct {
 	// TODO: add more stuff here
 }
 
-type AddonInstancePhase string
-
-// Well-known Addon Phases for printing a Status in kubectl,
-// see deprecation notice in AddonStatus for details.
-const (
-	AddonInstancePhasePending     AddonInstancePhase = "Pending"
-	AddonInstancePhaseReady       AddonInstancePhase = "Ready"
-	AddonInstancePhaseTerminating AddonInstancePhase = "Terminating"
-	AddonInstancePhaseError       AddonInstancePhase = "Error"
-)
-
 // AddonInstanceStatus defines the observed state of Addon
 type AddonInstanceStatus struct {
 	// The most recent generation observed by the controller.
@@ -33,21 +22,18 @@ type AddonInstanceStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Timestamp of the last reported status check
 	// +optional
-	LastHeartbeatTime metav1.Time        `json:"lastHeartbeatTime"`
-	Phase             AddonInstancePhase `json:"phase,omitempty"`
+	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime"`
 }
 
 // AddonInstance is the Schema for the AddonInstance API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type AddonInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec AddonInstanceSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	Spec   AddonInstanceSpec   `json:"spec,omitempty"`
 	Status AddonInstanceStatus `json:"status,omitempty"`
 }
 
