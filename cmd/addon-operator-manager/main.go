@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -18,6 +19,8 @@ import (
 
 	aoapis "github.com/openshift/addon-operator/apis"
 	"github.com/openshift/addon-operator/internal/controllers"
+
+	addoninstanceapi "github.com/openshift/addon-operator/pkg/addoninstance"
 )
 
 var (
@@ -140,6 +143,8 @@ func main() {
 	// 	setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
 	// 	os.Exit(1)
 	// }
+
+	go addoninstanceapi.RunHeartbeatChecker(context.TODO(), ctrl.Log.WithName("components").WithName("AddonInstanceReferenceAddonChecker"), mgr, 10*time.Second)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

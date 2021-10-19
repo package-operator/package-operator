@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -51,9 +49,10 @@ const (
 
 var (
 	DefaultAddonInstanceSpec AddonInstanceSpec = AddonInstanceSpec{
-		HeartbeatUpdatePeriod: int64(10 * time.Second),
+		HeartbeatUpdatePeriod: 10,
 		//TODO: add more stuff later on
 	}
+	DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64 = 3
 )
 
 func init() {
