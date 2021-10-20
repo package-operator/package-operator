@@ -22,7 +22,21 @@ type AddonSpec struct {
 	// Defines how an Addon is installed.
 	// This field is immutable.
 	Install AddonInstallSpec `json:"install"`
+
+	// ResourceAdoptionStrategy coordinates resource adoption for an Addon
+	// Originally introduced for coordinating fleetwide migration on OSD with pre-existing OLM objects.
+	// NOTE: This field is for internal usage only and not to be modified by the user.
+	// +kubebuilder:validation:Enum={"Prevent","AdoptAll"}
+	ResourceAdoptionStrategy ResourceAdoptionStrategyType `json:"resourceAdoptionStrategy,omitempty"`
 }
+
+type ResourceAdoptionStrategyType string
+
+// known resource adoption strategy types
+const (
+	ResourceAdoptionPrevent  ResourceAdoptionStrategyType = "Prevent"
+	ResourceAdoptionAdoptAll ResourceAdoptionStrategyType = "AdoptAll"
+)
 
 // AddonInstallSpec defines the desired Addon installation type.
 type AddonInstallSpec struct {
