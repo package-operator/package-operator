@@ -11,6 +11,7 @@ import (
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
@@ -195,7 +196,8 @@ func TestReconcileNamespace_Create(t *testing.T) {
 	c.On("Create", testutil.IsContext, testutil.IsCoreV1NamespacePtr, mock.Anything).Return(nil, newTestNamespace())
 
 	ctx := context.Background()
-	reconciledNamespace, err := reconcileNamespace(ctx, c, newTestNamespace())
+	reconciledNamespace, err := reconcileNamespace(ctx, c, newTestSchemeWithAddonsv1alpha1(), newTestNamespace(),
+		addonsv1alpha1.ResourceAdoptionPrevent)
 	require.NoError(t, err)
 	assert.NotNil(t, reconciledNamespace)
 	assert.Equal(t, newTestNamespace(), reconciledNamespace)
@@ -214,7 +216,8 @@ func TestReconcileNamespace_CreateWithCollisionWithoutOwner(t *testing.T) {
 	}).Return(nil)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, newTestNamespace())
+	_, err := reconcileNamespace(ctx, c, newTestSchemeWithAddonsv1alpha1(), newTestNamespace(),
+		addonsv1alpha1.ResourceAdoptionPrevent)
 	require.EqualError(t, err, errNotOwnedByUs.Error())
 	c.AssertExpectations(t)
 	c.AssertCalled(t, "Get", testutil.IsContext, client.ObjectKey{
@@ -230,7 +233,8 @@ func TestReconcileNamespace_CreateWithCollisionWithOtherOwner(t *testing.T) {
 	}).Return(nil)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, newTestNamespace())
+	_, err := reconcileNamespace(ctx, c, newTestSchemeWithAddonsv1alpha1(), newTestNamespace(),
+		addonsv1alpha1.ResourceAdoptionPrevent)
 	require.EqualError(t, err, errNotOwnedByUs.Error())
 	c.AssertExpectations(t)
 	c.AssertCalled(t, "Get", testutil.IsContext, client.ObjectKey{
@@ -246,7 +250,8 @@ func TestReconcileNamespace_CreateWithClientError(t *testing.T) {
 		Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, newTestNamespace())
+	_, err := reconcileNamespace(ctx, c, newTestSchemeWithAddonsv1alpha1(), newTestNamespace(),
+		addonsv1alpha1.ResourceAdoptionPrevent)
 	require.Error(t, err)
 	require.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)
