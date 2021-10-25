@@ -56,8 +56,6 @@ type AddonInstallOLMCommon struct {
 	Namespace string `json:"namespace"`
 
 	// Defines the CatalogSource image.
-	// Please only use digests and no tags here!
-	// TODO: add validation for ensuring SHA digests only and NOT tags/anything else
 	// +kubebuilder:validation:MinLength=1
 	CatalogSourceImage string `json:"catalogSourceImage"`
 
@@ -135,10 +133,6 @@ const (
 
 	// Paused condition indicates that the reconciliation of resources for the Addon(s) has paused
 	Paused = "Paused"
-)
-
-var (
-	SupportedInstallTypes []AddonInstallType = []AddonInstallType{OLMOwnNamespace, OLMAllNamespaces}
 )
 
 // AddonStatus defines the observed state of Addon

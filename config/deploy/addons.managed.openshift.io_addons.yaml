@@ -55,9 +55,7 @@ spec:
                       if Type = OLMAllNamespaces.
                     properties:
                       catalogSourceImage:
-                        description: 'Defines the CatalogSource image. Please only
-                          use digests and no tags here! TODO: add validation for ensuring
-                          SHA digests only and NOT tags/anything else'
+                        description: Defines the CatalogSource image.
                         minLength: 1
                         type: string
                       channel:
@@ -84,9 +82,7 @@ spec:
                       Type = OLMOwnNamespace.
                     properties:
                       catalogSourceImage:
-                        description: 'Defines the CatalogSource image. Please only
-                          use digests and no tags here! TODO: add validation for ensuring
-                          SHA digests only and NOT tags/anything else'
+                        description: Defines the CatalogSource image.
                         minLength: 1
                         type: string
                       channel:

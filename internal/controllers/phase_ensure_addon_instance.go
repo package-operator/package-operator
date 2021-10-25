@@ -31,7 +31,10 @@ func (r *AddonReconciler) ensureAddonInstance(
 			Name:      addonsv1alpha1.DefaultAddonInstanceName,
 			Namespace: targetNamespace,
 		},
-		Spec: addonsv1alpha1.DefaultAddonInstanceSpec,
+		// Can't skip specifying spec because in this case, the zero-value for metav1.Duration will be perceived beforehand i.e. 0s instead of CRD's default value of 10s
+		Spec: addonsv1alpha1.AddonInstanceSpec{
+			HeartbeatUpdatePeriod: addonsv1alpha1.DefaultAddonInstanceHeartbeatUpdatePeriod,
+		},
 	}
 
 	if err := controllerutil.SetControllerReference(addon, desiredAddonInstance, r.Scheme); err != nil {
@@ -46,7 +49,6 @@ func (r *AddonReconciler) ensureAddonInstance(
 func (r *AddonReconciler) reconcileAddonInstance(
 	ctx context.Context, addonInstance *addonsv1alpha1.AddonInstance) error {
 	currentAddonInstance := &addonsv1alpha1.AddonInstance{}
-
 	err := r.Get(ctx, client.ObjectKeyFromObject(addonInstance), currentAddonInstance)
 	if errors.IsNotFound(err) {
 		return r.Create(ctx, addonInstance)

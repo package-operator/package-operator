@@ -36,7 +36,7 @@ func parseTargetNamespaceFromAddon(addon addonsv1alpha1.Addon) (string, error) {
 	default:
 		// ideally, this should never happen
 		// but technically, it is possible to happen if validation webhook is turned off and CRD validation gets bypassed via the `--validate=false` argument
-		return "", fmt.Errorf("unsupported install type found: %s. Allowed install types: %+v", addon.Spec.Install.Type, addonsv1alpha1.SupportedInstallTypes)
+		return "", fmt.Errorf("unsupported install type found: %s", addon.Spec.Install.Type)
 	}
 	return targetNamespace, nil
 }

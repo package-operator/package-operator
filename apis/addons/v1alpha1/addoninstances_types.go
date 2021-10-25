@@ -1,14 +1,16 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AddonInstanceSpec defines the desired state of Addon operator.
+// AddonInstanceSpec defines the configuration to consider while taking AddonInstance-related decisions such as HeartbeatTimeouts
 type AddonInstanceSpec struct {
-	// Name of Kubernetes Secret resource containing the credentials to Sendgrid
-	// +kubebuilder:default=10
-	HeartbeatUpdatePeriod int64 `json:"heartbeatUpdatePeriod,omitempty"`
+	// The periodic rate at which heartbeats are expected to be received by the AddonInstance object
+	// +kubebuilder:default="10s"
+	HeartbeatUpdatePeriod metav1.Duration `json:"heartbeatUpdatePeriod,omitempty"`
 	// TODO: add more stuff here
 }
 
@@ -26,6 +28,7 @@ type AddonInstanceStatus struct {
 // AddonInstance is the Schema for the AddonInstance API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Last Heartbeat",type="date",JSONPath=".status.lastHeartbeatTime"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type AddonInstance struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -48,11 +51,8 @@ const (
 )
 
 var (
-	DefaultAddonInstanceSpec AddonInstanceSpec = AddonInstanceSpec{
-		HeartbeatUpdatePeriod: 10,
-		//TODO: add more stuff later on
-	}
-	DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64 = 3
+	DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64           = 3
+	DefaultAddonInstanceHeartbeatUpdatePeriod               metav1.Duration = metav1.Duration{Duration: time.Duration(10000000000)}
 )
 
 func init() {

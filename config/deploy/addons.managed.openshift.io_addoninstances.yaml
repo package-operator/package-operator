@@ -17,6 +17,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.lastHeartbeatTime
+      name: Last Heartbeat
+      type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -38,14 +41,14 @@ spec:
           metadata:
             type: object
           spec:
-            description: AddonInstanceSpec defines the desired state of Addon operator.
+            description: AddonInstanceSpec defines the configuration to consider while
+              taking AddonInstance-related decisions such as HeartbeatTimeouts
             properties:
               heartbeatUpdatePeriod:
-                default: 10
-                description: Name of Kubernetes Secret resource containing the credentials
-                  to Sendgrid
-                format: int64
-                type: integer
+                default: 10s
+                description: The periodic rate at which heartbeats are expected to
+                  be received by the AddonInstance object
+                type: string
             type: object
           status:
             description: AddonInstanceStatus defines the observed state of Addon

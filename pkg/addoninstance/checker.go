@@ -32,7 +32,8 @@ func RunHeartbeatChecker(ctx context.Context, log logr.Logger, mgr manager.Manag
 			}
 
 			diff := int64(now.Time.Sub(lastHeartbeatTime.Time) / time.Second)
-			threshold := int64(addonsv1alpha1.DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier) * addonInstance.Spec.HeartbeatUpdatePeriod
+			threshold := addonsv1alpha1.DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier * int64(addonInstance.Spec.HeartbeatUpdatePeriod.Duration/time.Second)
+
 			// if the last heartbeat is older than the timeout threshold, register HeartbeatTimeout Condition
 			if diff >= threshold {
 				// check if already HeartbeatTimeout condition exists
