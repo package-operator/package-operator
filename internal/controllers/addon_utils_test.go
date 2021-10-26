@@ -17,39 +17,79 @@ import (
 )
 
 func TestHandleAddonDeletion(t *testing.T) {
-	addonToDelete := &addonsv1alpha1.Addon{
-		ObjectMeta: metav1.ObjectMeta{
-			Finalizers: []string{
-				cacheFinalizer,
+	t.Run("happy", func(t *testing.T) {
+		addonToDelete := &addonsv1alpha1.Addon{
+			ObjectMeta: metav1.ObjectMeta{
+				Finalizers: []string{
+					cacheFinalizer,
+				},
 			},
-		},
-	}
+		}
 
-	c := testutil.NewClient()
+		c := testutil.NewClient()
 
-	csvEventHandlerMock := &csvEventHandlerMock{}
-	r := &AddonReconciler{
-		Client:          c,
-		Log:             testutil.NewLogger(t),
-		Scheme:          newTestSchemeWithAddonsv1alpha1(),
-		csvEventHandler: csvEventHandlerMock,
-	}
+		csvEventHandlerMock := &csvEventHandlerMock{}
+		r := &AddonReconciler{
+			Client:          c,
+			Log:             testutil.NewLogger(t),
+			Scheme:          newTestSchemeWithAddonsv1alpha1(),
+			csvEventHandler: csvEventHandlerMock,
+		}
 
-	c.StatusMock.
-		On("Update", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-	c.
-		On("Update", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-	csvEventHandlerMock.
-		On("Free", addonToDelete)
+		c.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		c.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		csvEventHandlerMock.
+			On("Free", addonToDelete)
 
-	ctx := context.Background()
-	err := r.handleAddonDeletion(ctx, addonToDelete)
-	require.NoError(t, err)
+		ctx := context.Background()
+		err := r.handleAddonDeletion(ctx, addonToDelete)
+		require.NoError(t, err)
 
-	assert.Empty(t, addonToDelete.Finalizers)                                    // finalizer is gone
-	assert.Equal(t, addonsv1alpha1.PhaseTerminating, addonToDelete.Status.Phase) // status is set
+		assert.Empty(t, addonToDelete.Finalizers)                                    // finalizer is gone
+		assert.Equal(t, addonsv1alpha1.PhaseTerminating, addonToDelete.Status.Phase) // status is set
+
+		// Methods have been called
+		c.AssertExpectations(t)
+		c.StatusMock.AssertExpectations(t)
+	})
+
+	t.Run("noop if finalizer already gone", func(t *testing.T) {
+		addonToDelete := &addonsv1alpha1.Addon{}
+
+		c := testutil.NewClient()
+
+		csvEventHandlerMock := &csvEventHandlerMock{}
+		r := &AddonReconciler{
+			Client:          c,
+			Log:             testutil.NewLogger(t),
+			Scheme:          newTestSchemeWithAddonsv1alpha1(),
+			csvEventHandler: csvEventHandlerMock,
+		}
+
+		c.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		c.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		csvEventHandlerMock.
+			On("Free", addonToDelete)
+
+		ctx := context.Background()
+		err := r.handleAddonDeletion(ctx, addonToDelete)
+		require.NoError(t, err)
+
+		// ensure no API calls are made,
+		// because the object is already deleted.
+		c.AssertNotCalled(
+			t, "Update", mock.Anything, mock.Anything, mock.Anything)
+		c.StatusMock.AssertNotCalled(
+			t, "Update", mock.Anything, mock.Anything, mock.Anything)
+	})
 }
 
 type csvEventHandlerMock struct {

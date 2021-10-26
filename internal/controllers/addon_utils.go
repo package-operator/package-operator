@@ -16,6 +16,13 @@ import (
 func (r *AddonReconciler) handleAddonDeletion(
 	ctx context.Context, addon *addonsv1alpha1.Addon,
 ) error {
+	if !controllerutil.ContainsFinalizer(addon, cacheFinalizer) {
+		// The finalizer is already gone and the deletion timestamp is set.
+		// kube-apiserver should have garbage collected this object already,
+		// this delete signal does not need further processing.
+		return nil
+	}
+
 	if err := r.reportTerminationStatus(ctx, addon); err != nil {
 		return fmt.Errorf("failed reporting terminiation status: %w", err)
 	}
@@ -23,11 +30,9 @@ func (r *AddonReconciler) handleAddonDeletion(
 	// Clear from CSV Event Handler
 	r.csvEventHandler.Free(addon)
 
-	if controllerutil.ContainsFinalizer(addon, cacheFinalizer) {
-		controllerutil.RemoveFinalizer(addon, cacheFinalizer)
-		if err := r.Update(ctx, addon); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
-		}
+	controllerutil.RemoveFinalizer(addon, cacheFinalizer)
+	if err := r.Update(ctx, addon); err != nil {
+		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 
 	return nil
