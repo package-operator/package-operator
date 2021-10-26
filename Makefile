@@ -470,6 +470,14 @@ push-images: \
 	push-image-addon-operator-index
 .PHONY: push-images
 
+docker-login:
+ifdef JENKINS_HOME
+	@echo running in Jenkins, calling docker login
+	$(eval DOCKER_CONF := ${PWD}/.docker)
+	@mkdir -p "${DOCKER_CONF}"
+	@docker --config="${DOCKER_CONF}" login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io
+endif
+
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
 clean-image-cache-%:
@@ -491,7 +499,7 @@ build-image-%: bin/linux_amd64/$$*
 	) 2>&1 | sed 's/^/  /'
 
 ## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
-push-image-%: build-image-$$*
+push-image-%: docker-login build-image-$$*
 	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
 		$$CONTAINER_COMMAND push "${IMAGE_ORG}/$*:${VERSION}"; \
