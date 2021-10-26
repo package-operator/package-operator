@@ -261,17 +261,17 @@ func TestReconcileNamespace_CreateWithClientError(t *testing.T) {
 }
 
 func TestHasEqualControllerReference(t *testing.T) {
-	require.True(t, hasEqualControllerReference(
+	require.True(t, HasEqualControllerReference(
 		newTestNamespace(),
 		newTestNamespace(),
 	))
 
-	require.False(t, hasEqualControllerReference(
+	require.False(t, HasEqualControllerReference(
 		newTestNamespace(),
 		newTestExistingNamespaceWithOwner(),
 	))
 
-	require.False(t, hasEqualControllerReference(
+	require.False(t, HasEqualControllerReference(
 		newTestNamespace(),
 		newTestExistingNamespaceWithoutOwner(),
 	))

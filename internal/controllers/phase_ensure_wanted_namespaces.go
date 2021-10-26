@@ -115,7 +115,7 @@ func reconcileNamespace(ctx context.Context, c client.Client, scheme *runtime.Sc
 	}
 
 	if len(currentNamespace.OwnerReferences) == 0 ||
-		!hasEqualControllerReference(currentNamespace, namespace) {
+		!HasEqualControllerReference(currentNamespace, namespace) {
 
 		// TODO: remove this condition once resoureceAdoptionStrategy is discontinued
 		if strategy == addonsv1alpha1.ResourceAdoptionAdoptAll {
@@ -124,32 +124,4 @@ func reconcileNamespace(ctx context.Context, c client.Client, scheme *runtime.Sc
 		return nil, errNotOwnedByUs
 	}
 	return currentNamespace, nil
-}
-
-// Tests if the controller reference on `wanted` matches the one on `current`
-func hasEqualControllerReference(current, wanted metav1.Object) bool {
-	currentOwnerRefs := current.GetOwnerReferences()
-
-	var currentControllerRef *metav1.OwnerReference
-	for _, ownerRef := range currentOwnerRefs {
-		if *ownerRef.Controller {
-			currentControllerRef = &ownerRef
-			break
-		}
-	}
-
-	if currentControllerRef == nil {
-		return false
-	}
-
-	wantedOwnerRefs := wanted.GetOwnerReferences()
-
-	for _, ownerRef := range wantedOwnerRefs {
-		// OwnerRef is the same if UIDs match
-		if currentControllerRef.UID == ownerRef.UID {
-			return true
-		}
-	}
-
-	return false
 }

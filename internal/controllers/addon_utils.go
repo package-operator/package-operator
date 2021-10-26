@@ -149,3 +149,31 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 
 	return targetNamespace, catalogSourceImage, false, nil
 }
+
+// Tests if the controller reference on `wanted` matches the one on `current`
+func HasEqualControllerReference(current, wanted metav1.Object) bool {
+	currentOwnerRefs := current.GetOwnerReferences()
+
+	var currentControllerRef *metav1.OwnerReference
+	for _, ownerRef := range currentOwnerRefs {
+		if *ownerRef.Controller {
+			currentControllerRef = &ownerRef
+			break
+		}
+	}
+
+	if currentControllerRef == nil {
+		return false
+	}
+
+	wantedOwnerRefs := wanted.GetOwnerReferences()
+
+	for _, ownerRef := range wantedOwnerRefs {
+		// OwnerRef is the same if UIDs match
+		if currentControllerRef.UID == ownerRef.UID {
+			return true
+		}
+	}
+
+	return false
+}
