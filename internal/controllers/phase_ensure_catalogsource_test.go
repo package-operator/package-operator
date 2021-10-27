@@ -91,6 +91,13 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 		arg := args.Get(2).(*operatorsv1alpha1.CatalogSource)
 		newTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
 	}).Return(nil)
+	// TODO: remove this Update call once resourceAdoptionStrategy is discontinued
+	// This update call changes the ownerRef to AddonOperator
+	c.On("Update",
+		testutil.IsContext,
+		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
+		mock.Anything,
+	).Return(nil)
 	c.StatusMock.On("Update",
 		testutil.IsContext,
 		testutil.IsAddonsv1alpha1AddonPtr,
