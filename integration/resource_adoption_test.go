@@ -248,22 +248,22 @@ func TestResourceAdoption(t *testing.T) {
 		}
 
 		// delete addon
-		// err = integration.Client.Delete(ctx, addon)
-		// require.NoError(t, err, "delete addon")
+		err = integration.Client.Delete(ctx, addon)
+		require.NoError(t, err, "delete addon")
 
-		// err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
-		// require.NoError(t, err, "wait for Addon to be deleted")
+		err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
+		require.NoError(t, err, "wait for Addon to be deleted")
 	})
 
-	// t.Cleanup(func() {
-	// 	// delete in reverse so namespace is deleted last
-	// 	for i := len(requiredOLMObjects); i <= 0; i-- {
-	// 		obj := requiredOLMObjects[i]
-	// 		t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-	// 		err := integration.Client.Delete(ctx, obj)
-	// 		require.NoError(t, err)
-	// 	}
-	// })
+	t.Cleanup(func() {
+		// delete in reverse so namespace is deleted last
+		for i := len(requiredOLMObjects); i <= 0; i-- {
+			obj := requiredOLMObjects[i]
+			t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+			err := integration.Client.Delete(ctx, obj)
+			require.NoError(t, err)
+		}
+	})
 }
 
 func validateOwnerReference(addon *addonsv1alpha1.Addon, obj metav1.Object) (bool, error) {
