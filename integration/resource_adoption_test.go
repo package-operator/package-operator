@@ -22,10 +22,9 @@ import (
 )
 
 var (
-	referenceAddonCataloSourceName = "addon-reference-addon-catalog"
-	referenceAddonNamespace        = "reference-addon"
-	referenceAddonName             = "reference-addon"
-	referenceAddonDisplayName      = "Reference Addon"
+	referenceAddonNamespace   = "reference-addon"
+	referenceAddonName        = "reference-addon"
+	referenceAddonDisplayName = "Reference Addon"
 )
 
 // taken from -
@@ -44,7 +43,7 @@ func getReferenceAddonNamespace() *corev1.Namespace {
 func getReferenceAddonCatalogSource() *operatorsv1alpha1.CatalogSource {
 	return &operatorsv1alpha1.CatalogSource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      referenceAddonCataloSourceName,
+			Name:      referenceAddonName,
 			Namespace: referenceAddonNamespace,
 		},
 		Spec: operatorsv1alpha1.CatalogSourceSpec{
@@ -74,7 +73,7 @@ func getReferenceAddonSubscription() *operatorsv1alpha1.Subscription {
 			Name:      referenceAddonName,
 			Namespace: referenceAddonNamespace},
 		Spec: &operatorsv1alpha1.SubscriptionSpec{
-			CatalogSource:          referenceAddonCataloSourceName,
+			CatalogSource:          referenceAddonName,
 			CatalogSourceNamespace: referenceAddonNamespace,
 			Channel:                referenceAddonNamespace,
 			Package:                referenceAddonName,
@@ -190,27 +189,57 @@ func TestResourceAdoption(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, ok)
 		}
-		// TODO: validate ownerReference on Subscription
-		// TODO: validate ownerReference on OperatorGroup
+		// validate ownerReference on Subscription
+		{
+			observedSubscription := &operatorsv1alpha1.Subscription{}
+			err = integration.Client.Get(ctx,
+				client.ObjectKey{Name: referenceAddonName,
+					Namespace: referenceAddonNamespace}, observedSubscription)
+			require.NoError(t, err)
+			ok, err := validateOwnerReference(addon, observedSubscription)
+			require.NoError(t, err)
+			assert.True(t, ok)
+		}
+		// validate ownerReference on OperatorGroup
+		{
+			observedOG := &operatorsv1.OperatorGroup{}
+			err = integration.Client.Get(ctx,
+				client.ObjectKey{Name: referenceAddonName,
+					Namespace: referenceAddonNamespace}, observedOG)
+			require.NoError(t, err)
+			ok, err := validateOwnerReference(addon, observedOG)
+			require.NoError(t, err)
+			assert.True(t, ok)
+		}
 		// TODO: validate ownerReference on CatalogSource
+		{
+			observedCS := &operatorsv1alpha1.CatalogSource{}
+			err = integration.Client.Get(ctx,
+				client.ObjectKey{Name: referenceAddonName,
+					Namespace: referenceAddonNamespace}, observedCS)
+			require.NoError(t, err)
+			ok, err := validateOwnerReference(addon, observedCS)
+			require.NoError(t, err)
+			assert.True(t, ok)
+		}
 
 		// delete addon
-		err = integration.Client.Delete(ctx, addon)
-		require.NoError(t, err, "delete addon")
+		// err = integration.Client.Delete(ctx, addon)
+		// require.NoError(t, err, "delete addon")
 
-		err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
-		require.NoError(t, err, "wait for Addon to be deleted")
+		// err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
+		// require.NoError(t, err, "wait for Addon to be deleted")
 	})
 
-	t.Cleanup(func() {
-		// delete in reverse so namespace is deleted last
-		for i := len(requiredOLMObjects); i <= 0; i-- {
-			obj := requiredOLMObjects[i]
-			t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-			err := integration.Client.Delete(ctx, obj)
-			require.NoError(t, err)
-		}
-	})
+	// t.Cleanup(func() {
+	// 	// delete in reverse so namespace is deleted last
+	// 	for i := len(requiredOLMObjects); i <= 0; i-- {
+	// 		obj := requiredOLMObjects[i]
+	// 		t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+	// 		err := integration.Client.Delete(ctx, obj)
+	// 		require.NoError(t, err)
+	// 	}
+	// })
 }
 
 func validateOwnerReference(addon *addonsv1alpha1.Addon, obj metav1.Object) (bool, error) {

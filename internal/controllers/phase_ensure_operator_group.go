@@ -59,8 +59,11 @@ func (r *AddonReconciler) reconcileOperatorGroup(
 		return fmt.Errorf("getting OperatorGroup: %w", err)
 	}
 
-	if !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec) {
-		return r.Update(ctx, operatorGroup)
+	if !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec) ||
+		!equality.Semantic.DeepEqual(currentOperatorGroup.OwnerReferences, operatorGroup.OwnerReferences) {
+		currentOperatorGroup.Spec = operatorGroup.Spec
+		currentOperatorGroup.OwnerReferences = operatorGroup.OwnerReferences
+		return r.Update(ctx, currentOperatorGroup)
 	}
 	return nil
 }

@@ -133,10 +133,12 @@ func reconcileCatalogSource(ctx context.Context, c client.Client, catalogSource 
 		}
 	}
 
-	// only update when spec has changed
-	if !equality.Semantic.DeepEqual(catalogSource.Spec, currentCatalogSource.Spec) {
+	// only update when spec or ownerReference has changed
+	if !equality.Semantic.DeepEqual(catalogSource.Spec, currentCatalogSource.Spec) ||
+		!equality.Semantic.DeepEqual(catalogSource.OwnerReferences, currentCatalogSource.OwnerReferences) {
 		// copy new spec into existing object and update in the k8s api
 		currentCatalogSource.Spec = catalogSource.Spec
+		currentCatalogSource.OwnerReferences = catalogSource.OwnerReferences
 		return currentCatalogSource, c.Update(ctx, currentCatalogSource)
 	}
 
