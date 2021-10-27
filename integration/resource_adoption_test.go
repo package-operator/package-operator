@@ -248,21 +248,12 @@ func TestResourceAdoption(t *testing.T) {
 		}
 
 		// delete addon
+		// note that this now also deletes the OLM objects
 		err = integration.Client.Delete(ctx, addon)
 		require.NoError(t, err, "delete addon")
 
 		err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
 		require.NoError(t, err, "wait for Addon to be deleted")
-	})
-
-	t.Cleanup(func() {
-		// delete in reverse so namespace is deleted last
-		for i := len(requiredOLMObjects) - 1; i >= 0; i-- {
-			obj := requiredOLMObjects[i]
-			t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-			err := integration.Client.Delete(ctx, obj)
-			require.NoError(t, err)
-		}
 	})
 }
 
