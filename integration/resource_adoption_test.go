@@ -257,7 +257,7 @@ func TestResourceAdoption(t *testing.T) {
 
 	t.Cleanup(func() {
 		// delete in reverse so namespace is deleted last
-		for i := len(requiredOLMObjects); i <= 0; i-- {
+		for i := len(requiredOLMObjects) - 1; i >= 0; i-- {
 			obj := requiredOLMObjects[i]
 			t.Logf("deleting %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 			err := integration.Client.Delete(ctx, obj)
