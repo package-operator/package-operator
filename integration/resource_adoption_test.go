@@ -7,7 +7,6 @@ import (
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -181,46 +180,71 @@ func TestResourceAdoption(t *testing.T) {
 
 		// validate ownerReference on Namespace
 		{
-			observedNs := &corev1.Namespace{}
-			err = integration.Client.Get(ctx,
-				client.ObjectKey{Name: referenceAddonNamespace}, observedNs)
+			observedNs := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: referenceAddonNamespace,
+				},
+			}
+			err = integration.WaitForObject(
+				t, 2*time.Minute, observedNs, "to have AddonOperator ownerReference",
+				func(obj client.Object) (done bool, err error) {
+					ns := obj.(*corev1.Namespace)
+					return validateOwnerReference(addon, ns)
+				})
 			require.NoError(t, err)
-			ok, err := validateOwnerReference(addon, observedNs)
-			require.NoError(t, err)
-			assert.True(t, ok)
 		}
+
 		// validate ownerReference on Subscription
 		{
-			observedSubscription := &operatorsv1alpha1.Subscription{}
-			err = integration.Client.Get(ctx,
-				client.ObjectKey{Name: referenceAddonName,
-					Namespace: referenceAddonNamespace}, observedSubscription)
+			observedSubscription := &operatorsv1alpha1.Subscription{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      referenceAddonName,
+					Namespace: referenceAddonNamespace,
+				},
+			}
+			err = integration.WaitForObject(
+				t, 2*time.Minute, observedSubscription, "to have AddonOperator ownerReference",
+				func(obj client.Object) (done bool, err error) {
+					sub := obj.(*operatorsv1alpha1.Subscription)
+					return validateOwnerReference(addon, sub)
+				})
 			require.NoError(t, err)
-			ok, err := validateOwnerReference(addon, observedSubscription)
-			require.NoError(t, err)
-			assert.True(t, ok)
+
 		}
+
 		// validate ownerReference on OperatorGroup
 		{
-			observedOG := &operatorsv1.OperatorGroup{}
-			err = integration.Client.Get(ctx,
-				client.ObjectKey{Name: referenceAddonName,
-					Namespace: referenceAddonNamespace}, observedOG)
+			observedOG := &operatorsv1.OperatorGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      referenceAddonName,
+					Namespace: referenceAddonNamespace,
+				},
+			}
+			err = integration.WaitForObject(
+				t, 2*time.Minute, observedOG, "to have AddonOperator ownerReference",
+				func(obj client.Object) (done bool, err error) {
+					og := obj.(*operatorsv1.OperatorGroup)
+					return validateOwnerReference(addon, og)
+				})
 			require.NoError(t, err)
-			ok, err := validateOwnerReference(addon, observedOG)
-			require.NoError(t, err)
-			assert.True(t, ok)
+
 		}
-		// TODO: validate ownerReference on CatalogSource
+		// validate ownerReference on CatalogSource
 		{
-			observedCS := &operatorsv1alpha1.CatalogSource{}
-			err = integration.Client.Get(ctx,
-				client.ObjectKey{Name: referenceAddonName,
-					Namespace: referenceAddonNamespace}, observedCS)
+			observedCS := &operatorsv1alpha1.CatalogSource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      referenceAddonName,
+					Namespace: referenceAddonNamespace,
+				},
+			}
+			err = integration.WaitForObject(
+				t, 2*time.Minute, observedCS, "to have AddonOperator ownerReference",
+				func(obj client.Object) (done bool, err error) {
+					cs := obj.(*operatorsv1alpha1.CatalogSource)
+					return validateOwnerReference(addon, cs)
+				})
 			require.NoError(t, err)
-			ok, err := validateOwnerReference(addon, observedCS)
-			require.NoError(t, err)
-			assert.True(t, ok)
+
 		}
 
 		// delete addon
