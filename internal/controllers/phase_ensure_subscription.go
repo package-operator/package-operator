@@ -112,11 +112,14 @@ func (r *AddonReconciler) reconcileSubscription(
 	// keep installPlanApproval value of existing object
 	subscription.Spec.InstallPlanApproval = currentSubscription.Spec.InstallPlanApproval
 
-	// only update when spec has changed
+	// only update when spec has changed or owner reference has changed
 	if !equality.Semantic.DeepEqual(
-		subscription.Spec, currentSubscription.Spec) {
+		subscription.Spec, currentSubscription.Spec) ||
+		!equality.Semantic.DeepEqual(
+			subscription.OwnerReferences, currentSubscription.OwnerReferences) {
 		// copy new spec into existing object and update in the k8s api
 		currentSubscription.Spec = subscription.Spec
+		currentSubscription.OwnerReferences = subscription.OwnerReferences
 		return currentSubscription, r.Update(ctx, currentSubscription)
 	}
 	return currentSubscription, nil

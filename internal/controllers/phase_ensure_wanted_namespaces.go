@@ -10,6 +10,7 @@ import (
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -86,67 +87,41 @@ func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1al
 		},
 	}
 	addCommonLabels(namespace.Labels, addon)
-
 	err := controllerutil.SetControllerReference(addon, namespace, r.Scheme)
 	if err != nil {
 		return nil, err
 	}
-
-	return reconcileNamespace(ctx, r.Client, namespace)
+	return reconcileNamespace(ctx, r.Client, r.Scheme, namespace, addon.Spec.ResourceAdoptionStrategy)
 }
 
 // reconciles a Namespace and returns the current object as observed.
 // prevents adoption of Namespaces (unowned or owned by something else)
 // reconciling a Namespace means: creating it when it is not present
 // and erroring if our controller is not the owner of said Namespace
-func reconcileNamespace(ctx context.Context, c client.Client, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func reconcileNamespace(ctx context.Context, c client.Client, scheme *runtime.Scheme,
+	namespace *corev1.Namespace, strategy addonsv1alpha1.ResourceAdoptionStrategyType) (*corev1.Namespace, error) {
 
 	currentNamespace := &corev1.Namespace{}
 
-	{
-		err := c.Get(ctx, client.ObjectKey{
-			Name: namespace.Name,
-		}, currentNamespace)
-		if err != nil {
-			if k8sApiErrors.IsNotFound(err) {
-				return namespace, c.Create(ctx, namespace)
-			}
-			return nil, err
-		}
+	err := c.Get(ctx, client.ObjectKey{
+		Name: namespace.Name,
+	}, currentNamespace)
+
+	if k8sApiErrors.IsNotFound(err) {
+		return namespace, c.Create(ctx, namespace)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if len(currentNamespace.OwnerReferences) == 0 ||
-		!hasEqualControllerReference(currentNamespace, namespace) {
+		!HasEqualControllerReference(currentNamespace, namespace) {
+
+		// TODO: remove this condition once resoureceAdoptionStrategy is discontinued
+		if strategy == addonsv1alpha1.ResourceAdoptionAdoptAll {
+			return namespace, c.Update(ctx, namespace)
+		}
 		return nil, errNotOwnedByUs
 	}
-
 	return currentNamespace, nil
-}
-
-// Tests if the controller reference on `wanted` matches the one on `current`
-func hasEqualControllerReference(current, wanted metav1.Object) bool {
-	currentOwnerRefs := current.GetOwnerReferences()
-
-	var currentControllerRef *metav1.OwnerReference
-	for _, ownerRef := range currentOwnerRefs {
-		if *ownerRef.Controller {
-			currentControllerRef = &ownerRef
-			break
-		}
-	}
-
-	if currentControllerRef == nil {
-		return false
-	}
-
-	wantedOwnerRefs := wanted.GetOwnerReferences()
-
-	for _, ownerRef := range wantedOwnerRefs {
-		// OwnerRef is the same if UIDs match
-		if currentControllerRef.UID == ownerRef.UID {
-			return true
-		}
-	}
-
-	return false
 }

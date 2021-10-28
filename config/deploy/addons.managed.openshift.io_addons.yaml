@@ -133,6 +133,15 @@ spec:
               pause:
                 description: Pause reconciliation of Addon when set to True
                 type: boolean
+              resourceAdoptionStrategy:
+                description: 'ResourceAdoptionStrategy coordinates resource adoption
+                  for an Addon Originally introduced for coordinating fleetwide migration
+                  on OSD with pre-existing OLM objects. NOTE: This field is for internal
+                  usage only and not to be modified by the user.'
+                enum:
+                - Prevent
+                - AdoptAll
+                type: string
             required:
             - displayName
             - install
