@@ -144,7 +144,8 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	go addoninstanceapi.RunHeartbeatChecker(context.TODO(), ctrl.Log.WithName("components").WithName("AddonInstanceReferenceAddonChecker"), mgr, 10*time.Second)
+	// mgr.GetClient() returns a Kubernetes Client backed by cached reads. Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/v0.10.2/pkg/cluster/cluster.go#L51-L55
+	go addoninstanceapi.RunHeartbeatChecker(context.TODO(), ctrl.Log.WithName("components").WithName("AddonInstanceHeartbeatChecker"), mgr.GetClient(), 10*time.Second)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

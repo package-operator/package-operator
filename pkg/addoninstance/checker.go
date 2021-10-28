@@ -9,17 +9,17 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-func RunHeartbeatChecker(ctx context.Context, log logr.Logger, mgr manager.Manager, rate time.Duration) {
+func RunHeartbeatChecker(ctx context.Context, log logr.Logger, cacheBackedKubeClient client.Client, rate time.Duration) {
 	// TODO: implement circuit breaker here
 	// run the checker at an interval of `rate`
 	for range time.Tick(rate) {
 		addonInstances := &addonsv1alpha1.AddonInstanceList{}
-		if err := mgr.GetCache().List(ctx, addonInstances); err != nil {
+		if err := cacheBackedKubeClient.List(ctx, addonInstances); err != nil {
 			log.Error(fmt.Errorf("failed to fetch the AddonInstanceList: %w", err), "retrying heartbeat check")
 			continue
 		}
@@ -28,7 +28,9 @@ func RunHeartbeatChecker(ctx context.Context, log logr.Logger, mgr manager.Manag
 
 			now, lastHeartbeatTime := metav1.Now(), addonInstance.Status.LastHeartbeatTime
 			if lastHeartbeatTime.IsZero() {
-				log.Info(fmt.Sprintf("skipping heartbeat for %s/%s because no lastHeartbeatTime was found.", addonInstance.Namespace, addonInstance.Name))
+				// is it worth logging this, considering the immense amounts of logs which are going to end up getting generated?
+				//log.Info(fmt.Sprintf("skipping heartbeat for %s/%s because no lastHeartbeatTime was found.", addonInstance.Namespace, addonInstance.Name))
+				continue
 			}
 
 			diff := int64(now.Time.Sub(lastHeartbeatTime.Time) / time.Second)
@@ -42,7 +44,7 @@ func RunHeartbeatChecker(ctx context.Context, log logr.Logger, mgr manager.Manag
 				if existingCondition == nil || existingCondition.Reason != "HeartbeatTimeout" {
 					log.Info(fmt.Sprintf("setting the Condition of %s/%s to 'HeartbeatTimeout'", addonInstance.Namespace, addonInstance.Name))
 					meta.SetStatusCondition(&addonInstance.Status.Conditions, heartbeatTimeoutCondition)
-					if err := mgr.GetClient().Status().Update(ctx, &addonInstance); err != nil {
+					if err := cacheBackedKubeClient.Status().Update(ctx, &addonInstance); err != nil {
 						log.Error(fmt.Errorf("failed to fetch the AddonInstanceList: %w", err), "retrying heartbeat check")
 						continue
 					}
