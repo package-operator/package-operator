@@ -48,7 +48,7 @@ ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
 
 ifdef JENKINS_HOME
-	export DOCKER_CONF:=$(abspath .docker)
+export DOCKER_CONF:=$(abspath .docker)
 endif
 
 
