@@ -47,6 +47,11 @@ IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
 
+ifdef JENKINS_HOME
+	export DOCKER_CONF:=$(abspath .docker)
+endif
+
+
 # COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -473,7 +478,6 @@ push-images: \
 docker-login:
 ifdef JENKINS_HOME
 	@echo running in Jenkins, calling docker login
-	$(eval DOCKER_CONF := ${PWD}/.docker)
 	@mkdir -p "${DOCKER_CONF}"
 	@docker --config="${DOCKER_CONF}" login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io
 endif
