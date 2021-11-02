@@ -13,9 +13,9 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-// SetCondition sets a certain condition on an AddonInstance corresponding to the provided Addon
-// this function will be used by our tenants to report a heartbeat
-func SetCondition(ctx context.Context, cacheBackedKubeClient client.Client, condition metav1.Condition, addonName string, log logr.Logger) error {
+// SetAddonInstanceCondition sets a certain condition on the AddonInstance corresponding to the provided Addon
+// this function can be used by our tenants to report a heartbeat as well
+func SetAddonInstanceCondition(ctx context.Context, cacheBackedKubeClient client.Client, condition metav1.Condition, addonName string, log logr.Logger) error {
 	addon := &addonsv1alpha1.Addon{}
 	if err := cacheBackedKubeClient.Get(ctx, types.NamespacedName{Name: addonName}, addon); err != nil {
 		return err

@@ -19,8 +19,6 @@ import (
 
 	aoapis "github.com/openshift/addon-operator/apis"
 	"github.com/openshift/addon-operator/internal/controllers"
-
-	addoninstanceapi "github.com/openshift/addon-operator/pkg/addoninstance"
 )
 
 var (
@@ -134,18 +132,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// commenting this as currently, it's not serving any purpose but might end up with some use case later on where, say, dedicated reconciliation of AddonInstance is resource ends up being required
-	// if err = (&controllers.AddonInstanceReconciler{
-	// 	Client: mgr.GetClient(),
-	// 	Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
-	// 	Scheme: mgr.GetScheme(),
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
-	// 	os.Exit(1)
-	// }
-
-	// mgr.GetClient() returns a Kubernetes Client backed by cached reads. Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/v0.10.2/pkg/cluster/cluster.go#L51-L55
-	go addoninstanceapi.RunHeartbeatChecker(context.TODO(), ctrl.Log.WithName("components").WithName("AddonInstanceHeartbeatChecker"), mgr.GetClient(), 10*time.Second)
+	if err = (&controllers.AddonInstanceReconciler{
+		Client:               mgr.GetClient(),
+		Log:                  ctrl.Log.WithName("controller").WithName("AddonInstance"),
+		Scheme:               mgr.GetScheme(),
+		HeartbeatCheckerRate: 10 * time.Second,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

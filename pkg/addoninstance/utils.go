@@ -8,7 +8,7 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-var heartbeatTimeoutCondition metav1.Condition = metav1.Condition{
+var HeartbeatTimeoutCondition metav1.Condition = metav1.Condition{
 	Type:    "addons.managed.openshift.io/Healthy",
 	Status:  "Unknown",
 	Reason:  "HeartbeatTimeout",

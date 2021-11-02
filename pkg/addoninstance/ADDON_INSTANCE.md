@@ -235,7 +235,7 @@ func main() {
             }
 
             //register the heartbeat
-            if err := addoninstance.SetConditions(ctx, client, condition, addonName, log); err != nil {
+            if err := addoninstance.SetAddonInstanceConditions(ctx, client, condition, addonName, log); err != nil {
                 log.Error("some error occurred", err)
                 // or any other error handling mechanism: circuit breakers, backoffs, etc.
             }
