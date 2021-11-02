@@ -506,7 +506,11 @@ build-image-%: bin/linux_amd64/$$*
 push-image-%: docker-login build-image-$$*
 	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
-		$$CONTAINER_COMMAND push "${IMAGE_ORG}/$*:${VERSION}"; \
+		CONFIG_FLAG=""; \
+		if [[ ! -z "$$DOCKER_CONF" ]]; then \
+			CONFIG_FLAG="--config $$DOCKER_CONF"; \
+		fi; \
+		$$CONTAINER_COMMAND push $$CONFIG_FLAG "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo pushed "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
