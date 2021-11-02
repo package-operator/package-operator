@@ -510,7 +510,7 @@ push-image-%: docker-login build-image-$$*
 		if [[ ! -z "$$DOCKER_CONF" ]]; then \
 			CONFIG_FLAG="--config $$DOCKER_CONF"; \
 		fi; \
-		$$CONTAINER_COMMAND push $$CONFIG_FLAG "${IMAGE_ORG}/$*:${VERSION}"; \
+		$$CONTAINER_COMMAND $$CONFIG_FLAG push "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo pushed "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
