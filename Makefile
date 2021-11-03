@@ -482,6 +482,38 @@ ifdef JENKINS_HOME
 	@docker --config="${DOCKER_CONF}" login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io
 endif
 
+# Build the development container image used by run-in-container.
+build-image-dev: clean-image-cache-dev
+	$(eval IMAGE_NAME := dev)
+	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@(source hack/determine-container-runtime.sh; \
+		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
+		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" ".cache/image/${IMAGE_NAME}"; \
+		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
+		echo) 2>&1 | sed 's/^/  /'
+.PHONY: build-image-dev
+
+# Run the command given by ARGS in a dev-container.
+# Only works when running with CONTAINER_RUNTIME=docker and docker installed and running.
+run-in-container: build-image-dev
+	@echo "-------------------------------------------------------"
+	@echo "running in development container..."
+	@echo "command: \"${ARGS}\""
+	@echo "-------------------------------------------------------"
+	$(eval UID=$(shell id -u))
+	(source hack/determine-container-runtime.sh; \
+		$$CONTAINER_COMMAND run --rm -it \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v ${PWD}:/workdir \
+		-w /workdir \
+		--privileged \
+		--env-file <(env | grep -vE "^PATH=") \
+		-e GOCACHE=/tmp/gocache \
+		"${IMAGE_ORG}/dev:${VERSION}" \
+		${ARGS}; \
+		echo) 2>&1 | sed 's/^/  /'
+.PHONY: run-in-container
+
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
 clean-image-cache-%:
@@ -507,7 +539,7 @@ push-image-%: docker-login build-image-$$*
 	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
 		CONFIG_FLAG=""; \
-		if [[ ! -z "$$DOCKER_CONF" ]]; then \
+		if [[ ! -z "$${DOCKER_CONF+x}" ]]; then \
 			CONFIG_FLAG="--config $$DOCKER_CONF"; \
 		fi; \
 		$$CONTAINER_COMMAND $$CONFIG_FLAG push "${IMAGE_ORG}/$*:${VERSION}"; \
