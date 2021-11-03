@@ -502,7 +502,7 @@ run-in-container: build-image-dev
 	@echo "-------------------------------------------------------"
 	$(eval UID=$(shell id -u))
 	(source hack/determine-container-runtime.sh; \
-		$$CONTAINER_COMMAND run --rm -it \
+		$$CONTAINER_COMMAND run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v ${PWD}:/workdir \
 		-w /workdir \
