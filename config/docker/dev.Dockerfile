@@ -1,8 +1,7 @@
-FROM golang:1.16
+FROM registry.ci.openshift.org/openshift/release:golang-1.16
 
-RUN apt-get update && apt-get install -y \
-  docker.io \
+RUN yum install -y \
+  docker \
   python3-pip \
   sudo \
-  && rm -rf /var/lib/apt/lists/* && \
   pip3 install pre-commit
