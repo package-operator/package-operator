@@ -482,37 +482,23 @@ ifdef JENKINS_HOME
 	@docker --config="${DOCKER_CONF}" login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io
 endif
 
-# Build the development container image used by run-in-container.
-build-image-dev: clean-image-cache-dev
-	$(eval IMAGE_NAME := dev)
-	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+# App Interface specific push-images target, to run within a docker container.
+app-interface-push-images:
+	@echo "-------------------------------------------------"
+	@echo "running in app-interface-push-images container..."
+	@echo "-------------------------------------------------"
+	$(eval IMAGE_NAME := app-interface-push-images)
 	@(source hack/determine-container-runtime.sh; \
-		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
-		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" ".cache/image/${IMAGE_NAME}"; \
-		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
-		echo) 2>&1 | sed 's/^/  /'
-.PHONY: build-image-dev
-
-# Run the command given by ARGS in a dev-container.
-# Only works when running with CONTAINER_RUNTIME=docker and docker installed and running.
-run-in-container: build-image-dev
-	@echo "-------------------------------------------------------"
-	@echo "running in development container..."
-	@echo "command: \"${ARGS}\""
-	@echo "-------------------------------------------------------"
-	$(eval UID=$(shell id -u))
-	(source hack/determine-container-runtime.sh; \
+		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" -f "config/docker/${IMAGE_NAME}.Dockerfile" .; \
 		$$CONTAINER_COMMAND run --rm \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v ${PWD}:/workdir \
-		-w /workdir \
-		--privileged \
-		--env-file <(env | grep -vE "^PATH=") \
-		-e GOCACHE=/tmp/gocache \
-		"${IMAGE_ORG}/dev:${VERSION}" \
-		${ARGS}; \
-		echo) 2>&1 | sed 's/^/  /'
-.PHONY: run-in-container
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			-e JENKINS_HOME=${JENKINS_HOME} \
+			-e QUAY_USER=${QUAY_USER} \
+			-e QUAY_TOKEN=${QUAY_TOKEN} \
+			"${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" \
+			make push-images; \
+	echo) 2>&1 | sed 's/^/  /'
+.PHONY: push-images-in-container
 
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
