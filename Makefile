@@ -124,23 +124,23 @@ endef
 KIND:=$(DEPENDENCY_VERSIONS)/kind/$(KIND_VERSION)
 $(KIND):
 	@$(call go-install-tool,sigs.k8s.io/kind@$(KIND_VERSION),$(KIND))
-	@(which kind; kind version) | sed 's/^/  /'
+	@(command -v kind; kind version) | sed 's/^/  /'
 
 CONTROLLER_GEN:=$(DEPENDENCY_VERSIONS)/controller-gen/$(CONTROLLER_GEN_VERSION)
 $(CONTROLLER_GEN):
 	@$(call go-install-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN))
-	@(echo; which controller-gen; controller-gen --version; echo) | sed 's/^/  /'
+	@(echo; command -v controller-gen; controller-gen --version; echo) | sed 's/^/  /'
 
 YQ:=$(DEPENDENCY_VERSIONS)/yq/$(YQ_VERSION)
 $(YQ):
 	@$(call go-install-tool,github.com/mikefarah/yq/$(YQ_VERSION),$(YQ))
-	@(which yq; yq --version) | sed 's/^/  /'
+	@(command -v yq; yq --version) | sed 's/^/  /'
 
 GOIMPORTS:=$(DEPENDENCY_VERSIONS)/goimports/$(GOIMPORTS_VERSION)
 $(GOIMPORTS):
 	@$(call go-install-tool,golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION),$(GOIMPORTS))
 	# goimports doesn't have a version flag
-	@(echo; which goimports; echo) | sed 's/^/  /'
+	@(echo; command -v goimports; echo) | sed 's/^/  /'
 
 # Setup goimports.
 # alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
@@ -150,7 +150,7 @@ goimports: $(GOIMPORTS)
 GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 $(GOLANGCI_LINT):
 	@$(call go-install-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT))
-	@(echo; which golangci-lint; golangci-lint --version; echo) | sed 's/^/  /'
+	@(echo; command -v golangci-lint; golangci-lint --version; echo) | sed 's/^/  /'
 
 # Setup golangci-lint.
 # alias for golangci-lint to use from `ensure-and-run-golangci-lint.sh` via pre-commit.
@@ -171,7 +171,7 @@ $(OPM):
 		&& mkdir -p "$(dir $(OPM))" \
 		&& touch "$(OPM)" \
 		&& echo
-	@(echo; which opm; opm version; echo) | sed 's/^/  /'
+	@(echo; command -v opm; opm version; echo) | sed 's/^/  /'
 
 # ------------
 ##@ Generators
