@@ -47,11 +47,6 @@ IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
 
-ifdef JENKINS_HOME
-export DOCKER_CONF:=$(abspath .docker)
-endif
-
-
 # COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -475,11 +470,12 @@ push-images: \
 	push-image-addon-operator-index
 .PHONY: push-images
 
-docker-login:
+registry-login:
 ifdef JENKINS_HOME
-	@echo running in Jenkins, calling docker login
-	@mkdir -p "${DOCKER_CONF}"
-	@docker --config="${DOCKER_CONF}" login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io
+	@(source hack/determine-container-runtime.sh; \
+		echo running in Jenkins, calling $$CONTAINER_COMMAND login; \
+		$$CONTAINER_COMMAND login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io; \
+	echo) 2>&1 | sed 's/^/  /'
 endif
 
 # App Interface specific push-images target, to run within a docker container.
@@ -491,14 +487,14 @@ app-interface-push-images:
 	@(source hack/determine-container-runtime.sh; \
 		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" -f "config/docker/${IMAGE_NAME}.Dockerfile" .; \
 		$$CONTAINER_COMMAND run --rm \
-			-v /var/run/docker.sock:/var/run/docker.sock \
+			--privileged \
 			-e JENKINS_HOME=${JENKINS_HOME} \
 			-e QUAY_USER=${QUAY_USER} \
 			-e QUAY_TOKEN=${QUAY_TOKEN} \
 			"${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" \
-			make push-images; \
+			make push-images -j 4; \
 	echo) 2>&1 | sed 's/^/  /'
-.PHONY: push-images-in-container
+.PHONY: app-interface-push-images
 
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
@@ -521,14 +517,10 @@ build-image-%: bin/linux_amd64/$$*
 	) 2>&1 | sed 's/^/  /'
 
 ## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
-push-image-%: docker-login build-image-$$*
+push-image-%: registry-login build-image-$$*
 	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
 	@(source hack/determine-container-runtime.sh; \
-		CONFIG_FLAG=""; \
-		if [[ ! -z "$${DOCKER_CONF+x}" ]]; then \
-			CONFIG_FLAG="--config $$DOCKER_CONF"; \
-		fi; \
-		$$CONTAINER_COMMAND $$CONFIG_FLAG push "${IMAGE_ORG}/$*:${VERSION}"; \
+		$$CONTAINER_COMMAND push "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo pushed "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'

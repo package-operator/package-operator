@@ -1,9 +1,8 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.16
+FROM quay.io/podman/stable
 
 RUN yum install -y \
-  docker \
-  python3-pip \
-  sudo \
+  golang \
+  python3-pip && \
   pip3 install pre-commit
 
 WORKDIR /workdir
