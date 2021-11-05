@@ -29,8 +29,7 @@ UNAME_ARCH:=$(shell uname -m)
 DEPENDENCIES:=.cache/dependencies
 DEPENDENCY_BIN:=$(abspath $(DEPENDENCIES)/bin)
 DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/versions)
-# explicitly add go path for app-interface
-export PATH:=/opt/go/1.16.9/bin:$(DEPENDENCY_BIN):$(PATH)
+export PATH:=$(DEPENDENCY_BIN):$(PATH)
 
 # Config
 KIND_KUBECONFIG_DIR:=.cache/integration
