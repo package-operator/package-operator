@@ -491,7 +491,7 @@ app-interface-push-images:
 			-e QUAY_USER=${QUAY_USER} \
 			-e QUAY_TOKEN=${QUAY_TOKEN} \
 			"${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" \
-			make push-images -j 4; \
+			make push-images; \
 	echo) 2>&1 | sed 's/^/  /'
 .PHONY: app-interface-push-images
 
