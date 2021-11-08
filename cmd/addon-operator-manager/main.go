@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -133,10 +132,9 @@ func main() {
 	}
 
 	if err = (&controllers.AddonInstanceReconciler{
-		Client:               mgr.GetClient(),
-		Log:                  ctrl.Log.WithName("controller").WithName("AddonInstance"),
-		Scheme:               mgr.GetScheme(),
-		HeartbeatCheckerRate: 10 * time.Second,
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
 		os.Exit(1)

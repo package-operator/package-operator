@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,7 +107,8 @@ func TestAddon_AddonInstance(t *testing.T) {
 				Namespace: test.targetNamespace,
 			}, addonInstance)
 			require.NoError(t, err)
-			assert.Equal(t, addonsv1alpha1.DefaultAddonInstanceHeartbeatUpdatePeriod, addonInstance.Spec.HeartbeatUpdatePeriod)
+			// Default of 10s is hardcoded in AddonInstanceReconciler
+			assert.Equal(t, 10*time.Second, addonInstance.Spec.HeartbeatUpdatePeriod.Duration)
 		})
 	}
 }

@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -11,7 +9,6 @@ type AddonInstanceSpec struct {
 	// The periodic rate at which heartbeats are expected to be received by the AddonInstance object
 	// +kubebuilder:default="10s"
 	HeartbeatUpdatePeriod metav1.Duration `json:"heartbeatUpdatePeriod,omitempty"`
-	// TODO: add more stuff here
 }
 
 // AddonInstanceStatus defines the observed state of Addon
@@ -50,9 +47,13 @@ const (
 	DefaultAddonInstanceName = "addon-instance"
 )
 
-var (
-	DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64           = 3
-	DefaultAddonInstanceHeartbeatUpdatePeriod               metav1.Duration = metav1.Duration{Duration: time.Duration(10000000000)}
+// AddonInstance Conditions
+const (
+	// AddonInstanceHealthy tracks the general health of an Addon.
+	//
+	// If false the service is degraded to a point that manual intervention is likely.
+	// Higher level controllers are adviced to stop actions that might further worsen the state of the service. E.g. by delaying upgrades until the status is cleared.
+	AddonInstanceHealthy = "addons.managed.openshift.io/Healthy"
 )
 
 func init() {

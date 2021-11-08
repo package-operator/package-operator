@@ -15,15 +15,24 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
+const (
+	defaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64 = 3
+)
+
+var defaultAddonInstanceHeartbeatUpdatePeriod metav1.Duration = metav1.Duration{
+	Duration: time.Second * 10,
+}
+
 type AddonInstanceReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 
-	HeartbeatCheckerRate time.Duration
+	heartbeatCheckerRate time.Duration
 }
 
 func (r *AddonInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.heartbeatCheckerRate = defaultAddonInstanceHeartbeatUpdatePeriod.Duration
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.AddonInstance{}).
 		Complete(r)
@@ -41,17 +50,17 @@ func (r *AddonInstanceReconciler) Reconcile(
 
 	now, lastHeartbeatTime := metav1.Now(), addonInstance.Status.LastHeartbeatTime
 	if lastHeartbeatTime.IsZero() {
-		return ctrl.Result{RequeueAfter: r.HeartbeatCheckerRate}, nil
+		return ctrl.Result{RequeueAfter: r.heartbeatCheckerRate}, nil
 	}
 
 	diff := int64(now.Time.Sub(lastHeartbeatTime.Time) / time.Second)
-	threshold := addonsv1alpha1.DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier * int64(addonInstance.Spec.HeartbeatUpdatePeriod.Duration/time.Second)
+	threshold := defaultAddonInstanceHeartbeatTimeoutThresholdMultiplier * int64(addonInstance.Spec.HeartbeatUpdatePeriod.Duration/time.Second)
 
 	// if the last heartbeat is older than the timeout threshold, register HeartbeatTimeout Condition
 	if diff >= threshold {
 		// check if already HeartbeatTimeout condition exists
 		// if it does, no need to update it
-		existingCondition := meta.FindStatusCondition(addonInstance.Status.Conditions, "addons.managed.openshift.io/Healthy")
+		existingCondition := meta.FindStatusCondition(addonInstance.Status.Conditions, addonsv1alpha1.AddonInstanceHealthy)
 		if existingCondition == nil || existingCondition.Reason != "HeartbeatTimeout" {
 			log.Info(fmt.Sprintf("setting the Condition of %s/%s to 'HeartbeatTimeout'", addonInstance.Namespace, addonInstance.Name))
 			// change the following line to: meta.SetStatusCondition(&addonInstance.Status.Conditions, addoninstanceapi.HeartbeatTimeoutCondition),
@@ -63,11 +72,10 @@ func (r *AddonInstanceReconciler) Reconcile(
 				Message: "Addon failed to send heartbeat.",
 			})
 			if err := r.Client.Status().Update(ctx, addonInstance); err != nil {
-				log.Error(fmt.Errorf("failed to update the condition of the addoninstance: %w", err), "retrying heartbeat check")
 				return ctrl.Result{}, err
 			}
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: r.HeartbeatCheckerRate}, nil
+	return ctrl.Result{RequeueAfter: r.heartbeatCheckerRate}, nil
 }
