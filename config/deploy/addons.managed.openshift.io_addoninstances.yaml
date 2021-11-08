@@ -6,27 +6,27 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: addons.addons.managed.openshift.io
+  name: addoninstances.addons.managed.openshift.io
 spec:
   group: addons.managed.openshift.io
   names:
-    kind: Addon
-    listKind: AddonList
-    plural: addons
-    singular: addon
-  scope: Cluster
+    kind: AddonInstance
+    listKind: AddonInstanceList
+    plural: addoninstances
+    singular: addoninstance
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
+    - jsonPath: .status.lastHeartbeatTime
+      name: Last Heartbeat
+      type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Addon is the Schema for the Addons API
+        description: AddonInstance is the Schema for the AddonInstance API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -41,113 +41,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: AddonSpec defines the desired state of Addon.
+            description: AddonInstanceSpec defines the configuration to consider while
+              taking AddonInstance-related decisions such as HeartbeatTimeouts
             properties:
-              displayName:
-                description: Human readable name for this addon.
-                minLength: 1
+              heartbeatUpdatePeriod:
+                default: 10s
+                description: The periodic rate at which heartbeats are expected to
+                  be received by the AddonInstance object
                 type: string
-              install:
-                description: Defines how an Addon is installed. This field is immutable.
-                properties:
-                  olmAllNamespaces:
-                    description: OLMAllNamespaces config parameters. Present only
-                      if Type = OLMAllNamespaces.
-                    properties:
-                      catalogSourceImage:
-                        description: Defines the CatalogSource image.
-                        minLength: 1
-                        type: string
-                      channel:
-                        description: Channel for the Subscription object.
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description: Namespace to install the Addon into.
-                        minLength: 1
-                        type: string
-                      packageName:
-                        description: Name of the package to install via OLM. OLM will
-                          resove this package name to install the matching bundle.
-                        minLength: 1
-                        type: string
-                    required:
-                    - catalogSourceImage
-                    - channel
-                    - namespace
-                    - packageName
-                    type: object
-                  olmOwnNamespace:
-                    description: OLMOwnNamespace config parameters. Present only if
-                      Type = OLMOwnNamespace.
-                    properties:
-                      catalogSourceImage:
-                        description: Defines the CatalogSource image.
-                        minLength: 1
-                        type: string
-                      channel:
-                        description: Channel for the Subscription object.
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description: Namespace to install the Addon into.
-                        minLength: 1
-                        type: string
-                      packageName:
-                        description: Name of the package to install via OLM. OLM will
-                          resove this package name to install the matching bundle.
-                        minLength: 1
-                        type: string
-                    required:
-                    - catalogSourceImage
-                    - channel
-                    - namespace
-                    - packageName
-                    type: object
-                  type:
-                    description: Type of installation.
-                    enum:
-                    - OLMOwnNamespace
-                    - OLMAllNamespaces
-                    type: string
-                required:
-                - type
-                type: object
-              namespaces:
-                description: Defines a list of Kubernetes Namespaces that belong to
-                  this Addon. Namespaces listed here will be created prior to installation
-                  of the Addon and will be removed from the cluster when the Addon
-                  is deleted. Collisions with existing Namespaces are NOT allowed.
-                items:
-                  properties:
-                    name:
-                      description: Name of the KubernetesNamespace.
-                      minLength: 1
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
-              pause:
-                description: Pause reconciliation of Addon when set to True
-                type: boolean
-              resourceAdoptionStrategy:
-                description: 'ResourceAdoptionStrategy coordinates resource adoption
-                  for an Addon Originally introduced for coordinating fleetwide migration
-                  on OSD with pre-existing OLM objects. NOTE: This field is for internal
-                  usage only and not to be modified by the user.'
-                enum:
-                - Prevent
-                - AdoptAll
-                type: string
-            required:
-            - displayName
-            - install
             type: object
           status:
-            default:
-              phase: Pending
-            description: AddonStatus defines the observed state of Addon
+            description: AddonInstanceStatus defines the observed state of Addon
             properties:
               conditions:
                 description: Conditions is a list of status conditions ths object
@@ -220,15 +124,14 @@ spec:
                   - type
                   type: object
                 type: array
+              lastHeartbeatTime:
+                description: Timestamp of the last reported status check
+                format: date-time
+                type: string
               observedGeneration:
                 description: The most recent generation observed by the controller.
                 format: int64
                 type: integer
-              phase:
-                description: 'DEPRECATED: This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions! Human readable
-                  status - please use .Conditions from code'
-                type: string
             type: object
         type: object
     served: true

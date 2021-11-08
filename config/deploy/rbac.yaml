@@ -56,6 +56,8 @@ rules:
   - addonoperators
   - addonoperators/status
   - addonoperators/finalizers
+  - addoninstances
+  - addoninstances/status
   verbs:
   - get
   - list
@@ -68,6 +70,8 @@ rules:
   - addonoperators
   - addonoperators/status
   - addonoperators/finalizers
+  - addoninstances
+  - addoninstances/status
   verbs:
   - create
 - apiGroups:

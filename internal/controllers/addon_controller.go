@@ -87,6 +87,7 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&operatorsv1.OperatorGroup{}).
 		Owns(&operatorsv1alpha1.CatalogSource{}).
 		Owns(&operatorsv1alpha1.Subscription{}).
+		Owns(&addonsv1alpha1.AddonInstance{}).
 		Watches(&source.Kind{
 			Type: &operatorsv1alpha1.ClusterServiceVersion{},
 		}, r.csvEventHandler).
@@ -165,6 +166,12 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	// Phase 3.
+	// Ensure the creation of the corresponding AddonInstance in .spec.install.olmOwnNamespace/.spec.install.olmAllNamespaces namespace
+	if err := r.ensureAddonInstance(ctx, log, addon); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure the creation of addoninstance: %w", err)
+	}
+
+	// Phase 4.
 	// Ensure OperatorGroup
 	if stop, err := r.ensureOperatorGroup(ctx, log, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure OperatorGroup: %w", err)
@@ -172,7 +179,7 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Phase 4.
+	// Phase 5.
 	ensureResult, catalogSource, err := r.ensureCatalogSource(ctx, log, addon)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure CatalogSource: %w", err)
@@ -187,7 +194,7 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Phase 5.
+	// Phase 6.
 	// Ensure Subscription for this Addon.
 	currentCSVKey, requeue, err := r.ensureSubscription(
 		ctx, log.WithName("phase-ensure-subscription"),
@@ -200,7 +207,7 @@ func (r *AddonReconciler) Reconcile(
 		}, nil
 	}
 
-	// Phase 6.
+	// Phase 7.
 	// Observe current csv
 	if requeue, err := r.observeCurrentCSV(ctx, addon, currentCSVKey); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to observe current CSV: %w", err)

@@ -56,7 +56,6 @@ type AddonInstallOLMCommon struct {
 	Namespace string `json:"namespace"`
 
 	// Defines the CatalogSource image.
-	// Please only use digests and no tags here!
 	// +kubebuilder:validation:MinLength=1
 	CatalogSourceImage string `json:"catalogSourceImage"`
 

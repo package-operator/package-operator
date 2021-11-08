@@ -97,6 +97,9 @@ spec:
           - addonoperators
           - addonoperators/status
           - addonoperators/finalizers
+          - addoninstances
+          - addoninstances/status
+          - addoninstances/finalizers
           verbs:
           - get
           - list
@@ -109,6 +112,9 @@ spec:
           - addonoperators
           - addonoperators/status
           - addonoperators/finalizers
+          - addoninstances
+          - addoninstances/status
+          - addoninstances/finalizers
           verbs:
           - create
         - apiGroups:
