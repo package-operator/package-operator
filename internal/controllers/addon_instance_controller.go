@@ -6,15 +6,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	addoninstanceapi "github.com/openshift/addon-operator/pkg/addoninstance"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type AddonInstanceReconciler struct {
@@ -37,15 +35,12 @@ func (r *AddonInstanceReconciler) Reconcile(
 	log := r.Log.WithValues("addoninstance", req.NamespacedName.String())
 
 	addonInstance := &addonsv1alpha1.AddonInstance{}
-	// r.Get() is backed by a Kubernetes Client backed by cached reads. Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/v0.10.2/pkg/cluster/cluster.go#L51-L55
 	if err := r.Get(ctx, req.NamespacedName, addonInstance); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	now, lastHeartbeatTime := metav1.Now(), addonInstance.Status.LastHeartbeatTime
 	if lastHeartbeatTime.IsZero() {
-		// is it worth logging this, considering the immense amounts of logs which are going to end up getting generated?
-		//log.Info(fmt.Sprintf("skipping heartbeat for %s/%s because no lastHeartbeatTime was found.", addonInstance.Namespace, addonInstance.Name))
 		return ctrl.Result{RequeueAfter: r.HeartbeatCheckerRate}, nil
 	}
 
@@ -59,7 +54,14 @@ func (r *AddonInstanceReconciler) Reconcile(
 		existingCondition := meta.FindStatusCondition(addonInstance.Status.Conditions, "addons.managed.openshift.io/Healthy")
 		if existingCondition == nil || existingCondition.Reason != "HeartbeatTimeout" {
 			log.Info(fmt.Sprintf("setting the Condition of %s/%s to 'HeartbeatTimeout'", addonInstance.Namespace, addonInstance.Name))
-			meta.SetStatusCondition(&addonInstance.Status.Conditions, addoninstanceapi.HeartbeatTimeoutCondition)
+			// change the following line to: meta.SetStatusCondition(&addonInstance.Status.Conditions, addoninstanceapi.HeartbeatTimeoutCondition),
+			// once https://github.com/openshift/addon-operator/pull/91 gets merged
+			meta.SetStatusCondition(&addonInstance.Status.Conditions, metav1.Condition{
+				Type:    "addons.managed.openshift.io/Healthy",
+				Status:  "Unknown",
+				Reason:  "HeartbeatTimeout",
+				Message: "Addon failed to send heartbeat.",
+			})
 			if err := r.Client.Status().Update(ctx, addonInstance); err != nil {
 				log.Error(fmt.Errorf("failed to update the condition of the addoninstance: %w", err), "retrying heartbeat check")
 				return ctrl.Result{}, err
