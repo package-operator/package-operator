@@ -411,7 +411,7 @@ setup-addon-operator-crds: generate
 # Template Cluster Service Version / CSV
 # By setting the container image to deploy.
 config/olm/addon-operator.csv.yaml: FORCE $(YQ)
-	@yq eval '.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)" | .metadata.annotations.containerImage = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
+	@yq eval '.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)" | .spec.install.spec.deployments[1].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_WEBHOOK_IMAGE)" | .metadata.annotations.containerImage = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 	config/olm/addon-operator.csv.tpl.yaml > config/olm/addon-operator.csv.yaml
 
 # Bundle image contains the manifests and CSV for a single version of this operator.

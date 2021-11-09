@@ -4,7 +4,7 @@ metadata:
   annotations:
     repository: https://github.com/openshift/addon-operator
     support: "false"
-    containerImage: +MANAGER_IMAGE_TO_REPLACE+
+    containerImage: quay.io/openshift/addon-operator:latest
     capabilities: Full Lifecycle
   name: addon-operator.v0.1.0
 spec:
