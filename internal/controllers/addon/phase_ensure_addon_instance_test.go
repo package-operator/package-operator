@@ -1,25 +1,35 @@
-package controllers
+package addon
 
 import (
 	"context"
 	"testing"
 
-	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
-func TestEnsureOperatorGroup(t *testing.T) {
-	t.Run("ensures OperatorGroup", func(t *testing.T) {
+func TestEnsureAddonInstance(t *testing.T) {
+	t.Run("ensures AddonInstance", func(t *testing.T) {
+		addonInstance := &addonsv1alpha1.AddonInstance{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      addonsv1alpha1.DefaultAddonInstanceName,
+				Namespace: "addon-system",
+			},
+			Spec: addonsv1alpha1.AddonInstanceSpec{
+				HeartbeatUpdatePeriod: controllers.DefaultAddonInstanceHeartbeatUpdatePeriod,
+			},
+		}
+
 		addonOwnNamespace := &addonsv1alpha1.Addon{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "addon-1",
@@ -79,7 +89,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 				c := testutil.NewClient()
 				r := AddonReconciler{
 					Client: c,
-					Scheme: newTestSchemeWithAddonsv1alpha1(),
+					Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 				}
 				addon := test.addon
 
@@ -95,45 +105,70 @@ func TestEnsureOperatorGroup(t *testing.T) {
 						mock.Anything,
 					).
 					Return(errors.NewNotFound(schema.GroupResource{}, ""))
-				var createdOpeatorGroup *operatorsv1.OperatorGroup
+				var createdAddonInstance *addonsv1alpha1.AddonInstance
 				c.
 					On(
 						"Create",
 						mock.Anything,
-						mock.IsType(&operatorsv1.OperatorGroup{}),
+						mock.IsType(&addonsv1alpha1.AddonInstance{}),
 						mock.Anything,
 					).
 					Run(func(args mock.Arguments) {
-						createdOpeatorGroup = args.Get(1).(*operatorsv1.OperatorGroup)
+						createdAddonInstance = args.Get(1).(*addonsv1alpha1.AddonInstance)
+					}).
+					Return(nil)
+
+				c.
+					On(
+						"Get",
+						mock.Anything,
+						client.ObjectKeyFromObject(addonInstance),
+						mock.IsType(&addonsv1alpha1.AddonInstance{}),
+					).
+					Return(nil)
+
+				c.
+					On(
+						"Update",
+						mock.Anything,
+						mock.IsType(&addonsv1alpha1.AddonInstance{}),
+						mock.Anything,
+					).
+					Run(func(args mock.Arguments) {
+						createdAddonInstance = args.Get(1).(*addonsv1alpha1.AddonInstance)
 					}).
 					Return(nil)
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, addon)
+				err := r.ensureAddonInstance(ctx, log, addon)
 				require.NoError(t, err)
-				assert.False(t, stop)
 
-				if c.AssertCalled(
-					t, "Create",
-					mock.Anything,
-					mock.IsType(&operatorsv1.OperatorGroup{}),
-					mock.Anything,
-				) {
-					assert.Equal(t, addon.Name, createdOpeatorGroup.Name)
-					assert.Equal(t, test.targetNamespace, createdOpeatorGroup.Namespace)
-
-					assert.Equal(t, test.expectedTargetNamespaces, createdOpeatorGroup.Spec.TargetNamespaces)
-				}
+				assert.Equal(t, addonsv1alpha1.DefaultAddonInstanceName, createdAddonInstance.Name)
+				assert.Equal(t, test.targetNamespace, createdAddonInstance.Namespace)
+				assert.Equal(t, controllers.DefaultAddonInstanceHeartbeatUpdatePeriod, createdAddonInstance.Spec.HeartbeatUpdatePeriod)
 			})
 		}
 	})
 
-	t.Run("guards against invalid configuration", func(t *testing.T) {
+	t.Run("gracefully handles invalid configuration", func(t *testing.T) {
 		tests := []struct {
 			name  string
 			addon *addonsv1alpha1.Addon
 		}{
+			{
+				name: "install.type is unsupported",
+				addon: &addonsv1alpha1.Addon{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "addon-1",
+					},
+					Spec: addonsv1alpha1.AddonSpec{
+						Install: addonsv1alpha1.AddonInstallSpec{
+							Type: addonsv1alpha1.AddonInstallType("random"),
+						},
+					},
+				},
+			},
 			{
 				name: "ownNamespace is nil",
 				addon: &addonsv1alpha1.Addon{
@@ -196,7 +231,7 @@ func TestEnsureOperatorGroup(t *testing.T) {
 				c := testutil.NewClient()
 				r := AddonReconciler{
 					Client: c,
-					Scheme: newTestSchemeWithAddonsv1alpha1(),
+					Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 				}
 
 				// Mock Setup
@@ -211,85 +246,46 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, test.addon)
-				require.NoError(t, err)
-				assert.True(t, stop)
-
-				c.StatusMock.AssertCalled(
-					t, "Update", mock.Anything, test.addon, mock.Anything)
-
-				availableCond := meta.FindStatusCondition(test.addon.Status.Conditions, addonsv1alpha1.Available)
-				if assert.NotNil(t, availableCond) {
-					assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
-					assert.Equal(t, "ConfigurationError", availableCond.Reason)
-				}
+				err := r.ensureAddonInstance(ctx, log, test.addon)
+				require.EqualError(t, err, "failed to create addonInstance due to misconfigured install.spec.type")
 			})
 		}
 	})
-
-	t.Run("unsupported install type", func(t *testing.T) {
-		addonUnsupported := &addonsv1alpha1.Addon{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "addon-1",
-			},
-			Spec: addonsv1alpha1.AddonSpec{
-				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.AddonInstallType("something something"),
-				},
-			},
-		}
-
-		log := testutil.NewLogger(t)
-		c := testutil.NewClient()
-		r := AddonReconciler{
-			Client: c,
-			Scheme: newTestSchemeWithAddonsv1alpha1(),
-		}
-
-		// Test
-		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
-		require.NoError(t, err)
-		assert.True(t, stop)
-
-		// indirect sanity check
-		// nothing was called on the client and the method signals to stop
-	})
 }
 
-func TestReconcileOperatorGroup(t *testing.T) {
-	operatorGroup := &operatorsv1.OperatorGroup{
+func TestReconcileAddonInstance(t *testing.T) {
+	addonInstance := &addonsv1alpha1.AddonInstance{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testing",
-			Namespace: "testing-ns",
+			Name:      addonsv1alpha1.DefaultAddonInstanceName,
+			Namespace: "test",
 		},
-		Spec: operatorsv1.OperatorGroupSpec{
-			TargetNamespaces: []string{"testing-ns"},
+		Spec: addonsv1alpha1.AddonInstanceSpec{
+			HeartbeatUpdatePeriod: controllers.DefaultAddonInstanceHeartbeatUpdatePeriod,
 		},
 	}
 
-	t.Run("no-op", func(t *testing.T) {
+	t.Run("no addoninstance", func(t *testing.T) {
 		c := testutil.NewClient()
 		r := AddonReconciler{
 			Client: c,
-			Scheme: newTestSchemeWithAddonsv1alpha1(),
+			Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 		}
 
 		c.
 			On(
 				"Get",
 				mock.Anything,
-				client.ObjectKeyFromObject(operatorGroup),
-				mock.IsType(&operatorsv1.OperatorGroup{}),
+				client.ObjectKeyFromObject(addonInstance),
+				mock.IsType(&addonsv1alpha1.AddonInstance{}),
 			).
 			Run(func(args mock.Arguments) {
-				og := args.Get(2).(*operatorsv1.OperatorGroup)
-				operatorGroup.DeepCopyInto(og)
+				fetchedAddonInstance := args.Get(2).(*addonsv1alpha1.AddonInstance)
+				addonInstance.DeepCopyInto(fetchedAddonInstance)
 			}).
 			Return(nil)
 
 		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
+		err := r.reconcileAddonInstance(ctx, addonInstance.DeepCopy())
 		require.NoError(t, err)
 	})
 
@@ -297,15 +293,15 @@ func TestReconcileOperatorGroup(t *testing.T) {
 		c := testutil.NewClient()
 		r := AddonReconciler{
 			Client: c,
-			Scheme: newTestSchemeWithAddonsv1alpha1(),
+			Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 		}
 
 		c.
 			On(
 				"Get",
 				mock.Anything,
-				client.ObjectKeyFromObject(operatorGroup),
-				mock.IsType(&operatorsv1.OperatorGroup{}),
+				client.ObjectKeyFromObject(addonInstance),
+				mock.IsType(&addonsv1alpha1.AddonInstance{}),
 			).
 			Return(nil)
 
@@ -313,19 +309,19 @@ func TestReconcileOperatorGroup(t *testing.T) {
 			On(
 				"Update",
 				mock.Anything,
-				mock.IsType(&operatorsv1.OperatorGroup{}),
+				mock.IsType(&addonsv1alpha1.AddonInstance{}),
 				mock.Anything,
 			).
 			Return(nil)
 
 		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
+		err := r.reconcileAddonInstance(ctx, addonInstance.DeepCopy())
 		require.NoError(t, err)
 
 		c.AssertCalled(t,
 			"Update",
 			mock.Anything,
-			mock.IsType(&operatorsv1.OperatorGroup{}),
+			mock.IsType(&addonsv1alpha1.AddonInstance{}),
 			mock.Anything,
 		)
 	})

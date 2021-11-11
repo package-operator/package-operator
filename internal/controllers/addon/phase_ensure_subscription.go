@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
 
 func (r *AddonReconciler) ensureSubscription(
@@ -56,7 +57,7 @@ func (r *AddonReconciler) ensureSubscription(
 			// make sure to keep the current value of this field
 		},
 	}
-	addCommonLabels(desiredSubscription.Labels, addon)
+	controllers.AddCommonLabels(desiredSubscription.Labels, addon)
 	if err := controllerutil.SetControllerReference(addon, desiredSubscription, r.Scheme); err != nil {
 		return client.ObjectKey{}, false, fmt.Errorf("setting controller reference: %w", err)
 	}

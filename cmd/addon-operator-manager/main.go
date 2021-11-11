@@ -17,7 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	aoapis "github.com/openshift/addon-operator/apis"
-	"github.com/openshift/addon-operator/internal/controllers"
+	addoncontroller "github.com/openshift/addon-operator/internal/controllers/addon"
+	aicontroller "github.com/openshift/addon-operator/internal/controllers/addoninstance"
+	aocontroller "github.com/openshift/addon-operator/internal/controllers/addonoperator"
 )
 
 var (
@@ -110,7 +112,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	addonReconciler := &controllers.AddonReconciler{
+	addonReconciler := &addoncontroller.AddonReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
 		Scheme: mgr.GetScheme(),
@@ -121,7 +123,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AddonOperatorReconciler{
+	if err = (&aocontroller.AddonOperatorReconciler{
 		Client:             mgr.GetClient(),
 		Log:                ctrl.Log.WithName("controllers").WithName("AddonOperator"),
 		Scheme:             mgr.GetScheme(),
@@ -131,7 +133,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AddonInstanceReconciler{
+	if err = (&aicontroller.AddonInstanceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
 		Scheme: mgr.GetScheme(),

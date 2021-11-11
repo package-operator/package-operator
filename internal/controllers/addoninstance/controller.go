@@ -1,4 +1,4 @@
-package controllers
+package addoninstance
 
 import (
 	"context"
@@ -13,15 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
-
-const (
-	defaultAddonInstanceHeartbeatTimeoutThresholdMultiplier int64 = 3
-)
-
-var defaultAddonInstanceHeartbeatUpdatePeriod metav1.Duration = metav1.Duration{
-	Duration: time.Second * 10,
-}
 
 type AddonInstanceReconciler struct {
 	client.Client
@@ -32,7 +25,7 @@ type AddonInstanceReconciler struct {
 }
 
 func (r *AddonInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.heartbeatCheckerRate = defaultAddonInstanceHeartbeatUpdatePeriod.Duration
+	r.heartbeatCheckerRate = controllers.DefaultAddonInstanceHeartbeatUpdatePeriod.Duration
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&addonsv1alpha1.AddonInstance{}).
 		Complete(r)
@@ -54,16 +47,22 @@ func (r *AddonInstanceReconciler) Reconcile(
 	}
 
 	diff := int64(now.Time.Sub(lastHeartbeatTime.Time) / time.Second)
-	threshold := defaultAddonInstanceHeartbeatTimeoutThresholdMultiplier * int64(addonInstance.Spec.HeartbeatUpdatePeriod.Duration/time.Second)
+	threshold := controllers.DefaultAddonInstanceHeartbeatTimeoutThresholdMultiplier *
+		int64(addonInstance.Spec.HeartbeatUpdatePeriod.Duration/time.Second)
 
-	// if the last heartbeat is older than the timeout threshold, register HeartbeatTimeout Condition
+	// if the last heartbeat is older than the timeout threshold,
+	// register HeartbeatTimeout Condition
 	if diff >= threshold {
 		// check if already HeartbeatTimeout condition exists
 		// if it does, no need to update it
-		existingCondition := meta.FindStatusCondition(addonInstance.Status.Conditions, addonsv1alpha1.AddonInstanceHealthy)
+		existingCondition := meta.FindStatusCondition(addonInstance.Status.Conditions,
+			addonsv1alpha1.AddonInstanceHealthy)
 		if existingCondition == nil || existingCondition.Reason != "HeartbeatTimeout" {
-			log.Info(fmt.Sprintf("setting the Condition of %s/%s to 'HeartbeatTimeout'", addonInstance.Namespace, addonInstance.Name))
-			// change the following line to: meta.SetStatusCondition(&addonInstance.Status.Conditions, addoninstanceapi.HeartbeatTimeoutCondition),
+			log.Info(fmt.Sprintf("setting the Condition of %s/%s to 'HeartbeatTimeout'",
+				addonInstance.Namespace, addonInstance.Name))
+			// change the following line to:
+			// meta.SetStatusCondition(&addonInstance.Status.Conditions,
+			// addoninstanceapi.HeartbeatTimeoutCondition),
 			// once https://github.com/openshift/addon-operator/pull/91 gets merged
 			meta.SetStatusCondition(&addonInstance.Status.Conditions, metav1.Condition{
 				Type:    "addons.managed.openshift.io/Healthy",

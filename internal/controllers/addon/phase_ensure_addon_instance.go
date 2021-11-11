@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
 
 // Ensures the presence of an AddonInstance well-compliant with the provided Addon object
@@ -33,7 +34,7 @@ func (r *AddonReconciler) ensureAddonInstance(
 		},
 		// Can't skip specifying spec because in this case, the zero-value for metav1.Duration will be perceived beforehand i.e. 0s instead of CRD's default value of 10s
 		Spec: addonsv1alpha1.AddonInstanceSpec{
-			HeartbeatUpdatePeriod: defaultAddonInstanceHeartbeatUpdatePeriod,
+			HeartbeatUpdatePeriod: controllers.DefaultAddonInstanceHeartbeatUpdatePeriod,
 		},
 	}
 

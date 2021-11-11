@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
-	internalhandler "github.com/openshift/addon-operator/internal/handler"
+	internalhandler "github.com/openshift/addon-operator/internal/controllers/addon/handler"
 )
 
 // Default timeout when we do a manual RequeueAfter

@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
 
 // Ensure cleanup of Namespaces that are not needed anymore for the given Addon resource
@@ -59,7 +60,7 @@ func ensureNamespaceDeletion(ctx context.Context, c client.Client, name string) 
 // Get all Namespaces that have common labels matching the given Addon resource
 func getOwnedNamespacesViaCommonLabels(
 	ctx context.Context, c client.Client, addon *addonsv1alpha1.Addon) ([]corev1.Namespace, error) {
-	selector := commonLabelsAsLabelSelector(addon)
+	selector := controllers.CommonLabelsAsLabelSelector(addon)
 
 	list := &corev1.NamespaceList{}
 	{
