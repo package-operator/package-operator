@@ -41,7 +41,7 @@ repos:
 
   - id: go-mod-tidy
     name: go-mod-tidy
-    entry: go mod tidy
+    entry: make tidy
     language: system
     exclude: ".*"
     always_run: true
