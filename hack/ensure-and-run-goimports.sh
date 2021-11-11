@@ -5,4 +5,5 @@ set -euo pipefail
 # and then executes goimport passing all arguments forward
 
 make -s goimports
-.cache/dependencies/bin/goimports -local github.com/openshift/addon-operator -w -l "$@"
+export GOFLAGS=""
+exec .cache/dependencies/bin/goimports -local github.com/openshift/addon-operator -w -l "$@"
