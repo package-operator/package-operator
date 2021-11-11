@@ -34,31 +34,107 @@ func init() {
 	_ = operatorsv1alpha1.AddToScheme(scheme)
 }
 
-func main() {
-	var (
-		metricsAddr          string
-		pprofAddr            string
-		enableLeaderElection bool
-		probeAddr            string
-	)
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&pprofAddr, "pprof-addr", "", "The address the pprof web endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+type options struct {
+	metricsAddr          string
+	pprofAddr            string
+	enableLeaderElection bool
+	probeAddr            string
+}
+
+func parseFlags() *options {
+	opts := &options{}
+
+	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", "The address the pprof web endpoint binds to.")
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081",
+	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
+
 	flag.Parse()
+
+	return opts
+}
+
+func initReconcilers(mgr ctrl.Manager) {
+	addonReconciler := &addoncontroller.AddonReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
+		Scheme: mgr.GetScheme(),
+	}
+
+	if err := addonReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Addon")
+		os.Exit(1)
+	}
+
+	if err := (&aocontroller.AddonOperatorReconciler{
+		Client:             mgr.GetClient(),
+		Log:                ctrl.Log.WithName("controllers").WithName("AddonOperator"),
+		Scheme:             mgr.GetScheme(),
+		GlobalPauseManager: addonReconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
+		os.Exit(1)
+	}
+
+	if err := (&aicontroller.AddonInstanceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
+		os.Exit(1)
+	}
+}
+
+func initPprof(mgr ctrl.Manager, addr string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	s := &http.Server{Addr: addr, Handler: mux}
+	err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		errCh := make(chan error)
+		defer func() {
+			for range errCh {
+			} // drain errCh for GC
+		}()
+		go func() {
+			defer close(errCh)
+			errCh <- s.ListenAndServe()
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-ctx.Done():
+			s.Close()
+			return nil
+		}
+	}))
+	if err != nil {
+		setupLog.Error(err, "unable to create pprof server")
+		os.Exit(1)
+	}
+}
+
+func main() {
+	opts := parseFlags()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
-		MetricsBindAddress:         metricsAddr,
-		HealthProbeBindAddress:     probeAddr,
+		MetricsBindAddress:         opts.metricsAddr,
+		HealthProbeBindAddress:     opts.probeAddr,
 		Port:                       9443,
 		LeaderElectionResourceLock: "leases",
-		LeaderElection:             enableLeaderElection,
+		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.addon-operator-lock",
 	})
 	if err != nil {
@@ -66,41 +142,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// -----
 	// PPROF
-	// -----
-	if len(pprofAddr) > 0 {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-		s := &http.Server{Addr: pprofAddr, Handler: mux}
-		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-			errCh := make(chan error)
-			defer func() {
-				for range errCh {
-				} // drain errCh for GC
-			}()
-			go func() {
-				defer close(errCh)
-				errCh <- s.ListenAndServe()
-			}()
-
-			select {
-			case err := <-errCh:
-				return err
-			case <-ctx.Done():
-				s.Close()
-				return nil
-			}
-		}))
-		if err != nil {
-			setupLog.Error(err, "unable to create pprof server")
-			os.Exit(1)
-		}
+	if len(opts.pprofAddr) > 0 {
+		initPprof(mgr, opts.pprofAddr)
 	}
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
@@ -112,35 +156,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	addonReconciler := &addoncontroller.AddonReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
-		Scheme: mgr.GetScheme(),
-	}
-
-	if err = addonReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Addon")
-		os.Exit(1)
-	}
-
-	if err = (&aocontroller.AddonOperatorReconciler{
-		Client:             mgr.GetClient(),
-		Log:                ctrl.Log.WithName("controllers").WithName("AddonOperator"),
-		Scheme:             mgr.GetScheme(),
-		GlobalPauseManager: addonReconciler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
-		os.Exit(1)
-	}
-
-	if err = (&aicontroller.AddonInstanceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
-		os.Exit(1)
-	}
+	initReconcilers(mgr)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
