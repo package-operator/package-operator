@@ -44,10 +44,13 @@ repos:
     entry: make tidy
     language: system
     exclude: ".*"
+    pass_filenames: false
     always_run: true
 
   - id: make-generate
     name: make-generate
     entry: make generate
     language: system
+    exclude: ".*"
+    pass_filenames: false
     always_run: true
