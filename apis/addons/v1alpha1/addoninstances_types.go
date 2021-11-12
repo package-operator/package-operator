@@ -57,5 +57,5 @@ const (
 )
 
 func init() {
-	SchemeBuilder.Register(&AddonInstance{}, &AddonInstanceList{})
+	register(&AddonInstance{}, &AddonInstanceList{})
 }

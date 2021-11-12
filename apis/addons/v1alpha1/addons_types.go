@@ -182,5 +182,5 @@ type AddonList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&Addon{}, &AddonList{})
+	register(&Addon{}, &AddonList{})
 }

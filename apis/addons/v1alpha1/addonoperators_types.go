@@ -67,5 +67,5 @@ type AddonOperatorList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&AddonOperator{}, &AddonOperatorList{})
+	register(&AddonOperator{}, &AddonOperatorList{})
 }

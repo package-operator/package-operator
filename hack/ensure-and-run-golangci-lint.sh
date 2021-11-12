@@ -5,5 +5,5 @@ set -euo pipefail
 # and then executes goimport passing all arguments forward to the `run` command
 
 make -s golangci-lint
-
+export GOFLAGS=""
 exec .cache/dependencies/bin/golangci-lint run "$@"
