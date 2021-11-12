@@ -61,7 +61,6 @@ func (r *AddonOperatorReconciler) reportAddonOperatorPauseStatus(
 		ObservedGeneration: addonOperator.Generation,
 	})
 	addonOperator.Status.ObservedGeneration = addonOperator.Generation
-	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
 	addonOperator.Status.LastHeartbeatTime = metav1.Now()
 	return r.Status().Update(ctx, addonOperator)
 }
@@ -71,6 +70,5 @@ func (r *AddonOperatorReconciler) removeAddonOperatorPauseCondition(
 	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
 	meta.RemoveStatusCondition(&addonOperator.Status.Conditions, addonsv1alpha1.Paused)
 	addonOperator.Status.ObservedGeneration = addonOperator.Generation
-	addonOperator.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addonOperator)
 }

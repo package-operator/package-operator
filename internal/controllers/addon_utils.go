@@ -95,7 +95,6 @@ func (r *AddonReconciler) reportAddonPauseStatus(
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addon)
 }
 
@@ -104,7 +103,6 @@ func (r *AddonReconciler) removeAddonPauseCondition(ctx context.Context,
 	addon *addonsv1alpha1.Addon) error {
 	meta.RemoveStatusCondition(&addon.Status.Conditions, addonsv1alpha1.Paused)
 	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhaseReady
 	return r.Status().Update(ctx, addon)
 }
 
