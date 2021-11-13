@@ -28,22 +28,23 @@ func Setup(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	objs := integration.LoadObjectsFromDeploymentFiles(t)
+	// testing olm and addon-operator installation
+	//objs := integration.LoadObjectsFromDeploymentFiles(t)
 
 	var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
-	for _, obj := range objs {
-		err := integration.Client.Create(ctx, &obj)
-		require.NoError(t, err)
+	// for _, obj := range objs {
+	// 	err := integration.Client.Create(ctx, &obj)
+	// 	require.NoError(t, err)
 
-		t.Log("created: ", obj.GroupVersionKind().String(),
-			obj.GetNamespace()+"/"+obj.GetName())
+	// 	t.Log("created: ", obj.GroupVersionKind().String(),
+	// 		obj.GetNamespace()+"/"+obj.GetName())
 
-		if obj.GetKind() == "Deployment" {
-			deployments = append(deployments, obj)
-		}
-	}
+	// 	if obj.GetKind() == "Deployment" {
+	// 		deployments = append(deployments, obj)
+	// 	}
+	// }
 
 	crds := []struct {
 		crdName string

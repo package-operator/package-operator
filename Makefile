@@ -222,6 +222,12 @@ lint: generate $(GOLANGCI_LINT)
 	golangci-lint run ./... --deadline=15m
 .PHONY: lint
 
+## Install OLM for tests
+test-olm-install: setup-olm
+
+## Install Addon-Operator for test setup
+test-ao-install: setup-addon-operator
+
 ## Runs code-generators and unittests.
 test-unit: generate
 	@echo "running unit tests..."
@@ -530,3 +536,4 @@ push-image-%: registry-login build-image-$$*
 		echo pushed "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
+
