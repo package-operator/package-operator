@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func TestHandleAddonDeletion(t *testing.T) {
 		r := &AddonReconciler{
 			Client:          c,
 			Log:             testutil.NewLogger(t),
-			Scheme:          newTestSchemeWithAddonsv1alpha1(),
+			Scheme:          testutil.NewTestSchemeWithAddonsv1alpha1(),
 			csvEventHandler: csvEventHandlerMock,
 		}
 
@@ -66,7 +66,7 @@ func TestHandleAddonDeletion(t *testing.T) {
 		r := &AddonReconciler{
 			Client:          c,
 			Log:             testutil.NewLogger(t),
-			Scheme:          newTestSchemeWithAddonsv1alpha1(),
+			Scheme:          testutil.NewTestSchemeWithAddonsv1alpha1(),
 			csvEventHandler: csvEventHandlerMock,
 		}
 

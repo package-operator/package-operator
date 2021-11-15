@@ -1,4 +1,4 @@
-package controllers
+package testutil
 
 import (
 	"net/http"
@@ -13,13 +13,13 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-func newTestSchemeWithAddonsv1alpha1() *runtime.Scheme {
+func NewTestSchemeWithAddonsv1alpha1() *runtime.Scheme {
 	testScheme := runtime.NewScheme()
 	_ = addonsv1alpha1.AddToScheme(testScheme)
 	return testScheme
 }
 
-func newTestAddonWithoutNamespace() *addonsv1alpha1.Addon {
+func NewTestAddonWithoutNamespace() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "addon-1",
@@ -30,7 +30,7 @@ func newTestAddonWithoutNamespace() *addonsv1alpha1.Addon {
 	}
 }
 
-func newTestAddonWithSingleNamespace() *addonsv1alpha1.Addon {
+func NewTestAddonWithSingleNamespace() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "addon-1",
@@ -43,7 +43,7 @@ func newTestAddonWithSingleNamespace() *addonsv1alpha1.Addon {
 	}
 }
 
-func newTestAddonWithMultipleNamespaces() *addonsv1alpha1.Addon {
+func NewTestAddonWithMultipleNamespaces() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "addon-1",
@@ -57,7 +57,7 @@ func newTestAddonWithMultipleNamespaces() *addonsv1alpha1.Addon {
 	}
 }
 
-func newTestNamespace() *corev1.Namespace {
+func NewTestNamespace() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace-1",
@@ -74,7 +74,7 @@ func newTestNamespace() *corev1.Namespace {
 	}
 }
 
-func newTestExistingNamespaceWithoutOwner() *corev1.Namespace {
+func NewTestExistingNamespaceWithoutOwner() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace-1",
@@ -82,7 +82,7 @@ func newTestExistingNamespaceWithoutOwner() *corev1.Namespace {
 	}
 }
 
-func newTestExistingNamespaceWithOwner() *corev1.Namespace {
+func NewTestExistingNamespaceWithOwner() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace-1",
@@ -99,7 +99,7 @@ func newTestExistingNamespaceWithOwner() *corev1.Namespace {
 	}
 }
 
-func newTestErrNotFound() *k8sApiErrors.StatusError {
+func NewTestErrNotFound() *k8sApiErrors.StatusError {
 	return &k8sApiErrors.StatusError{
 		ErrStatus: metav1.Status{
 			Status: metav1.StatusFailure,
@@ -109,7 +109,7 @@ func newTestErrNotFound() *k8sApiErrors.StatusError {
 	}
 }
 
-func newTestCatalogSource() *operatorsv1alpha1.CatalogSource {
+func NewTestCatalogSource() *operatorsv1alpha1.CatalogSource {
 	return &operatorsv1alpha1.CatalogSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "catalogsource-pfsdboia",
@@ -126,7 +126,7 @@ func newTestCatalogSource() *operatorsv1alpha1.CatalogSource {
 	}
 }
 
-func newTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
+func NewTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
 	return &operatorsv1alpha1.CatalogSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "catalogsource-pfsdboia",
@@ -135,7 +135,7 @@ func newTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
 	}
 }
 
-func newTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
+func NewTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "addon-1",

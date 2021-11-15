@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
