@@ -22,7 +22,23 @@ type AddonInstanceStatus struct {
 	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime"`
 }
 
-// AddonInstance is the Schema for the AddonInstance API
+// AddonInstance is a managed service facing interface to get configuration and report status back.
+//
+// **Example**
+// ```yaml
+// apiVersion: addons.managed.openshift.io/v1alpha1
+// kind: AddonInstance
+// metadata:
+//   name: addon-instance
+//   namespace: my-addon-namespace
+// spec:
+//   heartbeatUpdatePeriod: 30s
+// status:
+//   lastHeartbeatTime: 2021-10-11T08:14:50Z
+//   conditions:
+//   - type: addons.managed.openshift.io/Healthy
+//     status: "True"
+// ```
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Last Heartbeat",type="date",JSONPath=".status.lastHeartbeatTime"

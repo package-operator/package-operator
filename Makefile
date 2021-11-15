@@ -201,6 +201,9 @@ generate: $(CONTROLLER_GEN)
 	@echo
 .PHONY: generate
 
+docs: bin/docgen
+	./hack/docgen.sh
+
 # Makes sandwich
 # https://xkcd.com/149/
 sandwich:
