@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
 
 const catalogSourcePublisher = "OSD Red Hat Addons"
@@ -53,7 +54,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 		},
 	}
 
-	addCommonLabels(catalogSource.Labels, addon)
+	controllers.AddCommonLabels(catalogSource.Labels, addon)
 
 	if err := controllerutil.SetControllerReference(addon, catalogSource, r.Scheme); err != nil {
 		return ensureCatalogSourceResultNil, nil, err

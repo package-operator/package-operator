@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 )
 
 // Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
@@ -37,7 +38,7 @@ func (r *AddonReconciler) ensureOperatorGroup(
 		desiredOperatorGroup.Spec.TargetNamespaces = []string{targetNamespace}
 	}
 
-	addCommonLabels(desiredOperatorGroup.Labels, addon)
+	controllers.AddCommonLabels(desiredOperatorGroup.Labels, addon)
 	if err := controllerutil.SetControllerReference(addon, desiredOperatorGroup, r.Scheme); err != nil {
 		return false, fmt.Errorf("setting controller reference: %w", err)
 	}

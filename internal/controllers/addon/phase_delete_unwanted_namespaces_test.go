@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openshift/addon-operator/internal/controllers"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
@@ -23,11 +24,11 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NoNamespacesInClu
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	ctx := context.Background()
-	err := r.ensureDeletionOfUnwantedNamespaces(ctx, newTestAddonWithoutNamespace())
+	err := r.ensureDeletionOfUnwantedNamespaces(ctx, testutil.NewTestAddonWithoutNamespace())
 	require.NoError(t, err)
 	c.AssertExpectations(t)
 }
@@ -35,8 +36,8 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NoNamespacesInClu
 func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NamespaceInCluster(t *testing.T) {
 	c := testutil.NewClient()
 
-	addon := newTestAddonWithoutNamespace()
-	existingNamespace := newTestNamespace()
+	addon := testutil.NewTestAddonWithoutNamespace()
+	existingNamespace := testutil.NewTestNamespace()
 
 	c.On("List", testutil.IsContext, testutil.IsCoreV1NamespaceListPtr, mock.Anything).
 		Run(func(args mock.Arguments) {
@@ -55,7 +56,7 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NamespaceInCluste
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	ctx := context.Background()
@@ -70,7 +71,7 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NamespaceInCluste
 			listOptions[0].ApplyToList(testListOptions)
 			testLabelSelectorString := testListOptions.LabelSelector.String()
 			return len(testLabelSelectorString) > 0 &&
-				testLabelSelectorString == commonLabelsAsLabelSelector(addon).String()
+				testLabelSelectorString == controllers.CommonLabelsAsLabelSelector(addon).String()
 		}))
 	c.AssertCalled(t, "Delete", testutil.IsContext,
 		mock.MatchedBy(func(val *corev1.Namespace) bool {
@@ -82,8 +83,8 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_NamespaceInCluste
 func TestEnsureDeletionOfUnwantedNamespaces_NamespacesInSpec_matching_NamespacesInCluster(t *testing.T) {
 	c := testutil.NewClient()
 
-	addon := newTestAddonWithSingleNamespace()
-	existingNamespace := newTestNamespace()
+	addon := testutil.NewTestAddonWithSingleNamespace()
+	existingNamespace := testutil.NewTestNamespace()
 
 	c.On("List", testutil.IsContext, testutil.IsCoreV1NamespaceListPtr, mock.Anything).
 		Run(func(args mock.Arguments) {
@@ -100,7 +101,7 @@ func TestEnsureDeletionOfUnwantedNamespaces_NamespacesInSpec_matching_Namespaces
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	ctx := context.Background()
@@ -115,7 +116,7 @@ func TestEnsureDeletionOfUnwantedNamespaces_NamespacesInSpec_matching_Namespaces
 			listOptions[0].ApplyToList(testListOptions)
 			testLabelSelectorString := testListOptions.LabelSelector.String()
 			return len(testLabelSelectorString) > 0 &&
-				testLabelSelectorString == commonLabelsAsLabelSelector(addon).String()
+				testLabelSelectorString == controllers.CommonLabelsAsLabelSelector(addon).String()
 		}))
 }
 
@@ -129,11 +130,11 @@ func TestEnsureDeletionOfUnwantedNamespaces_NoNamespacesInSpec_WithClientError(t
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	ctx := context.Background()
-	err := r.ensureDeletionOfUnwantedNamespaces(ctx, newTestAddonWithoutNamespace())
+	err := r.ensureDeletionOfUnwantedNamespaces(ctx, testutil.NewTestAddonWithoutNamespace())
 	require.EqualError(t, errors.Unwrap(err), timeoutErr.Error())
 	c.AssertExpectations(t)
 }

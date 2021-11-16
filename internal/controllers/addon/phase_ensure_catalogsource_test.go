@@ -1,4 +1,4 @@
-package controllers
+package addon
 
 import (
 	"context"
@@ -19,7 +19,7 @@ func TestReconcileCatalogSource_NotExistingYet_HappyPath(t *testing.T) {
 		testutil.IsContext,
 		testutil.IsObjectKey,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-	).Return(newTestErrNotFound())
+	).Return(testutil.NewTestErrNotFound())
 	c.On("Create",
 		testutil.IsContext,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
@@ -27,7 +27,7 @@ func TestReconcileCatalogSource_NotExistingYet_HappyPath(t *testing.T) {
 	).Return(nil)
 
 	ctx := context.Background()
-	catalogSource := newTestCatalogSource()
+	catalogSource := testutil.NewTestCatalogSource()
 	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy())
 	assert.NoError(t, err)
 	assert.NotNil(t, reconciledCatalogSource)
@@ -51,7 +51,7 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorGet(t *testing.T) 
 	).Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileCatalogSource(ctx, c, newTestCatalogSource())
+	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource())
 	assert.Error(t, err)
 	assert.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)
@@ -65,7 +65,7 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorCreate(t *testing.
 		testutil.IsContext,
 		testutil.IsObjectKey,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-	).Return(newTestErrNotFound())
+	).Return(testutil.NewTestErrNotFound())
 	c.On("Create",
 		testutil.IsContext,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
@@ -73,14 +73,14 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorCreate(t *testing.
 	).Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileCatalogSource(ctx, c, newTestCatalogSource())
+	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource())
 	assert.Error(t, err)
 	assert.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)
 }
 
 func TestReconcileCatalogSource_Adoption(t *testing.T) {
-	catalogSource := newTestCatalogSource()
+	catalogSource := testutil.NewTestCatalogSource()
 
 	c := testutil.NewClient()
 	c.On("Get",
@@ -89,7 +89,7 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
 	).Run(func(args mock.Arguments) {
 		arg := args.Get(2).(*operatorsv1alpha1.CatalogSource)
-		newTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
+		testutil.NewTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
 	}).Return(nil)
 	// TODO: remove this Update call once resourceAdoptionStrategy is discontinued
 	// This update call changes the ownerRef to AddonOperator
@@ -112,14 +112,14 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 }
 
 func TestEnsureCatalogSource_Create(t *testing.T) {
-	addon := newTestAddonWithCatalogSourceImage()
+	addon := testutil.NewTestAddonWithCatalogSourceImage()
 
 	c := testutil.NewClient()
 	c.On("Get",
 		testutil.IsContext,
 		testutil.IsObjectKey,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-	).Return(newTestErrNotFound())
+	).Return(testutil.NewTestErrNotFound())
 	c.On("Create",
 		testutil.IsContext,
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
@@ -134,7 +134,7 @@ func TestEnsureCatalogSource_Create(t *testing.T) {
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	log := testutil.NewLogger(t)
@@ -147,7 +147,7 @@ func TestEnsureCatalogSource_Create(t *testing.T) {
 }
 
 func TestEnsureCatalogSource_Update(t *testing.T) {
-	addon := newTestAddonWithCatalogSourceImage()
+	addon := testutil.NewTestAddonWithCatalogSourceImage()
 
 	c := testutil.NewClient()
 	c.On("Get",
@@ -169,7 +169,7 @@ func TestEnsureCatalogSource_Update(t *testing.T) {
 	r := &AddonReconciler{
 		Client: c,
 		Log:    testutil.NewLogger(t),
-		Scheme: newTestSchemeWithAddonsv1alpha1(),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
 	log := testutil.NewLogger(t)
