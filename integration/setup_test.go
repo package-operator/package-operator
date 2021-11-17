@@ -93,36 +93,36 @@ func Setup(t *testing.T) {
 		})
 	}
 
-	for _, deploy := range deployments {
-		t.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func(t *testing.T) {
+	// for _, deploy := range deployments {
+	// 	t.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func(t *testing.T) {
 
-			deployment := &appsv1.Deployment{}
-			err := wait.PollImmediate(
-				time.Second, 5*time.Minute, func() (done bool, err error) {
-					err = integration.Client.Get(
-						ctx, client.ObjectKey{
-							Name:      deploy.GetName(),
-							Namespace: deploy.GetNamespace(),
-						}, deployment)
-					if errors.IsNotFound(err) {
-						return false, err
-					}
-					if err != nil {
-						// retry on transient errors
-						return false, nil
-					}
+	// 		deployment := &appsv1.Deployment{}
+	// 		err := wait.PollImmediate(
+	// 			time.Second, 5*time.Minute, func() (done bool, err error) {
+	// 				err = integration.Client.Get(
+	// 					ctx, client.ObjectKey{
+	// 						Name:      deploy.GetName(),
+	// 						Namespace: deploy.GetNamespace(),
+	// 					}, deployment)
+	// 				if errors.IsNotFound(err) {
+	// 					return false, err
+	// 				}
+	// 				if err != nil {
+	// 					// retry on transient errors
+	// 					return false, nil
+	// 				}
 
-					for _, cond := range deployment.Status.Conditions {
-						if cond.Type == appsv1.DeploymentAvailable &&
-							cond.Status == corev1.ConditionTrue {
-							return true, nil
-						}
-					}
-					return false, nil
-				})
-			require.NoError(t, err, "wait for Addon Operator Deployment")
-		})
-	}
+	// 				for _, cond := range deployment.Status.Conditions {
+	// 					if cond.Type == appsv1.DeploymentAvailable &&
+	// 						cond.Status == corev1.ConditionTrue {
+	// 						return true, nil
+	// 					}
+	// 				}
+	// 				return false, nil
+	// 			})
+	// 		require.NoError(t, err, "wait for Addon Operator Deployment")
+	// 	})
+	// }
 
 	t.Run("Addon Operator available", func(t *testing.T) {
 		addonOperator := addonsv1alpha1.AddonOperator{}

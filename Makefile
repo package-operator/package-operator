@@ -222,12 +222,6 @@ lint: generate $(GOLANGCI_LINT)
 	golangci-lint run ./... --deadline=15m
 .PHONY: lint
 
-## Install OLM for tests
-test-olm-install: setup-olm
-
-## Install Addon-Operator for test setup
-test-ao-install: setup-addon-operator
-
 ## Runs code-generators and unittests.
 test-unit: generate
 	@echo "running unit tests..."
