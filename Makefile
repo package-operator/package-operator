@@ -95,7 +95,7 @@ clean: delete-kind-cluster
 bin/linux_amd64/%: GOARGS = GOOS=linux GOARCH=amd64
 
 ## Builds binaries from cmd/%.
-bin/%: generate FORCE
+bin/%: generate-code FORCE
 	$(eval COMPONENT=$(shell basename $*))
 	@echo -e -n "compiling cmd/$(COMPONENT)...\n  "
 	$(GOARGS) go build -ldflags "-w $(LD_FLAGS)" -o bin/$* cmd/$(COMPONENT)/main.go
@@ -183,8 +183,16 @@ tidy:
 ##@ Generators
 # ------------
 
-## Generate deepcopy code and kubernetes manifests.
-generate: $(CONTROLLER_GEN)
+## Generate deepcopy code, kubernetes manifests and docs.
+generate: generate-code generate-docs
+
+generate-code: $(CONTROLLER_GEN)
+	@echo "generating kubernetes manifests..."
+	@controller-gen crd:crdVersions=v1 \
+		rbac:roleName=addon-operator-manager \
+		paths="./..." \
+		output:crd:artifacts:config=config/deploy 2>&1 | sed 's/^/  /'
+	@echo
 	@echo "generating code..."
 	@(controller-gen crd:crdVersions=v1 \
 			rbac:roleName=addon-operator-manager \
@@ -201,8 +209,10 @@ generate: $(CONTROLLER_GEN)
 	@echo
 .PHONY: generate
 
-docs: bin/docgen
+generate-docs: bin/docgen
+	@echo "generating docs..."
 	./hack/docgen.sh
+	@echo
 
 # Makes sandwich
 # https://xkcd.com/149/
