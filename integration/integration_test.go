@@ -1,71 +1,27 @@
 package integration_test
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"os"
 	"testing"
 
-	"github.com/openshift/addon-operator/integration"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestMain(m *testing.M) {
-	os.Exit(runTests(m))
+type integrationTestSuite struct {
+	suite.Suite
 }
 
-func runTests(m *testing.M) int {
-	defer func() {
-		if err := integration.PrintPodStatusAndLogs("addon-operator"); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	// Setup
-	setupExitCode := testing.MainStart(&deps{}, []testing.InternalTest{
-		{
-			Name: "Setup",
-			F:    Setup,
-		},
-	}, nil, nil).Run()
-	if setupExitCode != 0 {
-		return setupExitCode
+func (s *integrationTestSuite) SetupSuite() {
+	if !testing.Short() {
+		s.Setup()
 	}
-	fmt.Println()
+}
 
-	// Main tests
-	exitCode := m.Run()
-	if exitCode != 0 {
-		return exitCode
+func (s *integrationTestSuite) TearDownSuite() {
+	if !testing.Short() {
+		s.Teardown()
 	}
-	fmt.Println()
-
-	// Teardown
-	teardownExitCode := testing.MainStart(&deps{}, []testing.InternalTest{
-		{
-			Name: "Teardown",
-			F:    Teardown,
-		},
-	}, nil, nil).Run()
-	return teardownExitCode
 }
 
-type deps struct{}
-
-func (*deps) ImportPath() string { return "" }
-
-func (*deps) MatchString(pat, str string) (bool, error) {
-	return true, nil
+func TestIntegration(t *testing.T) {
+	suite.Run(t, new(integrationTestSuite))
 }
-
-func (*deps) SetPanicOnExit0(bool) {}
-
-func (*deps) StartCPUProfile(io.Writer) error { return nil }
-
-func (*deps) StopCPUProfile() {}
-
-func (*deps) StartTestLog(wr io.Writer) {}
-
-func (*deps) StopTestLog() error { return nil }
-
-func (*deps) WriteProfileTo(string, io.Writer, int) error { return nil }

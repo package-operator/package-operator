@@ -3,12 +3,9 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,8 +18,8 @@ import (
 // This test deploys a version of our addon where InstallPlan and
 // CSV never succeed because the deployed operator pod is deliberately
 // broken through invalid readiness and liveness probes.
-func TestAddon_BrokenSubscription(t *testing.T) {
-	t.Parallel()
+func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
+	s.T().Parallel()
 
 	ctx := context.Background()
 
@@ -54,12 +51,12 @@ func TestAddon_BrokenSubscription(t *testing.T) {
 	}
 
 	err := integration.Client.Create(ctx, addon)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	t.Cleanup(func() {
+	s.T().Cleanup(func() {
 		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
 		if client.IgnoreNotFound(err) != nil {
-			t.Logf("could not clean up Addon %s: %v", addon.Name, err)
+			s.T().Logf("could not clean up Addon %s: %v", addon.Name, err)
 		}
 	})
 
@@ -71,21 +68,21 @@ func TestAddon_BrokenSubscription(t *testing.T) {
 	}
 
 	err = integration.WaitForObject(
-		t, 10*time.Minute, observedCSV, "to be Failed",
+		s.T(), 10*time.Minute, observedCSV, "to be Failed",
 		func(obj client.Object) (done bool, err error) {
 			csv := obj.(*operatorsv1alpha1.ClusterServiceVersion)
 			return csv.Status.Phase == operatorsv1alpha1.CSVPhaseFailed, nil
 		})
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	{
 		observedAddon := &addonsv1alpha1.Addon{}
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Name: addon.Name,
 		}, observedAddon)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
-		assert.Equal(t, addon.Status.Phase, addonsv1alpha1.PhasePending)
+		s.Assert().Equal(addon.Status.Phase, addonsv1alpha1.PhasePending)
 	}
 
 	{
@@ -94,24 +91,24 @@ func TestAddon_BrokenSubscription(t *testing.T) {
 			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
 			Name:      addon.Name,
 		}, subscription)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		// Force type of `operatorsv1alpha1.SubscriptionStateAtLatest` to `operatorsv1alpha1.SubscriptionState`
 		// because it is an untyped string const otherwise.
 		var subscriptionAtLatest operatorsv1alpha1.SubscriptionState = operatorsv1alpha1.SubscriptionStateAtLatest
-		assert.Equal(t, subscriptionAtLatest, subscription.Status.State)
-		assert.NotEmpty(t, subscription.Status.Install)
-		assert.Equal(t, "reference-addon.v0.1.3", subscription.Status.CurrentCSV)
-		assert.Equal(t, "reference-addon.v0.1.3", subscription.Status.InstalledCSV)
+		s.Assert().Equal(subscriptionAtLatest, subscription.Status.State)
+		s.Assert().NotEmpty(subscription.Status.Install)
+		s.Assert().Equal("reference-addon.v0.1.3", subscription.Status.CurrentCSV)
+		s.Assert().Equal("reference-addon.v0.1.3", subscription.Status.InstalledCSV)
 	}
 
 	// delete Addon
 	err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-	require.NoError(t, err, "delete Addon: %v", addon)
+	s.Require().NoError(err, "delete Addon: %v", addon)
 
 	// wait until Addon is gone
-	err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
-	require.NoError(t, err, "wait for Addon to be deleted")
+	err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
+	s.Require().NoError(err, "wait for Addon to be deleted")
 
 	// assert that CatalogSource is gone
 	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
@@ -119,5 +116,5 @@ func TestAddon_BrokenSubscription(t *testing.T) {
 		Name:      addon.Name,
 		Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
 	}, currentCatalogSource)
-	assert.True(t, k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
+	s.Assert().True(k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
 }

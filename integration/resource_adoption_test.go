@@ -2,12 +2,10 @@ package integration_test
 
 import (
 	"context"
-	"testing"
 	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,7 +78,7 @@ func getReferenceAddonSubscription() *operatorsv1alpha1.Subscription {
 	}
 }
 
-func TestResourceAdoption(t *testing.T) {
+func (s *integrationTestSuite) TestResourceAdoption() {
 	requiredOLMObjects := []client.Object{
 		getReferenceAddonNamespace(),
 		getReferenceAddonCatalogSource(),
@@ -91,9 +89,9 @@ func TestResourceAdoption(t *testing.T) {
 	ctx := context.Background()
 	for _, obj := range requiredOLMObjects {
 		obj := obj
-		t.Logf("creating %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+		s.T().Logf("creating %s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 		err := integration.Client.Create(ctx, obj)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 	}
 
 	addon := &addonsv1alpha1.Addon{
@@ -120,12 +118,12 @@ func TestResourceAdoption(t *testing.T) {
 			},
 		},
 	}
-	t.Run("resource adoption strategy: Prevent", func(t *testing.T) {
+	s.Run("resource adoption strategy: Prevent", func() {
 		addon := addon.DeepCopy()
 		addon.Spec.ResourceAdoptionStrategy = addonsv1alpha1.ResourceAdoptionPrevent
 
 		err := integration.Client.Create(ctx, addon)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		observedAddon := &addonsv1alpha1.Addon{
 			ObjectMeta: metav1.ObjectMeta{
@@ -135,7 +133,7 @@ func TestResourceAdoption(t *testing.T) {
 
 		// check status condition for collided namespace error
 		err = integration.WaitForObject(
-			t, 10*time.Minute, observedAddon, "to report collided namespaces",
+			s.T(), 10*time.Minute, observedAddon, "to report collided namespaces",
 			func(obj client.Object) (done bool, err error) {
 				addon := obj.(*addonsv1alpha1.Addon)
 				if collidedCondition := meta.FindStatusCondition(addon.Status.Conditions,
@@ -145,23 +143,23 @@ func TestResourceAdoption(t *testing.T) {
 				}
 				return false, nil
 			})
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		// delete addon
 		err = integration.Client.Delete(ctx, addon)
-		require.NoError(t, err, "delete addon")
+		s.Require().NoError(err, "delete addon")
 
-		err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
-		require.NoError(t, err, "wait for Addon to be deleted")
+		err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
+		s.Require().NoError(err, "wait for Addon to be deleted")
 
 	})
 
-	t.Run("resource adoption strategy: AdoptAll", func(t *testing.T) {
+	s.Run("resource adoption strategy: AdoptAll", func() {
 		addon := addon.DeepCopy()
 		addon.Spec.ResourceAdoptionStrategy = addonsv1alpha1.ResourceAdoptionAdoptAll
 
 		err := integration.Client.Create(ctx, addon)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		observedAddon := &addonsv1alpha1.Addon{
 			ObjectMeta: metav1.ObjectMeta{
@@ -170,13 +168,13 @@ func TestResourceAdoption(t *testing.T) {
 		}
 
 		err = integration.WaitForObject(
-			t, 10*time.Minute, observedAddon, "to be available",
+			s.T(), 10*time.Minute, observedAddon, "to be available",
 			func(obj client.Object) (done bool, err error) {
 				addon := obj.(*addonsv1alpha1.Addon)
 				return meta.IsStatusConditionTrue(addon.Status.Conditions,
 					addonsv1alpha1.Available), nil
 			})
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		// validate ownerReference on Namespace
 		{
@@ -186,12 +184,12 @@ func TestResourceAdoption(t *testing.T) {
 				},
 			}
 			err = integration.WaitForObject(
-				t, 2*time.Minute, observedNs, "to have AddonOperator ownerReference",
+				s.T(), 2*time.Minute, observedNs, "to have AddonOperator ownerReference",
 				func(obj client.Object) (done bool, err error) {
 					ns := obj.(*corev1.Namespace)
 					return validateOwnerReference(addon, ns)
 				})
-			require.NoError(t, err)
+			s.Require().NoError(err)
 		}
 
 		// validate ownerReference on Subscription
@@ -203,12 +201,12 @@ func TestResourceAdoption(t *testing.T) {
 				},
 			}
 			err = integration.WaitForObject(
-				t, 2*time.Minute, observedSubscription, "to have AddonOperator ownerReference",
+				s.T(), 2*time.Minute, observedSubscription, "to have AddonOperator ownerReference",
 				func(obj client.Object) (done bool, err error) {
 					sub := obj.(*operatorsv1alpha1.Subscription)
 					return validateOwnerReference(addon, sub)
 				})
-			require.NoError(t, err)
+			s.Require().NoError(err)
 
 		}
 
@@ -221,12 +219,12 @@ func TestResourceAdoption(t *testing.T) {
 				},
 			}
 			err = integration.WaitForObject(
-				t, 2*time.Minute, observedOG, "to have AddonOperator ownerReference",
+				s.T(), 2*time.Minute, observedOG, "to have AddonOperator ownerReference",
 				func(obj client.Object) (done bool, err error) {
 					og := obj.(*operatorsv1.OperatorGroup)
 					return validateOwnerReference(addon, og)
 				})
-			require.NoError(t, err)
+			s.Require().NoError(err)
 
 		}
 		// validate ownerReference on CatalogSource
@@ -238,22 +236,22 @@ func TestResourceAdoption(t *testing.T) {
 				},
 			}
 			err = integration.WaitForObject(
-				t, 2*time.Minute, observedCS, "to have AddonOperator ownerReference",
+				s.T(), 2*time.Minute, observedCS, "to have AddonOperator ownerReference",
 				func(obj client.Object) (done bool, err error) {
 					cs := obj.(*operatorsv1alpha1.CatalogSource)
 					return validateOwnerReference(addon, cs)
 				})
-			require.NoError(t, err)
+			s.Require().NoError(err)
 
 		}
 
 		// delete addon
 		// note that this now also deletes the OLM objects
 		err = integration.Client.Delete(ctx, addon)
-		require.NoError(t, err, "delete addon")
+		s.Require().NoError(err, "delete addon")
 
-		err = integration.WaitToBeGone(t, defaultAddonDeletionTimeout, addon)
-		require.NoError(t, err, "wait for Addon to be deleted")
+		err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
+		s.Require().NoError(err, "wait for Addon to be deleted")
 	})
 }
 

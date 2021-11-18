@@ -2,22 +2,14 @@ package integration_test
 
 import (
 	"context"
-	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/openshift/addon-operator/integration"
 )
 
-func Teardown(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-
+func (s *integrationTestSuite) Teardown() {
 	ctx := context.Background()
-	objs := integration.LoadObjectsFromDeploymentFiles(t)
+	objs := integration.LoadObjectsFromDeploymentFiles(s.T())
 
 	// reverse object order for de-install
 	for i, j := 0, len(objs)-1; i < j; i, j = i+1, j-1 {
@@ -27,17 +19,17 @@ func Teardown(t *testing.T) {
 	// Delete all objects to teardown the Addon Operator
 	for _, obj := range objs {
 		err := integration.Client.Delete(ctx, &obj)
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
-		t.Log("deleted: ", obj.GroupVersionKind().String(),
+		s.T().Log("deleted: ", obj.GroupVersionKind().String(),
 			obj.GetNamespace()+"/"+obj.GetName())
 	}
 
-	t.Run("everything is gone", func(t *testing.T) {
+	s.Run("everything is gone", func() {
 		for _, obj := range objs {
 			// Namespaces can take a long time to be cleaned up and
 			// there is no need to be specific about the object kind here
-			assert.NoError(t, integration.WaitToBeGone(t, 2*time.Minute, &obj))
+			s.Assert().NoError(integration.WaitToBeGone(s.T(), 2*time.Minute, &obj))
 		}
 	})
 }

@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,12 +15,12 @@ import (
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
-func TestAddonInstallSpec(t *testing.T) {
+func (s *integrationTestSuite) TestAddonInstallSpec() {
 	if !testutil.IsWebhookServerEnabled() {
-		t.Skip("skipping test as webhook server execution is disabled")
+		s.T().Skip("skipping test as webhook server execution is disabled")
 	}
 
-	t.Parallel()
+	s.T().Parallel()
 
 	ctx := context.Background()
 	addonName := "reference-addon-test-install-spec"
@@ -76,31 +73,31 @@ func TestAddonInstallSpec(t *testing.T) {
 
 	for i, tc := range testCases {
 		tc := tc // pin
-		t.Run(fmt.Sprintf("test case: %d", i), func(t *testing.T) {
+		s.Run(fmt.Sprintf("test case: %d", i), func() {
 			err := integration.Client.Create(ctx, tc.addon)
 
 			if err == nil {
-				require.NoError(t, err)
+				s.Require().NoError(err)
 
 				// clean-up addon
 				err = integration.Client.Delete(ctx, tc.addon)
-				require.NoError(t, err)
+				s.Require().NoError(err)
 
-				err = integration.WaitToBeGone(t, 5*time.Minute, tc.addon)
-				require.NoError(t, err, "wait for Addon to be deleted")
+				err = integration.WaitToBeGone(s.T(), 5*time.Minute, tc.addon)
+				s.Require().NoError(err, "wait for Addon to be deleted")
 			} else {
-				assert.EqualValues(t, tc.err, err)
+				s.Assert().EqualValues(tc.err, err)
 			}
 		})
 	}
 }
 
-func TestAddonSpecImmutability(t *testing.T) {
+func (s *integrationTestSuite) TestAddonSpecImmutability() {
 	if !testutil.IsWebhookServerEnabled() {
-		t.Skip("skipping test as webhook server execution is disabled")
+		s.T().Skip("skipping test as webhook server execution is disabled")
 	}
 
-	t.Parallel()
+	s.T().Parallel()
 
 	ctx := context.Background()
 	addonName := "reference-addon-test-install-spec-immutability"
@@ -118,7 +115,7 @@ func TestAddonSpecImmutability(t *testing.T) {
 	}, addonName)
 
 	err := integration.Client.Create(ctx, addon)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		addon := &addonsv1alpha1.Addon{}
@@ -146,12 +143,12 @@ func TestAddonSpecImmutability(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	// cleanup
 	err = integration.Client.Delete(ctx, addon)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	err = integration.WaitToBeGone(t, 5*time.Minute, addon)
-	require.NoError(t, err, "wait for Addon to be deleted")
+	err = integration.WaitToBeGone(s.T(), 5*time.Minute, addon)
+	s.Require().NoError(err, "wait for Addon to be deleted")
 }

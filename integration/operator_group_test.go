@@ -2,10 +2,8 @@ package integration_test
 
 import (
 	"context"
-	"testing"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,7 +12,7 @@ import (
 	"github.com/openshift/addon-operator/integration"
 )
 
-func TestAddon_OperatorGroup(t *testing.T) {
+func (s *integrationTestSuite) TestAddon_OperatorGroup() {
 	addonOwnNamespace := &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "addon-fuccniy3l4",
@@ -77,31 +75,31 @@ func TestAddon_OperatorGroup(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+		s.Run(test.name, func() {
 			ctx := context.Background()
 			addon := test.addon
 
 			err := integration.Client.Create(ctx, addon)
-			require.NoError(t, err)
-			t.Cleanup(func() {
+			s.Require().NoError(err)
+			s.T().Cleanup(func() {
 				err := integration.Client.Delete(ctx, addon)
 				if client.IgnoreNotFound(err) != nil {
-					t.Logf("could not clean up Addon %s: %v", addon.Name, err)
+					s.T().Logf("could not clean up Addon %s: %v", addon.Name, err)
 				}
 			})
 
 			err = integration.WaitForObject(
-				t, defaultAddonAvailabilityTimeout, addon, "to be Available",
+				s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
 				func(obj client.Object) (done bool, err error) {
 					a := obj.(*addonsv1alpha1.Addon)
 					return meta.IsStatusConditionTrue(
 						a.Status.Conditions, addonsv1alpha1.Available), nil
 				})
-			require.NoError(t, err)
+			s.Require().NoError(err)
 
 			// check that there is an OperatorGroup in the target namespace.
 			operatorGroup := &operatorsv1.OperatorGroup{}
-			require.NoError(t, integration.Client.Get(ctx, client.ObjectKey{
+			s.Require().NoError(integration.Client.Get(ctx, client.ObjectKey{
 				Name:      addon.Name,
 				Namespace: test.targetNamespace,
 			}, operatorGroup))
