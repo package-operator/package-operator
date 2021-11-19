@@ -531,3 +531,14 @@ push-image-%: registry-login build-image-$$*
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 
+## openshift release openshift-ci operator
+openshift-ci: all 
+	@rm -rf ".cache/image/"
+	@mkdir -p ".cache/image/manifests";  
+	@mkdir -p ".cache/image/metadata"; 
+	@cp -a "config/olm/addon-operator.csv.tpl.yaml" ".cache/image/manifests/addon-operator.csv.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/manifests/addons.crd.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > ".cache/image/manifests/addonoperators.crd.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > ".cache/image/manifests/addoninstances.crd.yaml"; 
+	@cp -a "config/olm/annotations.yaml" ".cache/image/metadata"; 
+	
