@@ -533,12 +533,14 @@ push-image-%: registry-login build-image-$$*
 
 ## openshift release openshift-ci operator
 openshift-ci: all 
-	@rm -rf ".cache/image/"
-	@mkdir -p ".cache/image/manifests";  
-	@mkdir -p ".cache/image/metadata"; 
-	@cp -a "config/olm/addon-operator.csv.tpl.yaml" ".cache/image/manifests/addon-operator.csv.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/manifests/addons.crd.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > ".cache/image/manifests/addonoperators.crd.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > ".cache/image/manifests/addoninstances.crd.yaml"; 
-	@cp -a "config/olm/annotations.yaml" ".cache/image/metadata"; 
+	@rm -rf "manifests"
+	@rm -rf "metadata"
+	@mkdir -p "manifests";  
+	@mkdir -p "metadata"; 
+	@cp -a "config/docker/addon-operator-bundle.Dockerfile" "addon-operator-bundle.Dockerfile";
+	@cp -a "config/olm/addon-operator.csv.tpl.yaml" "manifests/addon-operator.csv.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "manifests/addons.crd.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "manifests/addonoperators.crd.yaml"; 
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "manifests/addoninstances.crd.yaml"; 
+	@cp -a "config/olm/annotations.yaml" "metadata"; 
 	
