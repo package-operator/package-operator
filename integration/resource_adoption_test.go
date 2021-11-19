@@ -18,72 +18,12 @@ import (
 	"github.com/openshift/addon-operator/internal/controllers"
 )
 
-var (
-	referenceAddonNamespace   = "reference-addon"
-	referenceAddonName        = "reference-addon"
-	referenceAddonDisplayName = "Reference Addon"
-)
-
-// taken from -
-// https://gitlab.cee.redhat.com/service/managed-tenants-manifests/-/blob/c60fa3f0252d908b5f868994f8934d24bbaca5f4/stage/addon-reference-addon-SelectorSyncSet.yaml
-func getReferenceAddonNamespace() *corev1.Namespace {
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"openshift.io/node-selector": "",
-			},
-			Name: referenceAddonNamespace,
-		},
-	}
-}
-
-func getReferenceAddonCatalogSource() *operatorsv1alpha1.CatalogSource {
-	return &operatorsv1alpha1.CatalogSource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      referenceAddonName,
-			Namespace: referenceAddonNamespace,
-		},
-		Spec: operatorsv1alpha1.CatalogSourceSpec{
-			DisplayName: referenceAddonDisplayName,
-			Image:       referenceAddonCatalogSourceImageWorking,
-			Publisher:   "OSD Red Hat Addons",
-			SourceType:  operatorsv1alpha1.SourceTypeGrpc,
-		},
-	}
-}
-
-func getReferenceAddonOperatorGroup() *operatorsv1.OperatorGroup {
-	return &operatorsv1.OperatorGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      referenceAddonName,
-			Namespace: referenceAddonNamespace,
-		},
-		Spec: operatorsv1.OperatorGroupSpec{
-			TargetNamespaces: []string{referenceAddonNamespace},
-		},
-	}
-}
-
-func getReferenceAddonSubscription() *operatorsv1alpha1.Subscription {
-	return &operatorsv1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      referenceAddonName,
-			Namespace: referenceAddonNamespace},
-		Spec: &operatorsv1alpha1.SubscriptionSpec{
-			CatalogSource:          referenceAddonName,
-			CatalogSourceNamespace: referenceAddonNamespace,
-			Channel:                referenceAddonNamespace,
-			Package:                referenceAddonName,
-		},
-	}
-}
-
 func (s *integrationTestSuite) TestResourceAdoption() {
 	requiredOLMObjects := []client.Object{
-		getReferenceAddonNamespace(),
-		getReferenceAddonCatalogSource(),
-		getReferenceAddonOperatorGroup(),
-		getReferenceAddonSubscription(),
+		namespace_TestResourceAdoption(),
+		catalogsource_TestResourceAdoption(),
+		operatorgroup_TestResourceAdoption(),
+		subscription_TestResourceAdoption(),
 	}
 
 	ctx := context.Background()
@@ -94,30 +34,7 @@ func (s *integrationTestSuite) TestResourceAdoption() {
 		s.Require().NoError(err)
 	}
 
-	addon := &addonsv1alpha1.Addon{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: referenceAddonName,
-		},
-		Spec: addonsv1alpha1.AddonSpec{
-			DisplayName: referenceAddonName,
-			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{
-					Name: referenceAddonNamespace,
-				},
-			},
-			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OLMOwnNamespace,
-				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          referenceAddonNamespace,
-						PackageName:        referenceAddonNamespace,
-						Channel:            "alpha",
-						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-					},
-				},
-			},
-		},
-	}
+	addon := addon_TestResourceAdoption()
 	s.Run("resource adoption strategy: Prevent", func() {
 		addon := addon.DeepCopy()
 		addon.Spec.ResourceAdoptionStrategy = addonsv1alpha1.ResourceAdoptionPrevent
@@ -144,7 +61,6 @@ func (s *integrationTestSuite) TestResourceAdoption() {
 				return false, nil
 			})
 		s.Require().NoError(err)
-
 		s.addonCleanup(addon, ctx)
 
 	})

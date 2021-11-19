@@ -21,40 +21,10 @@ import (
 func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
 
 	ctx := context.Background()
-
-	uuid := "c24cd15c-4353-4036-bd86-384046eb4ff8"
-	addonName := fmt.Sprintf("addon-%s", uuid)
-	addonNamespace := fmt.Sprintf("namespace-%s", uuid)
-
-	addon := &addonsv1alpha1.Addon{
-		ObjectMeta: v1.ObjectMeta{
-			Name: addonName,
-		},
-		Spec: addonsv1alpha1.AddonSpec{
-			DisplayName: addonName,
-			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{Name: addonNamespace},
-			},
-			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OLMOwnNamespace,
-				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          addonNamespace,
-						CatalogSourceImage: referenceAddonCatalogSourceImageBroken,
-						PackageName:        "reference-addon",
-						Channel:            "alpha",
-					},
-				},
-			},
-		},
-	}
+	addon := addon_OwnNamespace_TestBrokenSubscription()
 
 	err := integration.Client.Create(ctx, addon)
 	s.Require().NoError(err)
-
-	s.T().Cleanup(func() {
-		s.addonCleanup(addon, ctx)
-	})
 
 	observedCSV := &operatorsv1alpha1.ClusterServiceVersion{
 		ObjectMeta: v1.ObjectMeta{
@@ -97,14 +67,15 @@ func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
 		s.Assert().Equal("reference-addon.v0.1.3", subscription.Status.CurrentCSV)
 		s.Assert().Equal("reference-addon.v0.1.3", subscription.Status.InstalledCSV)
 	}
+	s.T().Cleanup(func() {
+		s.addonCleanup(addon, ctx)
 
-	s.addonCleanup(addon, ctx)
-
-	// assert that CatalogSource is gone
-	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
-	err = integration.Client.Get(ctx, types.NamespacedName{
-		Name:      addon.Name,
-		Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
-	}, currentCatalogSource)
-	s.Assert().True(k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
+		// assert that CatalogSource is gone
+		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
+		err = integration.Client.Get(ctx, types.NamespacedName{
+			Name:      addon.Name,
+			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
+		}, currentCatalogSource)
+		s.Assert().True(k8sApiErrors.IsNotFound(err), "CatalogSource not deleted: %s", currentCatalogSource.Name)
+	})
 }

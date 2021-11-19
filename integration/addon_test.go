@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,41 +18,10 @@ func (s *integrationTestSuite) TestAddon() {
 
 	ctx := context.Background()
 
-	addon := &addonsv1alpha1.Addon{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "addon-oisafbo12",
-		},
-		Spec: addonsv1alpha1.AddonSpec{
-			DisplayName: "addon-oisafbo12",
-			Namespaces: []addonsv1alpha1.AddonNamespace{
-				{Name: "namespace-onbgdions"},
-				{Name: "namespace-pioghfndb"},
-			},
-			Install: addonsv1alpha1.AddonInstallSpec{
-				Type: addonsv1alpha1.OLMOwnNamespace,
-				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-						Namespace:          "namespace-onbgdions",
-						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-						Channel:            "alpha",
-						PackageName:        "reference-addon",
-					},
-				},
-			},
-		},
-	}
+	addon := addon_OwnNamespace()
 
 	err := integration.Client.Create(ctx, addon)
 	s.Require().NoError(err)
-
-	// clean up addon resource in case it
-	// was leaked because of a failed test
-	s.T().Cleanup(func() {
-		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-		if client.IgnoreNotFound(err) != nil {
-			s.T().Logf("could not clean up Addon %s: %v", addon.Name, err)
-		}
-	})
 
 	// wait until Addon is available
 	err = integration.WaitForObject(
