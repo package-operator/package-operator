@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -24,6 +25,10 @@ func (s *integrationTestSuite) SetupSuite() {
 func (s *integrationTestSuite) TearDownSuite() {
 	if !testing.Short() {
 		s.Teardown()
+	}
+
+	if err := integration.PrintPodStatusAndLogs("addon-operator"); err != nil {
+		log.Fatal(err)
 	}
 }
 
