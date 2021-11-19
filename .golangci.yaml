@@ -1,0 +1,9 @@
+linters:
+  enable:
+  - nilnil
+  disable:
+  - scopelint # deprecated
+  - exhaustive # was creating false positives left and right
+  presets:
+  - bugs
+  - unused

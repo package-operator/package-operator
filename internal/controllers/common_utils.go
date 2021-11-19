@@ -35,8 +35,9 @@ func HasEqualControllerReference(current, wanted metav1.Object) bool {
 
 	var currentControllerRef *metav1.OwnerReference
 	for _, ownerRef := range currentOwnerRefs {
-		if *ownerRef.Controller {
-			currentControllerRef = &ownerRef
+		or := ownerRef
+		if *or.Controller {
+			currentControllerRef = &or
 			break
 		}
 	}

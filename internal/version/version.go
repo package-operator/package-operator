@@ -43,7 +43,7 @@ func Get() Info {
 	if BuildDate != empty {
 		i, err := strconv.ParseInt(BuildDate, 10, 64)
 		if err != nil {
-			panic(fmt.Errorf("error parsing build time: %v", err))
+			panic(fmt.Errorf("error parsing build time: %w", err))
 		}
 		v.BuildDate = time.Unix(i, 0).UTC()
 	}

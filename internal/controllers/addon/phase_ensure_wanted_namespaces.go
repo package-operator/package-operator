@@ -10,7 +10,6 @@ import (
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -92,14 +91,14 @@ func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1al
 	if err != nil {
 		return nil, err
 	}
-	return reconcileNamespace(ctx, r.Client, r.Scheme, namespace, addon.Spec.ResourceAdoptionStrategy)
+	return reconcileNamespace(ctx, r.Client, namespace, addon.Spec.ResourceAdoptionStrategy)
 }
 
 // reconciles a Namespace and returns the current object as observed.
 // prevents adoption of Namespaces (unowned or owned by something else)
 // reconciling a Namespace means: creating it when it is not present
 // and erroring if our controller is not the owner of said Namespace
-func reconcileNamespace(ctx context.Context, c client.Client, scheme *runtime.Scheme,
+func reconcileNamespace(ctx context.Context, c client.Client,
 	namespace *corev1.Namespace, strategy addonsv1alpha1.ResourceAdoptionStrategyType) (*corev1.Namespace, error) {
 
 	currentNamespace := &corev1.Namespace{}
