@@ -19,7 +19,6 @@ import (
 // CSV never succeed because the deployed operator pod is deliberately
 // broken through invalid readiness and liveness probes.
 func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
-	s.T().Parallel()
 
 	ctx := context.Background()
 

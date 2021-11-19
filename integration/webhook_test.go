@@ -20,8 +20,6 @@ func (s *integrationTestSuite) TestAddonInstallSpec() {
 		s.T().Skip("skipping test as webhook server execution is disabled")
 	}
 
-	s.T().Parallel()
-
 	ctx := context.Background()
 	addonName := "reference-addon-test-install-spec"
 
@@ -96,8 +94,6 @@ func (s *integrationTestSuite) TestAddonSpecImmutability() {
 	if !testutil.IsWebhookServerEnabled() {
 		s.T().Skip("skipping test as webhook server execution is disabled")
 	}
-
-	s.T().Parallel()
 
 	ctx := context.Background()
 	addonName := "reference-addon-test-install-spec-immutability"

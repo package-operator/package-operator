@@ -16,7 +16,6 @@ import (
 )
 
 func (s *integrationTestSuite) TestAddon() {
-	s.T().Parallel()
 
 	ctx := context.Background()
 
@@ -67,7 +66,6 @@ func (s *integrationTestSuite) TestAddon() {
 	s.Require().NoError(err)
 
 	s.Run("test_namespaces", func() {
-		s.T().Parallel()
 
 		for _, namespace := range addon.Spec.Namespaces {
 			currentNamespace := &corev1.Namespace{}
@@ -81,7 +79,6 @@ func (s *integrationTestSuite) TestAddon() {
 	})
 
 	s.Run("test_catalogsource", func() {
-		s.T().Parallel()
 
 		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
 		err := integration.Client.Get(ctx, types.NamespacedName{
@@ -94,7 +91,6 @@ func (s *integrationTestSuite) TestAddon() {
 	})
 
 	s.Run("test_subscription_csv", func() {
-		s.T().Parallel()
 
 		subscription := &operatorsv1alpha1.Subscription{}
 		{
