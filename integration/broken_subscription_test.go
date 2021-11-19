@@ -53,10 +53,7 @@ func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
 	s.Require().NoError(err)
 
 	s.T().Cleanup(func() {
-		err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-		if client.IgnoreNotFound(err) != nil {
-			s.T().Logf("could not clean up Addon %s: %v", addon.Name, err)
-		}
+		s.addonCleanup(addon, ctx)
 	})
 
 	observedCSV := &operatorsv1alpha1.ClusterServiceVersion{
@@ -101,13 +98,7 @@ func (s *integrationTestSuite) TestAddon_BrokenSubscription() {
 		s.Assert().Equal("reference-addon.v0.1.3", subscription.Status.InstalledCSV)
 	}
 
-	// delete Addon
-	err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-	s.Require().NoError(err, "delete Addon: %v", addon)
-
-	// wait until Addon is gone
-	err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
-	s.Require().NoError(err, "wait for Addon to be deleted")
+	s.addonCleanup(addon, ctx)
 
 	// assert that CatalogSource is gone
 	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}

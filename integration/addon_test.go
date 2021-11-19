@@ -122,13 +122,8 @@ func (s *integrationTestSuite) TestAddon() {
 	})
 
 	s.T().Cleanup(func() {
-		// delete Addon
-		err = integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-		s.Require().NoError(err, "delete Addon: %v", addon)
 
-		// wait until Addon is gone
-		err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
-		s.Require().NoError(err, "wait for Addon to be deleted")
+		s.addonCleanup(addon, ctx)
 
 		// assert that CatalogSource is gone
 		currentCatalogSource := &operatorsv1alpha1.CatalogSource{}

@@ -140,11 +140,5 @@ func (s *integrationTestSuite) TestAddonSpecImmutability() {
 	})
 
 	s.Require().NoError(err)
-
-	// cleanup
-	err = integration.Client.Delete(ctx, addon)
-	s.Require().NoError(err)
-
-	err = integration.WaitToBeGone(s.T(), 5*time.Minute, addon)
-	s.Require().NoError(err, "wait for Addon to be deleted")
+	s.addonCleanup(addon, ctx)
 }

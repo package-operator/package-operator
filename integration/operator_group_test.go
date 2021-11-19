@@ -82,10 +82,7 @@ func (s *integrationTestSuite) TestAddon_OperatorGroup() {
 			err := integration.Client.Create(ctx, addon)
 			s.Require().NoError(err)
 			s.T().Cleanup(func() {
-				err := integration.Client.Delete(ctx, addon)
-				if client.IgnoreNotFound(err) != nil {
-					s.T().Logf("could not clean up Addon %s: %v", addon.Name, err)
-				}
+				s.addonCleanup(test.addon, ctx)
 			})
 
 			err = integration.WaitForObject(

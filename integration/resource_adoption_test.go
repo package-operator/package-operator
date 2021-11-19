@@ -145,12 +145,7 @@ func (s *integrationTestSuite) TestResourceAdoption() {
 			})
 		s.Require().NoError(err)
 
-		// delete addon
-		err = integration.Client.Delete(ctx, addon)
-		s.Require().NoError(err, "delete addon")
-
-		err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
-		s.Require().NoError(err, "wait for Addon to be deleted")
+		s.addonCleanup(addon, ctx)
 
 	})
 
@@ -245,13 +240,7 @@ func (s *integrationTestSuite) TestResourceAdoption() {
 
 		}
 
-		// delete addon
-		// note that this now also deletes the OLM objects
-		err = integration.Client.Delete(ctx, addon)
-		s.Require().NoError(err, "delete addon")
-
-		err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
-		s.Require().NoError(err, "wait for Addon to be deleted")
+		s.addonCleanup(addon, ctx)
 	})
 }
 
