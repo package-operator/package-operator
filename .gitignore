@@ -24,3 +24,5 @@ config/deploy/webhook/service.yaml
 config/olm/addon-operator.csv.yaml
 
 addon-operator-bundle.Dockerfile
+manifests/
+metadata/
