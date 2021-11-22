@@ -545,15 +545,15 @@ push-image-%: registry-login build-image-$$*
 	) 2>&1 | sed 's/^/  /'
 
 ## openshift release openshift-ci operator
-openshift-ci: all 
+openshift-ci: all
 	@rm -rf "manifests"
 	@rm -rf "metadata"
-	@mkdir -p "manifests";  
-	@mkdir -p "metadata"; 
+	@mkdir -p "manifests";
+	@mkdir -p "metadata";
 	@cp -a "config/docker/addon-operator-bundle.Dockerfile" "addon-operator-bundle.Dockerfile";
-	@cp -a "config/olm/addon-operator.csv.tpl.yaml" "manifests/addon-operator.csv.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "manifests/addons.crd.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "manifests/addonoperators.crd.yaml"; 
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "manifests/addoninstances.crd.yaml"; 
-	@cp -a "config/olm/annotations.yaml" "metadata"; 
-	
+	@cp -a "config/olm/addon-operator.csv.tpl.yaml" "manifests/addon-operator.csv.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "manifests/addons.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "manifests/addonoperators.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "manifests/addoninstances.crd.yaml";
+	@cp -a "config/olm/annotations.yaml" "metadata";
+
