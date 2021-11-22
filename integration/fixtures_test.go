@@ -1,6 +1,17 @@
 package integration_test
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+)
 
 var (
 	// Version: v0.1.0
@@ -14,3 +25,174 @@ var (
 	defaultAddonDeletionTimeout     = 2 * time.Minute
 	defaultAddonAvailabilityTimeout = 5 * time.Minute
 )
+
+func addon_OwnNamespace() *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "addon-oisafbo12",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-oisafbo12",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{Name: "namespace-onbgdions"},
+				{Name: "namespace-pioghfndb"},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          "namespace-onbgdions",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
+					},
+				},
+			},
+		},
+	}
+}
+
+func addon_AllNamespaces() *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "addon-2425constance",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-2425constance",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{
+					Name: "namespace-2425constance",
+				},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMAllNamespaces,
+				OLMAllNamespaces: &addonsv1alpha1.AddonInstallOLMAllNamespaces{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          "namespace-2425constance",
+						PackageName:        "reference-addon",
+						Channel:            "alpha",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+					},
+				},
+			},
+		},
+	}
+}
+
+var uuid = "c24cd15c-4353-4036-bd86-384046eb4ff8"
+
+func addon_OwnNamespace_TestBrokenSubscription() *addonsv1alpha1.Addon {
+
+	addonName := fmt.Sprintf("addon-%s", uuid)
+	addonNamespace := fmt.Sprintf("namespace-%s", uuid)
+
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: v1.ObjectMeta{
+			Name: addonName,
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: addonName,
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{Name: addonNamespace},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          addonNamespace,
+						CatalogSourceImage: referenceAddonCatalogSourceImageBroken,
+						PackageName:        "reference-addon",
+						Channel:            "alpha",
+					},
+				},
+			},
+		},
+	}
+}
+
+var (
+	referenceAddonNamespace   = "reference-addon"
+	referenceAddonName        = "reference-addon"
+	referenceAddonDisplayName = "Reference Addon"
+)
+
+// taken from -
+// https://gitlab.cee.redhat.com/service/managed-tenants-manifests/-/blob/c60fa3f0252d908b5f868994f8934d24bbaca5f4/stage/addon-reference-addon-SelectorSyncSet.yaml
+func namespace_TestResourceAdoption() *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"openshift.io/node-selector": "",
+			},
+			Name: referenceAddonNamespace,
+		},
+	}
+}
+
+func catalogsource_TestResourceAdoption() *operatorsv1alpha1.CatalogSource {
+	return &operatorsv1alpha1.CatalogSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referenceAddonName,
+			Namespace: referenceAddonNamespace,
+		},
+		Spec: operatorsv1alpha1.CatalogSourceSpec{
+			DisplayName: referenceAddonDisplayName,
+			Image:       referenceAddonCatalogSourceImageWorking,
+			Publisher:   "OSD Red Hat Addons",
+			SourceType:  operatorsv1alpha1.SourceTypeGrpc,
+		},
+	}
+}
+
+func operatorgroup_TestResourceAdoption() *operatorsv1.OperatorGroup {
+	return &operatorsv1.OperatorGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referenceAddonName,
+			Namespace: referenceAddonNamespace,
+		},
+		Spec: operatorsv1.OperatorGroupSpec{
+			TargetNamespaces: []string{referenceAddonNamespace},
+		},
+	}
+}
+
+func subscription_TestResourceAdoption() *operatorsv1alpha1.Subscription {
+	return &operatorsv1alpha1.Subscription{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      referenceAddonName,
+			Namespace: referenceAddonNamespace},
+		Spec: &operatorsv1alpha1.SubscriptionSpec{
+			CatalogSource:          referenceAddonName,
+			CatalogSourceNamespace: referenceAddonNamespace,
+			Channel:                referenceAddonNamespace,
+			Package:                referenceAddonName,
+		},
+	}
+}
+
+func addon_TestResourceAdoption() *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: referenceAddonName,
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: referenceAddonName,
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{
+					Name: referenceAddonNamespace,
+				},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          referenceAddonNamespace,
+						PackageName:        referenceAddonNamespace,
+						Channel:            "alpha",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+					},
+				},
+			},
+		},
+	}
+}

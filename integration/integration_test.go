@@ -1,71 +1,49 @@
 package integration_test
 
 import (
-	"fmt"
-	"io"
+	"context"
 	"log"
-	"os"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
 )
 
-func TestMain(m *testing.M) {
-	os.Exit(runTests(m))
+type integrationTestSuite struct {
+	suite.Suite
 }
 
-func runTests(m *testing.M) int {
-	defer func() {
-		if err := integration.PrintPodStatusAndLogs("addon-operator"); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	// Setup
-	setupExitCode := testing.MainStart(&deps{}, []testing.InternalTest{
-		{
-			Name: "Setup",
-			F:    Setup,
-		},
-	}, nil, nil).Run()
-	if setupExitCode != 0 {
-		return setupExitCode
+func (s *integrationTestSuite) SetupSuite() {
+	if !testing.Short() {
+		s.Setup()
 	}
-	fmt.Println()
+}
 
-	// Main tests
-	exitCode := m.Run()
-	if exitCode != 0 {
-		return exitCode
+func (s *integrationTestSuite) TearDownSuite() {
+	if !testing.Short() {
+		s.Teardown()
 	}
-	fmt.Println()
 
-	// Teardown
-	teardownExitCode := testing.MainStart(&deps{}, []testing.InternalTest{
-		{
-			Name: "Teardown",
-			F:    Teardown,
-		},
-	}, nil, nil).Run()
-	return teardownExitCode
+	if err := integration.PrintPodStatusAndLogs("addon-operator"); err != nil {
+		log.Fatal(err)
+	}
 }
 
-type deps struct{}
+func (s *integrationTestSuite) addonCleanup(addon *addonsv1alpha1.Addon,
+	ctx context.Context) {
+	// delete Addon
+	err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
+	s.Require().NoError(err, "delete Addon: %v", addon)
 
-func (*deps) ImportPath() string { return "" }
-
-func (*deps) MatchString(pat, str string) (bool, error) {
-	return true, nil
+	// wait until Addon is gone
+	err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)
+	s.Require().NoError(err, "wait for Addon to be deleted")
 }
 
-func (*deps) SetPanicOnExit0(bool) {}
-
-func (*deps) StartCPUProfile(io.Writer) error { return nil }
-
-func (*deps) StopCPUProfile() {}
-
-func (*deps) StartTestLog(wr io.Writer) {}
-
-func (*deps) StopTestLog() error { return nil }
-
-func (*deps) WriteProfileTo(string, io.Writer, int) error { return nil }
+func TestIntegration(t *testing.T) {
+	// does not support parallel test runs
+	suite.Run(t, new(integrationTestSuite))
+}

@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -22,11 +21,7 @@ import (
 	"github.com/openshift/addon-operator/integration"
 )
 
-func Setup(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-
+func (s *integrationTestSuite) Setup() {
 	ctx := context.Background()
 	// testing olm and addon-operator installation
 	//objs := integration.LoadObjectsFromDeploymentFiles(t)
@@ -36,9 +31,9 @@ func Setup(t *testing.T) {
 	// Create all objects to install the Addon Operator
 	// for _, obj := range objs {
 	// 	err := integration.Client.Create(ctx, &obj)
-	// 	require.NoError(t, err)
+	// 	s.Require().NoError(err)
 
-	// 	t.Log("created: ", obj.GroupVersionKind().String(),
+	// 	s.T().Log("created: ", obj.GroupVersionKind().String(),
 	// 		obj.GetNamespace()+"/"+obj.GetName())
 
 	// 	if obj.GetKind() == "Deployment" {
@@ -62,7 +57,7 @@ func Setup(t *testing.T) {
 
 	for _, crd := range crds {
 		crd := crd // pin
-		t.Run(fmt.Sprintf("API %s established", crd.crdName), func(t *testing.T) {
+		s.Run(fmt.Sprintf("API %s established", crd.crdName), func() {
 			crdObj := &apiextensionsv1.CustomResourceDefinition{}
 
 			err := wait.PollImmediate(time.Second, 10*time.Second, func() (done bool, err error) {
@@ -70,7 +65,7 @@ func Setup(t *testing.T) {
 					Name: crd.crdName,
 				}, crdObj)
 				if err != nil {
-					t.Logf("error getting CRD: %v", err)
+					s.T().Logf("error getting CRD: %v", err)
 					return false, nil
 				}
 
@@ -85,16 +80,16 @@ func Setup(t *testing.T) {
 
 				return establishedCond != nil && establishedCond.Status == apiextensionsv1.ConditionTrue, nil
 			})
-			require.NoError(t, err, "waiting for %s to be Established", crd.crdName)
+			s.Require().NoError(err, "waiting for %s to be Established", crd.crdName)
 
 			// check CRD API
 			err = integration.Client.List(ctx, crd.objList)
-			require.NoError(t, err)
+			s.Require().NoError(err)
 		})
 	}
 
 	// for _, deploy := range deployments {
-	// 	t.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func(t *testing.T) {
+	// 	s.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func() {
 
 	// 		deployment := &appsv1.Deployment{}
 	// 		err := wait.PollImmediate(
@@ -120,11 +115,11 @@ func Setup(t *testing.T) {
 	// 				}
 	// 				return false, nil
 	// 			})
-	// 		require.NoError(t, err, "wait for Addon Operator Deployment")
+	// 		s.Require().NoError(err, "wait for Addon Operator Deployment")
 	// 	})
 	// }
 
-	t.Run("Addon Operator available", func(t *testing.T) {
+	s.Run("Addon Operator available", func() {
 		addonOperator := addonsv1alpha1.AddonOperator{}
 
 		// Wait for API to be created
@@ -134,15 +129,15 @@ func Setup(t *testing.T) {
 			}, &addonOperator)
 			return err
 		})
-		require.NoError(t, err)
+		s.Require().NoError(err)
 
 		err = integration.WaitForObject(
-			t, defaultAddonAvailabilityTimeout, &addonOperator, "to be Available",
+			s.T(), defaultAddonAvailabilityTimeout, &addonOperator, "to be Available",
 			func(obj client.Object) (done bool, err error) {
 				a := obj.(*addonsv1alpha1.AddonOperator)
 				return meta.IsStatusConditionTrue(
 					a.Status.Conditions, addonsv1alpha1.Available), nil
 			})
-		require.NoError(t, err)
+		s.Require().NoError(err)
 	})
 }
