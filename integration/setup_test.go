@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	// appsv1 "k8s.io/api/apps/v1"
 	// corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -23,8 +22,7 @@ import (
 
 func (s *integrationTestSuite) Setup() {
 	ctx := context.Background()
-	// testing olm and addon-operator installation
-	//objs := integration.LoadObjectsFromDeploymentFiles(t)
+	//objs := integration.LoadObjectsFromDeploymentFiles(s.T())
 
 	// var deployments []unstructured.Unstructured
 
