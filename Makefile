@@ -556,4 +556,3 @@ openshift-ci: all
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "manifests/addonoperators.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "manifests/addoninstances.crd.yaml";
 	@cp -a "config/olm/annotations.yaml" "metadata";
-
