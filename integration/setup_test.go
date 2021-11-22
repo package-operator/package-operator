@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	// appsv1 "k8s.io/api/apps/v1"
+	// corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	// "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -31,7 +31,7 @@ func Setup(t *testing.T) {
 	// testing olm and addon-operator installation
 	//objs := integration.LoadObjectsFromDeploymentFiles(t)
 
-	var deployments []unstructured.Unstructured
+	// var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
 	// for _, obj := range objs {
