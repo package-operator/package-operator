@@ -70,7 +70,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 	}
 
 	if observedCatalogSource.Status.GRPCConnectionState == nil {
-		err := r.reportCatalogSourceUnreadinessStatus(ctx, addon, observedCatalogSource, ".Status.GRPCConnectionState is nil")
+		err := r.reportCatalogSourceUnreadinessStatus(ctx, addon, ".Status.GRPCConnectionState is nil")
 		if err != nil {
 			return ensureCatalogSourceResultNil, nil, err
 		}
@@ -80,7 +80,6 @@ func (r *AddonReconciler) ensureCatalogSource(
 		err := r.reportCatalogSourceUnreadinessStatus(
 			ctx,
 			addon,
-			observedCatalogSource,
 			fmt.Sprintf(
 				".Status.GRPCConnectionState.LastObservedState == %s",
 				observedCatalogSource.Status.GRPCConnectionState.LastObservedState,
@@ -99,7 +98,6 @@ func (r *AddonReconciler) ensureCatalogSource(
 func (r *AddonReconciler) reportCatalogSourceUnreadinessStatus(
 	ctx context.Context,
 	addon *addonsv1alpha1.Addon,
-	catalogSource *operatorsv1alpha1.CatalogSource,
 	message string) error {
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:   addonsv1alpha1.Available,
