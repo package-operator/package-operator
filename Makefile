@@ -27,6 +27,7 @@ UNAME_OS:=$(shell uname -s)
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
+PROJECT_DIR:=$(shell pwd)
 DEPENDENCIES:=.cache/dependencies
 DEPENDENCY_BIN:=$(abspath $(DEPENDENCIES)/bin)
 DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/versions)
@@ -188,10 +189,11 @@ generate: generate-code generate-docs
 
 generate-code: $(CONTROLLER_GEN)
 	@echo "generating kubernetes manifests..."
-	@controller-gen crd:crdVersions=v1 \
+	@(cd apis; \
+		controller-gen crd:crdVersions=v1 \
 		rbac:roleName=addon-operator-manager \
 		paths="./..." \
-		output:crd:artifacts:config=config/deploy 2>&1 | sed 's/^/  /'
+		output:crd:artifacts:config=${PROJECT_DIR}/config/deploy 2>&1 | sed 's/^/  /')
 	@echo
 	@echo "generating code..."
 	@(controller-gen crd:crdVersions=v1 \
