@@ -27,32 +27,18 @@ func (s *integrationTestSuite) Setup() {
 	// var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
-<<<<<<< HEAD
 	// for _, obj := range objs {
-	// 	err := integration.Client.Create(ctx, &obj)
+	// 	o := obj
+	// 	err := integration.Client.Create(ctx, &o)
 	// 	s.Require().NoError(err)
 
-	// 	s.T().Log("created: ", obj.GroupVersionKind().String(),
-	// 		obj.GetNamespace()+"/"+obj.GetName())
+	// 	s.T().Log("created: ", o.GroupVersionKind().String(),
+	// 		o.GetNamespace()+"/"+o.GetName())
 
-	// 	if obj.GetKind() == "Deployment" {
-	// 		deployments = append(deployments, obj)
+	// 	if o.GetKind() == "Deployment" {
+	// 		deployments = append(deployments, o)
 	// 	}
 	// }
-=======
-	for _, obj := range objs {
-		o := obj
-		err := integration.Client.Create(ctx, &o)
-		s.Require().NoError(err)
-
-		s.T().Log("created: ", o.GroupVersionKind().String(),
-			o.GetNamespace()+"/"+o.GetName())
-
-		if o.GetKind() == "Deployment" {
-			deployments = append(deployments, o)
-		}
-	}
->>>>>>> 81643cffad01bd904b9ce429fb547712f9000341
 
 	crds := []struct {
 		crdName string
@@ -102,7 +88,6 @@ func (s *integrationTestSuite) Setup() {
 		})
 	}
 
-<<<<<<< HEAD
 	// for _, deploy := range deployments {
 	// 	s.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func() {
 
@@ -118,7 +103,7 @@ func (s *integrationTestSuite) Setup() {
 	// 					return false, err
 	// 				}
 	// 				if err != nil {
-	// 					// retry on transient errors
+	// 					//nolint:nilerr // retry on transient errors
 	// 					return false, nil
 	// 				}
 
@@ -133,38 +118,6 @@ func (s *integrationTestSuite) Setup() {
 	// 		s.Require().NoError(err, "wait for Addon Operator Deployment")
 	// 	})
 	// }
-=======
-	for _, deploy := range deployments {
-		s.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func() {
-
-			deployment := &appsv1.Deployment{}
-			err := wait.PollImmediate(
-				time.Second, 5*time.Minute, func() (done bool, err error) {
-					err = integration.Client.Get(
-						ctx, client.ObjectKey{
-							Name:      deploy.GetName(),
-							Namespace: deploy.GetNamespace(),
-						}, deployment)
-					if errors.IsNotFound(err) {
-						return false, err
-					}
-					if err != nil {
-						//nolint:nilerr // retry on transient errors
-						return false, nil
-					}
-
-					for _, cond := range deployment.Status.Conditions {
-						if cond.Type == appsv1.DeploymentAvailable &&
-							cond.Status == corev1.ConditionTrue {
-							return true, nil
-						}
-					}
-					return false, nil
-				})
-			s.Require().NoError(err, "wait for Addon Operator Deployment")
-		})
-	}
->>>>>>> 81643cffad01bd904b9ce429fb547712f9000341
 
 	s.Run("Addon Operator available", func() {
 		addonOperator := addonsv1alpha1.AddonOperator{}
