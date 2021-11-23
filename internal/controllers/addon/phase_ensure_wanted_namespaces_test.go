@@ -197,8 +197,7 @@ func TestReconcileNamespace_Create(t *testing.T) {
 	c.On("Create", testutil.IsContext, testutil.IsCoreV1NamespacePtr, mock.Anything).Return(nil, testutil.NewTestNamespace())
 
 	ctx := context.Background()
-	reconciledNamespace, err := reconcileNamespace(ctx, c, testutil.NewTestSchemeWithAddonsv1alpha1(), testutil.NewTestNamespace(),
-		addonsv1alpha1.ResourceAdoptionPrevent)
+	reconciledNamespace, err := reconcileNamespace(ctx, c, testutil.NewTestNamespace(), addonsv1alpha1.ResourceAdoptionPrevent)
 	require.NoError(t, err)
 	assert.NotNil(t, reconciledNamespace)
 	assert.Equal(t, testutil.NewTestNamespace(), reconciledNamespace)
@@ -217,8 +216,7 @@ func TestReconcileNamespace_CreateWithCollisionWithoutOwner(t *testing.T) {
 	}).Return(nil)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, testutil.NewTestSchemeWithAddonsv1alpha1(), testutil.NewTestNamespace(),
-		addonsv1alpha1.ResourceAdoptionPrevent)
+	_, err := reconcileNamespace(ctx, c, testutil.NewTestNamespace(), addonsv1alpha1.ResourceAdoptionPrevent)
 	require.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
 	c.AssertExpectations(t)
 	c.AssertCalled(t, "Get", testutil.IsContext, client.ObjectKey{
@@ -234,8 +232,7 @@ func TestReconcileNamespace_CreateWithCollisionWithOtherOwner(t *testing.T) {
 	}).Return(nil)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, testutil.NewTestSchemeWithAddonsv1alpha1(), testutil.NewTestNamespace(),
-		addonsv1alpha1.ResourceAdoptionPrevent)
+	_, err := reconcileNamespace(ctx, c, testutil.NewTestNamespace(), addonsv1alpha1.ResourceAdoptionPrevent)
 	require.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
 	c.AssertExpectations(t)
 	c.AssertCalled(t, "Get", testutil.IsContext, client.ObjectKey{
@@ -251,8 +248,7 @@ func TestReconcileNamespace_CreateWithClientError(t *testing.T) {
 		Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileNamespace(ctx, c, testutil.NewTestSchemeWithAddonsv1alpha1(), testutil.NewTestNamespace(),
-		addonsv1alpha1.ResourceAdoptionPrevent)
+	_, err := reconcileNamespace(ctx, c, testutil.NewTestNamespace(), addonsv1alpha1.ResourceAdoptionPrevent)
 	require.Error(t, err)
 	require.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)

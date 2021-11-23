@@ -18,18 +18,20 @@ func (s *integrationTestSuite) Teardown() {
 
 	// Delete all objects to teardown the Addon Operator
 	for _, obj := range objs {
-		err := integration.Client.Delete(ctx, &obj)
+		o := obj
+		err := integration.Client.Delete(ctx, &o)
 		s.Require().NoError(err)
 
-		s.T().Log("deleted: ", obj.GroupVersionKind().String(),
-			obj.GetNamespace()+"/"+obj.GetName())
+		s.T().Log("deleted: ", o.GroupVersionKind().String(),
+			o.GetNamespace()+"/"+o.GetName())
 	}
 
 	s.Run("everything is gone", func() {
 		for _, obj := range objs {
 			// Namespaces can take a long time to be cleaned up and
 			// there is no need to be specific about the object kind here
-			s.Assert().NoError(integration.WaitToBeGone(s.T(), 2*time.Minute, &obj))
+			o := obj
+			s.Assert().NoError(integration.WaitToBeGone(s.T(), 2*time.Minute, &o))
 		}
 	})
 }

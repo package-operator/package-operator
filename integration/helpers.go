@@ -187,7 +187,8 @@ func PrintPodStatusAndLogs(namespace string) error {
 	}
 
 	for _, pod := range pods.Items {
-		if err := reportPodStatus(ctx, &pod); err != nil {
+		p := pod
+		if err := reportPodStatus(ctx, &p); err != nil {
 			return err
 		}
 	}
@@ -267,6 +268,7 @@ func WaitForObject(
 	return wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
 		err = Client.Get(ctx, client.ObjectKeyFromObject(object), object)
 		if err != nil {
+			//nolint:nilerr // retry on transient errors
 			return false, nil
 		}
 

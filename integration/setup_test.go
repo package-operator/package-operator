@@ -28,14 +28,15 @@ func (s *integrationTestSuite) Setup() {
 
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
-		err := integration.Client.Create(ctx, &obj)
+		o := obj
+		err := integration.Client.Create(ctx, &o)
 		s.Require().NoError(err)
 
-		s.T().Log("created: ", obj.GroupVersionKind().String(),
-			obj.GetNamespace()+"/"+obj.GetName())
+		s.T().Log("created: ", o.GroupVersionKind().String(),
+			o.GetNamespace()+"/"+o.GetName())
 
-		if obj.GetKind() == "Deployment" {
-			deployments = append(deployments, obj)
+		if o.GetKind() == "Deployment" {
+			deployments = append(deployments, o)
 		}
 	}
 
@@ -69,7 +70,8 @@ func (s *integrationTestSuite) Setup() {
 
 				// check CRD Established Condition
 				var establishedCond *apiextensionsv1.CustomResourceDefinitionCondition
-				for _, c := range crdObj.Status.Conditions {
+				for _, cond := range crdObj.Status.Conditions {
+					c := cond
 					if c.Type == apiextensionsv1.Established {
 						establishedCond = &c
 						break
@@ -101,7 +103,7 @@ func (s *integrationTestSuite) Setup() {
 						return false, err
 					}
 					if err != nil {
-						// retry on transient errors
+						//nolint:nilerr // retry on transient errors
 						return false, nil
 					}
 
