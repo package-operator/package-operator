@@ -68,6 +68,30 @@ spec:
                         description: Channel for the Subscription object.
                         minLength: 1
                         type: string
+                      config:
+                        description: Configs to be passed to subscription OLM object
+                        properties:
+                          env:
+                            description: Array of env variables to be passed to the
+                              subscription object.
+                            items:
+                              properties:
+                                name:
+                                  description: Name of the environment variable
+                                  minLength: 1
+                                  type: string
+                                value:
+                                  description: Value of the environment variable
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                        required:
+                        - env
+                        type: object
                       namespace:
                         description: Namespace to install the Addon into.
                         minLength: 1
@@ -95,6 +119,30 @@ spec:
                         description: Channel for the Subscription object.
                         minLength: 1
                         type: string
+                      config:
+                        description: Configs to be passed to subscription OLM object
+                        properties:
+                          env:
+                            description: Array of env variables to be passed to the
+                              subscription object.
+                            items:
+                              properties:
+                                name:
+                                  description: Name of the environment variable
+                                  minLength: 1
+                                  type: string
+                                value:
+                                  description: Value of the environment variable
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                        required:
+                        - env
+                        type: object
                       namespace:
                         description: Namespace to install the Addon into.
                         minLength: 1
