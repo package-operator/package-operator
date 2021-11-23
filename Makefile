@@ -547,7 +547,7 @@ push-image-%: registry-login build-image-$$*
 	) 2>&1 | sed 's/^/  /'
 
 ## openshift release openshift-ci operator
-openshift-ci: all
+openshift-ci-test-build:
 	@rm -rf "manifests"
 	@rm -rf "metadata"
 	@mkdir -p "manifests";
