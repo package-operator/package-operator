@@ -110,9 +110,9 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, addon)
+				requeueResult, err := r.ensureOperatorGroup(ctx, log, addon)
 				require.NoError(t, err)
-				assert.False(t, stop)
+				assert.Equal(t, resultStop, requeueResult)
 
 				if c.AssertCalled(
 					t, "Create",
@@ -211,9 +211,9 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, test.addon)
+				requeueResult, err := r.ensureOperatorGroup(ctx, log, test.addon)
 				require.NoError(t, err)
-				assert.True(t, stop)
+				assert.Equal(t, resultStop, requeueResult)
 
 				c.StatusMock.AssertCalled(
 					t, "Update", mock.Anything, test.addon, mock.Anything)
@@ -248,9 +248,9 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 		// Test
 		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
+		requeueResult, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
 		require.NoError(t, err)
-		assert.True(t, stop)
+		assert.Equal(t, resultStop, requeueResult)
 
 		// indirect sanity check
 		// nothing was called on the client and the method signals to stop

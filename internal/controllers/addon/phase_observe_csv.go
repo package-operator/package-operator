@@ -16,10 +16,10 @@ func (r *AddonReconciler) observeCurrentCSV(
 	ctx context.Context,
 	addon *addonsv1alpha1.Addon,
 	csvKey client.ObjectKey,
-) (requeue bool, err error) {
+) (requeueResult, error) {
 	csv := &operatorsv1alpha1.ClusterServiceVersion{}
 	if err := r.Get(ctx, csvKey, csv); err != nil {
-		return false, fmt.Errorf("getting installed CSV: %w", err)
+		return resultNil, fmt.Errorf("getting installed CSV: %w", err)
 	}
 
 	var message string
@@ -44,8 +44,8 @@ func (r *AddonReconciler) observeCurrentCSV(
 		})
 		addon.Status.ObservedGeneration = addon.Generation
 		addon.Status.Phase = addonsv1alpha1.PhasePending
-		return true, r.Status().Update(ctx, addon)
+		return resultRetry, r.Status().Update(ctx, addon)
 	}
 
-	return false, nil
+	return resultNil, nil
 }

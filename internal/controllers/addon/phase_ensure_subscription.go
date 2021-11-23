@@ -22,9 +22,9 @@ func (r *AddonReconciler) ensureSubscription(
 	addon *addonsv1alpha1.Addon,
 	catalogSource *operatorsv1alpha1.CatalogSource,
 ) (
-	currentCSVKey client.ObjectKey,
-	requeue bool,
-	err error,
+	requeueResult,
+	client.ObjectKey,
+	error,
 ) {
 	var commonInstallOptions addonsv1alpha1.AddonInstallOLMCommon
 	switch addon.Spec.Install.Type {
@@ -59,26 +59,26 @@ func (r *AddonReconciler) ensureSubscription(
 	}
 	controllers.AddCommonLabels(desiredSubscription.Labels, addon)
 	if err := controllerutil.SetControllerReference(addon, desiredSubscription, r.Scheme); err != nil {
-		return client.ObjectKey{}, false, fmt.Errorf("setting controller reference: %w", err)
+		return resultNil, client.ObjectKey{}, fmt.Errorf("setting controller reference: %w", err)
 	}
 
 	observedSubscription, err := r.reconcileSubscription(
 		ctx, desiredSubscription)
 	if err != nil {
-		return client.ObjectKey{}, false, fmt.Errorf("reconciling Subscription: %w", err)
+		return resultNil, client.ObjectKey{}, fmt.Errorf("reconciling Subscription: %w", err)
 	}
 
 	if len(observedSubscription.Status.InstalledCSV) == 0 ||
 		len(observedSubscription.Status.CurrentCSV) == 0 {
 		log.Info("requeue", "reason", "csv not linked in subscription")
-		return client.ObjectKey{}, true, nil
+		return resultRetry, client.ObjectKey{}, nil
 	}
 
 	installedCSVKey := client.ObjectKey{
 		Name:      observedSubscription.Status.InstalledCSV,
 		Namespace: commonInstallOptions.Namespace,
 	}
-	currentCSVKey = client.ObjectKey{
+	currentCSVKey := client.ObjectKey{
 		Name:      observedSubscription.Status.CurrentCSV,
 		Namespace: commonInstallOptions.Namespace,
 	}
@@ -88,10 +88,10 @@ func (r *AddonReconciler) ensureSubscription(
 		// Mapping changes need to requeue, because we could have lost events before or during
 		// setting up the mapping, see csvEventHandler implementation for a longer description.
 		log.Info("requeue", "reason", "csv-addon mapping changed")
-		return client.ObjectKey{}, true, nil
+		return resultRetry, client.ObjectKey{}, nil
 	}
 
-	return currentCSVKey, false, nil
+	return resultNil, currentCSVKey, nil
 }
 
 func (r *AddonReconciler) reconcileSubscription(

@@ -18,13 +18,13 @@ import (
 
 // Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
 func (r *AddonReconciler) ensureOperatorGroup(
-	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (stop bool, err error) {
+	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (requeueResult, error) {
 	targetNamespace, _, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
 	if err != nil {
-		return false, err
+		return resultNil, err
 	}
 	if stop {
-		return true, nil
+		return resultStop, nil
 	}
 
 	desiredOperatorGroup := &operatorsv1.OperatorGroup{
@@ -40,10 +40,10 @@ func (r *AddonReconciler) ensureOperatorGroup(
 
 	controllers.AddCommonLabels(desiredOperatorGroup.Labels, addon)
 	if err := controllerutil.SetControllerReference(addon, desiredOperatorGroup, r.Scheme); err != nil {
-		return false, fmt.Errorf("setting controller reference: %w", err)
+		return resultNil, fmt.Errorf("setting controller reference: %w", err)
 	}
 
-	return false, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
+	return resultNil, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
 }
 
 // Reconciles the Spec of the given OperatorGroup if needed by updating or creating the OperatorGroup.

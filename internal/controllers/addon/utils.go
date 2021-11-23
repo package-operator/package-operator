@@ -7,10 +7,39 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
+
+// use this type for exit handling
+type requeueResult int
+
+const (
+	// Should be used when requeue result does not matter.
+	// For example, when an error is returned along with it.
+	resultNil requeueResult = iota
+
+	// Should be used when request needs to be retried
+	resultRetry
+
+	// Should be used when reconciler needs to stop and exit.
+	resultStop
+)
+
+// This method should be called ONLY if result is NOT `resultNil`, or it could
+// lead to unpredictable behaviour.
+func (r *AddonReconciler) handleExit(result requeueResult) ctrl.Result {
+	switch result {
+	case resultRetry:
+		return ctrl.Result{
+			RequeueAfter: defaultRetryAfterTime,
+		}
+	default:
+		return ctrl.Result{}
+	}
+}
 
 // Handle the deletion of an Addon.
 func (r *AddonReconciler) handleAddonDeletion(

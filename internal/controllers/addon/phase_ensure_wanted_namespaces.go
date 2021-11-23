@@ -20,7 +20,7 @@ import (
 // Ensure existence of Namespaces specified in the given Addon resource
 // returns a bool that signals the caller to stop reconciliation and retry later
 func (r *AddonReconciler) ensureWantedNamespaces(
-	ctx context.Context, addon *addonsv1alpha1.Addon) (stopAndRetry bool, err error) {
+	ctx context.Context, addon *addonsv1alpha1.Addon) (requeueResult, error) {
 	var unreadyNamespaces []string
 	var collidedNamespaces []string
 
@@ -31,8 +31,7 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 				collidedNamespaces = append(collidedNamespaces, namespace.Name)
 				continue
 			}
-
-			return false, err
+			return resultNil, err
 		}
 
 		if ensuredNamespace.Status.Phase != corev1.NamespaceActive {
@@ -54,10 +53,10 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 		addon.Status.Phase = addonsv1alpha1.PhasePending
 		err := r.Status().Update(ctx, addon)
 		if err != nil {
-			return false, err
+			return resultNil, err
 		}
 		// collisions occured: signal caller to stop and retry
-		return true, nil
+		return resultRetry, nil
 	}
 
 	if len(unreadyNamespaces) > 0 {
@@ -72,10 +71,10 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 		})
 		addon.Status.ObservedGeneration = addon.Generation
 		addon.Status.Phase = addonsv1alpha1.PhasePending
-		return false, r.Status().Update(ctx, addon)
+		return resultNil, r.Status().Update(ctx, addon)
 	}
 
-	return false, nil
+	return resultNil, nil
 }
 
 // Ensure a single Namespace for the given Addon resource
