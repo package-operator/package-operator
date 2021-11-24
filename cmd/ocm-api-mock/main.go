@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -40,11 +39,11 @@ func UpgradePolicyState(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fmt.Fprintf(w, "Category: %v\n", vars["category"])
 
-	var buf bytes.Buffer
-	defer r.Body.Close()
-	if _, err := io.Copy(&buf, r.Body); err != nil {
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		panic(err)
 	}
+	defer r.Body.Close()
 
-	log.Printf("%s %s:\n%s\n", r.URL.String(), r.Method, buf.String())
+	log.Printf("%s %s:\n%s\n", r.URL.String(), r.Method, payload)
 }

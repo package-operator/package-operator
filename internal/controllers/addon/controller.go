@@ -20,6 +20,7 @@ import (
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	internalhandler "github.com/openshift/addon-operator/internal/controllers/addon/handler"
+	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 // Default timeout when we do a manual RequeueAfter
@@ -37,6 +38,23 @@ type AddonReconciler struct {
 	globalPause     bool
 	globalPauseMux  sync.RWMutex
 	addonRequeueCh  chan event.GenericEvent
+
+	ocmClient    ocmClient
+	ocmClientMux sync.RWMutex
+}
+
+type ocmClient interface {
+	PatchUpgradePolicy(
+		ctx context.Context,
+		req ocm.UpgradePolicyPatchRequest,
+	) (res ocm.UpgradePolicyPatchResponse, err error)
+}
+
+func (r *AddonReconciler) InjectOCMClient(c *ocm.Client) {
+	r.ocmClientMux.Lock()
+	defer r.ocmClientMux.Unlock()
+
+	r.ocmClient = c
 }
 
 // Pauses reconcilation of all Addon objects. Concurrency safe.

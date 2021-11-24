@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 // globalPauseManager is an interface used for coordinating
@@ -16,6 +17,10 @@ import (
 type globalPauseManager interface {
 	EnableGlobalPause(ctx context.Context) error
 	DisableGlobalPause(ctx context.Context) error
+}
+
+type ocmClientManager interface {
+	InjectOCMClient(c *ocm.Client)
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
