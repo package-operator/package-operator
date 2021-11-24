@@ -78,8 +78,8 @@ func (c *Client) do(
 	if err != nil {
 		return fmt.Errorf("parsing endpoint URL: %w", err)
 	}
-	reqURL.ResolveReference(&url.URL{
-		Path: path,
+	reqURL = reqURL.ResolveReference(&url.URL{
+		Path: strings.TrimLeft(path, "/"), // trim first slash to always be relative to baseURL
 	})
 
 	// Payload
@@ -94,7 +94,7 @@ func (c *Client) do(
 	}
 
 	// Request
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, reqURL.String(), resBody)
+	httpReq, err := http.NewRequestWithContext(ctx, httpMethod, reqURL.String(), resBody)
 	if err != nil {
 		return fmt.Errorf("creating http request: %w", err)
 	}

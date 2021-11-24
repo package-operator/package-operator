@@ -46,4 +46,6 @@ func UpgradePolicyState(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	log.Printf("%s %s:\n%s\n", r.URL.String(), r.Method, payload)
+
+	fmt.Fprintln(w, `{}`)
 }
