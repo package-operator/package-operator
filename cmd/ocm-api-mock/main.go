@@ -36,8 +36,6 @@ func UpgradePolicyState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	vars := mux.Vars(r)
-	fmt.Fprintf(w, "Category: %v\n", vars["category"])
 
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {

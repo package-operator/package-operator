@@ -4,7 +4,7 @@ metadata:
   name: addon-operator
 spec:
   ocm:
-    endpoint: http://ocm-api-mock
+    endpoint: http://ocm-api-mock.ocm-api-mock.svc.cluster.local
     secret:
       name: ocm-api-mock
-      namespace: addon-operator
+      namespace: ocm-api-mock

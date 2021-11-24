@@ -238,7 +238,7 @@ AddonStatus defines the observed state of Addon
 | observedGeneration | The most recent generation observed by the controller. | int64 | false |
 | conditions | Conditions is a list of status conditions ths object is in. | []metav1.Condition | false |
 | phase | DEPRECATED: This field is not part of any API contract it will go away as soon as kubectl can print conditions! Human readable status - please use .Conditions from code | AddonPhase.addons.managed.openshift.io/v1alpha1 | false |
-| upgradePolicyStatus | Tracks last reported upgrade policy status. | *[AddonUpgradePolicyStatus.addons.managed.openshift.io/v1alpha1](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1) | false |
+| upgradePolicy | Tracks last reported upgrade policy status. | *[AddonUpgradePolicyStatus.addons.managed.openshift.io/v1alpha1](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -260,7 +260,7 @@ Tracks the last state last reported to the Upgrade Policy endpoint.
 | ----- | ----------- | ------ | -------- |
 | id | Upgrade policy id. | string | true |
 | value | Upgrade policy value. | AddonUpgradePolicyValue.addons.managed.openshift.io/v1alpha1 | true |
-| observedGeneration | The most recent generation a status update was based on. | int64 | false |
+| observedGeneration | The most recent generation a status update was based on. | int64 | true |
 
 [Back to Group]()
 

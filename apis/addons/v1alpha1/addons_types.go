@@ -43,7 +43,6 @@ type AddonUpgradePolicyValue string
 const (
 	AddonUpgradePolicyValueStarted   AddonUpgradePolicyValue = "started"
 	AddonUpgradePolicyValueCompleted AddonUpgradePolicyValue = "completed"
-	AddonUpgradePolicyValueFailed    AddonUpgradePolicyValue = "failed"
 )
 
 // Tracks the last state last reported to the Upgrade Policy endpoint.
@@ -53,7 +52,7 @@ type AddonUpgradePolicyStatus struct {
 	// Upgrade policy value.
 	Value AddonUpgradePolicyValue `json:"value"`
 	// The most recent generation a status update was based on.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration"`
 }
 
 type ResourceAdoptionStrategyType string
@@ -191,7 +190,7 @@ type AddonStatus struct {
 	Phase AddonPhase `json:"phase,omitempty"`
 	// Tracks last reported upgrade policy status.
 	// +optional
-	UpgradePolicyStatus *AddonUpgradePolicyStatus `json:"upgradePolicyStatus,omitempty"`
+	UpgradePolicy *AddonUpgradePolicyStatus `json:"upgradePolicy,omitempty"`
 }
 
 type AddonPhase string

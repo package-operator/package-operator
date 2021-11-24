@@ -7,6 +7,7 @@ import (
 	"net/http/pprof"
 	"os"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ func init() {
 	_ = aoapis.AddToScheme(scheme)
 	_ = operatorsv1.AddToScheme(scheme)
 	_ = operatorsv1alpha1.AddToScheme(scheme)
+	_ = configv1.AddToScheme(scheme)
 }
 
 type options struct {

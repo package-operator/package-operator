@@ -20,7 +20,7 @@ type globalPauseManager interface {
 }
 
 type ocmClientManager interface {
-	InjectOCMClient(c *ocm.Client)
+	InjectOCMClient(ctx context.Context, c *ocm.Client) error
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(

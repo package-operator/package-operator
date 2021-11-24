@@ -292,7 +292,7 @@ spec:
                   it will go away as soon as kubectl can print conditions! Human readable
                   status - please use .Conditions from code'
                 type: string
-              upgradePolicyStatus:
+              upgradePolicy:
                 description: Tracks last reported upgrade policy status.
                 properties:
                   id:
@@ -308,6 +308,7 @@ spec:
                     type: string
                 required:
                 - id
+                - observedGeneration
                 - value
                 type: object
             type: object

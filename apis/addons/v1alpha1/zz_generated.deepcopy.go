@@ -412,8 +412,8 @@ func (in *AddonStatus) DeepCopyInto(out *AddonStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.UpgradePolicyStatus != nil {
-		in, out := &in.UpgradePolicyStatus, &out.UpgradePolicyStatus
+	if in.UpgradePolicy != nil {
+		in, out := &in.UpgradePolicy, &out.UpgradePolicy
 		*out = new(AddonUpgradePolicyStatus)
 		**out = **in
 	}

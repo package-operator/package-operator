@@ -94,6 +94,7 @@ func (r *AddonOperatorReconciler) Reconcile(
 	return ctrl.Result{RequeueAfter: defaultAddonOperatorRequeueTime}, nil
 }
 
+// Creates an OCM API client and injects it into the OCM Client Manager for distribution.
 func (r *AddonOperatorReconciler) handleOCMClient(
 	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
 	if addonOperator.Spec.OCM == nil {
@@ -106,7 +107,7 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 	}
 
 	secret := &corev1.Secret{}
-	if err := r.Get(ctx, client.ObjectKey{
+	if err := r.UncachedClient.Get(ctx, client.ObjectKey{
 		Name:      addonOperator.Spec.OCM.Secret.Name,
 		Namespace: addonOperator.Spec.OCM.Secret.Namespace,
 	}, secret); err != nil {
@@ -123,7 +124,9 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 		ocm.WithAccessToken(accessToken),
 		ocm.WithClusterID(string(cv.Spec.ClusterID)),
 	)
-	r.OCMClientManager.InjectOCMClient(c)
+	if err := r.OCMClientManager.InjectOCMClient(ctx, c); err != nil {
+		return fmt.Errorf("injecting ocm client: %w", err)
+	}
 	return nil
 }
 

@@ -6,10 +6,17 @@ import (
 	"net/http"
 )
 
+type UpgradePolicyValue string
+
+const (
+	UpgradePolicyValueStarted   UpgradePolicyValue = "started"
+	UpgradePolicyValueCompleted UpgradePolicyValue = "completed"
+)
+
 type UpgradePolicyPatchRequest struct {
-	ID          string `json:"id"`
-	Value       string `json:"value"`
-	Description string `json:"description"`
+	ID          string             `json:"id"`
+	Value       UpgradePolicyValue `json:"value"`
+	Description string             `json:"description"`
 }
 
 type UpgradePolicyPatchResponse struct{}
