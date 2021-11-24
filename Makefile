@@ -47,6 +47,7 @@ WEBHOOK_PORT?=8080
 IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
+OCM_API_MOCK_IMAGE?=$(IMAGE_ORG)/ocm-api-mock:$(VERSION)
 
 # COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -298,7 +299,8 @@ dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
-	setup-okd-console
+	setup-okd-console \
+	setup-ocm-api-mock
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -375,10 +377,23 @@ load-addon-operator-webhook: build-image-addon-operator-webhook
 			--name=$(KIND_CLUSTER_NAME);
 .PHONY: load-addon-operator-webhook
 
+## Load OCM API mock images into kind
+load-ocm-api-mock: build-image-ocm-api-mock
+	@source hack/determine-container-runtime.sh; \
+		$$KIND_COMMAND load image-archive \
+			.cache/image/ocm-api-mock.tar \
+			--name=$(KIND_CLUSTER_NAME);
+.PHONY: load-ocm-api-mock
+
 # Template deployment for Addon Operator
 config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
+
+# Template deployment for OCM API Mock
+config/deploy/ocm-api-mock/deployment.yaml: FORCE $(YQ)
+	@yq eval '.spec.template.spec.containers[0].image = "$(OCM_API_MOCK_IMAGE)"' \
+		config/deploy/ocm-api-mock/deployment.yaml.tpl > config/deploy/ocm-api-mock/deployment.yaml
 
 # Template deployment for Addon Operator Webhook
 config/deploy/webhook/deployment.yaml: FORCE $(YQ)
@@ -389,7 +404,8 @@ config/deploy/webhook/deployment.yaml: FORCE $(YQ)
 
 
 ## Loads and installs the Addon Operator into the currently selected cluster.
-setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
+setup-addon-operator: load-addon-operator \
+	config/deploy/deployment.yaml
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh; \
 		kubectl apply -f config/deploy; \
@@ -402,6 +418,17 @@ ifneq ($(ENABLE_WEBHOOK), "false")
 endif
 .PHONY: setup-addon-operator
 
+## Loads and installs the OCM API Mock into the currently selected cluster.
+setup-ocm-api-mock: load-ocm-api-mock \
+	config/deploy/ocm-api-mock/deployment.yaml
+	@echo "installing ocm-api-mock $(VERSION)..."
+	@(source hack/determine-container-runtime.sh; \
+		kubectl apply -f config/deploy/ocm-api-mock; \
+		echo -e "\nwaiting for deployment/ocm-api-mock..."; \
+		kubectl wait --for=condition=available deployment/ocm-api-mock -n addon-operator --timeout=240s; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
+.PHONY: setup-ocm-api-mock
 
 ## Loads and installs the Addon Operator Webhook into the currently selected cluster.
 setup-addon-operator-webhook: $(YQ) load-addon-operator-webhook \

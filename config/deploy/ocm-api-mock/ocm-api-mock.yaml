@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocm-api-mock
+  namespace: addon-operator
+  labels:
+    app.kubernetes.io/name: ocm-api-mock
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: ocm-api-mock
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ocm-api-mock
+  namespace: addon-operator
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: '{"auths": {"cloud.openshift.com": {"auth": "THIS_IS_AN_API_TOKEN"}}}'
