@@ -89,7 +89,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 	if addonOperator.Spec.Paused {
 		// Check if Paused condition has already been reported
 		if meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
-			addonsv1alpha1.Paused) {
+			addonsv1alpha1.AddonOperatorPaused) {
 			return nil
 		}
 		if err := r.GlobalPauseManager.EnableGlobalPause(ctx); err != nil {
@@ -103,7 +103,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 
 	// Unpause only if the current reported condition is Paused
 	if !meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
-		addonsv1alpha1.Paused) {
+		addonsv1alpha1.AddonOperatorPaused) {
 		return nil
 	}
 	if err := r.GlobalPauseManager.DisableGlobalPause(ctx); err != nil {
