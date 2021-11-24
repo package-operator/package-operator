@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ocm-api-mock
-  namespace: addon-operator
+  namespace: ocm-api-mock
   labels:
     app.kubernetes.io/name: ocm-api-mock
 spec:

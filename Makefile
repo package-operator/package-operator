@@ -326,6 +326,12 @@ create-kind-cluster: $(KIND)
 	@if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
 		sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
 	fi
+
+	@echo "post-setup for kind-cluster..."
+	@(
+		kubectl create -f config/ocp/cluster-version-operator_01_clusterversion.crd.yaml; \
+		kubectl create -f config/ocp/cluster-version.yaml; \
+	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster
 
 ## Deletes the previously created kind cluster.
@@ -425,7 +431,7 @@ setup-ocm-api-mock: load-ocm-api-mock \
 	@(source hack/determine-container-runtime.sh; \
 		kubectl apply -f config/deploy/ocm-api-mock; \
 		echo -e "\nwaiting for deployment/ocm-api-mock..."; \
-		kubectl wait --for=condition=available deployment/ocm-api-mock -n addon-operator --timeout=240s; \
+		kubectl wait --for=condition=available deployment/ocm-api-mock -n ocm-api-mock --timeout=240s; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-ocm-api-mock
