@@ -329,6 +329,7 @@ create-kind-cluster: $(KIND)
 
 	@echo "post-setup for kind-cluster..."
 	@(kubectl create -f config/ocp/cluster-version-operator_01_clusterversion.crd.yaml; \
+		kubectl create -f config/ocp/config-operator_01_proxy.crd.yaml; \
 		kubectl create -f config/ocp/cluster-version.yaml; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
