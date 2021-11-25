@@ -67,6 +67,24 @@ type AddonInstallOLMCommon struct {
 	// OLM will resove this package name to install the matching bundle.
 	// +kubebuilder:validation:MinLength=1
 	PackageName string `json:"packageName"`
+
+	// Configs to be passed to subscription OLM object
+	// +optional
+	Config *SubscriptionConfig `json:"config,omitempty"`
+}
+
+type SubscriptionConfig struct {
+	// Array of env variables to be passed to the subscription object.
+	EnvironmentVariables []EnvObject `json:"env"`
+}
+
+type EnvObject struct {
+	// Name of the environment variable
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Value of the environment variable
+	// +kubebuilder:validation:MinLength=1
+	Value string `json:"value"`
 }
 
 // AllNamespaces specific Addon installation parameters.

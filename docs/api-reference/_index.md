@@ -25,6 +25,8 @@ The `addons.managed.openshift.io` API group in managed OpenShift contains all Ad
 	* [AddonNamespace](#addonnamespaceaddonsmanagedopenshiftiov1alpha1)
 	* [AddonSpec](#addonspecaddonsmanagedopenshiftiov1alpha1)
 	* [AddonStatus](#addonstatusaddonsmanagedopenshiftiov1alpha1)
+	* [EnvObject](#envobjectaddonsmanagedopenshiftiov1alpha1)
+	* [SubscriptionConfig](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1)
 
 ### AddonInstance.addons.managed.openshift.io/v1alpha1
 
@@ -161,6 +163,7 @@ Common Addon installation parameters.
 | catalogSourceImage | Defines the CatalogSource image. | string | true |
 | channel | Channel for the Subscription object. | string | true |
 | packageName | Name of the package to install via OLM. OLM will resove this package name to install the matching bundle. | string | true |
+| config | Configs to be passed to subscription OLM object | *[SubscriptionConfig.addons.managed.openshift.io/v1alpha1](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -218,5 +221,26 @@ AddonStatus defines the observed state of Addon
 | observedGeneration | The most recent generation observed by the controller. | int64 | false |
 | conditions | Conditions is a list of status conditions ths object is in. | []metav1.Condition | false |
 | phase | DEPRECATED: This field is not part of any API contract it will go away as soon as kubectl can print conditions! Human readable status - please use .Conditions from code | AddonPhase.addons.managed.openshift.io/v1alpha1 | false |
+
+[Back to Group]()
+
+### EnvObject.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| name | Name of the environment variable | string | true |
+| value | Value of the environment variable | string | true |
+
+[Back to Group]()
+
+### SubscriptionConfig.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| env | Array of env variables to be passed to the subscription object. | [][EnvObject.addons.managed.openshift.io/v1alpha1](#envobjectaddonsmanagedopenshiftiov1alpha1) | true |
 
 [Back to Group]()

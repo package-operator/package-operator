@@ -89,6 +89,28 @@ func (s *integrationTestSuite) TestAddon() {
 		}
 	})
 
+	s.Run("test_subscription_config", func() {
+
+		subscription := &operatorsv1alpha1.Subscription{}
+
+		err := integration.Client.Get(ctx, client.ObjectKey{
+			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
+			Name:      addon.Name,
+		}, subscription)
+		s.Require().NoError(err)
+		envObjectsPresent := subscription.Spec.Config.Env
+		foundEnvMap := make(map[string]string)
+		for _, envObj := range envObjectsPresent {
+			foundEnvMap[envObj.Name] = envObj.Value
+		}
+		// assert that the env objects passed while creating the addon are indeed present.
+		for _, passedEnvObj := range referenceAddonConfigEnvObjects {
+			foundValue, found := foundEnvMap[passedEnvObj.Name]
+			s.Assert().True(found, "Passed env variable not found")
+			s.Assert().Equal(passedEnvObj.Value, foundValue, "Passed env variable value doesnt match with the one created")
+		}
+	})
+
 	s.T().Cleanup(func() {
 
 		s.addonCleanup(addon, ctx)

@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	corev1 "k8s.io/api/core/v1"
+
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/internal/controllers"
 )
@@ -35,7 +37,7 @@ func (r *AddonReconciler) ensureSubscription(
 		commonInstallOptions = addon.Spec.Install.
 			OLMOwnNamespace.AddonInstallOLMCommon
 	}
-
+	subscriptionConfigObject := createSubscriptionConfigObject(commonInstallOptions)
 	desiredSubscription := &operatorsv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      addon.Name,
@@ -46,6 +48,7 @@ func (r *AddonReconciler) ensureSubscription(
 			CatalogSourceNamespace: catalogSource.Namespace,
 			Channel:                commonInstallOptions.Channel,
 			Package:                commonInstallOptions.PackageName,
+			Config:                 subscriptionConfigObject,
 			// InstallPlanApproval is deliberately unmanaged
 			// API default is `Automatic`
 			// Legacy behavior of existing managed-tenants tooling is:
@@ -124,4 +127,28 @@ func (r *AddonReconciler) reconcileSubscription(
 		return currentSubscription, r.Update(ctx, currentSubscription)
 	}
 	return currentSubscription, nil
+}
+
+// Returns the subscription config object to be created from the passed AddonInstallOLMCommon object
+func createSubscriptionConfigObject(commonInstallOptions addonsv1alpha1.AddonInstallOLMCommon) *operatorsv1alpha1.SubscriptionConfig {
+	if commonInstallOptions.Config != nil {
+		subscriptionConfig := &operatorsv1alpha1.SubscriptionConfig{
+			Env: getSubscriptionEnvObjects(commonInstallOptions.Config.EnvironmentVariables),
+		}
+		return subscriptionConfig
+	}
+	return nil
+}
+
+// Converts addonsv1alpha1.EnvObjects to corev1.EnvVar's
+func getSubscriptionEnvObjects(envObjects []addonsv1alpha1.EnvObject) []corev1.EnvVar {
+	subscriptionEnvObjects := []corev1.EnvVar{}
+	for _, envObject := range envObjects {
+		currentEnvObj := corev1.EnvVar{
+			Name:  envObject.Name,
+			Value: envObject.Value,
+		}
+		subscriptionEnvObjects = append(subscriptionEnvObjects, currentEnvObj)
+	}
+	return subscriptionEnvObjects
 }
