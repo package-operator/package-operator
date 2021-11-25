@@ -34,3 +34,26 @@ func (c *Client) PatchUpgradePolicy(
 		&res,
 	)
 }
+
+type UpgradePolicyGetRequest struct {
+	ID string `json:"id"`
+}
+
+type UpgradePolicyGetResponse struct {
+	Value       UpgradePolicyValue `json:"value"`
+	Description string             `json:"description"`
+}
+
+func (c *Client) GetUpgradePolicy(
+	ctx context.Context,
+	req UpgradePolicyGetRequest,
+) (res UpgradePolicyGetResponse, err error) {
+	return res, c.do(ctx, http.MethodGet, fmt.Sprintf(
+		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
+		c.opts.ClusterID,
+		req.ID,
+	),
+		req,
+		&res,
+	)
+}

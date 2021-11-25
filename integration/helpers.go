@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -37,12 +38,15 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aoapis "github.com/openshift/addon-operator/apis"
+	"github.com/openshift/addon-operator/internal/ocm"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
 const (
-	relativeConfigDeployPath        = "../config/deploy"
-	relativeWebhookConfigDeployPath = "../config/deploy/webhook"
+	relativeConfigDeployPath           = "../config/deploy"
+	relativeWebhookConfigDeployPath    = "../config/deploy/webhook"
+	relativeOCMAPIMockConfigDeployPath = "../config/deploy/ocm-api-mock"
+	OCMAPIEndpoint                     = "http://ocm-api-mock.ocm-api-mock.svc.cluster.local"
 )
 
 type fileInfosByName []fs.FileInfo
@@ -67,6 +71,8 @@ var (
 	Config *rest.Config
 	Scheme = runtime.NewScheme()
 
+	OCMClient *ocm.Client
+
 	// Typed K8s Clients
 	CoreV1Client corev1client.CoreV1Interface
 
@@ -75,6 +81,9 @@ var (
 
 	// Path to the webhook deployment configuration directory.
 	PathWebhookConfigDeploy string
+
+	// Path to the OCM API
+	PathOCMAPIMockDeploy string
 )
 
 func init() {
@@ -85,6 +94,7 @@ func init() {
 		apiextensionsv1.AddToScheme,
 		operatorsv1.AddToScheme,
 		operatorsv1alpha1.AddToScheme,
+		configv1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		panic(fmt.Errorf("could not load schemes: %w", err))
@@ -103,6 +113,17 @@ func init() {
 	// Typed Kubernetes Clients
 	CoreV1Client = corev1client.NewForConfigOrDie(Config)
 
+	// OCM Client
+	cv := &configv1.ClusterVersion{}
+	if err := Client.Get(context.Background(), client.ObjectKey{Name: "version"}, cv); err != nil {
+		panic(fmt.Errorf("getting clusterversion: %w", err))
+	}
+	OCMClient = ocm.NewClient(
+		ocm.WithEndpoint("http://127.0.0.1:8001/api/v1/namespaces/ocm-api-mock/services/ocm-api-mock:80/proxy"),
+		ocm.WithAccessToken("accessToken"), //TODO: Needs to be supplied from the outside, does not matter for mock.
+		ocm.WithClusterID(string(cv.Spec.ClusterID)),
+	)
+
 	// Paths
 	PathConfigDeploy, err = filepath.Abs(relativeConfigDeployPath)
 	if err != nil {
@@ -110,6 +131,11 @@ func init() {
 	}
 
 	PathWebhookConfigDeploy, err = filepath.Abs(relativeWebhookConfigDeployPath)
+	if err != nil {
+		panic(err)
+	}
+
+	PathOCMAPIMockDeploy, err = filepath.Abs(relativeOCMAPIMockConfigDeployPath)
 	if err != nil {
 		panic(err)
 	}

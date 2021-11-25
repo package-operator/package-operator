@@ -41,6 +41,9 @@ func addon_OwnNamespace() *addonsv1alpha1.Addon {
 				{Name: "namespace-onbgdions"},
 				{Name: "namespace-pioghfndb"},
 			},
+			UpgradePolicy: &addonsv1alpha1.AddonUpgradePolicy{
+				ID: "123-456-789",
+			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{

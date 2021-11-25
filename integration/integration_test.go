@@ -20,6 +20,25 @@ func (s *integrationTestSuite) SetupSuite() {
 	if !testing.Short() {
 		s.Setup()
 	}
+
+	ctx := context.Background()
+	addonOperator := &addonsv1alpha1.AddonOperator{}
+	if err := integration.Client.Get(ctx, client.ObjectKey{
+		Name: addonsv1alpha1.DefaultAddonOperatorName,
+	}, addonOperator); err != nil {
+		s.T().Fatalf("get AddonOperator object: %v", err)
+	}
+
+	addonOperator.Spec.OCM = &addonsv1alpha1.AddonOperatorOCM{
+		Endpoint: integration.OCMAPIEndpoint,
+		Secret: addonsv1alpha1.ClusterSecretReference{
+			Name:      "ocm-api-mock",
+			Namespace: "ocm-api-mock",
+		},
+	}
+	if err := integration.Client.Update(ctx, addonOperator); err != nil {
+		s.T().Fatalf("patch AddonOperator object: %v", err)
+	}
 }
 
 func (s *integrationTestSuite) TearDownSuite() {
@@ -48,7 +67,7 @@ func TestIntegration(t *testing.T) {
 	apiProxyCloseCh := make(chan struct{})
 	defer close(apiProxyCloseCh)
 	if err := integration.RunAPIServerProxy(apiProxyCloseCh); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	// does not support parallel test runs
