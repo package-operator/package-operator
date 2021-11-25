@@ -4,10 +4,13 @@ package integration
 import (
 	"bytes"
 	"context"
+	goerrors "errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
+	"net"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,6 +30,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/proxy"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -274,4 +278,47 @@ func WaitForObject(
 
 		return checkFn(object)
 	})
+}
+
+const (
+	defaultPort      = 8001
+	defaultAPIPrefix = "/"
+	defaultAddress   = "127.0.0.1"
+)
+
+// Runs a local apiserver proxy on 127.0.0.1:8001 similar to `kubectl proxy`.
+func RunAPIServerProxy(closeCh <-chan struct{}) error {
+	mux := http.NewServeMux()
+
+	proxyHandler, err := proxy.NewProxyHandler(defaultAPIPrefix, nil, Config, 0)
+	if err != nil {
+		return fmt.Errorf("creating proxy server: %w", err)
+	}
+	mux.Handle(defaultAPIPrefix, proxyHandler)
+
+	// Already start a listener, so callers can already connect to the server,
+	// even if the server is not up yet.
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", defaultAddress, defaultPort))
+	if err != nil {
+		return fmt.Errorf("listen on %s:%d: %w", defaultAddress, defaultPort, err)
+	}
+
+	server := http.Server{
+		Handler: mux,
+	}
+
+	go func() {
+		if err := server.Serve(l); err != nil &&
+			!goerrors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		<-closeCh
+		if err := server.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	return nil
 }

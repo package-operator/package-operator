@@ -44,6 +44,13 @@ func (s *integrationTestSuite) addonCleanup(addon *addonsv1alpha1.Addon,
 }
 
 func TestIntegration(t *testing.T) {
+	// Run kube-apiserver proxy during tests
+	apiProxyCloseCh := make(chan struct{})
+	defer close(apiProxyCloseCh)
+	if err := integration.RunAPIServerProxy(apiProxyCloseCh); err != nil {
+		log.Fatal(err)
+	}
+
 	// does not support parallel test runs
 	suite.Run(t, new(integrationTestSuite))
 }
