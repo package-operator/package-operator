@@ -120,7 +120,8 @@ func (c *Client) do(
 
 		var ocmErr OCMError
 		if err := json.Unmarshal(body, &ocmErr); err != nil {
-			return fmt.Errorf("unmarshal json error response: %w", err)
+			return fmt.Errorf(
+				"HTTP %d: unmarshal json error response %s: %w", httpRes.StatusCode, string(body), err)
 		}
 		ocmErr.StatusCode = httpRes.StatusCode
 		return ocmErr
