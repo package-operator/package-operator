@@ -98,11 +98,6 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
 		mock.Anything,
 	).Return(nil)
-	c.StatusMock.On("Update",
-		testutil.IsContext,
-		testutil.IsAddonsv1alpha1AddonPtr,
-		mock.Anything,
-	).Return(nil)
 
 	ctx := context.Background()
 	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy())

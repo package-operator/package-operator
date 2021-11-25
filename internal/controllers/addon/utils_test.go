@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,9 +37,6 @@ func TestHandleAddonDeletion(t *testing.T) {
 			csvEventHandler: csvEventHandlerMock,
 		}
 
-		c.StatusMock.
-			On("Update", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
 		c.
 			On("Update", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
@@ -54,7 +52,13 @@ func TestHandleAddonDeletion(t *testing.T) {
 
 		// Methods have been called
 		c.AssertExpectations(t)
-		c.StatusMock.AssertExpectations(t)
+
+		// test addon status condition
+		availableCond := meta.FindStatusCondition(addonToDelete.Status.Conditions, addonsv1alpha1.Available)
+		if assert.NotNil(t, availableCond) {
+			assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
+			assert.Equal(t, addonsv1alpha1.AddonReasonTerminating, availableCond.Reason)
+		}
 	})
 
 	t.Run("noop if finalizer already gone", func(t *testing.T) {
@@ -70,9 +74,6 @@ func TestHandleAddonDeletion(t *testing.T) {
 			csvEventHandler: csvEventHandlerMock,
 		}
 
-		c.StatusMock.
-			On("Update", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
 		c.
 			On("Update", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
@@ -86,8 +87,6 @@ func TestHandleAddonDeletion(t *testing.T) {
 		// ensure no API calls are made,
 		// because the object is already deleted.
 		c.AssertNotCalled(
-			t, "Update", mock.Anything, mock.Anything, mock.Anything)
-		c.StatusMock.AssertNotCalled(
 			t, "Update", mock.Anything, mock.Anything, mock.Anything)
 	})
 }

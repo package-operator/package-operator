@@ -181,7 +181,8 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 		if addon.Spec.Install.OLMOwnNamespace == nil ||
 			len(addon.Spec.Install.OLMOwnNamespace.Namespace) == 0 {
 			// invalid/missing configuration
-
+			reportConfigurationError(addon,
+				".spec.install.ownNamespace.namespace is required when .spec.install.type = OwnNamespace")
 			return "", "", true
 		}
 		targetNamespace = addon.Spec.Install.OLMOwnNamespace.Namespace
