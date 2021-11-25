@@ -55,7 +55,6 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 			return fmt.Errorf("patching UpgradePolicy endpoint: %w", err)
 		}
 
-		log.Info("updating Addon status!")
 		addon.Status.UpgradePolicy = &addonsv1alpha1.AddonUpgradePolicyStatus{
 			ID:                 addon.Spec.UpgradePolicy.ID,
 			Value:              addonsv1alpha1.AddonUpgradePolicyValueStarted,
@@ -64,7 +63,6 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 		if err := r.Status().Update(ctx, addon); err != nil {
 			return fmt.Errorf("updating Addon status: %w", err)
 		}
-		log.Info("updated Addon status!")
 		return nil
 	}
 
@@ -75,7 +73,6 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 
 	// Addon is healthy and we have not yet reported the upgrade as completed,
 	// let's do that :)
-
 	_, err := r.ocmClient.PatchUpgradePolicy(ctx, ocm.UpgradePolicyPatchRequest{
 		ID:          addon.Spec.UpgradePolicy.ID,
 		Value:       ocm.UpgradePolicyValueCompleted,
