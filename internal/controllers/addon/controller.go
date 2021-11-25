@@ -99,43 +99,40 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // AddonReconciler/Controller entrypoint
 func (r *AddonReconciler) Reconcile(
-	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("addon", req.NamespacedName.String())
 
 	addon := &addonsv1alpha1.Addon{}
 
-	err := r.Get(ctx, req.NamespacedName, addon)
-	if err != nil {
+	if err := r.Get(ctx, req.NamespacedName, addon); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// Update Addon Status via the kube-api.
+	// This is the only place where the Addon Status is reported back to Kubernetes.
+	defer func() {
+		if updateErr := r.Status().Update(ctx, addon); updateErr != nil {
+			err = updateErr
+		}
+	}()
 
 	// check for global pause
 	r.globalPauseMux.RLock()
 	defer r.globalPauseMux.RUnlock()
 	if r.globalPause {
-		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
-			addon)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		reportAddonPauseStatus(addon, addonsv1alpha1.AddonOperatorReasonPaused)
 		// TODO: figure out how we can continue to report status
 		return ctrl.Result{}, nil
 	}
 
 	// check for Addon pause
 	if addon.Spec.Paused {
-		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
-			addon)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		reportAddonPauseStatus(addon, addonsv1alpha1.AddonReasonPaused)
 		return ctrl.Result{}, nil
 	}
 
 	// Make sure Pause condition is removed
-	if err := r.removeAddonPauseCondition(ctx, addon); err != nil {
-		return ctrl.Result{}, err
-	}
+	r.removeAddonPauseCondition(addon)
 
 	if !addon.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
@@ -209,9 +206,6 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	// After last phase and if everything is healthy
-	if err = r.reportReadinessStatus(ctx, addon); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to report readiness status: %w", err)
-	}
-
+	reportReadinessStatus(addon)
 	return ctrl.Result{}, nil
 }

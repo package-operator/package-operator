@@ -19,10 +19,7 @@ import (
 func (r *AddonReconciler) ensureAddonInstance(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (err error) {
 	// not capturing "stop" because it won't ever be reached due to the guard rails of CRD Enum-Validation Markers
-	targetNamespace, _, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
-	if err != nil {
-		return err
-	}
+	targetNamespace, _, stop := r.parseAddonInstallConfig(log, addon)
 	if stop {
 		return fmt.Errorf("failed to create addonInstance due to misconfigured install.spec.type")
 	}

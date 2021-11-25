@@ -19,10 +19,7 @@ import (
 // Ensures the presense or absense of an OperatorGroup depending on the Addon install type.
 func (r *AddonReconciler) ensureOperatorGroup(
 	ctx context.Context, log logr.Logger, addon *addonsv1alpha1.Addon) (requeueResult, error) {
-	targetNamespace, _, stop, err := r.parseAddonInstallConfig(ctx, log, addon)
-	if err != nil {
-		return resultNil, err
-	}
+	targetNamespace, _, stop := r.parseAddonInstallConfig(log, addon)
 	if stop {
 		return resultStop, nil
 	}
@@ -42,7 +39,6 @@ func (r *AddonReconciler) ensureOperatorGroup(
 	if err := controllerutil.SetControllerReference(addon, desiredOperatorGroup, r.Scheme); err != nil {
 		return resultNil, fmt.Errorf("setting controller reference: %w", err)
 	}
-
 	return resultNil, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
 }
 

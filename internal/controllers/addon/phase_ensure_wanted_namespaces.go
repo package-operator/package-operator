@@ -3,12 +3,9 @@ package addon
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,38 +37,14 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 	}
 
 	if len(collidedNamespaces) > 0 {
-		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-			Type:   addonsv1alpha1.Available,
-			Status: metav1.ConditionFalse,
-			Reason: addonsv1alpha1.AddonReasonCollidedNamespaces,
-			Message: fmt.Sprintf(
-				"Namespaces with collisions: %s",
-				strings.Join(collidedNamespaces, ", ")),
-			ObservedGeneration: addon.Generation,
-		})
-		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.PhasePending
-		err := r.Status().Update(ctx, addon)
-		if err != nil {
-			return resultNil, err
-		}
+		reportCollidedNamespaces(addon, unreadyNamespaces)
 		// collisions occured: signal caller to stop and retry
 		return resultRetry, nil
 	}
 
 	if len(unreadyNamespaces) > 0 {
-		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-			Type:   addonsv1alpha1.Available,
-			Status: metav1.ConditionFalse,
-			Reason: addonsv1alpha1.AddonReasonUnreadyNamespaces,
-			Message: fmt.Sprintf(
-				"Namespaces not yet in Active phase: %s",
-				strings.Join(unreadyNamespaces, ", ")),
-			ObservedGeneration: addon.Generation,
-		})
-		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.PhasePending
-		return resultNil, r.Status().Update(ctx, addon)
+		reportUnreadyCSV(addon, unreadyNamespaces)
+		return resultNil, nil
 	}
 
 	return resultNil, nil
