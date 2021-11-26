@@ -1,5 +1,3 @@
-# From https://github.com/openshift/api/tree/master/config/v1
-# ClusterVersion API is required to lookup the cluster ID, when reporting to upgrade policies endpoints.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:

@@ -107,6 +107,9 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 	}
 
 	secret := &corev1.Secret{}
+	// Use an uncached client to get this secret,
+	// so we don't setup a cluster-wide cache for Secrets.
+	// Saving memory and required RBAC privileges.
 	if err := r.UncachedClient.Get(ctx, client.ObjectKey{
 		Name:      addonOperator.Spec.OCM.Secret.Name,
 		Namespace: addonOperator.Spec.OCM.Secret.Namespace,

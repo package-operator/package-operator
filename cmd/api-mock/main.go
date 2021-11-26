@@ -46,8 +46,6 @@ type UpgradePolicyStateKey struct {
 }
 
 func (ups *UpgradePolicyStateEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
 	switch r.Method {
 	case http.MethodPatch:
 		ups.dataMux.Lock()

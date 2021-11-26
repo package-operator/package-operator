@@ -25,7 +25,6 @@ func TestClientPatchUpgradePolicy(t *testing.T) {
 	defer s.Close()
 
 	c := NewClient(
-		WithAccessToken("access-token"),
 		WithClusterID("123"),
 		WithEndpoint(s.URL+"/proxy/apis"), // test existing path + trailing / handling
 	)
@@ -56,7 +55,6 @@ func TestClientGetUpgradePolicy(t *testing.T) {
 	defer s.Close()
 
 	c := NewClient(
-		WithAccessToken("access-token"),
 		WithClusterID("123"),
 		WithEndpoint(s.URL+"/proxy/apis"), // test existing path + trailing / handling
 	)
