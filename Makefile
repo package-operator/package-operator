@@ -60,7 +60,8 @@ RESET  := $(shell tput -Txterm sgr0)
 # Default build target - must be first!
 all: \
 	bin/linux_amd64/addon-operator-manager \
-	bin/linux_amd64/addon-operator-webhook
+	bin/linux_amd64/addon-operator-webhook \
+	bin/linux_amd64/api-mock
 
 ## Display this help.
 help:
