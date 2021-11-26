@@ -80,7 +80,7 @@ func (ups *UpgradePolicyStateEndpoint) ServeHTTP(w http.ResponseWriter, r *http.
 		}]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, `{}`)
+			fmt.Fprintln(w, `{"code":"not found","reason":"upgrade policy not found"}`)
 			return
 		}
 
