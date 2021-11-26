@@ -28,6 +28,31 @@ type AddonSpec struct {
 	// NOTE: This field is for internal usage only and not to be modified by the user.
 	// +kubebuilder:validation:Enum={"Prevent","AdoptAll"}
 	ResourceAdoptionStrategy ResourceAdoptionStrategyType `json:"resourceAdoptionStrategy,omitempty"`
+
+	// UpgradePolicy enables status reporting via upgrade policies.
+	UpgradePolicy *AddonUpgradePolicy `json:"upgradePolicy,omitempty"`
+}
+
+type AddonUpgradePolicy struct {
+	// Upgrade policy id.
+	ID string `json:"id"`
+}
+
+type AddonUpgradePolicyValue string
+
+const (
+	AddonUpgradePolicyValueStarted   AddonUpgradePolicyValue = "started"
+	AddonUpgradePolicyValueCompleted AddonUpgradePolicyValue = "completed"
+)
+
+// Tracks the last state last reported to the Upgrade Policy endpoint.
+type AddonUpgradePolicyStatus struct {
+	// Upgrade policy id.
+	ID string `json:"id"`
+	// Upgrade policy value.
+	Value AddonUpgradePolicyValue `json:"value"`
+	// The most recent generation a status update was based on.
+	ObservedGeneration int64 `json:"observedGeneration"`
 }
 
 type ResourceAdoptionStrategyType string
@@ -163,6 +188,9 @@ type AddonStatus struct {
 	// it will go away as soon as kubectl can print conditions!
 	// Human readable status - please use .Conditions from code
 	Phase AddonPhase `json:"phase,omitempty"`
+	// Tracks last reported upgrade policy status.
+	// +optional
+	UpgradePolicy *AddonUpgradePolicyStatus `json:"upgradePolicy,omitempty"`
 }
 
 type AddonPhase string

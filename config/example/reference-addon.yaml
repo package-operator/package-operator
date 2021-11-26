@@ -13,3 +13,5 @@ spec:
       packageName: reference-addon
       channel: alpha
       catalogSourceImage: quay.io/osd-addons/reference-addon-index@sha256:58cb1c4478a150dc44e6c179d709726516d84db46e4e130a5227d8b76456b5bd
+  upgradePolicy:
+    id: 123-456-789
