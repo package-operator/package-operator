@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ocm-api-mock
-  namespace: ocm-api-mock
+  name: api-mock
+  namespace: api-mock
   labels:
-    app.kubernetes.io/name: ocm-api-mock
+    app.kubernetes.io/name: api-mock
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: ocm-api-mock
+      app.kubernetes.io/name: api-mock
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ocm-api-mock
+        app.kubernetes.io/name: api-mock
     spec:
       containers:
       - name: manager
-        image: quay.io/app-sre/ocm-api-mock:latest
+        image: quay.io/app-sre/api-mock:latest
         livenessProbe:
           httpGet:
             path: /healthz

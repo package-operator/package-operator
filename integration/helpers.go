@@ -45,8 +45,8 @@ import (
 const (
 	relativeConfigDeployPath           = "../config/deploy"
 	relativeWebhookConfigDeployPath    = "../config/deploy/webhook"
-	relativeOCMAPIMockConfigDeployPath = "../config/deploy/ocm-api-mock"
-	OCMAPIEndpoint                     = "http://ocm-api-mock.ocm-api-mock.svc.cluster.local"
+	relativeOCMAPIMockConfigDeployPath = "../config/deploy/api-mock"
+	OCMAPIEndpoint                     = "http://api-mock.api-mock.svc.cluster.local"
 )
 
 type fileInfosByName []fs.FileInfo
@@ -119,7 +119,7 @@ func init() {
 		panic(fmt.Errorf("getting clusterversion: %w", err))
 	}
 	OCMClient = ocm.NewClient(
-		ocm.WithEndpoint("http://127.0.0.1:8001/api/v1/namespaces/ocm-api-mock/services/ocm-api-mock:80/proxy"),
+		ocm.WithEndpoint("http://127.0.0.1:8001/api/v1/namespaces/api-mock/services/api-mock:80/proxy"),
 		ocm.WithAccessToken("accessToken"), //TODO: Needs to be supplied from the outside, does not matter for mock.
 		ocm.WithClusterID(string(cv.Spec.ClusterID)),
 	)
