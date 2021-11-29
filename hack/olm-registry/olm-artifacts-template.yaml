@@ -16,6 +16,9 @@ parameters:
   - name: DISPLAY_NAME
     value: Managed Upgrade Operator
     required: true
+  - name: OCM_BASE_URL
+    value: http://api-mock.api-mock.svc.cluster.local
+    required: true
 
 objects:
   - apiVersion: hive.openshift.io/v1
@@ -70,3 +73,13 @@ objects:
             name: addon-operator
             source: addon-operator-catalog
             sourceNamespace: openshift-addon-operator
+        - apiVersion: addons.managed.openshift.io/v1alpha1
+          kind: AddonOperator
+          metadata:
+            name: addon-operator
+          spec:
+            ocm:
+              endpoint: ${OCM_BASE_URL}
+              secret:
+                name: pull-secret
+                namespace: openshift-config
