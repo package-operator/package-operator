@@ -135,20 +135,19 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-
 	// Update Addon Status via the kube-api.
 	// This is the only place where the Addon Status is reported back to Kubernetes.
 	defer func() {
 		if updateErr := r.Status().Update(ctx, addon); updateErr != nil {
 			err = updateErr
 		}
+	}()
 
 	// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
 	defer func() {
 		if err != nil {
 			return
 		}
-
 		err = r.handleUpgradePolicyStatusReporting(ctx, log, addon)
 	}()
 
