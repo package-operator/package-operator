@@ -100,12 +100,6 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 				nil,
 			)
 
-		client.StatusMock.
-			On("Update", mock.Anything,
-				mock.AnythingOfType("*v1alpha1.Addon"),
-				mock.Anything).
-			Return(nil)
-
 		err := r.handleUpgradePolicyStatusReporting(
 			context.Background(), log, addon)
 		require.NoError(t, err)
@@ -192,12 +186,6 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 				ocm.UpgradePolicyPatchResponse{},
 				nil,
 			)
-
-		client.StatusMock.
-			On("Update", mock.Anything,
-				mock.AnythingOfType("*v1alpha1.Addon"),
-				mock.Anything).
-			Return(nil)
 
 		err := r.handleUpgradePolicyStatusReporting(
 			context.Background(), log, addon)
