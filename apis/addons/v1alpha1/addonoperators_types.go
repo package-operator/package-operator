@@ -26,6 +26,23 @@ type AddonOperatorSpec struct {
 	// when set to True
 	// +optional
 	Paused bool `json:"pause"`
+
+	// OCM specific configuration.
+	// Setting this subconfig will enable deeper OCM integration.
+	// e.g. push status reporting, etc.
+	// +optional
+	OCM *AddonOperatorOCM `json:"ocm,omitempty"`
+}
+
+// OCM specific configuration.
+type AddonOperatorOCM struct {
+	// Root of the OCM API Endpoint.
+	Endpoint string `json:"endpoint"`
+
+	// Secret to authenticate to the OCM API Endpoint.
+	// Only supports secrets of type "kubernetes.io/dockerconfigjson"
+	// https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
+	Secret ClusterSecretReference `json:"secret"`
 }
 
 // AddonOperatorStatus defines the observed state of Addon
@@ -42,6 +59,14 @@ type AddonOperatorStatus struct {
 	// Human readable status - please use .Conditions from code
 	Phase AddonPhase `json:"phase,omitempty"`
 }
+
+const (
+	// Available condition indicates that the AddonOperator alive and well.
+	AddonOperatorAvailable = "Available"
+
+	// Paused condition indicates that the AddonOperator is paused entirely.
+	AddonOperatorPaused = "Paused"
+)
 
 // AddonOperator is the Schema for the AddonOperator API
 // +kubebuilder:object:root=true

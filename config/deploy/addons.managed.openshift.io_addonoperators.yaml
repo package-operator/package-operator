@@ -43,6 +43,31 @@ spec:
           spec:
             description: AddonOperatorSpec defines the desired state of Addon operator.
             properties:
+              ocm:
+                description: OCM specific configuration. Setting this subconfig will
+                  enable deeper OCM integration. e.g. push status reporting, etc.
+                properties:
+                  endpoint:
+                    description: Root of the OCM API Endpoint.
+                    type: string
+                  secret:
+                    description: Secret to authenticate to the OCM API Endpoint. Only
+                      supports secrets of type "kubernetes.io/dockerconfigjson" https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
+                    properties:
+                      name:
+                        description: Name of the secret object.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret object.
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - endpoint
+                - secret
+                type: object
               pause:
                 description: Pause reconciliation on all Addons in the cluster when
                   set to True

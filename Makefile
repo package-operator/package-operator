@@ -3,7 +3,7 @@ SHELL=/bin/bash
 
 # Dependency Versions
 CONTROLLER_GEN_VERSION:=v0.6.2
-OLM_VERSION:=v0.18.3
+OLM_VERSION:=v0.19.1
 KIND_VERSION:=v0.11.1
 YQ_VERSION:=v4@v4.12.0
 GOIMPORTS_VERSION:=v0.1.5
@@ -47,6 +47,7 @@ WEBHOOK_PORT?=8080
 IMAGE_ORG?=quay.io/app-sre
 ADDON_OPERATOR_MANAGER_IMAGE?=$(IMAGE_ORG)/addon-operator-manager:$(VERSION)
 ADDON_OPERATOR_WEBHOOK_IMAGE?=$(IMAGE_ORG)/addon-operator-webhook:$(VERSION)
+API_MOCK_IMAGE?=$(IMAGE_ORG)/api-mock:$(VERSION)
 
 # COLORS
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -60,7 +61,8 @@ RESET  := $(shell tput -Txterm sgr0)
 # Default build target - must be first!
 all: \
 	bin/linux_amd64/addon-operator-manager \
-	bin/linux_amd64/addon-operator-webhook
+	bin/linux_amd64/addon-operator-webhook \
+	bin/linux_amd64/api-mock
 
 ## Display this help.
 help:
@@ -245,7 +247,8 @@ test-unit: generate
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster
 test-integration: config/deploy/deployment.yaml \
-	config/deploy/webhook/deployment.yaml
+	config/deploy/webhook/deployment.yaml \
+	config/deploy/api-mock/deployment.yaml
 	@echo "running integration tests..."
 	@go test -v -count=1 -timeout=20m ./integration/...
 .PHONY: test-integration
@@ -297,7 +300,8 @@ dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
-	setup-okd-console
+	setup-okd-console \
+	setup-api-mock
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -323,6 +327,13 @@ create-kind-cluster: $(KIND)
 	@if [[ ! -O "$(KIND_KUBECONFIG)" ]]; then \
 		sudo chown $$USER: "$(KIND_KUBECONFIG)"; \
 	fi
+
+	@echo "post-setup for kind-cluster..."
+	@(kubectl create -f config/ocp/cluster-version-operator_01_clusterversion.crd.yaml; \
+		kubectl create -f config/ocp/config-operator_01_proxy.crd.yaml; \
+		kubectl create -f config/ocp/cluster-version.yaml; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster
 
 ## Deletes the previously created kind cluster.
@@ -374,10 +385,23 @@ load-addon-operator-webhook: build-image-addon-operator-webhook
 			--name=$(KIND_CLUSTER_NAME);
 .PHONY: load-addon-operator-webhook
 
+## Load OCM API mock images into kind
+load-api-mock: build-image-api-mock
+	@source hack/determine-container-runtime.sh; \
+		$$KIND_COMMAND load image-archive \
+			.cache/image/api-mock.tar \
+			--name=$(KIND_CLUSTER_NAME);
+.PHONY: load-api-mock
+
 # Template deployment for Addon Operator
 config/deploy/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
+
+# Template deployment for OCM API Mock
+config/deploy/api-mock/deployment.yaml: FORCE $(YQ)
+	@yq eval '.spec.template.spec.containers[0].image = "$(API_MOCK_IMAGE)"' \
+		config/deploy/api-mock/deployment.yaml.tpl > config/deploy/api-mock/deployment.yaml
 
 # Template deployment for Addon Operator Webhook
 config/deploy/webhook/deployment.yaml: FORCE $(YQ)
@@ -388,7 +412,8 @@ config/deploy/webhook/deployment.yaml: FORCE $(YQ)
 
 
 ## Loads and installs the Addon Operator into the currently selected cluster.
-setup-addon-operator: $(YQ) load-addon-operator config/deploy/deployment.yaml
+setup-addon-operator: load-addon-operator \
+	config/deploy/deployment.yaml
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh; \
 		kubectl apply -f config/deploy; \
@@ -401,6 +426,17 @@ ifneq ($(ENABLE_WEBHOOK), "false")
 endif
 .PHONY: setup-addon-operator
 
+## Loads and installs the OCM API Mock into the currently selected cluster.
+setup-api-mock: load-api-mock \
+	config/deploy/api-mock/deployment.yaml
+	@echo "installing api-mock $(VERSION)..."
+	@(source hack/determine-container-runtime.sh; \
+		kubectl apply -f config/deploy/api-mock; \
+		echo -e "\nwaiting for deployment/api-mock..."; \
+		kubectl wait --for=condition=available deployment/api-mock -n api-mock --timeout=240s; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
+.PHONY: setup-api-mock
 
 ## Loads and installs the Addon Operator Webhook into the currently selected cluster.
 setup-addon-operator-webhook: $(YQ) load-addon-operator-webhook \
