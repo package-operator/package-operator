@@ -7,11 +7,13 @@ import (
 	"net/http/pprof"
 	"os"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -32,6 +34,7 @@ func init() {
 	_ = aoapis.AddToScheme(scheme)
 	_ = operatorsv1.AddToScheme(scheme)
 	_ = operatorsv1alpha1.AddToScheme(scheme)
+	_ = configv1.AddToScheme(scheme)
 }
 
 type options struct {
@@ -58,6 +61,14 @@ func parseFlags() *options {
 }
 
 func initReconcilers(mgr ctrl.Manager) {
+	// Create a client that does not cache resources cluster-wide.
+	uncachedClient, err := client.New(
+		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		setupLog.Error(err, "unable to set up uncached client")
+		os.Exit(1)
+	}
+
 	addonReconciler := &addoncontroller.AddonReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
@@ -71,9 +82,11 @@ func initReconcilers(mgr ctrl.Manager) {
 
 	if err := (&aocontroller.AddonOperatorReconciler{
 		Client:             mgr.GetClient(),
+		UncachedClient:     uncachedClient,
 		Log:                ctrl.Log.WithName("controllers").WithName("AddonOperator"),
 		Scheme:             mgr.GetScheme(),
 		GlobalPauseManager: addonReconciler,
+		OCMClientManager:   addonReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
 		os.Exit(1)

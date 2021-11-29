@@ -2,19 +2,24 @@ package addonoperator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/go-logr/logr"
+	configv1 "github.com/openshift/api/config/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/ocm"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -29,9 +34,11 @@ const (
 
 type AddonOperatorReconciler struct {
 	client.Client
+	UncachedClient     client.Client
 	Log                logr.Logger
 	Scheme             *runtime.Scheme
 	GlobalPauseManager globalPauseManager
+	OCMClientManager   ocmClientManager
 }
 
 func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -73,6 +80,10 @@ func (r *AddonOperatorReconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("handling global pause: %w", err)
 	}
 
+	if err := r.handleOCMClient(ctx, addonOperator); err != nil {
+		return ctrl.Result{}, fmt.Errorf("handling OCM client: %w", err)
+	}
+
 	// TODO: This is where all the checking / validation happens
 	// for "in-depth" status reporting
 
@@ -83,13 +94,52 @@ func (r *AddonOperatorReconciler) Reconcile(
 	return ctrl.Result{RequeueAfter: defaultAddonOperatorRequeueTime}, nil
 }
 
+// Creates an OCM API client and injects it into the OCM Client Manager for distribution.
+func (r *AddonOperatorReconciler) handleOCMClient(
+	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
+	if addonOperator.Spec.OCM == nil {
+		return nil
+	}
+
+	cv := &configv1.ClusterVersion{}
+	if err := r.Get(ctx, client.ObjectKey{Name: "version"}, cv); err != nil {
+		return fmt.Errorf("getting clusterversion: %w", err)
+	}
+
+	secret := &corev1.Secret{}
+	// Use an uncached client to get this secret,
+	// so we don't setup a cluster-wide cache for Secrets.
+	// Saving memory and required RBAC privileges.
+	if err := r.UncachedClient.Get(ctx, client.ObjectKey{
+		Name:      addonOperator.Spec.OCM.Secret.Name,
+		Namespace: addonOperator.Spec.OCM.Secret.Namespace,
+	}, secret); err != nil {
+		return fmt.Errorf("getting ocm secret: %w", err)
+	}
+
+	accessToken, err := accessTokenFromDockerConfig(secret.Data[corev1.DockerConfigJsonKey])
+	if err != nil {
+		return fmt.Errorf("extracting access token from .dockerconfigjson: %w", err)
+	}
+
+	c := ocm.NewClient(
+		ocm.WithEndpoint(addonOperator.Spec.OCM.Endpoint),
+		ocm.WithAccessToken(accessToken),
+		ocm.WithClusterID(string(cv.Spec.ClusterID)),
+	)
+	if err := r.OCMClientManager.InjectOCMClient(ctx, c); err != nil {
+		return fmt.Errorf("injecting ocm client: %w", err)
+	}
+	return nil
+}
+
 func (r *AddonOperatorReconciler) handleGlobalPause(
 	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
 	// Check if addonoperator.spec.paused == true
 	if addonOperator.Spec.Paused {
 		// Check if Paused condition has already been reported
 		if meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
-			addonsv1alpha1.Paused) {
+			addonsv1alpha1.AddonOperatorPaused) {
 			return nil
 		}
 		if err := r.GlobalPauseManager.EnableGlobalPause(ctx); err != nil {
@@ -103,7 +153,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 
 	// Unpause only if the current reported condition is Paused
 	if !meta.IsStatusConditionTrue(addonOperator.Status.Conditions,
-		addonsv1alpha1.Paused) {
+		addonsv1alpha1.AddonOperatorPaused) {
 		return nil
 	}
 	if err := r.GlobalPauseManager.DisableGlobalPause(ctx); err != nil {
@@ -113,4 +163,21 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		return fmt.Errorf("remove AddonOperator paused: %w", err)
 	}
 	return nil
+}
+
+func accessTokenFromDockerConfig(dockerConfigJson []byte) (string, error) {
+	dockerConfig := map[string]interface{}{}
+	if err := json.Unmarshal(dockerConfigJson, &dockerConfig); err != nil {
+		return "", fmt.Errorf("unmarshalling docker config json: %w", err)
+	}
+
+	accessToken, ok, err := unstructured.NestedString(
+		dockerConfig, "auths", "cloud.openshift.com", "auth")
+	if err != nil {
+		return "", fmt.Errorf("accessing cloud.openshift.com auth key: %w", err)
+	}
+	if !ok {
+		return "", fmt.Errorf("missing token for cloud.openshift.com")
+	}
+	return accessToken, nil
 }

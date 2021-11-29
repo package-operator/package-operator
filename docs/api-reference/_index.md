@@ -15,6 +15,7 @@ The `addons.managed.openshift.io` API group in managed OpenShift contains all Ad
 	* [AddonInstanceSpec](#addoninstancespecaddonsmanagedopenshiftiov1alpha1)
 	* [AddonInstanceStatus](#addoninstancestatusaddonsmanagedopenshiftiov1alpha1)
 * [AddonOperator](#addonoperatoraddonsmanagedopenshiftiov1alpha1)
+	* [AddonOperatorOCM](#addonoperatorocmaddonsmanagedopenshiftiov1alpha1)
 	* [AddonOperatorSpec](#addonoperatorspecaddonsmanagedopenshiftiov1alpha1)
 	* [AddonOperatorStatus](#addonoperatorstatusaddonsmanagedopenshiftiov1alpha1)
 * [Addon](#addonaddonsmanagedopenshiftiov1alpha1)
@@ -25,6 +26,11 @@ The `addons.managed.openshift.io` API group in managed OpenShift contains all Ad
 	* [AddonNamespace](#addonnamespaceaddonsmanagedopenshiftiov1alpha1)
 	* [AddonSpec](#addonspecaddonsmanagedopenshiftiov1alpha1)
 	* [AddonStatus](#addonstatusaddonsmanagedopenshiftiov1alpha1)
+	* [AddonUpgradePolicy](#addonupgradepolicyaddonsmanagedopenshiftiov1alpha1)
+	* [AddonUpgradePolicyStatus](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1)
+	* [EnvObject](#envobjectaddonsmanagedopenshiftiov1alpha1)
+	* [SubscriptionConfig](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1)
+	* [ClusterSecretReference](#clustersecretreferenceaddonsmanagedopenshiftiov1alpha1)
 
 ### AddonInstance.addons.managed.openshift.io/v1alpha1
 
@@ -88,6 +94,17 @@ AddonOperator is the Schema for the AddonOperator API
 
 [Back to Group]()
 
+### AddonOperatorOCM.addons.managed.openshift.io/v1alpha1
+
+OCM specific configuration.
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| endpoint | Root of the OCM API Endpoint. | string | true |
+| secret | Secret to authenticate to the OCM API Endpoint. Only supports secrets of type "kubernetes.io/dockerconfigjson" https://kubernetes.io/docs/concepts/configuration/secret/#secret-types | [ClusterSecretReference.addons.managed.openshift.io/v1alpha1](#clustersecretreferenceaddonsmanagedopenshiftiov1alpha1) | true |
+
+[Back to Group]()
+
 ### AddonOperatorSpec.addons.managed.openshift.io/v1alpha1
 
 AddonOperatorSpec defines the desired state of Addon operator.
@@ -95,6 +112,7 @@ AddonOperatorSpec defines the desired state of Addon operator.
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
 | pause | Pause reconciliation on all Addons in the cluster when set to True | bool | true |
+| ocm | OCM specific configuration. Setting this subconfig will enable deeper OCM integration. e.g. push status reporting, etc. | *[AddonOperatorOCM.addons.managed.openshift.io/v1alpha1](#addonoperatorocmaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -161,6 +179,7 @@ Common Addon installation parameters.
 | catalogSourceImage | Defines the CatalogSource image. | string | true |
 | channel | Channel for the Subscription object. | string | true |
 | packageName | Name of the package to install via OLM. OLM will resove this package name to install the matching bundle. | string | true |
+| config | Configs to be passed to subscription OLM object | *[SubscriptionConfig.addons.managed.openshift.io/v1alpha1](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -206,6 +225,7 @@ AddonSpec defines the desired state of Addon.
 | namespaces | Defines a list of Kubernetes Namespaces that belong to this Addon. Namespaces listed here will be created prior to installation of the Addon and will be removed from the cluster when the Addon is deleted. Collisions with existing Namespaces are NOT allowed. | [][AddonNamespace.addons.managed.openshift.io/v1alpha1](#addonnamespaceaddonsmanagedopenshiftiov1alpha1) | false |
 | install | Defines how an Addon is installed. This field is immutable. | [AddonInstallSpec.addons.managed.openshift.io/v1alpha1](#addoninstallspecaddonsmanagedopenshiftiov1alpha1) | true |
 | resourceAdoptionStrategy | ResourceAdoptionStrategy coordinates resource adoption for an Addon Originally introduced for coordinating fleetwide migration on OSD with pre-existing OLM objects. NOTE: This field is for internal usage only and not to be modified by the user. | ResourceAdoptionStrategyType.addons.managed.openshift.io/v1alpha1 | false |
+| upgradePolicy | UpgradePolicy enables status reporting via upgrade policies. | *[AddonUpgradePolicy.addons.managed.openshift.io/v1alpha1](#addonupgradepolicyaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -218,5 +238,60 @@ AddonStatus defines the observed state of Addon
 | observedGeneration | The most recent generation observed by the controller. | int64 | false |
 | conditions | Conditions is a list of status conditions ths object is in. | []metav1.Condition | false |
 | phase | DEPRECATED: This field is not part of any API contract it will go away as soon as kubectl can print conditions! Human readable status - please use .Conditions from code | AddonPhase.addons.managed.openshift.io/v1alpha1 | false |
+| upgradePolicy | Tracks last reported upgrade policy status. | *[AddonUpgradePolicyStatus.addons.managed.openshift.io/v1alpha1](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1) | false |
+
+[Back to Group]()
+
+### AddonUpgradePolicy.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| id | Upgrade policy id. | string | true |
+
+[Back to Group]()
+
+### AddonUpgradePolicyStatus.addons.managed.openshift.io/v1alpha1
+
+Tracks the last state last reported to the Upgrade Policy endpoint.
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| id | Upgrade policy id. | string | true |
+| value | Upgrade policy value. | AddonUpgradePolicyValue.addons.managed.openshift.io/v1alpha1 | true |
+| observedGeneration | The most recent generation a status update was based on. | int64 | true |
+
+[Back to Group]()
+
+### EnvObject.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| name | Name of the environment variable | string | true |
+| value | Value of the environment variable | string | true |
+
+[Back to Group]()
+
+### SubscriptionConfig.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| env | Array of env variables to be passed to the subscription object. | [][EnvObject.addons.managed.openshift.io/v1alpha1](#envobjectaddonsmanagedopenshiftiov1alpha1) | true |
+
+[Back to Group]()
+
+### ClusterSecretReference.addons.managed.openshift.io/v1alpha1
+
+References a secret on the cluster.
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| name | Name of the secret object. | string | true |
+| namespace | Namespace of the secret object. | string | true |
 
 [Back to Group]()

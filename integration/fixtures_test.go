@@ -21,6 +21,10 @@ var (
 	// because the deployed operator pod is deliberately broken through invalid readiness and liveness probes.
 	// Version: v0.1.3
 	referenceAddonCatalogSourceImageBroken = "quay.io/osd-addons/reference-addon-index@sha256:9e6306e310d585610d564412780d58ec54cb24a67d7cdabfc067ab733295010a"
+	referenceAddonConfigEnvObjects         = []addonsv1alpha1.EnvObject{
+		{Name: "TESTING1", Value: "TRUE"},
+		{Name: "TESTING2", Value: "TRUE"},
+	}
 
 	defaultAddonDeletionTimeout     = 2 * time.Minute
 	defaultAddonAvailabilityTimeout = 5 * time.Minute
@@ -37,6 +41,9 @@ func addon_OwnNamespace() *addonsv1alpha1.Addon {
 				{Name: "namespace-onbgdions"},
 				{Name: "namespace-pioghfndb"},
 			},
+			UpgradePolicy: &addonsv1alpha1.AddonUpgradePolicy{
+				ID: "123-456-789",
+			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
 				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
@@ -45,6 +52,9 @@ func addon_OwnNamespace() *addonsv1alpha1.Addon {
 						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
 						Channel:            "alpha",
 						PackageName:        "reference-addon",
+						Config: &addonsv1alpha1.SubscriptionConfig{
+							EnvironmentVariables: referenceAddonConfigEnvObjects,
+						},
 					},
 				},
 			},

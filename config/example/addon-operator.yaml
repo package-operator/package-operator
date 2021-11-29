@@ -1,0 +1,10 @@
+apiVersion: addons.managed.openshift.io/v1alpha1
+kind: AddonOperator
+metadata:
+  name: addon-operator
+spec:
+  ocm:
+    endpoint: http://api-mock.api-mock.svc.cluster.local
+    secret:
+      name: api-mock
+      namespace: api-mock

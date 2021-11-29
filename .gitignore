@@ -26,3 +26,4 @@ config/olm/addon-operator.csv.yaml
 addon-operator-bundle.Dockerfile
 manifests/
 metadata/
+config/deploy/ocm-api-mock/deployment.yaml

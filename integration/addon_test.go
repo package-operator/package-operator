@@ -12,6 +12,7 @@ import (
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
+	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 func (s *integrationTestSuite) TestAddon() {
@@ -32,6 +33,13 @@ func (s *integrationTestSuite) TestAddon() {
 				a.Status.Conditions, addonsv1alpha1.Available), nil
 		})
 	s.Require().NoError(err)
+
+	s.Run("reports to upgrade policy endpoint", func() {
+		res, err := integration.OCMClient.GetUpgradePolicy(ctx, ocm.UpgradePolicyGetRequest{ID: addon.Spec.UpgradePolicy.ID})
+		s.Require().NoError(err)
+
+		s.Assert().Equal(ocm.UpgradePolicyValueCompleted, res.Value)
+	})
 
 	s.Run("test_namespaces", func() {
 
@@ -86,6 +94,28 @@ func (s *integrationTestSuite) TestAddon() {
 			s.Require().NoError(err)
 
 			s.Assert().Equal(operatorsv1alpha1.CSVPhaseSucceeded, csv.Status.Phase)
+		}
+	})
+
+	s.Run("test_subscription_config", func() {
+
+		subscription := &operatorsv1alpha1.Subscription{}
+
+		err := integration.Client.Get(ctx, client.ObjectKey{
+			Namespace: addon.Spec.Install.OLMOwnNamespace.Namespace,
+			Name:      addon.Name,
+		}, subscription)
+		s.Require().NoError(err)
+		envObjectsPresent := subscription.Spec.Config.Env
+		foundEnvMap := make(map[string]string)
+		for _, envObj := range envObjectsPresent {
+			foundEnvMap[envObj.Name] = envObj.Value
+		}
+		// assert that the env objects passed while creating the addon are indeed present.
+		for _, passedEnvObj := range referenceAddonConfigEnvObjects {
+			foundValue, found := foundEnvMap[passedEnvObj.Name]
+			s.Assert().True(found, "Passed env variable not found")
+			s.Assert().Equal(passedEnvObj.Value, foundValue, "Passed env variable value doesnt match with the one created")
 		}
 	})
 

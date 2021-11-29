@@ -52,6 +52,10 @@ func (s *integrationTestSuite) Setup() {
 			crdName: "addonoperators.addons.managed.openshift.io",
 			objList: &addonsv1alpha1.AddonOperatorList{},
 		},
+		{
+			crdName: "addoninstances.addons.managed.openshift.io",
+			objList: &addonsv1alpha1.AddonInstanceList{},
+		},
 	}
 
 	for _, crd := range crds {

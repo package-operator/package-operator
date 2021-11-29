@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 // globalPauseManager is an interface used for coordinating
@@ -16,6 +17,10 @@ import (
 type globalPauseManager interface {
 	EnableGlobalPause(ctx context.Context) error
 	DisableGlobalPause(ctx context.Context) error
+}
+
+type ocmClientManager interface {
+	InjectOCMClient(ctx context.Context, c *ocm.Client) error
 }
 
 func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
@@ -37,7 +42,7 @@ func (r *AddonOperatorReconciler) reportAddonOperatorReadinessStatus(
 	ctx context.Context,
 	addonOperator *addonsv1alpha1.AddonOperator) error {
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
-		Type:               addonsv1alpha1.Available,
+		Type:               addonsv1alpha1.AddonOperatorAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             addonsv1alpha1.AddonOperatorReasonReady,
 		Message:            "Addon Operator is ready",
@@ -54,7 +59,7 @@ func (r *AddonOperatorReconciler) reportAddonOperatorPauseStatus(
 	ctx context.Context,
 	addonOperator *addonsv1alpha1.AddonOperator) error {
 	meta.SetStatusCondition(&addonOperator.Status.Conditions, metav1.Condition{
-		Type:               addonsv1alpha1.Paused,
+		Type:               addonsv1alpha1.AddonOperatorPaused,
 		Status:             metav1.ConditionTrue,
 		Reason:             addonsv1alpha1.AddonOperatorReasonPaused,
 		Message:            "Addon operator is paused",

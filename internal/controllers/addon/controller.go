@@ -20,6 +20,7 @@ import (
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	internalhandler "github.com/openshift/addon-operator/internal/controllers/addon/handler"
+	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 // Default timeout when we do a manual RequeueAfter
@@ -37,6 +38,33 @@ type AddonReconciler struct {
 	globalPause     bool
 	globalPauseMux  sync.RWMutex
 	addonRequeueCh  chan event.GenericEvent
+
+	ocmClient    ocmClient
+	ocmClientMux sync.RWMutex
+}
+
+type ocmClient interface {
+	PatchUpgradePolicy(
+		ctx context.Context,
+		req ocm.UpgradePolicyPatchRequest,
+	) (res ocm.UpgradePolicyPatchResponse, err error)
+}
+
+func (r *AddonReconciler) InjectOCMClient(ctx context.Context, c *ocm.Client) error {
+	r.ocmClientMux.Lock()
+	defer r.ocmClientMux.Unlock()
+
+	if r.ocmClient == nil {
+		r.Log.Info("ocm client initialized for the first time")
+
+		// Requeue all addons for the first time that the ocm client becomes available.
+		if err := r.requeueAllAddons(ctx); err != nil {
+			return fmt.Errorf("requeue all Addons: %w", err)
+		}
+	}
+
+	r.ocmClient = c
+	return nil
 }
 
 // Pauses reconcilation of all Addon objects. Concurrency safe.
@@ -99,14 +127,22 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // AddonReconciler/Controller entrypoint
 func (r *AddonReconciler) Reconcile(
-	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("addon", req.NamespacedName.String())
 
 	addon := &addonsv1alpha1.Addon{}
-	err := r.Get(ctx, req.NamespacedName, addon)
-	if err != nil {
+	if err := r.Get(ctx, req.NamespacedName, addon); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		err = r.handleUpgradePolicyStatusReporting(ctx, log, addon)
+	}()
 
 	// check for global pause
 	r.globalPauseMux.RLock()
