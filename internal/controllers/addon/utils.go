@@ -142,7 +142,7 @@ func reportCatalogSourceUnreadinessStatus(
 	addon.Status.Phase = addonsv1alpha1.PhasePending
 }
 
-func reportUnreadyCSV(addon *addonsv1alpha1.Addon, unreadyNamespaces []string) {
+func reportUnreadyNamespaces(addon *addonsv1alpha1.Addon, unreadyNamespaces []string) {
 	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
 		Type:   addonsv1alpha1.Available,
 		Status: metav1.ConditionFalse,
@@ -164,6 +164,20 @@ func reportCollidedNamespaces(addon *addonsv1alpha1.Addon, collidedNamespaces []
 		Message: fmt.Sprintf(
 			"Namespaces with collisions: %s",
 			strings.Join(collidedNamespaces, ", ")),
+		ObservedGeneration: addon.Generation,
+	})
+	addon.Status.ObservedGeneration = addon.Generation
+	addon.Status.Phase = addonsv1alpha1.PhasePending
+}
+
+func reportUnreadyCSV(addon *addonsv1alpha1.Addon, message string) {
+	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
+		Type:   addonsv1alpha1.Available,
+		Status: metav1.ConditionFalse,
+		Reason: addonsv1alpha1.AddonReasonUnreadyCSV,
+		Message: fmt.Sprintf(
+			"ClusterServiceVersion is not ready: %s",
+			message),
 		ObservedGeneration: addon.Generation,
 	})
 	addon.Status.ObservedGeneration = addon.Generation

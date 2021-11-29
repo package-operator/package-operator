@@ -43,7 +43,7 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 	}
 
 	if len(unreadyNamespaces) > 0 {
-		reportUnreadyCSV(addon, unreadyNamespaces)
+		reportUnreadyNamespaces(addon, unreadyNamespaces)
 		return resultNil, nil
 	}
 
