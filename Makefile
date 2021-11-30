@@ -301,8 +301,7 @@ dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
 	setup-okd-console \
-	setup-api-mock \
-	setup-monitoring-servicemonitor-crd
+	setup-api-mock
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -333,6 +332,7 @@ create-kind-cluster: $(KIND)
 	@(kubectl create -f config/ocp/cluster-version-operator_01_clusterversion.crd.yaml; \
 		kubectl create -f config/ocp/config-operator_01_proxy.crd.yaml; \
 		kubectl create -f config/ocp/cluster-version.yaml; \
+		kubectl create -f config/ocp/monitoring.coreos.com_servicemonitors.yaml; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster
@@ -361,12 +361,6 @@ setup-olm:
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-olm
-
-setup-monitoring-servicemonitor-crd:
-	@echo "installing monitoring ServiceMonitor CRD..."
-	@(kubectl apply -f https://raw.githubusercontent.com/openshift/prometheus-operator/release-4.8/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml; \
-	) 2>&1 | sed 's/^/  /'
-.PHONY: setup-monitoring-servicemonitor-crd
 
 ## Setup the OpenShift/OKD console into the currently selected cluster.
 setup-okd-console:
