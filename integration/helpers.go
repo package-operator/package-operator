@@ -21,10 +21,12 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,6 +40,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aoapis "github.com/openshift/addon-operator/apis"
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/internal/ocm"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
@@ -95,6 +98,7 @@ func init() {
 		operatorsv1.AddToScheme,
 		operatorsv1alpha1.AddToScheme,
 		configv1.AddToScheme,
+		monitoringv1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		panic(fmt.Errorf("could not load schemes: %w", err))
@@ -347,4 +351,22 @@ func RunAPIServerProxy(closeCh <-chan struct{}) error {
 		}
 	}()
 	return nil
+}
+
+// IsFreshStatusConditionTrue returns true when conditionType is present, set to `metav1.ConditionTrue`
+// and `.ObservedGeneration` matches `addon.ObjectMeta.Generation`
+func IsFreshStatusConditionTrue(addon *addonsv1alpha1.Addon, conditionType string) bool {
+	for _, condition := range addon.Status.Conditions {
+		if condition.Type != conditionType {
+			continue
+		}
+
+		if condition.Status != metav1.ConditionTrue {
+			return false
+		}
+
+		return condition.ObservedGeneration == addon.ObjectMeta.Generation
+	}
+
+	return false
 }

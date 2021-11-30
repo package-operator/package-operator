@@ -39,6 +39,10 @@ func (s *integrationTestSuite) TestAddon_OperatorGroup() {
 			err := integration.Client.Create(ctx, addon)
 			s.Require().NoError(err)
 
+			s.T().Cleanup(func() {
+				s.addonCleanup(test.addon, ctx)
+			})
+
 			err = integration.WaitForObject(
 				s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
 				func(obj client.Object) (done bool, err error) {
@@ -54,10 +58,6 @@ func (s *integrationTestSuite) TestAddon_OperatorGroup() {
 				Name:      addon.Name,
 				Namespace: test.targetNamespace,
 			}, operatorGroup))
-
-			s.T().Cleanup(func() {
-				s.addonCleanup(test.addon, ctx)
-			})
 		})
 	}
 }

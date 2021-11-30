@@ -13,6 +13,7 @@ type AddonSpec struct {
 	// Pause reconciliation of Addon when set to True
 	// +optional
 	Paused bool `json:"pause"`
+
 	// Defines a list of Kubernetes Namespaces that belong to this Addon.
 	// Namespaces listed here will be created prior to installation of the Addon and
 	// will be removed from the cluster when the Addon is deleted.
@@ -31,6 +32,9 @@ type AddonSpec struct {
 
 	// UpgradePolicy enables status reporting via upgrade policies.
 	UpgradePolicy *AddonUpgradePolicy `json:"upgradePolicy,omitempty"`
+
+	// Defines how an addon is monitored.
+	Monitoring *MonitoringSpec `json:"monitoring,omitempty"`
 }
 
 type AddonUpgradePolicy struct {
@@ -53,6 +57,29 @@ type AddonUpgradePolicyStatus struct {
 	Value AddonUpgradePolicyValue `json:"value"`
 	// The most recent generation a status update was based on.
 	ObservedGeneration int64 `json:"observedGeneration"`
+}
+
+type MonitoringSpec struct {
+	// Configuration parameters to be injected in the ServiceMonitor used for federation.
+	// The target prometheus server found by matchLabels needs to serve service-ca signed TLS traffic
+	// (https://docs.openshift.com/container-platform/4.6/security/certificate_types_descriptions/service-ca-certificates.html),
+	// and it needs to be runing inside the namespace specified by `.monitoring.federation.namespace`
+	// with the service name 'prometheus'.
+	Federation *MonitoringFederationSpec `json:"federation,omitempty"`
+}
+
+type MonitoringFederationSpec struct {
+	// Namespace where the prometheus server is running.
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+
+	// List of series names to federate from the prometheus server.
+	// +listType:set
+	MatchNames []string `json:"matchNames"`
+
+	// List of labels used to discover the prometheus server(s) to be federated.
+	// +kubebuilder:validation:MinProperties=1
+	MatchLabels map[string]string `json:"matchLabels"`
 }
 
 type ResourceAdoptionStrategyType string
@@ -159,6 +186,9 @@ const (
 
 	// Addon has unready namespaces
 	AddonReasonUnreadyNamespaces = "UnreadyNamespaces"
+
+	// Addon has unready metrics federation
+	AddonReasonUnreadyMonitoring = "UnreadyMonitoringFederation"
 
 	// Addon has unready CSV
 	AddonReasonUnreadyCSV = "UnreadyCSV"

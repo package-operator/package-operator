@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -116,6 +117,7 @@ func (r *AddonReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&operatorsv1alpha1.CatalogSource{}).
 		Owns(&operatorsv1alpha1.Subscription{}).
 		Owns(&addonsv1alpha1.AddonInstance{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Watches(&source.Kind{
 			Type: &operatorsv1alpha1.ClusterServiceVersion{},
 		}, r.csvEventHandler).
@@ -252,6 +254,25 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{
 			RequeueAfter: defaultRetryAfterTime,
 		}, nil
+	}
+
+	// Phase 7.
+	// Possibly ensure monitoring federation
+	// Normally this would be configured before the addon workload is installed
+	// but currently the addon workload creates the monitoring stack by itself
+	// thus we want to create the service monitor as late as possible to ensure that
+	// cluster-monitoring prom does not try to scrape a non-existent addon prometheus.
+	if stop, err := r.ensureMonitoringFederation(ctx, addon); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure ServiceMonitor: %w", err)
+	} else if stop {
+		log.Info("stopping", "reason", "monitoring federation namespace or servicemonitor owned by something else")
+		return ctrl.Result{}, nil
+	}
+
+	// Phase 8
+	// Remove possibly unwanted monitoring federation
+	if err := r.ensureDeletionOfUnwantedMonitoringFederation(ctx, addon); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure deletion of unwanted ServiceMonitors: %w", err)
 	}
 
 	// After last phase and if everything is healthy
