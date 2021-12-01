@@ -97,12 +97,7 @@ func (s *integrationTestSuite) TestMonitoringFederation_MonitoringInPlaceAtCreat
 	}
 
 	// wait until Addon is available again
-	err = integration.WaitForObject(
-		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
-		func(obj client.Object) (done bool, err error) {
-			a := obj.(*addonsv1alpha1.Addon)
-			return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
-		})
+	err = integration.WaitForFreshAddonCondition(s.T(), defaultAddonAvailabilityTimeout, addon, addonsv1alpha1.Available, metav1.ConditionTrue)
 	s.Require().NoError(err)
 
 	// wait until monitoring Namespace is gone (ServiceMonitor will be gone as well)
@@ -186,12 +181,7 @@ func (s *integrationTestSuite) TestMonitoringFederation_MonitoringNotInPlaceAtCr
 	}
 
 	// wait until Addon is available again
-	err = integration.WaitForObject(
-		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
-		func(obj client.Object) (done bool, err error) {
-			a := obj.(*addonsv1alpha1.Addon)
-			return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
-		})
+	err = integration.WaitForFreshAddonCondition(s.T(), defaultAddonAvailabilityTimeout, addon, addonsv1alpha1.Available, metav1.ConditionTrue)
 	s.Require().NoError(err)
 
 	// validate monitoring Namespace

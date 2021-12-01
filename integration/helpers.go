@@ -310,6 +310,40 @@ func WaitForObject(
 	})
 }
 
+// Wait for an up-to-date condition value on an addon.
+// A condition is considered up-to-date when it's .ObservedGeneration
+// matches the generation of it's addon object.
+func WaitForFreshAddonCondition(
+	t *testing.T, timeout time.Duration,
+	a *addonsv1alpha1.Addon, conditionType string, conditionStatus metav1.ConditionStatus,
+) error {
+	return WaitForObject(
+		t, timeout, a, fmt.Sprintf("to be %s: %s", conditionType, conditionStatus),
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return isFreshStatusCondition(a, conditionType, conditionStatus), nil
+		})
+}
+
+// isFreshStatusCondition returns true when `conditionType` is present,
+// it's status matches `conditionStatus`
+// and `.ObservedGeneration` matches `addon.ObjectMeta.Generation`
+func isFreshStatusCondition(a *addonsv1alpha1.Addon, conditionType string, conditionStatus metav1.ConditionStatus) bool {
+	for _, condition := range a.Status.Conditions {
+		if condition.Type != conditionType {
+			continue
+		}
+
+		if condition.Status != conditionStatus {
+			return false
+		}
+
+		return condition.ObservedGeneration == a.GetGeneration()
+	}
+
+	return false
+}
+
 const (
 	defaultPort      = 8001
 	defaultAPIPrefix = "/"
@@ -351,22 +385,4 @@ func RunAPIServerProxy(closeCh <-chan struct{}) error {
 		}
 	}()
 	return nil
-}
-
-// IsFreshStatusConditionTrue returns true when conditionType is present, set to `metav1.ConditionTrue`
-// and `.ObservedGeneration` matches `addon.ObjectMeta.Generation`
-func IsFreshStatusConditionTrue(addon *addonsv1alpha1.Addon, conditionType string) bool {
-	for _, condition := range addon.Status.Conditions {
-		if condition.Type != conditionType {
-			continue
-		}
-
-		if condition.Status != metav1.ConditionTrue {
-			return false
-		}
-
-		return condition.ObservedGeneration == addon.ObjectMeta.Generation
-	}
-
-	return false
 }
