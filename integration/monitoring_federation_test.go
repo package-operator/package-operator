@@ -21,192 +21,190 @@ import (
 	"github.com/openshift/addon-operator/internal/controllers"
 )
 
-func (s *integrationTestSuite) TestMonitoringFederation() {
-	s.Run("MonitoringInPlaceAtCreationRemovedAfterwards", func() {
-		ctx := context.Background()
+func (s *integrationTestSuite) TestMonitoringFederation_MonitoringInPlaceAtCreationRemovedAfterwards() {
+	ctx := context.Background()
 
-		addon := &addonsv1alpha1.Addon{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "addon-41b95034425c4d55",
+	addon := &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "addon-41b95034425c4d55",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-41b95034425c4d55",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{Name: "namespace-a9953682ff70d594"},
 			},
-			Spec: addonsv1alpha1.AddonSpec{
-				DisplayName: "addon-41b95034425c4d55",
-				Namespaces: []addonsv1alpha1.AddonNamespace{
-					{Name: "namespace-a9953682ff70d594"},
-				},
-				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.OLMOwnNamespace,
-					OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-						AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-							Namespace:          "namespace-a9953682ff70d594",
-							CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-							Channel:            "alpha",
-							PackageName:        "reference-addon",
-						},
-					},
-				},
-				Monitoring: &addonsv1alpha1.MonitoringSpec{
-					Federation: &addonsv1alpha1.MonitoringFederationSpec{
-						Namespace:  "namespace-a9953682ff70d594",
-						MatchNames: []string{"some_timeseries"},
-						MatchLabels: map[string]string{
-							"foo": "bar",
-						},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          "namespace-a9953682ff70d594",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
-		}
+			Monitoring: &addonsv1alpha1.MonitoringSpec{
+				Federation: &addonsv1alpha1.MonitoringFederationSpec{
+					Namespace:  "namespace-a9953682ff70d594",
+					MatchNames: []string{"some_timeseries"},
+					MatchLabels: map[string]string{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+	}
 
-		err := integration.Client.Create(ctx, addon)
-		s.Require().NoError(err)
+	err := integration.Client.Create(ctx, addon)
+	s.Require().NoError(err)
 
-		// clean up addon resource in case it
-		// was leaked because of a failed test
-		s.T().Cleanup(func() {
-			s.addonCleanup(addon, ctx)
-		})
-
-		// wait until Addon is available
-		err = integration.WaitForObject(
-			s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
-			func(obj client.Object) (done bool, err error) {
-				a := obj.(*addonsv1alpha1.Addon)
-				return meta.IsStatusConditionTrue(
-					a.Status.Conditions, addonsv1alpha1.Available), nil
-			})
-		s.Require().NoError(err)
-
-		monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
-
-		// validate monitoring Namespace
-		currentMonitoringNamespace := &corev1.Namespace{}
-		{
-			err := integration.Client.Get(ctx, types.NamespacedName{
-				Name: monitoringNamespaceName,
-			}, currentMonitoringNamespace)
-			s.Assert().NoError(err, "could not get monitoring Namespace %s", monitoringNamespaceName)
-		}
-
-		// validate ServiceMonitor
-		validateMonitoringFederationServiceMonitor(s.T(), ctx, addon, monitoringNamespaceName)
-
-		// unset addon.spec.monitoring.federation and update Addon object
-		addon.Spec.Monitoring.Federation = nil
-		{
-			err := integration.Client.Update(ctx, addon)
-			s.Require().NoError(err)
-		}
-
-		// wait until Addon is available again
-		err = integration.WaitForObject(
-			s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
-			func(obj client.Object) (done bool, err error) {
-				a := obj.(*addonsv1alpha1.Addon)
-				return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
-			})
-		s.Require().NoError(err)
-
-		// wait until monitoring Namespace is gone (ServiceMonitor will be gone as well)
-		{
-			err := integration.WaitToBeGone(s.T(), time.Minute, currentMonitoringNamespace)
-			s.Require().NoError(err)
-		}
+	// clean up addon resource in case it
+	// was leaked because of a failed test
+	s.T().Cleanup(func() {
+		s.addonCleanup(addon, ctx)
 	})
 
-	s.Run("MonitoringNotInPlaceAtCreationAddedAfterwards", func() {
-		ctx := context.Background()
+	// wait until Addon is available
+	err = integration.WaitForObject(
+		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return meta.IsStatusConditionTrue(
+				a.Status.Conditions, addonsv1alpha1.Available), nil
+		})
+	s.Require().NoError(err)
 
-		addon := &addonsv1alpha1.Addon{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "addon-oe7phook",
+	monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
+
+	// validate monitoring Namespace
+	currentMonitoringNamespace := &corev1.Namespace{}
+	{
+		err := integration.Client.Get(ctx, types.NamespacedName{
+			Name: monitoringNamespaceName,
+		}, currentMonitoringNamespace)
+		s.Assert().NoError(err, "could not get monitoring Namespace %s", monitoringNamespaceName)
+	}
+
+	// validate ServiceMonitor
+	validateMonitoringFederationServiceMonitor(s.T(), ctx, addon, monitoringNamespaceName)
+
+	// unset addon.spec.monitoring.federation and update Addon object
+	addon.Spec.Monitoring.Federation = nil
+	{
+		err := integration.Client.Update(ctx, addon)
+		s.Require().NoError(err)
+	}
+
+	// wait until Addon is available again
+	err = integration.WaitForObject(
+		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
+		})
+	s.Require().NoError(err)
+
+	// wait until monitoring Namespace is gone (ServiceMonitor will be gone as well)
+	{
+		err := integration.WaitToBeGone(s.T(), time.Minute, currentMonitoringNamespace)
+		s.Require().NoError(err)
+	}
+}
+
+func (s *integrationTestSuite) TestMonitoringFederation_MonitoringNotInPlaceAtCreationAddedAfterwards() {
+	ctx := context.Background()
+
+	addon := &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "addon-oe7phook",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-oe7phook",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{Name: "namespace-xoh2pa0l"},
 			},
-			Spec: addonsv1alpha1.AddonSpec{
-				DisplayName: "addon-oe7phook",
-				Namespaces: []addonsv1alpha1.AddonNamespace{
-					{Name: "namespace-xoh2pa0l"},
-				},
-				Install: addonsv1alpha1.AddonInstallSpec{
-					Type: addonsv1alpha1.OLMOwnNamespace,
-					OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
-						AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
-							Namespace:          "namespace-xoh2pa0l",
-							CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
-							Channel:            "alpha",
-							PackageName:        "reference-addon",
-						},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          "namespace-xoh2pa0l",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
 					},
 				},
 			},
-		}
+		},
+	}
 
-		err := integration.Client.Create(ctx, addon)
-		s.Require().NoError(err)
+	err := integration.Client.Create(ctx, addon)
+	s.Require().NoError(err)
 
-		// clean up addon resource in case it
-		// was leaked because of a failed test
-		s.T().Cleanup(func() {
-			s.addonCleanup(addon, ctx)
-		})
-
-		// wait until Addon is available
-		err = integration.WaitForObject(
-			s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
-			func(obj client.Object) (done bool, err error) {
-				a := obj.(*addonsv1alpha1.Addon)
-				return meta.IsStatusConditionTrue(
-					a.Status.Conditions, addonsv1alpha1.Available), nil
-			})
-		s.Require().NoError(err)
-
-		monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
-
-		// validate that monitoring Namespace is not there
-		{
-			currentMonitoringNamespace := &corev1.Namespace{}
-			err := integration.Client.Get(ctx, types.NamespacedName{
-				Name: monitoringNamespaceName,
-			}, currentMonitoringNamespace)
-			s.Assert().Error(err, "getting a non-existent Namespace should error")
-			s.Require().Equal(true, k8sApiErrors.IsNotFound(err), "error should have been 'Not Found'")
-		}
-
-		// set addon.spec.monitoring.federation and update Addon object
-		addon.Spec.Monitoring = &addonsv1alpha1.MonitoringSpec{
-			Federation: &addonsv1alpha1.MonitoringFederationSpec{
-				Namespace:  "namespace-xoh2pa0l",
-				MatchNames: []string{"some_timeseries"},
-				MatchLabels: map[string]string{
-					"foo": "bar",
-				},
-			},
-		}
-
-		{
-			err := integration.Client.Update(ctx, addon)
-			s.Require().NoError(err)
-		}
-
-		// wait until Addon is available again
-		err = integration.WaitForObject(
-			s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
-			func(obj client.Object) (done bool, err error) {
-				a := obj.(*addonsv1alpha1.Addon)
-				return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
-			})
-		s.Require().NoError(err)
-
-		// validate monitoring Namespace
-		currentMonitoringNamespace := &corev1.Namespace{}
-		{
-			err := integration.Client.Get(ctx, types.NamespacedName{
-				Name: monitoringNamespaceName,
-			}, currentMonitoringNamespace)
-			s.Assert().NoError(err, "could not get monitoring Namespace %s", monitoringNamespaceName)
-		}
-
-		// validate ServiceMonitor
-		validateMonitoringFederationServiceMonitor(s.T(), ctx, addon, monitoringNamespaceName)
+	// clean up addon resource in case it
+	// was leaked because of a failed test
+	s.T().Cleanup(func() {
+		s.addonCleanup(addon, ctx)
 	})
+
+	// wait until Addon is available
+	err = integration.WaitForObject(
+		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return meta.IsStatusConditionTrue(
+				a.Status.Conditions, addonsv1alpha1.Available), nil
+		})
+	s.Require().NoError(err)
+
+	monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
+
+	// validate that monitoring Namespace is not there
+	{
+		currentMonitoringNamespace := &corev1.Namespace{}
+		err := integration.Client.Get(ctx, types.NamespacedName{
+			Name: monitoringNamespaceName,
+		}, currentMonitoringNamespace)
+		s.Assert().Error(err, "getting a non-existent Namespace should error")
+		s.Require().Equal(true, k8sApiErrors.IsNotFound(err), "error should have been 'Not Found'")
+	}
+
+	// set addon.spec.monitoring.federation and update Addon object
+	addon.Spec.Monitoring = &addonsv1alpha1.MonitoringSpec{
+		Federation: &addonsv1alpha1.MonitoringFederationSpec{
+			Namespace:  "namespace-xoh2pa0l",
+			MatchNames: []string{"some_timeseries"},
+			MatchLabels: map[string]string{
+				"foo": "bar",
+			},
+		},
+	}
+
+	{
+		err := integration.Client.Update(ctx, addon)
+		s.Require().NoError(err)
+	}
+
+	// wait until Addon is available again
+	err = integration.WaitForObject(
+		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available again",
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return integration.IsFreshStatusConditionTrue(a, addonsv1alpha1.Available), nil
+		})
+	s.Require().NoError(err)
+
+	// validate monitoring Namespace
+	currentMonitoringNamespace := &corev1.Namespace{}
+	{
+		err := integration.Client.Get(ctx, types.NamespacedName{
+			Name: monitoringNamespaceName,
+		}, currentMonitoringNamespace)
+		s.Assert().NoError(err, "could not get monitoring Namespace %s", monitoringNamespaceName)
+	}
+
+	// validate ServiceMonitor
+	validateMonitoringFederationServiceMonitor(s.T(), ctx, addon, monitoringNamespaceName)
 }
 
 func validateMonitoringFederationServiceMonitor(t *testing.T, ctx context.Context, addon *addonsv1alpha1.Addon, monitoringNamespaceName string) {
