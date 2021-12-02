@@ -29,12 +29,16 @@ func (s *integrationTestSuite) Setup() {
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
 		o := obj
+		// check if object is already exists
 		var existingObj client.Object
-		err := integration.Client.Get(ctx, types.NamespacedName{Namespace: o.GetNamespace(), Name: o.GetName()}, existingObj)
-		s.Require().NoError(err)
+		integration.Client.Get(ctx, client.ObjectKey{
+			Namespace: o.GetNamespace(),
+			Name:      o.GetName(),
+		}, existingObj)
 
 		if existingObj == nil {
-			err = integration.Client.Create(ctx, &o)
+			// if not create one
+			err := integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
 			s.T().Log("created: ", o.GroupVersionKind().String(),
