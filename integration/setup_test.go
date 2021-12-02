@@ -31,7 +31,7 @@ func (s *integrationTestSuite) Setup() {
 		o := obj
 		// check if object is already exists
 		var existingObj client.Object
-		integration.Client.Get(ctx, client.ObjectKey{
+		_ = integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
 			Name:      o.GetName(),
 		}, existingObj)
