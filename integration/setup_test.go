@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	// appsv1 "k8s.io/api/apps/v1"
-	// corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	// "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -22,23 +22,29 @@ import (
 
 func (s *integrationTestSuite) Setup() {
 	ctx := context.Background()
-	//objs := integration.LoadObjectsFromDeploymentFiles(s.T())
+	objs := integration.LoadObjectsFromDeploymentFiles(s.T())
 
-	// var deployments []unstructured.Unstructured
+	var deployments []unstructured.Unstructured
 
 	// Create all objects to install the Addon Operator
-	// for _, obj := range objs {
-	// 	o := obj
-	// 	err := integration.Client.Create(ctx, &o)
-	// 	s.Require().NoError(err)
+	for _, obj := range objs {
+		o := obj
+		var existingObj client.Object
+		err := integration.Client.Get(ctx, types.NamespacedName{Namespace: o.GetNamespace(), Name: o.GetName()}, existingObj)
+		s.Require().NoError(err)
 
-	// 	s.T().Log("created: ", o.GroupVersionKind().String(),
-	// 		o.GetNamespace()+"/"+o.GetName())
+		if existingObj == nil {
+			err = integration.Client.Create(ctx, &o)
+			s.Require().NoError(err)
 
-	// 	if o.GetKind() == "Deployment" {
-	// 		deployments = append(deployments, o)
-	// 	}
-	// }
+			s.T().Log("created: ", o.GroupVersionKind().String(),
+				o.GetNamespace()+"/"+o.GetName())
+
+			if o.GetKind() == "Deployment" {
+				deployments = append(deployments, o)
+			}
+		}
+	}
 
 	crds := []struct {
 		crdName string
@@ -92,36 +98,36 @@ func (s *integrationTestSuite) Setup() {
 		})
 	}
 
-	// for _, deploy := range deployments {
-	// 	s.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func() {
+	for _, deploy := range deployments {
+		s.Run(fmt.Sprintf("Deployment %s available", deploy.GetName()), func() {
 
-	// 		deployment := &appsv1.Deployment{}
-	// 		err := wait.PollImmediate(
-	// 			time.Second, 5*time.Minute, func() (done bool, err error) {
-	// 				err = integration.Client.Get(
-	// 					ctx, client.ObjectKey{
-	// 						Name:      deploy.GetName(),
-	// 						Namespace: deploy.GetNamespace(),
-	// 					}, deployment)
-	// 				if errors.IsNotFound(err) {
-	// 					return false, err
-	// 				}
-	// 				if err != nil {
-	// 					//nolint:nilerr // retry on transient errors
-	// 					return false, nil
-	// 				}
+			deployment := &appsv1.Deployment{}
+			err := wait.PollImmediate(
+				time.Second, 5*time.Minute, func() (done bool, err error) {
+					err = integration.Client.Get(
+						ctx, client.ObjectKey{
+							Name:      deploy.GetName(),
+							Namespace: deploy.GetNamespace(),
+						}, deployment)
+					if errors.IsNotFound(err) {
+						return false, err
+					}
+					if err != nil {
+						//nolint:nilerr // retry on transient errors
+						return false, nil
+					}
 
-	// 				for _, cond := range deployment.Status.Conditions {
-	// 					if cond.Type == appsv1.DeploymentAvailable &&
-	// 						cond.Status == corev1.ConditionTrue {
-	// 						return true, nil
-	// 					}
-	// 				}
-	// 				return false, nil
-	// 			})
-	// 		s.Require().NoError(err, "wait for Addon Operator Deployment")
-	// 	})
-	// }
+					for _, cond := range deployment.Status.Conditions {
+						if cond.Type == appsv1.DeploymentAvailable &&
+							cond.Status == corev1.ConditionTrue {
+							return true, nil
+						}
+					}
+					return false, nil
+				})
+			s.Require().NoError(err, "wait for Addon Operator Deployment")
+		})
+	}
 
 	s.Run("Addon Operator available", func() {
 		addonOperator := addonsv1alpha1.AddonOperator{}
