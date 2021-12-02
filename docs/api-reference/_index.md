@@ -29,6 +29,8 @@ The `addons.managed.openshift.io` API group in managed OpenShift contains all Ad
 	* [AddonUpgradePolicy](#addonupgradepolicyaddonsmanagedopenshiftiov1alpha1)
 	* [AddonUpgradePolicyStatus](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1)
 	* [EnvObject](#envobjectaddonsmanagedopenshiftiov1alpha1)
+	* [MonitoringFederationSpec](#monitoringfederationspecaddonsmanagedopenshiftiov1alpha1)
+	* [MonitoringSpec](#monitoringspecaddonsmanagedopenshiftiov1alpha1)
 	* [SubscriptionConfig](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1)
 	* [ClusterSecretReference](#clustersecretreferenceaddonsmanagedopenshiftiov1alpha1)
 
@@ -226,6 +228,7 @@ AddonSpec defines the desired state of Addon.
 | install | Defines how an Addon is installed. This field is immutable. | [AddonInstallSpec.addons.managed.openshift.io/v1alpha1](#addoninstallspecaddonsmanagedopenshiftiov1alpha1) | true |
 | resourceAdoptionStrategy | ResourceAdoptionStrategy coordinates resource adoption for an Addon Originally introduced for coordinating fleetwide migration on OSD with pre-existing OLM objects. NOTE: This field is for internal usage only and not to be modified by the user. | ResourceAdoptionStrategyType.addons.managed.openshift.io/v1alpha1 | false |
 | upgradePolicy | UpgradePolicy enables status reporting via upgrade policies. | *[AddonUpgradePolicy.addons.managed.openshift.io/v1alpha1](#addonupgradepolicyaddonsmanagedopenshiftiov1alpha1) | false |
+| monitoring | Defines how an addon is monitored. | *[MonitoringSpec.addons.managed.openshift.io/v1alpha1](#monitoringspecaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 
@@ -272,6 +275,28 @@ Tracks the last state last reported to the Upgrade Policy endpoint.
 | ----- | ----------- | ------ | -------- |
 | name | Name of the environment variable | string | true |
 | value | Value of the environment variable | string | true |
+
+[Back to Group]()
+
+### MonitoringFederationSpec.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| namespace | Namespace where the prometheus server is running. | string | true |
+| matchNames | List of series names to federate from the prometheus server. | []string | true |
+| matchLabels | List of labels used to discover the prometheus server(s) to be federated. | map[string]string | true |
+
+[Back to Group]()
+
+### MonitoringSpec.addons.managed.openshift.io/v1alpha1
+
+
+
+| Field | Description | Scheme | Required |
+| ----- | ----------- | ------ | -------- |
+| federation | Configuration parameters to be injected in the ServiceMonitor used for federation. The target prometheus server found by matchLabels needs to serve service-ca signed TLS traffic (https://docs.openshift.com/container-platform/4.6/security/certificate_types_descriptions/service-ca-certificates.html), and it needs to be runing inside the namespace specified by `.monitoring.federation.namespace` with the service name 'prometheus'. | *[MonitoringFederationSpec.addons.managed.openshift.io/v1alpha1](#monitoringfederationspecaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()
 

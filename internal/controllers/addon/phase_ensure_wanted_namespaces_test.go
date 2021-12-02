@@ -191,6 +191,35 @@ func TestEnsureNamespace_Create(t *testing.T) {
 	require.NotNil(t, ensuredNamespace)
 }
 
+func TestEnsureNamespace_CreateWithLabels(t *testing.T) {
+	addon := testutil.NewTestAddonWithSingleNamespace()
+
+	c := testutil.NewClient()
+	c.On("Get", testutil.IsContext, testutil.IsObjectKey, testutil.IsCoreV1NamespacePtr).Return(testutil.NewTestErrNotFound())
+	c.On("Create", testutil.IsContext, testutil.IsCoreV1NamespacePtr, mock.Anything).
+		Run(func(args mock.Arguments) {
+			ns := args.Get(1).(*corev1.Namespace)
+			assert.Equal(t, "bar", ns.Labels["foo"])
+			assert.Equal(t, "qux", ns.Labels["baz"])
+		}).
+		Return(nil)
+
+	r := &AddonReconciler{
+		Client: c,
+		Log:    testutil.NewLogger(t),
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
+	}
+
+	ctx := context.Background()
+	ensuredNamespace, err := r.ensureNamespaceWithLabels(ctx, addon, addon.Spec.Namespaces[0].Name, map[string]string{
+		"foo": "bar",
+		"baz": "qux",
+	})
+	c.AssertExpectations(t)
+	require.NoError(t, err)
+	require.NotNil(t, ensuredNamespace)
+}
+
 func TestReconcileNamespace_Create(t *testing.T) {
 	c := testutil.NewClient()
 	c.On("Get", testutil.IsContext, testutil.IsObjectKey, testutil.IsCoreV1NamespacePtr).Return(testutil.NewTestErrNotFound())

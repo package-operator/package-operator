@@ -53,9 +53,11 @@ func (s *integrationTestSuite) TearDownSuite() {
 
 func (s *integrationTestSuite) addonCleanup(addon *addonsv1alpha1.Addon,
 	ctx context.Context) {
+	s.T().Logf("waiting for addon %s to be deleted", addon.Name)
+
 	// delete Addon
 	err := integration.Client.Delete(ctx, addon, client.PropagationPolicy("Foreground"))
-	s.Require().NoError(err, "delete Addon: %v", addon)
+	s.Require().NoError(client.IgnoreNotFound(err), "delete Addon: %v", addon)
 
 	// wait until Addon is gone
 	err = integration.WaitToBeGone(s.T(), defaultAddonDeletionTimeout, addon)

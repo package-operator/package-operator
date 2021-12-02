@@ -21,10 +21,12 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,6 +40,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aoapis "github.com/openshift/addon-operator/apis"
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/internal/ocm"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
@@ -95,6 +98,7 @@ func init() {
 		operatorsv1.AddToScheme,
 		operatorsv1alpha1.AddToScheme,
 		configv1.AddToScheme,
+		monitoringv1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		panic(fmt.Errorf("could not load schemes: %w", err))
@@ -304,6 +308,40 @@ func WaitForObject(
 
 		return checkFn(object)
 	})
+}
+
+// Wait for an up-to-date condition value on an addon.
+// A condition is considered up-to-date when it's .ObservedGeneration
+// matches the generation of it's addon object.
+func WaitForFreshAddonCondition(
+	t *testing.T, timeout time.Duration,
+	a *addonsv1alpha1.Addon, conditionType string, conditionStatus metav1.ConditionStatus,
+) error {
+	return WaitForObject(
+		t, timeout, a, fmt.Sprintf("to be %s: %s", conditionType, conditionStatus),
+		func(obj client.Object) (done bool, err error) {
+			a := obj.(*addonsv1alpha1.Addon)
+			return isFreshStatusCondition(a, conditionType, conditionStatus), nil
+		})
+}
+
+// isFreshStatusCondition returns true when `conditionType` is present,
+// it's status matches `conditionStatus`
+// and `.ObservedGeneration` matches `addon.ObjectMeta.Generation`
+func isFreshStatusCondition(a *addonsv1alpha1.Addon, conditionType string, conditionStatus metav1.ConditionStatus) bool {
+	for _, condition := range a.Status.Conditions {
+		if condition.Type != conditionType {
+			continue
+		}
+
+		if condition.Status != conditionStatus {
+			return false
+		}
+
+		return condition.ObservedGeneration == a.GetGeneration()
+	}
+
+	return false
 }
 
 const (
