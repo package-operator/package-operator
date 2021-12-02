@@ -123,7 +123,7 @@ func (s *integrationTestSuite) Setup() {
 		})
 	}
 
-	s.Run("Addon Operator available", func() {
+	s.Run("AddonOperator available", func() {
 		addonOperator := addonsv1alpha1.AddonOperator{}
 
 		// Wait for API to be created
@@ -143,5 +143,25 @@ func (s *integrationTestSuite) Setup() {
 					a.Status.Conditions, addonsv1alpha1.Available), nil
 			})
 		s.Require().NoError(err)
+	})
+
+	s.Run("Patch AddonOperator with OCM mock configuration", func() {
+		addonOperator := &addonsv1alpha1.AddonOperator{}
+		if err := integration.Client.Get(ctx, client.ObjectKey{
+			Name: addonsv1alpha1.DefaultAddonOperatorName,
+		}, addonOperator); err != nil {
+			s.T().Fatalf("get AddonOperator object: %v", err)
+		}
+
+		addonOperator.Spec.OCM = &addonsv1alpha1.AddonOperatorOCM{
+			Endpoint: integration.OCMAPIEndpoint,
+			Secret: addonsv1alpha1.ClusterSecretReference{
+				Name:      "api-mock",
+				Namespace: "api-mock",
+			},
+		}
+		if err := integration.Client.Update(ctx, addonOperator); err != nil {
+			s.T().Fatalf("patch AddonOperator object: %v", err)
+		}
 	})
 }

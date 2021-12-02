@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
@@ -74,15 +73,12 @@ func (s *integrationTestSuite) TestAddonInstallSpec() {
 		s.Run(fmt.Sprintf("test case: %d", i), func() {
 			err := integration.Client.Create(ctx, tc.addon)
 
+			s.T().Cleanup(func() {
+				s.addonCleanup(tc.addon, ctx)
+			})
+
 			if err == nil {
 				s.Require().NoError(err)
-
-				// clean-up addon
-				err = integration.Client.Delete(ctx, tc.addon)
-				s.Require().NoError(err)
-
-				err = integration.WaitToBeGone(s.T(), 5*time.Minute, tc.addon)
-				s.Require().NoError(err, "wait for Addon to be deleted")
 			} else {
 				s.Assert().EqualValues(tc.err, err)
 			}
@@ -113,6 +109,10 @@ func (s *integrationTestSuite) TestAddonSpecImmutability() {
 	err := integration.Client.Create(ctx, addon)
 	s.Require().NoError(err)
 
+	s.T().Cleanup(func() {
+		s.addonCleanup(addon, ctx)
+	})
+
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		addon := &addonsv1alpha1.Addon{}
 		err := integration.Client.Get(ctx, client.ObjectKey{
@@ -129,7 +129,7 @@ func (s *integrationTestSuite) TestAddonSpecImmutability() {
 			Channel = "beta"
 
 		err = integration.Client.Update(ctx, addon)
-		expectedErr := testutil.NewStatusError(".spec.install.type is immutable")
+		expectedErr := testutil.NewStatusError(".spec.install is immutable, except for .catalogSourceImage")
 
 		// explicitly check error type as
 		// `Update` can return many different kinds of errors
@@ -140,5 +140,4 @@ func (s *integrationTestSuite) TestAddonSpecImmutability() {
 	})
 
 	s.Require().NoError(err)
-	s.addonCleanup(addon, ctx)
 }

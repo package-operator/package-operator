@@ -173,10 +173,17 @@ func getFileInfoFromPath(paths []string) ([]fileInfoMap, error) {
 // Load all k8s objects from .yaml files in config/deploy.
 // File/Object order is preserved.
 func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
-	paths := []string{PathConfigDeploy, PathOCMAPIMockDeploy}
+	paths := []string{PathConfigDeploy}
+
+	if testutil.IsApiMockEnabled() {
+		t.Log("api mock is enabled: deploying it")
+		paths = append(paths, PathOCMAPIMockDeploy)
+	}
 	if testutil.IsWebhookServerEnabled() {
+		t.Log("webhook server is enabled: deploying it")
 		paths = append(paths, PathWebhookConfigDeploy)
 	}
+
 	fileInfoMap, err := getFileInfoFromPath(paths)
 	require.NoError(t, err)
 

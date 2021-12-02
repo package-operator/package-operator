@@ -45,3 +45,8 @@ func IsWebhookServerEnabled() bool {
 	value, exists := os.LookupEnv("ENABLE_WEBHOOK")
 	return exists && value != "false"
 }
+
+func IsApiMockEnabled() bool {
+	value, exists := os.LookupEnv("ENABLE_API_MOCK")
+	return exists && value != "false"
+}

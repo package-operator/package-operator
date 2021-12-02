@@ -12,11 +12,9 @@ import (
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
-	"github.com/openshift/addon-operator/internal/ocm"
 )
 
 func (s *integrationTestSuite) TestAddon() {
-
 	ctx := context.Background()
 
 	addon := addon_OwnNamespace()
@@ -33,13 +31,6 @@ func (s *integrationTestSuite) TestAddon() {
 				a.Status.Conditions, addonsv1alpha1.Available), nil
 		})
 	s.Require().NoError(err)
-
-	s.Run("reports to upgrade policy endpoint", func() {
-		res, err := integration.OCMClient.GetUpgradePolicy(ctx, ocm.UpgradePolicyGetRequest{ID: addon.Spec.UpgradePolicy.ID})
-		s.Require().NoError(err)
-
-		s.Assert().Equal(ocm.UpgradePolicyValueCompleted, res.Value)
-	})
 
 	s.Run("test_namespaces", func() {
 

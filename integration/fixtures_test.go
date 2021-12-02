@@ -30,6 +30,38 @@ var (
 	defaultAddonAvailabilityTimeout = 10 * time.Minute
 )
 
+func addon_OwnNamespace_UpgradePolicyReporting() *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "addon-aefigh1x",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			DisplayName: "addon-aefigh1x",
+			Namespaces: []addonsv1alpha1.AddonNamespace{
+				{Name: "namespace-eecu3ou1"},
+				{Name: "namespace-jei9egh2"},
+			},
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						Namespace:          "namespace-eecu3ou1",
+						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+						Channel:            "alpha",
+						PackageName:        "reference-addon",
+						Config: &addonsv1alpha1.SubscriptionConfig{
+							EnvironmentVariables: referenceAddonConfigEnvObjects,
+						},
+					},
+				},
+			},
+			UpgradePolicy: &addonsv1alpha1.AddonUpgradePolicy{
+				ID: "123-456-789",
+			},
+		},
+	}
+}
+
 func addon_OwnNamespace() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: v1.ObjectMeta{
@@ -40,9 +72,6 @@ func addon_OwnNamespace() *addonsv1alpha1.Addon {
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-onbgdions"},
 				{Name: "namespace-pioghfndb"},
-			},
-			UpgradePolicy: &addonsv1alpha1.AddonUpgradePolicy{
-				ID: "123-456-789",
 			},
 			Install: addonsv1alpha1.AddonInstallSpec{
 				Type: addonsv1alpha1.OLMOwnNamespace,
