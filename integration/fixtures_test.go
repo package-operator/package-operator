@@ -27,7 +27,7 @@ var (
 	}
 
 	defaultAddonDeletionTimeout     = 2 * time.Minute
-	defaultAddonAvailabilityTimeout = 5 * time.Minute
+	defaultAddonAvailabilityTimeout = 10 * time.Minute
 )
 
 func addon_OwnNamespace() *addonsv1alpha1.Addon {

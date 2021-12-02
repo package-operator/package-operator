@@ -332,6 +332,7 @@ create-kind-cluster: $(KIND)
 	@(kubectl create -f config/ocp/cluster-version-operator_01_clusterversion.crd.yaml; \
 		kubectl create -f config/ocp/config-operator_01_proxy.crd.yaml; \
 		kubectl create -f config/ocp/cluster-version.yaml; \
+		kubectl create -f config/ocp/monitoring.coreos.com_servicemonitors.yaml; \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: create-kind-cluster

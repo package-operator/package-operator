@@ -80,10 +80,15 @@ func (r *AddonReconciler) ensureWantedNamespaces(
 
 // Ensure a single Namespace for the given Addon resource
 func (r *AddonReconciler) ensureNamespace(ctx context.Context, addon *addonsv1alpha1.Addon, name string) (*corev1.Namespace, error) {
+	return r.ensureNamespaceWithLabels(ctx, addon, name, map[string]string{})
+}
+
+// Ensure a single Namespace with a set of labels for the given Addon resource
+func (r *AddonReconciler) ensureNamespaceWithLabels(ctx context.Context, addon *addonsv1alpha1.Addon, name string, labels map[string]string) (*corev1.Namespace, error) {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
-			Labels: map[string]string{},
+			Labels: labels,
 		},
 	}
 	controllers.AddCommonLabels(namespace.Labels, addon)
@@ -117,7 +122,7 @@ func reconcileNamespace(ctx context.Context, c client.Client,
 	if len(currentNamespace.OwnerReferences) == 0 ||
 		!controllers.HasEqualControllerReference(currentNamespace, namespace) {
 
-		// TODO: remove this condition once resoureceAdoptionStrategy is discontinued
+		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
 		if strategy == addonsv1alpha1.ResourceAdoptionAdoptAll {
 			return namespace, c.Update(ctx, namespace)
 		}

@@ -26,6 +26,10 @@ func (r *AddonReconciler) ensureDeletionOfUnwantedNamespaces(
 		wantedNamespaceNames[namespace.Name] = struct{}{}
 	}
 
+	// Don't remove monitoring namespace as it will be handled
+	// separately by `phase_delete_unwanted_monitoring_federation`
+	wantedNamespaceNames[controllers.GetMonitoringNamespaceName(addon)] = struct{}{}
+
 	for _, namespace := range currentNamespaces {
 		_, isWanted := wantedNamespaceNames[namespace.Name]
 		if isWanted {
@@ -69,7 +73,7 @@ func getOwnedNamespacesViaCommonLabels(
 				Selector: selector,
 			}})
 		if err != nil {
-			return nil, fmt.Errorf("could not list owned namespaces: %w", err)
+			return nil, fmt.Errorf("could not list owned Namespaces: %w", err)
 		}
 	}
 

@@ -10,6 +10,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,6 +36,7 @@ func init() {
 	_ = operatorsv1.AddToScheme(scheme)
 	_ = operatorsv1alpha1.AddToScheme(scheme)
 	_ = configv1.AddToScheme(scheme)
+	_ = monitoringv1.AddToScheme(scheme)
 }
 
 type options struct {
