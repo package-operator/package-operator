@@ -255,12 +255,15 @@ test-integration:
 .PHONY: test-integration
 
 # legacy alias for CI/CD
-test-e2e: test-integration
+test-e2e: | \
+	config/deploy/deployment.yaml \
+	config/deploy/api-mock/deployment.yaml \
+	config/deploy/webhook/deployment.yaml \
+	test-integration
 .PHONY: test-e2e
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
-test-integration-short: config/deploy/deployment.yaml \
-	config/deploy/webhook/deployment.yaml
+test-integration-short:
 	@echo "running [short] integration tests..."
 	@go test -v -count=1 -short ./integration/...
 
