@@ -31,7 +31,7 @@ func (s *integrationTestSuite) Teardown() {
 			// Namespaces can take a long time to be cleaned up and
 			// there is no need to be specific about the object kind here
 			o := obj
-			s.Assert().NoError(integration.WaitToBeGone(s.T(), 5*time.Minute, &o))
+			s.Assert().NoError(integration.WaitToBeGone(s.T(), 10*time.Minute, &o))
 		}
 	})
 }
