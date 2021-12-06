@@ -151,6 +151,26 @@ spec:
           - watch
           - get
           - list
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - delete
+          - update
+          - watch
+          - get
+          - list
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - secrets
+          verbs:
+          - get
+          resourceNames:
+          - pull-secret
         serviceAccountName: addon-operator
       permissions:
       - rules:
