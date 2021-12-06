@@ -584,14 +584,15 @@ push-image-%: registry-login build-image-$$*
 	) 2>&1 | sed 's/^/  /'
 
 ## openshift release openshift-ci operator
-openshift-ci-test-build:
-	@rm -rf "manifests"
-	@rm -rf "metadata"
-	@mkdir -p "manifests";
-	@mkdir -p "metadata";
-	@cp -a "config/docker/addon-operator-bundle.Dockerfile" "addon-operator-bundle.Dockerfile";
-	@cp -a "config/olm/addon-operator.csv.tpl.yaml" "manifests/addon-operator.csv.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "manifests/addons.crd.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "manifests/addonoperators.crd.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "manifests/addoninstances.crd.yaml";
-	@cp -a "config/olm/annotations.yaml" "metadata";
+openshift-ci-test-build: \
+	clean-image-cache-addon-operator-bundle \
+	$(eval IMAGE_NAME := addon-operator-bundle)
+	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@mkdir -p ".cache/image/${IMAGE_NAME}/manifests";
+	@mkdir -p ".cache/image/${IMAGE_NAME}/metadata";
+	@cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/${IMAGE_NAME}.Dockerfile";
+	@cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata";
+	@cp -a "config/olm/addon-operator.csv.tpl.yaml" ".cache/image/${IMAGE_NAME}/manifests/addon-operator.csv.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addonoperators.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addoninstances.crd.yaml";

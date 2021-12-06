@@ -22,9 +22,4 @@ config/deploy/deployment.yaml
 config/deploy/webhook/deployment.yaml
 config/deploy/webhook/service.yaml
 config/olm/addon-operator.csv.yaml
-config/deploy/ocm-api-mock/deployment.yaml
 config/deploy/api-mock/deployment.yaml
-
-addon-operator-bundle.Dockerfile
-manifests/
-metadata/
