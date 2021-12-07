@@ -583,11 +583,12 @@ push-image-%: registry-login build-image-$$*
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 
+.SECONDEXPANSION:
 ## openshift release openshift-ci operator
 openshift-ci-test-build: \
 	clean-image-cache-addon-operator-bundle \
 	$(eval IMAGE_NAME := addon-operator-bundle)
-	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@echo "preparing files for ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
 	@mkdir -p ".cache/image/${IMAGE_NAME}/manifests";
 	@mkdir -p ".cache/image/${IMAGE_NAME}/metadata";
 	@cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/${IMAGE_NAME}.Dockerfile";
