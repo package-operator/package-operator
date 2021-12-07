@@ -176,11 +176,11 @@ func LoadObjectsFromDeploymentFiles(t *testing.T) []unstructured.Unstructured {
 	paths := []string{PathConfigDeploy}
 
 	if testutil.IsApiMockEnabled() {
-		t.Log("api mock is enabled: deploying it")
+		t.Log("api mock is enabled: loading manifests")
 		paths = append(paths, PathOCMAPIMockDeploy)
 	}
 	if testutil.IsWebhookServerEnabled() {
-		t.Log("webhook server is enabled: deploying it")
+		t.Log("webhook server is enabled: loading manifests")
 		paths = append(paths, PathWebhookConfigDeploy)
 	}
 
