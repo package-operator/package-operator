@@ -23,6 +23,10 @@ func (s *integrationTestSuite) TestUpgradePolicyReporting() {
 	err := integration.Client.Create(ctx, addon)
 	s.Require().NoError(err)
 
+	s.T().Cleanup(func() {
+		s.addonCleanup(addon, ctx)
+	})
+
 	// wait until Addon is available
 	err = integration.WaitForObject(
 		s.T(), defaultAddonAvailabilityTimeout, addon, "to be Available",
