@@ -110,9 +110,9 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, addon)
+				requeueResult, err := r.ensureOperatorGroup(ctx, log, addon)
 				require.NoError(t, err)
-				assert.False(t, stop)
+				assert.Equal(t, resultNil, requeueResult)
 
 				if c.AssertCalled(
 					t, "Create",
@@ -199,29 +199,16 @@ func TestEnsureOperatorGroup(t *testing.T) {
 					Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 				}
 
-				// Mock Setup
-				c.StatusMock.
-					On(
-						"Update",
-						mock.Anything,
-						mock.IsType(&addonsv1alpha1.Addon{}),
-						mock.Anything,
-					).
-					Return(nil)
-
 				// Test
 				ctx := context.Background()
-				stop, err := r.ensureOperatorGroup(ctx, log, test.addon)
+				requeueResult, err := r.ensureOperatorGroup(ctx, log, test.addon)
 				require.NoError(t, err)
-				assert.True(t, stop)
-
-				c.StatusMock.AssertCalled(
-					t, "Update", mock.Anything, test.addon, mock.Anything)
+				assert.Equal(t, resultStop, requeueResult)
 
 				availableCond := meta.FindStatusCondition(test.addon.Status.Conditions, addonsv1alpha1.Available)
 				if assert.NotNil(t, availableCond) {
 					assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
-					assert.Equal(t, "ConfigurationError", availableCond.Reason)
+					assert.Equal(t, addonsv1alpha1.AddonReasonConfigError, availableCond.Reason)
 				}
 			})
 		}
@@ -248,9 +235,9 @@ func TestEnsureOperatorGroup(t *testing.T) {
 
 		// Test
 		ctx := context.Background()
-		stop, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
+		requeueResult, err := r.ensureOperatorGroup(ctx, log, addonUnsupported.DeepCopy())
 		require.NoError(t, err)
-		assert.True(t, stop)
+		assert.Equal(t, resultStop, requeueResult)
 
 		// indirect sanity check
 		// nothing was called on the client and the method signals to stop

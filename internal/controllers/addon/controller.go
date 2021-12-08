@@ -137,42 +137,38 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
 	defer func() {
+		// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
 		if err != nil {
 			return
 		}
-
 		err = r.handleUpgradePolicyStatusReporting(ctx, log, addon)
+
+		// Finally, update the Status back to the kube-api
+		// This is the only place where Status is being reported.
+		if err != nil {
+			return
+		}
+		err = r.Status().Update(ctx, addon)
 	}()
 
 	// check for global pause
 	r.globalPauseMux.RLock()
 	defer r.globalPauseMux.RUnlock()
 	if r.globalPause {
-		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonOperatorReasonPaused,
-			addon)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		reportAddonPauseStatus(addon, addonsv1alpha1.AddonOperatorReasonPaused)
 		// TODO: figure out how we can continue to report status
 		return ctrl.Result{}, nil
 	}
 
 	// check for Addon pause
 	if addon.Spec.Paused {
-		err = r.reportAddonPauseStatus(ctx, addonsv1alpha1.AddonReasonPaused,
-			addon)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		reportAddonPauseStatus(addon, addonsv1alpha1.AddonReasonPaused)
 		return ctrl.Result{}, nil
 	}
 
 	// Make sure Pause condition is removed
-	if err := r.removeAddonPauseCondition(ctx, addon); err != nil {
-		return ctrl.Result{}, err
-	}
+	r.removeAddonPauseCondition(addon)
 
 	if !addon.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
@@ -189,12 +185,10 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 1.
 	// Ensure wanted namespaces
-	if stopAndRetry, err := r.ensureWantedNamespaces(ctx, addon); err != nil {
+	if requeueResult, err := r.ensureWantedNamespaces(ctx, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure wanted Namespaces: %w", err)
-	} else if stopAndRetry {
-		return ctrl.Result{
-			RequeueAfter: defaultRetryAfterTime,
-		}, nil
+	} else if requeueResult != resultNil {
+		return r.handleExit(requeueResult), nil
 	}
 
 	// Phase 2.
@@ -211,49 +205,40 @@ func (r *AddonReconciler) Reconcile(
 
 	// Phase 4.
 	// Ensure OperatorGroup
-	if stop, err := r.ensureOperatorGroup(ctx, log, addon); err != nil {
+	if requeueResult, err := r.ensureOperatorGroup(ctx, log, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure OperatorGroup: %w", err)
-	} else if stop {
-		return ctrl.Result{}, nil
+	} else if requeueResult != resultNil {
+		return r.handleExit(requeueResult), nil
 	}
 
 	// Phase 5.
-	ensureResult, catalogSource, err := r.ensureCatalogSource(ctx, log, addon)
-	if err != nil {
+	var (
+		catalogSource *operatorsv1alpha1.CatalogSource
+		requeueResult requeueResult
+	)
+	if requeueResult, catalogSource, err = r.ensureCatalogSource(ctx, log, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure CatalogSource: %w", err)
-	}
-	switch ensureResult {
-	case ensureCatalogSourceResultRetry:
-		log.Info("requeuing", "reason", "catalogsource unready")
-		return ctrl.Result{
-			RequeueAfter: defaultRetryAfterTime,
-		}, nil
-	case ensureCatalogSourceResultStop:
-		return ctrl.Result{}, nil
+	} else if requeueResult != resultNil {
+		return r.handleExit(requeueResult), nil
 	}
 
 	// Phase 6.
 	// Ensure Subscription for this Addon.
-	currentCSVKey, requeue, err := r.ensureSubscription(
+	requeueResult, currentCSVKey, err := r.ensureSubscription(
 		ctx, log.WithName("phase-ensure-subscription"),
 		addon, catalogSource)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Subscription: %w", err)
-	} else if requeue {
-		return ctrl.Result{
-			RequeueAfter: defaultRetryAfterTime,
-		}, nil
+	} else if requeueResult != resultNil {
+		return r.handleExit(requeueResult), nil
 	}
 
 	// Phase 7.
 	// Observe current csv
-	if requeue, err := r.observeCurrentCSV(ctx, addon, currentCSVKey); err != nil {
+	if requeueResult, err := r.observeCurrentCSV(ctx, addon, currentCSVKey); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to observe current CSV: %w", err)
-	} else if requeue {
-		log.Info("requeuing", "reason", "csv unready")
-		return ctrl.Result{
-			RequeueAfter: defaultRetryAfterTime,
-		}, nil
+	} else if requeueResult != resultNil {
+		return r.handleExit(requeueResult), nil
 	}
 
 	// Phase 7.
@@ -276,9 +261,6 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	// After last phase and if everything is healthy
-	if err = r.reportReadinessStatus(ctx, addon); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to report readiness status: %w", err)
-	}
-
+	reportReadinessStatus(addon)
 	return ctrl.Result{}, nil
 }

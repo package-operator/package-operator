@@ -98,11 +98,6 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
 		mock.Anything,
 	).Return(nil)
-	c.StatusMock.On("Update",
-		testutil.IsContext,
-		testutil.IsAddonsv1alpha1AddonPtr,
-		mock.Anything,
-	).Return(nil)
 
 	ctx := context.Background()
 	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy())
@@ -140,9 +135,9 @@ func TestEnsureCatalogSource_Create(t *testing.T) {
 	log := testutil.NewLogger(t)
 
 	ctx := context.Background()
-	ensureResult, _, err := r.ensureCatalogSource(ctx, log, addon)
+	requeueResult, _, err := r.ensureCatalogSource(ctx, log, addon)
 	assert.NoError(t, err)
-	assert.Equal(t, ensureCatalogSourceResultNil, ensureResult)
+	assert.Equal(t, resultNil, requeueResult)
 	c.AssertExpectations(t)
 }
 
@@ -175,9 +170,9 @@ func TestEnsureCatalogSource_Update(t *testing.T) {
 	log := testutil.NewLogger(t)
 
 	ctx := context.Background()
-	ensureResult, _, err := r.ensureCatalogSource(ctx, log, addon)
+	requeueResult, _, err := r.ensureCatalogSource(ctx, log, addon)
 	assert.NoError(t, err)
-	assert.Equal(t, ensureCatalogSourceResultNil, ensureResult)
+	assert.Equal(t, resultNil, requeueResult)
 	c.AssertExpectations(t)
 	c.AssertNumberOfCalls(t, "Get", 1)
 	c.AssertNumberOfCalls(t, "Update", 1)

@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
@@ -16,10 +14,10 @@ func (r *AddonReconciler) observeCurrentCSV(
 	ctx context.Context,
 	addon *addonsv1alpha1.Addon,
 	csvKey client.ObjectKey,
-) (requeue bool, err error) {
+) (requeueResult, error) {
 	csv := &operatorsv1alpha1.ClusterServiceVersion{}
 	if err := r.Get(ctx, csvKey, csv); err != nil {
-		return false, fmt.Errorf("getting installed CSV: %w", err)
+		return resultNil, fmt.Errorf("getting installed CSV: %w", err)
 	}
 
 	var message string
@@ -33,19 +31,9 @@ func (r *AddonReconciler) observeCurrentCSV(
 	}
 
 	if message != "" {
-		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-			Type:   addonsv1alpha1.Available,
-			Status: metav1.ConditionFalse,
-			Reason: addonsv1alpha1.AddonReasonUnreadyCSV,
-			Message: fmt.Sprintf(
-				"ClusterServiceVersion is not ready: %s",
-				message),
-			ObservedGeneration: addon.Generation,
-		})
-		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.PhasePending
-		return true, r.Status().Update(ctx, addon)
+		reportUnreadyCSV(addon, message)
+		return resultRetry, nil
 	}
 
-	return false, nil
+	return resultNil, nil
 }

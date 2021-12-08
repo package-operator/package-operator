@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -225,7 +226,7 @@ func TestEnsureAddonInstance(t *testing.T) {
 			},
 		}
 
-		for _, test := range tests {
+		for i, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
 				log := testutil.NewLogger(t)
 				c := testutil.NewClient()
@@ -234,20 +235,21 @@ func TestEnsureAddonInstance(t *testing.T) {
 					Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 				}
 
-				// Mock Setup
-				c.StatusMock.
-					On(
-						"Update",
-						mock.Anything,
-						mock.IsType(&addonsv1alpha1.Addon{}),
-						mock.Anything,
-					).
-					Return(nil)
-
 				// Test
 				ctx := context.Background()
 				err := r.ensureAddonInstance(ctx, log, test.addon)
 				require.EqualError(t, err, "failed to create addonInstance due to misconfigured install.spec.type")
+
+				// check Addon Status
+				// skip the first test case
+				if i > 0 {
+					availableCond := meta.FindStatusCondition(test.addon.Status.Conditions, addonsv1alpha1.Available)
+					if assert.NotNil(t, availableCond) {
+						assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
+						assert.Equal(t, addonsv1alpha1.AddonReasonConfigError, availableCond.Reason)
+					}
+				}
+
 			})
 		}
 	})

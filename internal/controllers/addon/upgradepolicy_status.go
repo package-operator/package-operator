@@ -60,9 +60,6 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 			Value:              addonsv1alpha1.AddonUpgradePolicyValueStarted,
 			ObservedGeneration: addon.Generation,
 		}
-		if err := r.Status().Update(ctx, addon); err != nil {
-			return fmt.Errorf("updating Addon status: %w", err)
-		}
 		return nil
 	}
 
@@ -86,9 +83,6 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 		ID:                 addon.Spec.UpgradePolicy.ID,
 		Value:              addonsv1alpha1.AddonUpgradePolicyValueCompleted,
 		ObservedGeneration: addon.Generation,
-	}
-	if err := r.Status().Update(ctx, addon); err != nil {
-		return fmt.Errorf("updating Addon status: %w", err)
 	}
 	return nil
 }
