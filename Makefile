@@ -40,6 +40,7 @@ export KUBECONFIG?=$(abspath $(KIND_KUBECONFIG))
 export GOLANGCI_LINT_CACHE=$(abspath .cache/golangci-lint)
 export SKIP_TEARDOWN?=
 KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
+ENABLE_API_MOCK?="false"
 ENABLE_WEBHOOK?="false"
 WEBHOOK_PORT?=8080
 
@@ -246,29 +247,35 @@ test-unit: generate
 .PHONY: test-unit
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster
-test-integration: config/deploy/deployment.yaml \
-	config/deploy/webhook/deployment.yaml \
-	config/deploy/api-mock/deployment.yaml
+test-integration: export ENABLE_WEBHOOK=true
+test-integration: export ENABLE_API_MOCK=true
+test-integration:
 	@echo "running integration tests..."
 	@go test -v -count=1 -timeout=20m ./integration/...
 .PHONY: test-integration
 
 # legacy alias for CI/CD
-test-e2e: ENABLE_WEBHOOK?=true
-test-e2e: test-integration
+test-e2e: | \
+	config/deploy/deployment.yaml \
+	config/deploy/api-mock/deployment.yaml \
+	config/deploy/webhook/deployment.yaml \
+	test-integration
 .PHONY: test-e2e
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster. Skips operator setup and teardown.
-test-integration-short: config/deploy/deployment.yaml \
-	config/deploy/webhook/deployment.yaml
+test-integration-short:
 	@echo "running [short] integration tests..."
 	@go test -v -count=1 -short ./integration/...
 
 # make sure that we install our components into the kind cluster and disregard normal $KUBECONFIG
 test-integration-local: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 ## Setup a local dev environment and execute the full integration testsuite against it.
-test-integration-local: | dev-setup load-addon-operator \
-	load-addon-operator-webhook test-integration
+test-integration-local: | \
+	dev-setup \
+	prepare-addon-operator \
+	prepare-addon-operator-webhook \
+	prepare-api-mock \
+	test-integration
 .PHONY: test-integration-local
 
 # -------------------------
@@ -300,8 +307,7 @@ dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
-	setup-okd-console \
-	setup-api-mock
+	setup-okd-console
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -370,6 +376,24 @@ setup-okd-console:
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-okd-console
 
+## Loads the OCM API Mock into the currently selected cluster.
+prepare-api-mock: \
+	load-api-mock \
+	config/deploy/api-mock/deployment.yaml
+.PHONY: prepare-api-mock
+
+## Loads the Addon Operator Webhook into the currently selected cluster.
+prepare-addon-operator-webhook: \
+	load-addon-operator-webhook \
+	config/deploy/webhook/deployment.yaml
+.PHONY: prepare-addon-operator-webhook
+
+## Loads the Addon Operator into the currently selected cluster.
+prepare-addon-operator: \
+	load-addon-operator \
+	config/deploy/deployment.yaml
+.PHONY: prepare-addon-operator
+
 ## Load Addon Operator images into kind
 load-addon-operator: build-image-addon-operator-manager
 	@source hack/determine-container-runtime.sh; \
@@ -411,10 +435,8 @@ config/deploy/webhook/deployment.yaml: FORCE $(YQ)
 	@yq eval '.spec.ports[0].targetPort = $(WEBHOOK_PORT)' \
 	config/deploy/webhook/service.yaml.tpl > config/deploy/webhook/service.yaml
 
-
 ## Loads and installs the Addon Operator into the currently selected cluster.
-setup-addon-operator: load-addon-operator \
-	config/deploy/deployment.yaml
+setup-addon-operator: prepare-addon-operator
 	@echo "installing Addon Operator $(VERSION)..."
 	@(source hack/determine-container-runtime.sh; \
 		kubectl apply -f config/deploy; \
@@ -423,37 +445,12 @@ setup-addon-operator: load-addon-operator \
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 ifneq ($(ENABLE_WEBHOOK), "false")
-	@make setup-addon-operator-webhook
+	@make prepare-addon-operator-webhook
+endif
+ifneq ($(ENABLE_API_MOCK), "false")
+	@make prepare-api-mock
 endif
 .PHONY: setup-addon-operator
-
-## Loads and installs the OCM API Mock into the currently selected cluster.
-setup-api-mock: load-api-mock \
-	config/deploy/api-mock/deployment.yaml
-	@echo "installing api-mock $(VERSION)..."
-	@(source hack/determine-container-runtime.sh; \
-		kubectl apply -f config/deploy/api-mock; \
-		echo -e "\nwaiting for deployment/api-mock..."; \
-		kubectl wait --for=condition=available deployment/api-mock -n api-mock --timeout=240s; \
-		echo; \
-	) 2>&1 | sed 's/^/  /'
-.PHONY: setup-api-mock
-
-## Loads and installs the Addon Operator Webhook into the currently selected cluster.
-setup-addon-operator-webhook: $(YQ) load-addon-operator-webhook \
-	config/deploy/webhook/deployment.yaml
-	@echo "setting up TLS cert..."
-	@kubectl apply -f \
-		config/deploy/webhook/00-tls-secret.yaml
-	@echo "installing Addon Operator $(VERSION)..."
-	@(source hack/determine-container-runtime.sh; \
-		kubectl apply -f config/deploy/webhook/deployment.yaml; \
-		echo -e "\nwaiting for deployment/addon-operator-webhook..."; \
-		kubectl wait --for=condition=available deployment/addon-operator-webhook -n addon-operator --timeout=240s; \
-		kubectl apply -f config/deploy/webhook/service.yaml; \
-		kubectl apply -f config/deploy/webhook/validatingwebhookconfig.yaml; \
-		echo; \
-	) 2>&1 | sed 's/^/  /'
 
 ## Installs Addon Operator CRDs in to the currently selected cluster.
 setup-addon-operator-crds: generate
