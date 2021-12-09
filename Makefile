@@ -553,17 +553,17 @@ app-interface-push-images:
 
 ## openshift release openshift-ci operator
 openshift-ci-test-build: \
-	clean-image-cache-addon-operator-bundle \
+	clean-config-openshift \
 	$(eval IMAGE_NAME := addon-operator-bundle)
-	@echo "preparing files for ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
-	@mkdir -p ".cache/image/${IMAGE_NAME}/manifests";
-	@mkdir -p ".cache/image/${IMAGE_NAME}/metadata";
-	@cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/${IMAGE_NAME}.Dockerfile";
-	@cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata";
-	@cp -a "config/olm/addon-operator.csv.tpl.yaml" ".cache/image/${IMAGE_NAME}/manifests/addon-operator.csv.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addonoperators.crd.yaml";
-	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addoninstances.crd.yaml";
+	@echo "preparing files for config/openshift ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
+	@mkdir -p "config/openshift/manifests";
+	@mkdir -p "config/openshift/metadata";
+	@cp -a "config/docker/${IMAGE_NAME}.Dockerfile" "config/openshift/${IMAGE_NAME}.Dockerfile";
+	@cp -a "config/olm/annotations.yaml" "config/openshift/metadata";
+	@cp -a "config/olm/addon-operator.csv.tpl.yaml" "config/openshift/manifests/addon-operator.csv.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "config/openshift/manifests/addons.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "config/openshift/manifests/addonoperators.crd.yaml";
+	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "config/openshift/manifests/addoninstances.crd.yaml";
 
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
@@ -571,6 +571,10 @@ clean-image-cache-%:
 	@rm -rf ".cache/image/$*" ".cache/image/$*.tar"
 	@mkdir -p ".cache/image/$*"
 
+# cleans the config/openshift folder for addon-operator-bundle openshift test folder
+clean-config-openshift:
+	@rm -rf "config/openshift/*"
+	
 ## Builds config/docker/%.Dockerfile using a binary build from cmd/%.
 build-image-%: bin/linux_amd64/$$*
 	@echo "building image ${IMAGE_ORG}/$*:${VERSION}..."
