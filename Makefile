@@ -188,7 +188,7 @@ tidy:
 # ------------
 
 ## Generate deepcopy code, kubernetes manifests and docs.
-generate: generate-code generate-docs
+generate: generate-code generate-docs openshift-ci-test-build
 
 generate-code: $(CONTROLLER_GEN)
 	@echo "generating kubernetes manifests..."
