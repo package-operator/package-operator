@@ -1,0 +1,356 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: addons.addons.managed.openshift.io
+spec:
+  group: addons.managed.openshift.io
+  names:
+    kind: Addon
+    listKind: AddonList
+    plural: addons
+    singular: addon
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: "Addon is the Schema for the Addons API \n **Example** ```yaml
+          apiVersion: addons.managed.openshift.io/v1alpha1 kind: Addon metadata:   name:
+          reference-addon spec:   displayName: An amazing example addon!   namespaces:
+          \  - name: reference-addon   install:     type: OLMOwnNamespace     olmOwnNamespace:
+          \      namespace: reference-addon       packageName: reference-addon       channel:
+          alpha       catalogSourceImage: quay.io/osd-addons/reference-addon-index@sha256:58cb1c4478a150dc44e6c179d709726516d84db46e4e130a5227d8b76456b5bd
+          ```"
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AddonSpec defines the desired state of Addon.
+            properties:
+              displayName:
+                description: Human readable name for this addon.
+                minLength: 1
+                type: string
+              install:
+                description: Defines how an Addon is installed. This field is immutable.
+                properties:
+                  olmAllNamespaces:
+                    description: OLMAllNamespaces config parameters. Present only
+                      if Type = OLMAllNamespaces.
+                    properties:
+                      catalogSourceImage:
+                        description: Defines the CatalogSource image.
+                        minLength: 1
+                        type: string
+                      channel:
+                        description: Channel for the Subscription object.
+                        minLength: 1
+                        type: string
+                      config:
+                        description: Configs to be passed to subscription OLM object
+                        properties:
+                          env:
+                            description: Array of env variables to be passed to the
+                              subscription object.
+                            items:
+                              properties:
+                                name:
+                                  description: Name of the environment variable
+                                  minLength: 1
+                                  type: string
+                                value:
+                                  description: Value of the environment variable
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                        required:
+                        - env
+                        type: object
+                      namespace:
+                        description: Namespace to install the Addon into.
+                        minLength: 1
+                        type: string
+                      packageName:
+                        description: Name of the package to install via OLM. OLM will
+                          resove this package name to install the matching bundle.
+                        minLength: 1
+                        type: string
+                    required:
+                    - catalogSourceImage
+                    - channel
+                    - namespace
+                    - packageName
+                    type: object
+                  olmOwnNamespace:
+                    description: OLMOwnNamespace config parameters. Present only if
+                      Type = OLMOwnNamespace.
+                    properties:
+                      catalogSourceImage:
+                        description: Defines the CatalogSource image.
+                        minLength: 1
+                        type: string
+                      channel:
+                        description: Channel for the Subscription object.
+                        minLength: 1
+                        type: string
+                      config:
+                        description: Configs to be passed to subscription OLM object
+                        properties:
+                          env:
+                            description: Array of env variables to be passed to the
+                              subscription object.
+                            items:
+                              properties:
+                                name:
+                                  description: Name of the environment variable
+                                  minLength: 1
+                                  type: string
+                                value:
+                                  description: Value of the environment variable
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                        required:
+                        - env
+                        type: object
+                      namespace:
+                        description: Namespace to install the Addon into.
+                        minLength: 1
+                        type: string
+                      packageName:
+                        description: Name of the package to install via OLM. OLM will
+                          resove this package name to install the matching bundle.
+                        minLength: 1
+                        type: string
+                    required:
+                    - catalogSourceImage
+                    - channel
+                    - namespace
+                    - packageName
+                    type: object
+                  type:
+                    description: Type of installation.
+                    enum:
+                    - OLMOwnNamespace
+                    - OLMAllNamespaces
+                    type: string
+                required:
+                - type
+                type: object
+              monitoring:
+                description: Defines how an addon is monitored.
+                properties:
+                  federation:
+                    description: Configuration parameters to be injected in the ServiceMonitor
+                      used for federation. The target prometheus server found by matchLabels
+                      needs to serve service-ca signed TLS traffic (https://docs.openshift.com/container-platform/4.6/security/certificate_types_descriptions/service-ca-certificates.html),
+                      and it needs to be runing inside the namespace specified by
+                      `.monitoring.federation.namespace` with the service name 'prometheus'.
+                    properties:
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: List of labels used to discover the prometheus
+                          server(s) to be federated.
+                        minProperties: 1
+                        type: object
+                      matchNames:
+                        description: List of series names to federate from the prometheus
+                          server.
+                        items:
+                          type: string
+                        type: array
+                      namespace:
+                        description: Namespace where the prometheus server is running.
+                        minLength: 1
+                        type: string
+                    required:
+                    - matchLabels
+                    - matchNames
+                    - namespace
+                    type: object
+                type: object
+              namespaces:
+                description: Defines a list of Kubernetes Namespaces that belong to
+                  this Addon. Namespaces listed here will be created prior to installation
+                  of the Addon and will be removed from the cluster when the Addon
+                  is deleted. Collisions with existing Namespaces are NOT allowed.
+                items:
+                  properties:
+                    name:
+                      description: Name of the KubernetesNamespace.
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              pause:
+                description: Pause reconciliation of Addon when set to True
+                type: boolean
+              resourceAdoptionStrategy:
+                description: 'ResourceAdoptionStrategy coordinates resource adoption
+                  for an Addon Originally introduced for coordinating fleetwide migration
+                  on OSD with pre-existing OLM objects. NOTE: This field is for internal
+                  usage only and not to be modified by the user.'
+                enum:
+                - Prevent
+                - AdoptAll
+                type: string
+              upgradePolicy:
+                description: UpgradePolicy enables status reporting via upgrade policies.
+                properties:
+                  id:
+                    description: Upgrade policy id.
+                    type: string
+                required:
+                - id
+                type: object
+            required:
+            - displayName
+            - install
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: AddonStatus defines the observed state of Addon
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{     // Represents the observations of a
+                    foo's current state.     // Known .status.conditions.type are:
+                    \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
+                    \    // +patchStrategy=merge     // +listType=map     // +listMapKey=type
+                    \    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
+                    \n     // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              observedGeneration:
+                description: The most recent generation observed by the controller.
+                format: int64
+                type: integer
+              phase:
+                description: 'DEPRECATED: This field is not part of any API contract
+                  it will go away as soon as kubectl can print conditions! Human readable
+                  status - please use .Conditions from code'
+                type: string
+              upgradePolicy:
+                description: Tracks last reported upgrade policy status.
+                properties:
+                  id:
+                    description: Upgrade policy id.
+                    type: string
+                  observedGeneration:
+                    description: The most recent generation a status update was based
+                      on.
+                    format: int64
+                    type: integer
+                  value:
+                    description: Upgrade policy value.
+                    type: string
+                required:
+                - id
+                - observedGeneration
+                - value
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
