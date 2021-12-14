@@ -24,6 +24,7 @@ LD_FLAGS=-X $(MODULE)/internal/version.Version=$(VERSION) \
 			-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
 
 UNAME_OS:=$(shell uname -s)
+UNAME_OS_LOWER:=$(shell uname -s | awk '{ print tolower($0); }') # UNAME_OS but in lower case
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
@@ -178,6 +179,25 @@ $(OPM):
 		&& echo
 	@(echo; command -v opm; opm version; echo) | sed 's/^/  /'
 
+HELM:=$(DEPENDENCY_VERSIONS)/helm/$(HELM_VERSION)
+$(HELM):
+	@echo "installing helm ${HELM_VERSION}"
+	$(eval HELM_TMP = $(shell mktemp -d))
+	@(cd "$(HELM_TMP)"; \
+		curl -L --fail \
+		https://get.helm.sh/helm-$(HELM_VERSION)-$(UNAME_OS_LOWER)-amd64.tar.gz -o helm.tar.gz; \
+		tar xvf helm.tar.gz; \
+		cp $(UNAME_OS_LOWER)-amd64/helm helm; \
+		chmod +x helm; \
+		mv helm $(DEPENDENCY_BIN); \
+	) 2>&1 | sed 's/^/  /'
+	@rm -rf "$(HELM_TMP)" "$(dir $(HELM))" \
+		&& mkdir -p "$(dir $(HELM))" \
+		&& touch "$(HELM)" \
+		&& echo
+	@(echo; command -v helm; helm version; echo) | sed 's/^/  /'
+
+
 ## Run go mod tidy in all go modules
 tidy:
 	@cd apis; go mod tidy
@@ -307,7 +327,8 @@ dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
-	setup-okd-console
+	setup-okd-console \
+	setup-monitoring
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -375,6 +396,14 @@ setup-okd-console:
 		echo; \
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-okd-console
+
+## Setup Prometheus Kubernetes stack
+setup-monitoring: $(HELM)
+	@(kubectl create ns monitoring)
+	@(helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring \
+     --set grafana.enabled=false \
+     --set kubeStateMetrics.enabled=false \
+     --set nodeExporter.enabled=false)
 
 ## Loads the OCM API Mock into the currently selected cluster.
 prepare-api-mock: \
