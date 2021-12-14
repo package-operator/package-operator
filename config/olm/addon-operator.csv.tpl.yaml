@@ -152,6 +152,14 @@ spec:
           - get
           - list
         - apiGroups:
+          - config.openshift.io
+          resources:
+          - clusterversions
+          verbs:
+          - watch
+          - get
+          - list
+        - apiGroups:
           - monitoring.coreos.com
           resources:
           - servicemonitors
