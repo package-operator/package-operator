@@ -41,7 +41,7 @@ func NewRecorder() *Recorder {
 	addonsTotal := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: prefixedMetricName("addons_total"),
-			Help: "Total number of Addon instances",
+			Help: "Total number of Addon installations",
 		}, []string{})
 
 	// Register metrics
