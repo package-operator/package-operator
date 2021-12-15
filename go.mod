@@ -9,6 +9,7 @@ require (
 	github.com/openshift/api v0.0.0-20211122204231-b094ceff1955
 	github.com/operator-framework/api v0.8.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.51.2
+	github.com/prometheus/client_golang v1.11.0
 	github.com/stretchr/testify v1.7.0
 	k8s.io/api v0.22.4
 	k8s.io/apiextensions-apiserver v0.22.2

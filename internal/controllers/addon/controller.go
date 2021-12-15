@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	"github.com/go-logr/logr"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -32,8 +34,9 @@ const (
 
 type AddonReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	Recorder *metrics.Recorder
 
 	csvEventHandler csvEventHandler
 	globalPause     bool
@@ -138,6 +141,9 @@ func (r *AddonReconciler) Reconcile(
 	}
 
 	defer func() {
+		// Update metrics
+		r.Recorder.UpdateConditionMetrics(addon)
+
 		// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
 		if err != nil {
 			return

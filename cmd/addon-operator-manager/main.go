@@ -7,6 +7,8 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -71,10 +73,12 @@ func initReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
+	recorder := metrics.NewRecorder()
 	addonReconciler := &addoncontroller.AddonReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("Addon"),
+		Scheme:   mgr.GetScheme(),
+		Recorder: recorder,
 	}
 
 	if err := addonReconciler.SetupWithManager(mgr); err != nil {
