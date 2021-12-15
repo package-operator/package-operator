@@ -583,7 +583,6 @@ build-image-%: bin/linux_amd64/$$*
 		mkdir -p ".cache/image/$*"; \
 		cp -a "bin/linux_amd64/$*" ".cache/image/$*"; \
 		cp -a "config/docker/$*.Dockerfile" ".cache/image/$*/Dockerfile"; \
-		cp -a "config/docker/passwd" ".cache/image/$*/passwd"; \
 		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/$*:${VERSION}" ".cache/image/$*"; \
 		$$CONTAINER_COMMAND image save -o ".cache/image/$*.tar" "${IMAGE_ORG}/$*:${VERSION}"; \
 		echo; \
