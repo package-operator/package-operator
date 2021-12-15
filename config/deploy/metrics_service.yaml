@@ -1,0 +1,31 @@
+# To be used for local development and testing only
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: addon-operator-metrics
+  namespace: addon-operator
+  labels:
+    app: addon-operator-metrics-service
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: addon-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: addon-operator-servicemonitor
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: addon-operator-metrics-service
+  endpoints:
+    - port: 8080
+      interval: 10s
+---
