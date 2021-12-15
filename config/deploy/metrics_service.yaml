@@ -10,6 +10,7 @@ metadata:
 spec:
   ports:
     - port: 8080
+      name: metrics
       targetPort: 8080
   selector:
     app.kubernetes.io/name: addon-operator
@@ -22,10 +23,14 @@ metadata:
   labels:
     release: prometheus
 spec:
+  namespaceSelector:
+    matchNames:
+      - addon-operator
   selector:
     matchLabels:
       app: addon-operator-metrics-service
   endpoints:
-    - port: 8080
+    - port: metrics
       interval: 10s
+      path: /metrics
 ---
