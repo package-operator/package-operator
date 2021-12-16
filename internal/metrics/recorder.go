@@ -11,12 +11,6 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
-const prefix = "addon_operator_"
-
-func prefixedMetricName(name string) string {
-	return fmt.Sprintf("%s%s", prefix, name)
-}
-
 // Recorder stores all Addon related metrics
 type Recorder struct {
 	addonsTotalAvailable *prometheus.GaugeVec
@@ -29,26 +23,26 @@ type Recorder struct {
 func NewRecorder() *Recorder {
 	addonsAvailable := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: prefixedMetricName("addons_available"),
+			Name: "addon_operator_addons_available",
 			Help: "Total number of Addons available",
 		}, []string{})
 
 	addonsPaused := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: prefixedMetricName("addons_paused"),
+			Name: "addon_operator_addons_paused",
 			Help: "Total number of Addons paused",
 		}, []string{})
 
 	addonsTotal := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: prefixedMetricName("addons_total"),
+			Name: "addon_operator_addons_total",
 			Help: "Total number of Addon installations",
 		}, []string{})
 
 	addonOperatorPaused := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: prefixedMetricName("paused"),
-			Help: "Tells if the AddonOperator is paused",
+			Name: "addon_operator_paused",
+			Help: "A boolean that tells if the AddonOperator is paused",
 		}, []string{})
 
 	// Register metrics
