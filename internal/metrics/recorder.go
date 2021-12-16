@@ -19,9 +19,11 @@ func prefixedMetricName(name string) string {
 
 // Recorder stores all Addon related metrics
 type Recorder struct {
-	addonsAvailable *prometheus.GaugeVec
-	addonsPaused    *prometheus.GaugeVec
-	addonsTotal     *prometheus.GaugeVec
+	addonsTotalAvailable *prometheus.GaugeVec
+	addonsTotalPaused    *prometheus.GaugeVec
+	addonsTotal          *prometheus.GaugeVec
+	// 0 - Not paused , 1 - Paused
+	addonOperatorPaused *prometheus.GaugeVec
 	// .. TODO: More metrics!
 }
 
@@ -44,37 +46,104 @@ func NewRecorder() *Recorder {
 			Help: "Total number of Addon installations",
 		}, []string{})
 
+	addonOperatorPaused := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: prefixedMetricName("paused"),
+			Help: "Tells if the AddonOperator is paused",
+		}, []string{})
+
 	// Register metrics
 	ctrlmetrics.Registry.MustRegister(
 		addonsTotal,
 		addonsAvailable,
 		addonsPaused,
+		addonOperatorPaused,
 	)
 
 	return &Recorder{
-		addonsTotal:     addonsTotal,
-		addonsAvailable: addonsAvailable,
-		addonsPaused:    addonsPaused,
+		addonsTotal:          addonsTotal,
+		addonsTotalAvailable: addonsAvailable,
+		addonsTotalPaused:    addonsPaused,
+		addonOperatorPaused:  addonOperatorPaused,
 	}
 }
 
-func (r *Recorder) increaseAvailableCount() {
-	r.addonsAvailable.WithLabelValues().Inc()
+func (r *Recorder) increaseAvailableAddonsCount() {
+	r.addonsTotalAvailable.WithLabelValues().Inc()
 }
 
-func (r *Recorder) decreaseAvailableCount() {
-	r.addonsAvailable.WithLabelValues().Dec()
+func (r *Recorder) decreaseAvailableAddonsCount() {
+	r.addonsTotalAvailable.WithLabelValues().Dec()
 }
 
-func (r *Recorder) increasePausedCount() {
-	r.addonsPaused.WithLabelValues().Inc()
+func (r *Recorder) increasePausedAddonsCount() {
+	r.addonsTotalPaused.WithLabelValues().Inc()
 }
 
-func (r *Recorder) decreasePausedCount() {
-	r.addonsPaused.WithLabelValues().Dec()
+func (r *Recorder) decreasePausedAddonsCount() {
+	r.addonsTotalPaused.WithLabelValues().Dec()
 }
 
-func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) {
+func (r *Recorder) increaseTotalAddonsCount() {
+	r.addonsTotal.WithLabelValues().Inc()
+}
+
+func (r *Recorder) decreaseTotalAddonsCount() {
+	r.addonsTotal.WithLabelValues().Dec()
+}
+
+func (r *Recorder) SetAddonOperatorPaused(paused bool) {
+	if paused {
+		r.addonOperatorPaused.WithLabelValues().Set(1)
+	} else {
+		r.addonOperatorPaused.WithLabelValues().Set(0)
+
+	}
+}
+
+// HandleNewAddonInstallation increases the `addon_operator_addons_total` counter metric.
+// It does this by initializing a State corresponding to the addonUID in the `stateObj`.
+// This method is called at the top of the Reconciliation loop after `Get`-ing an Addon.
+// If the Addon state already exists in `stateObj` the metric update is skipped.
+func (r *Recorder) HandleNewAddonInstallation(addonUID string) {
+	stateObj.mux.Lock()
+	defer stateObj.mux.Unlock()
+	_, ok := stateObj.conditionMapping[addonUID]
+
+	// Check if Addon is not available in the internal mapping
+	if !ok {
+		// Initialize empty state condition.
+
+		// These will later be updated in UpdateConditionMetrics
+		// when the Conditions on the Addon are actually updated
+		// by the controller after a successful reconciliation loop
+		stateObj.conditionMapping[addonUID] = addonCondition{}
+
+		r.increaseTotalAddonsCount()
+	}
+}
+
+func (r *Recorder) HandleAddonUninstallation(addonUID string) {
+	stateObj.mux.Lock()
+	defer stateObj.mux.Unlock()
+	conditions, ok := stateObj.conditionMapping[addonUID]
+
+	// Check if Addon was found in the in-memory mapping
+	if ok {
+		r.decreaseTotalAddonsCount()
+		if conditions.available {
+			r.decreaseAvailableAddonsCount()
+		}
+
+		if conditions.paused {
+			r.decreasePausedAddonsCount()
+		}
+
+		delete(stateObj.conditionMapping, addonUID)
+	}
+}
+
+func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
 	stateObj.mux.Lock()
 	defer stateObj.mux.Unlock()
 
@@ -88,41 +157,36 @@ func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) {
 
 	oldState, ok := stateObj.conditionMapping[uid]
 	if !ok {
-		// create a new entry
-		stateObj.conditionMapping[uid] = currState
-		if currState.available {
-			// increase available metric
-			r.increasePausedCount()
-		}
-
-		if currState.paused {
-			// increase paused metric
-			r.increasePausedCount()
-		}
-		return
-	}
-
-	// available condition changed
-	if oldState.available != currState.available {
-		// update metric according to current condition
-		if currState.available {
-			r.increaseAvailableCount()
-		} else {
-			r.decreaseAvailableCount()
-		}
-	}
-
-	// paused condition changed
-	if oldState.paused != currState.paused {
-		// update metric according to current condition
-		if currState.paused {
-			r.increasePausedCount()
-		} else {
-			r.decreasePausedCount()
-		}
+		// Addon should have already been initialized in the `stateObj`.
+		// Return an error so that Reconciliation is retried and metrics are
+		// updated successfully.
+		return fmt.Errorf("failed to update metrics: could not sync Addon condition " +
+			"with local in-memory mapping")
 	}
 
 	if oldState != currState {
+		// check if available condition changed
+		if oldState.available != currState.available {
+			// update metric according to current condition
+			if currState.available {
+				r.increaseAvailableAddonsCount()
+			} else {
+				r.decreaseAvailableAddonsCount()
+			}
+		}
+
+		// check if paused condition changed
+		if oldState.paused != currState.paused {
+			// update metric according to current condition
+			if currState.paused {
+				r.increasePausedAddonsCount()
+			} else {
+				r.decreasePausedAddonsCount()
+			}
+		}
+
+		// Sync the current Addon conditions with the local mapping
 		stateObj.conditionMapping[uid] = currState
 	}
+	return nil
 }

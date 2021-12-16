@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// addonState is a helper type that will keep track of an addon and its Status.
+// addonState is a helper type that will keep track of an addon and its Conditions.
 // This will used for updating metrics
 type addonState struct {
 	conditionMapping map[string]addonCondition

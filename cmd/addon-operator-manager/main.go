@@ -93,6 +93,7 @@ func initReconcilers(mgr ctrl.Manager) {
 		Scheme:             mgr.GetScheme(),
 		GlobalPauseManager: addonReconciler,
 		OCMClientManager:   addonReconciler,
+		Recorder:           recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
 		os.Exit(1)

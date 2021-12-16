@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,6 +41,7 @@ type AddonOperatorReconciler struct {
 	Scheme             *runtime.Scheme
 	GlobalPauseManager globalPauseManager
 	OCMClientManager   ocmClientManager
+	Recorder           *metrics.Recorder
 }
 
 func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -148,6 +151,9 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		if err := r.reportAddonOperatorPauseStatus(ctx, addonOperator); err != nil {
 			return fmt.Errorf("report AddonOperator paused: %w", err)
 		}
+
+		// Update `addon_operator_paused` metric
+		r.Recorder.SetAddonOperatorPaused(true)
 		return nil
 	}
 
@@ -156,6 +162,9 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		addonsv1alpha1.AddonOperatorPaused) {
 		return nil
 	}
+
+	// Update `addon_operator_paused` metric
+	r.Recorder.SetAddonOperatorPaused(false)
 	if err := r.GlobalPauseManager.DisableGlobalPause(ctx); err != nil {
 		return fmt.Errorf("removing global pause: %w", err)
 	}

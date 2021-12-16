@@ -140,9 +140,11 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	r.Recorder.HandleNewAddonInstallation(string(addon.UID))
+
 	defer func() {
 		// Update metrics
-		r.Recorder.UpdateConditionMetrics(addon)
+		err = r.Recorder.UpdateConditionMetrics(addon)
 
 		// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
 		if err != nil {
