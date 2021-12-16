@@ -22,8 +22,7 @@ type Recorder struct {
 	addonsTotalAvailable *prometheus.GaugeVec
 	addonsTotalPaused    *prometheus.GaugeVec
 	addonsTotal          *prometheus.GaugeVec
-	// 0 - Not paused , 1 - Paused
-	addonOperatorPaused *prometheus.GaugeVec
+	addonOperatorPaused  *prometheus.GaugeVec // 0 - Not paused , 1 - Paused
 	// .. TODO: More metrics!
 }
 
@@ -92,6 +91,8 @@ func (r *Recorder) decreaseTotalAddonsCount() {
 	r.addonsTotal.WithLabelValues().Dec()
 }
 
+// SetAddonOperatorPaused sets the `addon_operator_paused` metric
+// 0 - Not paused , 1 - Paused
 func (r *Recorder) SetAddonOperatorPaused(paused bool) {
 	if paused {
 		r.addonOperatorPaused.WithLabelValues().Set(1)
@@ -131,6 +132,9 @@ func (r *Recorder) HandleAddonUninstallation(addonUID string) {
 	// Check if Addon was found in the in-memory mapping
 	if ok {
 		r.decreaseTotalAddonsCount()
+
+		// Reconcile the Condition metrics
+
 		if conditions.available {
 			r.decreaseAvailableAddonsCount()
 		}
@@ -139,6 +143,7 @@ func (r *Recorder) HandleAddonUninstallation(addonUID string) {
 			r.decreasePausedAddonsCount()
 		}
 
+		// Delete entry in the in-memory map
 		delete(stateObj.conditionMapping, addonUID)
 	}
 }
@@ -165,9 +170,10 @@ func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
 	}
 
 	if oldState != currState {
-		// check if available condition changed
+
+		// Reconcile metrics with the current Conditions of the Addon
+
 		if oldState.available != currState.available {
-			// update metric according to current condition
 			if currState.available {
 				r.increaseAvailableAddonsCount()
 			} else {
@@ -175,9 +181,7 @@ func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
 			}
 		}
 
-		// check if paused condition changed
 		if oldState.paused != currState.paused {
-			// update metric according to current condition
 			if currState.paused {
 				r.increasePausedAddonsCount()
 			} else {
@@ -185,7 +189,7 @@ func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
 			}
 		}
 
-		// Sync the current Addon conditions with the local mapping
+		// Update the current Addon conditions in the in-memory map
 		stateObj.conditionMapping[uid] = currState
 	}
 	return nil
