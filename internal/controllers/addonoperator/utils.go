@@ -31,7 +31,9 @@ func (r *AddonOperatorReconciler) handleAddonOperatorCreation(
 			Name: addonsv1alpha1.DefaultAddonOperatorName,
 		},
 	}
-	r.Recorder.SetAddonOperatorPaused(false)
+	if r.Recorder != nil {
+		r.Recorder.SetAddonOperatorPaused(false)
+	}
 	log.Info("creating default AddonOperator object")
 	err := r.Create(ctx, defaultAddonOperator)
 	return err

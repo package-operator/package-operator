@@ -70,6 +70,14 @@ func (r *AddonOperatorReconciler) Reconcile(
 	err := r.Get(ctx, client.ObjectKey{
 		Name: addonsv1alpha1.DefaultAddonOperatorName,
 	}, addonOperator)
+
+	defer func() {
+		// update metrics
+		if r.Recorder != nil {
+			r.Recorder.SetAddonOperatorPaused(meta.IsStatusConditionTrue(
+				addonOperator.Status.Conditions, addonsv1alpha1.AddonOperatorPaused))
+		}
+	}()
 	// Create default AddonOperator object if it doesn't exist
 	if apierrors.IsNotFound(err) {
 		log.Info("default AddonOperator not found")
@@ -153,8 +161,6 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 			return fmt.Errorf("report AddonOperator paused: %w", err)
 		}
 
-		// Update `addon_operator_paused` metric
-		r.Recorder.SetAddonOperatorPaused(true)
 		return nil
 	}
 
@@ -163,9 +169,6 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		addonsv1alpha1.AddonOperatorPaused) {
 		return nil
 	}
-
-	// Update `addon_operator_paused` metric
-	r.Recorder.SetAddonOperatorPaused(false)
 	if err := r.GlobalPauseManager.DisableGlobalPause(ctx); err != nil {
 		return fmt.Errorf("removing global pause: %w", err)
 	}
