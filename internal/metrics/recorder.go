@@ -26,11 +26,14 @@ type addonConditions struct {
 
 // Recorder stores all Addon related metrics
 type Recorder struct {
-	addonState           *addonState
-	addonsTotalAvailable *prometheus.GaugeVec
-	addonsTotalPaused    *prometheus.GaugeVec
-	addonsTotal          *prometheus.GaugeVec
-	addonOperatorPaused  *prometheus.GaugeVec // 0 - Not paused , 1 - Paused
+	addonState *addonState
+
+	// metrics
+	addonsTotalAvailable  *prometheus.GaugeVec
+	addonsTotalPaused     *prometheus.GaugeVec
+	addonsTotal           *prometheus.GaugeVec
+	addonOperatorPaused   *prometheus.GaugeVec // 0 - Not paused , 1 - Paused
+	ocmAPIRequestDuration prometheus.Summary
 	// .. TODO: More metrics!
 }
 
@@ -59,22 +62,32 @@ func NewRecorder() *Recorder {
 			Help: "A boolean that tells if the AddonOperator is paused",
 		}, []string{})
 
+	ocmAPIReqDuration := prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "addon_operator_ocm_api_requests_durations",
+			Help: "OCM API request latencies in microseconds",
+			// p50, p90 and p99 latencies
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		})
+
 	// Register metrics
 	ctrlmetrics.Registry.MustRegister(
 		addonsTotal,
 		addonsAvailable,
 		addonsPaused,
 		addonOperatorPaused,
+		ocmAPIReqDuration,
 	)
 
 	return &Recorder{
 		addonState: &addonState{
 			conditionMap: map[string]addonConditions{},
 		},
-		addonsTotal:          addonsTotal,
-		addonsTotalAvailable: addonsAvailable,
-		addonsTotalPaused:    addonsPaused,
-		addonOperatorPaused:  addonOperatorPaused,
+		addonsTotal:           addonsTotal,
+		addonsTotalAvailable:  addonsAvailable,
+		addonsTotalPaused:     addonsPaused,
+		addonOperatorPaused:   addonOperatorPaused,
+		ocmAPIRequestDuration: ocmAPIReqDuration,
 	}
 }
 
@@ -100,6 +113,10 @@ func (r *Recorder) increaseTotalAddonsCount() {
 
 func (r *Recorder) decreaseTotalAddonsCount() {
 	r.addonsTotal.WithLabelValues().Dec()
+}
+
+func (r *Recorder) ObserveOCMAPIRequests(us float64) {
+	r.ocmAPIRequestDuration.Observe(us)
 }
 
 // SetAddonOperatorPaused sets the `addon_operator_paused` metric
