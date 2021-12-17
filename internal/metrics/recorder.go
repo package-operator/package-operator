@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"fmt"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -11,8 +11,22 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
+// addonState is a helper type that will help us
+// track the conditions for an addon, in-memory.
+// This state will be used for updating condition metrics.
+type addonState struct {
+	conditionMap map[string]addonConditions
+	lock         sync.RWMutex
+}
+
+type addonConditions struct {
+	available bool
+	paused    bool
+}
+
 // Recorder stores all Addon related metrics
 type Recorder struct {
+	addonState           *addonState
 	addonsTotalAvailable *prometheus.GaugeVec
 	addonsTotalPaused    *prometheus.GaugeVec
 	addonsTotal          *prometheus.GaugeVec
@@ -54,6 +68,9 @@ func NewRecorder() *Recorder {
 	)
 
 	return &Recorder{
+		addonState: &addonState{
+			conditionMap: map[string]addonConditions{},
+		},
 		addonsTotal:          addonsTotal,
 		addonsTotalAvailable: addonsAvailable,
 		addonsTotalPaused:    addonsPaused,
@@ -96,87 +113,49 @@ func (r *Recorder) SetAddonOperatorPaused(paused bool) {
 	}
 }
 
-// HandleNewAddonInstallation increases the `addon_operator_addons_total` counter metric.
-// It does this by initializing a State corresponding to the addonUID in the `stateObj`.
-// This method is called at the top of the Reconciliation loop after `Get`-ing an Addon.
-// If the Addon state already exists in `stateObj` the metric update is skipped.
-func (r *Recorder) HandleNewAddonInstallation(addonUID string) {
-	stateObj.mux.Lock()
-	defer stateObj.mux.Unlock()
-	_, ok := stateObj.conditionMapping[addonUID]
+// HandleAddonConditionAndInstallCount is responsible for reconciling the following metrics:
+// - addon_operator_addons_available
+// - addon_operator_addons_paused
+// - addon_operator_addons_total
+func (r *Recorder) HandleAddonConditionAndInstallCount(addonUID string,
+	conditions []metav1.Condition,
+	uninstall bool) {
+	r.addonState.lock.Lock()
+	defer r.addonState.lock.Unlock()
 
-	// Check if Addon is not available in the internal mapping
+	currCondition := addonConditions{
+		available: meta.IsStatusConditionTrue(conditions, addonsv1alpha1.Available),
+		paused:    meta.IsStatusConditionTrue(conditions, addonsv1alpha1.Paused),
+	}
+
+	oldCondition, ok := r.addonState.conditionMap[addonUID]
+
+	// handle new Addon installations
 	if !ok {
-		// Initialize empty state condition.
-
-		// These will later be updated in UpdateConditionMetrics
-		// when the Conditions on the Addon are actually updated
-		// by the controller after a successful reconciliation loop
-		stateObj.conditionMapping[addonUID] = addonCondition{}
-
+		r.addonState.conditionMap[addonUID] = currCondition
 		r.increaseTotalAddonsCount()
-	}
-}
-
-func (r *Recorder) HandleAddonUninstallation(addonUID string) {
-	stateObj.mux.Lock()
-	defer stateObj.mux.Unlock()
-	conditions, ok := stateObj.conditionMapping[addonUID]
-
-	// Check if Addon was found in the in-memory mapping
-	if ok {
-		r.decreaseTotalAddonsCount()
-
-		// Reconcile the Condition metrics
-
-		if conditions.available {
-			r.decreaseAvailableAddonsCount()
+		if currCondition.available {
+			r.increaseAvailableAddonsCount()
 		}
 
-		if conditions.paused {
-			r.decreasePausedAddonsCount()
+		if currCondition.paused {
+			r.increasePausedAddonsCount()
 		}
-
-		// Delete entry in the in-memory map
-		delete(stateObj.conditionMapping, addonUID)
-	}
-}
-
-func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
-	stateObj.mux.Lock()
-	defer stateObj.mux.Unlock()
-
-	uid := string(addon.UID)
-	currState := addonCondition{
-		available: meta.IsStatusConditionPresentAndEqual(addon.Status.Conditions,
-			addonsv1alpha1.Available, metav1.ConditionTrue),
-		paused: meta.IsStatusConditionPresentAndEqual(addon.Status.Conditions,
-			addonsv1alpha1.Paused, metav1.ConditionTrue),
+		return
 	}
 
-	oldState, ok := stateObj.conditionMapping[uid]
-	if !ok {
-		// Addon should have already been initialized in the `stateObj`.
-		// Return an error so that Reconciliation is retried and metrics are
-		// updated successfully.
-		return fmt.Errorf("failed to update metrics: could not sync Addon condition " +
-			"with local in-memory mapping")
-	}
-
-	if oldState != currState {
-
-		// Reconcile metrics with the current Conditions of the Addon
-
-		if oldState.available != currState.available {
-			if currState.available {
+	// reconcile metrics for existing Addons
+	if oldCondition != currCondition {
+		if oldCondition.available != currCondition.available {
+			if currCondition.available {
 				r.increaseAvailableAddonsCount()
 			} else {
 				r.decreaseAvailableAddonsCount()
 			}
 		}
 
-		if oldState.paused != currState.paused {
-			if currState.paused {
+		if oldCondition.paused != currCondition.paused {
+			if currCondition.paused {
 				r.increasePausedAddonsCount()
 			} else {
 				r.decreasePausedAddonsCount()
@@ -184,7 +163,19 @@ func (r *Recorder) UpdateConditionMetrics(addon *addonsv1alpha1.Addon) error {
 		}
 
 		// Update the current Addon conditions in the in-memory map
-		stateObj.conditionMapping[uid] = currState
+		r.addonState.conditionMap[addonUID] = currCondition
 	}
-	return nil
+
+	// handle new Addon uninstallations
+	if uninstall {
+		r.decreaseTotalAddonsCount()
+		if currCondition.available {
+			r.decreaseAvailableAddonsCount()
+		}
+
+		if currCondition.paused {
+			r.decreasePausedAddonsCount()
+		}
+		delete(r.addonState.conditionMap, addonUID)
+	}
 }

@@ -63,9 +63,6 @@ func (r *AddonReconciler) handleAddonDeletion(
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 
-	// Update metrics
-	r.Recorder.HandleAddonUninstallation(string(addon.UID))
-
 	return nil
 }
 
