@@ -30,36 +30,44 @@ func TestAddonMetrics_InstallCount(t *testing.T) {
 
 	t.Run("no addons installed", func(t *testing.T) {
 		// Expected:
-		// addon_operator_addons_total{} 0
-		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonsTotal.WithLabelValues()))
+		// addon_operator_addons_count{count_by="total"} 0
+		assert.Equal(t, float64(0), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(available))))
 	})
 
 	t.Run("new addon(s) installed", func(t *testing.T) {
-		recorder.HandleAddonConditionAndInstallCount(addons[0].addonUID, addons[0].addonConditions, false)
+		recorder.HandleAddonConditionAndInstallCount(
+			addons[0].addonUID, addons[0].addonConditions, false)
 
 		// Expected:
-		// addon_operator_addons_total{} 1
-		assert.Equal(t, float64(1), testutil.ToFloat64(recorder.addonsTotal.WithLabelValues()))
+		// addon_operator_addons_count{count_by="total"} 1
+		assert.Equal(t, float64(1), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(total))))
 
-		recorder.HandleAddonConditionAndInstallCount(addons[1].addonUID, addons[1].addonConditions, false)
+		recorder.HandleAddonConditionAndInstallCount(addons[1].addonUID,
+			addons[1].addonConditions, false)
 
 		// Expected:
-		// addon_operator_addons_total{} 2
-		assert.Equal(t, float64(2), testutil.ToFloat64(recorder.addonsTotal.WithLabelValues()))
+		// addon_operator_addons_count{count_by="total"} 2
+		assert.Equal(t, float64(2), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(total))))
 	})
 
 	t.Run("addon(s) uninstalled", func(t *testing.T) {
 		recorder.HandleAddonConditionAndInstallCount(addons[0].addonUID, addons[0].addonConditions, true)
 
 		// Expected:
-		// addon_operator_addons_total{} 1
-		assert.Equal(t, float64(1), testutil.ToFloat64(recorder.addonsTotal.WithLabelValues()))
+		// addon_operator_addons_count{count_by="total"} 1
+		assert.Equal(t, float64(1), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(total))))
 
-		recorder.HandleAddonConditionAndInstallCount(addons[1].addonUID, addons[1].addonConditions, true)
+		recorder.HandleAddonConditionAndInstallCount(
+			addons[1].addonUID, addons[1].addonConditions, true)
 
 		// Expected:
-		// addon_operator_addons_total{} 2
-		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonsTotal.WithLabelValues()))
+		// addon_operator_addons_count{count_by="total"} 0
+		assert.Equal(t, float64(0), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(total))))
 	})
 }
 
@@ -72,39 +80,43 @@ func TestAddonMetrics_AddonConditions(t *testing.T) {
 		recorder.HandleAddonConditionAndInstallCount(addonUID, conditions, false)
 
 		// Expected:
-		// addon_operator_addons_paused{} 0
-		// addon_operator_addons_available{} 0
-		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonsTotalPaused.WithLabelValues()))
-		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonsTotalAvailable.WithLabelValues()))
+		// addon_operator_addons_count{count_by="paused"} 0
+		// addon_operator_addons_count{count_by="available"} 0
+		assert.Equal(t, float64(0), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(paused))))
+		assert.Equal(t, float64(0), testutil.ToFloat64(
+			recorder.addonsCount.WithLabelValues(string(available))))
 	})
 
 	// create a matrix of different combinations for available and paused
-	for _, available := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
-		for _, paused := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
+	for _, isAvailable := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
+		for _, isPaused := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
 			t.Run(fmt.Sprintf("addon available: %v, addon paused: %v", available, paused), func(t *testing.T) {
 				expectedAvailable := 0
-				if available == metav1.ConditionTrue {
+				if isAvailable == metav1.ConditionTrue {
 					expectedAvailable = 1
 				}
 				expectedPaused := 0
-				if paused == metav1.ConditionTrue {
+				if isPaused == metav1.ConditionTrue {
 					expectedPaused = 1
 				}
 
 				conditions := []metav1.Condition{
 					{
 						Type:   addonsv1alpha1.Available,
-						Status: available,
+						Status: isAvailable,
 					},
 					{
 						Type:   addonsv1alpha1.Paused,
-						Status: paused,
+						Status: isPaused,
 					},
 				}
 				recorder.HandleAddonConditionAndInstallCount(addonUID, conditions, false)
 
-				assert.Equal(t, float64(expectedPaused), testutil.ToFloat64(recorder.addonsTotalPaused.WithLabelValues()))
-				assert.Equal(t, float64(expectedAvailable), testutil.ToFloat64(recorder.addonsTotalAvailable.WithLabelValues()))
+				assert.Equal(t, float64(expectedPaused),
+					testutil.ToFloat64(recorder.addonsCount.WithLabelValues(string(paused))))
+				assert.Equal(t, float64(expectedAvailable),
+					testutil.ToFloat64(recorder.addonsCount.WithLabelValues(string(available))))
 
 			})
 		}
@@ -115,7 +127,7 @@ func TestAddonMetrics_AddonConditions(t *testing.T) {
 
 		// Expected:
 		// addon_operator_paused{} 1
-		assert.Equal(t, float64(1), testutil.ToFloat64(recorder.addonOperatorPaused.WithLabelValues()))
+		assert.Equal(t, float64(1), testutil.ToFloat64(recorder.addonOperatorPaused))
 	})
 
 	t.Run("addon operator unpaused", func(t *testing.T) {
@@ -123,6 +135,6 @@ func TestAddonMetrics_AddonConditions(t *testing.T) {
 
 		// Expected:
 		// addon_operator_paused{} 0
-		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonOperatorPaused.WithLabelValues()))
+		assert.Equal(t, float64(0), testutil.ToFloat64(recorder.addonOperatorPaused))
 	})
 }

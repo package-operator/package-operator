@@ -29,38 +29,33 @@ type Recorder struct {
 	addonState *addonState
 
 	// metrics
-	addonsTotalAvailable  *prometheus.GaugeVec
-	addonsTotalPaused     *prometheus.GaugeVec
-	addonsTotal           *prometheus.GaugeVec
-	addonOperatorPaused   *prometheus.GaugeVec // 0 - Not paused , 1 - Paused
+	addonsCount           *prometheus.GaugeVec
+	addonOperatorPaused   prometheus.Gauge // 0 - Not paused , 1 - Paused
 	ocmAPIRequestDuration prometheus.Summary
 	// .. TODO: More metrics!
 }
 
+type addonCountLabel string
+
+var (
+	available addonCountLabel = "available"
+	paused    addonCountLabel = "paused"
+	total     addonCountLabel = "total"
+)
+
 func NewRecorder() *Recorder {
-	addonsAvailable := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "addon_operator_addons_available",
-			Help: "Total number of Addons available",
-		}, []string{})
 
-	addonsPaused := prometheus.NewGaugeVec(
+	addonsCount := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "addon_operator_addons_paused",
-			Help: "Total number of Addons paused",
-		}, []string{})
+			Name: "addon_operator_addons_count",
+			Help: "Total number of Addon installations, grouped by 'available', 'paused' and 'total'",
+		}, []string{"count_by"})
 
-	addonsTotal := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "addon_operator_addons_total",
-			Help: "Total number of Addon installations",
-		}, []string{})
-
-	addonOperatorPaused := prometheus.NewGaugeVec(
+	addonOperatorPaused := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "addon_operator_paused",
 			Help: "A boolean that tells if the AddonOperator is paused",
-		}, []string{})
+		})
 
 	ocmAPIReqDuration := prometheus.NewSummary(
 		prometheus.SummaryOpts{
@@ -72,9 +67,7 @@ func NewRecorder() *Recorder {
 
 	// Register metrics
 	ctrlmetrics.Registry.MustRegister(
-		addonsTotal,
-		addonsAvailable,
-		addonsPaused,
+		addonsCount,
 		addonOperatorPaused,
 		ocmAPIReqDuration,
 	)
@@ -83,36 +76,34 @@ func NewRecorder() *Recorder {
 		addonState: &addonState{
 			conditionMap: map[string]addonConditions{},
 		},
-		addonsTotal:           addonsTotal,
-		addonsTotalAvailable:  addonsAvailable,
-		addonsTotalPaused:     addonsPaused,
+		addonsCount:           addonsCount,
 		addonOperatorPaused:   addonOperatorPaused,
 		ocmAPIRequestDuration: ocmAPIReqDuration,
 	}
 }
 
 func (r *Recorder) increaseAvailableAddonsCount() {
-	r.addonsTotalAvailable.WithLabelValues().Inc()
+	r.addonsCount.WithLabelValues(string(available)).Inc()
 }
 
 func (r *Recorder) decreaseAvailableAddonsCount() {
-	r.addonsTotalAvailable.WithLabelValues().Dec()
+	r.addonsCount.WithLabelValues(string(available)).Dec()
 }
 
 func (r *Recorder) increasePausedAddonsCount() {
-	r.addonsTotalPaused.WithLabelValues().Inc()
+	r.addonsCount.WithLabelValues(string(paused)).Inc()
 }
 
 func (r *Recorder) decreasePausedAddonsCount() {
-	r.addonsTotalPaused.WithLabelValues().Dec()
+	r.addonsCount.WithLabelValues(string(paused)).Dec()
 }
 
 func (r *Recorder) increaseTotalAddonsCount() {
-	r.addonsTotal.WithLabelValues().Inc()
+	r.addonsCount.WithLabelValues(string(total)).Inc()
 }
 
 func (r *Recorder) decreaseTotalAddonsCount() {
-	r.addonsTotal.WithLabelValues().Dec()
+	r.addonsCount.WithLabelValues(string(total)).Dec()
 }
 
 func (r *Recorder) ObserveOCMAPIRequests(us float64) {
@@ -123,9 +114,9 @@ func (r *Recorder) ObserveOCMAPIRequests(us float64) {
 // 0 - Not paused , 1 - Paused
 func (r *Recorder) SetAddonOperatorPaused(paused bool) {
 	if paused {
-		r.addonOperatorPaused.WithLabelValues().Set(1)
+		r.addonOperatorPaused.Set(1)
 	} else {
-		r.addonOperatorPaused.WithLabelValues().Set(0)
+		r.addonOperatorPaused.Set(0)
 
 	}
 }
