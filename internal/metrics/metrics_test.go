@@ -12,7 +12,7 @@ import (
 )
 
 func TestAddonMetrics_InstallCount(t *testing.T) {
-	recorder := NewRecorder()
+	recorder := NewRecorder(false)
 
 	addons := []struct {
 		addonUID        string
@@ -72,7 +72,7 @@ func TestAddonMetrics_InstallCount(t *testing.T) {
 }
 
 func TestAddonMetrics_AddonConditions(t *testing.T) {
-	recorder := NewRecorder()
+	recorder := NewRecorder(false)
 	addonUID := "o672wxBaW9iR"
 
 	t.Run("uninitialized conditions", func(t *testing.T) {

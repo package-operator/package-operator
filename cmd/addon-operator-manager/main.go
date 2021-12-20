@@ -73,7 +73,7 @@ func initReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
-	recorder := metrics.NewRecorder()
+	recorder := metrics.NewRecorder(true)
 	addonReconciler := &addoncontroller.AddonReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("Addon"),

@@ -3,10 +3,11 @@ package metrics
 import (
 	"sync"
 
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
@@ -43,7 +44,7 @@ var (
 	total     addonCountLabel = "total"
 )
 
-func NewRecorder() *Recorder {
+func NewRecorder(register bool) *Recorder {
 
 	addonsCount := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -65,12 +66,16 @@ func NewRecorder() *Recorder {
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		})
 
-	// Register metrics
-	ctrlmetrics.Registry.MustRegister(
-		addonsCount,
-		addonOperatorPaused,
-		ocmAPIReqDuration,
-	)
+	// Register metrics if `register` is true
+	// This allows us to skip registering metrics
+	// and re-use the recorder when testing.
+	if register {
+		ctrlmetrics.Registry.MustRegister(
+			addonsCount,
+			addonOperatorPaused,
+			ocmAPIReqDuration,
+		)
+	}
 
 	return &Recorder{
 		addonState: &addonState{
