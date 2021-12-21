@@ -327,8 +327,7 @@ dev-setup: export KUBECONFIG=$(abspath $(KIND_KUBECONFIG))
 dev-setup: | \
 	create-kind-cluster \
 	setup-olm \
-	setup-okd-console \
-	setup-monitoring
+	setup-okd-console
 .PHONY: dev-setup
 
 ## Setup a local env for integration test development. (Kind, OLM, OKD Console, Addon Operator). Use with test-integration-short.
@@ -481,6 +480,7 @@ endif
 ifneq ($(ENABLE_API_MOCK), "false")
 	@make prepare-api-mock
 endif
+	@make setup-monitoring
 .PHONY: setup-addon-operator
 
 ## Installs Addon Operator CRDs in to the currently selected cluster.
