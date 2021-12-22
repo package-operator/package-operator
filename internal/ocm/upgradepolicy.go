@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type UpgradePolicyValue string
@@ -27,15 +25,6 @@ func (c *Client) PatchUpgradePolicy(
 	ctx context.Context,
 	req UpgradePolicyPatchRequest,
 ) (res UpgradePolicyPatchResponse, err error) {
-
-	if c.opts.Recorder != nil {
-		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-			us := v * 1000000 // make microseconds
-			c.opts.Recorder.ObserveOCMAPIRequests(us)
-		}))
-		defer timer.ObserveDuration()
-	}
-
 	return res, c.do(ctx, http.MethodPatch, fmt.Sprintf(
 		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
 		c.opts.ClusterID,

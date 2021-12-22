@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/openshift/addon-operator/internal/metrics"
-
 	"github.com/openshift/addon-operator/internal/version"
 )
 
@@ -36,16 +34,9 @@ type ClientOptions struct {
 	Endpoint    string
 	ClusterID   string
 	AccessToken string
-	Recorder    *metrics.Recorder
 }
 
 type Option func(o *ClientOptions)
-
-func WithRecorder(recorder *metrics.Recorder) Option {
-	return func(o *ClientOptions) {
-		o.Recorder = recorder
-	}
-}
 
 func WithEndpoint(endpoint string) Option {
 	return func(o *ClientOptions) {

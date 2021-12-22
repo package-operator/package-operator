@@ -25,7 +25,7 @@ type addonConditions struct {
 	paused    bool
 }
 
-// Recorder stores all Addon related metrics
+// Recorder stores all the metrics related to Addons.
 type Recorder struct {
 	addonState *addonState
 
@@ -85,6 +85,12 @@ func NewRecorder(register bool) *Recorder {
 		addonOperatorPaused:   addonOperatorPaused,
 		ocmAPIRequestDuration: ocmAPIReqDuration,
 	}
+}
+
+// InjectOCMAPIRequestDuration allows us to override `r.ocmAPIRequestDuration` metric
+// Useful while writing tests
+func (r *Recorder) InjectOCMAPIRequestDuration(s prometheus.Summary) {
+	r.ocmAPIRequestDuration = s
 }
 
 func (r *Recorder) increaseAvailableAddonsCount() {

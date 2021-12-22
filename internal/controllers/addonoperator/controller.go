@@ -137,7 +137,6 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 		ocm.WithEndpoint(addonOperator.Spec.OCM.Endpoint),
 		ocm.WithAccessToken(accessToken),
 		ocm.WithClusterID(string(cv.Spec.ClusterID)),
-		ocm.WithRecorder(r.Recorder),
 	)
 	if err := r.OCMClientManager.InjectOCMClient(ctx, c); err != nil {
 		return fmt.Errorf("injecting ocm client: %w", err)
