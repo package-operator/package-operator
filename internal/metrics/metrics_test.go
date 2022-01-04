@@ -3,6 +3,9 @@ package metrics
 import (
 	"fmt"
 	"testing"
+	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -11,21 +14,23 @@ import (
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
 
+func newTestAddon(uid string, conditions []metav1.Condition) *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: types.UID(uid),
+		},
+		Status: addonsv1alpha1.AddonStatus{
+			Conditions: conditions,
+		},
+	}
+}
+
 func TestAddonMetrics_InstallCount(t *testing.T) {
 	recorder := NewRecorder(false)
 
-	addons := []struct {
-		addonUID        string
-		addonConditions []metav1.Condition
-	}{
-		{
-			addonUID:        "o672wxBaW9iR",
-			addonConditions: []metav1.Condition{},
-		},
-		{
-			addonUID:        "kpzLavSo27F8",
-			addonConditions: []metav1.Condition{},
-		},
+	addons := []*addonsv1alpha1.Addon{
+		newTestAddon("o672wxBaW9iR", []metav1.Condition{}),
+		newTestAddon("kpzLavSo27F8", []metav1.Condition{}),
 	}
 
 	t.Run("no addons installed", func(t *testing.T) {
@@ -36,16 +41,14 @@ func TestAddonMetrics_InstallCount(t *testing.T) {
 	})
 
 	t.Run("new addon(s) installed", func(t *testing.T) {
-		recorder.HandleAddonConditionAndInstallCount(
-			addons[0].addonUID, addons[0].addonConditions, false)
+		recorder.RecordAddonMetrics(addons[0])
 
 		// Expected:
 		// addon_operator_addons_count{count_by="total"} 1
 		assert.Equal(t, float64(1), testutil.ToFloat64(
 			recorder.addonsCount.WithLabelValues(string(total))))
 
-		recorder.HandleAddonConditionAndInstallCount(addons[1].addonUID,
-			addons[1].addonConditions, false)
+		recorder.RecordAddonMetrics(addons[1])
 
 		// Expected:
 		// addon_operator_addons_count{count_by="total"} 2
@@ -54,15 +57,17 @@ func TestAddonMetrics_InstallCount(t *testing.T) {
 	})
 
 	t.Run("addon(s) uninstalled", func(t *testing.T) {
-		recorder.HandleAddonConditionAndInstallCount(addons[0].addonUID, addons[0].addonConditions, true)
+		now := metav1.NewTime(time.Now())
+		addons[0].DeletionTimestamp = &now
+		recorder.RecordAddonMetrics(addons[0])
 
 		// Expected:
 		// addon_operator_addons_count{count_by="total"} 1
 		assert.Equal(t, float64(1), testutil.ToFloat64(
 			recorder.addonsCount.WithLabelValues(string(total))))
 
-		recorder.HandleAddonConditionAndInstallCount(
-			addons[1].addonUID, addons[1].addonConditions, true)
+		addons[1].DeletionTimestamp = &now
+		recorder.RecordAddonMetrics(addons[1])
 
 		// Expected:
 		// addon_operator_addons_count{count_by="total"} 0
@@ -73,11 +78,10 @@ func TestAddonMetrics_InstallCount(t *testing.T) {
 
 func TestAddonMetrics_AddonConditions(t *testing.T) {
 	recorder := NewRecorder(false)
-	addonUID := "o672wxBaW9iR"
+	addon := newTestAddon("o672wxBaW9iR", []metav1.Condition{})
 
 	t.Run("uninitialized conditions", func(t *testing.T) {
-		conditions := []metav1.Condition{}
-		recorder.HandleAddonConditionAndInstallCount(addonUID, conditions, false)
+		recorder.RecordAddonMetrics(addon)
 
 		// Expected:
 		// addon_operator_addons_count{count_by="paused"} 0
@@ -92,6 +96,10 @@ func TestAddonMetrics_AddonConditions(t *testing.T) {
 	for _, isAvailable := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
 		for _, isPaused := range []metav1.ConditionStatus{metav1.ConditionTrue, metav1.ConditionFalse} {
 			t.Run(fmt.Sprintf("addon available: %v, addon paused: %v", available, paused), func(t *testing.T) {
+
+				// create local copy within this closure
+				addon := addon.DeepCopy()
+
 				expectedAvailable := 0
 				if isAvailable == metav1.ConditionTrue {
 					expectedAvailable = 1
@@ -111,7 +119,8 @@ func TestAddonMetrics_AddonConditions(t *testing.T) {
 						Status: isPaused,
 					},
 				}
-				recorder.HandleAddonConditionAndInstallCount(addonUID, conditions, false)
+				addon.Status.Conditions = conditions
+				recorder.RecordAddonMetrics(addon)
 
 				assert.Equal(t, float64(expectedPaused),
 					testutil.ToFloat64(recorder.addonsCount.WithLabelValues(string(paused))))

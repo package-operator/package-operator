@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 )
@@ -117,7 +116,7 @@ func (r *Recorder) decreaseTotalAddonsCount() {
 	r.addonsCount.WithLabelValues(string(total)).Dec()
 }
 
-func (r *Recorder) ObserveOCMAPIRequests(us float64) {
+func (r *Recorder) RecordOCMAPIRequests(us float64) {
 	r.ocmAPIRequestDuration.Observe(us)
 }
 
@@ -132,21 +131,20 @@ func (r *Recorder) SetAddonOperatorPaused(paused bool) {
 	}
 }
 
-// HandleAddonConditionAndInstallCount is responsible for reconciling the following metrics:
+// RecordAddonMetrics is responsible for reconciling the following metrics:
 // - addon_operator_addons_available
 // - addon_operator_addons_paused
 // - addon_operator_addons_total
-func (r *Recorder) HandleAddonConditionAndInstallCount(addonUID string,
-	conditions []metav1.Condition,
-	uninstall bool) {
+func (r *Recorder) RecordAddonMetrics(addon *addonsv1alpha1.Addon) {
 	r.addonState.lock.Lock()
 	defer r.addonState.lock.Unlock()
 
 	currCondition := addonConditions{
-		available: meta.IsStatusConditionTrue(conditions, addonsv1alpha1.Available),
-		paused:    meta.IsStatusConditionTrue(conditions, addonsv1alpha1.Paused),
+		available: meta.IsStatusConditionTrue(addon.Status.Conditions, addonsv1alpha1.Available),
+		paused:    meta.IsStatusConditionTrue(addon.Status.Conditions, addonsv1alpha1.Paused),
 	}
 
+	addonUID := string(addon.UID)
 	oldCondition, ok := r.addonState.conditionMap[addonUID]
 
 	// handle new Addon installations
@@ -185,8 +183,8 @@ func (r *Recorder) HandleAddonConditionAndInstallCount(addonUID string,
 		r.addonState.conditionMap[addonUID] = currCondition
 	}
 
-	// handle new Addon uninstallations
-	if uninstall {
+	// handle Addon uninstallations
+	if !addon.DeletionTimestamp.IsZero() {
 		r.decreaseTotalAddonsCount()
 		if currCondition.available {
 			r.decreaseAvailableAddonsCount()

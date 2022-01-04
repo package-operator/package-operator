@@ -23,7 +23,7 @@ func (r *AddonReconciler) handlePatchUpgradePolicy(ctx context.Context,
 		// TODO: do not count metrics when API returns 5XX response
 		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 			us := v * 1000000 // convert to microseconds
-			r.Recorder.ObserveOCMAPIRequests(us)
+			r.Recorder.RecordOCMAPIRequests(us)
 		}))
 		defer timer.ObserveDuration()
 	}

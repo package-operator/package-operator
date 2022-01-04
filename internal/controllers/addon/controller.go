@@ -140,12 +140,10 @@ func (r *AddonReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	isUninstalling := false
 	defer func() {
 		// Update metrics only if a Recorder is initialized
 		if r.Recorder != nil {
-			r.Recorder.HandleAddonConditionAndInstallCount(string(addon.UID),
-				addon.Status.Conditions, isUninstalling)
+			r.Recorder.RecordAddonMetrics(addon)
 		}
 
 		// Ensure we report to the UpgradePolicy endpoint, when we are done with whatever we are doing.
@@ -181,7 +179,6 @@ func (r *AddonReconciler) Reconcile(
 	r.removeAddonPauseCondition(addon)
 
 	if !addon.DeletionTimestamp.IsZero() {
-		isUninstalling = true
 		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
 	}
 
