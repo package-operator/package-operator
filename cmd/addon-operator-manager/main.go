@@ -42,10 +42,11 @@ func init() {
 }
 
 type options struct {
-	metricsAddr          string
-	pprofAddr            string
-	enableLeaderElection bool
-	probeAddr            string
+	metricsAddr           string
+	pprofAddr             string
+	enableLeaderElection  bool
+	enableMetricsRecorder bool
+	probeAddr             string
 }
 
 func parseFlags() *options {
@@ -58,13 +59,13 @@ func parseFlags() *options {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-
+	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording Addon Metrics")
 	flag.Parse()
 
 	return opts
 }
 
-func initReconcilers(mgr ctrl.Manager) {
+func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
 	// Create a client that does not cache resources cluster-wide.
 	uncachedClient, err := client.New(
 		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
@@ -73,7 +74,6 @@ func initReconcilers(mgr ctrl.Manager) {
 		os.Exit(1)
 	}
 
-	recorder := metrics.NewRecorder(true)
 	addonReconciler := &addoncontroller.AddonReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("Addon"),
@@ -175,8 +175,11 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	initReconcilers(mgr)
+	var recorder *metrics.Recorder
+	if opts.enableMetricsRecorder {
+		recorder = metrics.NewRecorder(true)
+	}
+	initReconcilers(mgr, recorder)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
