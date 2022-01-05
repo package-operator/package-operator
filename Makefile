@@ -564,9 +564,7 @@ openshift-ci-test-build: \
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "config/openshift/manifests/addons.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "config/openshift/manifests/addonoperators.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "config/openshift/manifests/addoninstances.crd.yaml";
-	@cp "config/docker/addon-operator-webhook.Dockerfile" "config/openshift/addon-operator-webhook.Dockerfile";
-	@cp "config/docker/addon-operator-manager.Dockerfile" "config/openshift/addon-operator-manager.Dockerfile";
-
+	
 .SECONDEXPANSION:
 # cleans the built image .tar and image build directory
 clean-image-cache-%:
