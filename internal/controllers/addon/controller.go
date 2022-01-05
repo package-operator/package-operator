@@ -152,6 +152,12 @@ func (r *AddonReconciler) Reconcile(
 		err = r.Status().Update(ctx, addon)
 	}()
 
+	// Handle addon deletion before checking for pause condition.
+	// This allows even paused addons to be deleted.
+	if !addon.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
+	}
+
 	// check for global pause
 	r.globalPauseMux.RLock()
 	defer r.globalPauseMux.RUnlock()
@@ -169,10 +175,6 @@ func (r *AddonReconciler) Reconcile(
 
 	// Make sure Pause condition is removed
 	r.removeAddonPauseCondition(addon)
-
-	if !addon.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, r.handleAddonDeletion(ctx, addon)
-	}
 
 	// Phase 0.
 	// Ensure cache finalizer
