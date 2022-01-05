@@ -31,22 +31,24 @@ func (s *integrationTestSuite) Setup() {
 		o := obj
 		// check if object already exists
 		var existingObj client.Object
-		_ = integration.Client.Get(ctx, client.ObjectKey{
+		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
 			Name:      o.GetName(),
 		}, existingObj)
 
-		if existingObj == nil {
+		if errors.IsNotFound(err) {
 			// if not create one
-			err := integration.Client.Create(ctx, &o)
+			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created: ", o.GroupVersionKind().String(),
+			s.T().Log("Created: ", o.GroupVersionKind().String(),
 				o.GetNamespace()+"/"+o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
+		} else {
+			s.T().Log("Found: ", o.GetNamespace()+"/"+o.GetName())
 		}
 	}
 
