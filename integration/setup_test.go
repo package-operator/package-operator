@@ -48,7 +48,7 @@ func (s *integrationTestSuite) Setup() {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("Found: ", o.GetNamespace()+"/"+o.GetName()+"object:"+fmt.Sprintf("object: %v", existingObj))
+			s.T().Log("Found: ", fmt.Sprintf("object: %v", o)+fmt.Sprintf("existing object: %v", existingObj))
 		}
 	}
 
