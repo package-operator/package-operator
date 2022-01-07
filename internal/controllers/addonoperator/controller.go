@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,6 +41,7 @@ type AddonOperatorReconciler struct {
 	Scheme             *runtime.Scheme
 	GlobalPauseManager globalPauseManager
 	OCMClientManager   ocmClientManager
+	Recorder           *metrics.Recorder
 }
 
 func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -67,6 +70,14 @@ func (r *AddonOperatorReconciler) Reconcile(
 	err := r.Get(ctx, client.ObjectKey{
 		Name: addonsv1alpha1.DefaultAddonOperatorName,
 	}, addonOperator)
+
+	defer func() {
+		// update metrics
+		if r.Recorder != nil {
+			r.Recorder.SetAddonOperatorPaused(meta.IsStatusConditionTrue(
+				addonOperator.Status.Conditions, addonsv1alpha1.AddonOperatorPaused))
+		}
+	}()
 	// Create default AddonOperator object if it doesn't exist
 	if apierrors.IsNotFound(err) {
 		log.Info("default AddonOperator not found")
@@ -148,6 +159,7 @@ func (r *AddonOperatorReconciler) handleGlobalPause(
 		if err := r.reportAddonOperatorPauseStatus(ctx, addonOperator); err != nil {
 			return fmt.Errorf("report AddonOperator paused: %w", err)
 		}
+
 		return nil
 	}
 

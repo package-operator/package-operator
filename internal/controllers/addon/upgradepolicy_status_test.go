@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -73,10 +75,17 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 	t.Run("post `started` on new upgradePolicyID", func(t *testing.T) {
 		client := testutil.NewClient()
 		ocmClient := ocmtest.NewClient()
+
+		recorder := metrics.NewRecorder(false)
+		mockSummary := testutil.NewSummaryMock()
+		recorder.InjectOCMAPIRequestDuration(mockSummary)
+
 		r := &AddonReconciler{
 			Client:    client,
 			ocmClient: ocmClient,
+			Recorder:  recorder,
 		}
+
 		log := testutil.NewLogger(t)
 		addon := &addonsv1alpha1.Addon{
 			ObjectMeta: metav1.ObjectMeta{
@@ -100,10 +109,14 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 				nil,
 			)
 
+		mockSummary.On(
+			"Observe", mock.IsType(float64(0)))
+
 		err := r.handleUpgradePolicyStatusReporting(
 			context.Background(), log, addon)
 		require.NoError(t, err)
 
+		mockSummary.AssertExpectations(t)
 		ocmClient.AssertExpectations(t)
 		client.AssertExpectations(t)
 
@@ -148,9 +161,15 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 	t.Run("post `completed` after `started` when Available", func(t *testing.T) {
 		client := testutil.NewClient()
 		ocmClient := ocmtest.NewClient()
+		recorder := metrics.NewRecorder(false)
+
+		mockSummary := testutil.NewSummaryMock()
+		recorder.InjectOCMAPIRequestDuration(mockSummary)
+
 		r := &AddonReconciler{
 			Client:    client,
 			ocmClient: ocmClient,
+			Recorder:  recorder,
 		}
 		log := testutil.NewLogger(t)
 		addon := &addonsv1alpha1.Addon{
@@ -186,11 +205,14 @@ func TestAddonReconciler_handleUpgradePolicyStatusReporting(t *testing.T) {
 				ocm.UpgradePolicyPatchResponse{},
 				nil,
 			)
+		mockSummary.On(
+			"Observe", mock.IsType(float64(0)))
 
 		err := r.handleUpgradePolicyStatusReporting(
 			context.Background(), log, addon)
 		require.NoError(t, err)
 
+		mockSummary.AssertExpectations(t)
 		ocmClient.AssertExpectations(t)
 		client.AssertExpectations(t)
 
