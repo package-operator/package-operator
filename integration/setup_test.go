@@ -36,7 +36,7 @@ func (s *integrationTestSuite) Setup() {
 			Name:      o.GetName(),
 		}, existingObj)
 
-		if errors.IsNotFound(err) {
+		if err != nil {
 			// if not create one
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
