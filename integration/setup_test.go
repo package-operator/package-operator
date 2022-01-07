@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,26 +33,50 @@ func (s *integrationTestSuite) Setup() {
 		o := obj
 		// check if object already exists
 		var existingObj client.Object
+		switch {
+		case obj.GroupVersionKind().Kind == "Namespace":
+			existingObj = &corev1.Namespace{}
+		case obj.GroupVersionKind().Kind == "CustomResourceDefinition":
+			existingObj = &apiextensionsv1.CustomResourceDefinition{}
+		case obj.GroupVersionKind().Kind == "Deployment":
+			existingObj = &appsv1.Deployment{}
+		case obj.GroupVersionKind().Kind == "ServiceAccount":
+			existingObj = &corev1.ServiceAccount{}
+		case obj.GroupVersionKind().Kind == "Role":
+			existingObj = &rbacv1.Role{}
+		case obj.GroupVersionKind().Kind == "RoleBinding":
+			existingObj = &rbacv1.RoleBinding{}
+		case obj.GroupVersionKind().Kind == "ClusterRole":
+			existingObj = &rbacv1.ClusterRole{}
+		case obj.GroupVersionKind().Kind == "ClusterRoleBinding":
+			existingObj = &rbacv1.ClusterRoleBinding{}
+		case obj.GroupVersionKind().Kind == "Service":
+			existingObj = &corev1.Service{}
+		case obj.GroupVersionKind().Kind == "Secret":
+			existingObj = &corev1.Secret{}
+		case obj.GroupVersionKind().Kind == "ValidatingWebhookConfiguration":
+			existingObj = &admissionv1.ValidatingWebhookConfiguration{}
+		default:
+			s.T().Log("not supported kind object:", o.GroupVersionKind().String())
+		}
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
 			Name:      o.GetName(),
 		}, existingObj)
 
 		if err != nil {
-			s.T().Log("error not found:", fmt.Sprintf("err: %v and existingObj: %v", err, existingObj))
+			s.T().Log("error not found:", fmt.Sprintf("err: %v objecy: %v and existingObj: %v", err, o, existingObj))
 			// if not create one
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created: ", o.GroupVersionKind().String(),
-				o.GetNamespace()+"/"+o.GetName())
+			s.T().Log("created: ", o.GroupVersionKind().String(), o.GetNamespace()+"/"+o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("found: ", o.GroupVersionKind().String(),
-				o.GetNamespace()+"/"+o.GetName())
+			s.T().Log("found:", fmt.Sprintf("err: %v objecy: %v and existingObj: %v", err, o, existingObj))
 		}
 	}
 
