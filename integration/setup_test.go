@@ -41,14 +41,15 @@ func (s *integrationTestSuite) Setup() {
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("Created: ", o.GroupVersionKind().String(),
+			s.T().Log("created: ", o.GroupVersionKind().String(),
 				o.GetNamespace()+"/"+o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("Found: ", fmt.Sprintf("object: %v", o)+fmt.Sprintf("existing object: %v", existingObj))
+			s.T().Log("found: ", o.GroupVersionKind().String(),
+				o.GetNamespace()+"/"+o.GetName())
 		}
 	}
 
