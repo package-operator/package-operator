@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,6 +57,8 @@ func (s *integrationTestSuite) Setup() {
 			existingObj = &corev1.Secret{}
 		case obj.GroupVersionKind().Kind == "ValidatingWebhookConfiguration":
 			existingObj = &admissionv1.ValidatingWebhookConfiguration{}
+		case obj.GroupVersionKind().Kind == "ServiceMonitor":
+			existingObj = &monitoringv1.ServiceMonitor{}
 		default:
 			s.T().Log("not supported kind object:", o.GroupVersionKind().String())
 		}
