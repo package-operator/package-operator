@@ -68,7 +68,7 @@ func (s *integrationTestSuite) Setup() {
 		}, existingObj)
 
 		if err != nil && errors.IsNotFound(err) {
-			s.T().Log("error not found:", fmt.Sprintf("err: %v object: %v and existingObj: %v", err, o, existingObj))
+			s.T().Log("error not found:", err, o.GetNamespace(), o.GetName())
 			// if not create one
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
@@ -79,7 +79,7 @@ func (s *integrationTestSuite) Setup() {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("found:", fmt.Sprintf("err: %v object: %v and existingObj: %v", err, o, existingObj))
+			s.T().Log("found:", err, o.GetNamespace(), o.GetName())
 		}
 	}
 
