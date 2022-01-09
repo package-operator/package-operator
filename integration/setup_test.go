@@ -73,7 +73,7 @@ func (s *integrationTestSuite) Setup() {
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
+			s.T().Log("created:", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
