@@ -60,7 +60,7 @@ func (s *integrationTestSuite) Setup() {
 		case obj.GroupVersionKind().Kind == "ServiceMonitor":
 			existingObj = &monitoringv1.ServiceMonitor{}
 		default:
-			s.T().Log("not supported kind object:", o.GroupVersionKind().String())
+			s.T().Fatalf("not supported kind object", o.GroupVersionKind())
 		}
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
@@ -68,18 +68,18 @@ func (s *integrationTestSuite) Setup() {
 		}, existingObj)
 
 		if err != nil && errors.IsNotFound(err) {
-			s.T().Log("error not found:", err, o.GetNamespace(), o.GetName())
+			s.T().Log("error not found:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 			// if not create one
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created: ", o.GroupVersionKind().String(), o.GetNamespace()+"/"+o.GetName())
+			s.T().Log("created:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("found:", err, o.GetNamespace(), o.GetName())
+			s.T().Log("found:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 		}
 	}
 
