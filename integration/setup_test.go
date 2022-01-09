@@ -60,7 +60,7 @@ func (s *integrationTestSuite) Setup() {
 		case obj.GroupVersionKind().Kind == "ServiceMonitor":
 			existingObj = &monitoringv1.ServiceMonitor{}
 		default:
-			s.T().Fatalf("not supported kind object", o.GroupVersionKind())
+			s.T().Fatalf("not supported kind object", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 		}
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
