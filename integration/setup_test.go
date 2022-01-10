@@ -32,36 +32,37 @@ func (s *integrationTestSuite) Setup() {
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
 		o := obj
-		// check if object already exists
+		// get object call requires specific kind object to be pass
 		var existingObj client.Object
 		switch {
-		case obj.GroupVersionKind().Kind == "Namespace":
+		case o.GroupVersionKind().Kind == "Namespace":
 			existingObj = &corev1.Namespace{}
-		case obj.GroupVersionKind().Kind == "CustomResourceDefinition":
+		case o.GroupVersionKind().Kind == "CustomResourceDefinition":
 			existingObj = &apiextensionsv1.CustomResourceDefinition{}
-		case obj.GroupVersionKind().Kind == "Deployment":
+		case o.GroupVersionKind().Kind == "Deployment":
 			existingObj = &appsv1.Deployment{}
-		case obj.GroupVersionKind().Kind == "ServiceAccount":
+		case o.GroupVersionKind().Kind == "ServiceAccount":
 			existingObj = &corev1.ServiceAccount{}
-		case obj.GroupVersionKind().Kind == "Role":
+		case o.GroupVersionKind().Kind == "Role":
 			existingObj = &rbacv1.Role{}
-		case obj.GroupVersionKind().Kind == "RoleBinding":
+		case o.GroupVersionKind().Kind == "RoleBinding":
 			existingObj = &rbacv1.RoleBinding{}
-		case obj.GroupVersionKind().Kind == "ClusterRole":
+		case o.GroupVersionKind().Kind == "ClusterRole":
 			existingObj = &rbacv1.ClusterRole{}
-		case obj.GroupVersionKind().Kind == "ClusterRoleBinding":
+		case o.GroupVersionKind().Kind == "ClusterRoleBinding":
 			existingObj = &rbacv1.ClusterRoleBinding{}
-		case obj.GroupVersionKind().Kind == "Service":
+		case o.GroupVersionKind().Kind == "Service":
 			existingObj = &corev1.Service{}
-		case obj.GroupVersionKind().Kind == "Secret":
+		case o.GroupVersionKind().Kind == "Secret":
 			existingObj = &corev1.Secret{}
-		case obj.GroupVersionKind().Kind == "ValidatingWebhookConfiguration":
+		case o.GroupVersionKind().Kind == "ValidatingWebhookConfiguration":
 			existingObj = &admissionv1.ValidatingWebhookConfiguration{}
-		case obj.GroupVersionKind().Kind == "ServiceMonitor":
+		case o.GroupVersionKind().Kind == "ServiceMonitor":
 			existingObj = &monitoringv1.ServiceMonitor{}
 		default:
 			s.T().Fatalf("not supported kind object %v %v %v", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 		}
+		// get object for namespace and name
 		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
 			Name:      o.GetName(),
@@ -73,13 +74,13 @@ func (s *integrationTestSuite) Setup() {
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created:", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
+			s.T().Log("created object:", o.GroupVersionKind(), "/", o.GetNamespace(), "/", o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
 		} else {
-			s.T().Log("found:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
+			s.T().Log("found object and skipping creation:", o.GroupVersionKind(), "/", o.GetNamespace(), "/", o.GetName())
 		}
 	}
 
