@@ -69,7 +69,7 @@ func (s *integrationTestSuite) Setup() {
 		}, existingObj)
 
 		if err != nil && errors.IsNotFound(err) {
-			s.T().Log("error not found:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
+			s.T().Log("not found object:", err, o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 			// if not create one
 			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
