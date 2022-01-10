@@ -43,6 +43,7 @@ export SKIP_TEARDOWN?=
 KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
 ENABLE_API_MOCK?="false"
 ENABLE_WEBHOOK?="false"
+ENABLE_MONITORING?="true"
 WEBHOOK_PORT?=8080
 
 # Container
@@ -480,7 +481,13 @@ endif
 ifneq ($(ENABLE_API_MOCK), "false")
 	@make prepare-api-mock
 endif
+ifeq ($(ENABLE_MONITORING), "true")
 	@make setup-monitoring
+	@(source hack/determine-container-runtime.sh; \
+		kubectl apply -f config/deploy/monitoring; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
+endif
 .PHONY: setup-addon-operator
 
 ## Installs Addon Operator CRDs in to the currently selected cluster.
