@@ -16,6 +16,16 @@ Addon Operator coordinates the lifecycle of Addons in managed OpenShift.
 
 ---
 
+## Index
+
+- [API reference](https://github.com/openshift/addon-operator/blob/main/docs/api-reference/_index.md)
+- [Development](https://github.com/openshift/addon-operator#development)
+	- [Commiting](https://github.com/openshift/addon-operator#committing)
+	- [Quickstart](https://github.com/openshift/addon-operator#quickstart--develop-integration-tests)
+	- [Iterate fast](https://github.com/openshift/addon-operator#iterate-fast)
+- [Troubleshooting](https://github.com/openshift/addon-operator#troubleshooting)
+- [Monitoring](https://github.com/openshift/addon-operator#monitoring-and-metrics)
+
 ## Development
 
 All development tooling can be accessed via `make`, use `make help` to get an overview of all supported targets.
@@ -24,7 +34,7 @@ This development tooling is currently used on Linux amd64, please get in touch i
 
 ### Prerequisites and Dependencies
 
-To contribute new features or test `podman` or `docker` and the `go` tool chain need to be present on the system.
+To contribute new features or add/run tests, `podman` or `docker` and the `go` tool chain need to be present on the system.
 
 Dependencies are loaded as required and are kept local to the project in the `.cache` directory and you can setup or update all dependencies via `make dependencies`
 
@@ -74,6 +84,13 @@ make test-integration-short
 # repeat!
 ```
 
+The `make` tooling offers the following flags to tweak your local in-cluster installation of the AddonOperator:
+
+- `ENABLE_WEBHOOK=true/false`: Deploy the AddonOperator webhook server that runs Admission webhooks
+- `WEBHOOK_PORT=<PORT>`: Port to use while running the webhook server
+- `ENABLE_API_MOCK=true/false`: Deploy the mock OCM API server for testing and validating the UpgradePolicy flow
+- `ENABLE_MONITORING=true/false`: Deploy the kube-prometheus monitoring stack for adding / testing AddonOperator metrics
+
 ### Iterate fast!
 
 To iterate fast on code changes and experiment, the operator can also run out-of-cluster. This way we don't have to rebuild images, load them into the cluster and redeploy the operator for every code change.
@@ -118,3 +135,15 @@ F0511 11:47:28.966114       1 server.go:495] open /proc/sys/net/netfilter/nf_con
 
 Make sure to:
 `sudo sysctl net/netfilter/nf_conntrack_max=<value>`, and add a drop-in file to `/etc/sysctl.d/99-custom.conf` to set the kernel parameters permanently.
+
+## Monitoring and metrics
+
+The AddonOperator is instrumented with the prometheus-client provided by controller-runtime to record some useful Addon metrics.
+
+| Metric name                                 | Type       | Description                                                                             |
+|---------------------------------------------|------------|-----------------------------------------------------------------------------------------|
+| `addon_operator_addons_count`               | `GaugeVec` | Total number of Addon installations, grouped by 'available', 'paused' and 'total'       |
+| `addon_operator_paused`                     | `Gauge`    | A boolean that tells if the AddonOperator is paused (1 - paused; 0 - unpaused)          |
+| `addon_operator_ocm_api_requests_durations` | `Summary`  | OCM API request latencies in microseconds. Grouped using tail-latencies (p50, p90, p99) |
+
+See [Quickstart](https://github.com/openshift/addon-operator#quickstart--develop-integration-tests) for instructions on how to setup a local monitoring stack for development / testing.
