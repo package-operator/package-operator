@@ -7,6 +7,8 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/openshift/addon-operator/internal/metrics"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -40,10 +42,11 @@ func init() {
 }
 
 type options struct {
-	metricsAddr          string
-	pprofAddr            string
-	enableLeaderElection bool
-	probeAddr            string
+	metricsAddr           string
+	pprofAddr             string
+	enableLeaderElection  bool
+	enableMetricsRecorder bool
+	probeAddr             string
 }
 
 func parseFlags() *options {
@@ -56,13 +59,13 @@ func parseFlags() *options {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-
+	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording Addon Metrics")
 	flag.Parse()
 
 	return opts
 }
 
-func initReconcilers(mgr ctrl.Manager) {
+func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
 	// Create a client that does not cache resources cluster-wide.
 	uncachedClient, err := client.New(
 		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
@@ -72,9 +75,10 @@ func initReconcilers(mgr ctrl.Manager) {
 	}
 
 	addonReconciler := &addoncontroller.AddonReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Addon"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("Addon"),
+		Scheme:   mgr.GetScheme(),
+		Recorder: recorder,
 	}
 
 	if err := addonReconciler.SetupWithManager(mgr); err != nil {
@@ -89,6 +93,7 @@ func initReconcilers(mgr ctrl.Manager) {
 		Scheme:             mgr.GetScheme(),
 		GlobalPauseManager: addonReconciler,
 		OCMClientManager:   addonReconciler,
+		Recorder:           recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
 		os.Exit(1)
@@ -170,8 +175,11 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	initReconcilers(mgr)
+	var recorder *metrics.Recorder
+	if opts.enableMetricsRecorder {
+		recorder = metrics.NewRecorder(true)
+	}
+	initReconcilers(mgr, recorder)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

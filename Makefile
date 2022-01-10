@@ -24,6 +24,7 @@ LD_FLAGS=-X $(MODULE)/internal/version.Version=$(VERSION) \
 			-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
 
 UNAME_OS:=$(shell uname -s)
+UNAME_OS_LOWER:=$(shell uname -s | awk '{ print tolower($0); }') # UNAME_OS but in lower case
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
@@ -42,6 +43,7 @@ export SKIP_TEARDOWN?=
 KIND_CLUSTER_NAME:="addon-operator" # name of the kind cluster for local development.
 ENABLE_API_MOCK?="false"
 ENABLE_WEBHOOK?="false"
+ENABLE_MONITORING?="true"
 WEBHOOK_PORT?=8080
 
 # Container
@@ -177,6 +179,25 @@ $(OPM):
 		&& touch "$(OPM)" \
 		&& echo
 	@(echo; command -v opm; opm version; echo) | sed 's/^/  /'
+
+HELM:=$(DEPENDENCY_VERSIONS)/helm/$(HELM_VERSION)
+$(HELM):
+	@echo "installing helm ${HELM_VERSION}"
+	$(eval HELM_TMP = $(shell mktemp -d))
+	@(cd "$(HELM_TMP)"; \
+		curl -L --fail \
+		https://get.helm.sh/helm-$(HELM_VERSION)-$(UNAME_OS_LOWER)-amd64.tar.gz -o helm.tar.gz; \
+		tar xvf helm.tar.gz; \
+		cp $(UNAME_OS_LOWER)-amd64/helm helm; \
+		chmod +x helm; \
+		mv helm $(DEPENDENCY_BIN); \
+	) 2>&1 | sed 's/^/  /'
+	@rm -rf "$(HELM_TMP)" "$(dir $(HELM))" \
+		&& mkdir -p "$(dir $(HELM))" \
+		&& touch "$(HELM)" \
+		&& echo
+	@(echo; command -v helm; helm version; echo) | sed 's/^/  /'
+
 
 ## Run go mod tidy in all go modules
 tidy:
@@ -376,6 +397,16 @@ setup-okd-console:
 	) 2>&1 | sed 's/^/  /'
 .PHONY: setup-okd-console
 
+## Setup Prometheus Kubernetes stack
+setup-monitoring: $(HELM)
+	@(kubectl create ns monitoring)
+	@(helm repo add prometheus-community https://prometheus-community.github.io/helm-charts)
+	@(helm repo update)
+	@(helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring \
+     --set grafana.enabled=false \
+     --set kubeStateMetrics.enabled=false \
+     --set nodeExporter.enabled=false)
+
 ## Loads the OCM API Mock into the currently selected cluster.
 prepare-api-mock: \
 	load-api-mock \
@@ -449,6 +480,13 @@ ifneq ($(ENABLE_WEBHOOK), "false")
 endif
 ifneq ($(ENABLE_API_MOCK), "false")
 	@make prepare-api-mock
+endif
+ifeq ($(ENABLE_MONITORING), "true")
+	@make setup-monitoring
+	@(source hack/determine-container-runtime.sh; \
+		kubectl apply -f config/deploy/monitoring; \
+		echo; \
+	) 2>&1 | sed 's/^/  /'
 endif
 .PHONY: setup-addon-operator
 

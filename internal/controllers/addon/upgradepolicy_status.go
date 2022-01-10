@@ -4,12 +4,32 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/internal/ocm"
 )
+
+// reconciler-facing wrapper around ocm.PatchUpgradePolicy that makes it
+// easier to record OCM API metrics, and unit test the instrumentation.
+// This also allows us to re-use the Recorder in AddonReconciler for recording
+// OCM API metrics, rather than passing it down to the ocmClient object.
+func (r *AddonReconciler) handlePatchUpgradePolicy(ctx context.Context,
+	req ocm.UpgradePolicyPatchRequest) error {
+	if r.Recorder != nil {
+		// TODO: do not count metrics when API returns 5XX response
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			us := v * 1000000 // convert to microseconds
+			r.Recorder.RecordOCMAPIRequests(us)
+		}))
+		defer timer.ObserveDuration()
+	}
+	_, err := r.ocmClient.PatchUpgradePolicy(ctx, req)
+	return err
+}
 
 func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 	ctx context.Context,
@@ -46,7 +66,7 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 		addon.Status.UpgradePolicy.ID != addon.Spec.UpgradePolicy.ID {
 		// The current upgrade policy never received a status update.
 		// Tell them: "we are working on it"
-		_, err := r.ocmClient.PatchUpgradePolicy(ctx, ocm.UpgradePolicyPatchRequest{
+		err := r.handlePatchUpgradePolicy(ctx, ocm.UpgradePolicyPatchRequest{
 			ID:          addon.Spec.UpgradePolicy.ID,
 			Value:       ocm.UpgradePolicyValueStarted,
 			Description: "Upgrading addon.",
@@ -70,7 +90,7 @@ func (r *AddonReconciler) handleUpgradePolicyStatusReporting(
 
 	// Addon is healthy and we have not yet reported the upgrade as completed,
 	// let's do that :)
-	_, err := r.ocmClient.PatchUpgradePolicy(ctx, ocm.UpgradePolicyPatchRequest{
+	err := r.handlePatchUpgradePolicy(ctx, ocm.UpgradePolicyPatchRequest{
 		ID:          addon.Spec.UpgradePolicy.ID,
 		Value:       ocm.UpgradePolicyValueCompleted,
 		Description: "Addon was healthy at least once.",

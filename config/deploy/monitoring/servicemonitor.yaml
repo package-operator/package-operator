@@ -1,0 +1,19 @@
+# To be used for local development and testing only
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: addon-operator-servicemonitor
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - addon-operator
+  selector:
+    matchLabels:
+      app: addon-operator-metrics-service
+  endpoints:
+    - port: metrics
+      interval: 10s
+      path: /metrics
