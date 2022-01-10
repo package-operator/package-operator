@@ -51,7 +51,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 	var observedCatalogSource *operatorsv1alpha1.CatalogSource
 	{
 		var err error
-		observedCatalogSource, err = reconcileCatalogSource(ctx, r.Client, catalogSource)
+		observedCatalogSource, err = reconcileCatalogSource(ctx, r.Client, catalogSource, addon.Spec.ResourceAdoptionStrategy)
 		if err != nil {
 			return resultNil, nil, err
 		}
@@ -77,7 +77,7 @@ func (r *AddonReconciler) ensureCatalogSource(
 
 // reconciles a CatalogSource and returns a new CatalogSource object with observed state.
 // Warning: Will adopt existing CatalogSource
-func reconcileCatalogSource(ctx context.Context, c client.Client, catalogSource *operatorsv1alpha1.CatalogSource) (
+func reconcileCatalogSource(ctx context.Context, c client.Client, catalogSource *operatorsv1alpha1.CatalogSource, strategy addonsv1alpha1.ResourceAdoptionStrategyType) (
 	*operatorsv1alpha1.CatalogSource, error) {
 	currentCatalogSource := &operatorsv1alpha1.CatalogSource{}
 
@@ -96,7 +96,11 @@ func reconcileCatalogSource(ctx context.Context, c client.Client, catalogSource 
 
 	// only update when spec or ownerReference has changed
 	if !equality.Semantic.DeepEqual(catalogSource.Spec, currentCatalogSource.Spec) ||
-		!equality.Semantic.DeepEqual(catalogSource.OwnerReferences, currentCatalogSource.OwnerReferences) {
+		!controllers.HasEqualControllerReference(catalogSource, currentCatalogSource) {
+		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+			return nil, controllers.ErrNotOwnedByUs
+		}
 		// copy new spec into existing object and update in the k8s api
 		currentCatalogSource.Spec = catalogSource.Spec
 		currentCatalogSource.OwnerReferences = catalogSource.OwnerReferences

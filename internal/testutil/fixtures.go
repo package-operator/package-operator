@@ -3,6 +3,7 @@ package testutil
 import (
 	"net/http"
 
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -135,6 +136,18 @@ func NewTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
 	}
 }
 
+func NewTestOperatorGroup() *operatorsv1.OperatorGroup {
+	return &operatorsv1.OperatorGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testing",
+			Namespace: "testing-ns",
+		},
+		Spec: operatorsv1.OperatorGroupSpec{
+			TargetNamespaces: []string{"testing-ns"},
+		},
+	}
+}
+
 func NewTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 	return &addonsv1alpha1.Addon{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,6 +164,27 @@ func NewTestAddonWithCatalogSourceImage() *addonsv1alpha1.Addon {
 					},
 				},
 			},
+		},
+	}
+}
+
+func NewTestAddonWithCatalogSourceImageWithResourceAdoptionStrategy(strategy addonsv1alpha1.ResourceAdoptionStrategyType) *addonsv1alpha1.Addon {
+	return &addonsv1alpha1.Addon{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "addon-1",
+			UID:  "addon-uid",
+		},
+		Spec: addonsv1alpha1.AddonSpec{
+			Install: addonsv1alpha1.AddonInstallSpec{
+				Type: addonsv1alpha1.OLMOwnNamespace,
+				OLMOwnNamespace: &addonsv1alpha1.AddonInstallOLMOwnNamespace{
+					AddonInstallOLMCommon: addonsv1alpha1.AddonInstallOLMCommon{
+						CatalogSourceImage: "quay.io/osd-addons/test:sha256:04864220677b2ed6244f2e0d421166df908986700647595ffdb6fd9ca4e5098a",
+						Namespace:          "addon-1",
+					},
+				},
+			},
+			ResourceAdoptionStrategy: strategy,
 		},
 	}
 }

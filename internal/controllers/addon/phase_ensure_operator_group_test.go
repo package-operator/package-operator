@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+	"github.com/openshift/addon-operator/internal/controllers"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
@@ -244,76 +245,60 @@ func TestEnsureOperatorGroup(t *testing.T) {
 	})
 }
 
-func TestReconcileOperatorGroup(t *testing.T) {
-	operatorGroup := &operatorsv1.OperatorGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testing",
-			Namespace: "testing-ns",
-		},
-		Spec: operatorsv1.OperatorGroupSpec{
-			TargetNamespaces: []string{"testing-ns"},
-		},
+func TestReconcileOperatorGroup_Update_Adoption_AdoptAll(t *testing.T) {
+	operatorGroup := testutil.NewTestOperatorGroup()
+	c := testutil.NewClient()
+	r := AddonReconciler{
+		Client: c,
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
 	}
 
-	t.Run("no-op", func(t *testing.T) {
-		c := testutil.NewClient()
-		r := AddonReconciler{
-			Client: c,
-			Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
-		}
+	c.
+		On(
+			"Get",
+			mock.Anything,
+			client.ObjectKeyFromObject(operatorGroup),
+			mock.IsType(&operatorsv1.OperatorGroup{}),
+		).
+		Return(nil)
 
-		c.
-			On(
-				"Get",
-				mock.Anything,
-				client.ObjectKeyFromObject(operatorGroup),
-				mock.IsType(&operatorsv1.OperatorGroup{}),
-			).
-			Run(func(args mock.Arguments) {
-				og := args.Get(2).(*operatorsv1.OperatorGroup)
-				operatorGroup.DeepCopyInto(og)
-			}).
-			Return(nil)
-
-		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
-		require.NoError(t, err)
-	})
-
-	t.Run("update", func(t *testing.T) {
-		c := testutil.NewClient()
-		r := AddonReconciler{
-			Client: c,
-			Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
-		}
-
-		c.
-			On(
-				"Get",
-				mock.Anything,
-				client.ObjectKeyFromObject(operatorGroup),
-				mock.IsType(&operatorsv1.OperatorGroup{}),
-			).
-			Return(nil)
-
-		c.
-			On(
-				"Update",
-				mock.Anything,
-				mock.IsType(&operatorsv1.OperatorGroup{}),
-				mock.Anything,
-			).
-			Return(nil)
-
-		ctx := context.Background()
-		err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy())
-		require.NoError(t, err)
-
-		c.AssertCalled(t,
+	c.
+		On(
 			"Update",
 			mock.Anything,
 			mock.IsType(&operatorsv1.OperatorGroup{}),
 			mock.Anything,
-		)
-	})
+		).
+		Return(nil)
+
+	ctx := context.Background()
+	err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy(), addonsv1alpha1.ResourceAdoptionAdoptAll)
+
+	assert.NoError(t, err)
+	c.AssertExpectations(t)
+}
+
+func TestReconcileOperatorGroup_Update_Adoption_Prevent(t *testing.T) {
+	operatorGroup := testutil.NewTestOperatorGroup()
+	c := testutil.NewClient()
+	r := AddonReconciler{
+		Client: c,
+		Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
+	}
+
+	c.
+		On(
+			"Get",
+			mock.Anything,
+			client.ObjectKeyFromObject(operatorGroup),
+			mock.IsType(&operatorsv1.OperatorGroup{}),
+		).
+		Return(nil)
+
+	ctx := context.Background()
+	err := r.reconcileOperatorGroup(ctx, operatorGroup.DeepCopy(), addonsv1alpha1.ResourceAdoptionPrevent)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
+	c.AssertExpectations(t)
 }
