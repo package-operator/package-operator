@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -29,24 +32,55 @@ func (s *integrationTestSuite) Setup() {
 	// Create all objects to install the Addon Operator
 	for _, obj := range objs {
 		o := obj
-		// check if object already exists
+		// get object call requires specific kind object to be pass
 		var existingObj client.Object
-		_ = integration.Client.Get(ctx, client.ObjectKey{
+		switch {
+		case o.GroupVersionKind().Kind == "Namespace":
+			existingObj = &corev1.Namespace{}
+		case o.GroupVersionKind().Kind == "CustomResourceDefinition":
+			existingObj = &apiextensionsv1.CustomResourceDefinition{}
+		case o.GroupVersionKind().Kind == "Deployment":
+			existingObj = &appsv1.Deployment{}
+		case o.GroupVersionKind().Kind == "ServiceAccount":
+			existingObj = &corev1.ServiceAccount{}
+		case o.GroupVersionKind().Kind == "Role":
+			existingObj = &rbacv1.Role{}
+		case o.GroupVersionKind().Kind == "RoleBinding":
+			existingObj = &rbacv1.RoleBinding{}
+		case o.GroupVersionKind().Kind == "ClusterRole":
+			existingObj = &rbacv1.ClusterRole{}
+		case o.GroupVersionKind().Kind == "ClusterRoleBinding":
+			existingObj = &rbacv1.ClusterRoleBinding{}
+		case o.GroupVersionKind().Kind == "Service":
+			existingObj = &corev1.Service{}
+		case o.GroupVersionKind().Kind == "Secret":
+			existingObj = &corev1.Secret{}
+		case o.GroupVersionKind().Kind == "ValidatingWebhookConfiguration":
+			existingObj = &admissionv1.ValidatingWebhookConfiguration{}
+		case o.GroupVersionKind().Kind == "ServiceMonitor":
+			existingObj = &monitoringv1.ServiceMonitor{}
+		default:
+			s.T().Fatalf("not supported kind object %v %v %v", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
+		}
+		// get object for namespace and name
+		err := integration.Client.Get(ctx, client.ObjectKey{
 			Namespace: o.GetNamespace(),
 			Name:      o.GetName(),
 		}, existingObj)
 
-		if existingObj == nil {
+		if err != nil && errors.IsNotFound(err) {
+			s.T().Log("not found object:", err, o.GroupVersionKind(), "/", o.GetNamespace(), "/", o.GetName())
 			// if not create one
-			err := integration.Client.Create(ctx, &o)
+			err = integration.Client.Create(ctx, &o)
 			s.Require().NoError(err)
 
-			s.T().Log("created: ", o.GroupVersionKind().String(),
-				o.GetNamespace()+"/"+o.GetName())
+			s.T().Log("created object:", o.GroupVersionKind(), "/", o.GetNamespace(), "/", o.GetName())
 
 			if o.GetKind() == "Deployment" {
 				deployments = append(deployments, o)
 			}
+		} else {
+			s.T().Log("found object and skipping creation:", o.GroupVersionKind(), "/", o.GetNamespace(), "/", o.GetName())
 		}
 	}
 
