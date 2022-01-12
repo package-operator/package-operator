@@ -48,6 +48,10 @@ type AddonReconciler struct {
 }
 
 type ocmClient interface {
+	GetCluster(
+		ctx context.Context,
+		req ocm.ClusterGetRequest,
+	) (res ocm.ClusterGetResponse, err error)
 	PatchUpgradePolicy(
 		ctx context.Context,
 		req ocm.UpgradePolicyPatchRequest,

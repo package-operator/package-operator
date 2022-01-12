@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/openshift/addon-operator/internal/ocm"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -166,6 +168,20 @@ func (s *integrationTestSuite) Setup() {
 			s.Require().NoError(err, "wait for Addon Operator Deployment")
 		})
 	}
+
+	// creating the OCMClient after applying all deployments, as ocm.NewClient() will
+	// talk to the OCM API to resolve the ClusterID from the ClusterExternalID
+	OCMClient, err := ocm.NewClient(
+		context.Background(),
+		ocm.WithEndpoint("http://127.0.0.1:8001/api/v1/namespaces/api-mock/services/api-mock:80/proxy"),
+		ocm.WithAccessToken("accessToken"), //TODO: Needs to be supplied from the outside, does not matter for mock.
+		ocm.WithClusterExternalID(string(integration.Cv.Spec.ClusterID)),
+	)
+	if err != nil {
+		panic(fmt.Errorf("initializing ocm client: %w", err))
+	}
+
+	integration.OCMClient = OCMClient
 
 	s.Run("AddonOperator available", func() {
 		addonOperator := addonsv1alpha1.AddonOperator{}

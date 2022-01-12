@@ -70,10 +70,10 @@ func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 var (
 	// Client pointing to the e2e test cluster.
-	Client client.Client
-	Config *rest.Config
-	Scheme = runtime.NewScheme()
-
+	Client    client.Client
+	Config    *rest.Config
+	Scheme    = runtime.NewScheme()
+	Cv        *configv1.ClusterVersion
 	OCMClient *ocm.Client
 
 	// Typed K8s Clients
@@ -117,16 +117,10 @@ func init() {
 	// Typed Kubernetes Clients
 	CoreV1Client = corev1client.NewForConfigOrDie(Config)
 
-	// OCM Client
-	cv := &configv1.ClusterVersion{}
-	if err := Client.Get(context.Background(), client.ObjectKey{Name: "version"}, cv); err != nil {
+	Cv = &configv1.ClusterVersion{}
+	if err := Client.Get(context.Background(), client.ObjectKey{Name: "version"}, Cv); err != nil {
 		panic(fmt.Errorf("getting clusterversion: %w", err))
 	}
-	OCMClient = ocm.NewClient(
-		ocm.WithEndpoint("http://127.0.0.1:8001/api/v1/namespaces/api-mock/services/api-mock:80/proxy"),
-		ocm.WithAccessToken("accessToken"), //TODO: Needs to be supplied from the outside, does not matter for mock.
-		ocm.WithClusterID(string(cv.Spec.ClusterID)),
-	)
 
 	// Paths
 	PathConfigDeploy, err = filepath.Abs(relativeConfigDeployPath)

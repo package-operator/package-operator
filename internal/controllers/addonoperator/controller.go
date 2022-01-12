@@ -91,7 +91,7 @@ func (r *AddonOperatorReconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("handling global pause: %w", err)
 	}
 
-	if err := r.handleOCMClient(ctx, addonOperator); err != nil {
+	if err := r.handleOCMClient(ctx, log, addonOperator); err != nil {
 		return ctrl.Result{}, fmt.Errorf("handling OCM client: %w", err)
 	}
 
@@ -107,7 +107,7 @@ func (r *AddonOperatorReconciler) Reconcile(
 
 // Creates an OCM API client and injects it into the OCM Client Manager for distribution.
 func (r *AddonOperatorReconciler) handleOCMClient(
-	ctx context.Context, addonOperator *addonsv1alpha1.AddonOperator) error {
+	ctx context.Context, log logr.Logger, addonOperator *addonsv1alpha1.AddonOperator) error {
 	if addonOperator.Spec.OCM == nil {
 		return nil
 	}
@@ -133,11 +133,21 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 		return fmt.Errorf("extracting access token from .dockerconfigjson: %w", err)
 	}
 
-	c := ocm.NewClient(
+	c, _ := ocm.NewClient(
+		ctx,
 		ocm.WithEndpoint(addonOperator.Spec.OCM.Endpoint),
 		ocm.WithAccessToken(accessToken),
-		ocm.WithClusterID(string(cv.Spec.ClusterID)),
+		ocm.WithClusterExternalID(string(cv.Spec.ClusterID)),
 	)
+
+	//ocm client not initialized, usually because the OCM API is not yet
+	//available or because the ClusterID from the ClusterVersion doesn't
+	//properly translate into an internal_id
+	if c == nil {
+		log.Info("delaying ocm client initialization until the OCM API is available")
+		return nil
+	}
+
 	if err := r.OCMClientManager.InjectOCMClient(ctx, c); err != nil {
 		return fmt.Errorf("injecting ocm client: %w", err)
 	}

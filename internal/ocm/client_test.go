@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -21,13 +22,22 @@ func TestClientDo_Success(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		recordedHttpRequest = r
 		recordedBody, _ = ioutil.ReadAll(recordedHttpRequest.Body)
-		fmt.Fprintln(rw, `{"response":"works!"}`)
+
+		if r.URL.Path == "/proxy/apis/api/clusters_mgmt/v1/clusters" {
+			fmt.Fprintln(rw, clustersMockAPIResponseBody)
+		} else {
+			fmt.Fprintln(rw, `{"response":"works!"}`)
+		}
+
 	}))
 	defer s.Close()
 
-	c := NewClient(
+	ctx := context.Background()
+
+	c, _ := NewClient(
+		ctx,
 		WithAccessToken("access-token"),
-		WithClusterID("123"),
+		WithClusterExternalID("123"),
 		WithEndpoint(s.URL+"/proxy/apis"), // test existing path + trailing / handling
 	)
 
@@ -43,6 +53,7 @@ func TestClientDo_Success(t *testing.T) {
 		payload, response interface{}
 		method            string
 		path              string
+		params            url.Values
 
 		expectedResponse interface{}
 		expectedPayload  string
@@ -53,6 +64,7 @@ func TestClientDo_Success(t *testing.T) {
 			payload:  &TestRequest{Request: "payload!"},
 			response: &TestResponse{},
 			path:     "test123",
+			params:   url.Values{},
 
 			expectedPayload:  `{"request":"payload!"}`,
 			expectedResponse: &TestResponse{Response: "works!"},
@@ -62,6 +74,7 @@ func TestClientDo_Success(t *testing.T) {
 			method:  http.MethodPatch,
 			payload: &TestRequest{Request: "payload!"},
 			path:    "test124",
+			params:  url.Values{},
 
 			expectedPayload: `{"request":"payload!"}`,
 		},
@@ -70,6 +83,7 @@ func TestClientDo_Success(t *testing.T) {
 			method:   http.MethodGet,
 			response: &TestResponse{},
 			path:     "/test123/dkxxx",
+			params:   url.Values{},
 
 			expectedResponse: &TestResponse{Response: "works!"},
 		},
@@ -80,7 +94,7 @@ func TestClientDo_Success(t *testing.T) {
 			ctx := context.Background()
 
 			err := c.do(
-				ctx, test.method, test.path, test.payload, test.response)
+				ctx, test.method, test.path, test.params, test.payload, test.response)
 			require.NoError(t, err)
 
 			assert.Equal(t, test.method, recordedHttpRequest.Method)
@@ -89,7 +103,7 @@ func TestClientDo_Success(t *testing.T) {
 			assert.Equal(t,
 				"application/json", recordedHttpRequest.Header.Get("Content-Type"))
 			assert.Equal(t,
-				"AccessToken 123:access-token", recordedHttpRequest.Header.Get("Authorization"))
+				"AccessToken 1ou:access-token", recordedHttpRequest.Header.Get("Authorization"))
 
 			if test.expectedPayload != "" {
 				assert.Equal(t, test.expectedPayload, string(recordedBody))
@@ -104,20 +118,27 @@ func TestClientDo_Success(t *testing.T) {
 
 func TestClientDo_Error(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(rw, `{"code":"swordfish","reason":"olm dance"}`)
+		if r.URL.Path == "/proxy/apis/api/clusters_mgmt/v1/clusters" {
+			rw.WriteHeader(http.StatusOK)
+			fmt.Fprintln(rw, clustersMockAPIResponseBody)
+		} else {
+			rw.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintln(rw, `{"code":"swordfish","reason":"olm dance"}`)
+		}
 	}))
 	defer s.Close()
 
-	c := NewClient(
-		WithAccessToken("access-token"),
-		WithClusterID("123"),
-		WithEndpoint(s.URL+"/proxy/apis"), // test existing path + trailing / handling
-	)
-
 	ctx := context.Background()
 
+	c, ocmClientError := NewClient(
+		ctx,
+		WithAccessToken("access-token"),
+		WithClusterExternalID("123"),
+		WithEndpoint(s.URL+"/proxy/apis"), // test existing path + trailing / handling
+	)
+	require.NoError(t, ocmClientError)
+
 	err := c.do(
-		ctx, http.MethodPatch, "/broken", nil, nil)
+		ctx, http.MethodPatch, "/broken", nil, nil, nil)
 	assert.EqualError(t, err, "HTTP 500: swordfish: olm dance")
 }
