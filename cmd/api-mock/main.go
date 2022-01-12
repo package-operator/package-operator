@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -14,6 +16,10 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/healthz", Health)
 	r.HandleFunc("/readyz", Health)
+	r.Handle(
+		"/api/clusters_mgmt/v1/clusters",
+		NewClustersEndpoint(),
+	)
 	r.Handle(
 		"/api/clusters_mgmt/v1/clusters/{cluster_id}/upgrade_policies/{upgrade_policy_id}/state",
 		NewUpgradePolicyStateEndpoint(),
@@ -28,6 +34,64 @@ func main() {
 
 func Health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+type ClustersEndpoint struct {
+	data    map[ClustersKey]string
+	dataMux sync.RWMutex
+}
+
+func NewClustersEndpoint() *ClustersEndpoint {
+	return &ClustersEndpoint{
+		data: map[ClustersKey]string{},
+	}
+}
+
+type ClustersKey struct {
+	ExternalId string
+}
+
+func (cs *ClustersEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	re := regexp.MustCompile(`'.*'`)
+
+	switch r.Method {
+
+	case http.MethodGet:
+		cs.dataMux.RLock()
+		defer cs.dataMux.RUnlock()
+
+		w.WriteHeader(http.StatusOK)
+
+		//for the mock server, we don't care about the expression itself,
+		//we just want the cluster external id out of it
+		//e.g.: external_id = 'a440b136-b2d6-406b-a884-fca2d62cd170'
+		//get the id, with quotes
+		search := r.URL.Query().Get("search")
+		idFromSearch := re.FindStringSubmatch(search)
+
+		//safeguard, when there's no cluster id in the search
+		//string, we return an empty list of clusters
+		if len(idFromSearch) == 0 {
+			fmt.Fprintf(w, `{"items": []}`)
+			return
+		}
+
+		//remove the quotes
+		clusterExternalId := strings.Trim(idFromSearch[0], "'")
+
+		//return always the same cluster id, regardless the external id
+		//provided
+		fmt.Fprintf(w,
+			`{"items": [{"kind": "Cluster","id": "1ou","external_id": "%s"}]}`,
+			clusterExternalId)
+
+		log.Printf("%s %s:\n", r.URL.String(), r.Method)
+
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
 }
 
 type UpgradePolicyStateEndpoint struct {
