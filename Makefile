@@ -24,7 +24,7 @@ LD_FLAGS=-X $(MODULE)/internal/version.Version=$(VERSION) \
 			-X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE)
 
 UNAME_OS:=$(shell uname -s)
-UNAME_OS_LOWER:=$(shell uname -s | awk '{ print tolower($0); }') # UNAME_OS but in lower case
+UNAME_OS_LOWER:=$(shell uname -s | awk '{ print tolower($$0); }') # UNAME_OS but in lower case
 UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
