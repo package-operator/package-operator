@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type UpgradePolicyValue string
@@ -25,11 +26,13 @@ func (c *Client) PatchUpgradePolicy(
 	ctx context.Context,
 	req UpgradePolicyPatchRequest,
 ) (res UpgradePolicyPatchResponse, err error) {
+	urlParams := url.Values{}
 	return res, c.do(ctx, http.MethodPatch, fmt.Sprintf(
 		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
 		c.opts.ClusterID,
 		req.ID,
 	),
+		urlParams,
 		req,
 		&res,
 	)
@@ -48,11 +51,13 @@ func (c *Client) GetUpgradePolicy(
 	ctx context.Context,
 	req UpgradePolicyGetRequest,
 ) (res UpgradePolicyGetResponse, err error) {
+	urlParams := url.Values{}
 	return res, c.do(ctx, http.MethodGet, fmt.Sprintf(
 		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
 		c.opts.ClusterID,
 		req.ID,
 	),
+		urlParams,
 		req,
 		&res,
 	)

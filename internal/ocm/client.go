@@ -20,20 +20,32 @@ type Client struct {
 }
 
 // Creates a new OCM client with the given options.
-func NewClient(opts ...Option) *Client {
+func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
 	c := &Client{}
 	for _, opt := range opts {
 		opt(&c.opts)
 	}
 
 	c.httpClient = &http.Client{}
-	return c
+
+	// Getting the Cluster Internal ID from the External ID
+	clusterInfo, err := c.GetCluster(ctx, ClusterGetRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("getting cluster info: %w", err)
+	}
+	if len(clusterInfo.Items) == 0 {
+		return nil, fmt.Errorf("cluster %s not found", c.opts.ClusterExternalID)
+	}
+
+	c.opts.ClusterID = clusterInfo.Items[0].Id
+	return c, nil
 }
 
 type ClientOptions struct {
-	Endpoint    string
-	ClusterID   string
-	AccessToken string
+	Endpoint          string
+	ClusterExternalID string
+	ClusterID         string
+	AccessToken       string
 }
 
 type Option func(o *ClientOptions)
@@ -45,9 +57,9 @@ func WithEndpoint(endpoint string) Option {
 	}
 }
 
-func WithClusterID(clusterID string) Option {
+func WithClusterExternalID(clusterExternalID string) Option {
 	return func(o *ClientOptions) {
-		o.ClusterID = clusterID
+		o.ClusterExternalID = clusterExternalID
 	}
 }
 
@@ -71,6 +83,7 @@ func (c *Client) do(
 	ctx context.Context,
 	httpMethod string,
 	path string,
+	params url.Values,
 	payload, result interface{},
 ) error {
 	// Build URL
@@ -93,8 +106,14 @@ func (c *Client) do(
 		resBody = bytes.NewBuffer(j)
 	}
 
-	// Request
-	httpReq, err := http.NewRequestWithContext(ctx, httpMethod, reqURL.String(), resBody)
+	var fullUrl string
+	if len(params) > 0 {
+		fullUrl = reqURL.String() + "?" + params.Encode()
+	} else {
+		fullUrl = reqURL.String()
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, httpMethod, fullUrl, resBody)
 	if err != nil {
 		return fmt.Errorf("creating http request: %w", err)
 	}
@@ -115,7 +134,7 @@ func (c *Client) do(
 	if httpRes.StatusCode >= 400 && httpRes.StatusCode <= 599 {
 		body, err := ioutil.ReadAll(httpRes.Body)
 		if err != nil {
-			return fmt.Errorf("reading error response body: %w", err)
+			return fmt.Errorf("reading error response body %s: %w", fullUrl, err)
 		}
 
 		var ocmErr OCMError
@@ -131,11 +150,11 @@ func (c *Client) do(
 	if result != nil {
 		body, err := ioutil.ReadAll(httpRes.Body)
 		if err != nil {
-			return fmt.Errorf("reading response body: %w", err)
+			return fmt.Errorf("reading response body %s: %w", fullUrl, err)
 		}
 
 		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("unmarshal json response: %w", err)
+			return fmt.Errorf("unmarshal json response %s: %w", fullUrl, err)
 		}
 	}
 
