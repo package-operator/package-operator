@@ -51,7 +51,15 @@ type options struct {
 	enableMetricsRecorder       bool
 	enableMetricsTLSTermination bool
 	probeAddr                   string
+	metricsTlsCertDir           string
 	nonTLSMetricsAddr           string
+	metricsTlsConfig            tlsConfig
+}
+
+type tlsConfig struct {
+	caCertPath string
+	certPath   string
+	keyPath    string
 }
 
 func parseFlags() *options {
@@ -66,6 +74,7 @@ func parseFlags() *options {
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording Addon Metrics")
 	flag.BoolVar(&opts.enableMetricsTLSTermination, "enable-metrics-tls-termination", true, "Enable metrics endpoint to be TLS-terminated")
+	flag.StringVar(&opts.metricsTlsCertDir, "metrics-tls-cert-dir", "/tmp/k8s-metrics-server/serving-certs/", "Path to the directory where the TLS config-related files exist (ca.crt, tls.crt, tls.key)")
 	flag.Parse()
 
 	return opts
@@ -80,6 +89,18 @@ func preprocessOpts(opts *options) {
 		opts.nonTLSMetricsAddr = defaultNonTlsMetricsAddr
 	} else {
 		opts.nonTLSMetricsAddr = opts.metricsAddr
+	}
+
+	// add a trailing slash to the metrics TLS cert-dir path, if it doesn't exist
+	if string(opts.metricsTlsCertDir[len(opts.metricsTlsCertDir)-1]) != "/" {
+		opts.metricsTlsCertDir += "/"
+	}
+
+	// setup metrics tls config w.r.t metricsTlsCertDir
+	opts.metricsTlsConfig = tlsConfig{
+		caCertPath: opts.metricsTlsCertDir + "ca.crt",
+		certPath:   opts.metricsTlsCertDir + "tls.crt",
+		keyPath:    opts.metricsTlsCertDir + "tls.key",
 	}
 }
 
@@ -161,7 +182,7 @@ func initPprof(mgr ctrl.Manager, addr string) {
 	}
 }
 
-func initMetricsRelayServer(mgr ctrl.Manager, httpsRelayAddr string, target string) {
+func initMetricsRelayServer(mgr ctrl.Manager, httpsRelayAddr string, target string, tlsConf tlsConfig) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		targetAddr := target
@@ -197,7 +218,7 @@ func initMetricsRelayServer(mgr ctrl.Manager, httpsRelayAddr string, target stri
 		}()
 		go func() {
 			defer close(errCh)
-			errCh <- s.ListenAndServeTLS("/tmp/k8s-metrics-server/serving-certs/tls.crt", "/tmp/k8s-metrics-server/serving-certs/tls.key")
+			errCh <- s.ListenAndServeTLS(tlsConf.certPath, tlsConf.keyPath)
 		}()
 
 		select {
@@ -240,7 +261,7 @@ func main() {
 	}
 
 	if opts.enableMetricsTLSTermination {
-		initMetricsRelayServer(mgr, opts.metricsAddr, opts.nonTLSMetricsAddr)
+		initMetricsRelayServer(mgr, opts.metricsAddr, opts.nonTLSMetricsAddr, opts.metricsTlsConfig)
 	}
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
