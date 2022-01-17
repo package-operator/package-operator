@@ -30,8 +30,9 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme                   = runtime.NewScheme()
+	setupLog                 = ctrl.Log.WithName("setup")
+	defaultNonTlsMetricsAddr = ":8083"
 )
 
 func init() {
@@ -44,19 +45,19 @@ func init() {
 }
 
 type options struct {
-	metricsAddr           string
-	metricsHttpsRelayAddr string
-	pprofAddr             string
-	enableLeaderElection  bool
-	enableMetricsRecorder bool
-	probeAddr             string
+	metricsAddr                 string
+	pprofAddr                   string
+	enableLeaderElection        bool
+	enableMetricsRecorder       bool
+	enableMetricsTLSTermination bool
+	probeAddr                   string
+	nonTLSMetricsAddr           string
 }
 
 func parseFlags() *options {
 	opts := &options{}
 
-	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&opts.metricsHttpsRelayAddr, "metrics-https-relay-addr", ":8083", "The address exposing an HTTPS endpoint which relays incoming traffic to the metrics server.")
+	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", "The address at which metrics (https or http) will be exposed.")
 	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", "The address the pprof web endpoint binds to.")
 	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -64,9 +65,22 @@ func parseFlags() *options {
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording Addon Metrics")
+	flag.BoolVar(&opts.enableMetricsTLSTermination, "enable-metrics-tls-termination", true, "Enable metrics endpoint to be TLS-terminated")
 	flag.Parse()
 
 	return opts
+}
+
+func preprocessOpts(opts *options) {
+	// opts.nonTLSMetricsAddr - where the actual controller-runtime metric server will be setup
+	// opts.metricsAddr - where the relay server will be setup if --enable-metrics-tls-termination flag would be provided
+	// For the end-user/client, if --enable-metrics-tls-termination is provided, https://<host>:<metrics-addr>/metrics will be reachable
+	// else, http://<host>:<metrics-addr>/metrics will be reachable
+	if opts.enableMetricsTLSTermination {
+		opts.nonTLSMetricsAddr = defaultNonTlsMetricsAddr
+	} else {
+		opts.nonTLSMetricsAddr = opts.metricsAddr
+	}
 }
 
 func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
@@ -202,12 +216,13 @@ func initMetricsRelayServer(mgr ctrl.Manager, httpsRelayAddr string, target stri
 
 func main() {
 	opts := parseFlags()
+	preprocessOpts(opts)
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
-		MetricsBindAddress:         opts.metricsAddr,
+		MetricsBindAddress:         opts.nonTLSMetricsAddr,
 		HealthProbeBindAddress:     opts.probeAddr,
 		Port:                       9443,
 		LeaderElectionResourceLock: "leases",
@@ -224,7 +239,9 @@ func main() {
 		initPprof(mgr, opts.pprofAddr)
 	}
 
-	initMetricsRelayServer(mgr, opts.metricsHttpsRelayAddr, opts.metricsAddr)
+	if opts.enableMetricsTLSTermination {
+		initMetricsRelayServer(mgr, opts.metricsAddr, opts.nonTLSMetricsAddr)
+	}
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

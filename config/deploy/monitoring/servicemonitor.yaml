@@ -14,11 +14,11 @@ spec:
     matchLabels:
       app: addon-operator-metrics-service
   endpoints:
-    ### TODO: get rid of http-port
-    - port: http
+    ### TODO: get rid of `port: private` in the future
+    - port: private
       interval: 10s
       path: /metrics
-    - port: https
+    - port: public
       interval: 10s
       path: /metrics
       tlsConfig:

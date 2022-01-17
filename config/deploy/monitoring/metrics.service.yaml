@@ -9,10 +9,10 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: http
+      name: public
       targetPort: 8080
     - port: 8083
-      name: https
+      name: private  ## [only for dev/test purposes], wouldn't work if --enable-metrics-tls-termination=false
       targetPort: 8083
   selector:
     app.kubernetes.io/name: addon-operator

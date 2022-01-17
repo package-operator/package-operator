@@ -25,6 +25,7 @@ spec:
         image: quay.io/openshift/addon-operator:latest
         args:
         - --enable-leader-election
+        - --enable-metrics-tls-termination # redundant as default is `true` as well but putting it here to highlight it
         volumeMounts:
         - name: tls
           mountPath: "/tmp/k8s-metrics-server/serving-certs/"
