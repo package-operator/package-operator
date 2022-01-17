@@ -28,6 +28,9 @@ var (
 
 	defaultAddonDeletionTimeout     = 4 * time.Minute
 	defaultAddonAvailabilityTimeout = 10 * time.Minute
+
+	defaultPodDeletionTimeout     = 1 * time.Minute
+	defaultPodAvailabilityTimeout = 1 * time.Minute
 )
 
 func addon_OwnNamespace_UpgradePolicyReporting() *addonsv1alpha1.Addon {
@@ -229,6 +232,42 @@ func addon_TestResourceAdoption() *addonsv1alpha1.Addon {
 						PackageName:        referenceAddonNamespace,
 						Channel:            "alpha",
 						CatalogSourceImage: referenceAddonCatalogSourceImageWorking,
+					},
+				},
+			},
+		},
+	}
+}
+
+func pod_metricsClient() *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sample-metrics-client",
+			Namespace: "addon-operator",
+		},
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{
+				{
+					Name: "tls",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "metrics-server-cert",
+						},
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name:    "playground-container",
+					Image:   "registry.access.redhat.com/ubi8/ubi-minimal@sha256:16da4d4c5cb289433305050a06834b7328769f8a5257ad5b4a5006465a0379ff",
+					Command: []string{"sh"},
+					Args:    []string{"-c", "sleep infinity;"},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "tls",
+							MountPath: "/tmp/k8s-metrics-server/serving-certs/",
+							ReadOnly:  true,
+						},
 					},
 				},
 			},
