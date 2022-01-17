@@ -16,11 +16,19 @@ spec:
         app.kubernetes.io/name: addon-operator
     spec:
       serviceAccountName: addon-operator
+      volumes:
+      - name: tls
+        secret:
+          secretName: metrics-server-cert
       containers:
       - name: manager
         image: quay.io/openshift/addon-operator:latest
         args:
         - --enable-leader-election
+        volumeMounts:
+        - name: tls
+          mountPath: "/tmp/k8s-metrics-server/serving-certs/"
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz

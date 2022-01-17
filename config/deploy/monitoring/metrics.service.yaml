@@ -9,7 +9,10 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: metrics
+      name: http
       targetPort: 8080
+    - port: 8083
+      name: https
+      targetPort: 8083
   selector:
     app.kubernetes.io/name: addon-operator

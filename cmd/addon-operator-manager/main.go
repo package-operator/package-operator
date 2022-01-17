@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -43,6 +45,7 @@ func init() {
 
 type options struct {
 	metricsAddr           string
+	metricsHttpsRelayAddr string
 	pprofAddr             string
 	enableLeaderElection  bool
 	enableMetricsRecorder bool
@@ -53,6 +56,7 @@ func parseFlags() *options {
 	opts := &options{}
 
 	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&opts.metricsHttpsRelayAddr, "metrics-https-relay-addr", ":8083", "The address exposing an HTTPS endpoint which relays incoming traffic to the metrics server.")
 	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", "The address the pprof web endpoint binds to.")
 	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -143,6 +147,59 @@ func initPprof(mgr ctrl.Manager, addr string) {
 	}
 }
 
+func initMetricsRelayServer(mgr ctrl.Manager, httpsRelayAddr string, target string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		targetAddr := target
+		if string(targetAddr[0]) == ":" {
+			targetAddr = "http://127.0.0.1" + targetAddr
+		}
+		targetAddr += r.URL.Path
+
+		resp, err := http.Get(targetAddr) //nolint
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("{\"code: %d\", \"message\": \"failed to call %s\", \"error\": \"%+v\"}", http.StatusInternalServerError, targetAddr, err))) //nolint
+			return
+		}
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("{\"code: %d\", \"message\": \"failed to parse the response body received from GET %s\", \"error\": \"%+v\"}", http.StatusInternalServerError, targetAddr, err))) //nolint
+			return
+		}
+
+		w.WriteHeader(resp.StatusCode)
+		w.Write(bodyBytes) //nolint
+	})
+
+	s := &http.Server{Addr: httpsRelayAddr, Handler: mux}
+
+	err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		errCh := make(chan error)
+		defer func() {
+			for range errCh {
+			} // drain errCh for GC
+		}()
+		go func() {
+			defer close(errCh)
+			errCh <- s.ListenAndServeTLS("/tmp/k8s-metrics-server/serving-certs/tls.crt", "/tmp/k8s-metrics-server/serving-certs/tls.key")
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-ctx.Done():
+			s.Close()
+			return nil
+		}
+	}))
+	if err != nil {
+		setupLog.Error(err, "unable to create metrics relay server")
+		os.Exit(1)
+	}
+}
+
 func main() {
 	opts := parseFlags()
 
@@ -166,6 +223,8 @@ func main() {
 	if len(opts.pprofAddr) > 0 {
 		initPprof(mgr, opts.pprofAddr)
 	}
+
+	initMetricsRelayServer(mgr, opts.metricsHttpsRelayAddr, opts.metricsAddr)
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

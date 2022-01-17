@@ -14,6 +14,29 @@ spec:
     matchLabels:
       app: addon-operator-metrics-service
   endpoints:
-    - port: metrics
+    ### TODO: get rid of http-port
+    - port: http
       interval: 10s
       path: /metrics
+    - port: https
+      interval: 10s
+      path: /metrics
+      tlsConfig:
+        insecureSkipVerify: true
+        ### ALERT! - Only use insecureSkipVerify: true for test / dev environment
+        ### For production-grade environment, it's recommended to have a dedicated secret injected with TLS config
+        ### and that secret should be fed to the service monitor's tls config like the following way:
+        # ca:
+        #   secret:
+        #     name: <secret-name-containing-tls-config>
+        #     key: ca.crt
+        #     optional: false
+        # cert:
+        #   secret:
+        #     name: <secret-name-containing-tls-config>
+        #     key: tls.crt
+        #     optional: false
+        # keySecret:
+        #   name: <secret-name-containing-tls-config>
+        #   key: tls.key
+        #   optional: false
