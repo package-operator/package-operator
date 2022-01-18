@@ -29,8 +29,8 @@ var (
 	defaultAddonDeletionTimeout     = 4 * time.Minute
 	defaultAddonAvailabilityTimeout = 10 * time.Minute
 
-	defaultPodDeletionTimeout     = 1 * time.Minute
-	defaultPodAvailabilityTimeout = 1 * time.Minute
+	defaultPodDeletionTimeout     = 4 * time.Minute
+	defaultPodAvailabilityTimeout = 10 * time.Minute
 )
 
 func addon_OwnNamespace_UpgradePolicyReporting() *addonsv1alpha1.Addon {

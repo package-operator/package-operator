@@ -32,7 +32,7 @@ func (s *integrationTestSuite) TestMetricsServer() {
 	s.Require().NoError(err)
 
 	s.Run("test_https_endpoint", func() {
-		httpsMetricsAddr := "https://addon-operator-metrics.addon-operator.svc:8080/healthz"
+		httpsMetricsAddr := "https://addon-operator-metrics.addon-operator.svc:8443/healthz"
 		caCertPath := pod.Spec.Containers[0].VolumeMounts[0].MountPath + "ca.crt"
 
 		command := []string{"curl", "--cacert", caCertPath, httpsMetricsAddr}
@@ -43,7 +43,7 @@ func (s *integrationTestSuite) TestMetricsServer() {
 	})
 
 	s.Run("test_http_endpoint", func() {
-		httpMetricsAddr := "http://addon-operator-metrics.addon-operator.svc:8083/healthz"
+		httpMetricsAddr := "http://addon-operator-metrics.addon-operator.svc:8080/healthz"
 
 		command := []string{"curl", httpMetricsAddr}
 
@@ -55,7 +55,7 @@ func (s *integrationTestSuite) TestMetricsServer() {
 	s.T().Cleanup(func() {
 		s.T().Logf("waiting for pod %s/%s to be deleted...", pod.Namespace, pod.Name)
 
-		err := integration.Client.Delete(ctx, pod, client.PropagationPolicy("Foreground"))
+		err := integration.Client.Delete(ctx, pod)
 		s.Require().NoError(client.IgnoreNotFound(err), "delete Pod: %v", pod)
 
 		// wait until Pod is gone
