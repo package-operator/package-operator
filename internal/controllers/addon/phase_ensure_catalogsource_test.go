@@ -10,6 +10,9 @@ import (
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
+
+	"github.com/openshift/addon-operator/internal/controllers"
 	"github.com/openshift/addon-operator/internal/testutil"
 )
 
@@ -28,7 +31,7 @@ func TestReconcileCatalogSource_NotExistingYet_HappyPath(t *testing.T) {
 
 	ctx := context.Background()
 	catalogSource := testutil.NewTestCatalogSource()
-	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy())
+	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), addonsv1alpha1.ResourceAdoptionAdoptAll)
 	assert.NoError(t, err)
 	assert.NotNil(t, reconciledCatalogSource)
 	c.AssertExpectations(t)
@@ -51,7 +54,7 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorGet(t *testing.T) 
 	).Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource())
+	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource(), addonsv1alpha1.ResourceAdoptionAdoptAll)
 	assert.Error(t, err)
 	assert.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)
@@ -73,13 +76,13 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorCreate(t *testing.
 	).Return(timeoutErr)
 
 	ctx := context.Background()
-	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource())
+	_, err := reconcileCatalogSource(ctx, c, testutil.NewTestCatalogSource(), addonsv1alpha1.ResourceAdoptionAdoptAll)
 	assert.Error(t, err)
 	assert.EqualError(t, err, timeoutErr.Error())
 	c.AssertExpectations(t)
 }
 
-func TestReconcileCatalogSource_Adoption(t *testing.T) {
+func TestReconcileCatalogSource_Adoption_AdoptAll(t *testing.T) {
 	catalogSource := testutil.NewTestCatalogSource()
 
 	c := testutil.NewClient()
@@ -100,9 +103,29 @@ func TestReconcileCatalogSource_Adoption(t *testing.T) {
 	).Return(nil)
 
 	ctx := context.Background()
-	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy())
+	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), addonsv1alpha1.ResourceAdoptionAdoptAll)
 	assert.NoError(t, err)
 	assert.NotNil(t, reconciledCatalogSource)
+}
+
+func TestReconcileCatalogSource_Adoption_Prevent(t *testing.T) {
+	catalogSource := testutil.NewTestCatalogSource()
+
+	c := testutil.NewClient()
+	c.On("Get",
+		testutil.IsContext,
+		testutil.IsObjectKey,
+		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
+	).Run(func(args mock.Arguments) {
+		arg := args.Get(2).(*operatorsv1alpha1.CatalogSource)
+		testutil.NewTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
+	}).Return(nil)
+
+	ctx := context.Background()
+	_, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), addonsv1alpha1.ResourceAdoptionPrevent)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
 	c.AssertExpectations(t)
 }
 
@@ -142,7 +165,7 @@ func TestEnsureCatalogSource_Create(t *testing.T) {
 }
 
 func TestEnsureCatalogSource_Update(t *testing.T) {
-	addon := testutil.NewTestAddonWithCatalogSourceImage()
+	addon := testutil.NewTestAddonWithCatalogSourceImageWithResourceAdoptionStrategy(addonsv1alpha1.ResourceAdoptionAdoptAll)
 
 	c := testutil.NewClient()
 	c.On("Get",

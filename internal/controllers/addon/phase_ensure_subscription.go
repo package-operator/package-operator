@@ -66,7 +66,7 @@ func (r *AddonReconciler) ensureSubscription(
 	}
 
 	observedSubscription, err := r.reconcileSubscription(
-		ctx, desiredSubscription)
+		ctx, desiredSubscription, addon.Spec.ResourceAdoptionStrategy)
 	if err != nil {
 		return resultNil, client.ObjectKey{}, fmt.Errorf("reconciling Subscription: %w", err)
 	}
@@ -100,6 +100,7 @@ func (r *AddonReconciler) ensureSubscription(
 func (r *AddonReconciler) reconcileSubscription(
 	ctx context.Context,
 	subscription *operatorsv1alpha1.Subscription,
+	strategy addonsv1alpha1.ResourceAdoptionStrategyType,
 ) (currentSubscription *operatorsv1alpha1.Subscription, err error) {
 	currentSubscription = &operatorsv1alpha1.Subscription{}
 	err = r.Get(ctx, client.ObjectKey{
@@ -119,8 +120,11 @@ func (r *AddonReconciler) reconcileSubscription(
 	// only update when spec has changed or owner reference has changed
 	if !equality.Semantic.DeepEqual(
 		subscription.Spec, currentSubscription.Spec) ||
-		!equality.Semantic.DeepEqual(
-			subscription.OwnerReferences, currentSubscription.OwnerReferences) {
+		!controllers.HasEqualControllerReference(currentSubscription, subscription) {
+		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+			return nil, controllers.ErrNotOwnedByUs
+		}
 		// copy new spec into existing object and update in the k8s api
 		currentSubscription.Spec = subscription.Spec
 		currentSubscription.OwnerReferences = subscription.OwnerReferences

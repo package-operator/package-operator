@@ -39,13 +39,13 @@ func (r *AddonReconciler) ensureOperatorGroup(
 	if err := controllerutil.SetControllerReference(addon, desiredOperatorGroup, r.Scheme); err != nil {
 		return resultNil, fmt.Errorf("setting controller reference: %w", err)
 	}
-	return resultNil, r.reconcileOperatorGroup(ctx, desiredOperatorGroup)
+	return resultNil, r.reconcileOperatorGroup(ctx, desiredOperatorGroup, addon.Spec.ResourceAdoptionStrategy)
 }
 
 // Reconciles the Spec of the given OperatorGroup if needed by updating or creating the OperatorGroup.
 // The given OperatorGroup is updated to reflect the latest state from the kube-apiserver.
 func (r *AddonReconciler) reconcileOperatorGroup(
-	ctx context.Context, operatorGroup *operatorsv1.OperatorGroup) error {
+	ctx context.Context, operatorGroup *operatorsv1.OperatorGroup, strategy addonsv1alpha1.ResourceAdoptionStrategyType) error {
 	currentOperatorGroup := &operatorsv1.OperatorGroup{}
 
 	err := r.Get(ctx, client.ObjectKeyFromObject(operatorGroup), currentOperatorGroup)
@@ -57,7 +57,11 @@ func (r *AddonReconciler) reconcileOperatorGroup(
 	}
 
 	if !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec) ||
-		!equality.Semantic.DeepEqual(currentOperatorGroup.OwnerReferences, operatorGroup.OwnerReferences) {
+		!controllers.HasEqualControllerReference(currentOperatorGroup, operatorGroup) {
+		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+			return controllers.ErrNotOwnedByUs
+		}
 		currentOperatorGroup.Spec = operatorGroup.Spec
 		currentOperatorGroup.OwnerReferences = operatorGroup.OwnerReferences
 		return r.Update(ctx, currentOperatorGroup)
