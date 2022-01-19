@@ -451,7 +451,7 @@ load-api-mock: build-image-api-mock
 
 # Template deployment for Addon Operator
 config/deploy/deployment.yaml: FORCE $(YQ)
-	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
+	@yq eval '(.spec.template.spec.containers[] | select(.name == "manager")).image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
 # Template deployment for OCM API Mock
