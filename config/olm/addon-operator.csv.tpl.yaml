@@ -7,11 +7,11 @@ metadata:
     containerImage: quay.io/openshift/addon-operator:latest
     capabilities: Full Lifecycle
     # BUMP skipRange so OLM has an upgrade path available
-    olm.skipRange: '>=0.0.1 <0.3.0'
+    olm.skipRange: '>=0.0.1 <0.4.0'
   # BUMP version so OLM has an upgrade available
-  name: addon-operator.v0.3.0
+  name: addon-operator.v0.4.0
 spec:
-  version: 0.3.0
+  version: 0.4.0
   description: |-
     Addon Operator coordinates the lifecycle of Addons in managed OpenShift.
   displayName: Managed OpenShift Addon Operator
