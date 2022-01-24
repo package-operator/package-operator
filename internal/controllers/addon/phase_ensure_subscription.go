@@ -118,11 +118,11 @@ func (r *AddonReconciler) reconcileSubscription(
 	subscription.Spec.InstallPlanApproval = currentSubscription.Spec.InstallPlanApproval
 
 	// only update when spec has changed or owner reference has changed
-	if !equality.Semantic.DeepEqual(
-		subscription.Spec, currentSubscription.Spec) ||
-		!controllers.HasEqualControllerReference(currentSubscription, subscription) {
+	ownedByAddon := controllers.HasEqualControllerReference(currentSubscription, subscription)
+	specChanged := !equality.Semantic.DeepEqual(subscription.Spec, currentSubscription.Spec)
+	if specChanged || !ownedByAddon {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !ownedByAddon {
 			return nil, controllers.ErrNotOwnedByUs
 		}
 		// copy new spec into existing object and update in the k8s api

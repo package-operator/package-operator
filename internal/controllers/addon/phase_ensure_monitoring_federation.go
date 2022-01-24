@@ -123,15 +123,14 @@ func (r *AddonReconciler) reconcileServiceMonitor(
 		return fmt.Errorf("getting ServiceMonitor: %w", err)
 	}
 
-	if len(currentServiceMonitor.OwnerReferences) == 0 ||
-		!controllers.HasEqualControllerReference(currentServiceMonitor, serviceMonitor) {
-		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
-			return controllers.ErrNotOwnedByUs
-		}
+	// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+	ownedByAddon := controllers.HasEqualControllerReference(currentServiceMonitor, serviceMonitor)
+	if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !ownedByAddon {
+		return controllers.ErrNotOwnedByUs
 	}
 
-	if !equality.Semantic.DeepEqual(currentServiceMonitor.Spec, serviceMonitor.Spec) {
+	specChanged := !equality.Semantic.DeepEqual(currentServiceMonitor.Spec, serviceMonitor.Spec)
+	if specChanged {
 		currentServiceMonitor.Spec = serviceMonitor.Spec
 		return r.Update(ctx, currentServiceMonitor)
 	}

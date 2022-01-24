@@ -56,10 +56,11 @@ func (r *AddonReconciler) reconcileOperatorGroup(
 		return fmt.Errorf("getting OperatorGroup: %w", err)
 	}
 
-	if !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec) ||
-		!controllers.HasEqualControllerReference(currentOperatorGroup, operatorGroup) {
+	ownedByAddon := controllers.HasEqualControllerReference(currentOperatorGroup, operatorGroup)
+	specChanged := !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec)
+	if specChanged || !ownedByAddon {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !ownedByAddon {
 			return controllers.ErrNotOwnedByUs
 		}
 		currentOperatorGroup.Spec = operatorGroup.Spec
