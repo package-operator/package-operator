@@ -95,12 +95,11 @@ func reconcileCatalogSource(ctx context.Context, c client.Client, catalogSource 
 	}
 
 	// only update when spec or ownerReference has changed
-	if !equality.Semantic.DeepEqual(catalogSource.Spec, currentCatalogSource.Spec) ||
-		!controllers.HasEqualControllerReference(catalogSource, currentCatalogSource) {
+	ownedByAddon := controllers.HasEqualControllerReference(currentCatalogSource, catalogSource)
+	specChanged := !equality.Semantic.DeepEqual(catalogSource.Spec, currentCatalogSource.Spec)
+	if specChanged || !ownedByAddon {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		// Only enforce resource-adoption check for resources NOT owned by the Addon in the first place.
-		// Note: `catalogSource`'s ownerRef is the Addon.
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !controllers.HasEqualControllerReference(catalogSource, currentCatalogSource) {
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !ownedByAddon {
 			return nil, controllers.ErrNotOwnedByUs
 		}
 		// copy new spec into existing object and update in the k8s api
