@@ -59,7 +59,9 @@ func (r *AddonReconciler) reconcileOperatorGroup(
 	if !equality.Semantic.DeepEqual(currentOperatorGroup.Spec, operatorGroup.Spec) ||
 		!controllers.HasEqualControllerReference(currentOperatorGroup, operatorGroup) {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+		// Only enforce resource-adoption check for resources NOT owned by the Addon in the first place.
+		// Note: `operatorGroup`'s ownerRef is the Addon.
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !controllers.HasEqualControllerReference(currentOperatorGroup, operatorGroup) {
 			return controllers.ErrNotOwnedByUs
 		}
 		currentOperatorGroup.Spec = operatorGroup.Spec

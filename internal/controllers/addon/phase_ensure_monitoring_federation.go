@@ -126,7 +126,9 @@ func (r *AddonReconciler) reconcileServiceMonitor(
 	if len(currentServiceMonitor.OwnerReferences) == 0 ||
 		!controllers.HasEqualControllerReference(currentServiceMonitor, serviceMonitor) {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+		// Only enforce resource-adoption check for resources NOT owned by the Addon in the first place.
+		// Note: `serviceMonitor`'s ownerRef is the Addon.
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !controllers.HasEqualControllerReference(currentServiceMonitor, serviceMonitor) {
 			return controllers.ErrNotOwnedByUs
 		}
 	}

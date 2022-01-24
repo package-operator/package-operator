@@ -122,7 +122,9 @@ func (r *AddonReconciler) reconcileSubscription(
 		subscription.Spec, currentSubscription.Spec) ||
 		!controllers.HasEqualControllerReference(currentSubscription, subscription) {
 		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
+		// Only enforce resource-adoption check for resources NOT owned by the Addon in the first place.
+		// Note: `subscription`'s ownerRef is the Addon.
+		if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !controllers.HasEqualControllerReference(currentSubscription, subscription) {
 			return nil, controllers.ErrNotOwnedByUs
 		}
 		// copy new spec into existing object and update in the k8s api
