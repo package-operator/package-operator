@@ -82,51 +82,95 @@ func TestReconcileCatalogSource_NotExistingYet_WithClientErrorCreate(t *testing.
 	c.AssertExpectations(t)
 }
 
-func TestReconcileCatalogSource_Adoption_AdoptAll(t *testing.T) {
-	catalogSource := testutil.NewTestCatalogSource()
+func TestReconcileCatalogSource_Adoption(t *testing.T) {
+	for name, tc := range map[string]struct {
+		MustAdopt  bool
+		Strategy   addonsv1alpha1.ResourceAdoptionStrategyType
+		AssertFunc func(*testing.T, *operatorsv1alpha1.CatalogSource, error)
+	}{
+		"no strategy/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionStrategyType(""),
+			AssertFunc: assertReconciledCatalogSource,
+		},
+		"Prevent/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionPrevent,
+			AssertFunc: assertReconciledCatalogSource,
+		},
+		"AdoptAll/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionAdoptAll,
+			AssertFunc: assertReconciledCatalogSource,
+		},
+		"no strategy/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionStrategyType(""),
+			AssertFunc: assertUnreconciledCatalogSource,
+		},
+		"Prevent/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionPrevent,
+			AssertFunc: assertUnreconciledCatalogSource,
+		},
+		"AdoptAll/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionAdoptAll,
+			AssertFunc: assertReconciledCatalogSource,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			catalogSource := testutil.NewTestCatalogSource()
 
-	c := testutil.NewClient()
-	c.On("Get",
-		testutil.IsContext,
-		testutil.IsObjectKey,
-		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-	).Run(func(args mock.Arguments) {
-		arg := args.Get(2).(*operatorsv1alpha1.CatalogSource)
-		testutil.NewTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
-	}).Return(nil)
-	// TODO: remove this Update call once resourceAdoptionStrategy is discontinued
-	// This update call changes the ownerRef to AddonOperator
-	c.On("Update",
-		testutil.IsContext,
-		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-		mock.Anything,
-	).Return(nil)
+			c := testutil.NewClient()
+			c.On("Get",
+				testutil.IsContext,
+				testutil.IsObjectKey,
+				testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
+			).Run(func(args mock.Arguments) {
+				var cs *operatorsv1alpha1.CatalogSource
 
-	ctx := context.Background()
-	reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), addonsv1alpha1.ResourceAdoptionAdoptAll)
-	assert.NoError(t, err)
-	assert.NotNil(t, reconciledCatalogSource)
+				if tc.MustAdopt {
+					cs = testutil.NewTestCatalogSourceWithoutOwner()
+				} else {
+					cs = testutil.NewTestCatalogSource()
+					// Unrelated spec change to force reconciliation
+					cs.Spec.ConfigMap = "new-config-map"
+				}
+
+				cs.DeepCopyInto(args.Get(2).(*operatorsv1alpha1.CatalogSource))
+			}).Return(nil)
+
+			if !tc.MustAdopt || (tc.MustAdopt && tc.Strategy == addonsv1alpha1.ResourceAdoptionAdoptAll) {
+				c.On("Update",
+					testutil.IsContext,
+					testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
+					mock.Anything,
+				).Return(nil)
+			}
+
+			ctx := context.Background()
+			reconciledCatalogSource, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), tc.Strategy)
+
+			tc.AssertFunc(t, reconciledCatalogSource, err)
+			c.AssertExpectations(t)
+		})
+	}
 }
 
-func TestReconcileCatalogSource_Adoption_Prevent(t *testing.T) {
-	catalogSource := testutil.NewTestCatalogSource()
+func assertReconciledCatalogSource(t *testing.T, cs *operatorsv1alpha1.CatalogSource, err error) {
+	t.Helper()
 
-	c := testutil.NewClient()
-	c.On("Get",
-		testutil.IsContext,
-		testutil.IsObjectKey,
-		testutil.IsOperatorsV1Alpha1CatalogSourcePtr,
-	).Run(func(args mock.Arguments) {
-		arg := args.Get(2).(*operatorsv1alpha1.CatalogSource)
-		testutil.NewTestCatalogSourceWithoutOwner().DeepCopyInto(arg)
-	}).Return(nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, cs)
 
-	ctx := context.Background()
-	_, err := reconcileCatalogSource(ctx, c, catalogSource.DeepCopy(), addonsv1alpha1.ResourceAdoptionPrevent)
+}
+
+func assertUnreconciledCatalogSource(t *testing.T, cs *operatorsv1alpha1.CatalogSource, err error) {
+	t.Helper()
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
-	c.AssertExpectations(t)
 }
 
 func TestEnsureCatalogSource_Create(t *testing.T) {

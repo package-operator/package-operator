@@ -186,3 +186,99 @@ func TestEnsureMonitoringFederation_MonitoringPresentInSpec_PresentInCluster(t *
 	assert.False(t, stop, "expected stop to be false")
 
 }
+
+func TestReconcileServiceMonitor_Adoption(t *testing.T) {
+	for name, tc := range map[string]struct {
+		MustAdopt  bool
+		Strategy   addonsv1alpha1.ResourceAdoptionStrategyType
+		AssertFunc func(*testing.T, error)
+	}{
+		"no strategy/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionStrategyType(""),
+			AssertFunc: assertReconciledServiceMonitor,
+		},
+		"Prevent/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionPrevent,
+			AssertFunc: assertReconciledServiceMonitor,
+		},
+		"AdoptAll/no adoption": {
+			MustAdopt:  false,
+			Strategy:   addonsv1alpha1.ResourceAdoptionAdoptAll,
+			AssertFunc: assertReconciledServiceMonitor,
+		},
+		"no strategy/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionStrategyType(""),
+			AssertFunc: assertUnreconciledServiceMonitor,
+		},
+		"Prevent/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionPrevent,
+			AssertFunc: assertUnreconciledServiceMonitor,
+		},
+		"AdoptAll/must adopt": {
+			MustAdopt:  true,
+			Strategy:   addonsv1alpha1.ResourceAdoptionAdoptAll,
+			AssertFunc: assertReconciledServiceMonitor,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			serviceMonitor := testutil.NewTestServiceMonitor()
+
+			c := testutil.NewClient()
+			c.On("Get",
+				testutil.IsContext,
+				testutil.IsObjectKey,
+				testutil.IsMonitoringV1ServiceMonitorPtr,
+			).Run(func(args mock.Arguments) {
+				var sm *monitoringv1.ServiceMonitor
+
+				if tc.MustAdopt {
+					sm = testutil.NewTestServiceMonitorWithoutOwner()
+				} else {
+					sm = testutil.NewTestServiceMonitor()
+				}
+
+				// Unrelated spec change to force reconciliation
+				// this is updated for ownerChanges as well since owner changes do not trigger update
+				sm.Spec.SampleLimit = 100
+				sm.DeepCopyInto(args.Get(2).(*monitoringv1.ServiceMonitor))
+			}).Return(nil)
+
+			if !tc.MustAdopt || (tc.MustAdopt && tc.Strategy == addonsv1alpha1.ResourceAdoptionAdoptAll) {
+				c.On("Update",
+					testutil.IsContext,
+					testutil.IsMonitoringV1ServiceMonitorPtr,
+					mock.Anything,
+				).Return(nil)
+			}
+
+			rec := AddonReconciler{
+				Client: c,
+				Scheme: testutil.NewTestSchemeWithAddonsv1alpha1(),
+			}
+
+			ctx := context.Background()
+			err := rec.reconcileServiceMonitor(ctx, serviceMonitor.DeepCopy(), tc.Strategy)
+
+			tc.AssertFunc(t, err)
+			c.AssertExpectations(t)
+		})
+	}
+}
+
+func assertReconciledServiceMonitor(t *testing.T, err error) {
+	t.Helper()
+
+	assert.NoError(t, err)
+
+}
+
+func assertUnreconciledServiceMonitor(t *testing.T, err error) {
+	t.Helper()
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, controllers.ErrNotOwnedByUs.Error())
+}
