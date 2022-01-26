@@ -7,11 +7,11 @@ metadata:
     containerImage: quay.io/openshift/addon-operator:latest
     capabilities: Full Lifecycle
     # BUMP skipRange so OLM has an upgrade path available
-    olm.skipRange: '>=0.0.1 <0.5.0'
+    olm.skipRange: '>=0.0.1 <0.6.0'
   # BUMP version so OLM has an upgrade available
-  name: addon-operator.v0.5.0
+  name: addon-operator.v0.6.0
 spec:
-  version: 0.5.0
+  version: 0.6.0
   description: |-
     Addon Operator coordinates the lifecycle of Addons in managed OpenShift.
   displayName: Managed OpenShift Addon Operator
@@ -237,10 +237,10 @@ spec:
                 resources:
                   limits:
                     cpu: 100m
-                    memory: 100Mi
+                    memory: 260Mi
                   requests:
                     cpu: 100m
-                    memory: 100Mi
+                    memory: 200Mi
       - name: addon-operator-webhook
         spec:
           replicas: 3
@@ -273,7 +273,7 @@ spec:
                 resources:
                   limits:
                     cpu: 100m
-                    memory: 120Mi
+                    memory: 30Mi
                   requests:
                     cpu: 100m
-                    memory: 80Mi
+                    memory: 20Mi
