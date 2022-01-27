@@ -519,6 +519,7 @@ build-image-addon-operator-bundle: \
 		mkdir -p ".cache/image/${IMAGE_NAME}/manifests"; \
 		mkdir -p ".cache/image/${IMAGE_NAME}/metadata"; \
 		cp -a "config/olm/addon-operator.csv.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
+		cp -a "config/olm/metrics.service.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
 		cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata"; \
 		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
 		tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml"; \
