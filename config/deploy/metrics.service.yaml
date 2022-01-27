@@ -6,6 +6,9 @@ metadata:
   namespace: addon-operator
   labels:
     app: addon-operator-metrics-service
+  # In production, the following annotation will make service-ca-operator to create a Secret called `metrics-server-cert` on the fly and manage its lifecycle
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: metrics-server-cert
 spec:
   ports:
     - port: 8443

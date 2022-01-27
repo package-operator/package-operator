@@ -33,7 +33,7 @@ func (s *integrationTestSuite) TestMetricsServer() {
 
 	s.Run("test_https_endpoint", func() {
 		httpsMetricsAddr := "https://addon-operator-metrics.addon-operator.svc:8443/healthz"
-		caCertPath := pod.Spec.Containers[0].VolumeMounts[0].MountPath + "ca.crt"
+		caCertPath := pod.Spec.Containers[0].VolumeMounts[0].MountPath + "ca-bundle.crt"
 
 		command := []string{"curl", "--cacert", caCertPath, httpsMetricsAddr}
 
