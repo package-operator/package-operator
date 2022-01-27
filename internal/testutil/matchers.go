@@ -3,7 +3,9 @@ package testutil
 import (
 	"context"
 
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +20,12 @@ var (
 	IsCoreV1NamespaceListPtr = mock.IsType(&corev1.NamespaceList{})
 
 	// olm
+	IsOperatorsV1OperatorGroupPtr       = mock.IsType(&operatorsv1.OperatorGroup{})
 	IsOperatorsV1Alpha1CatalogSourcePtr = mock.IsType(&operatorsv1alpha1.CatalogSource{})
+	IsOperatorsV1Alpha1SubscriptionPtr  = mock.IsType(&operatorsv1alpha1.Subscription{})
+
+	// prom
+	IsMonitoringV1ServiceMonitorPtr = mock.IsType(&monitoringv1.ServiceMonitor{})
 
 	// addon.managed.openshift.io/v1alpha1
 	IsAddonsv1alpha1AddonPtr             = mock.IsType(&addonsv1alpha1.Addon{})

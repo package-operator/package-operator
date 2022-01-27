@@ -5,6 +5,7 @@ import (
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,43 +60,39 @@ func NewTestAddonWithMultipleNamespaces() *addonsv1alpha1.Addon {
 }
 
 func NewTestNamespace() *corev1.Namespace {
+	ns := NewTestNamespaceWithoutOwner()
+	ns.OwnerReferences = testOwnerRefs()
+
+	return ns
+}
+
+func NewTestNamespaceWithoutOwner() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace-1",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "foo-apiVersion",
-					Kind:       "foo-kind",
-					Name:       "foo-name",
-					UID:        "foo-uid",
-					Controller: utilpointer.BoolPtr(true),
-				},
-			},
 		},
 	}
+}
+
+func NewTestExistingNamespace() *corev1.Namespace {
+	ns := NewTestExistingNamespaceWithoutOwner()
+	ns.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: "foo-apiVersion-something-else",
+			Kind:       "foo-kind-something-else",
+			Name:       "foo-name-something-else",
+			UID:        "foo-uid-something-else",
+			Controller: utilpointer.BoolPtr(true),
+		},
+	}
+
+	return ns
 }
 
 func NewTestExistingNamespaceWithoutOwner() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace-1",
-		},
-	}
-}
-
-func NewTestExistingNamespaceWithOwner() *corev1.Namespace {
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "namespace-1",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "foo-apiVersion-something-else",
-					Kind:       "foo-kind-something-else",
-					Name:       "foo-name-something-else",
-					UID:        "foo-uid-something-else",
-					Controller: utilpointer.BoolPtr(true),
-				},
-			},
 		},
 	}
 }
@@ -111,20 +108,10 @@ func NewTestErrNotFound() *k8sApiErrors.StatusError {
 }
 
 func NewTestCatalogSource() *operatorsv1alpha1.CatalogSource {
-	return &operatorsv1alpha1.CatalogSource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "catalogsource-pfsdboia",
-			Namespace: "default",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "foo-apiVersion",
-					Kind:       "foo-kind",
-					Name:       "foo-name",
-					UID:        "foo-uid",
-					Controller: utilpointer.BoolPtr(true),
-				},
-			}},
-	}
+	cs := NewTestCatalogSourceWithoutOwner()
+	cs.OwnerReferences = testOwnerRefs()
+
+	return cs
 }
 
 func NewTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
@@ -137,6 +124,13 @@ func NewTestCatalogSourceWithoutOwner() *operatorsv1alpha1.CatalogSource {
 }
 
 func NewTestOperatorGroup() *operatorsv1.OperatorGroup {
+	og := NewTestOperatorGroupWithoutOwner()
+	og.OwnerReferences = testOwnerRefs()
+
+	return og
+}
+
+func NewTestOperatorGroupWithoutOwner() *operatorsv1.OperatorGroup {
 	return &operatorsv1.OperatorGroup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "testing",
@@ -185,6 +179,51 @@ func NewTestAddonWithCatalogSourceImageWithResourceAdoptionStrategy(strategy add
 				},
 			},
 			ResourceAdoptionStrategy: strategy,
+		},
+	}
+}
+
+func NewTestServiceMonitor() *monitoringv1.ServiceMonitor {
+	sm := NewTestServiceMonitorWithoutOwner()
+	sm.OwnerReferences = testOwnerRefs()
+
+	return sm
+}
+
+func NewTestServiceMonitorWithoutOwner() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "servicemonitor-abcdefgh",
+			Namespace: "default",
+		},
+	}
+}
+
+func NewTestSubscription() *operatorsv1alpha1.Subscription {
+	sub := NewTestSubscriptionWithoutOwner()
+	sub.OwnerReferences = testOwnerRefs()
+
+	return sub
+}
+
+func NewTestSubscriptionWithoutOwner() *operatorsv1alpha1.Subscription {
+	return &operatorsv1alpha1.Subscription{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "subscription-abcdefgh",
+			Namespace: "default",
+		},
+		Spec: &operatorsv1alpha1.SubscriptionSpec{},
+	}
+}
+
+func testOwnerRefs() []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		{
+			APIVersion: "foo-apiVersion",
+			Kind:       "foo-kind",
+			Name:       "foo-name",
+			UID:        "foo-uid",
+			Controller: utilpointer.BoolPtr(true),
 		},
 	}
 }
