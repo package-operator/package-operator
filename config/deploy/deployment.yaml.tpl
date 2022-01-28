@@ -30,7 +30,7 @@ spec:
         - "--tls-private-key-file=/tmp/k8s-metrics-server/serving-certs/tls.key"
         - "--logtostderr=true"
         - "--ignore-paths=/metrics,/healthz"
-        - "--v=10"
+        - "--v=10"  ### only for dev
         volumeMounts:
         - name: tls
           mountPath: "/tmp/k8s-metrics-server/serving-certs/"
