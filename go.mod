@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/go-logr/logr v0.4.0
 	github.com/gorilla/mux v1.8.0
+	github.com/magefile/mage v1.12.1
 	github.com/openshift/addon-operator/apis v0.0.0-00010101000000-000000000000
 	github.com/openshift/api v0.0.0-20211122204231-b094ceff1955
 	github.com/operator-framework/api v0.8.1

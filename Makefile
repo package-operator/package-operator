@@ -264,7 +264,7 @@ lint: generate $(GOLANGCI_LINT)
 ## Runs code-generators and unittests.
 test-unit: generate
 	@echo "running unit tests..."
-	CGO_ENABLED=1 go test -race -v ./internal/... ./cmd/...
+	./mage test:unit
 .PHONY: test-unit
 
 ## Runs the Integration testsuite against the current $KUBECONFIG cluster

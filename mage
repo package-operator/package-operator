@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export MAGEFILE_CACHE=$PWD/.cache/magefile
+export GOFLAGS=""
+
+if [ ! -f "bin/mage" ]; then
+  go build -o bin/mage ./cmd/mage
+fi
+
+exec ./bin/mage -v $@
