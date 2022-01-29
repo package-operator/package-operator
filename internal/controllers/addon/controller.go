@@ -2,10 +2,12 @@ package addon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/openshift/addon-operator/internal/controllers"
 	"github.com/openshift/addon-operator/internal/metrics"
 
 	"github.com/go-logr/logr"
@@ -255,20 +257,21 @@ func (r *AddonReconciler) Reconcile(
 		return r.handleExit(requeueResult), nil
 	}
 
-	// Phase 7.
+	// Phase 8.
 	// Possibly ensure monitoring federation
 	// Normally this would be configured before the addon workload is installed
 	// but currently the addon workload creates the monitoring stack by itself
 	// thus we want to create the service monitor as late as possible to ensure that
 	// cluster-monitoring prom does not try to scrape a non-existent addon prometheus.
-	if stop, err := r.ensureMonitoringFederation(ctx, addon); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure ServiceMonitor: %w", err)
-	} else if stop {
-		log.Info("stopping", "reason", "monitoring federation namespace or servicemonitor owned by something else")
+	if err := r.ensureMonitoringFederation(ctx, addon); errors.Is(err, controllers.ErrNotOwnedByUs) {
+		log.Info("stopping", "reason", "monitoring federation namespace or serviceMonitor owned by something else")
+
 		return ctrl.Result{}, nil
+	} else if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure ServiceMonitor: %w", err)
 	}
 
-	// Phase 8
+	// Phase 9.
 	// Remove possibly unwanted monitoring federation
 	if err := r.ensureDeletionOfUnwantedMonitoringFederation(ctx, addon); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure deletion of unwanted ServiceMonitors: %w", err)

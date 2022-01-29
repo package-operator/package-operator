@@ -18,7 +18,7 @@ import (
 
 	addonsv1alpha1 "github.com/openshift/addon-operator/apis/addons/v1alpha1"
 	"github.com/openshift/addon-operator/integration"
-	"github.com/openshift/addon-operator/internal/controllers"
+	addonctrl "github.com/openshift/addon-operator/internal/controllers/addon"
 )
 
 func (s *integrationTestSuite) TestMonitoringFederation_MonitoringInPlaceAtCreationRemovedAfterwards() {
@@ -75,7 +75,7 @@ func (s *integrationTestSuite) TestMonitoringFederation_MonitoringInPlaceAtCreat
 		})
 	s.Require().NoError(err)
 
-	monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
+	monitoringNamespaceName := addonctrl.GetMonitoringNamespaceName(addon)
 
 	// validate monitoring Namespace
 	currentMonitoringNamespace := &corev1.Namespace{}
@@ -152,7 +152,7 @@ func (s *integrationTestSuite) TestMonitoringFederation_MonitoringNotInPlaceAtCr
 		})
 	s.Require().NoError(err)
 
-	monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
+	monitoringNamespaceName := addonctrl.GetMonitoringNamespaceName(addon)
 
 	// validate that monitoring Namespace is not there
 	{
@@ -198,7 +198,7 @@ func (s *integrationTestSuite) TestMonitoringFederation_MonitoringNotInPlaceAtCr
 }
 
 func validateMonitoringFederationServiceMonitor(t *testing.T, ctx context.Context, addon *addonsv1alpha1.Addon, monitoringNamespaceName string) {
-	serviceMonitorName := controllers.GetMonitoringFederationServiceMonitorName(addon)
+	serviceMonitorName := addonctrl.GetMonitoringFederationServiceMonitorName(addon)
 	currentServiceMonitor := &monitoringv1.ServiceMonitor{}
 	err := integration.Client.Get(ctx, types.NamespacedName{
 		Name:      serviceMonitorName,

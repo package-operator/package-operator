@@ -30,7 +30,7 @@ func TestEnsureDeletionOfMonitoringFederation_MonitoringFullyMissingInSpec_NotPr
 	c.On("Delete", testutil.IsContext, mock.IsType(&corev1.Namespace{}), mock.Anything).
 		Run(func(args mock.Arguments) {
 			ns := args.Get(1).(*corev1.Namespace)
-			assert.Equal(t, controllers.GetMonitoringNamespaceName(addon), ns.Name)
+			assert.Equal(t, GetMonitoringNamespaceName(addon), ns.Name)
 		}).
 		Return(testutil.NewTestErrNotFound())
 
@@ -97,7 +97,7 @@ func TestEnsureDeletionOfMonitoringFederation_MonitoringFullyMissingInSpec_Prese
 	c.On("Delete", testutil.IsContext, mock.IsType(&corev1.Namespace{}), mock.Anything).
 		Run(func(args mock.Arguments) {
 			ns := args.Get(1).(*corev1.Namespace)
-			assert.Equal(t, controllers.GetMonitoringNamespaceName(addon), ns.Name)
+			assert.Equal(t, GetMonitoringNamespaceName(addon), ns.Name)
 		}).
 		Return(nil)
 
@@ -140,8 +140,8 @@ func TestEnsureDeletionOfMonitoringFederation_MonitoringFullyPresentInSpec_Prese
 		Items: []*monitoringv1.ServiceMonitor{
 			{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      controllers.GetMonitoringFederationServiceMonitorName(addon),
-					Namespace: controllers.GetMonitoringNamespaceName(addon),
+					Name:      GetMonitoringFederationServiceMonitorName(addon),
+					Namespace: GetMonitoringNamespaceName(addon),
 					Labels:    map[string]string{},
 				},
 			},

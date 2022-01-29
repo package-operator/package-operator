@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -58,14 +56,4 @@ func HasEqualControllerReference(current, wanted metav1.Object) bool {
 	}
 
 	return false
-}
-
-// Helper function to compute monitoring Namespace name from addon object
-func GetMonitoringNamespaceName(addon *addonsv1alpha1.Addon) string {
-	return fmt.Sprintf("redhat-monitoring-%s", addon.Name)
-}
-
-// Helper function to compute monitoring federation ServiceMonitor name from addon object
-func GetMonitoringFederationServiceMonitorName(addon *addonsv1alpha1.Addon) string {
-	return fmt.Sprintf("federated-sm-%s", addon.Name)
 }

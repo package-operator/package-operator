@@ -26,7 +26,7 @@ func (r *AddonReconciler) ensureDeletionOfUnwantedMonitoringFederation(
 	// A ServiceMonitor is wanted only if .spec.monitoring.federation is set
 	wantedServiceMonitorName := ""
 	if addon.Spec.Monitoring != nil && addon.Spec.Monitoring.Federation != nil {
-		wantedServiceMonitorName = controllers.GetMonitoringFederationServiceMonitorName(addon)
+		wantedServiceMonitorName = GetMonitoringFederationServiceMonitorName(addon)
 	}
 
 	for _, serviceMonitor := range currentServiceMonitors {
@@ -42,7 +42,7 @@ func (r *AddonReconciler) ensureDeletionOfUnwantedMonitoringFederation(
 	}
 
 	if wantedServiceMonitorName == "" {
-		err := ensureNamespaceDeletion(ctx, r.Client, controllers.GetMonitoringNamespaceName(addon))
+		err := ensureNamespaceDeletion(ctx, r.Client, GetMonitoringNamespaceName(addon))
 		if err != nil {
 			return fmt.Errorf("could not remove monitoring federation Namespace: %w", err)
 		}
