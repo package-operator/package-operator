@@ -451,7 +451,7 @@ load-api-mock: build-image-api-mock
 
 # Template deployment for Addon Operator
 config/deploy/deployment.yaml: FORCE $(YQ)
-	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
+	@yq eval '(.spec.template.spec.containers[] | select(.name == "manager")).image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
 # Template deployment for OCM API Mock
@@ -519,6 +519,7 @@ build-image-addon-operator-bundle: \
 		mkdir -p ".cache/image/${IMAGE_NAME}/manifests"; \
 		mkdir -p ".cache/image/${IMAGE_NAME}/metadata"; \
 		cp -a "config/olm/addon-operator.csv.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
+		cp -a "config/olm/metrics.service.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
 		cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata"; \
 		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
 		tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml"; \
@@ -598,6 +599,7 @@ openshift-ci-test-build: \
 	@mkdir -p "config/openshift/metadata";
 	@cp "config/docker/${IMAGE_NAME}.Dockerfile" "config/openshift/${IMAGE_NAME}.Dockerfile";
 	@cp "config/olm/annotations.yaml" "config/openshift/metadata";
+	@cp "config/olm/metrics.service.yaml" "config/openshift/manifests/metrics.service.yaml";
 	@cp "config/olm/addon-operator.csv.tpl.yaml" "config/openshift/manifests/addon-operator.csv.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "config/openshift/manifests/addons.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "config/openshift/manifests/addonoperators.crd.yaml";

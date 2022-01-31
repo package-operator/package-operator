@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/proxy"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -386,4 +388,41 @@ func RunAPIServerProxy(closeCh <-chan struct{}) error {
 		}
 	}()
 	return nil
+}
+
+func ExecCommandInPod(namespace string, pod string, container string, command []string) (string, string, error) {
+	attachOptions := &corev1.PodExecOptions{
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+		Container: container,
+		Command:   command,
+	}
+
+	request := CoreV1Client.RESTClient().Post().
+		Resource("pods").
+		Name(pod).
+		Namespace(namespace).
+		SubResource("exec").
+		VersionedParams(attachOptions, clientgoscheme.ParameterCodec)
+
+	stdoutStream, stderrStream := new(bytes.Buffer), new(bytes.Buffer)
+	streamOptions := remotecommand.StreamOptions{
+		Stdout: stdoutStream,
+		Stderr: stderrStream,
+	}
+
+	exec, err := remotecommand.NewSPDYExecutor(Config, "POST", request.URL())
+	if err != nil {
+		return "", "", fmt.Errorf("failed to establish SPDY stream with Kubernetes API: %w", err)
+	}
+
+	err = exec.Stream(streamOptions)
+	stdout, stderr := strings.TrimSpace(stdoutStream.String()), strings.TrimSpace(stderrStream.String())
+	if err != nil {
+		return stdout, stderr, fmt.Errorf("failed to transport shell streams: %w", err)
+	}
+
+	return stdout, stderr, nil
 }

@@ -16,7 +16,25 @@ spec:
         app.kubernetes.io/name: addon-operator
     spec:
       serviceAccountName: addon-operator
+      volumes:
+      - name: tls
+        secret:
+          secretName: metrics-server-cert
       containers:
+      - name: metrics-relay-server
+        image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
+        args:
+        - "--secure-listen-address=0.0.0.0:8443"
+        - "--upstream=http://127.0.0.1:8080/"
+        - "--tls-cert-file=/tmp/k8s-metrics-server/serving-certs/tls.crt"
+        - "--tls-private-key-file=/tmp/k8s-metrics-server/serving-certs/tls.key"
+        - "--logtostderr=true"
+        - "--ignore-paths=/metrics,/healthz"
+        - "--v=10"  ### only for dev
+        volumeMounts:
+        - name: tls
+          mountPath: "/tmp/k8s-metrics-server/serving-certs/"
+          readOnly: true
       - name: manager
         image: quay.io/openshift/addon-operator:latest
         args:
