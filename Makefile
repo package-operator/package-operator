@@ -29,7 +29,7 @@ UNAME_ARCH:=$(shell uname -m)
 
 # PATH/Bin
 PROJECT_DIR:=$(shell pwd)
-DEPENDENCIES:=.cache/dependencies
+DEPENDENCIES:=.deps
 DEPENDENCY_BIN:=$(abspath $(DEPENDENCIES)/bin)
 DEPENDENCY_VERSIONS:=$(abspath $(DEPENDENCIES)/$(UNAME_OS)/$(UNAME_ARCH)/versions)
 export PATH:=$(DEPENDENCY_BIN):$(PATH)
@@ -114,90 +114,23 @@ FORCE:
 # Dependencies (project local)
 # ----------------------------
 
-# go-install-tool will 'go install' any package $1 if file $2 does not exist.
-define go-install-tool
-@[ -f "$(2)" ] || { \
-	TMP_DIR=$$(mktemp -d); \
-	cd $$TMP_DIR; \
-	go mod init tmp; \
-	echo "Downloading $(1) to $(DEPENDENCIES)/bin"; \
-	GOBIN="$(DEPENDENCY_BIN)" go install -mod=readonly "$(1)"; \
-	rm -rf $$TMP_DIR; \
-	mkdir -p "$(dir $(2))"; \
-	touch "$(2)"; \
-}
-endef
+kind:
+	./mage dependency:kind
 
-KIND:=$(DEPENDENCY_VERSIONS)/kind/$(KIND_VERSION)
-$(KIND):
-	@$(call go-install-tool,sigs.k8s.io/kind@$(KIND_VERSION),$(KIND))
-	@(command -v kind; kind version) | sed 's/^/  /'
+controller-gen:
+	./mage dependency:controllergen
 
-CONTROLLER_GEN:=$(DEPENDENCY_VERSIONS)/controller-gen/$(CONTROLLER_GEN_VERSION)
-$(CONTROLLER_GEN):
-	@$(call go-install-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION),$(CONTROLLER_GEN))
-	@(echo; command -v controller-gen; controller-gen --version; echo) | sed 's/^/  /'
+yq:
+	./mage dependency:yq
 
-YQ:=$(DEPENDENCY_VERSIONS)/yq/$(YQ_VERSION)
-$(YQ):
-	@$(call go-install-tool,github.com/mikefarah/yq/$(YQ_VERSION),$(YQ))
-	@(command -v yq; yq --version) | sed 's/^/  /'
+golangci-lint:
+	./mage dependency:golangcilint
 
-GOIMPORTS:=$(DEPENDENCY_VERSIONS)/goimports/$(GOIMPORTS_VERSION)
-$(GOIMPORTS):
-	@$(call go-install-tool,golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION),$(GOIMPORTS))
-	# goimports doesn't have a version flag
-	@(echo; command -v goimports; echo) | sed 's/^/  /'
+opm:
+	./mage dependency:opm
 
-# Setup goimports.
-# alias for goimports to use from `ensure-and-run-goimports.sh` via pre-commit.
-goimports: $(GOIMPORTS)
-.PHONY: goimports
-
-GOLANGCI_LINT:=$(DEPENDENCY_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
-$(GOLANGCI_LINT):
-	@$(call go-install-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT))
-	@(echo; command -v golangci-lint; golangci-lint --version; echo) | sed 's/^/  /'
-
-# Setup golangci-lint.
-# alias for golangci-lint to use from `ensure-and-run-golangci-lint.sh` via pre-commit.
-golangci-lint: $(GOLANGCI_LINT)
-.PHONY: golangci-lint
-
-OPM:=$(DEPENDENCY_VERSIONS)/opm/$(OPM_VERSION)
-$(OPM):
-	@echo "installing opm $(OPM_VERSION)..."
-	$(eval OPM_TMP := $(shell mktemp -d))
-	@(cd "$(OPM_TMP)"; \
-		curl -L --fail \
-		https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/linux-amd64-opm -o opm; \
-		chmod +x opm; \
-		mv opm $(DEPENDENCY_BIN); \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(OPM_TMP)" "$(dir $(OPM))" \
-		&& mkdir -p "$(dir $(OPM))" \
-		&& touch "$(OPM)" \
-		&& echo
-	@(echo; command -v opm; opm version; echo) | sed 's/^/  /'
-
-HELM:=$(DEPENDENCY_VERSIONS)/helm/$(HELM_VERSION)
-$(HELM):
-	@echo "installing helm ${HELM_VERSION}"
-	$(eval HELM_TMP = $(shell mktemp -d))
-	@(cd "$(HELM_TMP)"; \
-		curl -L --fail \
-		https://get.helm.sh/helm-$(HELM_VERSION)-$(UNAME_OS_LOWER)-amd64.tar.gz -o helm.tar.gz; \
-		tar xvf helm.tar.gz; \
-		cp $(UNAME_OS_LOWER)-amd64/helm helm; \
-		chmod +x helm; \
-		mv helm $(DEPENDENCY_BIN); \
-	) 2>&1 | sed 's/^/  /'
-	@rm -rf "$(HELM_TMP)" "$(dir $(HELM))" \
-		&& mkdir -p "$(dir $(HELM))" \
-		&& touch "$(HELM)" \
-		&& echo
-	@(echo; command -v helm; helm version; echo) | sed 's/^/  /'
-
+helm:
+	./mage dependency:helm
 
 ## Run go mod tidy in all go modules
 tidy:
@@ -211,7 +144,7 @@ tidy:
 ## Generate deepcopy code, kubernetes manifests and docs.
 generate: generate-code generate-docs openshift-ci-test-build
 
-generate-code: $(CONTROLLER_GEN)
+generate-code: controller-gen
 	@echo "generating kubernetes manifests..."
 	@(cd apis; \
 		controller-gen crd:crdVersions=v1 \
@@ -255,7 +188,7 @@ endif
 # ---------------------
 
 ## Runs code-generators, checks for clean directory and lints the source code.
-lint: generate $(GOLANGCI_LINT)
+lint: generate golangci-lint
 	go fmt ./...
 	@hack/validate-directory-clean.sh
 	golangci-lint run ./... --deadline=15m
@@ -303,13 +236,9 @@ test-integration-local: | \
 ##@ Development Environment
 # -------------------------
 
-## Installs all project dependencies into $(PWD)/.cache/bin
-dependencies: \
-	$(KIND) \
-	$(CONTROLLER_GEN) \
-	$(YQ) \
-	$(GOIMPORTS) \
-	$(GOLANGCI_LINT)
+## Installs all project dependencies into $(PWD)/.deps/bin
+dependencies:
+	./mage dependency:all
 .PHONY: dependencies
 
 ## Run cmd/addon-operator-manager against $KUBECONFIG.
@@ -338,7 +267,7 @@ test-setup: | \
 .PHONY: test-setup
 
 ## Creates an empty kind cluster to be used for local development.
-create-kind-cluster: $(KIND)
+create-kind-cluster: kind
 	@echo "creating kind cluster addon-operator..."
 	@mkdir -p .cache/integration
 	@(source hack/determine-container-runtime.sh; \
@@ -365,7 +294,7 @@ create-kind-cluster: $(KIND)
 .PHONY: create-kind-cluster
 
 ## Deletes the previously created kind cluster.
-delete-kind-cluster: $(KIND)
+delete-kind-cluster: kind
 	@echo "deleting kind cluster addon-operator..."
 	@(source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND delete cluster \
@@ -398,7 +327,7 @@ setup-okd-console:
 .PHONY: setup-okd-console
 
 ## Setup Prometheus Kubernetes stack
-setup-monitoring: $(HELM)
+setup-monitoring: helm
 	@(kubectl create ns monitoring)
 	@(helm repo add prometheus-community https://prometheus-community.github.io/helm-charts)
 	@(helm repo update)
@@ -450,17 +379,17 @@ load-api-mock: build-image-api-mock
 .PHONY: load-api-mock
 
 # Template deployment for Addon Operator
-config/deploy/deployment.yaml: FORCE $(YQ)
+config/deploy/deployment.yaml: FORCE yq
 	@yq eval '(.spec.template.spec.containers[] | select(.name == "manager")).image = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 		config/deploy/deployment.yaml.tpl > config/deploy/deployment.yaml
 
 # Template deployment for OCM API Mock
-config/deploy/api-mock/deployment.yaml: FORCE $(YQ)
+config/deploy/api-mock/deployment.yaml: FORCE yq
 	@yq eval '.spec.template.spec.containers[0].image = "$(API_MOCK_IMAGE)"' \
 		config/deploy/api-mock/deployment.yaml.tpl > config/deploy/api-mock/deployment.yaml
 
 # Template deployment for Addon Operator Webhook
-config/deploy/webhook/deployment.yaml: FORCE $(YQ)
+config/deploy/webhook/deployment.yaml: FORCE yq
 	@yq eval '.spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_WEBHOOK_IMAGE)" | .spec.template.spec.containers[0].ports[0].containerPort = $(WEBHOOK_PORT)' \
 		config/deploy/webhook/deployment.yaml.tpl > config/deploy/webhook/deployment.yaml;
 	@yq eval '.spec.ports[0].targetPort = $(WEBHOOK_PORT)' \
@@ -503,7 +432,7 @@ setup-addon-operator-crds: generate
 
 # Template Cluster Service Version / CSV
 # By setting the container image to deploy.
-config/olm/addon-operator.csv.yaml: FORCE $(YQ)
+config/olm/addon-operator.csv.yaml: FORCE yq
 	@yq eval '.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)" | .spec.install.spec.deployments[1].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_WEBHOOK_IMAGE)" | .metadata.annotations.containerImage = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
 	config/olm/addon-operator.csv.tpl.yaml > config/olm/addon-operator.csv.yaml
 
@@ -533,7 +462,7 @@ build-image-addon-operator-bundle: \
 # Index image contains a list of bundle images for use in a CatalogSource.
 # Warning!
 # The bundle image needs to be pushed so the opm CLI can create the index image.
-build-image-addon-operator-index: $(OPM) \
+build-image-addon-operator-index: opm \
 	clean-image-cache-addon-operator-index \
 	| build-image-addon-operator-bundle \
 	push-image-addon-operator-bundle

@@ -4,6 +4,6 @@ set -euo pipefail
 # this script ensures that the `golangci-lint` dependency is present
 # and then executes goimport passing all arguments forward to the `run` command
 
-make -s golangci-lint
+./mage dependency:golangcilint
 export GOFLAGS=""
-exec .cache/dependencies/bin/golangci-lint run "$@"
+exec .deps/bin/golangci-lint run "$@"
