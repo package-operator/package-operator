@@ -22,7 +22,7 @@ spec:
           secretName: metrics-server-cert
       containers:
       - name: metrics-relay-server
-        image: quay.io/brancz/kube-rbac-proxy:v0.11.0
+        image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
         args:
         - "--secure-listen-address=0.0.0.0:8443"
         - "--upstream=http://127.0.0.1:8080/"
