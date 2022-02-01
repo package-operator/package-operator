@@ -117,7 +117,7 @@ func (d Dependency) Opm() error {
 		"curl", "-L", "--fail",
 		"-o", tempOPMBin,
 		fmt.Sprintf(
-			"https://github.com/protocolbuffers/protobuf/releases/download/%s/linux-amd64-opm",
+			"https://github.com/operator-framework/operator-registry/releases/download/v%s/linux-amd64-opm",
 			opmVersion,
 		),
 	); err != nil {
