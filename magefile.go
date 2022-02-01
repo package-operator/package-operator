@@ -121,7 +121,7 @@ func (d Dependency) Opm() error {
 			opmVersion,
 		),
 	); err != nil {
-		return fmt.Errorf("downloading protoc: %w", err)
+		return fmt.Errorf("downloading opm: %w", err)
 	}
 
 	if err := os.Chmod(tempOPMBin, 0755); err != nil {
@@ -130,7 +130,7 @@ func (d Dependency) Opm() error {
 
 	// Move
 	if err := os.Rename(tempOPMBin, path.Join(depsDir.Bin(), "opm")); err != nil {
-		return fmt.Errorf("move protoc: %w", err)
+		return fmt.Errorf("move opm: %w", err)
 	}
 	return nil
 }
