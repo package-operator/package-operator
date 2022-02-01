@@ -15,6 +15,7 @@
 # vendor/
 bin/
 .cache
+.deps
 .envrc
 
 # IDEs

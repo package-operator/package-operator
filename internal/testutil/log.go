@@ -16,18 +16,19 @@ type Logger struct {
 	values map[string]interface{}
 }
 
-var _ logr.Logger = (*Logger)(nil)
+var _ logr.LogSink = (*Logger)(nil)
 
 // NewLogger returns a new Logger flushing to testing.T.
-func NewLogger(t *testing.T) *Logger {
-	return &Logger{
+func NewLogger(t *testing.T) logr.Logger {
+	l := &Logger{
 		t:      t,
 		values: map[string]interface{}{},
 	}
+	return logr.New(l)
 }
 
-// Info implements logr.Logger.Info
-func (l *Logger) Info(msg string, kvs ...interface{}) {
+// Info implements logr.LogSink.Info
+func (l *Logger) Info(level int, msg string, kvs ...interface{}) {
 	// marks this function as a helper method, so it will be excluded in the log stacktrace
 	l.t.Helper()
 
@@ -40,25 +41,25 @@ func (l *Logger) Info(msg string, kvs ...interface{}) {
 	l.t.Log(fmt.Sprintf("%-15s %-20s %s", strings.Join(l.names, "."), msg, string(j)))
 }
 
-// Error implements logr.Logger.Error
+// Error implements logr.LogSink.Error
 func (l *Logger) Error(err error, msg string, kvs ...interface{}) {
 	// marks this function as a helper method, so it will be excluded in the log stacktrace
 	l.t.Helper()
-	l.Info(msg, append(kvs, "error", err.Error())...)
+	l.Info(1, msg, append(kvs, "error", err.Error())...)
 }
 
-// Enabled implements logr.Logger.Enabled
-func (l *Logger) Enabled() bool {
+// Enabled implements logr.LogSink.Enabled
+func (l *Logger) Enabled(level int) bool {
 	return true
 }
 
-// V implements logr.Logger.V
-func (l *Logger) V(level int) logr.Logger {
-	return l
+// Init implements logr.LogSink.Init
+func (l *Logger) Init(info logr.RuntimeInfo) {
+
 }
 
-// WithValues implements logr.Logger.WithValues
-func (l *Logger) WithValues(kvs ...interface{}) logr.Logger {
+// WithValues implements logr.LogSink.WithValues
+func (l *Logger) WithValues(kvs ...interface{}) logr.LogSink {
 	return &Logger{
 		t:      l.t,
 		names:  l.names,
@@ -66,8 +67,8 @@ func (l *Logger) WithValues(kvs ...interface{}) logr.Logger {
 	}
 }
 
-// WithName implements logr.Logger.WithName
-func (l *Logger) WithName(name string) logr.Logger {
+// WithName implements logr.LogSink.WithName
+func (l *Logger) WithName(name string) logr.LogSink {
 	return &Logger{
 		t:      l.t,
 		names:  append(l.names, name),

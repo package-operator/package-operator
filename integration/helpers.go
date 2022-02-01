@@ -357,7 +357,7 @@ const (
 func RunAPIServerProxy(closeCh <-chan struct{}) error {
 	mux := http.NewServeMux()
 
-	proxyHandler, err := proxy.NewProxyHandler(defaultAPIPrefix, nil, Config, 0)
+	proxyHandler, err := proxy.NewProxyHandler(defaultAPIPrefix, nil, Config, 0, false)
 	if err != nil {
 		return fmt.Errorf("creating proxy server: %w", err)
 	}
