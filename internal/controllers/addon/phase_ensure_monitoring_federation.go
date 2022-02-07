@@ -2,14 +2,12 @@ package addon
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sApiErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -18,65 +16,143 @@ import (
 	"github.com/openshift/addon-operator/internal/controllers"
 )
 
-// Ensure existence of ServiceMonitors for monitoring configuration specified in the given Addon resource.
-func (r *AddonReconciler) ensureMonitoringFederation(
-	ctx context.Context,
-	addon *addonsv1alpha1.Addon,
-) (stop bool, err error) {
-	// early return if .spec.monitoring.federation is not specified
-	if addon.Spec.Monitoring == nil || addon.Spec.Monitoring.Federation == nil {
-		return false, nil
+// ensureMonitoringFederation inspects an addon's MonitoringFederation specification
+// and if it exists ensures that a ServiceMonitor is present in the desired monitoring
+// namespace.
+func (r *AddonReconciler) ensureMonitoringFederation(ctx context.Context, addon *addonsv1alpha1.Addon) error {
+	if !HasMonitoringFederation(addon) {
+		return nil
 	}
 
-	// ensure monitoring namespace
-	monitoringNamespaceName := controllers.GetMonitoringNamespaceName(addon)
-	if monitoringNamespace, err := r.ensureNamespaceWithLabels(ctx, addon, monitoringNamespaceName, map[string]string{
-		"openshift.io/cluster-monitoring": "true",
-	}); err != nil {
-		if errors.Is(err, controllers.ErrNotOwnedByUs) {
-			return true, nil
-		}
-		return false, fmt.Errorf("could not ensure monitoring Namespace: %w", err)
-	} else if monitoringNamespace.Status.Phase != corev1.NamespaceActive {
-		meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-			Type:   addonsv1alpha1.Available,
-			Status: metav1.ConditionFalse,
-			Reason: addonsv1alpha1.AddonReasonUnreadyMonitoring,
-			Message: fmt.Sprintf(
-				"Monitoring Namespace is not in Active phase: %s",
-				monitoringNamespaceName,
-			),
-			ObservedGeneration: addon.Generation,
-		})
-		addon.Status.ObservedGeneration = addon.Generation
-		addon.Status.Phase = addonsv1alpha1.PhasePending
-		return false, r.Status().Update(ctx, addon)
+	if err := r.ensureMonitoringNamespace(ctx, addon); err != nil {
+		return fmt.Errorf("ensuring monitoring Namespace: %w", err)
 	}
 
-	desiredServiceMonitor := &monitoringv1.ServiceMonitor{
+	if err := r.ensureServiceMonitor(ctx, addon); err != nil {
+		return fmt.Errorf("ensuring ServiceMonitor: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AddonReconciler) ensureMonitoringNamespace(
+	ctx context.Context, addon *addonsv1alpha1.Addon) error {
+	desired, err := r.desiredMonitoringNamespace(addon)
+	if err != nil {
+		return err
+	}
+
+	actual, err := r.actualMonitoringNamespace(ctx, addon)
+	if k8sApiErrors.IsNotFound(err) {
+		return r.Create(ctx, desired)
+	} else if err != nil {
+		return fmt.Errorf("getting monitoring namespace: %w", err)
+	}
+
+	var (
+		mustAdopt     = !controllers.HasEqualControllerReference(actual, desired)
+		labelsChanged = !equality.Semantic.DeepEqual(actual.Labels, desired.Labels)
+	)
+
+	if !mustAdopt && !labelsChanged {
+		return nil
+	}
+
+	// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+	if mustAdopt && !HasAdoptAllStrategy(addon) {
+		return controllers.ErrNotOwnedByUs
+	}
+
+	actual.OwnerReferences, actual.Labels = desired.OwnerReferences, desired.Labels
+
+	if err := r.Update(ctx, actual); err != nil {
+		return fmt.Errorf("updating monitoring namespace: %w", err)
+	}
+
+	if actual.Status.Phase == corev1.NamespaceActive {
+		return nil
+	}
+
+	reportUnreadyMonitoring(addon, fmt.Sprintf("namespace %q is not active", actual.Name))
+
+	// Previously this would trigger exit and move on to the next phase.
+	// However given that the reconciliation is not complete an error should
+	// be returned to requeue the work.
+	return fmt.Errorf("monitoring namespace is not active")
+}
+
+func (r *AddonReconciler) desiredMonitoringNamespace(addon *addonsv1alpha1.Addon) (*corev1.Namespace, error) {
+	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllers.GetMonitoringFederationServiceMonitorName(addon),
-			Namespace: monitoringNamespaceName,
+			Name: GetMonitoringNamespaceName(addon),
+			Labels: map[string]string{
+				"openshift.io/cluster-monitoring": "true",
+			},
+		},
+	}
+
+	controllers.AddCommonLabels(namespace.Labels, addon)
+
+	if err := controllerutil.SetControllerReference(addon, namespace, r.Scheme); err != nil {
+		return nil, err
+	}
+
+	return namespace, nil
+}
+
+func (r *AddonReconciler) actualMonitoringNamespace(
+	ctx context.Context, addon *addonsv1alpha1.Addon) (*corev1.Namespace, error) {
+	key := client.ObjectKey{
+		Name: GetMonitoringNamespaceName(addon),
+	}
+
+	namespace := &corev1.Namespace{}
+	if err := r.Get(ctx, key, namespace); err != nil {
+		return nil, err
+	}
+
+	return namespace, nil
+}
+
+func (r *AddonReconciler) ensureServiceMonitor(ctx context.Context, addon *addonsv1alpha1.Addon) error {
+	desired, err := r.desiredServiceMonitor(addon)
+	if err != nil {
+		return err
+	}
+
+	actual, err := r.actualServiceMonitor(ctx, addon)
+	if k8sApiErrors.IsNotFound(err) {
+		return r.Create(ctx, desired)
+	} else if err != nil {
+		return fmt.Errorf("getting ServiceMonitor: %w", err)
+	}
+
+	var (
+		mustAdopt   = !controllers.HasEqualControllerReference(actual, desired)
+		specChanged = !equality.Semantic.DeepEqual(actual.Spec, desired.Spec)
+	)
+
+	if !mustAdopt && !specChanged {
+		return nil
+	}
+
+	if mustAdopt && !HasAdoptAllStrategy(addon) {
+		return controllers.ErrNotOwnedByUs
+	}
+
+	actual.Spec, actual.OwnerReferences = desired.Spec, desired.OwnerReferences
+
+	return r.Update(ctx, actual)
+}
+
+func (r *AddonReconciler) desiredServiceMonitor(addon *addonsv1alpha1.Addon) (*monitoringv1.ServiceMonitor, error) {
+	serviceMonitor := &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GetMonitoringFederationServiceMonitorName(addon),
+			Namespace: GetMonitoringNamespaceName(addon),
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
-			Endpoints: []monitoringv1.Endpoint{
-				{
-					HonorLabels: true,
-					Port:        "9090",
-					Path:        "/federate",
-					Scheme:      "https",
-					Interval:    "30s",
-					TLSConfig: &monitoringv1.TLSConfig{
-						CAFile: "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt",
-						SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							ServerName: fmt.Sprintf(
-								"prometheus.%s.svc",
-								addon.Spec.Monitoring.Federation.Namespace,
-							),
-						},
-					},
-				},
-			},
+			Endpoints: GetMonitoringFederationServiceMonitorEndpoints(addon),
 			NamespaceSelector: monitoringv1.NamespaceSelector{
 				MatchNames: []string{addon.Spec.Monitoring.Federation.Namespace},
 			},
@@ -86,54 +162,26 @@ func (r *AddonReconciler) ensureMonitoringFederation(
 		},
 	}
 
-	matchParams := []string{
-		`ALERTS{alertstate="firing"}`,
-	}
-	for _, matchName := range addon.Spec.Monitoring.Federation.MatchNames {
-		matchParams = append(matchParams, fmt.Sprintf(`{__name__="%s"}`, matchName))
-	}
-	desiredServiceMonitor.Spec.Endpoints[0].Params = map[string][]string{
-		"match[]": matchParams,
+	controllers.AddCommonLabels(serviceMonitor.Labels, addon)
+
+	if err := controllerutil.SetControllerReference(addon, serviceMonitor, r.Scheme); err != nil {
+		return nil, fmt.Errorf("setting controller reference on ServiceMonitor: %w", err)
 	}
 
-	controllers.AddCommonLabels(desiredServiceMonitor.Labels, addon)
-
-	if err := controllerutil.SetControllerReference(addon, desiredServiceMonitor, r.Scheme); err != nil {
-		return false, fmt.Errorf("could not set controller reference on ServiceMonitor: %w", err)
-	}
-
-	if err := r.reconcileServiceMonitor(ctx, desiredServiceMonitor, addon.Spec.ResourceAdoptionStrategy); err != nil {
-		return false, fmt.Errorf("could not reconcile ServiceMonitor: %w", err)
-	}
-
-	return false, nil
+	return serviceMonitor, nil
 }
 
-// Reconciles the Spec of the given ServiceMonitor if needed by updating or creating the ServiceMonitor.
-// If a change happens, the given ServiceMonitor is updated to reflect the latest state from the kube-apiserver.
-func (r *AddonReconciler) reconcileServiceMonitor(
-	ctx context.Context,
-	serviceMonitor *monitoringv1.ServiceMonitor,
-	strategy addonsv1alpha1.ResourceAdoptionStrategyType,
-) error {
-	currentServiceMonitor := &monitoringv1.ServiceMonitor{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), currentServiceMonitor); k8sApiErrors.IsNotFound(err) {
-		return r.Create(ctx, serviceMonitor)
-	} else if err != nil {
-		return fmt.Errorf("getting ServiceMonitor: %w", err)
+func (r *AddonReconciler) actualServiceMonitor(
+	ctx context.Context, addon *addonsv1alpha1.Addon) (*monitoringv1.ServiceMonitor, error) {
+	key := client.ObjectKey{
+		Name:      GetMonitoringFederationServiceMonitorName(addon),
+		Namespace: GetMonitoringNamespaceName(addon),
 	}
 
-	// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-	ownedByAddon := controllers.HasEqualControllerReference(currentServiceMonitor, serviceMonitor)
-	if strategy != addonsv1alpha1.ResourceAdoptionAdoptAll && !ownedByAddon {
-		return controllers.ErrNotOwnedByUs
+	serviceMonitor := &monitoringv1.ServiceMonitor{}
+	if err := r.Get(ctx, key, serviceMonitor); err != nil {
+		return nil, err
 	}
 
-	specChanged := !equality.Semantic.DeepEqual(currentServiceMonitor.Spec, serviceMonitor.Spec)
-	if specChanged {
-		currentServiceMonitor.Spec = serviceMonitor.Spec
-		return r.Update(ctx, currentServiceMonitor)
-	}
-
-	return nil
+	return serviceMonitor, nil
 }

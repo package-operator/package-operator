@@ -77,28 +77,24 @@ func (r *AddonReconciler) ensureNamespaceWithLabels(ctx context.Context, addon *
 // and erroring if our controller is not the owner of said Namespace
 func reconcileNamespace(ctx context.Context, c client.Client,
 	namespace *corev1.Namespace, strategy addonsv1alpha1.ResourceAdoptionStrategyType) (*corev1.Namespace, error) {
-
 	currentNamespace := &corev1.Namespace{}
 
-	err := c.Get(ctx, client.ObjectKey{
-		Name: namespace.Name,
-	}, currentNamespace)
-
-	if k8sApiErrors.IsNotFound(err) {
+	if err := c.Get(ctx, client.ObjectKey{Name: namespace.Name}, currentNamespace); k8sApiErrors.IsNotFound(err) {
 		return namespace, c.Create(ctx, namespace)
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 
-	if len(currentNamespace.OwnerReferences) == 0 ||
-		!controllers.HasEqualControllerReference(currentNamespace, namespace) {
+	mustAdopt := len(currentNamespace.OwnerReferences) == 0 ||
+		!controllers.HasEqualControllerReference(currentNamespace, namespace)
 
-		// TODO: remove this condition once resourceAdoptionStrategy is discontinued
-		if strategy == addonsv1alpha1.ResourceAdoptionAdoptAll {
-			return namespace, c.Update(ctx, namespace)
-		}
+	// TODO: remove this condition once resourceAdoptionStrategy is discontinued
+	if mustAdopt && strategy != addonsv1alpha1.ResourceAdoptionAdoptAll {
 		return nil, controllers.ErrNotOwnedByUs
 	}
-	return currentNamespace, nil
+
+	currentNamespace.OwnerReferences = namespace.OwnerReferences
+	currentNamespace.Labels = namespace.Labels
+
+	return currentNamespace, c.Update(ctx, currentNamespace)
 }

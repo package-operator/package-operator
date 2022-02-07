@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -126,60 +127,41 @@ func (r *AddonReconciler) removeAddonPauseCondition(addon *addonsv1alpha1.Addon)
 }
 
 // Marks Addon as unavailable because the CatalogSource is unready
-func reportCatalogSourceUnreadinessStatus(
-	addon *addonsv1alpha1.Addon,
-	message string) {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:   addonsv1alpha1.Available,
-		Status: metav1.ConditionFalse,
-		Reason: addonsv1alpha1.AddonReasonUnreadyCatalogSource,
-		Message: fmt.Sprintf(
-			"CatalogSource connection is not ready: %s",
-			message),
-		ObservedGeneration: addon.Generation,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhasePending
+func reportCatalogSourceUnreadinessStatus(addon *addonsv1alpha1.Addon, message string) {
+	reportPendingStatus(addon, addonsv1alpha1.AddonReasonUnreadyCatalogSource,
+		fmt.Sprintf("CatalogSource connection is not ready: %s", message))
 }
 
 func reportUnreadyNamespaces(addon *addonsv1alpha1.Addon, unreadyNamespaces []string) {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:   addonsv1alpha1.Available,
-		Status: metav1.ConditionFalse,
-		Reason: addonsv1alpha1.AddonReasonUnreadyNamespaces,
-		Message: fmt.Sprintf(
-			"Namespaces not yet in Active phase: %s",
-			strings.Join(unreadyNamespaces, ", ")),
-		ObservedGeneration: addon.Generation,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhasePending
+	reportPendingStatus(addon, addonsv1alpha1.AddonReasonUnreadyNamespaces,
+		fmt.Sprintf("Namespaces not yet in Active phase: %s", strings.Join(unreadyNamespaces, ", ")))
 }
 
 func reportCollidedNamespaces(addon *addonsv1alpha1.Addon, collidedNamespaces []string) {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:   addonsv1alpha1.Available,
-		Status: metav1.ConditionFalse,
-		Reason: addonsv1alpha1.AddonReasonCollidedNamespaces,
-		Message: fmt.Sprintf(
-			"Namespaces with collisions: %s",
-			strings.Join(collidedNamespaces, ", ")),
-		ObservedGeneration: addon.Generation,
-	})
-	addon.Status.ObservedGeneration = addon.Generation
-	addon.Status.Phase = addonsv1alpha1.PhasePending
+	reportPendingStatus(addon, addonsv1alpha1.AddonReasonCollidedNamespaces,
+		fmt.Sprintf("Namespaces with collisions: %s", strings.Join(collidedNamespaces, ", ")))
 }
 
 func reportUnreadyCSV(addon *addonsv1alpha1.Addon, message string) {
-	meta.SetStatusCondition(&addon.Status.Conditions, metav1.Condition{
-		Type:   addonsv1alpha1.Available,
-		Status: metav1.ConditionFalse,
-		Reason: addonsv1alpha1.AddonReasonUnreadyCSV,
-		Message: fmt.Sprintf(
-			"ClusterServiceVersion is not ready: %s",
-			message),
-		ObservedGeneration: addon.Generation,
-	})
+	reportPendingStatus(addon, addonsv1alpha1.AddonReasonUnreadyCSV,
+		fmt.Sprintf("ClusterServiceVersion is not ready: %s", message))
+}
+
+func reportUnreadyMonitoring(addon *addonsv1alpha1.Addon, message string) {
+	reportPendingStatus(addon, addonsv1alpha1.AddonReasonUnreadyMonitoring,
+		fmt.Sprintf("Monitoring Federation is not ready: %s", message))
+}
+
+func reportPendingStatus(addon *addonsv1alpha1.Addon, reason, msg string) {
+	meta.SetStatusCondition(&addon.Status.Conditions,
+		metav1.Condition{
+			Type:               addonsv1alpha1.Available,
+			Status:             metav1.ConditionFalse,
+			Reason:             reason,
+			Message:            msg,
+			ObservedGeneration: addon.Generation,
+		})
+
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhasePending
 }
@@ -237,4 +219,54 @@ func (r *AddonReconciler) parseAddonInstallConfig(
 		return "", "", true
 	}
 	return targetNamespace, catalogSourceImage, false
+}
+
+// HasMonitoringFederation is a helper to determine if a given addon's spec
+// defines a Monitoring.Federation.
+func HasMonitoringFederation(addon *addonsv1alpha1.Addon) bool {
+	return addon.Spec.Monitoring != nil && addon.Spec.Monitoring.Federation != nil
+}
+
+// Helper function to compute monitoring Namespace name from addon object
+func GetMonitoringNamespaceName(addon *addonsv1alpha1.Addon) string {
+	return fmt.Sprintf("redhat-monitoring-%s", addon.Name)
+}
+
+// Helper function to compute monitoring federation ServiceMonitor name from addon object
+func GetMonitoringFederationServiceMonitorName(addon *addonsv1alpha1.Addon) string {
+	return fmt.Sprintf("federated-sm-%s", addon.Name)
+}
+
+// GetMonitoringFederationServiceMonitorEndpoints generates a slice of monitoringv1.Endpoint
+// instances from an addon's Monitoring.Federation specification.
+func GetMonitoringFederationServiceMonitorEndpoints(addon *addonsv1alpha1.Addon) []monitoringv1.Endpoint {
+	const cacert = "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
+
+	tlsConfig := &monitoringv1.TLSConfig{
+		CAFile: cacert,
+		SafeTLSConfig: monitoringv1.SafeTLSConfig{
+			ServerName: fmt.Sprintf("prometheus.%s.svc", addon.Spec.Monitoring.Federation.Namespace),
+		},
+	}
+
+	matchParams := []string{`ALERTS{alertstate="firing"}`}
+
+	for _, name := range addon.Spec.Monitoring.Federation.MatchNames {
+		matchParams = append(matchParams, fmt.Sprintf(`{__name__="%s"}`, name))
+	}
+
+	return []monitoringv1.Endpoint{{
+		HonorLabels: true,
+		Port:        "9090",
+		Path:        "/federate",
+		Scheme:      "https",
+		Interval:    "30s",
+		TLSConfig:   tlsConfig,
+		Params:      map[string][]string{"match[]": matchParams},
+	}}
+}
+
+// HasAdoptAllStrategy returns true if a given addon has the AdoptAll ResourceAdoptionStrategy.
+func HasAdoptAllStrategy(addon *addonsv1alpha1.Addon) bool {
+	return addon.Spec.ResourceAdoptionStrategy == addonsv1alpha1.ResourceAdoptionAdoptAll
 }

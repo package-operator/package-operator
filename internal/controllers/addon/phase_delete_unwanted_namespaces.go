@@ -28,7 +28,7 @@ func (r *AddonReconciler) ensureDeletionOfUnwantedNamespaces(
 
 	// Don't remove monitoring namespace as it will be handled
 	// separately by `phase_delete_unwanted_monitoring_federation`
-	wantedNamespaceNames[controllers.GetMonitoringNamespaceName(addon)] = struct{}{}
+	wantedNamespaceNames[GetMonitoringNamespaceName(addon)] = struct{}{}
 
 	for _, namespace := range currentNamespaces {
 		_, isWanted := wantedNamespaceNames[namespace.Name]
