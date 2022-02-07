@@ -178,7 +178,7 @@ func (Test) Lint() error {
 
 	for _, cmd := range [][]string{
 		{"go", "fmt", "./..."},
-		{"./hack/validate-directory-clean.sh"},
+		{"bash", "./hack/validate-directory-clean.sh"},
 		{"golangci-lint", "run", "./...", "--deadline=15m"},
 	} {
 		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
