@@ -57,3 +57,4 @@ repos:
     exclude: ".*"
     pass_filenames: false
     always_run: true
+    require_serial: true # mage does not like multiple parallel compiles
