@@ -311,7 +311,7 @@ prepare-addon-operator: \
 .PHONY: prepare-addon-operator
 
 ## Load Addon Operator images into kind
-load-addon-operator: build-image-addon-operator-manager
+load-addon-operator: build-images
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
@@ -319,7 +319,7 @@ load-addon-operator: build-image-addon-operator-manager
 .PHONY: load-addon-operator
 
 ## Load Addon Operator Webhook images into kind
-load-addon-operator-webhook: build-image-addon-operator-webhook
+load-addon-operator-webhook: build-images
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-webhook.tar \
@@ -327,7 +327,7 @@ load-addon-operator-webhook: build-image-addon-operator-webhook
 .PHONY: load-addon-operator-webhook
 
 ## Load OCM API mock images into kind
-load-api-mock: build-image-api-mock
+load-api-mock: build-images
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/api-mock.tar \
@@ -382,80 +382,19 @@ setup-addon-operator-crds: generate
 	done
 .PHONY: setup-addon-operator-crds
 
-# ---
-# OLM
-# ---
-
-# Template Cluster Service Version / CSV
-# By setting the container image to deploy.
-config/olm/addon-operator.csv.yaml: FORCE yq
-	@yq eval '.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_MANAGER_IMAGE)" | .spec.install.spec.deployments[1].spec.template.spec.containers[0].image = "$(ADDON_OPERATOR_WEBHOOK_IMAGE)" | .metadata.annotations.containerImage = "$(ADDON_OPERATOR_MANAGER_IMAGE)"' \
-	config/olm/addon-operator.csv.tpl.yaml > config/olm/addon-operator.csv.yaml
-
-# Bundle image contains the manifests and CSV for a single version of this operator.
-# The first few lines of the CRD file need to be removed:
-# https://github.com/operator-framework/operator-registry/issues/222
-build-image-addon-operator-bundle: \
-	clean-image-cache-addon-operator-bundle \
-	config/olm/addon-operator.csv.yaml
-	$(eval IMAGE_NAME := addon-operator-bundle)
-	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
-	@(source hack/determine-container-runtime.sh; \
-		mkdir -p ".cache/image/${IMAGE_NAME}/manifests"; \
-		mkdir -p ".cache/image/${IMAGE_NAME}/metadata"; \
-		cp -a "config/olm/addon-operator.csv.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
-		cp -a "config/olm/metrics.service.yaml" ".cache/image/${IMAGE_NAME}/manifests"; \
-		cp -a "config/olm/annotations.yaml" ".cache/image/${IMAGE_NAME}/metadata"; \
-		cp -a "config/docker/${IMAGE_NAME}.Dockerfile" ".cache/image/${IMAGE_NAME}/Dockerfile"; \
-		tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addons.crd.yaml"; \
-		tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addonoperators.crd.yaml"; \
-		tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > ".cache/image/${IMAGE_NAME}/manifests/addoninstances.crd.yaml"; \
-		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" ".cache/image/${IMAGE_NAME}"; \
-		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
-		echo) 2>&1 | sed 's/^/  /'
-.PHONY: build-image-addon-operator-bundle
-
-# Index image contains a list of bundle images for use in a CatalogSource.
-# Warning!
-# The bundle image needs to be pushed so the opm CLI can create the index image.
-build-image-addon-operator-index: opm \
-	clean-image-cache-addon-operator-index \
-	| build-image-addon-operator-bundle \
-	push-image-addon-operator-bundle
-	$(eval IMAGE_NAME := addon-operator-index)
-	@echo "building image ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
-	@(source hack/determine-container-runtime.sh; \
-		opm index add --container-tool $$CONTAINER_COMMAND \
-		--bundles ${IMAGE_ORG}/addon-operator-bundle:${VERSION} \
-		--tag ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}; \
-		$$CONTAINER_COMMAND image save -o ".cache/image/${IMAGE_NAME}.tar" "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}"; \
-		echo) 2>&1 | sed 's/^/  /'
-.PHONY: build-image-addon-operator-index
-
 # ------------------
 ##@ Container Images
 # ------------------
 
 ## Build all images.
-build-images: \
-	build-image-addon-operator-manager \
-	build-image-addon-operator-webhook
+build-images:
+	./mage build:buildimages
 .PHONY: build-images
 
 ## Build and push all images.
-push-images: \
-	push-image-addon-operator-manager \
-	push-image-addon-operator-webhook \
-	push-image-addon-operator-index
+push-images:
+	./mage build:pushimages
 .PHONY: push-images
-
-registry-login:
-ifdef JENKINS_HOME
-	@(source hack/determine-container-runtime.sh; \
-		echo running in Jenkins, calling $$CONTAINER_COMMAND login; \
-		$$CONTAINER_COMMAND login -u="${QUAY_USER}" -p="${QUAY_TOKEN}" quay.io; \
-	echo) 2>&1 | sed 's/^/  /'
-endif
 
 # App Interface specific push-images target, to run within a docker container.
 app-interface-push-images:
@@ -491,33 +430,7 @@ openshift-ci-test-build: \
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "config/openshift/manifests/addoninstances.crd.yaml";
 
 .SECONDEXPANSION:
-# cleans the built image .tar and image build directory
-clean-image-cache-%:
-	@rm -rf ".cache/image/$*" ".cache/image/$*.tar"
-	@mkdir -p ".cache/image/$*"
 
 # cleans the config/openshift folder for addon-operator-bundle openshift test folder
 clean-config-openshift:
 	@rm -rf "config/openshift/*"
-
-## Builds config/docker/%.Dockerfile using a binary build from cmd/%.
-build-image-%: all
-	@echo "building image ${IMAGE_ORG}/$*:${VERSION}..."
-	@(source hack/determine-container-runtime.sh; \
-		rm -rf ".cache/image/$*" ".cache/image/$*.tar"; \
-		mkdir -p ".cache/image/$*"; \
-		cp -a "bin/linux_amd64/$*" ".cache/image/$*"; \
-		cp -a "config/docker/$*.Dockerfile" ".cache/image/$*/Dockerfile"; \
-		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/$*:${VERSION}" ".cache/image/$*"; \
-		$$CONTAINER_COMMAND image save -o ".cache/image/$*.tar" "${IMAGE_ORG}/$*:${VERSION}"; \
-		echo; \
-	) 2>&1 | sed 's/^/  /'
-
-## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
-push-image-%: registry-login build-image-$$*
-	@echo "pushing image ${IMAGE_ORG}/$*:${VERSION}..."
-	@(source hack/determine-container-runtime.sh; \
-		$$CONTAINER_COMMAND push "${IMAGE_ORG}/$*:${VERSION}"; \
-		echo pushed "${IMAGE_ORG}/$*:${VERSION}"; \
-		echo; \
-	) 2>&1 | sed 's/^/  /'

@@ -5,6 +5,8 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -14,11 +16,17 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 const (
-	module = "github.com/openshift/addon-operator"
+	module                  = "github.com/openshift/addon-operator"
+	defaultImageOrg         = "quay.io/app-sre"
+	defaultContainerRuntime = "podman"
 )
 
 // Directories
@@ -26,8 +34,10 @@ var (
 	// Working directory of the project.
 	workDir string
 	// Dependency directory.
-	depsDir magedeps.DependencyDirectory
-	logger  *logr.Logger
+	depsDir  magedeps.DependencyDirectory
+	cacheDir string
+
+	logger *logr.Logger
 )
 
 // Building
@@ -42,10 +52,14 @@ var (
 	buildDate     string
 
 	ldFlags string
+
+	imageOrg         string
+	containerRuntime string
 )
 
 // init build variables
 func (Build) init() error {
+	// Build flags
 	branchCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	branchBytes, err := branchCmd.Output()
 	if err != nil {
@@ -75,6 +89,17 @@ func (Build) init() error {
 		module, shortCommitID,
 		module, buildDate,
 	)
+
+	imageOrg = os.Getenv("IMAGE_ORG")
+	if len(imageOrg) == 0 {
+		imageOrg = defaultImageOrg
+	}
+
+	containerRuntime = os.Getenv("CONTAINER_RUNTIME")
+	if len(containerRuntime) == 0 {
+		containerRuntime = defaultContainerRuntime
+	}
+
 	return nil
 }
 
@@ -114,9 +139,232 @@ func (Build) All() {
 	)
 }
 
+func (Build) BuildImages() {
+	mg.Deps(
+		mg.F(Build.imageBuild, "addon-operator-manager"),
+		mg.F(Build.imageBuild, "addon-operator-webhook"),
+		mg.F(Build.imageBuild, "api-mock"),
+		mg.F(Build.imageBuild, "addon-operator-index"), // also pushes bundle
+	)
+}
+
+func (Build) PushImages() {
+	mg.Deps(
+		mg.F(Build.imagePush, "addon-operator-manager"),
+		mg.F(Build.imagePush, "addon-operator-webhook"),
+		mg.F(Build.imagePush, "addon-operator-index"), // also pushes bundle
+	)
+}
+
 // Builds the docgen internal tool
 func (Build) Docgen() {
 	mg.Deps(mg.F(Build.cmd, "docgen", "", ""))
+}
+
+func (b Build) imageBuild(cmd string) error {
+	mg.Deps(
+		mg.F(Build.cmd, cmd, "linux", "amd64"),
+	)
+
+	// clean/prepare cache directory
+	imageCacheDir := path.Join(cacheDir, "image", cmd)
+	if err := os.RemoveAll(imageCacheDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("deleting image cache: %w", err)
+	}
+	if err := os.Remove(imageCacheDir + ".tar"); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("deleting image cache: %w", err)
+	}
+	if err := os.MkdirAll(imageCacheDir, os.ModePerm); err != nil {
+		return fmt.Errorf("create image cache dir: %w", err)
+	}
+
+	switch cmd {
+	case "addon-operator-index":
+		return b.buildOLMIndexImage(imageCacheDir)
+
+	case "addon-operator-bundle":
+		return b.buildOLMBundleImage(imageCacheDir)
+
+	default:
+		return b.buildGenericImage(cmd, imageCacheDir)
+	}
+}
+
+// generic image build function, when the image just relies on
+// a static binary build from cmd/*
+func (Build) buildGenericImage(cmd, imageCacheDir string) error {
+	imageTag := imageURL(cmd)
+	for _, command := range [][]string{
+		// Copy files for build environment
+		{"cp", "-a",
+			"bin/linux_amd64/" + cmd,
+			imageCacheDir + "/" + cmd},
+		{"cp", "-a",
+			"config/docker/" + cmd + ".Dockerfile",
+			imageCacheDir + "/Dockerfile"},
+
+		// Build image!
+		{containerRuntime, "build", "-t", imageTag, imageCacheDir},
+		{containerRuntime, "image", "save",
+			"-o", imageCacheDir + ".tar", imageTag},
+	} {
+		if err := sh.Run(command[0], command[1:]...); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+	return nil
+}
+
+func (b Build) buildOLMIndexImage(imageCacheDir string) error {
+	mg.Deps(
+		Dependency.Opm,
+		mg.F(Build.imagePush, "bundle"),
+	)
+
+	if err := sh.Run("opm", "index", "add",
+		"--container-tool", containerRuntime,
+		"--bundles", imageURL("addon-operator-bundle"),
+		"--tag", imageURL("addon-operator-index")); err != nil {
+		return fmt.Errorf("runnign opm: %w", err)
+	}
+	return nil
+}
+
+func (b Build) buildOLMBundleImage(imageCacheDir string) error {
+	mg.Deps(
+		Build.TemplateAddonOperatorCSV,
+	)
+
+	imageTag := imageURL("addon-operator-bundle")
+	manifestsDir := path.Join(imageCacheDir, "manifests")
+	metadataDir := path.Join(imageCacheDir, "metadata")
+	for _, command := range [][]string{
+		{"mkdir", "-p", manifestsDir},
+		{"mkdir", "-p", metadataDir},
+
+		// Copy files for build environment
+		{"cp", "-a",
+			"config/docker/addon-operator-bundle.Dockerfile",
+			imageCacheDir + "/Dockerfile"},
+
+		{"cp", "-a", "config/olm/addon-operator.csv.yaml", manifestsDir},
+		{"cp", "-a", "config/olm/metrics.service.yaml", manifestsDir},
+		{"cp", "-a", "config/olm/annotations.yaml", metadataDir},
+
+		// copy CRDs
+		// The first few lines of the CRD file need to be removed:
+		// https://github.com/operator-framework/operator-registry/issues/222
+		{"tail", "-n+3",
+			"config/deploy/addons.managed.openshift.io_addons.yaml",
+			manifestsDir},
+		{"tail", "-n+3",
+			"config/deploy/addons.managed.openshift.io_addonoperators.yaml",
+			manifestsDir},
+		{"tail", "-n+3",
+			"config/deploy/addons.managed.openshift.io_addoninstances.yaml",
+			manifestsDir},
+
+		// Build image!
+		{containerRuntime, "build", "-t", imageTag, imageCacheDir},
+		{containerRuntime, "image", "save",
+			"-o", imageCacheDir + ".tar", imageTag},
+	} {
+		if err := sh.Run(command[0], command[1:]...); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+	return nil
+}
+
+func (b Build) TemplateAddonOperatorCSV() error {
+	objs, err := dev.LoadKubernetesObjectsFromFile(
+		"config/olm/addon-operator.csv.tpl.yaml")
+	if err != nil {
+		return fmt.Errorf("loading CSV template: %w", err)
+	}
+	if len(objs) != 1 {
+		return fmt.Errorf(
+			"loaded %d kube objects from CSV template, expected 1",
+			len(objs))
+	}
+
+	// convert unstructured.Unstructured to CSV
+	scheme := runtime.NewScheme()
+	if err := operatorsv1alpha1.AddToScheme(scheme); err != nil {
+		return err
+	}
+	var csv operatorsv1alpha1.ClusterServiceVersion
+	if err := scheme.Convert(&objs[0], &csv, nil); err != nil {
+		return err
+	}
+
+	// replace images
+	for i := range csv.Spec.
+		InstallStrategy.StrategySpec.DeploymentSpecs {
+		deploy := &csv.Spec.
+			InstallStrategy.StrategySpec.DeploymentSpecs[i]
+
+		switch deploy.Name {
+		case "addon-operator-manager":
+			for i := range deploy.Spec.
+				Template.Spec.Containers {
+				container := &deploy.Spec.Template.Spec.Containers[i]
+				switch container.Name {
+				case "manager":
+					container.Image = imageURL("addon-operator-manager")
+				}
+			}
+
+		case "addon-operator-webhook":
+			for i := range deploy.Spec.
+				Template.Spec.Containers {
+				container := &deploy.Spec.Template.Spec.Containers[i]
+				switch container.Name {
+				case "webhook":
+					container.Image = imageURL("addon-operator-webhook")
+				}
+			}
+		}
+	}
+	csv.Annotations["containerImage"] = imageURL("addon-operator-manager")
+
+	// write
+	csvBytes, err := yaml.Marshal(csv)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile("config/olm/addon-operator.csv.yaml",
+		csvBytes, os.ModePerm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (Build) imagePush(imageName string) error {
+	mg.Deps(
+		mg.F(Build.imageBuild, imageName),
+	)
+
+	// Login to container registry when running on AppSRE Jenkins.
+	if _, ok := os.LookupEnv("JENKINS_HOME"); ok {
+		log.Println("running in Jenkins, calling container runtime login")
+		if err := sh.Run(containerRuntime,
+			"login", "-u="+os.Getenv("QUAY_USER"),
+			"-p="+os.Getenv("QUAY_TOKEN"), "quay.io"); err != nil {
+			return fmt.Errorf("registry login: %w", err)
+		}
+	}
+
+	if err := sh.Run(containerRuntime, "push", imageURL(imageName)); err != nil {
+		return fmt.Errorf("pushing image: %w", err)
+	}
+
+	return nil
+}
+
+func imageURL(name string) string {
+	return imageOrg + "/" + name + ":" + version
 }
 
 // Code Generators
@@ -304,6 +552,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("getting work dir: %w", err))
 	}
-
+	cacheDir = path.Join(workDir + ".cache")
 	depsDir = magedeps.DependencyDirectory(path.Join(workDir, ".deps"))
 }
