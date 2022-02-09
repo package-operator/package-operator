@@ -311,7 +311,7 @@ prepare-addon-operator: \
 .PHONY: prepare-addon-operator
 
 ## Load Addon Operator images into kind
-load-addon-operator: build-images
+load-addon-operator: build-image-addon-operator-manager
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-manager.tar \
@@ -319,7 +319,7 @@ load-addon-operator: build-images
 .PHONY: load-addon-operator
 
 ## Load Addon Operator Webhook images into kind
-load-addon-operator-webhook: build-images
+load-addon-operator-webhook: build-image-addon-operator-webhook
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/addon-operator-webhook.tar \
@@ -327,7 +327,7 @@ load-addon-operator-webhook: build-images
 .PHONY: load-addon-operator-webhook
 
 ## Load OCM API mock images into kind
-load-api-mock: build-images
+load-api-mock: build-image-api-mock
 	@source hack/determine-container-runtime.sh; \
 		$$KIND_COMMAND load image-archive \
 			.cache/image/api-mock.tar \
@@ -430,6 +430,14 @@ openshift-ci-test-build: \
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "config/openshift/manifests/addoninstances.crd.yaml";
 
 .SECONDEXPANSION:
+
+## Builds config/docker/%.Dockerfile using a binary build from cmd/%.
+build-image-%:
+	./mage build:imagebuild $*
+
+## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
+push-image-%: registry-login
+	./mage build:imagepush $*
 
 # cleans the config/openshift folder for addon-operator-bundle openshift test folder
 clean-config-openshift:

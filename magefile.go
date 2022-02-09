@@ -141,10 +141,10 @@ func (Build) All() {
 
 func (Build) BuildImages() {
 	mg.Deps(
-		mg.F(Build.imageBuild, "addon-operator-manager"),
-		mg.F(Build.imageBuild, "addon-operator-webhook"),
-		mg.F(Build.imageBuild, "api-mock"),
-		mg.F(Build.imageBuild, "addon-operator-index"), // also pushes bundle
+		mg.F(Build.ImageBuild, "addon-operator-manager"),
+		mg.F(Build.ImageBuild, "addon-operator-webhook"),
+		mg.F(Build.ImageBuild, "api-mock"),
+		mg.F(Build.ImageBuild, "addon-operator-index"), // also pushes bundle
 	)
 }
 
@@ -161,7 +161,7 @@ func (Build) Docgen() {
 	mg.Deps(mg.F(Build.cmd, "docgen", "", ""))
 }
 
-func (b Build) imageBuild(cmd string) error {
+func (b Build) ImageBuild(cmd string) error {
 	mg.Deps(
 		mg.F(Build.cmd, cmd, "linux", "amd64"),
 	)
@@ -218,7 +218,7 @@ func (Build) buildGenericImage(cmd, imageCacheDir string) error {
 func (b Build) buildOLMIndexImage(imageCacheDir string) error {
 	mg.Deps(
 		Dependency.Opm,
-		mg.F(Build.imagePush, "bundle"),
+		mg.F(Build.imagePush, "addon-operator-bundle"),
 	)
 
 	if err := sh.Run("opm", "index", "add",
@@ -343,7 +343,7 @@ func (b Build) TemplateAddonOperatorCSV() error {
 
 func (Build) imagePush(imageName string) error {
 	mg.Deps(
-		mg.F(Build.imageBuild, imageName),
+		mg.F(Build.ImageBuild, imageName),
 	)
 
 	// Login to container registry when running on AppSRE Jenkins.
