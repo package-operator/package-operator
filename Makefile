@@ -436,7 +436,7 @@ build-image-%:
 	./mage build:imagebuild $*
 
 ## Build and push config/docker/%.Dockerfile using a binary build from cmd/%.
-push-image-%: registry-login
+push-image-%:
 	./mage build:imagepush $*
 
 # cleans the config/openshift folder for addon-operator-bundle openshift test folder
