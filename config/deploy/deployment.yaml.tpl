@@ -16,6 +16,17 @@ spec:
         app.kubernetes.io/name: addon-operator
     spec:
       serviceAccountName: addon-operator
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: Exists
+            weight: 1
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/infra
       volumes:
       - name: tls
         secret:
