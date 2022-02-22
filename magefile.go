@@ -118,7 +118,8 @@ func (Build) cmd(cmd, goos, goarch string) error {
 	if len(goos) != 0 && len(goarch) != 0 {
 		// change bin path to point to a sudirectory when cross compiling
 		bin = path.Join("bin", goos+"_"+goarch, cmd)
-		env["GOARGS"] = fmt.Sprintf("GOOS=%s GOARCH=%s", goos, goarch)
+		env["GOOS"] = goos
+		env["GOARCH"] = goarch
 	}
 
 	if err := sh.RunWithV(
