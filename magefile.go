@@ -164,10 +164,6 @@ func (Build) Docgen() {
 }
 
 func (b Build) ImageBuild(cmd string) error {
-	mg.Deps(
-		mg.F(Build.cmd, cmd, "linux", "amd64"),
-	)
-
 	// clean/prepare cache directory
 	imageCacheDir := path.Join(cacheDir, "image", cmd)
 	if err := os.RemoveAll(imageCacheDir); err != nil && !os.IsNotExist(err) {
@@ -188,6 +184,9 @@ func (b Build) ImageBuild(cmd string) error {
 		return b.buildOLMBundleImage(imageCacheDir)
 
 	default:
+		mg.Deps(
+			mg.F(Build.cmd, cmd, "linux", "amd64"),
+		)
 		return b.buildGenericImage(cmd, imageCacheDir)
 	}
 }
@@ -234,6 +233,7 @@ func (b Build) buildOLMIndexImage(imageCacheDir string) error {
 
 func (b Build) buildOLMBundleImage(imageCacheDir string) error {
 	mg.Deps(
+		Build.init,
 		Build.TemplateAddonOperatorCSV,
 	)
 
@@ -256,23 +256,23 @@ func (b Build) buildOLMBundleImage(imageCacheDir string) error {
 		// copy CRDs
 		// The first few lines of the CRD file need to be removed:
 		// https://github.com/operator-framework/operator-registry/issues/222
-		{"tail", "-n+3",
-			"config/deploy/addons.managed.openshift.io_addons.yaml",
-			manifestsDir},
-		{"tail", "-n+3",
-			"config/deploy/addons.managed.openshift.io_addonoperators.yaml",
-			manifestsDir},
-		{"tail", "-n+3",
-			"config/deploy/addons.managed.openshift.io_addoninstances.yaml",
-			manifestsDir},
+		{"bash", "-c", "tail -n+3 " +
+			"config/deploy/addons.managed.openshift.io_addons.yaml " +
+			"> " + path.Join(manifestsDir, "addons.yaml")},
+		{"bash", "-c", "tail -n+3 " +
+			"config/deploy/addons.managed.openshift.io_addonoperators.yaml " +
+			"> " + path.Join(manifestsDir, "addonoperators.yaml")},
+		{"bash", "-c", "tail -n+3 " +
+			"config/deploy/addons.managed.openshift.io_addoninstances.yaml " +
+			"> " + path.Join(manifestsDir, "addoninstances.yaml")},
 
 		// Build image!
 		{containerRuntime, "build", "-t", imageTag, imageCacheDir},
 		{containerRuntime, "image", "save",
 			"-o", imageCacheDir + ".tar", imageTag},
 	} {
-		if err := sh.Run(command[0], command[1:]...); err != nil {
-			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		if err := sh.RunV(command[0], command[1:]...); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -403,7 +403,7 @@ app-interface-push-images:
 	@echo "-------------------------------------------------"
 	$(eval IMAGE_NAME := app-interface-push-images)
 	@(source hack/determine-container-runtime.sh; \
-		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" -f "config/docker/${IMAGE_NAME}.Dockerfile" .; \
+		$$CONTAINER_COMMAND build -t "${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" -f "config/docker/${IMAGE_NAME}.Dockerfile" --pull .; \
 		$$CONTAINER_COMMAND run --rm \
 			--privileged \
 			-e JENKINS_HOME=${JENKINS_HOME} \
