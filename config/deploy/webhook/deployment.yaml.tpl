@@ -16,6 +16,30 @@ spec:
         app.kubernetes.io/name: addon-operator-webook-server
     spec:
       serviceAccountName: addon-operator
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: Exists
+            weight: 1
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - addon-operator-webook-server
+              topologyKey: "kubernetes.io/hostname"
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/infra
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
       containers:
       - name: webhook
         image: quay.io/openshift/addon-operator-webhook:latest
