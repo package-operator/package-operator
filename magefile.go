@@ -517,6 +517,11 @@ func (d Dependency) Helm() error {
 }
 
 func (d Dependency) Opm() error {
+	// TODO: move this into devkube library, to ensure the depsDir is present, even if you just call "NeedsRebuild"
+	if err := os.MkdirAll(string(depsDir), os.ModePerm); err != nil {
+		return fmt.Errorf("create dependency dir: %w", err)
+	}
+
 	needsRebuild, err := depsDir.NeedsRebuild("opm", opmVersion)
 	if err != nil {
 		return err
