@@ -526,7 +526,7 @@ func (d Dependency) Opm() error {
 	}
 
 	// Tempdir
-	tempDir, err := os.MkdirTemp(".cache", "")
+	tempDir, err := os.MkdirTemp(cacheDir, "")
 	if err != nil {
 		return fmt.Errorf("temp dir: %w", err)
 	}
@@ -534,7 +534,7 @@ func (d Dependency) Opm() error {
 
 	// Download
 	tempOPMBin := path.Join(tempDir, "opm")
-	if err := sh.Run(
+	if err := sh.RunV(
 		"curl", "-L", "--fail",
 		"-o", tempOPMBin,
 		fmt.Sprintf(
