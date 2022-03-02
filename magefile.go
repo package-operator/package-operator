@@ -222,7 +222,7 @@ func (b Build) buildOLMIndexImage(imageCacheDir string) error {
 		mg.F(Build.imagePush, "addon-operator-bundle"),
 	)
 
-	if err := sh.Run("opm", "index", "add",
+	if err := sh.RunV("opm", "index", "add",
 		"--container-tool", containerRuntime,
 		"--bundles", imageURL("addon-operator-bundle"),
 		"--tag", imageURL("addon-operator-index")); err != nil {
@@ -570,4 +570,6 @@ func init() {
 	}
 	cacheDir = path.Join(workDir + "/" + ".cache")
 	depsDir = magedeps.DependencyDirectory(path.Join(workDir, ".deps"))
+	os.Setenv("PATH", depsDir.Bin()+":"+os.Getenv("PATH"))
+
 }
