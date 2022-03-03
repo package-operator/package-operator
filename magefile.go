@@ -21,6 +21,7 @@ import (
 	"github.com/mt-sre/devkube/magedeps"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -329,6 +330,13 @@ func (b Build) TemplateAddonOperatorCSV() error {
 		}
 	}
 	csv.Annotations["containerImage"] = imageURL("addon-operator-manager")
+
+	// Sets kind and apiGroup
+	gvk, err := apiutil.GVKForObject(&csv, scheme)
+	if err != nil {
+		return err
+	}
+	csv.SetGroupVersionKind(gvk)
 
 	// write
 	csvBytes, err := yaml.Marshal(csv)
