@@ -27,4 +27,3 @@ config/deploy/webhook/deployment.yaml
 config/deploy/webhook/service.yaml
 config/olm/addon-operator.csv.yaml
 config/deploy/api-mock/deployment.yaml
-config/openshift
