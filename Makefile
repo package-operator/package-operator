@@ -416,7 +416,8 @@ app-interface-push-images:
 
 ## openshift release openshift-ci operator
 openshift-ci-test-build: \
-	clean-config-openshift \
+	clean-config-openshift
+	@./mage build:TemplateAddonOperatorCSV
 	$(eval IMAGE_NAME := addon-operator-bundle)
 	@echo "preparing files for config/openshift ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
 	@mkdir -p "config/openshift/manifests";
@@ -424,7 +425,7 @@ openshift-ci-test-build: \
 	@cp "config/docker/${IMAGE_NAME}.Dockerfile" "config/openshift/${IMAGE_NAME}.Dockerfile";
 	@cp "config/olm/annotations.yaml" "config/openshift/metadata";
 	@cp "config/olm/metrics.service.yaml" "config/openshift/manifests/metrics.service.yaml";
-	@cp "config/olm/addon-operator.csv.tpl.yaml" "config/openshift/manifests/addon-operator.csv.yaml";
+	@cp "config/olm/addon-operator.csv.yaml" "config/openshift/manifests/addon-operator.csv.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addons.yaml" > "config/openshift/manifests/addons.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addonoperators.yaml" > "config/openshift/manifests/addonoperators.crd.yaml";
 	@tail -n"+3" "config/deploy/addons.managed.openshift.io_addoninstances.yaml" > "config/openshift/manifests/addoninstances.crd.yaml";
