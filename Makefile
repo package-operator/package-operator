@@ -62,7 +62,7 @@ RESET  := $(shell tput -Txterm sgr0)
 # ---------
 
 # Default build target - must be first!
-all:
+all: openshift-ci-test-build
 	./mage build:all
 
 ## Display this help.
