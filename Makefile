@@ -417,7 +417,7 @@ app-interface-push-images:
 ## openshift release openshift-ci operator
 openshift-ci-test-build: \
 	clean-config-openshift
-	@./mage build:TemplateAddonOperatorCSV
+	@ADDON_OPERATOR_MANAGER_IMAGE=quay.io/openshift/addon-operator:latest ADDON_OPERATOR_WEBHOOK_IMAGE=quay.io/openshift/addon-operator-webhook:latest ./mage build:TemplateAddonOperatorCSV
 	$(eval IMAGE_NAME := addon-operator-bundle)
 	@echo "preparing files for config/openshift ${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}..."
 	@mkdir -p "config/openshift/manifests";

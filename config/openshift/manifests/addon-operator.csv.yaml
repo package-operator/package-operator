@@ -3,7 +3,7 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     capabilities: Full Lifecycle
-    containerImage: '/addon-operator-manager:'
+    containerImage: quay.io/openshift/addon-operator:latest
     olm.skipRange: '>=0.0.1 <0.7.0'
     repository: https://github.com/openshift/addon-operator
     support: "false"
@@ -176,7 +176,7 @@ spec:
                   readOnly: true
               - args:
                 - --enable-leader-election
-                image: '/addon-operator-manager:'
+                image: quay.io/openshift/addon-operator:latest
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -238,7 +238,7 @@ spec:
                       topologyKey: kubernetes.io/hostname
                     weight: 100
               containers:
-              - image: '/addon-operator-webhook:'
+              - image: quay.io/openshift/addon-operator-webhook:latest
                 livenessProbe:
                   httpGet:
                     path: /healthz

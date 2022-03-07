@@ -354,6 +354,10 @@ func (Build) imagePush(imageName string) error {
 }
 
 func imageURL(name string) string {
+	envvar := strings.ReplaceAll(strings.ToUpper(name), "-", "_") + "_IMAGE"
+	if url := os.Getenv(envvar); len(url) != 0 {
+		return url
+	}
 	return imageOrg + "/" + name + ":" + version
 }
 
