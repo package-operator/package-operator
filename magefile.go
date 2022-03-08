@@ -17,11 +17,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -280,24 +277,14 @@ func (b Build) buildOLMBundleImage(imageCacheDir string) error {
 }
 
 func (b Build) TemplateAddonOperatorCSV() error {
-	objs, err := dev.LoadKubernetesObjectsFromFile(
-		"config/olm/addon-operator.csv.tpl.yaml")
+	// convert unstructured.Unstructured to CSV
+	csvTemplate, err := ioutil.ReadFile(path.Join(workDir, "config/olm/addon-operator.csv.tpl.yaml"))
 	if err != nil {
-		return fmt.Errorf("loading CSV template: %w", err)
-	}
-	if len(objs) != 1 {
-		return fmt.Errorf(
-			"loaded %d kube objects from CSV template, expected 1",
-			len(objs))
+		return fmt.Errorf("reading CSV template: %w", err)
 	}
 
-	// convert unstructured.Unstructured to CSV
-	scheme := runtime.NewScheme()
-	if err := operatorsv1alpha1.AddToScheme(scheme); err != nil {
-		return err
-	}
 	var csv operatorsv1alpha1.ClusterServiceVersion
-	if err := scheme.Convert(&objs[0], &csv, nil); err != nil {
+	if err := yaml.Unmarshal(csvTemplate, &csv); err != nil {
 		return err
 	}
 
@@ -330,13 +317,6 @@ func (b Build) TemplateAddonOperatorCSV() error {
 		}
 	}
 	csv.Annotations["containerImage"] = imageURL("addon-operator-manager")
-
-	// Sets kind and apiGroup
-	gvk, err := apiutil.GVKForObject(&csv, scheme)
-	if err != nil {
-		return err
-	}
-	csv.SetGroupVersionKind(gvk)
 
 	// write
 	csvBytes, err := yaml.Marshal(csv)
@@ -374,6 +354,10 @@ func (Build) imagePush(imageName string) error {
 }
 
 func imageURL(name string) string {
+	envvar := strings.ReplaceAll(strings.ToUpper(name), "-", "_") + "_IMAGE"
+	if url := os.Getenv(envvar); len(url) != 0 {
+		return url
+	}
 	return imageOrg + "/" + name + ":" + version
 }
 
