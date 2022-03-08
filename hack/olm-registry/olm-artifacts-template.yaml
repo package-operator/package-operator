@@ -35,7 +35,7 @@ objects:
       name: addon-operator
     spec:
       clusterDeploymentSelector:
-        matchLabels:
+        matchLabels: {}
           # api.openshift.com/managed: "true"
       resourceApplyMode: Sync
       resources:
