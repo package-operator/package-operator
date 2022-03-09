@@ -28,7 +28,7 @@ func (c *Client) PatchUpgradePolicy(
 ) (res UpgradePolicyPatchResponse, err error) {
 	urlParams := url.Values{}
 	return res, c.do(ctx, http.MethodPatch, fmt.Sprintf(
-		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
+		"api/clusters_mgmt/v1/clusters/%s/addon_upgrade_policies/%s/state",
 		c.opts.ClusterID,
 		req.ID,
 	),
@@ -53,7 +53,7 @@ func (c *Client) GetUpgradePolicy(
 ) (res UpgradePolicyGetResponse, err error) {
 	urlParams := url.Values{}
 	return res, c.do(ctx, http.MethodGet, fmt.Sprintf(
-		"api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state",
+		"api/clusters_mgmt/v1/clusters/%s/addon_upgrade_policies/%s/state",
 		c.opts.ClusterID,
 		req.ID,
 	),

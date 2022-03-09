@@ -47,7 +47,7 @@ func TestClientPatchUpgradePolicy(t *testing.T) {
 
 	assert.Equal(t, http.MethodPatch, recordedHttpRequest.Method)
 	assert.Equal(t, `{"id":"123","value":"success","description":"works"}`, string(recordedBody))
-	assert.Equal(t, "/proxy/apis/api/clusters_mgmt/v1/clusters/1ou/upgrade_policies/123/state", recordedHttpRequest.URL.Path)
+	assert.Equal(t, "/proxy/apis/api/clusters_mgmt/v1/clusters/1ou/addon_upgrade_policies/123/state", recordedHttpRequest.URL.Path)
 }
 
 func TestClientGetUpgradePolicy(t *testing.T) {
@@ -84,5 +84,5 @@ func TestClientGetUpgradePolicy(t *testing.T) {
 		Value:       "completed",
 		Description: "1234",
 	}, res)
-	assert.Equal(t, "/proxy/apis/api/clusters_mgmt/v1/clusters/1ou/upgrade_policies/678/state", recordedHttpRequest.URL.Path)
+	assert.Equal(t, "/proxy/apis/api/clusters_mgmt/v1/clusters/1ou/addon_upgrade_policies/678/state", recordedHttpRequest.URL.Path)
 }
