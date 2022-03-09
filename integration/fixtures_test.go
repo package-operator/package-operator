@@ -71,6 +71,7 @@ func addon_OwnNamespace() *addonsv1alpha1.Addon {
 			Name: "addon-oisafbo12",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			Version:     "v0.3.0",
 			DisplayName: "addon-oisafbo12",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: "namespace-onbgdions"},
@@ -100,6 +101,8 @@ func addon_AllNamespaces() *addonsv1alpha1.Addon {
 			Name: "addon-2425constance",
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			// Explicitly commented out in this case, to make sure the parameter is still optional.
+			// Version:     "v0.3.0",
 			DisplayName: "addon-2425constance",
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{
@@ -133,6 +136,7 @@ func addon_OwnNamespace_TestBrokenSubscription() *addonsv1alpha1.Addon {
 			Name: addonName,
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			Version:     "v0.3.0",
 			DisplayName: addonName,
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{Name: addonNamespace},
@@ -218,6 +222,7 @@ func addon_TestResourceAdoption() *addonsv1alpha1.Addon {
 			Name: referenceAddonName,
 		},
 		Spec: addonsv1alpha1.AddonSpec{
+			Version:     "v0.3.0",
 			DisplayName: referenceAddonName,
 			Namespaces: []addonsv1alpha1.AddonNamespace{
 				{
