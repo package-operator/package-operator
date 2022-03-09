@@ -21,7 +21,7 @@ func main() {
 		NewClustersEndpoint(),
 	)
 	r.Handle(
-		"/api/clusters_mgmt/v1/clusters/{cluster_id}/upgrade_policies/{upgrade_policy_id}/state",
+		"/api/clusters_mgmt/v1/clusters/{cluster_id}/addon_upgrade_policies/{upgrade_policy_id}/state",
 		NewUpgradePolicyStateEndpoint(),
 	)
 
