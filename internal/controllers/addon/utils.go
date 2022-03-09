@@ -78,6 +78,9 @@ func reportReadinessStatus(addon *addonsv1alpha1.Addon) {
 	addon.Status.ObservedGeneration = addon.Generation
 	addon.Status.Phase = addonsv1alpha1.PhaseReady
 
+	// When everything is ready, we are also operating on the current version of the Addon.
+	// Otherwise we would be in a pending or error state.
+	addon.Status.ObservedVersion = addon.Spec.Version
 }
 
 // Report Addon status to communicate that the Addon is terminating
