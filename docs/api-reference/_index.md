@@ -223,6 +223,7 @@ AddonSpec defines the desired state of Addon.
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
 | displayName | Human readable name for this addon. | string | true |
+| version | Version of the Addon to deploy. Used for reporting via status and metrics. | string | false |
 | pause | Pause reconciliation of Addon when set to True | bool | true |
 | namespaces | Defines a list of Kubernetes Namespaces that belong to this Addon. Namespaces listed here will be created prior to installation of the Addon and will be removed from the cluster when the Addon is deleted. Collisions with existing Namespaces are NOT allowed. | [][AddonNamespace.addons.managed.openshift.io/v1alpha1](#addonnamespaceaddonsmanagedopenshiftiov1alpha1) | false |
 | install | Defines how an Addon is installed. This field is immutable. | [AddonInstallSpec.addons.managed.openshift.io/v1alpha1](#addoninstallspecaddonsmanagedopenshiftiov1alpha1) | true |
@@ -242,6 +243,7 @@ AddonStatus defines the observed state of Addon
 | conditions | Conditions is a list of status conditions ths object is in. | []metav1.Condition | false |
 | phase | DEPRECATED: This field is not part of any API contract it will go away as soon as kubectl can print conditions! Human readable status - please use .Conditions from code | AddonPhase.addons.managed.openshift.io/v1alpha1 | false |
 | upgradePolicy | Tracks last reported upgrade policy status. | *[AddonUpgradePolicyStatus.addons.managed.openshift.io/v1alpha1](#addonupgradepolicystatusaddonsmanagedopenshiftiov1alpha1) | false |
+| observedVersion | Observed version of the Addon on the cluster, only present when .spec.version is populated. | string | false |
 
 [Back to Group]()
 

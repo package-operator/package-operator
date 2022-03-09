@@ -236,6 +236,10 @@ spec:
                 required:
                 - id
                 type: object
+              version:
+                description: Version of the Addon to deploy. Used for reporting via
+                  status and metrics.
+                type: string
             required:
             - displayName
             - install
@@ -320,6 +324,10 @@ spec:
                 description: The most recent generation observed by the controller.
                 format: int64
                 type: integer
+              observedVersion:
+                description: Observed version of the Addon on the cluster, only present
+                  when .spec.version is populated.
+                type: string
               phase:
                 description: 'DEPRECATED: This field is not part of any API contract
                   it will go away as soon as kubectl can print conditions! Human readable

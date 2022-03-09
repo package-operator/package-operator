@@ -10,6 +10,11 @@ type AddonSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	DisplayName string `json:"displayName"`
 
+	// Version of the Addon to deploy.
+	// Used for reporting via status and metrics.
+	// +optional
+	Version string `json:"version,omitempty"`
+
 	// Pause reconciliation of Addon when set to True
 	// +optional
 	Paused bool `json:"pause"`
@@ -221,6 +226,9 @@ type AddonStatus struct {
 	// Tracks last reported upgrade policy status.
 	// +optional
 	UpgradePolicy *AddonUpgradePolicyStatus `json:"upgradePolicy,omitempty"`
+	// Observed version of the Addon on the cluster, only present when .spec.version is populated.
+	// +optional
+	ObservedVersion string `json:"observedVersion,omitempty"`
 }
 
 type AddonPhase string
