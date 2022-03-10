@@ -66,13 +66,23 @@ func parseFlags() *options {
 	return opts
 }
 
-func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder, clusterExternalID string) error {
+func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) error {
+	ctx := context.Background()
+
 	// Create a client that does not cache resources cluster-wide.
 	uncachedClient, err := client.New(
 		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 	if err != nil {
 		return fmt.Errorf("unable to set up uncached client: %w", err)
 	}
+
+	// Lookup ClusterID prior to starting
+	cv := &configv1.ClusterVersion{}
+	if err := uncachedClient.Get(ctx, client.ObjectKey{Name: "version"}, cv); err != nil {
+		return fmt.Errorf("getting clusterversion: %w", err)
+	}
+	// calling this external ID to differenciate it from the cluster ID we use to contact OCM
+	clusterExternalID := string(cv.Spec.ClusterID)
 
 	addonReconciler := &addoncontroller.AddonReconciler{
 		Client:   mgr.GetClient(),
@@ -172,23 +182,13 @@ func setup() error {
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	ctx := context.Background()
-
-	// Lookup ClusterID prior to starting
-	cv := &configv1.ClusterVersion{}
-	if err := mgr.GetClient().Get(ctx, client.ObjectKey{Name: "version"}, cv); err != nil {
-		return fmt.Errorf("getting clusterversion: %w", err)
-	}
-	// calling this external ID to differenciate it from the cluster ID we use to contact OCM
-	clusterExternalID := string(cv.Spec.ClusterID)
-
 	// Create metrics recorder
 	var recorder *metrics.Recorder
 	if opts.enableMetricsRecorder {
 		recorder = metrics.NewRecorder(true)
 	}
 
-	if err := initReconcilers(mgr, recorder, clusterExternalID); err != nil {
+	if err := initReconcilers(mgr, recorder); err != nil {
 		return fmt.Errorf("init reconcilers: %w", err)
 	}
 
