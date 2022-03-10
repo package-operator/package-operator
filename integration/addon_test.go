@@ -32,6 +32,10 @@ func (s *integrationTestSuite) TestAddon() {
 		})
 	s.Require().NoError(err)
 
+	err = integration.Client.Get(ctx, client.ObjectKeyFromObject(addon), addon)
+	s.Require().NoError(err)
+	s.Assert().Equal(addon.Spec.Version, addon.Status.ObservedVersion, "addon version should be reported")
+
 	s.Run("test_namespaces", func() {
 
 		for _, namespace := range addon.Spec.Namespaces {
