@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/go-logr/logr"
-	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -42,6 +41,7 @@ type AddonOperatorReconciler struct {
 	GlobalPauseManager globalPauseManager
 	OCMClientManager   ocmClientManager
 	Recorder           *metrics.Recorder
+	ClusterExternalID  string
 }
 
 func (r *AddonOperatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -112,11 +112,6 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 		return nil
 	}
 
-	cv := &configv1.ClusterVersion{}
-	if err := r.Get(ctx, client.ObjectKey{Name: "version"}, cv); err != nil {
-		return fmt.Errorf("getting clusterversion: %w", err)
-	}
-
 	secret := &corev1.Secret{}
 	// Use an uncached client to get this secret,
 	// so we don't setup a cluster-wide cache for Secrets.
@@ -137,7 +132,7 @@ func (r *AddonOperatorReconciler) handleOCMClient(
 		ctx,
 		ocm.WithEndpoint(addonOperator.Spec.OCM.Endpoint),
 		ocm.WithAccessToken(accessToken),
-		ocm.WithClusterExternalID(string(cv.Spec.ClusterID)),
+		ocm.WithClusterExternalID(r.ClusterExternalID),
 	)
 
 	//ocm client not initialized, usually because the OCM API is not yet
