@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -65,14 +66,23 @@ func parseFlags() *options {
 	return opts
 }
 
-func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
+func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) error {
+	ctx := context.Background()
+
 	// Create a client that does not cache resources cluster-wide.
 	uncachedClient, err := client.New(
 		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 	if err != nil {
-		setupLog.Error(err, "unable to set up uncached client")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up uncached client: %w", err)
 	}
+
+	// Lookup ClusterID prior to starting
+	cv := &configv1.ClusterVersion{}
+	if err := uncachedClient.Get(ctx, client.ObjectKey{Name: "version"}, cv); err != nil {
+		return fmt.Errorf("getting clusterversion: %w", err)
+	}
+	// calling this external ID to differenciate it from the cluster ID we use to contact OCM
+	clusterExternalID := string(cv.Spec.ClusterID)
 
 	addonReconciler := &addoncontroller.AddonReconciler{
 		Client:   mgr.GetClient(),
@@ -82,8 +92,7 @@ func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
 	}
 
 	if err := addonReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Addon")
-		os.Exit(1)
+		return fmt.Errorf("unable to create Addon controller: %w", err)
 	}
 
 	if err := (&aocontroller.AddonOperatorReconciler{
@@ -94,9 +103,9 @@ func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
 		GlobalPauseManager: addonReconciler,
 		OCMClientManager:   addonReconciler,
 		Recorder:           recorder,
+		ClusterExternalID:  clusterExternalID,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AddonOperator")
-		os.Exit(1)
+		return fmt.Errorf("unable to create AddonOperator controller: %w", err)
 	}
 
 	if err := (&aicontroller.AddonInstanceReconciler{
@@ -104,9 +113,9 @@ func initReconcilers(mgr ctrl.Manager, recorder *metrics.Recorder) {
 		Log:    ctrl.Log.WithName("controller").WithName("AddonInstance"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AddonInstance")
-		os.Exit(1)
+		return fmt.Errorf("unable to create AddonInstance controller: %w", err)
 	}
+	return nil
 }
 
 func initPprof(mgr ctrl.Manager, addr string) {
@@ -143,7 +152,7 @@ func initPprof(mgr ctrl.Manager, addr string) {
 	}
 }
 
-func main() {
+func setup() error {
 	opts := parseFlags()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -158,8 +167,7 @@ func main() {
 		LeaderElectionID:           "8a4hp84a6s.addon-operator-lock",
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
 	// PPROF
@@ -168,22 +176,32 @@ func main() {
 	}
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up health check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
+
+	// Create metrics recorder
 	var recorder *metrics.Recorder
 	if opts.enableMetricsRecorder {
 		recorder = metrics.NewRecorder(true)
 	}
-	initReconcilers(mgr, recorder)
+
+	if err := initReconcilers(mgr, recorder); err != nil {
+		return fmt.Errorf("init reconcilers: %w", err)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		return fmt.Errorf("problem running manager: %w", err)
+	}
+	return nil
+}
+
+func main() {
+	if err := setup(); err != nil {
+		setupLog.Error(err, "setting up manager")
 		os.Exit(1)
 	}
 }
