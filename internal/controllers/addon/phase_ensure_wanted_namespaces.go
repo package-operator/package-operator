@@ -93,8 +93,10 @@ func reconcileNamespace(ctx context.Context, c client.Client,
 		return nil, controllers.ErrNotOwnedByUs
 	}
 
+	for k, v := range namespace.Labels {
+		currentNamespace.Labels[k] = v
+	}
 	currentNamespace.OwnerReferences = namespace.OwnerReferences
-	currentNamespace.Labels = namespace.Labels
 
 	return currentNamespace, c.Update(ctx, currentNamespace)
 }
