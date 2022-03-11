@@ -63,11 +63,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 200m
+            memory: 50Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 30Mi
       volumes:
       - name: tls
         secret:
