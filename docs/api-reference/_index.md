@@ -181,6 +181,7 @@ Common Addon installation parameters.
 | catalogSourceImage | Defines the CatalogSource image. | string | true |
 | channel | Channel for the Subscription object. | string | true |
 | packageName | Name of the package to install via OLM. OLM will resove this package name to install the matching bundle. | string | true |
+| pullSecretName | Reference to a secret of type kubernetes.io/dockercfg or kubernetes.io/dockerconfigjson in the addon operators installation namespace. The secret referenced here, will be made available to the addon in the addon installation namespace, as addon-pullsecret prior to installing the addon itself. | string | false |
 | config | Configs to be passed to subscription OLM object | *[SubscriptionConfig.addons.managed.openshift.io/v1alpha1](#subscriptionconfigaddonsmanagedopenshiftiov1alpha1) | false |
 
 [Back to Group]()

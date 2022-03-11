@@ -101,6 +101,14 @@ spec:
                           resove this package name to install the matching bundle.
                         minLength: 1
                         type: string
+                      pullSecretName:
+                        description: Reference to a secret of type kubernetes.io/dockercfg
+                          or kubernetes.io/dockerconfigjson in the addon operators
+                          installation namespace. The secret referenced here, will
+                          be made available to the addon in the addon installation
+                          namespace, as addon-pullsecret prior to installing the addon
+                          itself.
+                        type: string
                     required:
                     - catalogSourceImage
                     - channel
@@ -151,6 +159,14 @@ spec:
                         description: Name of the package to install via OLM. OLM will
                           resove this package name to install the matching bundle.
                         minLength: 1
+                        type: string
+                      pullSecretName:
+                        description: Reference to a secret of type kubernetes.io/dockercfg
+                          or kubernetes.io/dockerconfigjson in the addon operators
+                          installation namespace. The secret referenced here, will
+                          be made available to the addon in the addon installation
+                          namespace, as addon-pullsecret prior to installing the addon
+                          itself.
                         type: string
                     required:
                     - catalogSourceImage

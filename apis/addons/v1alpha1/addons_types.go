@@ -125,6 +125,12 @@ type AddonInstallOLMCommon struct {
 	// +kubebuilder:validation:MinLength=1
 	PackageName string `json:"packageName"`
 
+	// Reference to a secret of type kubernetes.io/dockercfg or kubernetes.io/dockerconfigjson
+	// in the addon operators installation namespace.
+	// The secret referenced here, will be made available to the addon in the addon installation namespace,
+	// as addon-pullsecret prior to installing the addon itself.
+	PullSecretName string `json:"pullSecretName,omitempty"`
+
 	// Configs to be passed to subscription OLM object
 	// +optional
 	Config *SubscriptionConfig `json:"config,omitempty"`
