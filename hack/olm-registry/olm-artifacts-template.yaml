@@ -36,7 +36,7 @@ objects:
     spec:
       clusterDeploymentSelector:
         matchLabels:
-          api.openshift.com/managed: "nonexistinglabel"
+          api.openshift.com/managed: "true"
       resourceApplyMode: Sync
       resources:
         - apiVersion: v1
