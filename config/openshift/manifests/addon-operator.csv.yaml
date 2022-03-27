@@ -4,11 +4,11 @@ metadata:
   annotations:
     capabilities: Full Lifecycle
     containerImage: quay.io/openshift/addon-operator:latest
-    olm.skipRange: '>=0.0.1 <1.0.0'
+    olm.skipRange: '>=0.0.1 <1.0.1'
     repository: https://github.com/openshift/addon-operator
     support: "false"
   creationTimestamp: null
-  name: addon-operator.v1.0.0
+  name: addon-operator.v1.0.1
 spec:
   apiservicedefinitions: {}
   cleanup:
@@ -193,10 +193,10 @@ spec:
                 resources:
                   limits:
                     cpu: 100m
-                    memory: 260Mi
+                    memory: 400Mi
                   requests:
                     cpu: 100m
-                    memory: 200Mi
+                    memory: 300Mi
               serviceAccountName: addon-operator
               tolerations:
               - effect: NoSchedule
@@ -311,7 +311,7 @@ spec:
   provider:
     name: Red Hat
     url: www.redhat.com
-  version: 1.0.0
+  version: 1.0.1
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
