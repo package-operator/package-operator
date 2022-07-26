@@ -1,0 +1,40 @@
+exclude: |
+  (?x)(
+    (^vendor/)|
+    (.deepcopy.go$)
+  )
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.4.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: detect-private-key
+  - id: end-of-file-fixer
+  - id: pretty-format-json
+    args:
+    - --autofix
+  - id: trailing-whitespace
+
+- repo: git://github.com/dnephin/pre-commit-golang
+  rev: v0.3.5
+  hooks:
+  - id: go-fmt
+
+- repo: local
+  hooks:
+  - id: goimports
+    name: goimports
+    entry: hack/ensure-and-run-goimports.sh
+    language: system
+    types: [go]
+
+  - id: go-mod-tidy
+    name: go-mod-tidy
+    entry: go mod tidy
+    language: system
+    exclude: ".*"
+    always_run: true

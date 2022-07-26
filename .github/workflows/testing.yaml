@@ -1,0 +1,46 @@
+name: Testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - main
+  pull_request:
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '>=1.17.0'
+
+    - name: Lint
+      run: ./mage test:lint
+
+    - name: Unit
+      run: ./mage test:unit
+
+  integration:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '>=1.17.0'
+
+    - name: Integration
+      run: ./mage dev:integration
+      env:
+        CONTAINER_RUNTIME: docker
