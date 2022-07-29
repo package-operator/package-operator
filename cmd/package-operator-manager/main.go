@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"runtime/debug"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,7 @@ type opts struct {
 	namespace            string
 	enableLeaderElection bool
 	probeAddr            string
+	printVersion         bool
 }
 
 func main() {
@@ -38,6 +40,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
+	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -46,6 +49,17 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		panic(err)
+	}
+
+	if opts.printVersion {
+		version := "binary compiled without version info"
+
+		if info, ok := debug.ReadBuildInfo(); ok {
+			version = info.String()
+		}
+
+		fmt.Fprintln(os.Stderr, version)
+		os.Exit(2)
 	}
 
 	if err := run(setupLog, scheme, opts); err != nil {
