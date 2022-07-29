@@ -15,10 +15,12 @@ import (
 var (
 	// Client pointing to the e2e test cluster.
 	Client client.Client
+	// Config is the REST config used to connect to the cluster.
 	Config *rest.Config
+	// Scheme used by created clients.
 	Scheme = runtime.NewScheme()
 
-	// Namespace that the Package Operator is running in.
+	// PackageOperatorNamespace is the namespace that the Package Operator is running in.
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
 	PackageOperatorNamespace string
 )
@@ -76,11 +78,11 @@ func findPackageOperatorNamespace(ctx context.Context) (
 	}
 	switch len(packageOperatorDeployments) {
 	case 0:
-		panic(fmt.Errorf("no packageOperator deployment found on the cluster!"))
+		panic("no packageOperator deployment found on the cluster")
 	case 1:
 		packageOperatorNamespace = packageOperatorDeployments[0].Namespace
 	default:
-		panic(fmt.Errorf("multiple packageOperator deployments found on the cluster!"))
+		panic("multiple packageOperator deployments found on the cluster")
 	}
 	return
 }
