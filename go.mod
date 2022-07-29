@@ -1,4 +1,4 @@
-module github.com/package-operator/package-operator
+module package-operator.run/package-operator
 
 go 1.18
 
