@@ -95,10 +95,6 @@ func (Test) Integration() error {
 // --------
 type Build mg.Namespace
 
-func (Build) Version() {
-	Builder.Version()
-}
-
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", "linux", "amd64"),
@@ -194,53 +190,24 @@ func determineContainerRuntime() {
 // -------
 
 type builder struct {
-	branch        string
-	shortCommitID string
-	version       string
-	buildDate     string
-
 	// Build Tags
-	ldFlags  string
 	imageOrg string
+	version  string
 }
 
 // init build variables
 func (b *builder) init() error {
-	// branch
-	branchCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	branchBytes, err := branchCmd.Output()
-	if err != nil {
-		panic(fmt.Errorf("getting git branch: %w", err))
-	}
-	b.branch = strings.TrimSpace(string(branchBytes))
-
-	// commit id
-	shortCommitIDCmd := exec.Command("git", "rev-parse", "--short", "HEAD")
-	shortCommitIDBytes, err := shortCommitIDCmd.Output()
-	if err != nil {
-		panic(fmt.Errorf("getting git short commit id"))
-	}
-	b.shortCommitID = strings.TrimSpace(string(shortCommitIDBytes))
-
 	// version
 	b.version = strings.TrimSpace(os.Getenv("VERSION"))
 	if len(b.version) == 0 {
-		b.version = b.shortCommitID
+		// commit id
+		shortCommitIDCmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+		shortCommitIDBytes, err := shortCommitIDCmd.Output()
+		if err != nil {
+			panic(fmt.Errorf("getting git short commit id"))
+		}
+		b.version = strings.TrimSpace(string(shortCommitIDBytes))
 	}
-
-	// buildDate
-	b.buildDate = fmt.Sprint(time.Now().UTC().Unix())
-
-	// flags
-	b.ldFlags = fmt.Sprintf(`-X %s/internal/version.Version=%s`+
-		`-X %s/internal/version.Branch=%s`+
-		`-X %s/internal/version.Commit=%s`+
-		`-X %s/internal/version.BuildDate=%s`,
-		module, b.version,
-		module, b.branch,
-		module, b.shortCommitID,
-		module, b.buildDate,
-	)
 
 	// image org
 	b.imageOrg = os.Getenv("IMAGE_ORG")
@@ -251,25 +218,13 @@ func (b *builder) init() error {
 	return nil
 }
 
-func (b *builder) Version() {
-	mg.SerialDeps(
-		b.init,
-	)
-
-	fmt.Println(b.version)
-}
-
 // Builds binaries from /cmd directory.
 func (b *builder) Cmd(cmd, goos, goarch string) error {
 	mg.SerialDeps(
 		b.init,
 	)
 
-	env := map[string]string{
-		"GOFLAGS":     "",
-		"CGO_ENABLED": "0",
-		"LDFLAGS":     b.ldFlags,
-	}
+	env := map[string]string{"CGO_ENABLED": "0"}
 
 	bin := path.Join("bin", cmd)
 	if len(goos) != 0 && len(goarch) != 0 {
@@ -279,12 +234,17 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 		env["GOARCH"] = goarch
 	}
 
-	if err := sh.RunWithV(
-		env,
-		"go", "build", "-v", "-o", bin, "./cmd/"+cmd+"/main.go",
-	); err != nil {
+	cmdline := []string{
+		"build",
+		"--ldflags", "-w -s --extldflags '-zrelro -znow -O1'",
+		"--trimpath", "--mod=readonly",
+		"-v", "-o", bin, "./cmd/" + cmd,
+	}
+
+	if err := sh.RunWithV(env, "go", cmdline...); err != nil {
 		return fmt.Errorf("compiling cmd/%s: %w", cmd, err)
 	}
+
 	return nil
 }
 
