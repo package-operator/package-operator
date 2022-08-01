@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,16 +16,20 @@ import (
 var (
 	// Client pointing to the e2e test cluster.
 	Client client.Client
+	// Config is the REST config used to connect to the cluster.
 	Config *rest.Config
+	// Scheme used by created clients.
 	Scheme = runtime.NewScheme()
 
-	// Namespace that the Package Operator is running in.
+	// PackageOperatorNamespace is the namespace that the Package Operator is running in.
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
 	PackageOperatorNamespace string
 )
 
 func init() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	if err := initClients(ctx); err != nil {
 		panic(err)
 	}
@@ -45,12 +50,14 @@ func initClients(ctx context.Context) error {
 		return fmt.Errorf("could not load schemes: %w", err)
 	}
 
-	Config = ctrl.GetConfigOrDie()
-
 	var err error
-	Client, err = client.New(Config, client.Options{
-		Scheme: Scheme,
-	})
+
+	Config, err = ctrl.GetConfig()
+	if err != nil {
+		return fmt.Errorf("get rest config: %w", err)
+	}
+
+	Client, err = client.New(Config, client.Options{Scheme: Scheme})
 	if err != nil {
 		return fmt.Errorf("creating runtime client: %w", err)
 	}
@@ -76,11 +83,11 @@ func findPackageOperatorNamespace(ctx context.Context) (
 	}
 	switch len(packageOperatorDeployments) {
 	case 0:
-		panic(fmt.Errorf("no packageOperator deployment found on the cluster!"))
+		panic("no packageOperator deployment found on the cluster")
 	case 1:
 		packageOperatorNamespace = packageOperatorDeployments[0].Namespace
 	default:
-		panic(fmt.Errorf("multiple packageOperator deployments found on the cluster!"))
+		panic("multiple packageOperator deployments found on the cluster")
 	}
 	return
 }
