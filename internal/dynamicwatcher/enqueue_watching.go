@@ -104,9 +104,7 @@ func (e *EnqueueWatchingObjects) parseWatcherTypeGroupKind(scheme *runtime.Schem
 	}
 	// Expect only 1 kind.  If there is more than one kind this is probably an edge case such as ListOptions.
 	if len(kinds) != 1 {
-		err := fmt.Errorf("Expected exactly 1 kind for WatcherType %T, but found %s kinds", e.WatcherType, kinds)
-		return err
-
+		panic(fmt.Sprintf("Expected exactly 1 kind for WatcherType %T, but found %s kinds", e.WatcherType, kinds))
 	}
 	// Cache the Group and Kind for the WatcherType
 	e.groupKind = schema.GroupKind{Group: kinds[0].Group, Kind: kinds[0].Kind}

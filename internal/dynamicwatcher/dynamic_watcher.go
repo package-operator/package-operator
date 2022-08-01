@@ -32,13 +32,13 @@ type OwnerReference struct {
 	Namespace string
 }
 
-// Namespaced GroupVersionKind
+// Namespaced GroupVersionKind.
 type NamespacedGKV struct {
 	schema.GroupVersionKind
 	Namespace string
 }
 
-// usually fulfilled by meta.RESTMapper
+// usually fulfilled by meta.RESTMapper.
 type restMapper interface {
 	RESTMapping(gk schema.GroupKind, versions ...string) (
 		*meta.RESTMapping, error)
@@ -52,7 +52,7 @@ type DynamicWatcher struct {
 	restMapper restMapper
 	client     dynamic.Interface
 
-	opts DynamicWatcherOptions
+	opts Options
 
 	sinksLock sync.RWMutex
 	sinks     []watchSink
@@ -75,12 +75,12 @@ type NewInformerFunc func(
 	indexers cache.Indexers,
 ) informer
 
-type DynamicWatcherOptions struct {
+type Options struct {
 	EventHandlerResyncPeriod time.Duration
 	NewInformer              NewInformerFunc
 }
 
-func (opts *DynamicWatcherOptions) Default() {
+func (opts *Options) Default() {
 	opts.EventHandlerResyncPeriod = defaultEventHandlerResyncPeriod
 	opts.NewInformer = func(
 		lw cache.ListerWatcher, exampleObject runtime.Object,
@@ -90,19 +90,19 @@ func (opts *DynamicWatcherOptions) Default() {
 	}
 }
 
-type DynamicWatcherOption interface {
-	ApplyToDynamicWatcherOptions(opts *DynamicWatcherOptions)
+type Option interface {
+	ApplyToOptions(opts *Options)
 }
 
-type DynamicWatcherEventHandlerNewInformer NewInformerFunc
+type EventHandlerNewInformer NewInformerFunc
 
-func (ii DynamicWatcherEventHandlerNewInformer) ApplyToDynamicWatcherOptions(opts *DynamicWatcherOptions) {
+func (ii EventHandlerNewInformer) ApplyToOptions(opts *Options) {
 	opts.NewInformer = NewInformerFunc(ii)
 }
 
-type DynamicWatcherEventHandlerResyncPeriod time.Duration
+type EventHandlerResyncPeriod time.Duration
 
-func (rp DynamicWatcherEventHandlerResyncPeriod) ApplyToDynamicWatcherOptions(opts *DynamicWatcherOptions) {
+func (rp EventHandlerResyncPeriod) ApplyToOptions(opts *Options) {
 	opts.EventHandlerResyncPeriod = time.Duration(rp)
 }
 
@@ -119,7 +119,7 @@ type watchSink struct {
 func New(
 	log logr.Logger, scheme *runtime.Scheme,
 	restMapper restMapper, client dynamic.Interface,
-	opts ...DynamicWatcherOption,
+	opts ...Option,
 ) *DynamicWatcher {
 	dw := &DynamicWatcher{
 		log:        log,
@@ -133,13 +133,13 @@ func New(
 
 	dw.opts.Default()
 	for _, opt := range opts {
-		opt.ApplyToDynamicWatcherOptions(&dw.opts)
+		opt.ApplyToOptions(&dw.opts)
 	}
 
 	return dw
 }
 
-// For printing in startup log messages
+// For printing in startup log messages.
 func (dw *DynamicWatcher) String() string {
 	return "DynamicWatcher"
 }
@@ -150,9 +150,16 @@ func (dw *DynamicWatcher) OwnersForNamespacedGKV(ngvk NamespacedGKV) []OwnerRefe
 	dw.informersLock.Lock()
 	defer dw.informersLock.Unlock()
 
-	var ownerRefs []OwnerReference
-	for ownerRef := range dw.informerReferences[ngvk] {
-		ownerRefs = append(ownerRefs, ownerRef)
+	refs, ok := dw.informerReferences[ngvk]
+	if !ok {
+		return nil
+	}
+
+	ownerRefs := make([]OwnerReference, len(refs))
+	var i int
+	for ownerRef := range refs {
+		ownerRefs[i] = ownerRef
+		i++
 	}
 	return ownerRefs
 }

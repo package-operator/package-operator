@@ -16,7 +16,6 @@ linters:
     - execinquery
     - exportloopref
     - forbidigo
-    - forcetypeassert
     - gci
     - gocritic
     - godot

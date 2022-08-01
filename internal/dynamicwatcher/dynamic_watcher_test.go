@@ -44,7 +44,7 @@ func TestDynamicWatcher(t *testing.T) {
 		Return(&meta.RESTMapping{Resource: secretsGVR}, nil)
 
 	dw := New(log, scheme, restMapper, dynamicClient,
-		DynamicWatcherEventHandlerNewInformer(func(
+		EventHandlerNewInformer(func(
 			lw toolscache.ListerWatcher, exampleObject runtime.Object,
 			defaultEventHandlerResyncPeriod time.Duration, indexers toolscache.Indexers,
 		) informer {
