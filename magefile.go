@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -511,4 +512,51 @@ func (d Dev) init() {
 		}),
 		dev.WithContainerRuntime(containerRuntime),
 	)
+}
+
+// Code Generators
+// ---------------
+type Generate mg.Namespace
+
+func (Generate) All() {
+	mg.Deps(
+		Generate.code,
+	)
+}
+
+func (Generate) code() error {
+	mg.Deps(Dependency.ControllerGen)
+
+	manifestsCmd := exec.Command("controller-gen",
+		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./...",
+		"output:crd:artifacts:config=../config/crds")
+	manifestsCmd.Dir = workDir + "/apis"
+	manifestsCmd.Stdout = os.Stdout
+	manifestsCmd.Stderr = os.Stderr
+	if err := manifestsCmd.Run(); err != nil {
+		return fmt.Errorf("generating kubernetes manifests: %w", err)
+	}
+
+	// code gen
+	codeCmd := exec.Command("controller-gen", "object", "paths=./...")
+	codeCmd.Dir = workDir + "/apis"
+	if err := codeCmd.Run(); err != nil {
+		return fmt.Errorf("generating deep copy methods: %w", err)
+	}
+
+	crds, err := filepath.Glob("config/crds/*.yaml")
+	if err != nil {
+		return fmt.Errorf("finding CRDs: %w", err)
+	}
+
+	for _, crd := range crds {
+		cmd := []string{
+			"cp", crd, path.Join("config/static-deployment", "1-"+path.Base(crd)),
+		}
+		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
+		}
+	}
+
+	return nil
 }
