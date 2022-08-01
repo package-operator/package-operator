@@ -22,7 +22,7 @@ const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
 
-// NativeOwner handling strategy uses .metadata.annotations
+// AnnotationOwner handling strategy uses .metadata.annotations
 type OwnerStrategyAnnotation struct{}
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
