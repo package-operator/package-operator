@@ -20,6 +20,7 @@ var _ logr.LogSink = (*Logger)(nil)
 
 // NewLogger returns a new Logger flushing to testing.T.
 func NewLogger(t *testing.T) logr.Logger {
+	t.Helper()
 	l := &Logger{
 		t:      t,
 		values: map[string]interface{}{},
@@ -27,7 +28,7 @@ func NewLogger(t *testing.T) logr.Logger {
 	return logr.New(l)
 }
 
-// Info implements logr.LogSink.Info
+// Info implements logr.LogSink.Info.
 func (l *Logger) Info(level int, msg string, kvs ...interface{}) {
 	// marks this function as a helper method, so it will be excluded in the log stacktrace
 	l.t.Helper()
@@ -41,24 +42,24 @@ func (l *Logger) Info(level int, msg string, kvs ...interface{}) {
 	l.t.Logf("%-15s %-20s %s", strings.Join(l.names, "."), msg, string(j))
 }
 
-// Error implements logr.LogSink.Error
+// Error implements logr.LogSink.Error.
 func (l *Logger) Error(err error, msg string, kvs ...interface{}) {
 	// marks this function as a helper method, so it will be excluded in the log stacktrace
 	l.t.Helper()
 	l.Info(1, msg, append(kvs, "error", err.Error())...)
 }
 
-// Enabled implements logr.LogSink.Enabled
+// Enabled implements logr.LogSink.Enabled.
 func (l *Logger) Enabled(level int) bool {
 	return true
 }
 
-// Init implements logr.LogSink.Init
+// Init implements logr.LogSink.Init.
 func (l *Logger) Init(info logr.RuntimeInfo) {
 
 }
 
-// WithValues implements logr.LogSink.WithValues
+// WithValues implements logr.LogSink.WithValues.
 func (l *Logger) WithValues(kvs ...interface{}) logr.LogSink {
 	return &Logger{
 		t:      l.t,
@@ -67,7 +68,7 @@ func (l *Logger) WithValues(kvs ...interface{}) logr.LogSink {
 	}
 }
 
-// WithName implements logr.LogSink.WithName
+// WithName implements logr.LogSink.WithName.
 func (l *Logger) WithName(name string) logr.LogSink {
 	return &Logger{
 		t:      l.t,
