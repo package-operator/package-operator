@@ -90,8 +90,8 @@ func (s *OwnerStrategyAnnotation) IsOwner(owner, obj metav1.Object) bool {
 
 func (s *OwnerStrategyAnnotation) ReleaseController(obj metav1.Object) {
 	ownerRefs := s.getOwnerReferences(obj)
-	for _, ownerRef := range ownerRefs {
-		ownerRef.Controller = nil
+	for i := range ownerRefs {
+		ownerRefs[i].Controller = nil
 	}
 	s.setOwnerReferences(obj, ownerRefs)
 }
