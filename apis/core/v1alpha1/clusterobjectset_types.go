@@ -13,7 +13,7 @@ type ClusterObjectSet struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ClusterObjectSetSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	// +kubebuilder:default={phase: Pending}
 	Status ClusterObjectSetStatus `json:"status,omitempty"`
 }
 
@@ -39,7 +39,7 @@ type ClusterObjectSetSpec struct {
 	ObjectSetTemplateSpec `json:",inline"`
 }
 
-// ClusterObjectSetStatus defines the observed state of a ClusterObjectSet
+// ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 type ClusterObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

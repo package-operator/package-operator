@@ -44,6 +44,7 @@ type ObjectSetTemplatePhase struct {
 type ObjectSetObject struct {
 	// +kubebuilder:validation:EmbeddedResource
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +example={apiVersion: apps/v1, kind: Deployment, metadata: {name: example-deployment}}
 	Object runtime.RawExtension `json:"object"`
 }
 
@@ -62,10 +63,13 @@ type ObjectSetStatus struct {
 // Specifies that the reconciliation of a specific object should be paused.
 type ObjectSetPausedObject struct {
 	// Object Kind.
+	// +example=Deployment
 	Kind string `json:"kind"`
 	// Object Group.
+	// +example=apps
 	Group string `json:"group"`
 	// Object Name.
+	// +example=example-deployment
 	Name string `json:"name"`
 }
 
@@ -125,8 +129,10 @@ type ProbeSelector struct {
 // Kind package probe parameters.
 type PackageProbeKindSpec struct {
 	// Object Group to apply a probe to.
+	// +example=apps
 	Group string `json:"group"`
 	// Object Kind to apply a probe to.
+	// +example=Deployment
 	Kind string `json:"kind"`
 }
 
@@ -138,7 +144,8 @@ type Probe struct {
 
 // Condition Probe parameters.
 type ProbeConditionSpec struct {
-	// Condition Type to probe for.
+	// Condition type to probe for.
+	// +example=Available
 	Type string `json:"type"`
 	// Condition status to probe for.
 	// +kubebuilder:default="True"
@@ -147,6 +154,8 @@ type ProbeConditionSpec struct {
 
 // Compares two fields specified by JSON Paths.
 type ProbeFieldsEqualSpec struct {
+	// +example=.spec.fieldA
 	FieldA string `json:"fieldA"`
+	// +example=.status.fieldB
 	FieldB string `json:"fieldB"`
 }

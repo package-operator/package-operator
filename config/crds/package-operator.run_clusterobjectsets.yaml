@@ -176,7 +176,7 @@ spec:
           status:
             default:
               phase: Pending
-            description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet
+            description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:
               conditions:
                 description: Conditions is a list of status conditions ths object
