@@ -136,6 +136,7 @@ const (
 	goimportsVersion     = "0.1.5"
 	golangciLintVersion  = "1.46.2"
 	kindVersion          = "0.11.1"
+	k8sDocGenVersion     = "0.1.0"
 )
 
 type Dependency mg.Namespace
@@ -146,6 +147,7 @@ func (d Dependency) All() {
 		Dependency.Goimports,
 		Dependency.GolangciLint,
 		Dependency.Kind,
+		Dependency.Docgen,
 	)
 }
 
@@ -163,6 +165,11 @@ func (d Dependency) Goimports() error {
 func (d Dependency) GolangciLint() error {
 	return depsDir.GoInstall("golangci-lint",
 		"github.com/golangci/golangci-lint/cmd/golangci-lint", golangciLintVersion)
+}
+
+func (d Dependency) Docgen() error {
+	return depsDir.GoInstall("k8s-docgen",
+		"github.com/thetechnick/k8s-docgen", k8sDocGenVersion)
 }
 
 // Ensure Kind dependency - Kubernetes in Docker (or Podman)
@@ -521,6 +528,7 @@ type Generate mg.Namespace
 func (Generate) All() {
 	mg.Deps(
 		Generate.code,
+		Generate.docs,
 	)
 }
 
@@ -559,4 +567,10 @@ func (Generate) code() error {
 	}
 
 	return nil
+}
+
+func (Generate) docs() error {
+	mg.Deps(Dependency.Docgen)
+
+	return sh.Run("./hack/docgen.sh")
 }

@@ -67,7 +67,7 @@ spec:
                                 description: Condition status to probe for.
                                 type: string
                               type:
-                                description: Condition Type to probe for.
+                                description: Condition type to probe for.
                                 type: string
                             required:
                             - status
