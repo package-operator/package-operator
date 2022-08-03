@@ -24,8 +24,8 @@ func (s *OwnerStrategyNative) IsOwner(owner, obj metav1.Object) bool {
 
 func (s *OwnerStrategyNative) ReleaseController(obj metav1.Object) {
 	ownerRefs := obj.GetOwnerReferences()
-	for _, ownerRef := range ownerRefs {
-		ownerRef.Controller = nil
+	for i := range ownerRefs {
+		ownerRefs[i].Controller = nil
 	}
 	obj.SetOwnerReferences(ownerRefs)
 }

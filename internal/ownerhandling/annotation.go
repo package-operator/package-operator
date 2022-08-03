@@ -28,7 +28,7 @@ type OwnerStrategyAnnotation struct{}
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 	ownerType client.Object, isController bool,
 ) handler.EventHandler {
-	return &AnnotationEnqueueOwnerHandler{
+	return &AnnotationEnqueueRequestForOwner{
 		OwnerType:    ownerType,
 		IsController: isController,
 	}
@@ -43,30 +43,15 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 			ownerRef.UID != owner.GetUID() {
 			return &controllerutil.AlreadyOwnedError{
 				Object: obj,
-				Owner: metav1.OwnerReference{
-					APIVersion: ownerRef.APIVersion,
-					Kind:       ownerRef.Kind,
-					Name:       ownerRef.Name,
-					Controller: ownerRef.Controller,
-					UID:        ownerRef.UID,
-				},
+				Owner:  createMetaV1OwnerRef(ownerRef),
 			}
 		}
 	}
 
-	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), scheme)
+	ownerRef, err := createAnnotationOwnerRef(owner, scheme)
 	if err != nil {
 		return err
 	}
-	ownerRef := annotationOwnerRef{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		UID:        owner.GetUID(),
-		Name:       owner.GetName(),
-		Namespace:  owner.GetNamespace(),
-		Controller: pointer.BoolPtr(true),
-	}
-
 	ownerIndex := s.indexOf(ownerRefs, ownerRef)
 	if ownerIndex != -1 {
 		ownerRefs[ownerIndex] = ownerRef
@@ -76,6 +61,32 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 	s.setOwnerReferences(obj, ownerRefs)
 
 	return nil
+}
+
+func createMetaV1OwnerRef(ref annotationOwnerRef) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: ref.APIVersion,
+		Kind:       ref.Kind,
+		Name:       ref.Name,
+		Controller: ref.Controller,
+		UID:        ref.UID,
+	}
+}
+
+func createAnnotationOwnerRef(owner metav1.Object, scheme *runtime.Scheme) (annotationOwnerRef, error) {
+	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), scheme)
+	if err != nil {
+		return annotationOwnerRef{}, err
+	}
+	ownerRef := annotationOwnerRef{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		UID:        owner.GetUID(),
+		Name:       owner.GetName(),
+		Namespace:  owner.GetNamespace(),
+		Controller: pointer.BoolPtr(true),
+	}
+	return ownerRef, nil
 }
 
 func (s *OwnerStrategyAnnotation) IsOwner(owner, obj metav1.Object) bool {
@@ -150,26 +161,36 @@ type annotationOwnerRef struct {
 	// UID of the referent.
 	// More info: http://kubernetes.io/docs/user-guide/identifiers#uids
 	UID types.UID `json:"uid"`
-	// If true, this reference points to the managing controller.
+	// If true, this reference struct points to the managing controller.
 	// +optional
 	Controller *bool `json:"controller,omitempty"`
 }
 
-type AnnotationEnqueueOwnerHandler struct {
-	OwnerType    client.Object
+func (r *annotationOwnerRef) IsController() bool {
+	// TODO: Should we keep this
+	return r.Controller != nil && *r.Controller
+}
+
+type AnnotationEnqueueRequestForOwner struct {
+	// OwnerType is the type of the Owner object to look for in OwnerReferences.  Only Group and Kind are compared.
+	OwnerType client.Object
+
+	// IsController if set will only look at the first OwnerReference with Controller: true.
 	IsController bool
-	ownerGK      schema.GroupKind
+
+	// OwnerType is the type of the Owner object to look for in OwnerReferences.  Only Group and Kind are compared.
+	ownerGK schema.GroupKind
 }
 
 // Create implements EventHandler
-func (e *AnnotationEnqueueOwnerHandler) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Update implements EventHandler
-func (e *AnnotationEnqueueOwnerHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.ObjectOld) {
 		q.Add(req)
 	}
@@ -179,24 +200,24 @@ func (e *AnnotationEnqueueOwnerHandler) Update(evt event.UpdateEvent, q workqueu
 }
 
 // Delete implements EventHandler
-func (e *AnnotationEnqueueOwnerHandler) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Generic implements EventHandler
-func (e *AnnotationEnqueueOwnerHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
-func (e *AnnotationEnqueueOwnerHandler) InjectScheme(s *runtime.Scheme) error {
+func (e *AnnotationEnqueueRequestForOwner) InjectScheme(s *runtime.Scheme) error {
 	return e.parseOwnerTypeGroupKind(s)
 }
 
-func (e *AnnotationEnqueueOwnerHandler) getOwnerReconcileRequest(object metav1.Object) []reconcile.Request {
+func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav1.Object) []reconcile.Request {
 	var requests []reconcile.Request
 	ownerReferences := Annotation.getOwnerReferences(object)
 	for _, ownerRef := range ownerReferences {
@@ -210,10 +231,7 @@ func (e *AnnotationEnqueueOwnerHandler) getOwnerReconcileRequest(object metav1.O
 			continue
 		}
 
-		if e.IsController &&
-			ownerRef.Controller != nil &&
-			!*ownerRef.Controller {
-			// only continue if ownerRef is setup as Controller
+		if e.IsController && !ownerRef.IsController() {
 			continue
 		}
 
@@ -229,7 +247,7 @@ func (e *AnnotationEnqueueOwnerHandler) getOwnerReconcileRequest(object metav1.O
 }
 
 // parseOwnerTypeGroupKind parses the OwnerType into a Group and Kind and caches the result.
-func (e *AnnotationEnqueueOwnerHandler) parseOwnerTypeGroupKind(scheme *runtime.Scheme) error {
+func (e *AnnotationEnqueueRequestForOwner) parseOwnerTypeGroupKind(scheme *runtime.Scheme) error {
 	// Get the kinds of the type
 	kinds, _, err := scheme.ObjectKinds(e.OwnerType)
 	if err != nil {

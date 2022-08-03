@@ -110,7 +110,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
 	obj := testutil.NewSecret()
 	s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
-	h := AnnotationEnqueueOwnerHandler{
+	h := AnnotationEnqueueRequestForOwner{
 		OwnerType:    &corev1.ConfigMap{},
 		IsController: true,
 		ownerGK: schema.GroupKind{
@@ -132,7 +132,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 }
 
 func TestAnnotationEnqueueOwnerHandler_ParseOwnerTypeGroupKind(t *testing.T) {
-	h := &AnnotationEnqueueOwnerHandler{
+	h := &AnnotationEnqueueRequestForOwner{
 		OwnerType:    &appsv1.Deployment{},
 		IsController: true,
 	}
