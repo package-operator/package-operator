@@ -2,7 +2,7 @@
 
 The Package Operator APIs are an extension of the [Kubernetes API](https://kubernetes.io/docs/reference/using-api/api-overview/) using `CustomResourceDefinitions`.
 
-## `package-operator.run/v1alpha1`
+## package-operator.run/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the dhcp v1alpha1 API group
 
@@ -167,9 +167,9 @@ Specifies that the reconciliation of a specific object should be paused.
 
 | Field | Description |
 | ----- | ----------- |
-| `kind` <b>required</b><br><a href="#string">string</a> | Object Kind. |
-| `group` <b>required</b><br><a href="#string">string</a> | Object Group. |
-| `name` <b>required</b><br><a href="#string">string</a> | Object Name. |
+| `kind` <b>required</b><br>string | Object Kind. |
+| `group` <b>required</b><br>string | Object Group. |
+| `name` <b>required</b><br>string | Object Name. |
 
 
 Used in:
@@ -232,7 +232,7 @@ ObjectSet reconcile phase.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` <b>required</b><br><a href="#string">string</a> | Name of the reconcile phase, must be unique within a ObjectSet. |
+| `name` <b>required</b><br>string | Name of the reconcile phase, must be unique within a ObjectSet. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 
 
@@ -261,8 +261,8 @@ Kind package probe parameters.
 
 | Field | Description |
 | ----- | ----------- |
-| `group` <b>required</b><br><a href="#string">string</a> | Object Group to apply a probe to. |
-| `kind` <b>required</b><br><a href="#string">string</a> | Object Kind to apply a probe to. |
+| `group` <b>required</b><br>string | Object Group to apply a probe to. |
+| `kind` <b>required</b><br>string | Object Kind to apply a probe to. |
 
 
 Used in:
@@ -289,8 +289,8 @@ Condition Probe parameters.
 
 | Field | Description |
 | ----- | ----------- |
-| `type` <b>required</b><br><a href="#string">string</a> | Condition type to probe for. |
-| `status` <b>required</b><br><a href="#string">string</a> | Condition status to probe for. |
+| `type` <b>required</b><br>string | Condition type to probe for. |
+| `status` <b>required</b><br>string | Condition status to probe for. |
 
 
 Used in:
@@ -303,8 +303,8 @@ Compares two fields specified by JSON Paths.
 
 | Field | Description |
 | ----- | ----------- |
-| `fieldA` <b>required</b><br><a href="#string">string</a> |  |
-| `fieldB` <b>required</b><br><a href="#string">string</a> |  |
+| `fieldA` <b>required</b><br>string |  |
+| `fieldB` <b>required</b><br>string |  |
 
 
 Used in:
