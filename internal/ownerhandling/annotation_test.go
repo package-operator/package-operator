@@ -3,15 +3,17 @@ package ownerhandling
 import (
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/rand"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"package-operator.run/package-operator/internal/testutil"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -19,37 +21,22 @@ import (
 
 func TestSetControllerReference(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
-	owner := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cmtest",
-			Namespace: "cmtestns",
-		},
-	}
-	obj := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "testns",
-			UID:       types.UID("1234"),
-		},
-	}
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
+	cm1 := testutil.NewConfigMap()
+	obj := testutil.NewSecret()
+	scheme := testutil.NewTestSchemeWithCoreV1()
 
-	err := s.SetControllerReference(owner, obj, scheme)
+	err := s.SetControllerReference(cm1, obj, scheme)
 	assert.NoError(t, err)
+
 	ownerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, ownerRefs, 1) {
-		assert.Equal(t, owner.Name, ownerRefs[0].Name)
-		assert.Equal(t, owner.Namespace, ownerRefs[0].Namespace)
+		assert.Equal(t, cm1.Name, ownerRefs[0].Name)
+		assert.Equal(t, cm1.Namespace, ownerRefs[0].Namespace)
 		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
+		assert.Equal(t, true, *ownerRefs[0].Controller)
 	}
-	cm2 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cmtest2",
-			Namespace: "cmtestns2",
-			UID:       types.UID("5678"),
-		},
-	}
+
+	cm2 := testutil.NewConfigMap()
 	err = s.SetControllerReference(cm2, obj, scheme)
 	assert.Error(t, err, controllerutil.AlreadyOwnedError{})
 
@@ -57,35 +44,22 @@ func TestSetControllerReference(t *testing.T) {
 
 	err = s.SetControllerReference(cm2, obj, scheme)
 	assert.NoError(t, err)
-	assert.True(t, s.IsOwner(owner, obj))
+	assert.True(t, s.IsOwner(cm1, obj))
 	assert.True(t, s.IsOwner(cm2, obj))
 }
 
 func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
-	owner := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cmtest",
-			Namespace: "cmtestns",
-		},
-	}
-	obj := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "testns",
-			UID:       types.UID("1234"),
-		},
-	}
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
+	owner := testutil.NewConfigMap()
+	obj := testutil.NewSecret()
+	scheme := testutil.NewTestSchemeWithCoreV1()
 
 	err := s.SetControllerReference(owner, obj, scheme)
 	assert.NoError(t, err)
+
 	ownerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, ownerRefs, 1) {
-		assert.Equal(t, owner.Name, ownerRefs[0].Name)
-		assert.Equal(t, owner.Namespace, ownerRefs[0].Namespace)
-		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
+		assert.NotNil(t, ownerRefs[0].Controller)
 	}
 
 	s.ReleaseController(obj)
@@ -95,31 +69,23 @@ func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 	}
 }
 
+func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
+	cm := testutil.NewConfigMap()
+	return annotationOwnerRef{
+		APIVersion: "v1",
+		Kind:       "ConfigMap",
+		UID:        types.UID(rand.String(7)),
+		Name:       cm.Name,
+		Namespace:  cm.Namespace,
+		Controller: pointer.BoolPtr(true),
+	}
+}
+
 func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
-	ownerRef1 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("1234"),
-		Name:       "cmtest1",
-		Namespace:  "cmtestns",
-		Controller: pointer.BoolPtr(true),
-	}
-	ownerRef2 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("6789"),
-		Name:       "cmtest2",
-		Namespace:  "cmtestns",
-		Controller: pointer.BoolPtr(true),
-	}
-	ownerRef3 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("1919"),
-		Name:       "cmtest2",
-		Namespace:  "cmtestns",
-		Controller: pointer.BoolPtr(true),
-	}
+	ownerRef1 := newConfigMapAnnotationOwnerRef()
+	ownerRef2 := newConfigMapAnnotationOwnerRef()
+	ownerRef3 := newConfigMapAnnotationOwnerRef()
+
 	s := &OwnerStrategyAnnotation{}
 	i1 := s.indexOf([]annotationOwnerRef{ownerRef1, ownerRef2}, ownerRef1)
 	assert.Equal(t, 0, i1)
@@ -128,21 +94,10 @@ func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
-	ownerRef := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("1234"),
-		Name:       "cmtest",
-		Namespace:  "cmtestns",
-		Controller: pointer.BoolPtr(true),
-	}
+	ownerRef := newConfigMapAnnotationOwnerRef()
+	obj := testutil.NewSecret()
+
 	s := &OwnerStrategyAnnotation{}
-	obj := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "testns",
-		},
-	}
 	s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
 	gottenOwnerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, gottenOwnerRefs, 1) {
@@ -151,27 +106,14 @@ func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
 }
 
 func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
-	ownerRef := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("1234"),
-		Name:       "cmtest",
-		Namespace:  "cmtestns",
-		Controller: pointer.BoolPtr(true),
-	}
+	ownerRef := newConfigMapAnnotationOwnerRef()
 	s := &OwnerStrategyAnnotation{}
-	obj := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "testns",
-		},
-	}
+	obj := testutil.NewSecret()
 	s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
-	// TODO: PUT IN FIELD NAMES
 	h := AnnotationEnqueueOwnerHandler{
-		&corev1.ConfigMap{},
-		true,
-		schema.GroupKind{
+		OwnerType:    &corev1.ConfigMap{},
+		IsController: true,
+		ownerGK: schema.GroupKind{
 			Kind: "ConfigMap",
 		},
 	}

@@ -22,7 +22,7 @@ const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
 
-// AnnotationOwner handling strategy uses .metadata.annotations
+// AnnotationOwner handling strategy uses .metadata.annotations.
 type OwnerStrategyAnnotation struct{}
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
@@ -37,7 +37,7 @@ func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object, scheme *runtime.Scheme) error {
 	ownerRefs := s.getOwnerReferences(obj)
 
-	// Ensure that there is only a single controller
+	// Ensure that there is only a single controller.
 	for _, ownerRef := range ownerRefs {
 		if ownerRef.Controller != nil && *ownerRef.Controller &&
 			ownerRef.UID != owner.GetUID() {
@@ -237,9 +237,7 @@ func (e *AnnotationEnqueueOwnerHandler) parseOwnerTypeGroupKind(scheme *runtime.
 	}
 	// Expect only 1 kind.  If there is more than one kind this is probably an edge case such as ListOptions.
 	if len(kinds) != 1 {
-		err := fmt.Errorf("Expected exactly 1 kind for OwnerType %T, but found %s kinds", e.OwnerType, kinds)
-		return err
-
+		return fmt.Errorf("Expected exactly 1 kind for OwnerType %T, but found %s kinds", e.OwnerType, kinds)
 	}
 	// Cache the Group and Kind for the OwnerType
 	e.ownerGK = schema.GroupKind{Group: kinds[0].Group, Kind: kinds[0].Kind}
