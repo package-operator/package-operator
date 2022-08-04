@@ -10,7 +10,7 @@ import (
 
 var _ ownerStrategy = (*OwnerStrategyNative)(nil)
 
-// NativeOwner handling strategy uses .metadata.ownerReferences
+// NativeOwner handling strategy uses .metadata.ownerReferences.
 type OwnerStrategyNative struct{}
 
 func (s *OwnerStrategyNative) IsOwner(owner, obj metav1.Object) bool {

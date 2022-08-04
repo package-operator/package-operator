@@ -172,14 +172,14 @@ type AnnotationEnqueueRequestForOwner struct {
 	ownerGK schema.GroupKind
 }
 
-// Create implements EventHandler
+// Create implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
-// Update implements EventHandler
+// Update implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.ObjectOld) {
 		q.Add(req)
@@ -189,14 +189,14 @@ func (e *AnnotationEnqueueRequestForOwner) Update(evt event.UpdateEvent, q workq
 	}
 }
 
-// Delete implements EventHandler
+// Delete implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
-// Generic implements EventHandler
+// Generic implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
@@ -236,7 +236,7 @@ func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav
 	return requests
 }
 
-var MultipleKindsError = errors.New("multiple kinds error: expected exactly one kind")
+var ErrMultipleKinds = errors.New("multiple kinds error: expected exactly one kind")
 
 // parseOwnerTypeGroupKind parses the OwnerType into a Group and Kind and caches the result.
 func (e *AnnotationEnqueueRequestForOwner) parseOwnerTypeGroupKind(scheme *runtime.Scheme) error {
@@ -247,7 +247,7 @@ func (e *AnnotationEnqueueRequestForOwner) parseOwnerTypeGroupKind(scheme *runti
 	}
 	// Expect only 1 kind.  If there is more than one kind this is probably an edge case such as ListOptions.
 	if len(kinds) != 1 {
-		return fmt.Errorf("%w. For ownerType %T, found %s kinds", MultipleKindsError, e.OwnerType, kinds)
+		return fmt.Errorf("%w. For ownerType %T, found %s kinds", ErrMultipleKinds, e.OwnerType, kinds)
 	}
 	// Cache the Group and Kind for the OwnerType
 	e.ownerGK = schema.GroupKind{Group: kinds[0].Group, Kind: kinds[0].Kind}
