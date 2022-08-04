@@ -208,8 +208,8 @@ func (e *AnnotationEnqueueRequestForOwner) InjectScheme(s *runtime.Scheme) error
 }
 
 func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav1.Object) []reconcile.Request {
-	var requests []reconcile.Request
 	ownerReferences := Annotation.getOwnerReferences(object)
+	requests := make([]reconcile.Request, len(ownerReferences))
 	for _, ownerRef := range ownerReferences {
 		ownerRefGV, err := schema.ParseGroupVersion(ownerRef.APIVersion)
 		if err != nil {
