@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/magefile/mage v1.13.0
 	github.com/mt-sre/devkube v0.3.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.24.3
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
@@ -47,7 +47,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.1.1 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
