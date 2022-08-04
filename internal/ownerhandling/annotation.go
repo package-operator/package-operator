@@ -2,6 +2,7 @@ package ownerhandling
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
-
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
+
+const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
 
 // AnnotationOwner handling strategy uses .metadata.annotations.
 // Allows cross-namespace owner references.
@@ -235,6 +236,8 @@ func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav
 	return requests
 }
 
+var MultipleKindsError = errors.New("multiple kinds error: expected exactly one kind")
+
 // parseOwnerTypeGroupKind parses the OwnerType into a Group and Kind and caches the result.
 func (e *AnnotationEnqueueRequestForOwner) parseOwnerTypeGroupKind(scheme *runtime.Scheme) error {
 	// Get the kinds of the type
@@ -244,7 +247,7 @@ func (e *AnnotationEnqueueRequestForOwner) parseOwnerTypeGroupKind(scheme *runti
 	}
 	// Expect only 1 kind.  If there is more than one kind this is probably an edge case such as ListOptions.
 	if len(kinds) != 1 {
-		return fmt.Errorf("Expected exactly 1 kind for OwnerType %T, but found %s kinds", e.OwnerType, kinds)
+		return fmt.Errorf("%w. For ownerType %T, found %s kinds", MultipleKindsError, e.OwnerType, kinds)
 	}
 	// Cache the Group and Kind for the OwnerType
 	e.ownerGK = schema.GroupKind{Group: kinds[0].Group, Kind: kinds[0].Kind}
