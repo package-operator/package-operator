@@ -155,8 +155,7 @@ type annotationOwnerRef struct {
 	Controller *bool `json:"controller,omitempty"`
 }
 
-func (r *annotationOwnerRef) IsController() bool {
-	// TODO: Should we keep this
+func (r *annotationOwnerRef) isController() bool {
 	return r.Controller != nil && *r.Controller
 }
 
@@ -220,7 +219,7 @@ func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav
 			continue
 		}
 
-		if e.IsController && !ownerRef.IsController() {
+		if e.IsController && !ownerRef.isController() {
 			continue
 		}
 
