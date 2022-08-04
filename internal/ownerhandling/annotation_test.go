@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestSetControllerReference(t *testing.T) {
+func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
