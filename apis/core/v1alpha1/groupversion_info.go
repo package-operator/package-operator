@@ -1,4 +1,5 @@
-// Package v1alpha1 contains API Schema definitions for the dhcp v1alpha1 API group
+// The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Page Operator API group,
+// containing basic building blocks that other auxiliary APIs can build on top of.
 // +kubebuilder:object:generate=true
 // +groupName=package-operator.run
 package v1alpha1

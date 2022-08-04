@@ -26,8 +26,13 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ObjectSet reconciles a collection of objects across ordered phases
-          and aggregates their status.
+        description: "ObjectSet reconciles a collection of objects across ordered
+          phases and aggregates their status. \n ObjectSets behave similar to Kubernetes
+          ReplicaSets, by managing a collection of objects and being itself mostly
+          immutable. This object type is able to suspend/pause reconciliation of specific
+          objects to facilitate the transition between revisions. \n Archived ObjectSets
+          may stay on the cluster, to store information about previous revisions.
+          \n A Cluster-scoped version of this API is available as ClusterObjectSet."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -60,7 +65,8 @@ spec:
                           package.
                         properties:
                           condition:
-                            description: Condition Probe parameters.
+                            description: Checks wether the object reports a condition
+                              with given type and status.
                             properties:
                               status:
                                 default: "True"
@@ -77,8 +83,10 @@ spec:
                             description: Compares two fields specified by JSON Paths.
                             properties:
                               fieldA:
+                                description: First field for comparison.
                                 type: string
                               fieldB:
+                                description: Second field for comparison.
                                 type: string
                             required:
                             - fieldA
@@ -91,8 +99,7 @@ spec:
                         target.
                       properties:
                         kind:
-                          description: Kind specific configuration parameters. Only
-                            present if Type = Kind.
+                          description: Selects objects based on Kinda and API Group.
                           properties:
                             group:
                               description: Object Group to apply a probe to.

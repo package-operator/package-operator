@@ -5,6 +5,13 @@ import (
 )
 
 // ObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+//
+// ObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+// This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+//
+// Archived ObjectSets may stay on the cluster, to store information about previous revisions.
+//
+// A Cluster-scoped version of this API is available as ClusterObjectSet.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
@@ -14,11 +21,11 @@ type ObjectSet struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ObjectSetSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	// +kubebuilder:default={phase: Pending}
 	Status ObjectSetStatus `json:"status,omitempty"`
 }
 
-// ObjectSetList contains a list of ObjectSets
+// ObjectSetList contains a list of ObjectSets.
 // +kubebuilder:object:root=true
 type ObjectSetList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -38,6 +45,18 @@ type ObjectSetSpec struct {
 	// Immutable fields below
 
 	ObjectSetTemplateSpec `json:",inline"`
+}
+
+// ObjectSetStatus defines the observed state of a ObjectSet.
+type ObjectSetStatus struct {
+	// Conditions is a list of status conditions ths object is in.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Deprecated: This field is not part of any API contract
+	// it will go away as soon as kubectl can print conditions!
+	// Human readable status - please use .Conditions from code
+	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
+	// List of objects, the controller has paused reconciliation on.
+	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
 }
 
 func init() {

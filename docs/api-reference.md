@@ -1,10 +1,7 @@
-# Package Operator API Reference
-
-The Package Operator APIs are an extension of the [Kubernetes API](https://kubernetes.io/docs/reference/using-api/api-overview/) using `CustomResourceDefinitions`.
-
 ## package-operator.run/v1alpha1
 
-Package v1alpha1 contains API Schema definitions for the dhcp v1alpha1 API group
+The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Page Operator API group,
+containing basic building blocks that other auxiliary APIs can build on top of.
 
 * [ClusterObjectSet](#clusterobjectset)
 * [ObjectSet](#objectset)
@@ -13,6 +10,13 @@ Package v1alpha1 contains API Schema definitions for the dhcp v1alpha1 API group
 ### ClusterObjectSet
 
 ClusterObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+
+ClusterObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+
+Archived ClusterObjectSets may stay on the cluster, to store information about previous revisions.
+
+A Namespace-scoped version of this API is available as ObjectSet.
 
 
 **Example**
@@ -57,13 +61,20 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#clusterobjectsetspec">ClusterObjectSetSpec</a> |  |
-| `status` <br><a href="#clusterobjectsetstatus">ClusterObjectSetStatus</a> |  |
+| `spec` <br><a href="#clusterobjectsetspec">ClusterObjectSetSpec</a> | ClusterObjectSetSpec defines the desired state of a ClusterObjectSet. |
+| `status` <br><a href="#clusterobjectsetstatus">ClusterObjectSetStatus</a> | ClusterObjectSetStatus defines the observed state of a ClusterObjectSet. |
 
 
 ### ObjectSet
 
 ObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+
+ObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+
+Archived ObjectSets may stay on the cluster, to store information about previous revisions.
+
+A Cluster-scoped version of this API is available as ClusterObjectSet.
 
 
 **Example**
@@ -101,7 +112,7 @@ spec:
         metadata:
           name: example-deployment
 status:
-  phase:Pending: null
+  phase: Pending
 
 ```
 
@@ -109,8 +120,8 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#objectsetspec">ObjectSetSpec</a> |  |
-| `status` <br><a href="#objectsetstatus">ObjectSetStatus</a> |  |
+| `spec` <br><a href="#objectsetspec">ObjectSetSpec</a> | ObjectSetSpec defines the desired state of a ObjectSet. |
+| `status` <br><a href="#objectsetstatus">ObjectSetStatus</a> | ObjectSetStatus defines the observed state of a ObjectSet. |
 
 
 
@@ -192,7 +203,6 @@ ObjectSetProbe define how ObjectSets check their children for their status.
 Used in:
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
 * [ObjectSetSpec](#objectsetspec)
-* [ObjectSetTemplateSpec](#objectsettemplatespec)
 
 
 ### ObjectSetSpec
@@ -239,20 +249,6 @@ ObjectSet reconcile phase.
 Used in:
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
 * [ObjectSetSpec](#objectsetspec)
-* [ObjectSetTemplateSpec](#objectsettemplatespec)
-
-
-### ObjectSetTemplateSpec
-
-ObjectSet specification.
-
-| Field | Description |
-| ----- | ----------- |
-| `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
-| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-
-
-Used in:
 
 
 ### PackageProbeKindSpec
@@ -275,8 +271,8 @@ Defines probe parameters to check parts of a package.
 
 | Field | Description |
 | ----- | ----------- |
-| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> |  |
-| `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> |  |
+| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | Checks wether the object reports a condition with given type and status. |
+| `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> | Compares two fields specified by JSON Paths. |
 
 
 Used in:
@@ -285,7 +281,7 @@ Used in:
 
 ### ProbeConditionSpec
 
-Condition Probe parameters.
+Checks wether the object reports a condition with given type and status.
 
 | Field | Description |
 | ----- | ----------- |
@@ -303,8 +299,8 @@ Compares two fields specified by JSON Paths.
 
 | Field | Description |
 | ----- | ----------- |
-| `fieldA` <b>required</b><br>string |  |
-| `fieldB` <b>required</b><br>string |  |
+| `fieldA` <b>required</b><br>string | First field for comparison. |
+| `fieldB` <b>required</b><br>string | Second field for comparison. |
 
 
 Used in:
@@ -313,11 +309,12 @@ Used in:
 
 ### ProbeSelector
 
-
+Selects a subset of objects to apply probes to.
+e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 
 | Field | Description |
 | ----- | ----------- |
-| `kind` <br><a href="#packageprobekindspec">PackageProbeKindSpec</a> | Kind specific configuration parameters. Only present if Type = Kind. |
+| `kind` <br><a href="#packageprobekindspec">PackageProbeKindSpec</a> | Selects objects based on Kinda and API Group. |
 
 
 Used in:

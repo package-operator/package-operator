@@ -3,6 +3,13 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // ClusterObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+//
+// ClusterObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+// This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+//
+// Archived ClusterObjectSets may stay on the cluster, to store information about previous revisions.
+//
+// A Namespace-scoped version of this API is available as ObjectSet.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
@@ -17,7 +24,7 @@ type ClusterObjectSet struct {
 	Status ClusterObjectSetStatus `json:"status,omitempty"`
 }
 
-// ClusterObjectSetList contains a list of ClusterObjectSets
+// ClusterObjectSetList contains a list of ClusterObjectSets.
 // +kubebuilder:object:root=true
 type ClusterObjectSetList struct {
 	metav1.TypeMeta `json:",inline"`

@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -46,18 +45,6 @@ type ObjectSetObject struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +example={apiVersion: apps/v1, kind: Deployment, metadata: {name: example-deployment}}
 	Object runtime.RawExtension `json:"object"`
-}
-
-// ObjectSetStatus defines the observed state of a ObjectSet.
-type ObjectSetStatus struct {
-	// Conditions is a list of status conditions ths object is in.
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Deprecated: This field is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// Human readable status - please use .Conditions from code
-	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
-	// List of objects, the controller has paused reconciliation on.
-	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
 }
 
 // Specifies that the reconciliation of a specific object should be paused.
@@ -121,8 +108,10 @@ const (
 	ProbeSelectorKind ProbeSelectorType = "Kind"
 )
 
+// Selects a subset of objects to apply probes to.
+// e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 type ProbeSelector struct {
-	// Kind specific configuration parameters. Only present if Type = Kind.
+	// Selects objects based on Kinda and API Group.
 	Kind *PackageProbeKindSpec `json:"kind,omitempty"`
 }
 
@@ -142,7 +131,7 @@ type Probe struct {
 	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
 }
 
-// Condition Probe parameters.
+// Checks wether the object reports a condition with given type and status.
 type ProbeConditionSpec struct {
 	// Condition type to probe for.
 	// +example=Available
@@ -154,8 +143,10 @@ type ProbeConditionSpec struct {
 
 // Compares two fields specified by JSON Paths.
 type ProbeFieldsEqualSpec struct {
+	// First field for comparison.
 	// +example=.spec.fieldA
 	FieldA string `json:"fieldA"`
+	// Second field for comparison.
 	// +example=.status.fieldB
 	FieldB string `json:"fieldB"`
 }
