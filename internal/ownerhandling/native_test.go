@@ -3,6 +3,8 @@ package ownerhandling
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
@@ -14,14 +16,14 @@ import (
 
 func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 	s := &OwnerStrategyNative{}
+	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cm1",
-			Namespace: "cmtestns",
+			Namespace: obj.Namespace,
 			UID:       types.UID("1234"),
 		},
 	}
-	obj := testutil.NewSecret()
 	scheme := testutil.NewTestSchemeWithCoreV1()
 
 	err := s.SetControllerReference(cm1, obj, scheme)
@@ -37,7 +39,7 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 	cm2 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cm2",
-			Namespace: "cmtestns",
+			Namespace: obj.Namespace,
 			UID:       types.UID("56789"),
 		},
 	}
@@ -52,10 +54,37 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 	assert.True(t, s.IsOwner(cm2, obj))
 }
 
+func TestOwnerStrategyNative_IsOwner(t *testing.T) {
+	s := &OwnerStrategyNative{}
+	obj := testutil.NewSecret()
+	cm1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: obj.Namespace,
+			UID:       types.UID("1234"),
+		},
+	}
+	scheme := testutil.NewTestSchemeWithCoreV1()
+
+	err := s.SetControllerReference(cm1, obj, scheme)
+	require.NoError(t, err)
+
+	cm2 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm2",
+			Namespace: obj.Namespace,
+			UID:       types.UID("56789"),
+		},
+	}
+	assert.True(t, s.IsOwner(cm1, obj))
+	assert.False(t, s.IsOwner(cm2, obj))
+}
+
 func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
 	s := &OwnerStrategyNative{}
-	owner := testutil.NewConfigMap()
 	obj := testutil.NewSecret()
+	owner := testutil.NewConfigMap()
+	owner.Namespace = obj.Namespace
 	scheme := testutil.NewTestSchemeWithCoreV1()
 
 	err := s.SetControllerReference(owner, obj, scheme)

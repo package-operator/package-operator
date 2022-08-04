@@ -23,6 +23,7 @@ const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
 
 // AnnotationOwner handling strategy uses .metadata.annotations.
+// Allows cross-namespace owner references.
 type OwnerStrategyAnnotation struct{}
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
