@@ -21,8 +21,8 @@ import (
 
 func TestSetControllerReference(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
-	cm1 := testutil.NewConfigMap()
-	obj := testutil.NewSecret()
+	cm1 := testutil.NewRandomConfigMap()
+	obj := testutil.NewRandomSecret()
 	scheme := testutil.NewTestSchemeWithCoreV1()
 
 	err := s.SetControllerReference(cm1, obj, scheme)
@@ -36,7 +36,7 @@ func TestSetControllerReference(t *testing.T) {
 		assert.Equal(t, true, *ownerRefs[0].Controller)
 	}
 
-	cm2 := testutil.NewConfigMap()
+	cm2 := testutil.NewRandomConfigMap()
 	err = s.SetControllerReference(cm2, obj, scheme)
 	assert.Error(t, err, controllerutil.AlreadyOwnedError{})
 
@@ -50,8 +50,8 @@ func TestSetControllerReference(t *testing.T) {
 
 func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 	s := &OwnerStrategyAnnotation{}
-	owner := testutil.NewConfigMap()
-	obj := testutil.NewSecret()
+	owner := testutil.NewRandomConfigMap()
+	obj := testutil.NewRandomSecret()
 	scheme := testutil.NewTestSchemeWithCoreV1()
 
 	err := s.SetControllerReference(owner, obj, scheme)
@@ -69,22 +69,22 @@ func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 	}
 }
 
-func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
-	cm := testutil.NewConfigMap()
+func newRandomConfigMapAnnotationOwnerRef() annotationOwnerRef {
+	cm := testutil.NewRandomConfigMap()
 	return annotationOwnerRef{
 		APIVersion: "v1",
 		Kind:       "ConfigMap",
 		UID:        types.UID(rand.String(7)),
 		Name:       cm.Name,
 		Namespace:  cm.Namespace,
-		Controller: pointer.BoolPtr(true),
+		Controller: pointer.Bool(true),
 	}
 }
 
 func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
-	ownerRef1 := newConfigMapAnnotationOwnerRef()
-	ownerRef2 := newConfigMapAnnotationOwnerRef()
-	ownerRef3 := newConfigMapAnnotationOwnerRef()
+	ownerRef1 := newRandomConfigMapAnnotationOwnerRef()
+	ownerRef2 := newRandomConfigMapAnnotationOwnerRef()
+	ownerRef3 := newRandomConfigMapAnnotationOwnerRef()
 
 	s := &OwnerStrategyAnnotation{}
 	i1 := s.indexOf([]annotationOwnerRef{ownerRef1, ownerRef2}, ownerRef1)
@@ -94,8 +94,8 @@ func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
-	ownerRef := newConfigMapAnnotationOwnerRef()
-	obj := testutil.NewSecret()
+	ownerRef := newRandomConfigMapAnnotationOwnerRef()
+	obj := testutil.NewRandomSecret()
 
 	s := &OwnerStrategyAnnotation{}
 	s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
@@ -106,28 +106,101 @@ func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
 }
 
 func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
-	ownerRef := newConfigMapAnnotationOwnerRef()
-	s := &OwnerStrategyAnnotation{}
-	obj := testutil.NewSecret()
-	s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
-	h := AnnotationEnqueueRequestForOwner{
-		OwnerType:    &corev1.ConfigMap{},
-		IsController: true,
-		ownerGK: schema.GroupKind{
-			Kind: "ConfigMap",
+	tests := []struct {
+		name              string
+		isOwnerController *bool
+		enqueue           AnnotationEnqueueRequestForOwner
+		requestExpected   bool
+	}{
+		{
+			name:              "owner is controller, enqueue is controller, types match",
+			isOwnerController: pointer.Bool(true),
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: true,
+			},
+			requestExpected: true,
+		},
+		{
+			name:              "owner is not controller, enqueue is controller, types match",
+			isOwnerController: pointer.Bool(false),
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: true,
+			},
+			requestExpected: false,
+		},
+		{
+			name:              "owner is controller, enqueue is not controller, types match",
+			isOwnerController: pointer.Bool(true),
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: false,
+			},
+			requestExpected: true,
+		},
+		{
+			name:              "owner is not controller, enqueue is not controller, types match",
+			isOwnerController: pointer.Bool(false),
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: false,
+			},
+			requestExpected: true,
+		},
+		{
+			name:              "owner controller is nil, enqueue is controller, types match",
+			isOwnerController: nil,
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: true,
+			},
+			requestExpected: false,
+		},
+		{
+			name:              "owner controller is nil, enqueue is not controller, types match",
+			isOwnerController: nil,
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &corev1.ConfigMap{},
+				IsController: false,
+			},
+			requestExpected: true,
+		},
+		{
+			name:              "owner is controller, enqueue is controller, types do not match",
+			isOwnerController: pointer.Bool(true),
+			enqueue: AnnotationEnqueueRequestForOwner{
+				OwnerType:    &appsv1.Deployment{},
+				IsController: true,
+			},
+			requestExpected: false,
 		},
 	}
-	r := h.getOwnerReconcileRequest(obj)
-	if assert.Len(t, r, 1) {
-		assert.Equal(t, r, []reconcile.Request{
-			{
-				NamespacedName: client.ObjectKey{
-					Name:      ownerRef.Name,
-					Namespace: ownerRef.Namespace,
-				},
-			},
-		},
-		)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ownerRef := newRandomConfigMapAnnotationOwnerRef()
+			ownerRef.Controller = test.isOwnerController
+			s := &OwnerStrategyAnnotation{}
+			obj := testutil.NewRandomSecret()
+			s.setOwnerReferences(obj, []annotationOwnerRef{ownerRef})
+			scheme := testutil.NewTestSchemeWithCoreV1AppsV1()
+			err := test.enqueue.parseOwnerTypeGroupKind(scheme)
+			require.NoError(t, err)
+			r := test.enqueue.getOwnerReconcileRequest(obj)
+			if test.requestExpected {
+				assert.Equal(t, r, []reconcile.Request{
+					{
+						NamespacedName: client.ObjectKey{
+							Name:      ownerRef.Name,
+							Namespace: ownerRef.Namespace,
+						},
+					},
+				})
+			} else {
+				assert.Len(t, r, 0)
+			}
+
+		})
 	}
 }
 

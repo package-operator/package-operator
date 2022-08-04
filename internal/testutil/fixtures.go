@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,7 +15,14 @@ func NewTestSchemeWithCoreV1() *runtime.Scheme {
 	return testScheme
 }
 
-func NewConfigMap() *corev1.ConfigMap {
+func NewTestSchemeWithCoreV1AppsV1() *runtime.Scheme {
+	testScheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(testScheme)
+	_ = appsv1.AddToScheme(testScheme)
+	return testScheme
+}
+
+func NewRandomConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rand.String(5),
@@ -24,7 +32,7 @@ func NewConfigMap() *corev1.ConfigMap {
 	}
 }
 
-func NewSecret() *corev1.Secret {
+func NewRandomSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rand.String(5),

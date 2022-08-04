@@ -37,21 +37,36 @@ func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object, scheme *runtime.Scheme) error {
 	ownerRefs := s.getOwnerReferences(obj)
 
-	// Ensure that there is only a single controller.
+	// Ensure that there is no controller already.
 	for _, ownerRef := range ownerRefs {
 		if ownerRef.Controller != nil && *ownerRef.Controller &&
 			ownerRef.UID != owner.GetUID() {
 			return &controllerutil.AlreadyOwnedError{
 				Object: obj,
-				Owner:  createMetaV1OwnerRef(ownerRef),
+				Owner: metav1.OwnerReference{
+					APIVersion: ownerRef.APIVersion,
+					Kind:       ownerRef.Kind,
+					Name:       ownerRef.Name,
+					Controller: ownerRef.Controller,
+					UID:        ownerRef.UID,
+				},
 			}
 		}
 	}
 
-	ownerRef, err := createAnnotationOwnerRef(owner, scheme)
+	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), scheme)
 	if err != nil {
 		return err
 	}
+	ownerRef := annotationOwnerRef{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		UID:        owner.GetUID(),
+		Name:       owner.GetName(),
+		Namespace:  owner.GetNamespace(),
+		Controller: pointer.Bool(true),
+	}
+
 	ownerIndex := s.indexOf(ownerRefs, ownerRef)
 	if ownerIndex != -1 {
 		ownerRefs[ownerIndex] = ownerRef
@@ -61,32 +76,6 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 	s.setOwnerReferences(obj, ownerRefs)
 
 	return nil
-}
-
-func createMetaV1OwnerRef(ref annotationOwnerRef) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion: ref.APIVersion,
-		Kind:       ref.Kind,
-		Name:       ref.Name,
-		Controller: ref.Controller,
-		UID:        ref.UID,
-	}
-}
-
-func createAnnotationOwnerRef(owner metav1.Object, scheme *runtime.Scheme) (annotationOwnerRef, error) {
-	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), scheme)
-	if err != nil {
-		return annotationOwnerRef{}, err
-	}
-	ownerRef := annotationOwnerRef{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		UID:        owner.GetUID(),
-		Name:       owner.GetName(),
-		Namespace:  owner.GetNamespace(),
-		Controller: pointer.BoolPtr(true),
-	}
-	return ownerRef, nil
 }
 
 func (s *OwnerStrategyAnnotation) IsOwner(owner, obj metav1.Object) bool {
