@@ -113,6 +113,7 @@ func (Build) Image(image string) {
 func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
+		mg.F(Builder.Image, "package-operator-webhook"),
 	)
 }
 
@@ -125,6 +126,7 @@ func (Build) PushImage(image string) {
 func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
+		mg.F(Builder.Push, "package-operator-webhook"),
 	)
 }
 
@@ -431,6 +433,7 @@ func (d Dev) Deploy(ctx context.Context) error {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 		mg.F(Dev.LoadImage, "package-operator-manager"),
+		mg.F(Dev.LoadImage, "webhook-operator-webhook"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
@@ -476,6 +479,50 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	}
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-manager: %w", err)
+	}
+	return nil
+}
+
+// Package Operator Webhook server from local files.
+func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Cluster) error {
+	objs, err := dev.LoadKubernetesObjectsFromFile(
+		"config/deploy/webhook/deployment.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
+	}
+
+	// Replace image
+	packageOperatorWebhookDeployment := &appsv1.Deployment{}
+	if err := cluster.Scheme.Convert(
+		&objs[0], packageOperatorWebhookDeployment, nil); err != nil {
+		return fmt.Errorf("converting to Deployment: %w", err)
+	}
+	packageOperatorWebhookImage := os.Getenv("PACKAGE_OPERATOR_WEBHOOK_IMAGE")
+	if len(packageOperatorWebhookImage) == 0 {
+		packageOperatorWebhookImage = imageURL("package-operator-webhook")
+	}
+	for i := range packageOperatorWebhookDeployment.Spec.Template.Spec.Containers {
+		container := &packageOperatorWebhookDeployment.Spec.Template.Spec.Containers[i]
+
+		switch container.Name {
+		case "webhook":
+			container.Image = packageOperatorWebhookImage
+		}
+	}
+
+	dev.ContextWithLogger(ctx, logger)
+
+	// Deploy
+	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
+		// TODO: replace with CreateAndWaitFromFolders when deployment.yaml is gone.
+		"config/deploy/webhook/00-tls-secret.yaml",
+		"config/deploy/webhook/service.yaml",
+		"config/deploy/webhook/validatingwebhookconfig.yaml",
+	}); err != nil {
+		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
+	}
+	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorWebhookDeployment); err != nil {
+		return fmt.Errorf("deploy package-operator-webhook: %w", err)
 	}
 	return nil
 }
