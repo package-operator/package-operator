@@ -433,10 +433,13 @@ func (d Dev) Deploy(ctx context.Context) error {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 		mg.F(Dev.LoadImage, "package-operator-manager"),
-		mg.F(Dev.LoadImage, "webhook-operator-webhook"),
+		mg.F(Dev.LoadImage, "package-operator-webhook"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
+		return fmt.Errorf("deploying: %w", err)
+	}
+	if err := d.deployPackageOperatorWebhook(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
 	}
 	return nil
@@ -499,7 +502,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	}
 	packageOperatorWebhookImage := os.Getenv("PACKAGE_OPERATOR_WEBHOOK_IMAGE")
 	if len(packageOperatorWebhookImage) == 0 {
-		packageOperatorWebhookImage = imageURL("package-operator-webhook")
+		packageOperatorWebhookImage = Builder.imageURL("package-operator-webhook")
 	}
 	for i := range packageOperatorWebhookDeployment.Spec.Template.Spec.Containers {
 		container := &packageOperatorWebhookDeployment.Spec.Template.Spec.Containers[i]
@@ -516,7 +519,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
 		// TODO: replace with CreateAndWaitFromFolders when deployment.yaml is gone.
 		"config/deploy/webhook/00-tls-secret.yaml",
-		"config/deploy/webhook/service.yaml",
+		"config/deploy/webhook/service.yaml.tpl", // why doesn't the addon have .tpl
 		"config/deploy/webhook/validatingwebhookconfig.yaml",
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
