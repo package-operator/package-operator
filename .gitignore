@@ -17,3 +17,6 @@ bin
 .cache
 .deps
 config/static-deployment/deployment.yaml
+
+# JetBrains IDEs (e.g. GoLand)
+.idea/
