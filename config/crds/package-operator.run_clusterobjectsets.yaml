@@ -26,13 +26,14 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: "ClusterObjectSet reconciles a collection of objects across ordered
-          phases and aggregates their status. \n ClusterObjectSets behave similar
-          to Kubernetes ReplicaSets, by managing a collection of objects and being
-          itself mostly immutable. This object type is able to suspend/pause reconciliation
-          of specific objects to facilitate the transition between revisions. \n Archived
-          ClusterObjectSets may stay on the cluster, to store information about previous
-          revisions. \n A Namespace-scoped version of this API is available as ObjectSet."
+        description: "ClusterObjectSet reconciles a collection of objects through
+          ordered phases and aggregates their status. \n ClusterObjectSets behave
+          similarly to Kubernetes ReplicaSets, by managing a collection of objects
+          and being itself mostly immutable. This object type is able to suspend/pause
+          reconciliation of specific objects to facilitate the transition between
+          revisions. \n Archived ClusterObjectSets may stay on the cluster, to store
+          information about previous revisions. \n A Namespace-scoped version of this
+          API is available as ObjectSet."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -65,8 +66,8 @@ spec:
                           package.
                         properties:
                           condition:
-                            description: Checks wether the object reports a condition
-                              with given type and status.
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
                             properties:
                               status:
                                 default: "True"
@@ -119,7 +120,7 @@ spec:
                 type: array
               lifecycleState:
                 default: Active
-                description: Specifies the lifecycle state of the ObjectSet.
+                description: Specifies the lifecycle state of the ClusterObjectSet.
                 enum:
                 - Active
                 - Paused
@@ -155,7 +156,7 @@ spec:
                   description: ObjectSet reconcile phase.
                   properties:
                     name:
-                      description: Name of the reconcile phase, must be unique within
+                      description: Name of the reconcile phase. Must be unique within
                         a ObjectSet.
                       type: string
                     objects:
@@ -257,7 +258,7 @@ spec:
                   type: object
                 type: array
               pausedFor:
-                description: List of objects, the controller has paused reconciliation
+                description: List of objects the controller has paused reconciliation
                   on.
                 items:
                   description: Specifies that the reconciliation of a specific object
@@ -280,8 +281,8 @@ spec:
                 type: array
               phase:
                 description: 'Deprecated: This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions! Human readable
-                  status - please use .Conditions from code'
+                  it will go away as soon as kubectl can print conditions! When evaluating
+                  object state in code, use .Conditions instead.'
                 type: string
             type: object
         type: object

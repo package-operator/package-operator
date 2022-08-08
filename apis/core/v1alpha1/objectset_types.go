@@ -4,9 +4,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+// ObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 //
-// ObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+// ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
 // This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
 //
 // Archived ObjectSets may stay on the cluster, to store information about previous revisions.
@@ -53,9 +53,9 @@ type ObjectSetStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Deprecated: This field is not part of any API contract
 	// it will go away as soon as kubectl can print conditions!
-	// Human readable status - please use .Conditions from code
+	// When evaluating object state in code, use .Conditions instead.
 	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
-	// List of objects, the controller has paused reconciliation on.
+	// List of objects the controller has paused reconciliation on.
 	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
 }
 

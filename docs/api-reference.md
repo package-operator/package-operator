@@ -1,6 +1,6 @@
 ## package-operator.run/v1alpha1
 
-The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Page Operator API group,
+The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
 containing basic building blocks that other auxiliary APIs can build on top of.
 
 * [ClusterObjectSet](#clusterobjectset)
@@ -9,9 +9,9 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 
 ### ClusterObjectSet
 
-ClusterObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+ClusterObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 
-ClusterObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+ClusterObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
 This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
 
 Archived ClusterObjectSets may stay on the cluster, to store information about previous revisions.
@@ -67,9 +67,9 @@ status:
 
 ### ObjectSet
 
-ObjectSet reconciles a collection of objects across ordered phases and aggregates their status.
+ObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 
-ObjectSets behave similar to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
+ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
 This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
 
 Archived ObjectSets may stay on the cluster, to store information about previous revisions.
@@ -134,7 +134,7 @@ ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 
 | Field | Description |
 | ----- | ----------- |
-| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSet. |
+| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSet. |
 | `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects, while still reporting status. |
 | `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
@@ -151,8 +151,8 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>Human readable status - please use .Conditions from code |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects, the controller has paused reconciliation on. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
 
 
 Used in:
@@ -228,8 +228,8 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>Human readable status - please use .Conditions from code |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects, the controller has paused reconciliation on. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
 
 
 Used in:
@@ -242,7 +242,7 @@ ObjectSet reconcile phase.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` <b>required</b><br>string | Name of the reconcile phase, must be unique within a ObjectSet. |
+| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 
 
@@ -271,7 +271,7 @@ Defines probe parameters to check parts of a package.
 
 | Field | Description |
 | ----- | ----------- |
-| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | Checks wether the object reports a condition with given type and status. |
+| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | Checks whether or not the object reports a condition with given type and status. |
 | `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> | Compares two fields specified by JSON Paths. |
 
 
@@ -281,7 +281,7 @@ Used in:
 
 ### ProbeConditionSpec
 
-Checks wether the object reports a condition with given type and status.
+Checks whether or not the object reports a condition with given type and status.
 
 | Field | Description |
 | ----- | ----------- |

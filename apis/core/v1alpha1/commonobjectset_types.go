@@ -33,7 +33,7 @@ type ObjectSetTemplateSpec struct {
 
 // ObjectSet reconcile phase.
 type ObjectSetTemplatePhase struct {
-	// Name of the reconcile phase, must be unique within a ObjectSet.
+	// Name of the reconcile phase. Must be unique within a ObjectSet.
 	Name string `json:"name"`
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects"`
@@ -64,7 +64,7 @@ type ObjectSetPausedObject struct {
 const (
 	// Available indicates that all objects pass their availability probe.
 	ObjectSetAvailable = "Available"
-	// Paused indicates that object changes are no reconciled, but status is still reported.
+	// Paused indicates that object changes are not reconciled, but status is still reported.
 	ObjectSetPaused = "Paused"
 	// Archived indicates that the ObjectSet is "scaled to zero"
 	// meaning that all objects under management are cleaned up and status is no longer reported.
@@ -131,7 +131,7 @@ type Probe struct {
 	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
 }
 
-// Checks wether the object reports a condition with given type and status.
+// Checks whether or not the object reports a condition with given type and status.
 type ProbeConditionSpec struct {
 	// Condition type to probe for.
 	// +example=Available
