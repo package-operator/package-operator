@@ -6,33 +6,26 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: objectsets.package-operator.run
+  name: objectsetphases.package-operator.run
 spec:
   group: package-operator.run
   names:
-    kind: ObjectSet
-    listKind: ObjectSetList
-    plural: objectsets
-    singular: objectset
+    kind: ObjectSetPhase
+    listKind: ObjectSetPhaseList
+    plural: objectsetphases
+    singular: objectsetphase
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: "ObjectSet reconciles a collection of objects through ordered
-          phases and aggregates their status. \n ObjectSets behave similarly to Kubernetes
-          ReplicaSets, by managing a collection of objects and being itself mostly
-          immutable. This object type is able to suspend/pause reconciliation of specific
-          objects to facilitate the transition between revisions. \n Archived ObjectSets
-          may stay on the cluster, to store information about previous revisions.
-          \n A Cluster-scoped version of this API is available as ClusterObjectSet."
+        description: ObjectSetPhase is an internal API, allowing an ObjectSet to delegate
+          a single phase to another custom controller. ObjectSets will create subordinate
+          ObjectSetPhases when `.class` within the phase specification is set.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -47,7 +40,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ObjectSetSpec defines the desired state of a ObjectSet.
+            description: ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
             properties:
               availabilityProbes:
                 description: Availability Probes check objects that are part of the
@@ -117,17 +110,37 @@ spec:
                   - selector
                   type: object
                 type: array
-              lifecycleState:
-                default: Active
-                description: Specifies the lifecycle state of the ObjectSet.
-                enum:
-                - Active
-                - Paused
-                - Archived
+              class:
+                description: If non empty, the ObjectSet controller will delegate
+                  phase reconciliation to another controller, by creating an ObjectSetPhase
+                  object. If set to the string "default" the build-in Package Operator
+                  ObjectSetPhase controller will reconcile the object in the same
+                  way the ObjectSet would. If set to any other string, an out-of-tree
+                  controller needs to be present to handle ObjectSetPhase objects.
                 type: string
+              name:
+                description: Name of the reconcile phase. Must be unique within a
+                  ObjectSet.
+                type: string
+              objects:
+                description: Objects belonging to this phase.
+                items:
+                  description: An object that is part of the phase of an ObjectSet.
+                  properties:
+                    object:
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - object
+                  type: object
+                type: array
+              paused:
+                description: Paused disables reconciliation of the ObjectSetPhase,
+                  only Status updates will be propagated.
+                type: boolean
               pausedFor:
-                description: Pause reconciliation of specific objects, while still
-                  reporting status.
+                description: Pause reconciliation of specific objects.
                 items:
                   description: Specifies that the reconciliation of a specific object
                     should be paused.
@@ -147,52 +160,13 @@ spec:
                   - name
                   type: object
                 type: array
-              phases:
-                description: Reconcile phase configuration for a ObjectSet. Phases
-                  will be reconciled in order and the contained objects checked against
-                  given probes before continuing with the next phase.
-                items:
-                  description: ObjectSet reconcile phase.
-                  properties:
-                    class:
-                      description: If non empty, the ObjectSet controller will delegate
-                        phase reconciliation to another controller, by creating an
-                        ObjectSetPhase object. If set to the string "default" the
-                        build-in Package Operator ObjectSetPhase controller will reconcile
-                        the object in the same way the ObjectSet would. If set to
-                        any other string, an out-of-tree controller needs to be present
-                        to handle ObjectSetPhase objects.
-                      type: string
-                    name:
-                      description: Name of the reconcile phase. Must be unique within
-                        a ObjectSet.
-                      type: string
-                    objects:
-                      description: Objects belonging to this phase.
-                      items:
-                        description: An object that is part of the phase of an ObjectSet.
-                        properties:
-                          object:
-                            type: object
-                            x-kubernetes-embedded-resource: true
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - object
-                        type: object
-                      type: array
-                  required:
-                  - name
-                  - objects
-                  type: object
-                type: array
             required:
             - availabilityProbes
-            - phases
+            - name
+            - objects
             type: object
           status:
-            default:
-              phase: Pending
-            description: ObjectSetStatus defines the observed state of a ObjectSet.
+            description: ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
             properties:
               conditions:
                 description: Conditions is a list of status conditions ths object
@@ -287,11 +261,6 @@ spec:
                   - name
                   type: object
                 type: array
-              phase:
-                description: 'Deprecated: This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions! When evaluating
-                  object state in code, use .Conditions instead.'
-                type: string
             type: object
         type: object
     served: true

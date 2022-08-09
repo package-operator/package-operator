@@ -4,7 +4,9 @@ The package v1alpha1 contains API Schema definitions for the v1alpha1 version of
 containing basic building blocks that other auxiliary APIs can build on top of.
 
 * [ClusterObjectSet](#clusterobjectset)
+* [ClusterObjectSetPhase](#clusterobjectsetphase)
 * [ObjectSet](#objectset)
+* [ObjectSetPhase](#objectsetphase)
 
 
 ### ClusterObjectSet
@@ -45,7 +47,8 @@ spec:
     kind: Deployment
     name: example-deployment
   phases:
-  - name: lorem
+  - class: ipsum
+    name: lorem
     objects:
     - object:
         apiVersion: apps/v1
@@ -63,6 +66,64 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#clusterobjectsetspec">ClusterObjectSetSpec</a> | ClusterObjectSetSpec defines the desired state of a ClusterObjectSet. |
 | `status` <br><a href="#clusterobjectsetstatus">ClusterObjectSetStatus</a> | ClusterObjectSetStatus defines the observed state of a ClusterObjectSet. |
+
+
+### ClusterObjectSetPhase
+
+ClusterObjectSetPhase is an internal API, allowing an ClusterObjectSet to delegate a single phase to another custom controller.
+ClusterObjectSets will create subordinate ClusterObjectSetPhases when `.class` within the phase specification is set.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterObjectSetPhase
+metadata:
+  name: example
+spec:
+  availabilityProbes:
+  - probes:
+    - condition:
+        status: "True"
+        type: Available
+      fieldsEqual:
+        fieldA: .spec.fieldA
+        fieldB: .status.fieldB
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
+  class: sit
+  name: dolor
+  objects:
+  - object:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: example-deployment
+  paused: true
+  pausedFor:
+  - group: apps
+    kind: Deployment
+    name: example-deployment
+status:
+  conditions:
+  - status: "True"
+    type: Available
+  pausedFor:
+  - group: apps
+    kind: Deployment
+    name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#clusterobjectsetphasespec">ClusterObjectSetPhaseSpec</a> | ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase. |
+| `status` <br><a href="#clusterobjectsetphasestatus">ClusterObjectSetPhaseStatus</a> | ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase. |
 
 
 ### ObjectSet
@@ -104,7 +165,8 @@ spec:
     kind: Deployment
     name: example-deployment
   phases:
-  - name: ipsum
+  - class: consetetur
+    name: amet
     objects:
     - object:
         apiVersion: apps/v1
@@ -124,9 +186,100 @@ status:
 | `status` <br><a href="#objectsetstatus">ObjectSetStatus</a> | ObjectSetStatus defines the observed state of a ObjectSet. |
 
 
+### ObjectSetPhase
+
+ObjectSetPhase is an internal API, allowing an ObjectSet to delegate a single phase to another custom controller.
+ObjectSets will create subordinate ObjectSetPhases when `.class` within the phase specification is set.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectSetPhase
+metadata:
+  name: example
+  namespace: default
+spec:
+  availabilityProbes:
+  - probes:
+    - condition:
+        status: "True"
+        type: Available
+      fieldsEqual:
+        fieldA: .spec.fieldA
+        fieldB: .status.fieldB
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
+  class: elitr
+  name: sadipscing
+  objects:
+  - object:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: example-deployment
+  paused: "true"
+  pausedFor:
+  - group: apps
+    kind: Deployment
+    name: example-deployment
+status:
+  conditions:
+  - status: "True"
+    type: Available
+  pausedFor:
+  - group: apps
+    kind: Deployment
+    name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#objectsetphasespec">ObjectSetPhaseSpec</a> | ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase. |
+| `status` <br><a href="#objectsetphasestatus">ObjectSetPhaseStatus</a> | ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase. |
+
+
 
 
 ---
+
+### ClusterObjectSetPhaseSpec
+
+ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `paused` <br><a href="#bool">bool</a> | Paused disables reconciliation of the ClusterObjectSetPhase,<br>only Status updates will be propagated. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects. |
+| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
+| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+
+
+Used in:
+* [ClusterObjectSetPhase](#clusterobjectsetphase)
+
+
+### ClusterObjectSetPhaseStatus
+
+ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
+
+
+Used in:
+* [ClusterObjectSetPhase](#clusterobjectsetphase)
+
 
 ### ClusterObjectSetSpec
 
@@ -169,6 +322,8 @@ An object that is part of the phase of an ObjectSet.
 
 
 Used in:
+* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
+* [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetTemplatePhase](#objectsettemplatephase)
 
 
@@ -184,10 +339,46 @@ Specifies that the reconciliation of a specific object should be paused.
 
 
 Used in:
+* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
+* [ClusterObjectSetPhaseStatus](#clusterobjectsetphasestatus)
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
+* [ObjectSetPhaseSpec](#objectsetphasespec)
+* [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetSpec](#objectsetspec)
 * [ObjectSetStatus](#objectsetstatus)
+
+
+### ObjectSetPhaseSpec
+
+ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `paused` <br><a href="#bool">bool</a> | Paused disables reconciliation of the ObjectSetPhase,<br>only Status updates will be propagated. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects. |
+| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
+| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+
+
+Used in:
+* [ObjectSetPhase](#objectsetphase)
+
+
+### ObjectSetPhaseStatus
+
+ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
+
+
+Used in:
+* [ObjectSetPhase](#objectsetphase)
 
 
 ### ObjectSetProbe
@@ -201,7 +392,9 @@ ObjectSetProbe define how ObjectSets check their children for their status.
 
 
 Used in:
+* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
+* [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetSpec](#objectsetspec)
 
 
@@ -243,6 +436,7 @@ ObjectSet reconcile phase.
 | Field | Description |
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
+| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 
 
