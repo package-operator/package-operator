@@ -1,0 +1,298 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: clusterobjectsets.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ClusterObjectSet
+    listKind: ClusterObjectSetList
+    plural: clusterobjectsets
+    singular: clusterobjectset
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: "ClusterObjectSet reconciles a collection of objects through
+          ordered phases and aggregates their status. \n ClusterObjectSets behave
+          similarly to Kubernetes ReplicaSets, by managing a collection of objects
+          and being itself mostly immutable. This object type is able to suspend/pause
+          reconciliation of specific objects to facilitate the transition between
+          revisions. \n Archived ClusterObjectSets may stay on the cluster, to store
+          information about previous revisions. \n A Namespace-scoped version of this
+          API is available as ObjectSet."
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
+            properties:
+              availabilityProbes:
+                description: Availability Probes check objects that are part of the
+                  package. All probes need to succeed for a package to be considered
+                  Available. Failing probes will prevent the reconciliation of objects
+                  in later phases.
+                items:
+                  description: ObjectSetProbe define how ObjectSets check their children
+                    for their status.
+                  properties:
+                    probes:
+                      description: Probe configuration parameters.
+                      items:
+                        description: Defines probe parameters to check parts of a
+                          package.
+                        properties:
+                          condition:
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
+                            properties:
+                              status:
+                                default: "True"
+                                description: Condition status to probe for.
+                                type: string
+                              type:
+                                description: Condition type to probe for.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          fieldsEqual:
+                            description: Compares two fields specified by JSON Paths.
+                            properties:
+                              fieldA:
+                                description: First field for comparison.
+                                type: string
+                              fieldB:
+                                description: Second field for comparison.
+                                type: string
+                            required:
+                            - fieldA
+                            - fieldB
+                            type: object
+                        type: object
+                      type: array
+                    selector:
+                      description: Selector specifies which objects this probe should
+                        target.
+                      properties:
+                        kind:
+                          description: Selects objects based on Kinda and API Group.
+                          properties:
+                            group:
+                              description: Object Group to apply a probe to.
+                              type: string
+                            kind:
+                              description: Object Kind to apply a probe to.
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          type: object
+                      type: object
+                  required:
+                  - probes
+                  - selector
+                  type: object
+                type: array
+              lifecycleState:
+                default: Active
+                description: Specifies the lifecycle state of the ClusterObjectSet.
+                enum:
+                - Active
+                - Paused
+                - Archived
+                type: string
+              pausedFor:
+                description: Pause reconciliation of specific objects, while still
+                  reporting status.
+                items:
+                  description: Specifies that the reconciliation of a specific object
+                    should be paused.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              phases:
+                description: Reconcile phase configuration for a ObjectSet. Phases
+                  will be reconciled in order and the contained objects checked against
+                  given probes before continuing with the next phase.
+                items:
+                  description: ObjectSet reconcile phase.
+                  properties:
+                    name:
+                      description: Name of the reconcile phase. Must be unique within
+                        a ObjectSet.
+                      type: string
+                    objects:
+                      description: Objects belonging to this phase.
+                      items:
+                        description: An object that is part of the phase of an ObjectSet.
+                        properties:
+                          object:
+                            type: object
+                            x-kubernetes-embedded-resource: true
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - object
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - objects
+                  type: object
+                type: array
+            required:
+            - availabilityProbes
+            - phases
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{     // Represents the observations of a
+                    foo's current state.     // Known .status.conditions.type are:
+                    \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
+                    \    // +patchStrategy=merge     // +listType=map     // +listMapKey=type
+                    \    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
+                    \n     // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              pausedFor:
+                description: List of objects the controller has paused reconciliation
+                  on.
+                items:
+                  description: Specifies that the reconciliation of a specific object
+                    should be paused.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              phase:
+                description: 'Deprecated: This field is not part of any API contract
+                  it will go away as soon as kubectl can print conditions! When evaluating
+                  object state in code, use .Conditions instead.'
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
