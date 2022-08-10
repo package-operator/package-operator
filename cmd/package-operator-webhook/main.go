@@ -1,4 +1,4 @@
-package main // OR package package_operator_webhook?
+package main
 
 import (
 	"flag"
@@ -15,9 +15,9 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-func init() {
-	// _ = aoapis.AddToScheme(scheme)
-}
+//func init() {
+// _ = <>.AddToScheme(scheme) TODO: Add our package with objects to scheme
+//}
 
 func main() {
 	var (
@@ -58,14 +58,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO: Create webhooks and register them here
 	// Register webhooks as handlers
 	//wbh := mgr.GetWebhookServer()
-	//wbh.Register("/validate-addon", &webhook.Admission{
-	//	Handler: &webhooks.AddonWebhookHandler{
-	//		Log:    log.Log.WithName("validating webhooks").WithName("Addon"),
-	//		Client: mgr.GetClient(),
-	//	},
-	//})
+	//wbh.Register()
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
