@@ -55,7 +55,7 @@ type ClusterObjectSetStatus struct {
 	// it will go away as soon as kubectl can print conditions!
 	// When evaluating object state in code, use .Conditions instead.
 	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
-	// Computed revision number to order revisions on a linear axis.
+	// Computed revision number, monotonically increasing. 
 	Revision int64 `json:"revision,omitempty"`
 }
 
