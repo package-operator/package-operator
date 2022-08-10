@@ -154,3 +154,16 @@ type ProbeFieldsEqualSpec struct {
 	// +example=.status.fieldB
 	FieldB string `json:"fieldB"`
 }
+
+// References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase or ClusterObjectSetPhase.
+type PreviousRevisionReference struct {
+	// Name of a previous revision.
+	// +example=previous-revision
+	Name string `json:"name"`
+	// Object kind of a previous revision.
+	// +example="ObjectSet"
+	Kind string `json:"kind"`
+	// Object group of a previous revision.
+	// +default="package-operator.run"
+	Group string `json:"group"`
+}

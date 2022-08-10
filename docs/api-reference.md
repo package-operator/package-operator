@@ -42,19 +42,19 @@ spec:
         group: apps
         kind: Deployment
   lifecycleState: Active
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
   phases:
-  - class: ipsum
-    name: lorem
+  - class: dolor
+    name: ipsum
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+  previous:
+  - group: lorem
+    kind: ObjectSet
+    name: previous-revision
 status:
   phase: Pending
 
@@ -94,27 +94,24 @@ spec:
       kind:
         group: apps
         kind: Deployment
-  class: sit
-  name: dolor
+  class: consetetur
+  lifecycleState: Active
+  name: amet
   objects:
   - object:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: example-deployment
-  paused: true
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
+  previous:
+  - group: sit
+    kind: ObjectSet
+    name: previous-revision
+  revision: 42
 status:
   conditions:
   - status: "True"
     type: Available
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
 
 ```
 
@@ -160,19 +157,19 @@ spec:
         group: apps
         kind: Deployment
   lifecycleState: Active
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
   phases:
-  - class: consetetur
-    name: amet
+  - class: sed
+    name: elitr
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+  previous:
+  - group: sadipscing
+    kind: ObjectSet
+    name: previous-revision
 status:
   phase: Pending
 
@@ -213,27 +210,24 @@ spec:
       kind:
         group: apps
         kind: Deployment
-  class: elitr
-  name: sadipscing
+  class: eirmod
+  lifecycleState: Active
+  name: nonumy
   objects:
   - object:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: example-deployment
-  paused: "true"
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
+  previous:
+  - group: diam
+    kind: ObjectSet
+    name: previous-revision
+  revision: 42
 status:
   conditions:
   - status: "True"
     type: Available
-  pausedFor:
-  - group: apps
-    kind: Deployment
-    name: example-deployment
 
 ```
 
@@ -255,8 +249,9 @@ ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `paused` <br><a href="#bool">bool</a> | Paused disables reconciliation of the ClusterObjectSetPhase,<br>only Status updates will be propagated. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects. |
+| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSetPhase. |
+| `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
+| `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
@@ -274,7 +269,6 @@ ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhas
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
 
 
 Used in:
@@ -288,7 +282,7 @@ ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSet. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects, while still reporting status. |
+| `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 
@@ -305,7 +299,7 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
+| `revision` <br>int64 | Computed revision number to order revisions on a linear axis. |
 
 
 Used in:
@@ -339,14 +333,6 @@ Specifies that the reconciliation of a specific object should be paused.
 
 
 Used in:
-* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
-* [ClusterObjectSetPhaseStatus](#clusterobjectsetphasestatus)
-* [ClusterObjectSetSpec](#clusterobjectsetspec)
-* [ClusterObjectSetStatus](#clusterobjectsetstatus)
-* [ObjectSetPhaseSpec](#objectsetphasespec)
-* [ObjectSetPhaseStatus](#objectsetphasestatus)
-* [ObjectSetSpec](#objectsetspec)
-* [ObjectSetStatus](#objectsetstatus)
 
 
 ### ObjectSetPhaseSpec
@@ -355,8 +341,9 @@ ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `paused` <br><a href="#bool">bool</a> | Paused disables reconciliation of the ObjectSetPhase,<br>only Status updates will be propagated. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects. |
+| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSetPhase. |
+| `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
+| `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
@@ -374,7 +361,6 @@ ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
 
 
 Used in:
@@ -405,7 +391,7 @@ ObjectSetSpec defines the desired state of a ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSet. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | Pause reconciliation of specific objects, while still reporting status. |
+| `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
 | `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 
@@ -422,7 +408,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
-| `pausedFor` <br><a href="#objectsetpausedobject">[]ObjectSetPausedObject</a> | List of objects the controller has paused reconciliation on. |
+| `revision` <br>int64 | Computed revision number to order revisions on a linear axis. |
 
 
 Used in:
@@ -457,6 +443,24 @@ Kind package probe parameters.
 
 Used in:
 * [ProbeSelector](#probeselector)
+
+
+### PreviousRevisionReference
+
+References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase or ClusterObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name of a previous revision. |
+| `kind` <b>required</b><br>string | Object kind of a previous revision. |
+| `group` <b>required</b><br>string | Object group of a previous revision. |
+
+
+Used in:
+* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
+* [ClusterObjectSetSpec](#clusterobjectsetspec)
+* [ObjectSetPhaseSpec](#objectsetphasespec)
+* [ObjectSetSpec](#objectsetspec)
 
 
 ### Probe

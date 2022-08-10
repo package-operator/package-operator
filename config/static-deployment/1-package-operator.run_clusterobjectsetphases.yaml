@@ -120,6 +120,14 @@ spec:
                   way the ObjectSet would. If set to any other string, an out-of-tree
                   controller needs to be present to handle ObjectSetPhase objects.
                 type: string
+              lifecycleState:
+                default: Active
+                description: Specifies the lifecycle state of the ClusterObjectSetPhase.
+                enum:
+                - Active
+                - Paused
+                - Archived
+                type: string
               name:
                 description: Name of the reconcile phase. Must be unique within a
                   ObjectSet.
@@ -137,24 +145,21 @@ spec:
                   - object
                   type: object
                 type: array
-              paused:
-                description: Paused disables reconciliation of the ClusterObjectSetPhase,
-                  only Status updates will be propagated.
-                type: boolean
-              pausedFor:
-                description: Pause reconciliation of specific objects.
+              previous:
+                description: Previous revisions of the ClusterObjectSet to adopt objects
+                  from.
                 items:
-                  description: Specifies that the reconciliation of a specific object
-                    should be paused.
+                  description: References a previous revision of an ObjectSet, ClusterObjectSet,
+                    ObjectSetPhase or ClusterObjectSetPhase.
                   properties:
                     group:
-                      description: Object Group.
+                      description: Object group of a previous revision.
                       type: string
                     kind:
-                      description: Object Kind.
+                      description: Object kind of a previous revision.
                       type: string
                     name:
-                      description: Object Name.
+                      description: Name of a previous revision.
                       type: string
                   required:
                   - group
@@ -162,10 +167,16 @@ spec:
                   - name
                   type: object
                 type: array
+              revision:
+                description: Revision of the parent ObjectSet to use during object
+                  adoption.
+                format: int64
+                type: integer
             required:
             - availabilityProbes
             - name
             - objects
+            - revision
             type: object
           status:
             description: ClusterObjectSetPhaseStatus defines the observed state of
@@ -240,28 +251,6 @@ spec:
                   - reason
                   - status
                   - type
-                  type: object
-                type: array
-              pausedFor:
-                description: List of objects the controller has paused reconciliation
-                  on.
-                items:
-                  description: Specifies that the reconciliation of a specific object
-                    should be paused.
-                  properties:
-                    group:
-                      description: Object Group.
-                      type: string
-                    kind:
-                      description: Object Kind.
-                      type: string
-                    name:
-                      description: Object Name.
-                      type: string
-                  required:
-                  - group
-                  - kind
-                  - name
                   type: object
                 type: array
             type: object

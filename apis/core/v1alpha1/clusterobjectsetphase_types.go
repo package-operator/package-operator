@@ -26,18 +26,23 @@ type ClusterObjectSetPhaseList struct {
 
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 type ClusterObjectSetPhaseSpec struct {
-	// Paused disables reconciliation of the ClusterObjectSetPhase,
-	// only Status updates will be propagated.
-	// +example=true
-	Paused bool `json:"paused,omitempty"`
-	// Pause reconciliation of specific objects.
-	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
+	// Specifies the lifecycle state of the ClusterObjectSetPhase.
+	// +kubebuilder:default="Active"
+	// +kubebuilder:validation:Enum=Active;Paused;Archived
+	LifecycleState ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
+
+	// Immutable fields below
+
+	// Revision of the parent ObjectSet to use during object adoption.
+	Revision int64 `json:"revision"`
+
+	// Previous revisions of the ClusterObjectSet to adopt objects from.
+	Previous []PreviousRevisionReference `json:"previous,omitempty"`
+
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes"`
-
-	// Immutable fields below
 
 	ObjectSetTemplatePhase `json:",inline"`
 }
@@ -47,8 +52,6 @@ type ClusterObjectSetPhaseStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	// +example=[{type: "Available", status: "True"}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// List of objects the controller has paused reconciliation on.
-	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
 }
 
 func init() {
