@@ -126,28 +126,6 @@ spec:
                 - Paused
                 - Archived
                 type: string
-              pausedFor:
-                description: Pause reconciliation of specific objects, while still
-                  reporting status.
-                items:
-                  description: Specifies that the reconciliation of a specific object
-                    should be paused.
-                  properties:
-                    group:
-                      description: Object Group.
-                      type: string
-                    kind:
-                      description: Object Kind.
-                      type: string
-                    name:
-                      description: Object Name.
-                      type: string
-                  required:
-                  - group
-                  - kind
-                  - name
-                  type: object
-                type: array
               phases:
                 description: Reconcile phase configuration for a ObjectSet. Phases
                   will be reconciled in order and the contained objects checked against
@@ -155,6 +133,15 @@ spec:
                 items:
                   description: ObjectSet reconcile phase.
                   properties:
+                    class:
+                      description: If non empty, the ObjectSet controller will delegate
+                        phase reconciliation to another controller, by creating an
+                        ObjectSetPhase object. If set to the string "default" the
+                        build-in Package Operator ObjectSetPhase controller will reconcile
+                        the object in the same way the ObjectSet would. If set to
+                        any other string, an out-of-tree controller needs to be present
+                        to handle ObjectSetPhase objects.
+                      type: string
                     name:
                       description: Name of the reconcile phase. Must be unique within
                         a ObjectSet.
@@ -175,6 +162,28 @@ spec:
                   required:
                   - name
                   - objects
+                  type: object
+                type: array
+              previous:
+                description: Previous revisions of the ClusterObjectSet to adopt objects
+                  from.
+                items:
+                  description: References a previous revision of an ObjectSet, ClusterObjectSet,
+                    ObjectSetPhase or ClusterObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object group of a previous revision.
+                      type: string
+                    kind:
+                      description: Object kind of a previous revision.
+                      type: string
+                    name:
+                      description: Name of a previous revision.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
                   type: object
                 type: array
             required:
@@ -257,33 +266,16 @@ spec:
                   - type
                   type: object
                 type: array
-              pausedFor:
-                description: List of objects the controller has paused reconciliation
-                  on.
-                items:
-                  description: Specifies that the reconciliation of a specific object
-                    should be paused.
-                  properties:
-                    group:
-                      description: Object Group.
-                      type: string
-                    kind:
-                      description: Object Kind.
-                      type: string
-                    name:
-                      description: Object Name.
-                      type: string
-                  required:
-                  - group
-                  - kind
-                  - name
-                  type: object
-                type: array
               phase:
                 description: 'Deprecated: This field is not part of any API contract
                   it will go away as soon as kubectl can print conditions! When evaluating
                   object state in code, use .Conditions instead.'
                 type: string
+              revision:
+                description: Computed revision number to order revisions on a linear
+                  axis.
+                format: int64
+                type: integer
             type: object
         type: object
     served: true

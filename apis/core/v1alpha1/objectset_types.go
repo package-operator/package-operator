@@ -39,10 +39,11 @@ type ObjectSetSpec struct {
 	// +kubebuilder:default="Active"
 	// +kubebuilder:validation:Enum=Active;Paused;Archived
 	LifecycleState ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
-	// Pause reconciliation of specific objects, while still reporting status.
-	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
 
 	// Immutable fields below
+
+	// Previous revisions of the ObjectSet to adopt objects from.
+	Previous []PreviousRevisionReference `json:"previous,omitempty"`
 
 	ObjectSetTemplateSpec `json:",inline"`
 }
@@ -55,8 +56,8 @@ type ObjectSetStatus struct {
 	// it will go away as soon as kubectl can print conditions!
 	// When evaluating object state in code, use .Conditions instead.
 	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
-	// List of objects the controller has paused reconciliation on.
-	PausedFor []ObjectSetPausedObject `json:"pausedFor,omitempty"`
+	// Computed revision number, monotonically increasing.
+	Revision int64 `json:"revision,omitempty"`
 }
 
 func init() {

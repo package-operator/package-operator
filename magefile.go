@@ -136,7 +136,7 @@ const (
 	goimportsVersion     = "0.1.5"
 	golangciLintVersion  = "1.46.2"
 	kindVersion          = "0.11.1"
-	k8sDocGenVersion     = "0.3.0"
+	k8sDocGenVersion     = "0.5.1"
 )
 
 type Dependency mg.Namespace
