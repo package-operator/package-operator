@@ -15,9 +15,9 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-//func init() {
-// _ = <>.AddToScheme(scheme) TODO: Add our package with objects to scheme
-//}
+// func init() {
+//  _ = <>.AddToScheme(scheme) TODO: Add our package with objects to scheme
+// }
 
 func main() {
 	var (
@@ -60,8 +60,8 @@ func main() {
 
 	// TODO: Create webhooks and register them here
 	// Register webhooks as handlers
-	//wbh := mgr.GetWebhookServer()
-	//wbh.Register()
+	// wbh := mgr.GetWebhookServer()
+	// wbh.Register()
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
