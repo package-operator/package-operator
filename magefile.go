@@ -63,6 +63,7 @@ type Test mg.Namespace
 
 func (Test) Lint() error {
 	mg.Deps(
+		Generate.All, // ensure code generators are re-triggered
 		Dependency.GolangciLint,
 	)
 

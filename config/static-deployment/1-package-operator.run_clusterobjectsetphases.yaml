@@ -23,10 +23,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterObjectSetPhase is an internal API, allowing an ClusterObjectSet
+        description: ClusterObjectSetPhase is an internal API, allowing a ClusterObjectSet
           to delegate a single phase to another custom controller. ClusterObjectSets
-          will create subordinate ClusterObjectSetPhases when `.class` within the
-          phase specification is set.
+          will create subordinate ClusterObjectSetPhases when `.class` is set within
+          the phase specification.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -115,7 +115,7 @@ spec:
               class:
                 description: If non empty, the ObjectSet controller will delegate
                   phase reconciliation to another controller, by creating an ObjectSetPhase
-                  object. If set to the string "default" the build-in Package Operator
+                  object. If set to the string "default" the built-in Package Operator
                   ObjectSetPhase controller will reconcile the object in the same
                   way the ObjectSet would. If set to any other string, an out-of-tree
                   controller needs to be present to handle ObjectSetPhase objects.
