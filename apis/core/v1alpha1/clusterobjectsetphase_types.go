@@ -2,7 +2,7 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// ClusterObjectSetPhase is an internal API, allowing an ClusterObjectSet to delegate a single phase to another custom controller.
+// ClusterObjectSetPhase is an internal API, allowing a ClusterObjectSet to delegate a single phase to another custom controller.
 // ClusterObjectSets will create subordinate ClusterObjectSetPhases when `.class` within the phase specification is set.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
