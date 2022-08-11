@@ -25,18 +25,27 @@ const ownerStrategyAnnotation = "package-operator.run/owners"
 
 // AnnotationOwner handling strategy uses .metadata.annotations.
 // Allows cross-namespace owner references.
-type OwnerStrategyAnnotation struct{}
+type OwnerStrategyAnnotation struct {
+	scheme *runtime.Scheme
+}
+
+func NewAnnotation(scheme *runtime.Scheme) *OwnerStrategyAnnotation {
+	return &OwnerStrategyAnnotation{
+		scheme: scheme,
+	}
+}
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 	ownerType client.Object, isController bool,
 ) handler.EventHandler {
 	return &AnnotationEnqueueRequestForOwner{
-		OwnerType:    ownerType,
-		IsController: isController,
+		OwnerType:     ownerType,
+		IsController:  isController,
+		ownerStrategy: s,
 	}
 }
 
-func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object, scheme *runtime.Scheme) error {
+func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object) error {
 	ownerRefs := s.getOwnerReferences(obj)
 
 	// Ensure that there is no controller already.
@@ -56,7 +65,7 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 		}
 	}
 
-	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), scheme)
+	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), s.scheme)
 	if err != nil {
 		return err
 	}
@@ -81,13 +90,41 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 }
 
 func (s *OwnerStrategyAnnotation) IsOwner(owner, obj metav1.Object) bool {
-	ownerRefs := s.getOwnerReferences(obj)
-	for _, ownerRef := range ownerRefs {
-		if ownerRef.UID == owner.GetUID() {
+	ownerRefComp := s.ownerRefForCompare(owner)
+	for _, ownerRef := range s.getOwnerReferences(obj) {
+		if s.referSameObject(ownerRefComp, ownerRef) {
 			return true
 		}
 	}
 	return false
+}
+
+func (s *OwnerStrategyAnnotation) IsController(
+	owner, obj metav1.Object) bool {
+	ownerRefComp := s.ownerRefForCompare(owner)
+	for _, ownerRef := range s.getOwnerReferences(obj) {
+		if s.referSameObject(ownerRefComp, ownerRef) &&
+			ownerRef.Controller != nil &&
+			*ownerRef.Controller {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *OwnerStrategyAnnotation) RemoveOwner(owner, obj metav1.Object) {
+	ownerRefs := s.getOwnerReferences(obj)
+	foundIndex := -1
+	for i, ownerRef := range ownerRefs {
+		if owner.GetUID() == ownerRef.UID {
+			// remove owner
+			foundIndex = i
+			break
+		}
+	}
+	if foundIndex != -1 {
+		s.setOwnerReferences(obj, remove(ownerRefs, foundIndex))
+	}
 }
 
 func (s *OwnerStrategyAnnotation) ReleaseController(obj metav1.Object) {
@@ -130,11 +167,47 @@ func (s *OwnerStrategyAnnotation) setOwnerReferences(obj metav1.Object, owners [
 
 func (s *OwnerStrategyAnnotation) indexOf(ownerRefs []annotationOwnerRef, ownerRef annotationOwnerRef) int {
 	for i := range ownerRefs {
-		if ownerRefs[i].UID == ownerRef.UID {
+		if s.referSameObject(ownerRef, ownerRefs[i]) {
 			return i
 		}
 	}
 	return -1
+}
+
+func (s *OwnerStrategyAnnotation) ownerRefForCompare(owner metav1.Object) annotationOwnerRef {
+	// Validate the owner.
+	ro, ok := owner.(runtime.Object)
+	if !ok {
+		panic(fmt.Sprintf("%T is not a runtime.Object, cannot call SetOwnerReference", owner))
+	}
+
+	// Create a new owner ref.
+	gvk, err := apiutil.GVKForObject(ro, s.scheme)
+	if err != nil {
+		panic(err)
+	}
+	ref := annotationOwnerRef{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		UID:        owner.GetUID(),
+		Name:       owner.GetName(),
+	}
+	return ref
+}
+
+// Returns true if a and b point to the same object.
+func (s *OwnerStrategyAnnotation) referSameObject(a, b annotationOwnerRef) bool {
+	aGV, err := schema.ParseGroupVersion(a.APIVersion)
+	if err != nil {
+		return false
+	}
+
+	bGV, err := schema.ParseGroupVersion(b.APIVersion)
+	if err != nil {
+		return false
+	}
+
+	return aGV.Group == bGV.Group && a.Kind == b.Kind && a.Name == b.Name
 }
 
 type annotationOwnerRef struct {
@@ -170,6 +243,8 @@ type AnnotationEnqueueRequestForOwner struct {
 
 	// OwnerType is the type of the Owner object to look for in OwnerReferences.  Only Group and Kind are compared.
 	ownerGK schema.GroupKind
+
+	ownerStrategy *OwnerStrategyAnnotation
 }
 
 // Create implements EventHandler.
@@ -208,7 +283,7 @@ func (e *AnnotationEnqueueRequestForOwner) InjectScheme(s *runtime.Scheme) error
 }
 
 func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav1.Object) []reconcile.Request {
-	ownerReferences := Annotation.getOwnerReferences(object)
+	ownerReferences := e.ownerStrategy.getOwnerReferences(object)
 	requests := make([]reconcile.Request, 0, len(ownerReferences))
 	for _, ownerRef := range ownerReferences {
 		ownerRefGV, err := schema.ParseGroupVersion(ownerRef.APIVersion)

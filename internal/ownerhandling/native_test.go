@@ -12,8 +12,37 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+var (
+	testScheme = testutil.NewTestSchemeWithCoreV1()
+)
+
+func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
+	obj := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: "test",
+			UID:       types.UID("1234"),
+			OwnerReferences: []metav1.OwnerReference{
+				{Name: "cm1", UID: types.UID("123456")},
+			},
+		},
+	}
+	owner := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: obj.Namespace,
+			UID:       types.UID("123456"),
+		},
+	}
+
+	s := NewNative(testScheme)
+	s.RemoveOwner(owner, obj)
+
+	assert.Equal(t, []metav1.OwnerReference{}, obj.GetOwnerReferences())
+}
+
 func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
-	s := &OwnerStrategyNative{}
+	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -22,9 +51,8 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 			UID:       types.UID("1234"),
 		},
 	}
-	scheme := testutil.NewTestSchemeWithCoreV1()
 
-	err := s.SetControllerReference(cm1, obj, scheme)
+	err := s.SetControllerReference(cm1, obj)
 	assert.NoError(t, err)
 
 	ownerRefs := obj.GetOwnerReferences()
@@ -41,19 +69,19 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 			UID:       types.UID("56789"),
 		},
 	}
-	err = s.SetControllerReference(cm2, obj, scheme)
+	err = s.SetControllerReference(cm2, obj)
 	assert.Error(t, err, controllerutil.AlreadyOwnedError{})
 
 	s.ReleaseController(obj)
 
-	err = s.SetControllerReference(cm2, obj, scheme)
+	err = s.SetControllerReference(cm2, obj)
 	assert.NoError(t, err)
 	assert.True(t, s.IsOwner(cm1, obj))
 	assert.True(t, s.IsOwner(cm2, obj))
 }
 
-func TestOwnerStrategyNative_IsOwner(t *testing.T) {
-	s := &OwnerStrategyNative{}
+func TestOwnerStrategyNative_IsController(t *testing.T) {
+	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -62,9 +90,32 @@ func TestOwnerStrategyNative_IsOwner(t *testing.T) {
 			UID:       types.UID("1234"),
 		},
 	}
-	scheme := testutil.NewTestSchemeWithCoreV1()
+	err := s.SetControllerReference(cm1, obj)
+	require.NoError(t, err)
 
-	err := s.SetControllerReference(cm1, obj, scheme)
+	cm2 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm2",
+			Namespace: obj.Namespace,
+			UID:       types.UID("56789"),
+		},
+	}
+	assert.True(t, s.IsController(cm1, obj))
+	assert.False(t, s.IsController(cm2, obj))
+}
+
+func TestOwnerStrategyNative_IsOwner(t *testing.T) {
+	s := NewNative(testScheme)
+	obj := testutil.NewSecret()
+	cm1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: obj.Namespace,
+			UID:       types.UID("1234"),
+		},
+	}
+
+	err := s.SetControllerReference(cm1, obj)
 	require.NoError(t, err)
 
 	cm2 := &corev1.ConfigMap{
@@ -79,13 +130,12 @@ func TestOwnerStrategyNative_IsOwner(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
-	s := &OwnerStrategyNative{}
+	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	owner := testutil.NewConfigMap()
 	owner.Namespace = obj.Namespace
-	scheme := testutil.NewTestSchemeWithCoreV1()
 
-	err := s.SetControllerReference(owner, obj, scheme)
+	err := s.SetControllerReference(owner, obj)
 	assert.NoError(t, err)
 
 	ownerRefs := obj.GetOwnerReferences()

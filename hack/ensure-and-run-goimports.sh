@@ -2,4 +2,4 @@
 set -euo pipefail
 
 export GOFLAGS=""
-exec .deps/bin/goimports -local github.com/package-operator/package-operator -w -l "$@"
+exec .deps/bin/goimports -local package-operator.run -w -l "$@"

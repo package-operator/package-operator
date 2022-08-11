@@ -88,9 +88,14 @@ func (Test) Unit() error {
 }
 
 func (Test) Integration() error {
-	return sh.Run("go", "test", "-v",
+	testErr := sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
 		"-timeout=20m", "./integration/...")
+
+	// TODO: Add this into devkube
+	sh.Run("kind", "export", "logs", path.Join(cacheDir, "dev-env-logs"), "--name", "package-operator-dev")
+
+	return testErr
 }
 
 // Building
@@ -480,6 +485,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
 	}
+	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-manager: %w", err)
 	}
@@ -526,6 +532,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
 	}
+	_ = cluster.CtrlClient.Delete(ctx, packageOperatorWebhookDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorWebhookDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook: %w", err)
 	}

@@ -310,7 +310,7 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 
 
@@ -331,20 +331,6 @@ Used in:
 * [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
 * [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetTemplatePhase](#objectsettemplatephase)
-
-
-### ObjectSetPausedObject
-
-Specifies that the reconciliation of a specific object should be paused.
-
-| Field | Description |
-| ----- | ----------- |
-| `kind` <b>required</b><br>string | Object Kind. |
-| `group` <b>required</b><br>string | Object Group. |
-| `name` <b>required</b><br>string | Object Name. |
-
-
-Used in:
 
 
 ### ObjectSetPhaseSpec
@@ -419,7 +405,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Deprecated: This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 
 

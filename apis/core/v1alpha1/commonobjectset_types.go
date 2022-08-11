@@ -52,19 +52,6 @@ type ObjectSetObject struct {
 	Object runtime.RawExtension `json:"object"`
 }
 
-// Specifies that the reconciliation of a specific object should be paused.
-type ObjectSetPausedObject struct {
-	// Object Kind.
-	// +example=Deployment
-	Kind string `json:"kind"`
-	// Object Group.
-	// +example=apps
-	Group string `json:"group"`
-	// Object Name.
-	// +example=example-deployment
-	Name string `json:"name"`
-}
-
 // ObjectSet Condition Types.
 const (
 	// Available indicates that all objects pass their availability probe.
