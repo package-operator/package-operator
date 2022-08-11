@@ -36,7 +36,7 @@ type ObjectSetTemplatePhase struct {
 	// Name of the reconcile phase. Must be unique within a ObjectSet.
 	Name string `json:"name"`
 	// If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.
-	// If set to the string "default" the build-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.
+	// If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.
 	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
 	Class string `json:"class,omitempty"`
 	// Objects belonging to this phase.
