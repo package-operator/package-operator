@@ -7,7 +7,7 @@ import (
 
 // KindSelector wraps a Probe object and only executes the probe when the probed object is of the right Group and Kind.
 type KindSelector struct {
-	Interface
+	ProbeInterface
 	schema.GroupKind
 }
 
@@ -15,7 +15,7 @@ func (kp *KindSelector) Probe(obj *unstructured.Unstructured) (success bool, mes
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	if kp.Kind == gvk.Kind &&
 		kp.Group == gvk.Group {
-		return kp.Interface.Probe(obj)
+		return kp.ProbeInterface.Probe(obj)
 	}
 
 	// don't probe stuff that does not match

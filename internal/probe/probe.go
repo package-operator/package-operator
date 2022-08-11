@@ -8,11 +8,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type Interface interface {
+type ProbeInterface interface {
 	Probe(obj *unstructured.Unstructured) (success bool, message string)
 }
 
-type ProbeList []Interface
+type ProbeList []ProbeInterface
 
 func (p ProbeList) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	var messages []string
@@ -27,12 +27,12 @@ func (p ProbeList) Probe(obj *unstructured.Unstructured) (success bool, message 
 	return true, ""
 }
 
-// Checks if the objects condition is set and in a certain status.
+// ConditionProbe checks if the object's condition is set and in a certain status.
 type ConditionProbe struct {
 	Type, Status string
 }
 
-var _ Interface = (*ConditionProbe)(nil)
+var _ ProbeInterface = (*ConditionProbe)(nil)
 
 func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	defer func() {
@@ -61,7 +61,7 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 			continue
 		}
 
-		// Check conditions observed generation, if set
+		// Check the condition's observed generation, if set
 		if observedGeneration, ok, err := unstructured.NestedInt64(
 			cond, "observedGeneration",
 		); err == nil && ok && observedGeneration != obj.GetGeneration() {
@@ -77,12 +77,12 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 	return false, "not reported"
 }
 
-// Checks if the values of the fields under the given json paths are equal.
+// FieldsEqualProbe checks if the values of the fields under the given json paths are equal.
 type FieldsEqualProbe struct {
 	FieldA, FieldB string
 }
 
-var _ Interface = (*FieldsEqualProbe)(nil)
+var _ ProbeInterface = (*FieldsEqualProbe)(nil)
 
 func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	fieldAPath := strings.Split(strings.Trim(fe.FieldA, "."), ".")
@@ -108,13 +108,13 @@ func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool,
 	return equality.Semantic.DeepEqual(fieldAVal, fieldBVal), fmt.Sprintf("%s != %s", fieldAVal, fieldBVal)
 }
 
-// CurrentGenerationProbe ensures that the objects status is up to date with the objects generation.
+// CurrentGenerationProbe ensures that the object's status is up-to-date with the object's generation.
 // Requires the probed object to have a .status.observedGeneration property.
 type CurrentGenerationProbe struct {
-	Interface
+	ProbeInterface
 }
 
-var _ Interface = (*CurrentGenerationProbe)(nil)
+var _ ProbeInterface = (*CurrentGenerationProbe)(nil)
 
 func (cg *CurrentGenerationProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	if observedGeneration, ok, err := unstructured.NestedInt64(
@@ -122,5 +122,5 @@ func (cg *CurrentGenerationProbe) Probe(obj *unstructured.Unstructured) (success
 	); err == nil && ok && observedGeneration != obj.GetGeneration() {
 		return false, ".status outdated"
 	}
-	return cg.Interface.Probe(obj)
+	return cg.ProbeInterface.Probe(obj)
 }

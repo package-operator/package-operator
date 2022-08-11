@@ -129,10 +129,15 @@ type PackageProbeKindSpec struct {
 	Kind string `json:"kind"`
 }
 
-// Defines probe parameters to check parts of a package.
+// Defines probe parameters. Only one can be filled.
 type Probe struct {
-	Condition   *ProbeConditionSpec   `json:"condition,omitempty"`
-	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
+	Condition         *ProbeConditionSpec     `json:"condition,omitempty"`
+	FieldsEqual       *ProbeFieldsEqualSpec   `json:"fieldsEqual,omitempty"`
+	CurrentGeneration *ProbeCurrentGeneration `json:"currentGeneration,omitempty"`
+}
+
+// Checks whether or not the object is the most recent generation.
+type ProbeCurrentGeneration struct {
 }
 
 // Checks whether or not the object reports a condition with given type and status.
