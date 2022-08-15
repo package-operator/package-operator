@@ -2,8 +2,7 @@ package probe
 
 import (
 	"github.com/stretchr/testify/assert"
-	corev1alpha1 "package-operator.run/package-operator/apis/core/v1alpha1"
-	// corev1alpha1 "package-operator.run/package-operator/apis"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"testing"
 )
 
@@ -27,12 +26,12 @@ func TestParse(t *testing.T) {
 	p4 := corev1alpha1.Probe{}
 
 	e1 := &FieldsEqualProbe{
-		FieldA: "asdf",
-		FieldB: "jkl;",
+		FieldA: p1.FieldsEqual.FieldA,
+		FieldB: p1.FieldsEqual.FieldB,
 	}
 	e2 := &ConditionProbe{
-		Type:   "asdf",
-		Status: "asdf",
+		Type:   p2.Condition.Type,
+		Status: p2.Condition.Status,
 	}
 	e3 := &CurrentGenerationProbe{}
 

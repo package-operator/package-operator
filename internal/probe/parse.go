@@ -1,7 +1,7 @@
 package probe
 
 import (
-	packagesv1alpha1 "package-operator.run/package-operator/apis/core/v1alpha1"
+	packagesv1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -13,12 +13,12 @@ func Parse(probeSpecs []packagesv1alpha1.Probe) ProbeList {
 		var probe ProbeInterface
 
 		switch {
-		case probeSpec.FieldsEqual == nil:
+		case probeSpec.FieldsEqual != nil:
 			probe = &FieldsEqualProbe{
 				FieldA: probeSpec.FieldsEqual.FieldA,
 				FieldB: probeSpec.FieldsEqual.FieldB,
 			}
-		case probeSpec.Condition == nil:
+		case probeSpec.Condition != nil:
 			probe = &ConditionProbe{
 				Type:   probeSpec.Condition.Type,
 				Status: probeSpec.Condition.Status,
