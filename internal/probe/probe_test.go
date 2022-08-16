@@ -3,7 +3,6 @@ package probe
 import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 	"testing"
 )
 
@@ -12,51 +11,17 @@ var test = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":              "test_name",
-			"namespace":         "test_namespace",
-			"generateName":      "test_generateName",
-			"uid":               "test_uid",
-			"resourceVersion":   "test_resourceVersion",
-			"selfLink":          "test_selfLink",
-			"creationTimestamp": "2009-11-10T23:00:00Z",
-			"deletionTimestamp": "2010-11-10T23:00:00Z",
-			"generation":        int64(1),
-			"labels": map[string]interface{}{
-				"test_label": "test_value",
-			},
-			"annotations": map[string]interface{}{
-				"test_annotation": "test_value",
-			},
-			"ownerReferences": []map[string]interface{}{
-				{
-					"kind":       "Pod",
-					"name":       "poda",
-					"apiVersion": "v1",
-					"uid":        "1",
-					"controller": (*bool)(nil),
+			"name":      "test_name",
+			"namespace": "test_namespace",
+			"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":   "Available",
+						"status": "False",
+					},
 				},
-				{
-					"kind":       "Pod",
-					"name":       "podb",
-					"apiVersion": "v1",
-					"uid":        "2",
-					"controller": pointer.Bool(true),
-				},
+				"observedGeneration": int64(1),
 			},
-			"finalizers": []interface{}{
-				"finalizer.1",
-				"finalizer.2",
-			},
-			"clusterName": "cluster123",
-		},
-		"status": map[string]interface{}{ // TODO: is this right?
-			"conditions": []map[string]interface{}{
-				{
-					"type":   "Available",
-					"status": "False",
-				},
-			},
-			"observedGeneration": int64(1),
 		},
 	},
 }
@@ -66,46 +31,13 @@ var test2 = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":              "test",
-			"namespace":         "test",
-			"generateName":      "test_generateName",
-			"uid":               "test_uid",
-			"resourceVersion":   "test_resourceVersion",
-			"selfLink":          "test_selfLink",
-			"creationTimestamp": "2009-11-10T23:00:00Z",
-			"deletionTimestamp": "2010-11-10T23:00:00Z",
-			"generation":        int64(1),
-			"labels": map[string]interface{}{
-				"test_label": "test_value",
-			},
-			"annotations": map[string]interface{}{
-				"test_annotation": "test_value",
-			},
-			"ownerReferences": []map[string]interface{}{
-				{
-					"kind":       "Pod",
-					"name":       "poda",
-					"apiVersion": "v1",
-					"uid":        "1",
-					"controller": (*bool)(nil),
-				},
-				{
-					"kind":       "Pod",
-					"name":       "podb",
-					"apiVersion": "v1",
-					"uid":        "2",
-					"controller": pointer.Bool(true),
-				},
-			},
-			"finalizers": []interface{}{
-				"finalizer.1",
-				"finalizer.2",
-			},
-			"clusterName": "cluster123",
+			"name":         "test",
+			"namespace":    "test",
+			"generateName": "test_generateName",
 		},
-		"status": map[string]interface{}{ // TODO: is this right?
-			"conditions": []map[string]interface{}{
-				{
+		"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
+			"conditions": []interface{}{
+				map[string]interface{}{
 					"type":   "Available",
 					"status": "True",
 				},
@@ -120,51 +52,18 @@ var test3 = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":              "test",
-			"namespace":         "test",
-			"generateName":      "test_generateName",
-			"uid":               "test_uid",
-			"resourceVersion":   "test_resourceVersion",
-			"selfLink":          "test_selfLink",
-			"creationTimestamp": "2009-11-10T23:00:00Z",
-			"deletionTimestamp": "2010-11-10T23:00:00Z",
-			"generation":        int64(2),
-			"labels": map[string]interface{}{
-				"test_label": "test_value",
-			},
-			"annotations": map[string]interface{}{
-				"test_annotation": "test_value",
-			},
-			"ownerReferences": []map[string]interface{}{
-				{
-					"kind":       "Pod",
-					"name":       "poda",
-					"apiVersion": "v1",
-					"uid":        "1",
-					"controller": (*bool)(nil),
+			"name":      "test",
+			"namespace": "test",
+			"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":               "Available",
+						"status":             "True",
+						"observedGeneration": int64(1),
+					},
 				},
-				{
-					"kind":       "Pod",
-					"name":       "podb",
-					"apiVersion": "v1",
-					"uid":        "2",
-					"controller": pointer.Bool(true),
-				},
+				"observedGeneration": int64(1),
 			},
-			"finalizers": []interface{}{
-				"finalizer.1",
-				"finalizer.2",
-			},
-			"clusterName": "cluster123",
-		},
-		"status": map[string]interface{}{ // TODO: is this right?
-			"conditions": []map[string]interface{}{
-				{
-					"type":   "Available",
-					"status": "True",
-				},
-			},
-			"observedGeneration": int64(1),
 		},
 	},
 }
@@ -194,8 +93,8 @@ func TestProbe(t *testing.T) {
 		{
 			name:                  "Fields equal, condition correct, out dated generation",
 			obj:                   &test3,
-			passFieldEqual:        false,
-			passCondition:         true,
+			passFieldEqual:        true,
+			passCondition:         false,
 			passCurrentGeneration: false,
 		},
 	}
@@ -206,18 +105,18 @@ func TestProbe(t *testing.T) {
 				Status: "True",
 			}
 			success, _ := cp.Probe(test.obj)
-			assert.Equal(t, test.passCondition, success)
+			assert.Equal(t, test.passCondition, success, "condition probe failed")
 
 			fep := FieldsEqualProbe{
 				FieldA: "metadata.name",
 				FieldB: "metadata.namespace",
 			}
 			success, _ = fep.Probe(test.obj)
-			assert.Equal(t, test.passFieldEqual, success)
+			assert.Equal(t, test.passFieldEqual, success, "fields equal probe failed")
 
 			cgp := CurrentGenerationProbe{}
 			success, _ = cgp.Probe(test.obj)
-			assert.Equal(t, test.passCurrentGeneration, success)
+			assert.Equal(t, test.passCurrentGeneration, success, "current generation probe failed")
 		})
 	}
 }

@@ -111,7 +111,7 @@ func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool,
 // CurrentGenerationProbe ensures that the object's status is up-to-date with the object's generation.
 // Requires the probed object to have a .status.observedGeneration property.
 type CurrentGenerationProbe struct {
-	ProbeInterface
+	ProbeInterface // TODO: remove?
 }
 
 var _ ProbeInterface = (*CurrentGenerationProbe)(nil)
