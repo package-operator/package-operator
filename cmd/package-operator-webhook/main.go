@@ -8,6 +8,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var (
@@ -15,9 +17,9 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-// func init() {
-//  _ = <>.AddToScheme(scheme) TODO: Add our package with objects to scheme
-// }
+func init() {
+	_ = corev1alpha1.AddToScheme(scheme)
+}
 
 func main() {
 	var (
