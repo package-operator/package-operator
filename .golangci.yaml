@@ -16,7 +16,6 @@ linters:
     - execinquery
     - exportloopref
     - forbidigo
-    - gci
     - gocritic
     - godot
     - goerr113
