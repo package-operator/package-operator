@@ -1,9 +1,10 @@
 package probe
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"testing"
 )
 
 var test = unstructured.Unstructured{
@@ -11,16 +12,20 @@ var test = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":      "test_name",
-			"namespace": "test_namespace",
+			"name":       "test_name",
+			"namespace":  "test_namespace",
+			"generation": int64(1),
 			"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
 				"conditions": []interface{}{
 					map[string]interface{}{
-						"type":   "Available",
-						"status": "False",
+						"type":               "Available",
+						"status":             "False",
+						"observedGeneration": int64(1), // up to date
 					},
 				},
 				"observedGeneration": int64(1),
+				"updatedReplicas":    int64(1),
+				"replicas":           int64(2),
 			},
 		},
 	},
@@ -31,18 +36,21 @@ var test2 = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":         "test",
-			"namespace":    "test",
-			"generateName": "test_generateName",
+			"name":       "test",
+			"namespace":  "test_namespace",
+			"generation": int64(1),
 		},
 		"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
 			"conditions": []interface{}{
 				map[string]interface{}{
-					"type":   "Available",
-					"status": "True",
+					"type":               "Available",
+					"status":             "True",
+					"observedGeneration": int64(1), // up to date
 				},
 			},
 			"observedGeneration": int64(1),
+			"updatedReplicas":    int64(1),
+			"replicas":           int64(1),
 		},
 	},
 }
@@ -52,18 +60,21 @@ var test3 = unstructured.Unstructured{
 		"kind":       "test_kind",
 		"apiVersion": "test_version",
 		"metadata": map[string]interface{}{
-			"name":      "test",
-			"namespace": "test",
-			"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
-				"conditions": []interface{}{
-					map[string]interface{}{
-						"type":               "Available",
-						"status":             "True",
-						"observedGeneration": int64(1),
-					},
+			"name":       "test",
+			"namespace":  "test_namespace",
+			"generation": int64(2),
+		},
+		"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
+			"conditions": []interface{}{
+				map[string]interface{}{
+					"type":               "Available",
+					"status":             "True",
+					"observedGeneration": int64(1), // outdated
 				},
-				"observedGeneration": int64(1),
 			},
+			"observedGeneration": int64(1),
+			"updatedReplicas":    int64(1),
+			"replicas":           int64(1),
 		},
 	},
 }
@@ -77,21 +88,21 @@ func TestProbe(t *testing.T) {
 		passCurrentGeneration bool
 	}{
 		{
-			name:                  "Fields unequal, condition wrong, up to date generation",
+			name:                  "only current generate probe passes",
 			obj:                   &test,
 			passFieldEqual:        false,
 			passCondition:         false,
 			passCurrentGeneration: true,
 		},
 		{
-			name:                  "Fields equal, condition correct, up to date generation",
+			name:                  "all passing",
 			obj:                   &test2,
 			passFieldEqual:        true,
 			passCondition:         true,
 			passCurrentGeneration: true,
 		},
 		{
-			name:                  "Fields equal, condition correct, out dated generation",
+			name:                  "condition probe fails because generation out of date",
 			obj:                   &test3,
 			passFieldEqual:        true,
 			passCondition:         false,
@@ -108,8 +119,8 @@ func TestProbe(t *testing.T) {
 			assert.Equal(t, test.passCondition, success, "condition probe failed")
 
 			fep := FieldsEqualProbe{
-				FieldA: "metadata.name",
-				FieldB: "metadata.namespace",
+				FieldA: ".status.replicas",
+				FieldB: ".status.updatedReplicas",
 			}
 			success, _ = fep.Probe(test.obj)
 			assert.Equal(t, test.passFieldEqual, success, "fields equal probe failed")
