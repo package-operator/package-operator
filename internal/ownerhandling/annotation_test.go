@@ -81,36 +81,78 @@ func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
-	ownerRef1 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("cm1___3245"),
-		Name:       "cm1",
-		Namespace:  "cm1namespace",
-		Controller: pointer.Bool(false),
-	}
-	ownerRef2 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("cm2___4326"),
-		Name:       "cm2",
-		Namespace:  "cm2namespace",
-		Controller: pointer.Bool(false),
-	}
-	ownerRef3 := annotationOwnerRef{
-		APIVersion: "v1",
-		Kind:       "ConfigMap",
-		UID:        types.UID("cm3___43643"),
-		Name:       "cm3",
-		Namespace:  "cm3namespace",
-		Controller: pointer.Bool(false),
+	testCases := []struct {
+		name          string
+		ownerRef      annotationOwnerRef
+		ownerRefs     []annotationOwnerRef
+		expectedIndex int
+	}{
+		{
+			name: "owner references are not defined",
+			ownerRef: annotationOwnerRef{
+				UID: types.UID("cm1___3245"),
+			},
+			ownerRefs:     []annotationOwnerRef{},
+			expectedIndex: -1,
+		},
+		{
+			name:     "owner reference is not defined",
+			ownerRef: annotationOwnerRef{},
+			ownerRefs: []annotationOwnerRef{
+				{
+					UID: types.UID("cm1___3245"),
+				},
+			},
+			expectedIndex: -1,
+		},
+		{
+			name:          "owner reference and references are not defined",
+			ownerRef:      annotationOwnerRef{},
+			ownerRefs:     []annotationOwnerRef{},
+			expectedIndex: -1,
+		},
+		{
+			name: "owner reference is not present in references",
+			ownerRef: annotationOwnerRef{
+				UID: types.UID("cm1___3245"),
+			},
+			ownerRefs: []annotationOwnerRef{
+				{
+					UID: types.UID("cm1___3265"),
+				},
+				{
+					UID: types.UID("cm1___3456"),
+				},
+			},
+			expectedIndex: -1,
+		},
+		{
+			name: "owner reference is present in references",
+			ownerRef: annotationOwnerRef{
+				UID: types.UID("cm1___3245"),
+			},
+			ownerRefs: []annotationOwnerRef{
+				{
+					UID: types.UID("cm1___3265"),
+				},
+				{
+					UID: types.UID("cm1___3456"),
+				},
+				{
+					UID: types.UID("cm1___3245"),
+				},
+			},
+			expectedIndex: 2,
+		},
 	}
 
-	s := &OwnerStrategyAnnotation{}
-	i1 := s.indexOf([]annotationOwnerRef{ownerRef1, ownerRef2}, ownerRef1)
-	assert.Equal(t, 0, i1)
-	i2 := s.indexOf([]annotationOwnerRef{ownerRef1, ownerRef2}, ownerRef3)
-	assert.Equal(t, -1, i2)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := OwnerStrategyAnnotation{}
+			resultIndex := s.indexOf(tc.ownerRefs, tc.ownerRef)
+			assert.Equal(t, tc.expectedIndex, resultIndex)
+		})
+	}
 }
 
 func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
@@ -251,4 +293,86 @@ func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
 		Controller: pointer.Bool(false),
 	}
 	return ownerRef1
+}
+
+func TestIsOwner(t *testing.T) {
+	testCases := []struct {
+		name          string
+		owner         *corev1.ConfigMap
+		obj           *corev1.Secret
+		expectedOwner bool
+	}{
+		{
+			name:          "owner reference is not present",
+			owner:         testutil.NewConfigMap(),
+			obj:           testutil.NewSecret(),
+			expectedOwner: false,
+		},
+		{
+			name:  "owner reference is present",
+			owner: testutil.NewConfigMap(),
+			obj: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cm",
+					Namespace: "cmtestns",
+					UID:       types.UID("asdfjkl"),
+					Annotations: map[string]string{
+						ownerStrategyAnnotation: `[{"uid":"test1"},{"uid":"test2"},{"uid": "asdfjkl"}]`,
+					},
+				},
+			},
+			expectedOwner: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := OwnerStrategyAnnotation{}
+			resultOwner := s.IsOwner(tc.owner, tc.obj)
+			assert.Equal(t, tc.expectedOwner, resultOwner)
+		})
+	}
+}
+
+func TestIsController(t *testing.T) {
+	testCases := []struct {
+		name               string
+		annOwnerRef        annotationOwnerRef
+		expectedController bool
+	}{
+		{
+			name:               "annotation owner ref not defined",
+			annOwnerRef:        annotationOwnerRef{},
+			expectedController: false,
+		},
+		{
+			name: "controller is null",
+			annOwnerRef: annotationOwnerRef{
+				Controller: nil,
+			},
+			expectedController: false,
+		},
+		{
+			name: "controller is false",
+			annOwnerRef: annotationOwnerRef{
+				Controller: pointer.Bool(false),
+			},
+			expectedController: false,
+		},
+		{
+			name: "conroller is defined and true",
+			annOwnerRef: annotationOwnerRef{
+				Controller: pointer.Bool(true),
+			},
+			expectedController: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			annOwnerRef := tc.annOwnerRef
+			resultController := annOwnerRef.isController()
+			assert.Equal(t, tc.expectedController, resultController)
+		})
+	}
 }
