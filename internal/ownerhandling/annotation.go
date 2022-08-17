@@ -21,7 +21,7 @@ import (
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
 
-const ownerStrategyAnnotation = "packages.thetechnick.ninja/owners"
+const ownerStrategyAnnotation = "package-operator.run/owners"
 
 // AnnotationOwner handling strategy uses .metadata.annotations.
 // Allows cross-namespace owner references.

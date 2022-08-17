@@ -316,10 +316,8 @@ func TestIsOwner(t *testing.T) {
 					Name:      "cm",
 					Namespace: "cmtestns",
 					UID:       types.UID("asdfjkl"),
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							UID: types.UID("asdfjkl"),
-						},
+					Annotations: map[string]string{
+						ownerStrategyAnnotation: `[{"uid":"test1"},{"uid":"test2"},{"uid": "asdfjkl"}]`,
 					},
 				},
 			},
