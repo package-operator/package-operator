@@ -22,8 +22,5 @@ func validateClusterObjectSetPhaseImmutability(cosp, oldCosp *corev1alpha1.Clust
 		return errAvailabilityProbesImmutable
 	}
 
-	//// Do semantic DeepEqual instead of reflect.DeepEqual  TODO: Why??
-	//if !equality.Semantic.DeepEqual(oldSpecInstall, specInstall) {
-
 	return nil
 }

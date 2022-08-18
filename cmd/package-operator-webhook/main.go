@@ -63,13 +63,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err != nil {
-		setupLog.Error(err, "unable to create decoder for webhook")
-		os.Exit(1)
-	}
-
 	// Register webhooks as handlers
 	wbh := mgr.GetWebhookServer()
+	wbh.Register("/validate-object-set", &webhook.Admission{
+		Handler: &webhooks.ObjectSetWebhookHandler{
+			Log:    log.Log.WithName("validating webhooks").WithName("ObjectSets"),
+			Client: mgr.GetClient(),
+		},
+	})
+	wbh.Register("/validate-object-set-phase", &webhook.Admission{
+		Handler: &webhooks.ObjectSetPhaseWebhookHandler{
+			Log:    log.Log.WithName("validating webhooks").WithName("ObjectSetPhases"),
+			Client: mgr.GetClient(),
+		},
+	})
 	wbh.Register("/validate-cluster-object-set", &webhook.Admission{
 		Handler: &webhooks.ClusterObjectSetWebhookHandler{
 			Log:    log.Log.WithName("validating webhooks").WithName("ClusterObjectSets"),
@@ -77,7 +84,7 @@ func main() {
 		},
 	})
 	wbh.Register("/validate-cluster-object-set-phase", &webhook.Admission{
-		Handler: &webhooks.ClusterObjectSetWebhookHandler{
+		Handler: &webhooks.ClusterObjectSetPhaseWebhookHandler{
 			Log:    log.Log.WithName("validating webhooks").WithName("ClusterObjectSetPhases"),
 			Client: mgr.GetClient(),
 		},

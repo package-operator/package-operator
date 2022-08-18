@@ -519,6 +519,8 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
 		"config/deploy/webhook/00-tls-secret.yaml",
 		"config/deploy/webhook/service.yaml.tpl",
+		"config/deploy/webhook/config/deploy/webhook/objectsetvalidatingwebhookconfig.yaml",
+		"config/deploy/webhook/config/deploy/webhook/objectsetphasevalidatingwebhookconfig.yaml",
 		"config/deploy/webhook/config/deploy/webhook/clusterobjectsetvalidatingwebhookconfig.yaml",
 		"config/deploy/webhook/config/deploy/webhook/clusterobjectsetphasevalidatingwebhookconfig.yaml",
 	}); err != nil {

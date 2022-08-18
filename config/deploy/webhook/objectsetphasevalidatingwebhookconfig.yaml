@@ -1,0 +1,28 @@
+# This manifest is only for testing and should be used with `00-tls-secret.yaml`
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: objectsetphase-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    # Should be used with `00-tls-secret.yaml`
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURaekNDQWsrZ0F3SUJBZ0lVVFV2dFNPOUJseE5Yd0dibENXcnpmWDRES0lZd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1F6RUxNQWtHQTFVRUJoTUNRVlV4TkRBeUJnTlZCQU1NSzNkbFltaHZiMnN0YzJWeWRtbGpaUzV3WVdOcgpZV2RsTFc5d1pYSmhkRzl5TFhONWMzUmxiUzV6ZG1Nd0hoY05Nakl3T0RFd01UVXpPVEEwV2hjTk16SXdPREEzCk1UVXpPVEEwV2pCRE1Rc3dDUVlEVlFRR0V3SkJWVEUwTURJR0ExVUVBd3dyZDJWaWFHOXZheTF6WlhKMmFXTmwKTG5CaFkydGhaMlV0YjNCbGNtRjBiM0l0YzNsemRHVnRMbk4yWXpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRApnZ0VQQURDQ0FRb0NnZ0VCQU5qSENTcVI1OHVOdjk2K1VvclZmNGFMUWxpRTdzd0E4V1JBNEVCWVBZb0YxdXpLClE5c1laem5tVHB3MGFoVTY1dXNqYXgzZXYvaEk4aURJUDNMekVnN2psNzVGRjNDWDFNUkVtcWhRUDEwT0tKTlQKSmZCckhLeTZkZU15MGJuY2FlQmlyYTlMc0dXeVhLdU1EN0cwb1JYWk8vMDc0NWc5RXoyem5GZngwM1VnSWhLYQpvVjllQS9xS1N3M1B0bkxpYmlaamRaMmxUckRYZTMvaHRLQ0FxK0FrMm0yaGh0K2ZuRHQzdWdVa1V4Z1RXVFdyCjhPK0RQREdZUnVnSzF6cjBCY29hODN4clNjSVFhSGREekRMU2haajlvcmJmcGVOZjlXRWFheGlDYTRsaEl6R0UKNVlQbzlhSGxZU2dJNHlIOGJNcGVGSlJNZUJKRU1VbDZKUFg5cHAwQ0F3RUFBYU5UTUZFd0hRWURWUjBPQkJZRQpGT1JzYitieS9XYXFNMnUvenRSdlU1UUhtVm04TUI4R0ExVWRJd1FZTUJhQUZPUnNiK2J5L1dhcU0ydS96dFJ2ClU1UUhtVm04TUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQU1CL2l5eWEKZ1JJZnZVNmNLRXFvcVdDb2xRbUkzeE1lejI3NkVTOWlDWVc4VXBLMjJIV0ZUUFpGcHJseHBjeTkzdTd4a05YTgp0c2JwRWVjUlFzc01uQklLODBjaGcwWCsxaG1jdEhuMW50WENMTXNiZnhIVDVxOXYrenlQV3h1SmhlUDVRR28yCjJyQUJ3N09qMk5mdFQrTmVISitsWmxjSU1UdWJSVzNockVWK0Y3KzI0Rmc5c1cyYW5xa3RuUHh4eGxlSzVCU0YKYlM0ZUtPOFp6SkxiNXZJeFYrRmtlb3Z3NE1neGNWZy9IYnBGUUhPUStoc3VsU3NXZmFMd3I0ZjdKNXF1K08vZApiN3UzWTRTMVBSSU1zVGpHQWMyV3dVYk8wN0pxdTJROEgySU5xT0pjazNaelpJQUkyTXVGVmpCdmIyWFQzeTJMCndBZUx5YWw2cHgya1Fmaz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: webhook-service
+      namespace: package-operator-system
+      path: /validate-object-set-phase
+  failurePolicy: Fail
+  name: vobjectsetphase.package-operator.run
+  rules:
+    - apiGroups:
+        - package-operator.run
+      apiVersions:
+        - v1alpha1
+      operations:
+        - UPDATE
+      resources:
+        - objectsetphases
+  sideEffects: None
