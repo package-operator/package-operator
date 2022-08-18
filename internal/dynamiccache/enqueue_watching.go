@@ -1,4 +1,4 @@
-package dynamicwatcher
+package dynamiccache
 
 import (
 	"fmt"
@@ -19,8 +19,6 @@ type EnqueueWatchingObjects struct {
 	WatcherRefGetter ownerRefGetter
 	// WatcherType is the type of the Owner object to look for in OwnerReferences.  Only Group and Kind are compared.
 	WatcherType runtime.Object
-	// Whether the registered owners/watchers are namespace scoped or cluster scoped.
-	ClusterScoped bool
 
 	scheme *runtime.Scheme
 	// groupKind is the cached Group and Kind from WatcherType
@@ -30,7 +28,7 @@ type EnqueueWatchingObjects struct {
 var _ handler.EventHandler = (*EnqueueWatchingObjects)(nil)
 
 type ownerRefGetter interface {
-	OwnersForNamespacedGKV(ngvk NamespacedGKV) []OwnerReference
+	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
 
 func (e *EnqueueWatchingObjects) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
@@ -67,19 +65,7 @@ func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object, q workqueue.
 		panic(err)
 	}
 
-	var ngvk NamespacedGKV
-	if e.ClusterScoped {
-		ngvk = NamespacedGKV{
-			GroupVersionKind: gvk,
-		}
-	} else {
-		ngvk = NamespacedGKV{
-			GroupVersionKind: gvk,
-			Namespace:        obj.GetNamespace(),
-		}
-	}
-
-	ownerRefs := e.WatcherRefGetter.OwnersForNamespacedGKV(ngvk)
+	ownerRefs := e.WatcherRefGetter.OwnersForGKV(gvk)
 	for _, ownerRef := range ownerRefs {
 		if ownerRef.Kind != e.groupKind.Kind ||
 			ownerRef.Group != e.groupKind.Group {

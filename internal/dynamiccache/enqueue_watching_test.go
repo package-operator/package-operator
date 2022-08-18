@@ -1,4 +1,4 @@
-package dynamicwatcher
+package dynamiccache
 
 import (
 	"testing"
@@ -22,12 +22,9 @@ func TestEnqueueWatchingObjects(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(scheme))
 
 	ownerRefGetter.
-		On("OwnersForNamespacedGKV", NamespacedGKV{
-			GroupVersionKind: schema.GroupVersionKind{
-				Version: "v1",
-				Kind:    "Secret",
-			},
-			Namespace: "testns",
+		On("OwnersForGKV", schema.GroupVersionKind{
+			Version: "v1",
+			Kind:    "Secret",
 		}).
 		Return([]OwnerReference{
 			{
@@ -69,7 +66,7 @@ type ownerRefGetterMock struct {
 	mock.Mock
 }
 
-func (m *ownerRefGetterMock) OwnersForNamespacedGKV(ngvk NamespacedGKV) []OwnerReference {
-	args := m.Called(ngvk)
+func (m *ownerRefGetterMock) OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference {
+	args := m.Called(gvk)
 	return args.Get(0).([]OwnerReference)
 }
