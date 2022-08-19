@@ -9,7 +9,7 @@ require (
 	github.com/mt-sre/devkube v0.3.0
 	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.24.3
-	k8s.io/apimachinery v0.24.3
+	k8s.io/apimachinery v0.24.4
 	k8s.io/client-go v0.24.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	package-operator.run/apis v0.0.0-20220811131139-c8eb562ed014
