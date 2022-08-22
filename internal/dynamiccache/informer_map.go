@@ -247,7 +247,11 @@ func resyncPeriod(resync time.Duration) func() time.Duration {
 // stolen from controller-runtime
 // sigs.k8s.io/controller-runtime@v0.12.3/pkg/cache/informer_cache.go.
 func indexByField(indexer cache.SharedIndexInformer, field string, extractor client.IndexerFunc) error {
-	indexFunc := func(objRaw interface{}) ([]string, error) {
+	return indexer.AddIndexers(cache.Indexers{FieldIndexName(field): indexFuncForExtractor(field, extractor)})
+}
+
+func indexFuncForExtractor(field string, extractor client.IndexerFunc) func(objRaw interface{}) ([]string, error) {
+	return func(objRaw interface{}) ([]string, error) {
 		// TODO(directxman12): check if this is the correct type?
 		obj, isObj := objRaw.(client.Object)
 		if !isObj {
@@ -282,6 +286,4 @@ func indexByField(indexer cache.SharedIndexInformer, field string, extractor cli
 
 		return vals, nil
 	}
-
-	return indexer.AddIndexers(cache.Indexers{FieldIndexName(field): indexFunc})
 }

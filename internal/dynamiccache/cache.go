@@ -3,6 +3,7 @@ package dynamiccache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -12,11 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -40,16 +39,15 @@ type informerMap interface {
 	) error
 }
 
-type eventHandler struct {
-	ctx        context.Context
-	handler    handler.EventHandler
-	queue      workqueue.RateLimitingInterface
-	predicates []predicate.Predicate
+type cacheSourcer interface {
+	source.Source
+	blockNewRegistrations()
+	handleNewInformer(cache.SharedIndexInformer) error
 }
 
 var (
-	_ source.Source = (*Cache)(nil)
-	_ client.Reader = (*Cache)(nil)
+	_ client.Reader    = (*Cache)(nil)
+	_ manager.Runnable = (*Cache)(nil)
 )
 
 type Cache struct {
@@ -60,8 +58,7 @@ type Cache struct {
 	informerReferencesMux sync.RWMutex
 	informerReferences    map[schema.GroupVersionKind]map[OwnerReference]struct{}
 
-	eventHandlersMux sync.Mutex
-	eventHandlers    []eventHandler
+	cacheSource cacheSourcer
 }
 
 func NewCache(
@@ -73,6 +70,7 @@ func NewCache(
 	c := &Cache{
 		scheme:             scheme,
 		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
+		cacheSource:        &cacheSource{},
 	}
 	for _, opt := range opts {
 		opt.ApplyToCacheOptions(&c.opts)
@@ -91,22 +89,15 @@ func (c *Cache) String() string {
 	return "dynamiccache.Cache"
 }
 
-// Implements source.Source interface to be used as event source when setting up controllers.
-// All event handlers must be added before the first Watch is added dynamically.
-func (c *Cache) Start(
-	ctx context.Context,
-	handler handler.EventHandler,
-	queue workqueue.RateLimitingInterface,
-	predicates ...predicate.Predicate,
-) error {
-	c.eventHandlersMux.Lock()
-	defer c.eventHandlersMux.Unlock()
-	c.eventHandlers = append(c.eventHandlers, eventHandler{
-		ctx:        ctx,
-		handler:    handler,
-		queue:      queue,
-		predicates: predicates,
-	})
+func (c *Cache) Source() source.Source {
+	return c.cacheSource
+}
+
+// Start implements manager.Runnable.
+// While this cache is not running workers itself,
+// we use it to block registration of new event handlers in the cache source.
+func (c *Cache) Start(context.Context) error {
+	c.cacheSource.blockNewRegistrations()
 	return nil
 }
 
@@ -147,32 +138,30 @@ func (c *Cache) Watch(
 		return err
 	}
 
-	// Create/Get Informer
-	informer, _, err := c.informerMap.Get(ctx, gvk, obj)
-	if err != nil {
-		return fmt.Errorf("getting informer from InformerMap: %w", err)
+	// Remember Owner watching this GVK
+	_, informerExists := c.informerReferences[gvk]
+	if !informerExists {
+		c.informerReferences[gvk] = map[OwnerReference]struct{}{}
 	}
+	c.informerReferences[gvk][ownerRef] = struct{}{}
 
-	if _, ok := c.informerReferences[gvk]; !ok {
+	if !informerExists {
 		log.Info("adding new watcher",
 			"ownerGV", ownerRef.GroupKind,
 			"forGVK", gvk.String(),
 			"ownerNamespace", owner.GetNamespace())
 
-		// Remember GVK
-		c.informerReferences[gvk] = map[OwnerReference]struct{}{}
+		// Create/Get Informer
+		informer, _, err := c.informerMap.Get(ctx, gvk, obj)
+		if err != nil {
+			return fmt.Errorf("getting informer from InformerMap: %w", err)
+		}
 
 		// ensure to add all event handlers to the new informer
-		s := source.Informer{Informer: informer}
-		for _, eh := range c.eventHandlers {
-			if err := s.Start(eh.ctx, eh.handler, eh.queue, eh.predicates...); err != nil {
-				return fmt.Errorf("starting EventHandler for %v: %w", gvk, err)
-			}
+		if err := c.cacheSource.handleNewInformer(informer); err != nil {
+			return fmt.Errorf("registering EventHandlers for %v: %w", gvk, err)
 		}
 	}
-
-	// Remember Owner watching this GVK
-	c.informerReferences[gvk][ownerRef] = struct{}{}
 
 	return nil
 }
@@ -214,7 +203,7 @@ func (c *Cache) Free(
 // CacheNotStartedError is returned when trying to read from a cache before starting a watch.
 type CacheNotStartedError struct{}
 
-func (*CacheNotStartedError) Error() string {
+func (CacheNotStartedError) Error() string {
 	return "cache access before calling Watch, can not read objects"
 }
 
@@ -253,6 +242,7 @@ func (c *Cache) List(
 	if err != nil {
 		return err
 	}
+	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
 	// Ensure we are not allocating a new cache implicitly here
 	// And that the cache is not deleted while the list call is still in-flight.
