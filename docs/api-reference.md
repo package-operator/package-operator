@@ -446,7 +446,7 @@ Used in:
 ### PackageProbeKindSpec
 
 Kind package probe parameters.
-selects objects based on Kinda and API Group.
+selects objects based on Kind and API Group.
 
 | Field | Description |
 | ----- | ----------- |
