@@ -41,7 +41,7 @@ func TestList(t *testing.T) {
 }
 
 func TestCondition(t *testing.T) {
-	c := &condition{
+	c := &conditionProbe{
 		Type:   "Available",
 		Status: "False",
 	}
@@ -227,7 +227,7 @@ func TestCondition(t *testing.T) {
 }
 
 func TestFieldsEqual(t *testing.T) {
-	fe := &fieldsEqual{
+	fe := &fieldsEqualProbe{
 		FieldA: ".spec.fieldA",
 		FieldB: ".spec.fieldB",
 	}
@@ -333,7 +333,7 @@ func TestFieldsEqual(t *testing.T) {
 
 func TestStatusObservedGeneration(t *testing.T) {
 	properMock := &proberMock{}
-	og := &statusObservedGeneration{
+	og := &statusObservedGenerationProbe{
 		Prober: properMock,
 	}
 

@@ -29,14 +29,14 @@ func (p list) Probe(obj *unstructured.Unstructured) (success bool, message strin
 	return true, ""
 }
 
-// condition checks if the object's condition is set and in a certain status.
-type condition struct {
+// conditionProbe checks if the object's condition is set and in a certain status.
+type conditionProbe struct {
 	Type, Status string
 }
 
-var _ Prober = (*condition)(nil)
+var _ Prober = (*conditionProbe)(nil)
 
-func (cp *condition) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cp *conditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	defer func() {
 		if success {
 			return
@@ -82,14 +82,14 @@ func (cp *condition) Probe(obj *unstructured.Unstructured) (success bool, messag
 	return false, "not reported"
 }
 
-// FieldsEqual checks if the values of the fields under the given json paths are equal.
-type fieldsEqual struct {
+// fieldsEqualProbe checks if the values of the fields under the given json paths are equal.
+type fieldsEqualProbe struct {
 	FieldA, FieldB string
 }
 
-var _ Prober = (*fieldsEqual)(nil)
+var _ Prober = (*fieldsEqualProbe)(nil)
 
-func (fe *fieldsEqual) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (fe *fieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	fieldAPath := strings.Split(strings.Trim(fe.FieldA, "."), ".")
 	fieldBPath := strings.Split(strings.Trim(fe.FieldB, "."), ".")
 
@@ -116,16 +116,16 @@ func (fe *fieldsEqual) Probe(obj *unstructured.Unstructured) (success bool, mess
 	return true, ""
 }
 
-// StatusObservedGeneration wraps the given Prober and ensures that .status.observedGeneration is qual to .metadata.generation,
+// statusObservedGenerationProbe wraps the given Prober and ensures that .status.observedGeneration is equal to .metadata.generation,
 // before running the given probe. If the probed object does not contain the .status.observedGeneration field,
 // the given prober is executed directly.
-type statusObservedGeneration struct {
+type statusObservedGenerationProbe struct {
 	Prober
 }
 
-var _ Prober = (*statusObservedGeneration)(nil)
+var _ Prober = (*statusObservedGenerationProbe)(nil)
 
-func (cg *statusObservedGeneration) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cg *statusObservedGenerationProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	if observedGeneration, ok, err := unstructured.NestedInt64(
 		obj.Object, "status", "observedGeneration",
 	); err == nil && ok && observedGeneration != obj.GetGeneration() {

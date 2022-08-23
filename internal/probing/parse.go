@@ -9,8 +9,8 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-// Parse takes a list of ObjectSetProbes commonly defined within a ObjectSet phase and
-// compiles a single Probe to test objects with.
+// Parse takes a list of ObjectSetProbes (commonly defined within a ObjectSetPhaseSpec)
+// and compiles a single Prober to test objects with.
 func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Prober, error) {
 	probeList := make(list, len(packageProbes))
 	for i, pkgProbe := range packageProbes {
@@ -25,7 +25,8 @@ func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Pr
 	return probeList, nil
 }
 
-// ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober, only executing it only when the selector matches.
+// ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober,
+// only executing the Prober when the selector criteria match.
 func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, probe Prober) (Prober, error) {
 	if selector.Kind != nil {
 		probe = &kindSelector{
@@ -57,13 +58,13 @@ func ParseProbes(ctx context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 
 		switch {
 		case probeSpec.FieldsEqual != nil:
-			probe = &fieldsEqual{
+			probe = &fieldsEqualProbe{
 				FieldA: probeSpec.FieldsEqual.FieldA,
 				FieldB: probeSpec.FieldsEqual.FieldB,
 			}
 
 		case probeSpec.Condition != nil:
-			probe = &condition{
+			probe = &conditionProbe{
 				Type:   probeSpec.Condition.Type,
 				Status: probeSpec.Condition.Status,
 			}
@@ -76,5 +77,5 @@ func ParseProbes(ctx context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 	}
 
 	// Always check .status.observedCondition, if present.
-	return &statusObservedGeneration{Prober: probeList}
+	return &statusObservedGenerationProbe{Prober: probeList}
 }

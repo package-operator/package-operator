@@ -12,12 +12,14 @@ import (
 
 func TestParse(t *testing.T) {
 	ctx := context.Background()
+	kind := "Test"
+	group := "test-group"
 	osp := []corev1alpha1.ObjectSetProbe{
 		{
 			Selector: corev1alpha1.ProbeSelector{
 				Kind: &corev1alpha1.PackageProbeKindSpec{
-					Kind:  "Test",
-					Group: "test",
+					Kind:  kind,
+					Group: group,
 				},
 			},
 		},
@@ -29,7 +31,10 @@ func TestParse(t *testing.T) {
 
 	if assert.Len(t, p, 1) {
 		list := p.(list)
-		assert.IsType(t, &kindSelector{}, list[0])
+		require.IsType(t, &kindSelector{}, list[0])
+		ks := list[0].(*kindSelector)
+		assert.Equal(t, kind, ks.Kind)
+		assert.Equal(t, group, ks.Group)
 	}
 }
 
@@ -56,13 +61,13 @@ func TestParseSelector(t *testing.T) {
 }
 
 func TestParseProbes(t *testing.T) {
-	fieldsEqualProbe := corev1alpha1.Probe{
+	fep := corev1alpha1.Probe{
 		FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
 			FieldA: "asdf",
 			FieldB: "jkl;",
 		},
 	}
-	conditionProbe := corev1alpha1.Probe{
+	cp := corev1alpha1.Probe{
 		Condition: &corev1alpha1.ProbeConditionSpec{
 			Type:   "asdf",
 			Status: "asdf",
@@ -71,22 +76,22 @@ func TestParseProbes(t *testing.T) {
 	emptyConfigProbe := corev1alpha1.Probe{}
 
 	p := ParseProbes(context.Background(), []corev1alpha1.Probe{
-		fieldsEqualProbe, conditionProbe, emptyConfigProbe,
+		fep, cp, emptyConfigProbe,
 	})
 	// everything should be wrapped
-	require.IsType(t, &statusObservedGeneration{}, p)
+	require.IsType(t, &statusObservedGenerationProbe{}, p)
 
-	ogProbe := p.(*statusObservedGeneration)
+	ogProbe := p.(*statusObservedGenerationProbe)
 	nested := ogProbe.Prober
 	require.IsType(t, list{}, nested)
 
 	if assert.Len(t, nested, 2) {
 		nestedList := nested.(list)
-		assert.Equal(t, &fieldsEqual{
+		assert.Equal(t, &fieldsEqualProbe{
 			FieldA: "asdf",
 			FieldB: "jkl;",
 		}, nestedList[0])
-		assert.Equal(t, &condition{
+		assert.Equal(t, &conditionProbe{
 			Type:   "asdf",
 			Status: "asdf",
 		}, nestedList[1])
