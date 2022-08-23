@@ -4,130 +4,397 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-var test = unstructured.Unstructured{
-	Object: map[string]interface{}{
-		"kind":       "test_kind",
-		"apiVersion": "test_version",
-		"metadata": map[string]interface{}{
-			"name":       "test_name",
-			"namespace":  "test_namespace",
-			"generation": int64(1),
-			"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
-				"conditions": []interface{}{
-					map[string]interface{}{
-						"type":               "Available",
-						"status":             "False",
-						"observedGeneration": int64(1), // up to date
-					},
-				},
-				"observedGeneration": int64(1),
-				"updatedReplicas":    int64(1),
-				"replicas":           int64(2),
-			},
-		},
-	},
+var (
+	_ Prober = (*proberMock)(nil)
+)
+
+type proberMock struct {
+	mock.Mock
 }
 
-var test2 = unstructured.Unstructured{
-	Object: map[string]interface{}{
-		"kind":       "test_kind",
-		"apiVersion": "test_version",
-		"metadata": map[string]interface{}{
-			"name":       "test",
-			"namespace":  "test_namespace",
-			"generation": int64(1),
-		},
-		"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
-			"conditions": []interface{}{
-				map[string]interface{}{
-					"type":               "Available",
-					"status":             "True",
-					"observedGeneration": int64(1), // up to date
-				},
-			},
-			"observedGeneration": int64(1),
-			"updatedReplicas":    int64(1),
-			"replicas":           int64(1),
-		},
-	},
+func (m *proberMock) Probe(obj *unstructured.Unstructured) (
+	success bool, message string) {
+	args := m.Called(obj)
+	return args.Bool(0), args.String(1)
 }
 
-var test3 = unstructured.Unstructured{
-	Object: map[string]interface{}{
-		"kind":       "test_kind",
-		"apiVersion": "test_version",
-		"metadata": map[string]interface{}{
-			"name":       "test",
-			"namespace":  "test_namespace",
-			"generation": int64(2),
-		},
-		"status": map[string]interface{}{ // TODO: is this right? unstructured.SetOwnerReferences sets them as []interface{}
-			"conditions": []interface{}{
-				map[string]interface{}{
-					"type":               "Available",
-					"status":             "True",
-					"observedGeneration": int64(1), // outdated
-				},
-			},
-			"observedGeneration": int64(1),
-			"updatedReplicas":    int64(1),
-			"replicas":           int64(1),
-		},
-	},
+func TestList(t *testing.T) {
+	prober1 := &proberMock{}
+	prober2 := &proberMock{}
+
+	prober1.
+		On("Probe", mock.Anything).
+		Return(false, "error from prober1")
+	prober2.
+		On("Probe", mock.Anything).
+		Return(false, "error from prober2")
+
+	l := List{prober1, prober2}
+
+	s, m := l.Probe(&unstructured.Unstructured{})
+	assert.False(t, s)
+	assert.Equal(t, "error from prober1, error from prober2", m)
 }
 
-func TestProbe(t *testing.T) {
+func TestCondition(t *testing.T) {
+	c := &Condition{
+		Type:   "Available",
+		Status: "False",
+	}
+
 	tests := []struct {
-		name                  string
-		obj                   *unstructured.Unstructured
-		passFieldEqual        bool
-		passCondition         bool
-		passCurrentGeneration bool
+		name     string
+		obj      *unstructured.Unstructured
+		succeeds bool
+		message  string
 	}{
 		{
-			name:                  "only current generate probe passes",
-			obj:                   &test,
-			passFieldEqual:        false,
-			passCondition:         false,
-			passCurrentGeneration: true,
+			name: "succeeds",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":               "Banana",
+								"status":             "True",
+								"observedGeneration": int64(1), // up to date
+							},
+							map[string]interface{}{
+								"type":               "Available",
+								"status":             "False",
+								"observedGeneration": int64(1), // up to date
+							},
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: true,
+			message:  "",
 		},
 		{
-			name:                  "all passing",
-			obj:                   &test2,
-			passFieldEqual:        true,
-			passCondition:         true,
-			passCurrentGeneration: true,
+			name: "outdated",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":               "Available",
+								"status":             "False",
+								"observedGeneration": int64(1), // up to date
+							},
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(42),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": outdated`,
 		},
 		{
-			name:                  "condition probe fails because generation out of date",
-			obj:                   &test3,
-			passFieldEqual:        true,
-			passCondition:         false,
-			passCurrentGeneration: false,
+			name: "wrong status",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":               "Available",
+								"status":             "Unknown",
+								"observedGeneration": int64(1), // up to date
+							},
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": wrong status`,
+		},
+		{
+			name: "not reported",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":               "Banana",
+								"status":             "True",
+								"observedGeneration": int64(1), // up to date
+							},
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": not reported`,
+		},
+		{
+			name: "malformed condition type int",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							42, 56,
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": malformed`,
+		},
+		{
+			name: "malformed condition type string",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							"42", "56",
+						},
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": malformed`,
+		},
+		{
+			name: "malformed conditions array",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{
+						"conditions": 42,
+					},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": malformed`,
+		},
+		{
+			name: "missing conditions",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"status": map[string]interface{}{},
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": missing .status.conditions`,
+		},
+		{
+			name: "missing status",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(1),
+					},
+				},
+			},
+			succeeds: false,
+			message:  `condition "Available" == "False": missing .status.conditions`,
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cp := ConditionProbe{
-				Type:   "Available",
-				Status: "True",
-			}
-			success, _ := cp.Probe(test.obj)
-			assert.Equal(t, test.passCondition, success, "condition probe failed")
+			s, m := c.Probe(test.obj)
+			assert.Equal(t, test.succeeds, s)
+			assert.Equal(t, test.message, m)
+		})
+	}
+}
 
-			fep := FieldsEqualProbe{
-				FieldA: ".status.replicas",
-				FieldB: ".status.updatedReplicas",
-			}
-			success, _ = fep.Probe(test.obj)
-			assert.Equal(t, test.passFieldEqual, success, "fields equal probe failed")
+func TestFieldsEqual(t *testing.T) {
+	fe := &FieldsEqual{
+		FieldA: ".spec.fieldA",
+		FieldB: ".spec.fieldB",
+	}
 
-			cgp := CurrentGenerationProbe{}
-			success, _ = cgp.Probe(test.obj)
-			assert.Equal(t, test.passCurrentGeneration, success, "current generation probe failed")
+	tests := []struct {
+		name     string
+		obj      *unstructured.Unstructured
+		succeeds bool
+		message  string
+	}{
+		{
+			name: "simple succeeds",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": "test",
+						"fieldB": "test",
+					},
+				},
+			},
+			succeeds: true,
+		},
+		{
+			name: "simple not equal",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": "test",
+						"fieldB": "not test",
+					},
+				},
+			},
+			succeeds: false,
+			message:  `".spec.fieldA" == ".spec.fieldB": "test" != "not test"`,
+		},
+		{
+			name: "complex succeeds",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": map[string]interface{}{
+							"fk": "fv",
+						},
+						"fieldB": map[string]interface{}{
+							"fk": "fv",
+						},
+					},
+				},
+			},
+			succeeds: true,
+		},
+		{
+			name: "simple not equal",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": map[string]interface{}{
+							"fk": "fv",
+						},
+						"fieldB": map[string]interface{}{
+							"fk": "something else",
+						},
+					},
+				},
+			},
+			succeeds: false,
+			message:  `".spec.fieldA" == ".spec.fieldB": map["fk":"fv"] != map["fk":"something else"]`,
+		},
+		{
+			name: "fieldA missing",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldB": "test",
+					},
+				},
+			},
+			succeeds: false,
+			message:  `".spec.fieldA" == ".spec.fieldB": ".spec.fieldA" missing`,
+		},
+		{
+			name: "fieldB missing",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": "test",
+					},
+				},
+			},
+			succeeds: false,
+			message:  `".spec.fieldA" == ".spec.fieldB": ".spec.fieldB" missing`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s, m := fe.Probe(test.obj)
+			assert.Equal(t, test.succeeds, s)
+			assert.Equal(t, test.message, m)
+		})
+	}
+}
+
+func TestStatusObservedGeneration(t *testing.T) {
+	properMock := &proberMock{}
+	og := &StatusObservedGeneration{
+		Prober: properMock,
+	}
+
+	properMock.On("Probe", mock.Anything).Return(true, "banana")
+
+	tests := []struct {
+		name     string
+		obj      *unstructured.Unstructured
+		succeeds bool
+		message  string
+	}{
+		{
+			name: "outdated",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(4),
+					},
+					"status": map[string]interface{}{
+						"observedGeneration": int64(2),
+					},
+				},
+			},
+			succeeds: false,
+			message:  ".status outdated",
+		},
+		{
+			name: "up-to-date",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(4),
+					},
+					"status": map[string]interface{}{
+						"observedGeneration": int64(4),
+					},
+				},
+			},
+			succeeds: true,
+			message:  "banana",
+		},
+		{
+			name: "not reported",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(4),
+					},
+					"status": map[string]interface{}{},
+				},
+			},
+			succeeds: true,
+			message:  "banana",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s, m := og.Probe(test.obj)
+			assert.Equal(t, test.succeeds, s)
+			assert.Equal(t, test.message, m)
 		})
 	}
 }

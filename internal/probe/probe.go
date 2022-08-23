@@ -8,13 +8,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type ProbeInterface interface {
+type Prober interface {
 	Probe(obj *unstructured.Unstructured) (success bool, message string)
 }
 
-type ProbeList []ProbeInterface
+type List []Prober
 
-func (p ProbeList) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (p List) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	var messages []string
 	for _, probe := range p {
 		if success, message := probe.Probe(obj); !success {
@@ -27,14 +27,14 @@ func (p ProbeList) Probe(obj *unstructured.Unstructured) (success bool, message 
 	return true, ""
 }
 
-// ConditionProbe checks if the object's condition is set and in a certain status.
-type ConditionProbe struct {
+// Condition checks if the object's condition is set and in a certain status.
+type Condition struct {
 	Type, Status string
 }
 
-var _ ProbeInterface = (*ConditionProbe)(nil)
+var _ Prober = (*Condition)(nil)
 
-func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cp *Condition) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	defer func() {
 		if success {
 			return
@@ -43,17 +43,21 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 		message = fmt.Sprintf("condition %q == %q: %s", cp.Type, cp.Status, message)
 	}()
 
-	conditions, exist, err := unstructured.
-		NestedSlice(obj.Object, "status", "conditions")
+	rawConditions, exist, err := unstructured.NestedFieldNoCopy(
+		obj.Object, "status", "conditions")
+	conditions, ok := rawConditions.([]interface{})
 	if err != nil || !exist {
 		return false, "missing .status.conditions"
+	}
+	if !ok {
+		return false, "malformed"
 	}
 
 	for _, condI := range conditions {
 		cond, ok := condI.(map[string]interface{})
 		if !ok {
-			// no idea what that is supposed to be
-			continue
+			// no idea what this is supposed to be
+			return false, "malformed"
 		}
 
 		if cond["type"] != cp.Type {
@@ -70,21 +74,20 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 
 		if cond["status"] == cp.Status {
 			return true, ""
-		} else {
-			return false, "wrong status"
 		}
+		return false, "wrong status"
 	}
 	return false, "not reported"
 }
 
-// FieldsEqualProbe checks if the values of the fields under the given json paths are equal.
-type FieldsEqualProbe struct {
+// FieldsEqual checks if the values of the fields under the given json paths are equal.
+type FieldsEqual struct {
 	FieldA, FieldB string
 }
 
-var _ ProbeInterface = (*FieldsEqualProbe)(nil)
+var _ Prober = (*FieldsEqual)(nil)
 
-func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (fe *FieldsEqual) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	fieldAPath := strings.Split(strings.Trim(fe.FieldA, "."), ".")
 	fieldBPath := strings.Split(strings.Trim(fe.FieldB, "."), ".")
 
@@ -105,22 +108,26 @@ func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool,
 		return false, fmt.Sprintf("%q missing", fe.FieldB)
 	}
 
-	return equality.Semantic.DeepEqual(fieldAVal, fieldBVal), fmt.Sprintf("%s != %s", fieldAVal, fieldBVal)
+	if !equality.Semantic.DeepEqual(fieldAVal, fieldBVal) {
+		return false, fmt.Sprintf("%q != %q", fieldAVal, fieldBVal)
+	}
+	return true, ""
 }
 
-// CurrentGenerationProbe ensures that the object's status is up-to-date with the object's generation.
-// Requires the probed object to have a .status.observedGeneration property.
-type CurrentGenerationProbe struct {
-	ProbeInterface // TODO: remove?
+// StatusObservedGeneration wraps the given Prober and ensures that .status.observedGeneration is qual to .metadata.generation,
+// before running the given probe. If the probed object does not contain the .status.observedGeneration field,
+// the given prober is executed directly.
+type StatusObservedGeneration struct {
+	Prober
 }
 
-var _ ProbeInterface = (*CurrentGenerationProbe)(nil)
+var _ Prober = (*StatusObservedGeneration)(nil)
 
-func (cg *CurrentGenerationProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cg *StatusObservedGeneration) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	if observedGeneration, ok, err := unstructured.NestedInt64(
 		obj.Object, "status", "observedGeneration",
 	); err == nil && ok && observedGeneration != obj.GetGeneration() {
 		return false, ".status outdated"
 	}
-	return true, "" //cg.ProbeInterface.Probe(obj)
+	return cg.Prober.Probe(obj)
 }

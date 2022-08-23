@@ -1,37 +1,80 @@
 package probe
 
 import (
-	packagesv1alpha1 "package-operator.run/apis/core/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"context"
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-func Parse(probeSpecs []packagesv1alpha1.Probe) ProbeList {
-	logger := ctrl.Log.WithName("parse_function") // TODO: I think we should make this into an argument?
-	var probeList ProbeList
+// Parse takes a list of ObjectSetProbes commonly defined within a ObjectSet phase and
+// compiles a single Probe to test objects with.
+func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Prober, error) {
+	probeList := make(List, len(packageProbes))
+	for i, pkgProbe := range packageProbes {
+		probe := ParseProbes(ctx, pkgProbe.Probes)
+		var err error
+		probe, err = ParseSelector(ctx, pkgProbe.Selector, probe)
+		if err != nil {
+			return nil, fmt.Errorf("parsing selector of probe #%d: %w", i, err)
+		}
+		probeList[i] = probe
+	}
+	return probeList, nil
+}
+
+// ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober, only executing it only when the selector matches.
+func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, probe Prober) (Prober, error) {
+	if selector.Kind != nil {
+		probe = &KindSelector{
+			Prober: probe,
+			GroupKind: schema.GroupKind{
+				Group: selector.Kind.Group,
+				Kind:  selector.Kind.Kind,
+			},
+		}
+	}
+	if selector.Selector != nil {
+		s, err := metav1.LabelSelectorAsSelector(&selector.Selector.Selector)
+		if err != nil {
+			return nil, err
+		}
+		probe = &SelectorSelector{
+			Prober:   probe,
+			Selector: s,
+		}
+	}
+	return probe, nil
+}
+
+// ParseProbes takes a []corev1alpha1.Probe and compiles it into a Prober.
+func ParseProbes(ctx context.Context, probeSpecs []corev1alpha1.Probe) Prober {
+	var probeList List
 	for _, probeSpec := range probeSpecs {
-		// main probe type
-		var probe ProbeInterface
+		var probe Prober
 
 		switch {
 		case probeSpec.FieldsEqual != nil:
-			probe = &FieldsEqualProbe{
+			probe = &FieldsEqual{
 				FieldA: probeSpec.FieldsEqual.FieldA,
 				FieldB: probeSpec.FieldsEqual.FieldB,
 			}
+
 		case probeSpec.Condition != nil:
-			probe = &ConditionProbe{
+			probe = &Condition{
 				Type:   probeSpec.Condition.Type,
 				Status: probeSpec.Condition.Status,
 			}
-		case probeSpec.CurrentGeneration != nil:
-			probe = &CurrentGenerationProbe{}
+
 		default:
-			// Unknown probe type
-			logger.Info("No probe given")
-			// continue
+			// probe has no known config
+			continue
 		}
 		probeList = append(probeList, probe)
 	}
 
-	return probeList
+	// Always check .status.observedCondition, if present.
+	return &StatusObservedGeneration{Prober: probeList}
 }

@@ -41,6 +41,9 @@ spec:
       kind:
         group: apps
         kind: Deployment
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
   - class: dolor
@@ -94,6 +97,9 @@ spec:
       kind:
         group: apps
         kind: Deployment
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: example-operator
   class: consetetur
   lifecycleState: Active
   name: amet
@@ -156,6 +162,9 @@ spec:
       kind:
         group: apps
         kind: Deployment
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
   - class: sed
@@ -210,6 +219,9 @@ spec:
       kind:
         group: apps
         kind: Deployment
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: example-operator
   class: eirmod
   lifecycleState: Active
   name: nonumy
@@ -434,11 +446,26 @@ Used in:
 ### PackageProbeKindSpec
 
 Kind package probe parameters.
+selects objects based on Kinda and API Group.
 
 | Field | Description |
 | ----- | ----------- |
 | `group` <b>required</b><br>string | Object Group to apply a probe to. |
 | `kind` <b>required</b><br>string | Object Kind to apply a probe to. |
+
+
+Used in:
+* [ProbeSelector](#probeselector)
+
+
+### PackageProbeSelectorSpec
+
+Selector package probe parameters.
+selects objects based on label selector.
+
+| Field | Description |
+| ----- | ----------- |
+| `selector` <b>required</b><br>metav1.LabelSelector | Selector targeting objects to probe. |
 
 
 Used in:
@@ -465,7 +492,7 @@ Used in:
 
 ### Probe
 
-Defines probe parameters to check parts of a package.
+Defines probe parameters. Only one can be filled.
 
 | Field | Description |
 | ----- | ----------- |
@@ -512,7 +539,8 @@ e.g. ensures that probes defined for apps/Deployments are not checked against Co
 
 | Field | Description |
 | ----- | ----------- |
-| `kind` <br><a href="#packageprobekindspec">PackageProbeKindSpec</a> | Selects objects based on Kinda and API Group. |
+| `kind` <b>required</b><br><a href="#packageprobekindspec">PackageProbeKindSpec</a> | Kind and API Group of the object to probe. |
+| `selector` <br><a href="#packageprobeselectorspec">PackageProbeSelectorSpec</a> | Further sub-selects objects based on a Label Selector. |
 
 
 Used in:

@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -115,11 +116,15 @@ const (
 // Selects a subset of objects to apply probes to.
 // e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 type ProbeSelector struct {
-	// Selects objects based on Kinda and API Group.
-	Kind *PackageProbeKindSpec `json:"kind,omitempty"`
+	// Kind and API Group of the object to probe.
+	Kind *PackageProbeKindSpec `json:"kind"`
+	// Further sub-selects objects based on a Label Selector.
+	// +example={matchLabels: {app.kubernetes.io/name: example-operator}}
+	Selector *PackageProbeSelectorSpec `json:"selector,omitempty"`
 }
 
 // Kind package probe parameters.
+// selects objects based on Kinda and API Group.
 type PackageProbeKindSpec struct {
 	// Object Group to apply a probe to.
 	// +example=apps
@@ -129,15 +134,17 @@ type PackageProbeKindSpec struct {
 	Kind string `json:"kind"`
 }
 
-// Defines probe parameters. Only one can be filled.
-type Probe struct {
-	Condition         *ProbeConditionSpec     `json:"condition,omitempty"`
-	FieldsEqual       *ProbeFieldsEqualSpec   `json:"fieldsEqual,omitempty"`
-	CurrentGeneration *ProbeCurrentGeneration `json:"currentGeneration,omitempty"`
+// Selector package probe parameters.
+// selects objects based on label selector.
+type PackageProbeSelectorSpec struct {
+	// Selector targeting objects to probe.
+	Selector metav1.LabelSelector `json:"selector"`
 }
 
-// Checks whether or not the object is the most recent generation.
-type ProbeCurrentGeneration struct {
+// Defines probe parameters. Only one can be filled.
+type Probe struct {
+	Condition   *ProbeConditionSpec   `json:"condition,omitempty"`
+	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
 }
 
 // Checks whether or not the object reports a condition with given type and status.
