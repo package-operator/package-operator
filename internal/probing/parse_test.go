@@ -25,11 +25,11 @@ func TestParse(t *testing.T) {
 
 	p, err := Parse(ctx, osp)
 	require.NoError(t, err)
-	require.IsType(t, List{}, p)
+	require.IsType(t, list{}, p)
 
 	if assert.Len(t, p, 1) {
-		list := p.(List)
-		assert.IsType(t, &KindSelector{}, list[0])
+		list := p.(list)
+		assert.IsType(t, &kindSelector{}, list[0])
 	}
 }
 
@@ -49,10 +49,10 @@ func TestParseSelector(t *testing.T) {
 		},
 	}, nil)
 	require.NoError(t, err)
-	require.IsType(t, &SelectorSelector{}, p)
+	require.IsType(t, &selectorSelector{}, p)
 
-	ss := p.(*SelectorSelector)
-	require.IsType(t, &KindSelector{}, ss.Prober)
+	ss := p.(*selectorSelector)
+	require.IsType(t, &kindSelector{}, ss.Prober)
 }
 
 func TestParseProbes(t *testing.T) {
@@ -74,19 +74,19 @@ func TestParseProbes(t *testing.T) {
 		fieldsEqualProbe, conditionProbe, emptyConfigProbe,
 	})
 	// everything should be wrapped
-	require.IsType(t, &StatusObservedGeneration{}, p)
+	require.IsType(t, &statusObservedGeneration{}, p)
 
-	ogProbe := p.(*StatusObservedGeneration)
+	ogProbe := p.(*statusObservedGeneration)
 	nested := ogProbe.Prober
-	require.IsType(t, List{}, nested)
+	require.IsType(t, list{}, nested)
 
 	if assert.Len(t, nested, 2) {
-		nestedList := nested.(List)
-		assert.Equal(t, &FieldsEqual{
+		nestedList := nested.(list)
+		assert.Equal(t, &fieldsEqual{
 			FieldA: "asdf",
 			FieldB: "jkl;",
 		}, nestedList[0])
-		assert.Equal(t, &Condition{
+		assert.Equal(t, &condition{
 			Type:   "asdf",
 			Status: "asdf",
 		}, nestedList[1])

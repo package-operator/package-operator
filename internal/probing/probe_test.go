@@ -33,7 +33,7 @@ func TestList(t *testing.T) {
 		On("Probe", mock.Anything).
 		Return(false, "error from prober2")
 
-	l := List{prober1, prober2}
+	l := list{prober1, prober2}
 
 	s, m := l.Probe(&unstructured.Unstructured{})
 	assert.False(t, s)
@@ -41,7 +41,7 @@ func TestList(t *testing.T) {
 }
 
 func TestCondition(t *testing.T) {
-	c := &Condition{
+	c := &condition{
 		Type:   "Available",
 		Status: "False",
 	}
@@ -227,7 +227,7 @@ func TestCondition(t *testing.T) {
 }
 
 func TestFieldsEqual(t *testing.T) {
-	fe := &FieldsEqual{
+	fe := &fieldsEqual{
 		FieldA: ".spec.fieldA",
 		FieldB: ".spec.fieldB",
 	}
@@ -333,7 +333,7 @@ func TestFieldsEqual(t *testing.T) {
 
 func TestStatusObservedGeneration(t *testing.T) {
 	properMock := &proberMock{}
-	og := &StatusObservedGeneration{
+	og := &statusObservedGeneration{
 		Prober: properMock,
 	}
 

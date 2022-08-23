@@ -12,7 +12,7 @@ import (
 // Parse takes a list of ObjectSetProbes commonly defined within a ObjectSet phase and
 // compiles a single Probe to test objects with.
 func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Prober, error) {
-	probeList := make(List, len(packageProbes))
+	probeList := make(list, len(packageProbes))
 	for i, pkgProbe := range packageProbes {
 		probe := ParseProbes(ctx, pkgProbe.Probes)
 		var err error
@@ -28,7 +28,7 @@ func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Pr
 // ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober, only executing it only when the selector matches.
 func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, probe Prober) (Prober, error) {
 	if selector.Kind != nil {
-		probe = &KindSelector{
+		probe = &kindSelector{
 			Prober: probe,
 			GroupKind: schema.GroupKind{
 				Group: selector.Kind.Group,
@@ -41,7 +41,7 @@ func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, pro
 		if err != nil {
 			return nil, err
 		}
-		probe = &SelectorSelector{
+		probe = &selectorSelector{
 			Prober:   probe,
 			Selector: s,
 		}
@@ -51,19 +51,19 @@ func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, pro
 
 // ParseProbes takes a []corev1alpha1.Probe and compiles it into a Prober.
 func ParseProbes(ctx context.Context, probeSpecs []corev1alpha1.Probe) Prober {
-	var probeList List
+	var probeList list
 	for _, probeSpec := range probeSpecs {
 		var probe Prober
 
 		switch {
 		case probeSpec.FieldsEqual != nil:
-			probe = &FieldsEqual{
+			probe = &fieldsEqual{
 				FieldA: probeSpec.FieldsEqual.FieldA,
 				FieldB: probeSpec.FieldsEqual.FieldB,
 			}
 
 		case probeSpec.Condition != nil:
-			probe = &Condition{
+			probe = &condition{
 				Type:   probeSpec.Condition.Type,
 				Status: probeSpec.Condition.Status,
 			}
@@ -76,5 +76,5 @@ func ParseProbes(ctx context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 	}
 
 	// Always check .status.observedCondition, if present.
-	return &StatusObservedGeneration{Prober: probeList}
+	return &statusObservedGeneration{Prober: probeList}
 }
