@@ -108,6 +108,24 @@ func (dc *DynamicClientResourceInterface) Patch(
 	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
 }
 
+func (dc *DynamicClientResourceInterface) Apply(
+	ctx context.Context, name string,
+	obj *unstructured.Unstructured,
+	options metav1.ApplyOptions, subresources ...string,
+) (*unstructured.Unstructured, error) {
+	args := dc.Called(ctx, name, obj, options, subresources)
+	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
+}
+
+func (dc *DynamicClientResourceInterface) ApplyStatus(
+	ctx context.Context, name string,
+	obj *unstructured.Unstructured,
+	options metav1.ApplyOptions,
+) (*unstructured.Unstructured, error) {
+	args := dc.Called(ctx, name, obj, options)
+	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
+}
+
 type DynamicClientNamespaceableResourceInterface struct {
 	mock.Mock
 }
@@ -186,5 +204,23 @@ func (dc *DynamicClientNamespaceableResourceInterface) Patch(
 	options metav1.PatchOptions, subresources ...string,
 ) (*unstructured.Unstructured, error) {
 	args := dc.Called(ctx, name, pt, data, options, subresources)
+	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
+}
+
+func (dc *DynamicClientNamespaceableResourceInterface) Apply(
+	ctx context.Context, name string,
+	obj *unstructured.Unstructured,
+	options metav1.ApplyOptions, subresources ...string,
+) (*unstructured.Unstructured, error) {
+	args := dc.Called(ctx, name, obj, options, subresources)
+	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
+}
+
+func (dc *DynamicClientNamespaceableResourceInterface) ApplyStatus(
+	ctx context.Context, name string,
+	obj *unstructured.Unstructured,
+	options metav1.ApplyOptions,
+) (*unstructured.Unstructured, error) {
+	args := dc.Called(ctx, name, obj, options)
 	return args.Get(0).(*unstructured.Unstructured), args.Error(1)
 }
