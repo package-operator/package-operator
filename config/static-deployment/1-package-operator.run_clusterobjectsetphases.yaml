@@ -56,8 +56,7 @@ spec:
                     probes:
                       description: Probe configuration parameters.
                       items:
-                        description: Defines probe parameters to check parts of a
-                          package.
+                        description: Defines probe parameters. Only one can be filled.
                         properties:
                           condition:
                             description: Checks whether or not the object reports
@@ -94,7 +93,7 @@ spec:
                         target.
                       properties:
                         kind:
-                          description: Selects objects based on Kinda and API Group.
+                          description: Kind and API Group of the object to probe.
                           properties:
                             group:
                               description: Object Group to apply a probe to.
@@ -106,6 +105,61 @@ spec:
                           - group
                           - kind
                           type: object
+                        selector:
+                          description: Further sub-selects objects based on a Label
+                            Selector.
+                          properties:
+                            selector:
+                              description: Selector targeting objects to probe.
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: A label selector requirement is a
+                                      selector that contains values, a key, and an
+                                      operator that relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: operator represents a key's relationship
+                                          to a set of values. Valid operators are
+                                          In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: values is an array of string
+                                          values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the
+                                          operator is Exists or DoesNotExist, the
+                                          values array must be empty. This array is
+                                          replaced during a strategic merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: matchLabels is a map of {key,value}
+                                    pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions,
+                                    whose key field is "key", the operator is "In",
+                                    and the values array contains only "value". The
+                                    requirements are ANDed.
+                                  type: object
+                              type: object
+                          required:
+                          - selector
+                          type: object
+                      required:
+                      - kind
                       type: object
                   required:
                   - probes

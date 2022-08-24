@@ -12,7 +12,7 @@ require (
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
-	package-operator.run/apis v0.0.0-20220811131139-c8eb562ed014
+	package-operator.run/apis v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.12.3
 )
 
@@ -73,3 +73,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace package-operator.run/apis => ./apis
