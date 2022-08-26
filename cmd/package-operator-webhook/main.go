@@ -66,28 +66,30 @@ func main() {
 	// Register webhooks as handlers
 	wbh := mgr.GetWebhookServer()
 	wbh.Register("/validate-object-set", &webhook.Admission{
-		Handler: &webhooks.ObjectSetWebhookHandler{
-			Log:    log.Log.WithName("validating webhooks").WithName("ObjectSets"),
-			Client: mgr.GetClient(),
-		},
-	})
+		Handler: webhooks.NewObjectSetWebhookHandler(
+			log.Log.WithName("validating webhooks").WithName("ObjectSets"),
+			mgr.GetClient(),
+		),
+	},
+	)
 	wbh.Register("/validate-object-set-phase", &webhook.Admission{
-		Handler: &webhooks.ObjectSetPhaseWebhookHandler{
-			Log:    log.Log.WithName("validating webhooks").WithName("ObjectSetPhases"),
-			Client: mgr.GetClient(),
-		},
-	})
+		Handler: webhooks.NewObjectSetPhaseWebhookHandler(
+			log.Log.WithName("validating webhooks").WithName("ObjectSetPhases"),
+			mgr.GetClient(),
+		),
+	},
+	)
 	wbh.Register("/validate-cluster-object-set", &webhook.Admission{
-		Handler: &webhooks.ClusterObjectSetWebhookHandler{
-			Log:    log.Log.WithName("validating webhooks").WithName("ClusterObjectSets"),
-			Client: mgr.GetClient(),
-		},
+		Handler: webhooks.NewClusterObjectSetWebhookHandler(
+			log.Log.WithName("validating webhooks").WithName("ClusterObjectSets"),
+			mgr.GetClient(),
+		),
 	})
 	wbh.Register("/validate-cluster-object-set-phase", &webhook.Admission{
-		Handler: &webhooks.ClusterObjectSetPhaseWebhookHandler{
-			Log:    log.Log.WithName("validating webhooks").WithName("ClusterObjectSetPhases"),
-			Client: mgr.GetClient(),
-		},
+		Handler: webhooks.NewClusterObjectSetPhaseWebhookHandler(
+			log.Log.WithName("validating webhooks").WithName("ClusterObjectSetPhases"),
+			mgr.GetClient(),
+		),
 	})
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

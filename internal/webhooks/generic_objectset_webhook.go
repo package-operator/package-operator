@@ -81,6 +81,11 @@ func (wh *GenericObjectSetWebhookHandler[T]) Handle(
 	}
 }
 
+func (wh *GenericObjectSetWebhookHandler[T]) InjectDecoder(d *admission.Decoder) error {
+	wh.decoder = d
+	return nil
+}
+
 func (wh *GenericObjectSetWebhookHandler[T]) validateUpdate(
 	obj, oldObj *T) admission.Response {
 	if err := validateGenericObjectSetImmutability(obj, oldObj); err != nil {
