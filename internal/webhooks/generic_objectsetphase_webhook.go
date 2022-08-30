@@ -123,8 +123,8 @@ func validateGenericObjectSetPhaseImmutability[T objectSetPhases](obj, oldObj *T
 type genericObjectSetPhaseImmutableFields struct {
 	Previous                            []corev1alpha1.PreviousRevisionReference `json:"previous,omitempty"`
 	corev1alpha1.ObjectSetTemplatePhase `json:",inline"`
-	Revision                            int64                         // TODO: tag
-	AvailabilityProbes                  []corev1alpha1.ObjectSetProbe // TODO: tag
+	Revision                            int64                         `json:"revision"`
+	AvailabilityProbes                  []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
 }
 
 func objectSetPhaseImmutableFields[T objectSetPhases](obj *T) genericObjectSetPhaseImmutableFields {
