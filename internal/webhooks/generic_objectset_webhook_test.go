@@ -8,6 +8,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+//nolint:dupl
 func TestValidateUpdate_ObjectSet(t *testing.T) {
 	wh := new(GenericObjectSetWebhookHandler[corev1alpha1.ObjectSet])
 
@@ -32,6 +33,7 @@ func TestValidateUpdate_ObjectSet(t *testing.T) {
 	assert.Equal(t, string(r.Result.Reason), errObjectSetTemplateSpecImmutable.Error())
 }
 
+//nolint:dupl
 func TestValidateUpdate_ClusterObjectSet(t *testing.T) {
 	wh := new(GenericObjectSetWebhookHandler[corev1alpha1.ClusterObjectSet])
 

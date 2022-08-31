@@ -8,6 +8,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+//nolint:dupl
 func TestValidateUpdate_ObjectSetPhase(t *testing.T) {
 	wh := new(GenericObjectSetPhaseWebhookHandler[corev1alpha1.ObjectSetPhase])
 
@@ -53,6 +54,7 @@ func TestValidateUpdate_ObjectSetPhase(t *testing.T) {
 	assert.Equal(t, string(r.Result.Reason), errAvailabilityProbesImmutable.Error())
 }
 
+//nolint:dupl
 func TestValidateUpdate_ClusterObjectSetPhase(t *testing.T) {
 	wh := new(GenericObjectSetPhaseWebhookHandler[corev1alpha1.ClusterObjectSetPhase])
 
