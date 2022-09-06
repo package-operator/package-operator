@@ -519,7 +519,10 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
 		"config/deploy/webhook/00-tls-secret.yaml",
 		"config/deploy/webhook/service.yaml.tpl",
-		// "config/deploy/webhook/validatingwebhookconfig.yaml", TODO: uncomment when there is a real webhook in that file
+		"config/deploy/webhook/objectsetvalidatingwebhookconfig.yaml",
+		"config/deploy/webhook/objectsetphasevalidatingwebhookconfig.yaml",
+		"config/deploy/webhook/clusterobjectsetvalidatingwebhookconfig.yaml",
+		"config/deploy/webhook/clusterobjectsetphasevalidatingwebhookconfig.yaml",
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
 	}
