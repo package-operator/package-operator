@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -94,9 +94,7 @@ func TestObjectSet_setupTeardown(t *testing.T) {
 		},
 	}
 
-	// TODO: Refactor in devkube:
-	// ctx := logr.NewContext(context.Background(), testr.New(t))
-	ctx := dev.ContextWithLogger(context.Background(), testr.New(t))
+	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
@@ -292,9 +290,7 @@ func TestObjectSet_handover(t *testing.T) {
 		},
 	}
 
-	// TODO: Refactor in devkube:
-	// ctx := logr.NewContext(context.Background(), testr.New(t))
-	ctx := dev.ContextWithLogger(context.Background(), testr.New(t))
+	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, objectSetRev1))
 	cleanupOnSuccess(ctx, t, objectSetRev1)

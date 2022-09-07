@@ -88,14 +88,9 @@ func (Test) Unit() error {
 }
 
 func (Test) Integration() error {
-	testErr := sh.Run("go", "test", "-v", "-failfast",
+	return sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
 		"-timeout=20m", "./integration/...")
-
-	// TODO: Add this into devkube
-	sh.Run("kind", "export", "logs", path.Join(cacheDir, "dev-env-logs"), "--name", "package-operator-dev")
-
-	return testErr
 }
 
 // Building
@@ -548,6 +543,12 @@ func (d Dev) Integration(ctx context.Context) error {
 	os.Setenv("KUBECONFIG", devEnvironment.Cluster.Kubeconfig())
 
 	mg.SerialDeps(Test.Integration)
+
+	if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
+		"export", "logs", path.Join(cacheDir, "dev-env-logs"),
+		"--name", "package-operator-dev"); err != nil {
+		logger.Error(err, "exporting logs")
+	}
 	return nil
 }
 
