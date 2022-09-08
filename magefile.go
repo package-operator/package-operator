@@ -472,7 +472,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 		}
 	}
 
-	ctx = dev.ContextWithLogger(ctx, logger)
+	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
 	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
@@ -514,7 +514,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 		}
 	}
 
-	dev.ContextWithLogger(ctx, logger)
+	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
