@@ -87,10 +87,19 @@ func (Test) Unit() error {
 	}, "go", "test", "-cover", "-v", "-race", "./internal/...", "./cmd/...")
 }
 
-func (Test) Integration() error {
-	return sh.Run("go", "test", "-v", "-failfast",
+func (Test) Integration(ctx context.Context) error {
+	testErr := sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
 		"-timeout=20m", "./integration/...")
+
+	// always export logs
+	if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
+		"export", "logs", path.Join(cacheDir, "dev-env-logs"),
+		"--name", "package-operator-dev"); err != nil {
+		logger.Error(err, "exporting logs")
+	}
+
+	return testErr
 }
 
 // Building
@@ -543,12 +552,6 @@ func (d Dev) Integration(ctx context.Context) error {
 	os.Setenv("KUBECONFIG", devEnvironment.Cluster.Kubeconfig())
 
 	mg.SerialDeps(Test.Integration)
-
-	if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
-		"export", "logs", path.Join(cacheDir, "dev-env-logs"),
-		"--name", "package-operator-dev"); err != nil {
-		logger.Error(err, "exporting logs")
-	}
 	return nil
 }
 
