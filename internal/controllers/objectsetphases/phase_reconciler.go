@@ -187,8 +187,8 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 	return r.reconcileObject(ctx, owner, desiredObj)
 }
 
-// Reads and builds an object as specified in a phase.
-// Including system labels, defaults and owner reference.
+// Builds an object as specified in a phase.
+// Includes system labels, namespace and owner reference.
 func (r *PhaseReconciler) desiredObject(
 	ctx context.Context, owner client.Object,
 	phaseObject corev1alpha1.ObjectSetObject,
