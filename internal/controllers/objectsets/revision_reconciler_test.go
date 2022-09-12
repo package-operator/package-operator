@@ -2,7 +2,6 @@ package objectsets
 
 import (
 	"context"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,11 +94,9 @@ func Test_revisionReconciler(t *testing.T) {
 				Spec: corev1alpha1.ObjectSetSpec{
 					Previous: []corev1alpha1.PreviousRevisionReference{
 						{
-							Kind: "ObjectSet",
 							Name: "prev1",
 						},
 						{
-							Kind: "ObjectSet",
 							Name: "prev2",
 						},
 					},
@@ -147,7 +144,6 @@ func Test_revisionReconciler(t *testing.T) {
 				Spec: corev1alpha1.ObjectSetSpec{
 					Previous: []corev1alpha1.PreviousRevisionReference{
 						{
-							Kind: "ObjectSet",
 							Name: "prev1",
 						},
 					},
@@ -163,33 +159,4 @@ func Test_revisionReconciler(t *testing.T) {
 		assert.False(t, res.IsZero())
 		assert.Equal(t, int64(0), objectSet.Status.Revision)
 	})
-}
-
-func Test_objectSetsByRevisionDesc(t *testing.T) {
-	rev1 := &GenericObjectSet{
-		corev1alpha1.ObjectSet{
-			Status: corev1alpha1.ObjectSetStatus{
-				Revision: 1,
-			},
-		},
-	}
-
-	rev12 := &GenericObjectSet{
-		corev1alpha1.ObjectSet{
-			Status: corev1alpha1.ObjectSetStatus{
-				Revision: 12,
-			},
-		},
-	}
-	rev20 := &GenericClusterObjectSet{
-		corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
-				Revision: 20,
-			},
-		},
-	}
-	s := objectSetsByRevisionDesc{rev12, rev20, rev1}
-	sort.Sort(s)
-
-	assert.Equal(t, objectSetsByRevisionDesc{rev20, rev12, rev1}, s)
 }

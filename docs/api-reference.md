@@ -46,8 +46,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: dolor
-    name: ipsum
+  - class: ipsum
+    name: lorem
     objects:
     - object:
         apiVersion: apps/v1
@@ -55,9 +55,7 @@ spec:
         metadata:
           name: example-deployment
   previous:
-  - group: lorem
-    kind: ObjectSet
-    name: previous-revision
+  - name: previous-revision
 status:
   phase: Pending
 
@@ -100,9 +98,9 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: consetetur
+  class: sit
   lifecycleState: Active
-  name: amet
+  name: dolor
   objects:
   - object:
       apiVersion: apps/v1
@@ -110,9 +108,7 @@ spec:
       metadata:
         name: example-deployment
   previous:
-  - group: sit
-    kind: ObjectSet
-    name: previous-revision
+  - name: previous-revision
   revision: 42
 status:
   conditions:
@@ -167,8 +163,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sed
-    name: elitr
+  - class: consetetur
+    name: amet
     objects:
     - object:
         apiVersion: apps/v1
@@ -176,9 +172,7 @@ spec:
         metadata:
           name: example-deployment
   previous:
-  - group: sadipscing
-    kind: ObjectSet
-    name: previous-revision
+  - name: previous-revision
 status:
   phase: Pending
 
@@ -222,9 +216,9 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: eirmod
+  class: elitr
   lifecycleState: Active
-  name: nonumy
+  name: sadipscing
   objects:
   - object:
       apiVersion: apps/v1
@@ -232,9 +226,7 @@ spec:
       metadata:
         name: example-deployment
   previous:
-  - group: diam
-    kind: ObjectSet
-    name: previous-revision
+  - name: previous-revision
   revision: 42
 status:
   conditions:
@@ -444,20 +436,6 @@ Used in:
 * [ProbeSelector](#probeselector)
 
 
-### PackageProbeSelectorSpec
-
-Selector package probe parameters.
-selects objects based on label selector.
-
-| Field | Description |
-| ----- | ----------- |
-| `selector` <b>required</b><br>metav1.LabelSelector | Selector targeting objects to probe. |
-
-
-Used in:
-* [ProbeSelector](#probeselector)
-
-
 ### PreviousRevisionReference
 
 References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase or ClusterObjectSetPhase.
@@ -465,8 +443,6 @@ References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase
 | Field | Description |
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of a previous revision. |
-| `kind` <b>required</b><br>string | Object kind of a previous revision. |
-| `group` <b>required</b><br>string | Object group of a previous revision. |
 
 
 Used in:
@@ -526,7 +502,7 @@ e.g. ensures that probes defined for apps/Deployments are not checked against Co
 | Field | Description |
 | ----- | ----------- |
 | `kind` <b>required</b><br><a href="#packageprobekindspec">PackageProbeKindSpec</a> | Kind and API Group of the object to probe. |
-| `selector` <br><a href="#packageprobeselectorspec">PackageProbeSelectorSpec</a> | Further sub-selects objects based on a Label Selector. |
+| `selector` <br>metav1.LabelSelector | Further sub-selects objects based on a Label Selector. |
 
 
 Used in:

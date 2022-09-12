@@ -175,6 +175,8 @@ func (c *GenericObjectSetController) Reconcile(
 		return res, err
 	}
 
+	c.reportPausedCondition(ctx, objectSet)
+
 	objectSet.UpdateStatusPhase()
 	// this controller owns status alone, so we can always update it without optimistic locking.
 	objectSet.ClientObject().SetResourceVersion("")
@@ -189,6 +191,19 @@ func (c *GenericObjectSetController) ensureCacheFinalizer(
 	ctx context.Context, objectSet genericObjectSet,
 ) error {
 	return controllers.EnsureCommonFinalizer(ctx, objectSet.ClientObject(), c.client, watchFinalizer)
+}
+
+func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) {
+	if objectSet.IsPaused() {
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:    corev1alpha1.ObjectSetPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Paused",
+			Message: "Lifecycle state set to paused.",
+		})
+	} else {
+		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+	}
 }
 
 func (c *GenericObjectSetController) handleDeletionAndArchival(

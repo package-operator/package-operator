@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,7 +51,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		assert.True(t, done)
 	})
 
-	t.Run("delete confirms", func(t *testing.T) {
+	t.Run("already gone when deleting", func(t *testing.T) {
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
@@ -93,7 +94,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, done)
 
-		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
+		// Ensure that IsController was called with currentObj and not desiredObj.
+		// If checking desiredObj, IsController will _always_ return true, which could lead to really nasty behavior.
 		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
 	})
 
@@ -218,7 +220,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 
 	ctx := context.Background()
 	desired := &unstructured.Unstructured{}
-	actual, err := r.reconcileObject(ctx, owner, desired)
+	actual, err := r.reconcileObject(ctx, owner, desired, nil)
 	require.NoError(t, err)
 
 	assert.Same(t, desired, actual)
@@ -262,7 +264,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 		Return(nil)
 
 	ctx := context.Background()
-	actual, err := r.reconcileObject(ctx, owner, &unstructured.Unstructured{})
+	actual, err := r.reconcileObject(ctx, owner, &unstructured.Unstructured{}, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
@@ -313,6 +315,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		name          string
 		mockPrepare   func(*ownerStrategyMock, *phaseObjectOwnerMock)
 		object        client.Object
+		previous      []client.Object
 		errorAs       interface{}
 		needsAdoption bool
 	}{
@@ -333,13 +336,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetPrevious").
-					Return([]corev1alpha1.PreviousRevisionReference{
-						{},
-					})
-				owner.
 					On("GetStatusRevision").Return(int64(34))
 			},
+			previous: []client.Object{&unstructured.Unstructured{}},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -387,11 +386,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetPrevious").
-					Return([]corev1alpha1.PreviousRevisionReference{{}})
-				owner.
 					On("GetStatusRevision").Return(int64(34))
 			},
+			previous: []client.Object{&unstructured.Unstructured{}},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -412,15 +409,13 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				osm.
 					On("IsController", mock.Anything, mock.Anything).
 					Return(false)
-				owner.
-					On("GetPrevious").
-					Return([]corev1alpha1.PreviousRevisionReference{{}})
 				ownerObj := &unstructured.Unstructured{
 					Object: map[string]interface{}{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
 				owner.On("GetStatusRevision").Return(int64(1))
 			},
+			previous: []client.Object{&unstructured.Unstructured{}},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{},
 			},
@@ -439,14 +434,12 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", ownerObj, mock.Anything).
 					Return(false)
 				osm.
-					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
+					On("IsController", mock.AnythingOfType("*v1.ConfigMap"), mock.Anything).
 					Return(true)
-				owner.
-					On("GetPrevious").
-					Return([]corev1alpha1.PreviousRevisionReference{{}})
 				owner.
 					On("GetStatusRevision").Return(int64(100))
 			},
+			previous: []client.Object{&corev1.ConfigMap{}},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -473,7 +466,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 
 			ctx := context.Background()
 			needsAdoption, err := c.Check(
-				ctx, owner, test.object)
+				ctx, owner, test.object, test.previous)
 			if test.errorAs == nil {
 				require.NoError(t, err)
 			} else {
@@ -688,14 +681,14 @@ func (m *phaseObjectOwnerMock) ClientObject() client.Object {
 	return args.Get(0).(client.Object)
 }
 
-func (m *phaseObjectOwnerMock) GetPrevious() []corev1alpha1.PreviousRevisionReference {
-	args := m.Called()
-	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
-}
-
 func (m *phaseObjectOwnerMock) GetStatusRevision() int64 {
 	args := m.Called()
 	return args.Get(0).(int64)
+}
+
+func (m *phaseObjectOwnerMock) IsPaused() bool {
+	args := m.Called()
+	return args.Bool(0)
 }
 
 type dynamicCacheMock struct {
@@ -714,7 +707,7 @@ type adoptionCheckerMock struct {
 }
 
 func (m *adoptionCheckerMock) Check(
-	ctx context.Context, owner PhaseObjectOwner, obj client.Object,
+	ctx context.Context, owner PhaseObjectOwner, obj client.Object, previous []client.Object,
 ) (needsAdoption bool, err error) {
 	args := m.Called(ctx, owner, obj)
 	return args.Bool(0), args.Error(1)

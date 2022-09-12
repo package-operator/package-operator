@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,13 +21,15 @@ import (
 type phasesReconciler struct {
 	client          client.Client
 	phaseReconciler phaseReconciler
+	scheme          *runtime.Scheme
+	newObjectSet    genericObjectSetFactory
 }
 
 type phaseReconciler interface {
 	ReconcilePhase(
 		ctx context.Context, owner objectsetphases.PhaseObjectOwner,
 		phase corev1alpha1.ObjectSetTemplatePhase,
-		probe probing.Prober,
+		probe probing.Prober, previous []client.Object,
 	) (failedProbes []string, err error)
 
 	TeardownPhase(
@@ -38,6 +41,10 @@ type phaseReconciler interface {
 func (r *phasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
+	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
+	if err != nil {
+		return res, fmt.Errorf("lookup previous revisions: %w", err)
+	}
 
 	probe, err := probing.Parse(
 		ctx, objectSet.GetAvailabilityProbes())
@@ -54,7 +61,7 @@ func (r *phasesReconciler) Reconcile(
 				ctx, objectSet, phase)
 		} else {
 			failedProbes, err = r.reconcileLocalPhase(
-				ctx, objectSet, phase, probe)
+				ctx, objectSet, phase, probe, previous)
 		}
 		if err != nil {
 			return ctrl.Result{}, err
@@ -109,10 +116,28 @@ func (r *phasesReconciler) reconcileRemotePhase(
 func (r *phasesReconciler) reconcileLocalPhase(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
+	probe probing.Prober, previous []client.Object,
 ) ([]string, error) {
 	return r.phaseReconciler.ReconcilePhase(
-		ctx, objectSet, phase, probe)
+		ctx, objectSet, phase, probe, previous)
+}
+
+func (r *phasesReconciler) lookupPreviousRevisions(
+	ctx context.Context, objectSet genericObjectSet,
+) ([]client.Object, error) {
+	previous := objectSet.GetPrevious()
+	previousSets := make([]client.Object, len(previous))
+	for i, prev := range objectSet.GetPrevious() {
+		set := r.newObjectSet(r.scheme)
+		if err := r.client.Get(
+			ctx, client.ObjectKey{
+				Name: prev.Name, Namespace: objectSet.ClientObject().GetNamespace(),
+			}, set.ClientObject()); err != nil {
+			return nil, err
+		}
+		previousSets[i] = set.ClientObject()
+	}
+	return previousSets, nil
 }
 
 func (r *phasesReconciler) Teardown(

@@ -3,7 +3,6 @@ package objectsets
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -36,8 +35,8 @@ func (r *revisionReconciler) Reconcile(
 	}
 
 	// Determine new revision number by inspecting previous revisions:
-	revisions := make([]genericObjectSet, len(objectSet.GetPrevious()))
-	for i, prev := range objectSet.GetPrevious() {
+	var latestPreviousRevision int64
+	for _, prev := range objectSet.GetPrevious() {
 		prevObjectSet := r.newObjectSet(r.scheme)
 		key := client.ObjectKey{
 			Name:      prev.Name,
@@ -47,9 +46,10 @@ func (r *revisionReconciler) Reconcile(
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
-		if prevObjectSet.GetStatusRevision() == 0 {
+		sr := prevObjectSet.GetStatusRevision()
+		if sr == 0 {
 			logr.FromContextOrDiscard(ctx).
-				Info("waiting for previous revision to report revision number", prev.Kind, key)
+				Info("waiting for previous revision to report revision number", "object", key)
 			// retry later
 			// this delay is needed, because we are not watching previous revisions from this object
 			// which means we are not getting requeued when .status.revision is finally reported.
@@ -57,20 +57,11 @@ func (r *revisionReconciler) Reconcile(
 			return res, nil
 		}
 
-		revisions[i] = prevObjectSet
+		if sr > latestPreviousRevision {
+			latestPreviousRevision = sr
+		}
 	}
 
-	sort.Sort(objectSetsByRevisionDesc(revisions))
-	latestPreviousRevision := revisions[0].GetStatusRevision()
 	objectSet.SetStatusRevision(latestPreviousRevision + 1)
 	return
-}
-
-// Sorts ObjectSets by .status.revision in descending order.
-type objectSetsByRevisionDesc []genericObjectSet
-
-func (a objectSetsByRevisionDesc) Len() int      { return len(a) }
-func (a objectSetsByRevisionDesc) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a objectSetsByRevisionDesc) Less(i, j int) bool {
-	return a[i].GetStatusRevision() > a[j].GetStatusRevision()
 }

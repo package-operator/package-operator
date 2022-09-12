@@ -94,12 +94,6 @@ type ObjectSetProbe struct {
 	Selector ProbeSelector `json:"selector"`
 }
 
-type ProbeSelectorType string
-
-const (
-	ProbeSelectorKind ProbeSelectorType = "Kind"
-)
-
 // Selects a subset of objects to apply probes to.
 // e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 type ProbeSelector struct {
@@ -107,7 +101,7 @@ type ProbeSelector struct {
 	Kind *PackageProbeKindSpec `json:"kind"`
 	// Further sub-selects objects based on a Label Selector.
 	// +example={matchLabels: {app.kubernetes.io/name: example-operator}}
-	Selector *PackageProbeSelectorSpec `json:"selector,omitempty"`
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
 // Kind package probe parameters.
@@ -119,13 +113,6 @@ type PackageProbeKindSpec struct {
 	// Object Kind to apply a probe to.
 	// +example=Deployment
 	Kind string `json:"kind"`
-}
-
-// Selector package probe parameters.
-// selects objects based on label selector.
-type PackageProbeSelectorSpec struct {
-	// Selector targeting objects to probe.
-	Selector metav1.LabelSelector `json:"selector"`
 }
 
 // Defines probe parameters. Only one can be filled.
@@ -159,10 +146,4 @@ type PreviousRevisionReference struct {
 	// Name of a previous revision.
 	// +example=previous-revision
 	Name string `json:"name"`
-	// Object kind of a previous revision.
-	// +example="ObjectSet"
-	Kind string `json:"kind"`
-	// Object group of a previous revision.
-	// +default="package-operator.run"
-	Group string `json:"group"`
 }

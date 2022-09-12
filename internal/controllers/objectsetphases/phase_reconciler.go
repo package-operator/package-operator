@@ -44,6 +44,7 @@ type ownerStrategy interface {
 type adoptionChecker interface {
 	Check(
 		ctx context.Context, owner PhaseObjectOwner, obj client.Object,
+		previous []client.Object,
 	) (needsAdoption bool, err error)
 }
 
@@ -79,18 +80,18 @@ func NewPhaseReconciler(
 
 type PhaseObjectOwner interface {
 	ClientObject() client.Object
-	GetPrevious() []corev1alpha1.PreviousRevisionReference
 	GetStatusRevision() int64
+	IsPaused() bool
 }
 
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
+	probe probing.Prober, previous []client.Object,
 ) (failedProbes []string, err error) {
 
 	for _, phaseObject := range phase.Objects {
-		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject)
+		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
 		if err != nil {
 			return nil, err
 		}
@@ -171,6 +172,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 func (r *PhaseReconciler) reconcilePhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
+	previous []client.Object,
 ) (actualObj *unstructured.Unstructured, err error) {
 	desiredObj, err := r.desiredObject(
 		ctx, owner.ClientObject(), phaseObject)
@@ -184,7 +186,15 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return nil, fmt.Errorf("watching new resource: %w", err)
 	}
 
-	return r.reconcileObject(ctx, owner, desiredObj)
+	if owner.IsPaused() {
+		actualObj = desiredObj.DeepCopy()
+		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
+			return nil, fmt.Errorf("looking up object while paused: %w", err)
+		}
+		return actualObj, nil
+	}
+
+	return r.reconcileObject(ctx, owner, desiredObj, previous)
 }
 
 // Builds an object as specified in a phase.
@@ -247,7 +257,7 @@ func (e RevisionCollisionError) Error() string {
 
 func (r *PhaseReconciler) reconcileObject(
 	ctx context.Context, owner PhaseObjectOwner,
-	desiredObj *unstructured.Unstructured,
+	desiredObj *unstructured.Unstructured, previous []client.Object,
 ) (actualObj *unstructured.Unstructured, err error) {
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
@@ -272,7 +282,7 @@ func (r *PhaseReconciler) reconcileObject(
 	updatedObj := currentObj.DeepCopy()
 
 	// Check if we can even work on this object or need to adopt it.
-	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj)
+	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous)
 	if err != nil {
 		return nil, err
 	}
@@ -405,6 +415,7 @@ type defaultAdoptionChecker struct {
 // Check detects whether an ownership change is needed.
 func (c *defaultAdoptionChecker) Check(
 	ctx context.Context, owner PhaseObjectOwner, obj client.Object,
+	previous []client.Object,
 ) (needsAdoption bool, err error) {
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
@@ -420,7 +431,7 @@ func (c *defaultAdoptionChecker) Check(
 		return false, nil
 	}
 
-	if !c.isOwnedByPreviousRevision(owner, obj) {
+	if !c.isOwnedByPreviousRevision(owner, obj, previous) {
 		return false, ObjectNotOwnedByPreviousRevisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
@@ -459,22 +470,10 @@ func (c *defaultAdoptionChecker) Check(
 }
 
 func (c *defaultAdoptionChecker) isOwnedByPreviousRevision(
-	owner PhaseObjectOwner, obj client.Object,
+	owner PhaseObjectOwner, obj client.Object, previous []client.Object,
 ) bool {
-	for _, prev := range owner.GetPrevious() {
-		// note:
-		// This object only contains fields needed for ownership check
-		// and lacks API version, UID, labels, etc.
-		//
-		// This is in no way super clean, but it prevents an extra cache-lookup.
-		prevObjectSet := &unstructured.Unstructured{}
-		prevObjectSet.SetName(prev.Name)
-		prevObjectSet.SetNamespace(owner.ClientObject().GetNamespace())
-		prevObjectSet.SetKind(prev.Kind)
-		prevObjectSet.SetAPIVersion(schema.GroupVersion{
-			Group: prev.Group, Version: corev1alpha1.GroupVersion.Version}.String())
-
-		if c.ownerStrategy.IsController(prevObjectSet, obj) {
+	for _, prev := range previous {
+		if c.ownerStrategy.IsController(prev, obj) {
 			return true
 		}
 	}

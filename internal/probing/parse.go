@@ -6,6 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
@@ -38,7 +39,7 @@ func ParseSelector(ctx context.Context, selector corev1alpha1.ProbeSelector, pro
 		}
 	}
 	if selector.Selector != nil {
-		s, err := metav1.LabelSelectorAsSelector(&selector.Selector.Selector)
+		s, err := metav1.LabelSelectorAsSelector(selector.Selector)
 		if err != nil {
 			return nil, err
 		}

@@ -3,9 +3,11 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -14,18 +16,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-// Simple Setup and Teardown test.
-func TestObjectSet_setupTeardown(t *testing.T) {
+// Simple Setup, Pause and Teardown test.
+func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "cm-4",
 			Labels: map[string]string{"test.package-operator.run/test": "True"},
+		},
+		Data: map[string]string{
+			"banana": "bread",
 		},
 	}
 	cmGVK, err := apiutil.GVKForObject(cm4, Scheme)
@@ -74,10 +80,8 @@ func TestObjectSet_setupTeardown(t *testing.T) {
 							Kind: &corev1alpha1.PackageProbeKindSpec{
 								Kind: "ConfigMap",
 							},
-							Selector: &corev1alpha1.PackageProbeSelectorSpec{
-								Selector: metav1.LabelSelector{
-									MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-								},
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
 							},
 						},
 						Probes: []corev1alpha1.Probe{
@@ -133,6 +137,48 @@ func TestObjectSet_setupTeardown(t *testing.T) {
 	// Expect cm-5 to be present now.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm5.Name, Namespace: objectSet.Namespace}, currentCM5))
+
+	// -----------
+	// Test pause.
+	// -----------
+
+	// Pause ObjectSet.
+	require.NoError(t, Client.Patch(ctx, objectSet,
+		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Paused"}}`))))
+
+	// ObjectSet is Pausing...
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetPaused, metav1.ConditionTrue))
+
+	// should be reconciled to "banana":"bread", if reconciler would not be paused.
+	require.NoError(t, Client.Patch(ctx, currentCM4,
+		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
+
+	// Wait 10s for the object to be reconciled, which should not happen, because it's paused.
+	require.EqualError(t,
+		Waiter.WaitForObject(ctx, cm4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+			cm := obj.(*corev1.ConfigMap)
+			return cm.Data["banana"] == "bread", nil
+		}, dev.WithTimeout(10*time.Second)), wait.ErrWaitTimeout.Error())
+
+	// Unpause ObjectSet.
+	require.NoError(t, Client.Patch(ctx, objectSet,
+		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Active"}}`))))
+
+	// ObjectSet is Unpausing...
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, objectSet, "to not report Paused anymore", func(obj client.Object) (done bool, err error) {
+			os := obj.(*corev1alpha1.ObjectSet)
+			pausedCond := meta.FindStatusCondition(os.Status.Conditions, corev1alpha1.ObjectSetPaused)
+			return pausedCond == nil, nil
+		}))
+
+	// Wait 10s for the object to be reconciled, which should now happen!
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, cm4, "to be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+			cm := obj.(*corev1.ConfigMap)
+			return cm.Data["banana"] == "bread", nil
+		}, dev.WithTimeout(10*time.Second)))
 
 	// ---------------------------
 	// Test phased teardown logic.
@@ -236,9 +282,7 @@ func TestObjectSet_handover(t *testing.T) {
 		Spec: corev1alpha1.ObjectSetSpec{
 			Previous: []corev1alpha1.PreviousRevisionReference{
 				{
-					Name:  objectSetRev1.Name,
-					Kind:  "ObjectSet",
-					Group: corev1alpha1.GroupVersion.Group,
+					Name: objectSetRev1.Name,
 				},
 			},
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -270,10 +314,8 @@ func TestObjectSet_handover(t *testing.T) {
 							Kind: &corev1alpha1.PackageProbeKindSpec{
 								Kind: "ConfigMap",
 							},
-							Selector: &corev1alpha1.PackageProbeSelectorSpec{
-								Selector: metav1.LabelSelector{
-									MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-								},
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
 							},
 						},
 						Probes: []corev1alpha1.Probe{
