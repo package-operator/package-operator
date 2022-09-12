@@ -98,6 +98,11 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 		},
 	}
 
+	cm4Key := client.ObjectKey{
+		Name: cm4.Name, Namespace: objectSet.Namespace}
+	cm5Key := client.ObjectKey{
+		Name: cm5.Name, Namespace: objectSet.Namespace}
+
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, objectSet))
@@ -117,13 +122,11 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 	// expect cm-4 to be present.
 	currentCM4 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm4.Name, Namespace: objectSet.Namespace}, currentCM4))
+	require.NoError(t, Client.Get(ctx, cm4Key, currentCM4))
 
 	// expect cm-5 to NOT be present as Phase-1 didn't complete.
 	currentCM5 := &corev1.ConfigMap{}
-	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace}, currentCM5), `configmaps "cm-5" not found`)
+	require.EqualError(t, Client.Get(ctx, cm5Key, currentCM5), `configmaps "cm-5" not found`)
 
 	// Patch cm-4 to pass probe.
 	require.NoError(t,
@@ -154,12 +157,12 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	require.NoError(t, Client.Patch(ctx, currentCM4,
 		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
 
-	// Wait 10s for the object to be reconciled, which should not happen, because it's paused.
+	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
 	require.EqualError(t,
-		Waiter.WaitForObject(ctx, cm4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+		Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(10*time.Second)), wait.ErrWaitTimeout.Error())
+		}, dev.WithTimeout(5*time.Second)), wait.ErrWaitTimeout.Error())
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
@@ -175,7 +178,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 	// Wait 10s for the object to be reconciled, which should now happen!
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, cm4, "to be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+		Waiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
 		}, dev.WithTimeout(10*time.Second)))

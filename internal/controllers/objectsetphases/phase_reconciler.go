@@ -135,6 +135,13 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		return false, fmt.Errorf("building desired object: %w", err)
 	}
 
+	// Ensure to watch this type of object, also during teardown!
+	// If the controller was restarted or crashed during deletion, we might not have a cache in memory anymore.
+	if err := r.dynamicCache.Watch(
+		ctx, owner, desiredObj); err != nil {
+		return false, fmt.Errorf("watching new resource: %w", err)
+	}
+
 	currentObj := desiredObj.DeepCopy()
 	err = r.dynamicCache.Get(
 		ctx, client.ObjectKeyFromObject(desiredObj), currentObj)

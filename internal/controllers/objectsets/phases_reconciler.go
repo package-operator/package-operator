@@ -25,6 +25,20 @@ type phasesReconciler struct {
 	newObjectSet    genericObjectSetFactory
 }
 
+func newPhasesReconciler(
+	client client.Client,
+	phaseReconciler phaseReconciler,
+	scheme *runtime.Scheme,
+	newObjectSet genericObjectSetFactory,
+) *phasesReconciler {
+	return &phasesReconciler{
+		client:          client,
+		phaseReconciler: phaseReconciler,
+		scheme:          scheme,
+		newObjectSet:    newObjectSet,
+	}
+}
+
 type phaseReconciler interface {
 	ReconcilePhase(
 		ctx context.Context, owner objectsetphases.PhaseObjectOwner,

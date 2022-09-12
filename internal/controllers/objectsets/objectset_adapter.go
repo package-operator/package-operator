@@ -72,6 +72,14 @@ func (a *GenericObjectSet) UpdateStatusPhase() {
 		return
 	}
 
+	if meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetPaused,
+	) {
+		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
+		return
+	}
+
 	availableCond := meta.FindStatusCondition(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetAvailable,
@@ -132,6 +140,14 @@ func (a *GenericClusterObjectSet) UpdateStatusPhase() {
 		corev1alpha1.ObjectSetArchived,
 	) {
 		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseArchived
+		return
+	}
+
+	if meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetPaused,
+	) {
+		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
 		return
 	}
 

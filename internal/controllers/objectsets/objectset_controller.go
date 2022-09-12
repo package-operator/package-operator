@@ -90,12 +90,10 @@ func newGenericObjectSetController(
 		dw:     dw,
 	}
 
-	phasesReconciler := &phasesReconciler{
-		client: c,
-		phaseReconciler: objectsetphases.NewPhaseReconciler(
-			scheme, c, dw, ownerhandling.NewNative(scheme),
-		),
-	}
+	phasesReconciler := newPhasesReconciler(c, objectsetphases.NewPhaseReconciler(
+		scheme, c, dw, ownerhandling.NewNative(scheme),
+	), scheme, newObjectSet)
+
 	controller.teardownHandler = phasesReconciler
 
 	controller.reconciler = []reconciler{
