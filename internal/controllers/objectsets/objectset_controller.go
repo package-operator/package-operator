@@ -19,7 +19,7 @@ import (
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
-const watchFinalizer = "objectset.package-operator.run/watch-cache"
+const cacheFinalizer = "objectset.package-operator.run/cache"
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
 type GenericObjectSetController struct {
@@ -188,7 +188,7 @@ func (c *GenericObjectSetController) Reconcile(
 func (c *GenericObjectSetController) ensureCacheFinalizer(
 	ctx context.Context, objectSet genericObjectSet,
 ) error {
-	return controllers.EnsureCommonFinalizer(ctx, objectSet.ClientObject(), c.client, watchFinalizer)
+	return controllers.EnsureFinalizer(ctx, c.client, objectSet.ClientObject(), cacheFinalizer)
 }
 
 func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) {
@@ -225,16 +225,16 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 				ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 			})
 		}
-		// don't remove finalizers before deletion is done
+		// don't remove finalizer before deletion is done
 		return nil
 	}
 
-	if err := controllers.HandleCommonDeletion(
-		ctx, objectSet.ClientObject(), c.client, c.dw, watchFinalizer); err != nil {
+	if err := controllers.FreeCacheAndFinalizer(
+		ctx, objectSet.ClientObject(), c.client, c.dw, cacheFinalizer); err != nil {
 		return err
 	}
 
-	// Needs to be called _after_ HandleCommonDeletion,
+	// Needs to be called _after_ FreeCacheAndFinalizer,
 	// because .Update is loading new state into objectSet, overriding changes to conditions.
 	if objectSet.IsArchived() {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{

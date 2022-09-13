@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,18 +11,17 @@ import (
 )
 
 const (
-	// This label is set on all dynamic objects, to limit caches.
+	// This label is set on all dynamic objects to limit caches.
 	DynamicCacheLabel = "package-operator.run/cache"
-	// Revision annotations holds a revision generation number to order ObjectSets.
-	RevisionAnnotation = "package-operator.run/revision"
 )
 
-func EnsureCommonFinalizer(
-	ctx context.Context, obj client.Object,
-	c client.Client, cacheFinalizer string,
+// Ensures the given finalizer is set and persisted on the given object.
+func EnsureFinalizer(
+	ctx context.Context, c client.Client,
+	obj client.Object, finalizer string,
 ) error {
-	if !controllerutil.ContainsFinalizer(obj, cacheFinalizer) {
-		controllerutil.AddFinalizer(obj, cacheFinalizer)
+	if !controllerutil.ContainsFinalizer(obj, finalizer) {
+		controllerutil.AddFinalizer(obj, finalizer)
 		if err := c.Update(ctx, obj); err != nil {
 			return fmt.Errorf("adding finalizer: %w", err)
 		}
@@ -31,21 +29,13 @@ func EnsureCommonFinalizer(
 	return nil
 }
 
-type dynamicWatchFreer interface {
-	Free(ctx context.Context, obj client.Object) error
-}
-
-func HandleCommonDeletion(
-	ctx context.Context, obj client.Object,
-	c client.Client, dw dynamicWatchFreer,
-	cacheFinalizer string,
+// Removes the given finalizer and persist the change.
+func RemoveFinalizer(
+	ctx context.Context, c client.Client,
+	obj client.Object, finalizer string,
 ) error {
-	if err := dw.Free(ctx, obj); err != nil {
-		return fmt.Errorf("free cache: %w", err)
-	}
-
-	if controllerutil.ContainsFinalizer(obj, cacheFinalizer) {
-		controllerutil.RemoveFinalizer(obj, cacheFinalizer)
+	if controllerutil.ContainsFinalizer(obj, finalizer) {
+		controllerutil.RemoveFinalizer(obj, finalizer)
 
 		patch := map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -64,20 +54,19 @@ func HandleCommonDeletion(
 	return nil
 }
 
-func GetObjectRevision(obj client.Object) (int64, error) {
-	a := obj.GetAnnotations()
-	if a == nil {
-		return 0, nil
-	}
-
-	return strconv.ParseInt(a[RevisionAnnotation], 10, 64)
+type dynamicWatchFreer interface {
+	Free(ctx context.Context, obj client.Object) error
 }
 
-func SetObjectRevision(obj client.Object, revision int64) {
-	a := obj.GetAnnotations()
-	if a == nil {
-		a = map[string]string{}
+// Frees caches and removes the associated finalizer.
+func FreeCacheAndFinalizer(
+	ctx context.Context, obj client.Object,
+	c client.Client, dw dynamicWatchFreer,
+	cacheFinalizer string,
+) error {
+	if err := dw.Free(ctx, obj); err != nil {
+		return fmt.Errorf("free cache: %w", err)
 	}
-	a[RevisionAnnotation] = fmt.Sprintf("%d", revision)
-	obj.SetAnnotations(a)
+
+	return RemoveFinalizer(ctx, c, obj, cacheFinalizer)
 }

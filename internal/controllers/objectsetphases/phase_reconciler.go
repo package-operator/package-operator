@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -302,7 +303,7 @@ func (r *PhaseReconciler) reconcileObject(
 			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
 			"ObjectKey", client.ObjectKeyFromObject(desiredObj),
 			"ObjectGVK", desiredObj.GetObjectKind().GroupVersionKind())
-		controllers.SetObjectRevision(updatedObj, owner.GetStatusRevision())
+		setObjectRevision(updatedObj, owner.GetStatusRevision())
 		r.ownerStrategy.ReleaseController(updatedObj)
 		if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), updatedObj); err != nil {
 			return nil, err
@@ -429,7 +430,7 @@ func (c *defaultAdoptionChecker) Check(
 		return false, nil
 	}
 
-	objRevision, err := controllers.GetObjectRevision(obj)
+	objRevision, err := getObjectRevision(obj)
 	if err != nil {
 		return false, err
 	}
@@ -449,7 +450,7 @@ func (c *defaultAdoptionChecker) Check(
 		}
 	}
 
-	currentRevision, err := controllers.GetObjectRevision(obj)
+	currentRevision, err := getObjectRevision(obj)
 	if err != nil {
 		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
@@ -485,4 +486,29 @@ func (c *defaultAdoptionChecker) isOwnedByPreviousRevision(
 		}
 	}
 	return false
+}
+
+const (
+	// Revision annotations holds a revision generation number to order ObjectSets.
+	revisionAnnotation = "package-operator.run/revision"
+)
+
+// Retrieves the revision number from a well-known annotation on the given object.
+func getObjectRevision(obj client.Object) (int64, error) {
+	a := obj.GetAnnotations()
+	if a == nil {
+		return 0, nil
+	}
+
+	return strconv.ParseInt(a[revisionAnnotation], 10, 64)
+}
+
+// Stores the revision number in a well-known annotation on the given object.
+func setObjectRevision(obj client.Object, revision int64) {
+	a := obj.GetAnnotations()
+	if a == nil {
+		a = map[string]string{}
+	}
+	a[revisionAnnotation] = fmt.Sprintf("%d", revision)
+	obj.SetAnnotations(a)
 }

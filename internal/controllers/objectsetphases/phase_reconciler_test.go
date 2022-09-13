@@ -288,7 +288,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 		Object: map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
-					controllers.RevisionAnnotation: "3",
+					revisionAnnotation: "3",
 				},
 			},
 		},
@@ -360,7 +360,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							controllers.RevisionAnnotation: "15",
+							revisionAnnotation: "15",
 						},
 					},
 				},
@@ -410,7 +410,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							controllers.RevisionAnnotation: "100",
+							revisionAnnotation: "100",
 						},
 					},
 				},
@@ -461,7 +461,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							controllers.RevisionAnnotation: "100",
+							revisionAnnotation: "100",
 						},
 					},
 				},
