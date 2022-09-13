@@ -162,7 +162,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
 	})
 
-	t.Run("not owner", func(t *testing.T) {
+	t.Run("not controller", func(t *testing.T) {
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
