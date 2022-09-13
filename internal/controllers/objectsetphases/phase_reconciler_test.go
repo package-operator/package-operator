@@ -36,6 +36,10 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 
 		dynamicCache.
+			On("Watch", mock.Anything, owner, mock.Anything).
+			Return(nil)
+
+		dynamicCache.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
@@ -49,6 +53,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
 	})
 
 	t.Run("already gone when deleting", func(t *testing.T) {
@@ -66,6 +71,9 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
+		dynamicCache.
+			On("Watch", mock.Anything, owner, mock.Anything).
+			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -93,6 +101,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
 
 		// Ensure that IsController was called with currentObj and not desiredObj.
 		// If checking desiredObj, IsController will _always_ return true, which could lead to really nasty behavior.
@@ -117,6 +126,9 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
+		dynamicCache.
+			On("Watch", mock.Anything, owner, mock.Anything).
+			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -144,6 +156,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.False(t, done) // wait for delete confirm
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
 		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
@@ -164,6 +177,9 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
+		dynamicCache.
+			On("Watch", mock.Anything, owner, mock.Anything).
+			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -194,6 +210,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
 		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
