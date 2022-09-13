@@ -310,7 +310,7 @@ func (r *PhaseReconciler) reconcileObject(
 		}
 	}
 
-	// Only issue updates when this instance is already or will be owned by this instance.
+	// Only issue updates when this instance is already or will be controlled by this instance.
 	if r.ownerStrategy.IsController(owner.ClientObject(), updatedObj) {
 		if err := r.patcher.Patch(ctx, desiredObj, currentObj, updatedObj); err != nil {
 			return nil, err
