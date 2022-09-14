@@ -47,7 +47,7 @@ type phaseReconciler interface {
 	) (failedProbes []string, err error)
 
 	TeardownPhase(
-		ctx context.Context, owner client.Object,
+		ctx context.Context, owner controllers.PhaseObjectOwner,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (cleanupDone bool, err error)
 }
@@ -181,8 +181,7 @@ func (r *phasesReconciler) teardownPhase(
 	if len(phase.Class) > 0 {
 		return r.teardownRemotePhase(ctx, objectSet, phase)
 	}
-	return r.phaseReconciler.TeardownPhase(
-		ctx, objectSet.ClientObject(), phase)
+	return r.phaseReconciler.TeardownPhase(ctx, objectSet, phase)
 }
 
 func (r *phasesReconciler) teardownRemotePhase(

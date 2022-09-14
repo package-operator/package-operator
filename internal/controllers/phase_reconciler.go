@@ -108,7 +108,7 @@ func (r *PhaseReconciler) ReconcilePhase(
 }
 
 func (r *PhaseReconciler) TeardownPhase(
-	ctx context.Context, owner client.Object,
+	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	var cleanupCounter int
@@ -127,7 +127,7 @@ func (r *PhaseReconciler) TeardownPhase(
 }
 
 func (r *PhaseReconciler) teardownPhaseObject(
-	ctx context.Context, owner client.Object,
+	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (cleanupDone bool, err error) {
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
@@ -138,7 +138,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	// Ensure to watch this type of object, also during teardown!
 	// If the controller was restarted or crashed during deletion, we might not have a cache in memory anymore.
 	if err := r.dynamicCache.Watch(
-		ctx, owner, desiredObj); err != nil {
+		ctx, owner.ClientObject(), desiredObj); err != nil {
 		return false, fmt.Errorf("watching new resource: %w", err)
 	}
 
@@ -154,11 +154,11 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		return false, fmt.Errorf("getting object for teardown: %w", err)
 	}
 
-	if !r.ownerStrategy.IsController(owner, currentObj) {
+	if !r.ownerStrategy.IsController(owner.ClientObject(), currentObj) {
 		// this object is owned by someone else
 		// so we don't have to delete it for cleanup,
 		// but we still want to remove ourself as owner.
-		r.ownerStrategy.RemoveOwner(owner, currentObj)
+		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
 		if err := r.writer.Update(ctx, currentObj); err != nil {
 			return false, fmt.Errorf("removing owner reference: %w", err)
 		}
@@ -182,7 +182,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 	previous []client.Object,
 ) (actualObj *unstructured.Unstructured, err error) {
 	desiredObj, err := r.desiredObject(
-		ctx, owner.ClientObject(), phaseObject)
+		ctx, owner, phaseObject)
 	if err != nil {
 		return nil, fmt.Errorf("building desired object: %w", err)
 	}
@@ -207,7 +207,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 // Builds an object as specified in a phase.
 // Includes system labels, namespace and owner reference.
 func (r *PhaseReconciler) desiredObject(
-	ctx context.Context, owner client.Object,
+	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
 	desiredObj, err = unstructuredFromObjectSetObject(&phaseObject)
@@ -218,7 +218,7 @@ func (r *PhaseReconciler) desiredObject(
 	// Default namespace to the owners namespace
 	if len(desiredObj.GetNamespace()) == 0 {
 		desiredObj.SetNamespace(
-			owner.GetNamespace())
+			owner.ClientObject().GetNamespace())
 	}
 
 	// Set cache label
@@ -229,8 +229,10 @@ func (r *PhaseReconciler) desiredObject(
 	labels[DynamicCacheLabel] = "True"
 	desiredObj.SetLabels(labels)
 
+	setObjectRevision(desiredObj, owner.GetStatusRevision())
+
 	// Set owner reference
-	if err := r.ownerStrategy.SetControllerReference(owner, desiredObj); err != nil {
+	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
 		return nil, err
 	}
 	return desiredObj, nil

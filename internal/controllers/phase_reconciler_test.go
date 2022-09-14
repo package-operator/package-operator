@@ -28,14 +28,17 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			dynamicCache:  dynamicCache,
 			ownerStrategy: ownerStrategy,
 		}
-		owner := &unstructured.Unstructured{}
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		dynamicCache.
-			On("Watch", mock.Anything, owner, mock.Anything).
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 
 		dynamicCache.
@@ -52,7 +55,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 	})
 
 	t.Run("already gone on delete", func(t *testing.T) {
@@ -64,14 +67,17 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			dynamicCache:  dynamicCache,
 			ownerStrategy: ownerStrategy,
 		}
-		owner := &unstructured.Unstructured{}
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		dynamicCache.
-			On("Watch", mock.Anything, owner, mock.Anything).
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
@@ -83,7 +89,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 
 		ownerStrategy.
-			On("IsController", owner, currentObj).
+			On("IsController", ownerObj, currentObj).
 			Return(true)
 
 		testClient.
@@ -100,11 +106,11 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 
 		// Ensure that IsController was called with currentObj and not desiredObj.
 		// If checking desiredObj, IsController will _always_ return true, which could lead to really nasty behavior.
-		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
+		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
 	})
 
 	t.Run("delete waits", func(t *testing.T) {
@@ -119,14 +125,18 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			dynamicCache:  dynamicCache,
 			ownerStrategy: ownerStrategy,
 		}
-		owner := &unstructured.Unstructured{}
+
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		dynamicCache.
-			On("Watch", mock.Anything, owner, mock.Anything).
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
@@ -138,7 +148,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 
 		ownerStrategy.
-			On("IsController", owner, currentObj).
+			On("IsController", ownerObj, currentObj).
 			Return(true)
 
 		testClient.
@@ -155,10 +165,10 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.False(t, done) // wait for delete confirm
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
-		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
+		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
 	})
 
 	t.Run("not controller", func(t *testing.T) {
@@ -170,14 +180,18 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			ownerStrategy: ownerStrategy,
 			writer:        testClient,
 		}
-		owner := &unstructured.Unstructured{}
+
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		dynamicCache.
-			On("Watch", mock.Anything, owner, mock.Anything).
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
@@ -189,10 +203,10 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 
 		ownerStrategy.
-			On("IsController", owner, currentObj).
+			On("IsController", ownerObj, currentObj).
 			Return(false)
 		ownerStrategy.
-			On("RemoveOwner", owner, currentObj).
+			On("RemoveOwner", ownerObj, currentObj).
 			Return(false)
 
 		testClient.
@@ -209,11 +223,11 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
+		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
-		ownerStrategy.AssertCalled(t, "IsController", owner, currentObj)
-		ownerStrategy.AssertCalled(t, "RemoveOwner", owner, currentObj)
+		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
+		ownerStrategy.AssertCalled(t, "RemoveOwner", ownerObj, currentObj)
 		testClient.AssertCalled(t, "Update", mock.Anything, currentObj, mock.Anything)
 	})
 }
@@ -305,7 +319,11 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 		Return(nil)
 
 	ctx := context.Background()
-	owner := &unstructured.Unstructured{}
+	owner := &phaseObjectOwnerMock{}
+	ownerObj := &unstructured.Unstructured{}
+	owner.On("ClientObject").Return(ownerObj)
+	owner.On("GetStatusRevision").Return(int64(5))
+
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: runtime.RawExtension{
 			Raw: []byte(`{"kind": "test"}`),
@@ -318,6 +336,9 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 		Object: map[string]interface{}{
 			"kind": "test",
 			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					revisionAnnotation: "5",
+				},
 				"labels": map[string]interface{}{
 					DynamicCacheLabel: "True",
 				},
