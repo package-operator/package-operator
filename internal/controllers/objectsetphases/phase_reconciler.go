@@ -430,16 +430,16 @@ func (c *defaultAdoptionChecker) Check(
 		return false, nil
 	}
 
-	objRevision, err := getObjectRevision(obj)
+	currentRevision, err := getObjectRevision(obj)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
-	if objRevision > owner.GetStatusRevision() {
+	if currentRevision > owner.GetStatusRevision() {
 		// owned by newer revision.
 		return false, nil
 	}
 
-	if !c.isOwnedByPreviousRevision(owner, obj, previous) {
+	if !c.isControlledByPreviousRevision(obj, previous) {
 		return false, ObjectNotOwnedByPreviousRevisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
@@ -450,14 +450,6 @@ func (c *defaultAdoptionChecker) Check(
 		}
 	}
 
-	currentRevision, err := getObjectRevision(obj)
-	if err != nil {
-		return false, fmt.Errorf("getting revision of object: %w", err)
-	}
-	if currentRevision > owner.GetStatusRevision() {
-		// no adoption, object is already owned by a newer revision.
-		return false, nil
-	}
 	if currentRevision == owner.GetStatusRevision() {
 		// This should not have happened.
 		// Revision is same as owner,

@@ -31,7 +31,7 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
-	dw              dynamicCache
+	dynamicCache    dynamicCache
 	teardownHandler teardownHandler
 }
 
@@ -78,20 +78,20 @@ func newGenericObjectSetController(
 	newObjectSet genericObjectSetFactory,
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme, dw dynamicCache,
+	scheme *runtime.Scheme, dynamicCache dynamicCache,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
 		newObjectSetPhase: newObjectSetPhase,
 
-		client: c,
-		log:    log,
-		scheme: scheme,
-		dw:     dw,
+		client:       c,
+		log:          log,
+		scheme:       scheme,
+		dynamicCache: dynamicCache,
 	}
 
 	phasesReconciler := newPhasesReconciler(c, objectsetphases.NewPhaseReconciler(
-		scheme, c, dw, ownerhandling.NewNative(scheme),
+		scheme, c, dynamicCache, ownerhandling.NewNative(scheme),
 	), scheme, newObjectSet)
 
 	controller.teardownHandler = phasesReconciler
@@ -115,7 +115,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSet).
 		Owns(objectSetPhase).
-		Watches(c.dw.Source(), &handler.EnqueueRequestForOwner{
+		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
 			OwnerType:    objectSet,
 			IsController: false,
 		}).
@@ -230,7 +230,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 	}
 
 	if err := controllers.FreeCacheAndFinalizer(
-		ctx, objectSet.ClientObject(), c.client, c.dw, cacheFinalizer); err != nil {
+		ctx, objectSet.ClientObject(), c.client, c.dynamicCache, cacheFinalizer); err != nil {
 		return err
 	}
 
