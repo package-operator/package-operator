@@ -337,7 +337,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		needsAdoption bool
 	}{
 		{
-			name: "owned by newer revision",
+			name: "owned by older revision",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
 				owner *phaseObjectOwnerMock,
