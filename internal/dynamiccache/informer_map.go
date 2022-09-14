@@ -13,12 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	cache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 type mapEntry struct {
@@ -49,9 +48,8 @@ func NewInformerMap(
 		selectors: selectors.forGVK,
 		indexers:  indexers.forGVK,
 
-		informers:  map[schema.GroupVersionKind]mapEntry{},
-		codecs:     serializer.NewCodecFactory(scheme),
-		paramCodec: runtime.NewParameterCodec(scheme),
+		informers:     map[schema.GroupVersionKind]mapEntry{},
+		dynamicClient: dynamic.NewForConfigOrDie(config),
 	}
 }
 
@@ -81,11 +79,8 @@ type InformerMap struct {
 	informers    map[schema.GroupVersionKind]mapEntry
 	informersMux sync.RWMutex
 
-	// codecs is used to create a new REST client
-	codecs serializer.CodecFactory
-
-	// paramCodec is used by list and watch
-	paramCodec runtime.ParameterCodec
+	// dynamicClient to create new ListWatches.
+	dynamicClient dynamic.Interface
 }
 
 // Get returns a informer for the given GVK.
@@ -197,38 +192,16 @@ func (im *InformerMap) createListWatch(
 		return nil, err
 	}
 
-	client, err := apiutil.RESTClientForGVK(gvk, false, im.config, im.codecs)
-	if err != nil {
-		return nil, err
-	}
-	listGVK := gvk.GroupVersion().WithKind(gvk.Kind + "List")
-	listObj, err := im.scheme.New(listGVK)
-	if err != nil {
-		return nil, err
-	}
+	client := im.dynamicClient.Resource(mapping.Resource)
 
-	// Create a new ListWatch for the obj
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			im.selectors(gvk).ApplyToList(&opts)
-			res := listObj.DeepCopyObject()
-			err := client.
-				Get().
-				Resource(mapping.Resource.Resource).
-				VersionedParams(&opts, im.paramCodec).
-				Do(ctx).
-				Into(res)
-			return res, err
+			return client.List(ctx, opts)
 		},
-		// Setup the watch function
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
 			im.selectors(gvk).ApplyToList(&opts)
-			// Watch needs to be set to true separately
-			opts.Watch = true
-			return client.Get().
-				Resource(mapping.Resource.Resource).
-				VersionedParams(&opts, im.paramCodec).
-				Watch(ctx)
+			return client.Watch(ctx, opts)
 		},
 	}, nil
 }

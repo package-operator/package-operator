@@ -87,10 +87,19 @@ func (Test) Unit() error {
 	}, "go", "test", "-cover", "-v", "-race", "./internal/...", "./cmd/...")
 }
 
-func (Test) Integration() error {
-	return sh.Run("go", "test", "-v",
+func (Test) Integration(ctx context.Context) error {
+	testErr := sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
 		"-timeout=20m", "./integration/...")
+
+	// always export logs
+	if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
+		"export", "logs", path.Join(cacheDir, "dev-env-logs"),
+		"--name", "package-operator-dev"); err != nil {
+		logger.Error(err, "exporting logs")
+	}
+
+	return testErr
 }
 
 // Building
@@ -472,7 +481,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 		}
 	}
 
-	ctx = dev.ContextWithLogger(ctx, logger)
+	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
 	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
@@ -480,6 +489,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
 	}
+	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-manager: %w", err)
 	}
@@ -513,7 +523,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 		}
 	}
 
-	dev.ContextWithLogger(ctx, logger)
+	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
@@ -526,6 +536,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
 	}
+	_ = cluster.CtrlClient.Delete(ctx, packageOperatorWebhookDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorWebhookDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook: %w", err)
 	}

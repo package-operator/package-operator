@@ -10,12 +10,19 @@ import (
 	"runtime/debug"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	pkoapis "package-operator.run/apis"
+	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/objectsets"
+	"package-operator.run/package-operator/internal/dynamiccache"
 )
 
 type opts struct {
@@ -48,6 +55,9 @@ func main() {
 	scheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := pkoapis.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
@@ -122,6 +132,33 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		if err != nil {
 			return fmt.Errorf("unable to create pprof server: %w", err)
 		}
+	}
+
+	// DynamicCache
+	dc := dynamiccache.NewCache(
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(),
+		dynamiccache.SelectorsByGVK{
+			// Only cache objects with our label selector,
+			// so we prevent our caches from exploding!
+			schema.GroupVersionKind{}: dynamiccache.Selector{
+				Label: labels.SelectorFromSet(labels.Set{
+					controllers.DynamicCacheLabel: "True",
+				}),
+			},
+		})
+
+	// ObjectSet
+	if err = (objectsets.NewObjectSetController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectSet"),
+		mgr.GetScheme(), dc,
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
+	}
+	if err = (objectsets.NewClusterObjectSetController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
+		mgr.GetScheme(), dc,
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
 	}
 
 	log.Info("starting manager")

@@ -5,12 +5,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mt-sre/devkube/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pkoapis "package-operator.run/apis"
+)
+
+const (
+	defaultWaitTimeout  = 20 * time.Second
+	defaultWaitInterval = 1 * time.Second
 )
 
 var (
@@ -20,6 +28,8 @@ var (
 	Config *rest.Config
 	// Scheme used by created clients.
 	Scheme = runtime.NewScheme()
+
+	Waiter *dev.Waiter
 
 	// PackageOperatorNamespace is the namespace that the Package Operator is running in.
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
@@ -39,12 +49,15 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	Waiter = dev.NewWaiter(Client, Scheme, dev.WithTimeout(defaultWaitTimeout), dev.WithInterval(defaultWaitInterval))
 }
 
 func initClients(ctx context.Context) error {
 	// Client/Scheme setup.
 	AddToSchemes := runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,
+		pkoapis.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		return fmt.Errorf("could not load schemes: %w", err)

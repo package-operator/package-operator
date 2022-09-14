@@ -62,3 +62,10 @@ jobs:
       run: ./mage dev:integration
       env:
         CONTAINER_RUNTIME: docker
+
+    - name: Archive cluster logs
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: cluster-logs
+        path: .cache/dev-env-logs

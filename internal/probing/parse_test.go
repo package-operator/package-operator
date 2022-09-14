@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
@@ -45,11 +46,9 @@ func TestParseSelector(t *testing.T) {
 			Kind:  "Test",
 			Group: "test",
 		},
-		Selector: &corev1alpha1.PackageProbeSelectorSpec{
-			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"test": "test123",
-				},
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"test": "test123",
 			},
 		},
 	}, nil)
