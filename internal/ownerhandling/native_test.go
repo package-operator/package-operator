@@ -8,8 +8,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"package-operator.run/package-operator/internal/testutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"package-operator.run/package-operator/internal/testutil"
 )
 
 var (
@@ -23,7 +24,7 @@ func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
 			Namespace: "test",
 			UID:       types.UID("1234"),
 			OwnerReferences: []metav1.OwnerReference{
-				{Name: "cm1", UID: types.UID("123456")},
+				{Name: "cm1", UID: types.UID("123456"), Kind: "ConfigMap", APIVersion: "v1"},
 			},
 		},
 	}

@@ -46,12 +46,13 @@ func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 }
 
 func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object) error {
+	ownerRefComp := s.ownerRefForCompare(owner)
 	ownerRefs := s.getOwnerReferences(obj)
 
 	// Ensure that there is no controller already.
 	for _, ownerRef := range ownerRefs {
-		if ownerRef.Controller != nil && *ownerRef.Controller &&
-			ownerRef.UID != owner.GetUID() {
+		if !s.referSameObject(ownerRefComp, ownerRef) &&
+			ownerRef.Controller != nil && *ownerRef.Controller {
 			return &controllerutil.AlreadyOwnedError{
 				Object: obj,
 				Owner: metav1.OwnerReference{
@@ -113,10 +114,11 @@ func (s *OwnerStrategyAnnotation) IsController(
 }
 
 func (s *OwnerStrategyAnnotation) RemoveOwner(owner, obj metav1.Object) {
+	ownerRefComp := s.ownerRefForCompare(owner)
 	ownerRefs := s.getOwnerReferences(obj)
 	foundIndex := -1
 	for i, ownerRef := range ownerRefs {
-		if owner.GetUID() == ownerRef.UID {
+		if s.referSameObject(ownerRefComp, ownerRef) {
 			// remove owner
 			foundIndex = i
 			break

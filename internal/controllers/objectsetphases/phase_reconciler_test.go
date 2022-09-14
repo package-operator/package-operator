@@ -56,7 +56,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		dynamicCache.AssertCalled(t, "Watch", mock.Anything, owner, mock.Anything)
 	})
 
-	t.Run("already gone when deleting", func(t *testing.T) {
+	t.Run("already gone on delete", func(t *testing.T) {
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}

@@ -49,11 +49,11 @@ func (s *OwnerStrategyNative) IsController(
 }
 
 func (s *OwnerStrategyNative) RemoveOwner(owner, obj metav1.Object) {
+	ownerRefComp := s.ownerRefForCompare(owner)
 	ownerRefs := obj.GetOwnerReferences()
 	foundIndex := -1
 	for i, ownerRef := range ownerRefs {
-		if owner.GetUID() == ownerRef.UID {
-			// remove owner
+		if s.referSameObject(ownerRefComp, ownerRef) {
 			foundIndex = i
 			break
 		}

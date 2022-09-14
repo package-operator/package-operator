@@ -26,7 +26,7 @@ func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 			Namespace: "test",
 			UID:       types.UID("1234"),
 			Annotations: map[string]string{
-				ownerStrategyAnnotation: `[{"uid":"123456"}]`,
+				ownerStrategyAnnotation: `[{"uid":"123456", "kind":"ConfigMap", "name":"cm1"}]`,
 			},
 		},
 	}
