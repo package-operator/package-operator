@@ -477,8 +477,8 @@ func (c *defaultAdoptionChecker) Check(
 	return true, nil
 }
 
-func (c *defaultAdoptionChecker) isOwnedByPreviousRevision(
-	owner PhaseObjectOwner, obj client.Object, previous []client.Object,
+func (c *defaultAdoptionChecker) isControlledByPreviousRevision(
+	obj client.Object, previous []client.Object,
 ) bool {
 	for _, prev := range previous {
 		if c.ownerStrategy.IsController(prev, obj) {
