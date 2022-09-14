@@ -146,13 +146,7 @@ func (c *GenericObjectSetController) Reconcile(
 			return ctrl.Result{}, err
 		}
 
-		objectSet.UpdateStatusPhase()
-		// this controller owns status alone, so we can always update it without optimistic locking.
-		objectSet.ClientObject().SetResourceVersion("")
-		if err := c.client.Status().Patch(ctx, objectSet.ClientObject(), client.Merge); err != nil {
-			return ctrl.Result{}, fmt.Errorf("updating ObjectSet status: %w", err)
-		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
 	}
 
 	if err := c.ensureCacheFinalizer(ctx, objectSet); err != nil {
@@ -174,14 +168,17 @@ func (c *GenericObjectSetController) Reconcile(
 	}
 
 	c.reportPausedCondition(ctx, objectSet)
+	return res, c.updateStatus(ctx, objectSet)
+}
 
+func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
 	objectSet.UpdateStatusPhase()
 	// this controller owns status alone, so we can always update it without optimistic locking.
 	objectSet.ClientObject().SetResourceVersion("")
 	if err := c.client.Status().Patch(ctx, objectSet.ClientObject(), client.Merge); err != nil {
-		return res, fmt.Errorf("updating ObjectSet status: %w", err)
+		return fmt.Errorf("updating ObjectSet status: %w", err)
 	}
-	return res, nil
+	return nil
 }
 
 // ensures the cache finalizer is set on the given object.
