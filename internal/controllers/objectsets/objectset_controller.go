@@ -15,11 +15,8 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
-
-const cacheFinalizer = "objectset.package-operator.run/cache"
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
 type GenericObjectSetController struct {
@@ -90,7 +87,7 @@ func newGenericObjectSetController(
 		dynamicCache: dynamicCache,
 	}
 
-	phasesReconciler := newPhasesReconciler(c, objectsetphases.NewPhaseReconciler(
+	phasesReconciler := newPhasesReconciler(c, controllers.NewPhaseReconciler(
 		scheme, c, dynamicCache, ownerhandling.NewNative(scheme),
 	), scheme, newObjectSet)
 
@@ -149,7 +146,7 @@ func (c *GenericObjectSetController) Reconcile(
 		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
 	}
 
-	if err := c.ensureCacheFinalizer(ctx, objectSet); err != nil {
+	if err := controllers.EnsureCachedFinalizer(ctx, c.client, objectSet.ClientObject()); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -179,13 +176,6 @@ func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet
 		return fmt.Errorf("updating ObjectSet status: %w", err)
 	}
 	return nil
-}
-
-// ensures the cache finalizer is set on the given object.
-func (c *GenericObjectSetController) ensureCacheFinalizer(
-	ctx context.Context, objectSet genericObjectSet,
-) error {
-	return controllers.EnsureFinalizer(ctx, c.client, objectSet.ClientObject(), cacheFinalizer)
 }
 
 func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) {
@@ -226,8 +216,8 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		return nil
 	}
 
-	if err := controllers.FreeCacheAndFinalizer(
-		ctx, objectSet.ClientObject(), c.client, c.dynamicCache, cacheFinalizer); err != nil {
+	if err := controllers.FreeCacheAndRemoveFinalizer(
+		ctx, c.client, objectSet.ClientObject(), c.dynamicCache); err != nil {
 		return err
 	}
 

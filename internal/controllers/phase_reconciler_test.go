@@ -1,4 +1,4 @@
-package objectsetphases
+package controllers
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 
 	"package-operator.run/apis/core/v1alpha1"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -320,7 +319,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 			"kind": "test",
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
-					controllers.DynamicCacheLabel: "True",
+					DynamicCacheLabel: "True",
 				},
 			},
 		},

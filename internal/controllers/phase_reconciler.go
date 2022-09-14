@@ -1,4 +1,4 @@
-package objectsetphases
+package controllers
 
 import (
 	"context"
@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/probing"
 )
 
@@ -227,7 +226,7 @@ func (r *PhaseReconciler) desiredObject(
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[controllers.DynamicCacheLabel] = "True"
+	labels[DynamicCacheLabel] = "True"
 	desiredObj.SetLabels(labels)
 
 	// Set owner reference

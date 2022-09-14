@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/objectsetphases"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/probing"
 )
 
@@ -41,7 +41,7 @@ func newPhasesReconciler(
 
 type phaseReconciler interface {
 	ReconcilePhase(
-		ctx context.Context, owner objectsetphases.PhaseObjectOwner,
+		ctx context.Context, owner controllers.PhaseObjectOwner,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 		probe probing.Prober, previous []client.Object,
 	) (failedProbes []string, err error)
