@@ -167,14 +167,6 @@ spec:
                   way the ObjectSet would. If set to any other string, an out-of-tree
                   controller needs to be present to handle ObjectSetPhase objects.
                 type: string
-              lifecycleState:
-                default: Active
-                description: Specifies the lifecycle state of the ClusterObjectSetPhase.
-                enum:
-                - Active
-                - Paused
-                - Archived
-                type: string
               name:
                 description: Name of the reconcile phase. Must be unique within a
                   ObjectSet.
@@ -192,12 +184,15 @@ spec:
                   - object
                   type: object
                 type: array
+              paused:
+                description: Disables reconciliation of the ObjectSet. Only Status
+                  updates will still propagated, but object changes will not be reconciled.
+                type: boolean
               previous:
                 description: Previous revisions of the ClusterObjectSet to adopt objects
                   from.
                 items:
-                  description: References a previous revision of an ObjectSet, ClusterObjectSet,
-                    ObjectSetPhase or ClusterObjectSetPhase.
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
                   properties:
                     name:
                       description: Name of a previous revision.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -44,7 +46,7 @@ type ownerStrategy interface {
 type adoptionChecker interface {
 	Check(
 		ctx context.Context, owner PhaseObjectOwner, obj client.Object,
-		previous []client.Object,
+		previous []PreviousObjectSet,
 	) (needsAdoption bool, err error)
 }
 
@@ -62,6 +64,20 @@ type dynamicCache interface {
 	) error
 }
 
+type PhaseProbingFailedError struct {
+	FailedProbes []string
+	PhaseName    string
+}
+
+func (e *PhaseProbingFailedError) ErrorWithoutPhase() string {
+	return strings.Join(e.FailedProbes, ", ")
+}
+
+func (e *PhaseProbingFailedError) Error() string {
+	return fmt.Sprintf("Phase %q failed: %s",
+		e.PhaseName, e.ErrorWithoutPhase())
+}
+
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
@@ -73,27 +89,27 @@ func NewPhaseReconciler(
 		writer:          writer,
 		dynamicCache:    dynamicCache,
 		ownerStrategy:   ownerStrategy,
-		adoptionChecker: &defaultAdoptionChecker{ownerStrategy: ownerStrategy},
+		adoptionChecker: &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
 		patcher:         &defaultPatcher{writer: writer},
 	}
 }
 
 type PhaseObjectOwner interface {
 	ClientObject() client.Object
-	GetStatusRevision() int64
+	GetRevision() int64
 	IsPaused() bool
 }
 
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober, previous []client.Object,
-) (failedProbes []string, err error) {
-
+	probe probing.Prober, previous []PreviousObjectSet,
+) error {
+	var failedProbes []string
 	for _, phaseObject := range phase.Objects {
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if success, message := probe.Probe(actualObj); !success {
@@ -104,7 +120,13 @@ func (r *PhaseReconciler) ReconcilePhase(
 		}
 	}
 
-	return
+	if len(failedProbes) > 0 {
+		return &PhaseProbingFailedError{
+			FailedProbes: failedProbes,
+			PhaseName:    phase.Name,
+		}
+	}
+	return nil
 }
 
 func (r *PhaseReconciler) TeardownPhase(
@@ -179,7 +201,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 func (r *PhaseReconciler) reconcilePhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
-	previous []client.Object,
+	previous []PreviousObjectSet,
 ) (actualObj *unstructured.Unstructured, err error) {
 	desiredObj, err := r.desiredObject(
 		ctx, owner, phaseObject)
@@ -229,7 +251,7 @@ func (r *PhaseReconciler) desiredObject(
 	labels[DynamicCacheLabel] = "True"
 	desiredObj.SetLabels(labels)
 
-	setObjectRevision(desiredObj, owner.GetStatusRevision())
+	setObjectRevision(desiredObj, owner.GetRevision())
 
 	// Set owner reference
 	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
@@ -266,7 +288,7 @@ func (e RevisionCollisionError) Error() string {
 
 func (r *PhaseReconciler) reconcileObject(
 	ctx context.Context, owner PhaseObjectOwner,
-	desiredObj *unstructured.Unstructured, previous []client.Object,
+	desiredObj *unstructured.Unstructured, previous []PreviousObjectSet,
 ) (actualObj *unstructured.Unstructured, err error) {
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
@@ -304,7 +326,7 @@ func (r *PhaseReconciler) reconcileObject(
 			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
 			"ObjectKey", client.ObjectKeyFromObject(desiredObj),
 			"ObjectGVK", desiredObj.GetObjectKind().GroupVersionKind())
-		setObjectRevision(updatedObj, owner.GetStatusRevision())
+		setObjectRevision(updatedObj, owner.GetRevision())
 		r.ownerStrategy.ReleaseController(updatedObj)
 		if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), updatedObj); err != nil {
 			return nil, err
@@ -418,13 +440,14 @@ func mergeKeysFrom(base, additional map[string]string) map[string]string {
 }
 
 type defaultAdoptionChecker struct {
+	scheme        *runtime.Scheme
 	ownerStrategy ownerStrategy
 }
 
 // Check detects whether an ownership change is needed.
 func (c *defaultAdoptionChecker) Check(
 	ctx context.Context, owner PhaseObjectOwner, obj client.Object,
-	previous []client.Object,
+	previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
@@ -435,7 +458,7 @@ func (c *defaultAdoptionChecker) Check(
 	if err != nil {
 		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
-	if currentRevision > owner.GetStatusRevision() {
+	if currentRevision > owner.GetRevision() {
 		// owned by newer revision.
 		return false, nil
 	}
@@ -451,7 +474,7 @@ func (c *defaultAdoptionChecker) Check(
 		}
 	}
 
-	if currentRevision == owner.GetStatusRevision() {
+	if currentRevision == owner.GetRevision() {
 		// This should not have happened.
 		// Revision is same as owner,
 		// but the object is not already owned by this object.
@@ -471,11 +494,42 @@ func (c *defaultAdoptionChecker) Check(
 }
 
 func (c *defaultAdoptionChecker) isControlledByPreviousRevision(
-	obj client.Object, previous []client.Object,
+	obj client.Object, previous []PreviousObjectSet,
 ) bool {
 	for _, prev := range previous {
-		if c.ownerStrategy.IsController(prev, obj) {
+		if c.ownerStrategy.IsController(prev.ClientObject(), obj) {
 			return true
+		}
+
+		remotePhases := prev.GetRemotePhases()
+		if len(remotePhases) == 0 {
+			continue
+		}
+
+		prevGVK, err := apiutil.GVKForObject(prev.ClientObject(), c.scheme)
+		if err != nil {
+			panic(err)
+		}
+
+		var remoteGVK schema.GroupVersionKind
+		if strings.HasPrefix(prevGVK.Kind, "Cluster") {
+			// ClusterObjectSet
+			remoteGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetPhase")
+		} else {
+			// ObjectSet
+			remoteGVK = corev1alpha1.GroupVersion.WithKind("ObjectSetPhase")
+		}
+		for _, remote := range remotePhases {
+			potentialRemoteOwner := &unstructured.Unstructured{}
+			potentialRemoteOwner.SetGroupVersionKind(remoteGVK)
+			potentialRemoteOwner.SetName(remote.Name)
+			potentialRemoteOwner.SetUID(remote.UID)
+			potentialRemoteOwner.SetNamespace(
+				prev.ClientObject().GetNamespace())
+
+			if c.ownerStrategy.IsController(potentialRemoteOwner, obj) {
+				return true
+			}
 		}
 	}
 	return false

@@ -26,10 +26,10 @@ type ClusterObjectSetPhaseList struct {
 
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 type ClusterObjectSetPhaseSpec struct {
-	// Specifies the lifecycle state of the ClusterObjectSetPhase.
-	// +kubebuilder:default="Active"
-	// +kubebuilder:validation:Enum=Active;Paused;Archived
-	LifecycleState ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
+	// Disables reconciliation of the ObjectSet.
+	// Only Status updates will still propagated, but object changes will not be reconciled.
+	// +optional
+	Paused bool `json:"paused,omitempty"`
 
 	// Immutable fields below
 

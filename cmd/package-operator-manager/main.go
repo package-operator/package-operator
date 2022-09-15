@@ -21,6 +21,7 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
 	"package-operator.run/package-operator/internal/dynamiccache"
 )
@@ -149,16 +150,33 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	// ObjectSet
 	if err = (objectsets.NewObjectSetController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectSet"),
+		mgr.GetClient(),
+		ctrl.Log.WithName("controllers").WithName("ObjectSet"),
 		mgr.GetScheme(), dc,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
 	}
 	if err = (objectsets.NewClusterObjectSetController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
+		mgr.GetClient(),
+		ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
 		mgr.GetScheme(), dc,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
+	}
+
+	// ObjectSetPhase for "default" class
+	const defaultObjectSetPhaseClass = "default"
+	if err = (objectsetphases.NewSameClusterObjectSetPhaseController(
+		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
+		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
+	}
+	if err = (objectsetphases.NewSameClusterClusterObjectSetPhaseController(
+		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
+		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}
 
 	log.Info("starting manager")

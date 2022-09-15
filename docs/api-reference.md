@@ -99,7 +99,6 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   class: sit
-  lifecycleState: Active
   name: dolor
   objects:
   - object:
@@ -107,6 +106,7 @@ spec:
       kind: Deployment
       metadata:
         name: example-deployment
+  paused: "true"
   previous:
   - name: previous-revision
   revision: 42
@@ -217,7 +217,6 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   class: elitr
-  lifecycleState: Active
   name: sadipscing
   objects:
   - object:
@@ -225,6 +224,7 @@ spec:
       kind: Deployment
       metadata:
         name: example-deployment
+  paused: "true"
   previous:
   - name: previous-revision
   revision: 42
@@ -253,7 +253,7 @@ ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSetPhase. |
+| `paused` <br><a href="#bool">bool</a> | Disables reconciliation of the ObjectSet.<br>Only Status updates will still propagated, but object changes will not be reconciled. |
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
@@ -304,6 +304,7 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
+| `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ClusterObjectSetPhase objects. |
 
 
 Used in:
@@ -331,7 +332,7 @@ ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSetPhase. |
+| `paused` <br><a href="#bool">bool</a> | Disables reconciliation of the ObjectSet.<br>Only Status updates will still propagated, but object changes will not be reconciled. |
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
@@ -399,6 +400,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
+| `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ObjectSetPhase objects. |
 
 
 Used in:
@@ -438,7 +440,7 @@ Used in:
 
 ### PreviousRevisionReference
 
-References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase or ClusterObjectSetPhase.
+References a previous revision of an ObjectSet or ClusterObjectSet.
 
 | Field | Description |
 | ----- | ----------- |
@@ -507,3 +509,18 @@ e.g. ensures that probes defined for apps/Deployments are not checked against Co
 
 Used in:
 * [ObjectSetProbe](#objectsetprobe)
+
+
+### RemotePhaseReference
+
+References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string |  |
+| `uid` <b>required</b><br>types.UID |  |
+
+
+Used in:
+* [ClusterObjectSetStatus](#clusterobjectsetstatus)
+* [ObjectSetStatus](#objectsetstatus)

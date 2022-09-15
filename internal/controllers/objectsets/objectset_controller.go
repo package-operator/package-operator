@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,29 +75,37 @@ func NewClusterObjectSetController(
 func newGenericObjectSetController(
 	newObjectSet genericObjectSetFactory,
 	newObjectSetPhase genericObjectSetPhaseFactory,
-	c client.Client, log logr.Logger,
+	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
 		newObjectSetPhase: newObjectSetPhase,
 
-		client:       c,
+		client:       client,
 		log:          log,
 		scheme:       scheme,
 		dynamicCache: dynamicCache,
 	}
 
-	phasesReconciler := newPhasesReconciler(c, controllers.NewPhaseReconciler(
-		scheme, c, dynamicCache, ownerhandling.NewNative(scheme),
-	), scheme, newObjectSet)
+	phasesReconciler := newObjectSetPhasesReconciler(
+		controllers.NewPhaseReconciler(
+			scheme, client,
+			dynamicCache, ownerhandling.NewNative(scheme)),
+		newObjectSetRemotePhaseReconciler(
+			client, scheme, newObjectSetPhase),
+		controllers.NewPreviousRevisionLookup(
+			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
+				return newObjectSet(s)
+			}, client).Lookup,
+	)
 
 	controller.teardownHandler = phasesReconciler
 
 	controller.reconciler = []reconciler{
 		&revisionReconciler{
 			scheme:       scheme,
-			client:       c,
+			client:       client,
 			newObjectSet: newObjectSet,
 		},
 		phasesReconciler,
@@ -164,7 +173,9 @@ func (c *GenericObjectSetController) Reconcile(
 		return res, err
 	}
 
-	c.reportPausedCondition(ctx, objectSet)
+	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
+		return res, fmt.Errorf("getting paused status: %w", err)
+	}
 	return res, c.updateStatus(ctx, objectSet)
 }
 
@@ -178,17 +189,69 @@ func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet
 	return nil
 }
 
-func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) {
-	if objectSet.IsPaused() {
+func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) error {
+	var phasesArePaused, unknown bool
+	if len(objectSet.GetRemotePhases()) > 0 {
+		var err error
+		phasesArePaused, unknown, err = c.areRemotePhasesPaused(ctx, objectSet)
+		if err != nil {
+			return fmt.Errorf("getting status of remote phases: %w", err)
+		}
+	} else {
+		phasesArePaused = objectSet.IsPaused()
+	}
+
+	switch {
+	case unknown ||
+		objectSet.IsPaused() && !phasesArePaused ||
+		!objectSet.IsPaused() && phasesArePaused:
+		// Could not get status of all remote ObjectSetPhases or they disagree with their parent.
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:    corev1alpha1.ObjectSetPaused,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "PartiallyPaused",
+			Message: "Waiting for ObjectSetPhases.",
+		})
+
+	case objectSet.IsPaused() && phasesArePaused:
+		// Everything is paused!
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:    corev1alpha1.ObjectSetPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  "Paused",
 			Message: "Lifecycle state set to paused.",
 		})
-	} else {
+
+	case !objectSet.IsPaused() && !phasesArePaused:
+		// Nothing is paused!
 		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
 	}
+	return nil
+}
+
+func (c *GenericObjectSetController) areRemotePhasesPaused(ctx context.Context, objectSet genericObjectSet) (arePaused, unknown bool, err error) {
+	var pausedPhases int
+	for _, phaseRef := range objectSet.GetRemotePhases() {
+		phase := c.newObjectSetPhase(c.scheme)
+		err := c.client.Get(ctx, client.ObjectKey{
+			Name:      phaseRef.Name,
+			Namespace: objectSet.ClientObject().GetNamespace(),
+		}, phase.ClientObject())
+		if errors.IsNotFound(err) {
+			// Phase object is not yet in cache, or was deleted by someone else.
+			// -> we have to wait, but we don't want to raise an error in logs.
+			return false, true, nil
+		}
+		if err != nil {
+			return false, false, fmt.Errorf("get ObjectSetPhase: %w", err)
+		}
+
+		if meta.IsStatusConditionTrue(phase.GetConditions(), corev1alpha1.ObjectSetPhasePaused) {
+			pausedPhases++
+		}
+	}
+	arePaused = pausedPhases == len(objectSet.GetRemotePhases())
+	return arePaused, false, nil
 }
 
 func (c *GenericObjectSetController) handleDeletionAndArchival(

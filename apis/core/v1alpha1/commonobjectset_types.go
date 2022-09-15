@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // Specifies the lifecycle state of the ObjectSet.
@@ -141,9 +142,15 @@ type ProbeFieldsEqualSpec struct {
 	FieldB string `json:"fieldB"`
 }
 
-// References a previous revision of an ObjectSet, ClusterObjectSet, ObjectSetPhase or ClusterObjectSetPhase.
+// References a previous revision of an ObjectSet or ClusterObjectSet.
 type PreviousRevisionReference struct {
 	// Name of a previous revision.
 	// +example=previous-revision
 	Name string `json:"name"`
+}
+
+// References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
+type RemotePhaseReference struct {
+	Name string    `json:"name"`
+	UID  types.UID `json:"uid"`
 }

@@ -23,14 +23,14 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
-	if objectSet.GetStatusRevision() != 0 {
+	if objectSet.GetRevision() != 0 {
 		// .status.revision is already set.
 		return
 	}
 
 	if len(objectSet.GetPrevious()) == 0 {
 		// no previous revision(s) specified, default to revision 1
-		objectSet.SetStatusRevision(1)
+		objectSet.SetRevision(1)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (r *revisionReconciler) Reconcile(
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
-		sr := prevObjectSet.GetStatusRevision()
+		sr := prevObjectSet.GetRevision()
 		if sr == 0 {
 			logr.FromContextOrDiscard(ctx).
 				Info("waiting for previous revision to report revision number", "object", key)
@@ -62,6 +62,6 @@ func (r *revisionReconciler) Reconcile(
 		}
 	}
 
-	objectSet.SetStatusRevision(latestPreviousRevision + 1)
+	objectSet.SetRevision(latestPreviousRevision + 1)
 	return
 }
