@@ -11,6 +11,12 @@ import (
 type genericObjectSetPhase interface {
 	ClientObject() client.Object
 	GetConditions() []metav1.Condition
+	IsPaused() bool
+	SetPhase(phase corev1alpha1.ObjectSetTemplatePhase)
+	SetPaused(paused bool)
+	SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe)
+	SetRevision(revision int64)
+	SetPrevious([]corev1alpha1.PreviousRevisionReference)
 }
 
 type genericObjectSetPhaseFactory func(
@@ -58,6 +64,30 @@ func (a *GenericObjectSetPhase) GetConditions() []metav1.Condition {
 	return a.Status.Conditions
 }
 
+func (a *GenericObjectSetPhase) SetPaused(paused bool) {
+	a.Spec.Paused = paused
+}
+
+func (a *GenericObjectSetPhase) SetAvailabilityProbes(probes []corev1alpha1.ObjectSetProbe) {
+	a.Spec.AvailabilityProbes = probes
+}
+
+func (a *GenericObjectSetPhase) IsPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *GenericObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.ObjectSetTemplatePhase = phase
+}
+
+func (a *GenericObjectSetPhase) SetRevision(revision int64) {
+	a.Spec.Revision = revision
+}
+
+func (a *GenericObjectSetPhase) SetPrevious(previous []corev1alpha1.PreviousRevisionReference) {
+	a.Spec.Previous = previous
+}
+
 type GenericClusterObjectSetPhase struct {
 	corev1alpha1.ClusterObjectSetPhase
 }
@@ -68,4 +98,28 @@ func (a *GenericClusterObjectSetPhase) ClientObject() client.Object {
 
 func (a *GenericClusterObjectSetPhase) GetConditions() []metav1.Condition {
 	return a.Status.Conditions
+}
+
+func (a *GenericClusterObjectSetPhase) SetPaused(paused bool) {
+	a.Spec.Paused = paused
+}
+
+func (a *GenericClusterObjectSetPhase) IsPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *GenericClusterObjectSetPhase) SetAvailabilityProbes(probes []corev1alpha1.ObjectSetProbe) {
+	a.Spec.AvailabilityProbes = probes
+}
+
+func (a *GenericClusterObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.ObjectSetTemplatePhase = phase
+}
+
+func (a *GenericClusterObjectSetPhase) SetRevision(revision int64) {
+	a.Spec.Revision = revision
+}
+
+func (a *GenericClusterObjectSetPhase) SetPrevious(previous []corev1alpha1.PreviousRevisionReference) {
+	a.Spec.Previous = previous
 }

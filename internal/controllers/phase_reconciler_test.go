@@ -13,12 +13,21 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/apis/core/v1alpha1"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
+
+var testScheme = runtime.NewScheme()
+
+func init() {
+	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+}
 
 func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 	t.Run("already gone", func(t *testing.T) {
@@ -31,7 +40,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetStatusRevision").Return(int64(5))
+		owner.On("GetRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -70,7 +79,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetStatusRevision").Return(int64(5))
+		owner.On("GetRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -129,7 +138,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetStatusRevision").Return(int64(5))
+		owner.On("GetRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -184,7 +193,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetStatusRevision").Return(int64(5))
+		owner.On("GetRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -271,7 +280,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	}
 	owner := &phaseObjectOwnerMock{}
 	owner.On("ClientObject").Return(&unstructured.Unstructured{})
-	owner.On("GetStatusRevision").Return(int64(3))
+	owner.On("GetRevision").Return(int64(3))
 
 	acMock.
 		On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -322,7 +331,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
 	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetStatusRevision").Return(int64(5))
+	owner.On("GetRevision").Return(int64(5))
 
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: runtime.RawExtension{
@@ -352,11 +361,13 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		name          string
 		mockPrepare   func(*ownerStrategyMock, *phaseObjectOwnerMock)
 		object        client.Object
-		previous      []client.Object
+		previous      []PreviousObjectSet
 		errorAs       interface{}
 		needsAdoption bool
 	}{
 		{
+			// Object is of revision 15, while our current revision is 34.
+			// Expect to confirm adoption with no error.
 			name: "owned by older revision",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
@@ -373,9 +384,12 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetStatusRevision").Return(int64(34))
+					On("GetRevision").Return(int64(34))
 			},
-			previous: []client.Object{&unstructured.Unstructured{}},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&unstructured.Unstructured{}),
+			},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -388,7 +402,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			needsAdoption: true,
 		},
 		{
-			name: "already owner",
+			// Object is already controlled my this owner.
+			// ->no op
+			name: "already controller",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
 				owner *phaseObjectOwnerMock,
@@ -407,6 +423,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			needsAdoption: false,
 		},
 		{
+			// Object is owned by a newer revision than owner.
 			name: "owned by newer revision",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
@@ -423,9 +440,11 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetStatusRevision").Return(int64(34))
+					On("GetRevision").Return(int64(34))
 			},
-			previous: []client.Object{&unstructured.Unstructured{}},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&unstructured.Unstructured{})},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -438,6 +457,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			needsAdoption: false,
 		},
 		{
+			// Object owner is not in previous revision list.
 			name: "object not owned by previous revision",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
@@ -450,9 +470,11 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					Object: map[string]interface{}{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
-				owner.On("GetStatusRevision").Return(int64(1))
+				owner.On("GetRevision").Return(int64(1))
 			},
-			previous: []client.Object{&unstructured.Unstructured{}},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&unstructured.Unstructured{})},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{},
 			},
@@ -460,6 +482,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			needsAdoption: false,
 		},
 		{
+			// both the object and the owner have the same revision number,
+			// but the owner is not the same.
 			name: "revision collision",
 			mockPrepare: func(
 				osm *ownerStrategyMock,
@@ -474,9 +498,11 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*v1.ConfigMap"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetStatusRevision").Return(int64(100))
+					On("GetRevision").Return(int64(100))
 			},
-			previous: []client.Object{&corev1.ConfigMap{}},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&corev1.ConfigMap{})},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -496,6 +522,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			os := &ownerStrategyMock{}
 			c := &defaultAdoptionChecker{
 				ownerStrategy: os,
+				scheme:        testScheme,
 			}
 			owner := &phaseObjectOwnerMock{}
 
@@ -512,6 +539,50 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			assert.Equal(t, test.needsAdoption, needsAdoption)
 		})
 	}
+}
+
+func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
+	os := &ownerStrategyMock{}
+	ac := &defaultAdoptionChecker{
+		scheme:        testScheme,
+		ownerStrategy: os,
+	}
+
+	os.On("IsController",
+		mock.AnythingOfType("*v1alpha1.ObjectSet"),
+		mock.Anything,
+	).Return(false)
+
+	os.On("IsController",
+		mock.AnythingOfType("*unstructured.Unstructured"),
+		mock.Anything,
+	).Return(true)
+
+	previousObj := &corev1alpha1.ObjectSet{}
+	previous := &previousObjectSetMock{}
+	previous.On("ClientObject").Return(previousObj)
+	previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
+		{
+			Name: "phase-1",
+		},
+	})
+
+	obj := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: corev1alpha1.GroupVersion.String(),
+					Kind:       "ObjectSetPhase",
+					Name:       "phase-1",
+					Controller: pointer.BoolPtr(true),
+				},
+			},
+		},
+	}
+
+	isController := ac.isControlledByPreviousRevision(
+		obj, []PreviousObjectSet{previous})
+	assert.True(t, isController)
 }
 
 func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
@@ -685,79 +756,4 @@ func Test_mergeKeysFrom(t *testing.T) {
 			assert.Equal(t, test.expected, r)
 		})
 	}
-}
-
-type ownerStrategyMock struct {
-	mock.Mock
-}
-
-func (m *ownerStrategyMock) IsController(owner, obj metav1.Object) bool {
-	args := m.Called(owner, obj)
-	return args.Bool(0)
-}
-
-func (m *ownerStrategyMock) RemoveOwner(owner, obj metav1.Object) {
-	m.Called(owner, obj)
-}
-
-func (m *ownerStrategyMock) ReleaseController(obj metav1.Object) {
-	m.Called(obj)
-}
-
-func (m *ownerStrategyMock) SetControllerReference(owner, obj metav1.Object) error {
-	args := m.Called(owner, obj)
-	return args.Error(0)
-}
-
-type phaseObjectOwnerMock struct {
-	mock.Mock
-}
-
-func (m *phaseObjectOwnerMock) ClientObject() client.Object {
-	args := m.Called()
-	return args.Get(0).(client.Object)
-}
-
-func (m *phaseObjectOwnerMock) GetStatusRevision() int64 {
-	args := m.Called()
-	return args.Get(0).(int64)
-}
-
-func (m *phaseObjectOwnerMock) IsPaused() bool {
-	args := m.Called()
-	return args.Bool(0)
-}
-
-type dynamicCacheMock struct {
-	testutil.CtrlClient
-}
-
-func (c *dynamicCacheMock) Watch(
-	ctx context.Context, owner client.Object, obj runtime.Object,
-) error {
-	args := c.Called(ctx, owner, obj)
-	return args.Error(0)
-}
-
-type adoptionCheckerMock struct {
-	mock.Mock
-}
-
-func (m *adoptionCheckerMock) Check(
-	ctx context.Context, owner PhaseObjectOwner, obj client.Object, previous []client.Object,
-) (needsAdoption bool, err error) {
-	args := m.Called(ctx, owner, obj)
-	return args.Bool(0), args.Error(1)
-}
-
-type patcherMock struct {
-	mock.Mock
-}
-
-func (m *patcherMock) Patch(
-	ctx context.Context,
-	desiredObj, currentObj, updatedObj *unstructured.Unstructured,
-) error {
-	args := m.Called(ctx, desiredObj, currentObj, updatedObj)
-	return args.Error(0)
 }

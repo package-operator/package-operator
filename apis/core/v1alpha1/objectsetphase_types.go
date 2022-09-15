@@ -25,10 +25,10 @@ type ObjectSetPhaseList struct {
 
 // ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 type ObjectSetPhaseSpec struct {
-	// Specifies the lifecycle state of the ObjectSetPhase.
-	// +kubebuilder:default="Active"
-	// +kubebuilder:validation:Enum=Active;Paused;Archived
-	LifecycleState ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
+	// Disables reconciliation of the ObjectSet.
+	// Only Status updates will still propagated, but object changes will not be reconciled.
+	// +optional
+	Paused bool `json:"paused,omitempty"`
 
 	// Immutable fields below
 

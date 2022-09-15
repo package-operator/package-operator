@@ -57,6 +57,8 @@ type ClusterObjectSetStatus struct {
 	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`
+	// Remote phases aka ClusterObjectSetPhase objects.
+	RemotePhases []RemotePhaseReference `json:"remotePhases,omitempty"`
 }
 
 func init() {

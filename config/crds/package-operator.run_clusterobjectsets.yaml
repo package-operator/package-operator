@@ -215,8 +215,7 @@ spec:
                 description: Previous revisions of the ClusterObjectSet to adopt objects
                   from.
                 items:
-                  description: References a previous revision of an ObjectSet, ClusterObjectSet,
-                    ObjectSetPhase or ClusterObjectSetPhase.
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
                   properties:
                     name:
                       description: Name of a previous revision.
@@ -311,6 +310,25 @@ spec:
                   away as soon as kubectl can print conditions! When evaluating object
                   state in code, use .Conditions instead.
                 type: string
+              remotePhases:
+                description: Remote phases aka ClusterObjectSetPhase objects.
+                items:
+                  description: References remote phases aka ObjectSetPhase/ClusterObjectSetPhase
+                    objects to which a phase is delegated.
+                  properties:
+                    name:
+                      type: string
+                    uid:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - name
+                  - uid
+                  type: object
+                type: array
               revision:
                 description: Computed revision number, monotonically increasing.
                 format: int64

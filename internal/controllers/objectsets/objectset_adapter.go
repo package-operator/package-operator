@@ -18,8 +18,10 @@ type genericObjectSet interface {
 	GetPrevious() []corev1alpha1.PreviousRevisionReference
 	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
-	SetStatusRevision(revision int64)
-	GetStatusRevision() int64
+	SetRevision(revision int64)
+	GetRevision() int64
+	GetRemotePhases() []corev1alpha1.RemotePhaseReference
+	SetRemotePhases([]corev1alpha1.RemotePhaseReference)
 }
 
 type genericObjectSetFactory func(
@@ -118,12 +120,20 @@ func (a *GenericObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	return a.Spec.AvailabilityProbes
 }
 
-func (a *GenericObjectSet) SetStatusRevision(revision int64) {
+func (a *GenericObjectSet) SetRevision(revision int64) {
 	a.Status.Revision = revision
 }
 
-func (a *GenericObjectSet) GetStatusRevision() int64 {
+func (a *GenericObjectSet) GetRevision() int64 {
 	return a.Status.Revision
+}
+
+func (a *GenericObjectSet) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+	return a.Status.RemotePhases
+}
+
+func (a *GenericObjectSet) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
+	a.Status.RemotePhases = remotes
 }
 
 type GenericClusterObjectSet struct {
@@ -189,10 +199,18 @@ func (a *GenericClusterObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectS
 	return a.Spec.AvailabilityProbes
 }
 
-func (a *GenericClusterObjectSet) SetStatusRevision(revision int64) {
+func (a *GenericClusterObjectSet) SetRevision(revision int64) {
 	a.Status.Revision = revision
 }
 
-func (a *GenericClusterObjectSet) GetStatusRevision() int64 {
+func (a *GenericClusterObjectSet) GetRevision() int64 {
 	return a.Status.Revision
+}
+
+func (a *GenericClusterObjectSet) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+	return a.Status.RemotePhases
+}
+
+func (a *GenericClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
+	a.Status.RemotePhases = remotes
 }
