@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
-	github.com/magefile/mage v1.13.0
+	github.com/magefile/mage v1.14.0
 	github.com/mt-sre/devkube v0.4.0
 	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.25.0
