@@ -299,7 +299,7 @@ func (c *Cache) SampleMetrics() error {
 	objCount := 0
 	for gvk := range c.informerReferences {
 		listObj := unstructured.UnstructuredList{}
-		gvk.Kind = gvk.Kind + "List"
+		gvk.Kind += "List"
 		listObj.SetGroupVersionKind(gvk)
 		if err := c.List(context.TODO(), &listObj); err != nil {
 			return fmt.Errorf("problem listing %v: %w", gvk, err)

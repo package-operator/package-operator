@@ -2,7 +2,6 @@ package dynamiccache
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,13 +26,4 @@ func TestCacheSource(t *testing.T) {
 			_ = cs.Start(ctx, nil, nil)
 		},
 	)
-}
-
-func TestCacheSource1(t *testing.T) {
-	a := map[string]map[string]string{}
-	// a["a"]["a"] = "a"
-	b := a
-	b["b"] = map[string]string{}
-	b["b"]["b"] = "b"
-	fmt.Println(a)
 }

@@ -89,7 +89,7 @@ func (r *Recorder) RecordDynamicCacheSizeObj(count int) {
 }
 
 // InjectOCMAPIRequestDuration allows us to override `r.ocmAPIRequestDuration` metric
-// Useful while writing tests
+// Useful while writing tests.
 func (r *Recorder) InjectOCMAPIRequestDuration(s prometheus.Summary) {
 	r.ocmAPIRequestDuration = s
 }
