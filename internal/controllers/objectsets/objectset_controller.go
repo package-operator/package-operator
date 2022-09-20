@@ -16,6 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
@@ -29,6 +30,7 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
+	recorder        MetricsRecorder
 	dynamicCache    dynamicCache
 	teardownHandler teardownHandler
 }
@@ -42,6 +44,7 @@ type dynamicCache interface {
 	Source() source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
+	SampleMetrics() error
 }
 
 type teardownHandler interface {
@@ -50,25 +53,31 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
+type MetricsRecorder interface {
+	RecordRolloutTime(os metrics.GenericObjectSet)
+}
+
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
+	r MetricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
-		c, log, scheme, dw,
+		c, log, scheme, dw, r,
 	)
 }
 
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
+	r MetricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
-		c, log, scheme, dw,
+		c, log, scheme, dw, r,
 	)
 }
 
@@ -77,6 +86,7 @@ func newGenericObjectSetController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
+	recorder MetricsRecorder,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -86,6 +96,7 @@ func newGenericObjectSetController(
 		log:          log,
 		scheme:       scheme,
 		dynamicCache: dynamicCache,
+		recorder:     recorder,
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
@@ -177,6 +188,15 @@ func (c *GenericObjectSetController) Reconcile(
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
 		return res, fmt.Errorf("getting paused status: %w", err)
 	}
+
+	err = c.dynamicCache.SampleMetrics()
+	if err != nil {
+		return res, fmt.Errorf("problem with the dynamicCache sampling metrics: %w", err) // TODO: Should it error for a metrics problem?
+	}
+	if c.recorder != nil {
+		c.recorder.RecordRolloutTime(objectSet)
+	}
+
 	return res, c.updateStatus(ctx, objectSet)
 }
 

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,19 +60,28 @@ type Cache struct {
 	informerReferencesMux sync.RWMutex
 	informerReferences    map[schema.GroupVersionKind]map[OwnerReference]struct{}
 
+	recorder MetricsRecorder
+
 	cacheSource cacheSourcer
+}
+
+type MetricsRecorder interface {
+	RecordDynamicCacheSizeGvk(int)
+	RecordDynamicCacheSizeObj(int)
 }
 
 func NewCache(
 	config *rest.Config,
 	scheme *runtime.Scheme,
 	mapper meta.RESTMapper,
+	recorder MetricsRecorder,
 	opts ...CacheOption,
 ) *Cache {
 	c := &Cache{
 		scheme:             scheme,
 		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
 		cacheSource:        &cacheSource{},
+		recorder:           recorder,
 	}
 	for _, opt := range opts {
 		opt.ApplyToCacheOptions(&c.opts)
@@ -277,4 +288,24 @@ func (c *Cache) ownerRef(owner client.Object) (OwnerReference, error) {
 		Name:      owner.GetName(),
 		Namespace: owner.GetNamespace(),
 	}, nil
+}
+
+func (c *Cache) SampleMetrics() error {
+	if c.recorder == nil {
+		return nil
+	}
+	gvkCount := len(c.informerReferences)
+	c.recorder.RecordDynamicCacheSizeGvk(gvkCount)
+	objCount := 0
+	for gvk := range c.informerReferences {
+		listObj := unstructured.UnstructuredList{}
+		gvk.Kind = gvk.Kind + "List"
+		listObj.SetGroupVersionKind(gvk)
+		if err := c.List(context.TODO(), &listObj); err != nil {
+			return fmt.Errorf("problem listing %v: %w", gvk, err)
+		}
+		objCount += len(listObj.Items)
+	}
+	c.recorder.RecordDynamicCacheSizeObj(objCount)
+	return nil
 }

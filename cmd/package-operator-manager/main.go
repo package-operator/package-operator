@@ -27,12 +27,13 @@ import (
 )
 
 type opts struct {
-	metricsAddr          string
-	pprofAddr            string
-	namespace            string
-	enableLeaderElection bool
-	probeAddr            string
-	printVersion         bool
+	metricsAddr           string
+	pprofAddr             string
+	namespace             string
+	enableLeaderElection  bool
+	probeAddr             string
+	enableMetricsRecorder bool
+	printVersion          bool
 }
 
 func main() {
@@ -43,12 +44,13 @@ func main() {
 		"The address the pprof web endpoint binds to.")
 	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
 		"The namespace the operator is deployed into.")
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election.", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit")
+	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording metrics.")
+	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -135,9 +137,15 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
+	// Create metrics recorder
+	var recorder *metrics.Recorder
+	if opts.enableMetricsRecorder {
+		recorder = metrics.NewRecorder(true)
+	}
+
 	// DynamicCache
 	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(),
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
