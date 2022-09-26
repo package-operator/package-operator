@@ -80,7 +80,7 @@ func (r *Recorder) GetDynamicCacheSizeGvk() prometheus.Gauge {
 	return r.dynamicCacheSizeGvk
 }
 
-// GetDynamicCacheSizeObj is used for testing Cache.SampleMetrics
+// GetDynamicCacheSizeObj is used for testing Cache.SampleMetrics.
 func (r *Recorder) GetDynamicCacheSizeObj() prometheus.Gauge {
 	return r.dynamicCacheSizeObjects
 }

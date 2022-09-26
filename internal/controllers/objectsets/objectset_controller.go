@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/package-operator/internal/metrics"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -53,7 +55,7 @@ type teardownHandler interface {
 }
 
 type MetricsRecorder interface {
-	RecordRolloutTime(objectSet genericObjectSet)
+	RecordRolloutTime(objectSet metrics.GenericObjectSet)
 }
 
 func NewObjectSetController(
