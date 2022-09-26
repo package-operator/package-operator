@@ -13,3 +13,5 @@
 Operator for packaging and managing a collection of arbitrary Kubernetes objects to install software on one or multiple clusters.
 
 ---
+Dev Note: Assure you have `export CONTAINER_RUNTIME=docker` or similar for `podman`, or you will get cryptic errors from
+mage that may lead you to think there is a problem with Kind cluster.
