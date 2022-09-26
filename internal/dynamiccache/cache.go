@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -68,6 +69,8 @@ type Cache struct {
 type MetricsRecorder interface {
 	RecordDynamicCacheSizeGvk(int)
 	RecordDynamicCacheSizeObj(int)
+	GetDynamicCacheSizeGvk() prometheus.Gauge
+	GetDynamicCacheSizeObj() prometheus.Gauge
 }
 
 func NewCache(

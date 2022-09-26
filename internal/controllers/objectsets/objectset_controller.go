@@ -16,7 +16,6 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
@@ -54,7 +53,7 @@ type teardownHandler interface {
 }
 
 type MetricsRecorder interface {
-	RecordRolloutTime(os metrics.GenericObjectSet)
+	RecordRolloutTime(objectSet genericObjectSet)
 }
 
 func NewObjectSetController(
@@ -191,7 +190,7 @@ func (c *GenericObjectSetController) Reconcile(
 
 	err = c.dynamicCache.SampleMetrics()
 	if err != nil {
-		return res, fmt.Errorf("problem with the dynamicCache sampling metrics: %w", err) // TODO: Should it error for a metrics problem?
+		log.Error(err, "sampling dynamicCache metrics")
 	}
 	if c.recorder != nil {
 		c.recorder.RecordRolloutTime(objectSet)

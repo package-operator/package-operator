@@ -2,6 +2,7 @@ package metrics
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,17 +10,14 @@ import (
 
 // Recorder stores all the metrics related to Addons.
 type Recorder struct {
-	// metrics
 	dynamicCacheSizeGvk     prometheus.Gauge
 	dynamicCacheSizeObjects prometheus.Gauge
 	rolloutTime             *prometheus.GaugeVec
-	ocmAPIRequestDuration   prometheus.Summary // TODO: Keep this?
 }
 
 type GenericObjectSet interface {
-	GetName() string
+	ClientObject() client.Object
 	GetConditions() *[]metav1.Condition
-	GetCreationTimestamp() metav1.Time
 }
 
 func NewRecorder(register bool) *Recorder {
@@ -65,17 +63,17 @@ func NewRecorder(register bool) *Recorder {
 	return &Recorder{
 		dynamicCacheSizeGvk:     dynamicCacheSizeGvk,
 		dynamicCacheSizeObjects: dynamicCacheSizeObjects,
-		ocmAPIRequestDuration:   ocmAPIReqDuration,
 		rolloutTime:             rolloutTime,
 	}
 }
 
-func (r *Recorder) RecordRolloutTime(os GenericObjectSet) {
-	start := os.GetCreationTimestamp()
-	conds := os.GetConditions()
+func (r *Recorder) RecordRolloutTime(objectSet GenericObjectSet) {
+	obj := objectSet.ClientObject()
+	start := obj.GetCreationTimestamp()
+	conds := objectSet.GetConditions()
 	for _, cond := range *conds {
 		if cond.Type == "Success" {
-			r.rolloutTime.WithLabelValues(os.GetName()).Set(cond.LastTransitionTime.Sub(start.Time).Seconds())
+			r.rolloutTime.WithLabelValues(obj.GetName()).Set(cond.LastTransitionTime.Sub(start.Time).Seconds())
 		}
 	}
 }
@@ -88,12 +86,11 @@ func (r *Recorder) RecordDynamicCacheSizeObj(count int) {
 	r.dynamicCacheSizeObjects.Set(float64(count))
 }
 
-// InjectOCMAPIRequestDuration allows us to override `r.ocmAPIRequestDuration` metric
-// Useful while writing tests.
-func (r *Recorder) InjectOCMAPIRequestDuration(s prometheus.Summary) {
-	r.ocmAPIRequestDuration = s
+func (r *Recorder) GetDynamicCacheSizeGvk() prometheus.Gauge {
+	return r.dynamicCacheSizeGvk
 }
 
-func (r *Recorder) RecordOCMAPIRequests(us float64) {
-	r.ocmAPIRequestDuration.Observe(us)
+// GetDynamicCacheSizeObj is used for testing Cache.SampleMetrics
+func (r *Recorder) GetDynamicCacheSizeObj() prometheus.Gauge {
+	return r.dynamicCacheSizeObjects
 }

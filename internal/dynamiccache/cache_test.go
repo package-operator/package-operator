@@ -4,6 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"package-operator.run/package-operator/internal/metrics"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -236,6 +241,45 @@ func TestCache_Reader(t *testing.T) {
 		err = c.List(ctx, obj)
 		require.ErrorIs(t, err, &CacheNotStartedError{})
 	})
+}
+
+func TestCache_SampleMetrics(t *testing.T) {
+	c, _, informerMap := setupTestCache(t)
+	c.recorder = metrics.NewRecorder(false)
+	secretGVK := schema.GroupVersionKind{
+		Version: "v1",
+		Kind:    "Secret",
+	}
+	configMapGVK := schema.GroupVersionKind{
+		Version: "v1",
+		Kind:    "ConfigMap",
+	}
+	c.informerReferences[secretGVK] = map[OwnerReference]struct{}{}
+	c.informerReferences[configMapGVK] = map[OwnerReference]struct{}{}
+
+	reader := &readerMock{}
+	reader.
+		On("List", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			list := args.Get(1).(*unstructured.UnstructuredList)
+			list.Items = make([]unstructured.Unstructured, 2)
+		}).
+		Return(nil).Once()
+	reader.
+		On("List", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			list := args.Get(1).(*unstructured.UnstructuredList)
+			list.Items = make([]unstructured.Unstructured, 1)
+		}).
+		Return(nil).Once()
+	informerMap.
+		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, reader, nil)
+
+	err := c.SampleMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, float64(2), testutil.ToFloat64(c.recorder.GetDynamicCacheSizeGvk()))
+	assert.Equal(t, float64(3), testutil.ToFloat64(c.recorder.GetDynamicCacheSizeObj()))
 }
 
 func setupTestCache(t *testing.T) (*Cache, *cacheSourceMock, *informerMapMock) {
