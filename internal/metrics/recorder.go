@@ -24,7 +24,7 @@ func NewRecorder(register bool) *Recorder {
 
 	dynamicCacheSizeGvk := prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "package_operator_dynamic_cache_size_gvk",
+			Name: "package_operator_dynamic_cache_size_gvks",
 			Help: "Size of the dynamic cache in gvk's",
 		})
 	dynamicCacheSizeObjects := prometheus.NewGauge(
@@ -32,15 +32,6 @@ func NewRecorder(register bool) *Recorder {
 			Name: "package_operator_dynamic_cache_size_objects",
 			Help: "Size of the dynamic cache in objects",
 		})
-
-	ocmAPIReqDuration := prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "addon_operator_ocm_api_requests_durations",
-			Help: "OCM API request latencies in microseconds",
-			// p50, p90 and p99 latencies
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		})
-
 	rolloutTime := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "package_operator_rollout_time_seconds",
@@ -55,7 +46,6 @@ func NewRecorder(register bool) *Recorder {
 		ctrlmetrics.Registry.MustRegister(
 			dynamicCacheSizeGvk,
 			dynamicCacheSizeObjects,
-			ocmAPIReqDuration,
 			rolloutTime,
 		)
 	}
