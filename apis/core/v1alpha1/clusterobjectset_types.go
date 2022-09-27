@@ -50,11 +50,11 @@ type ClusterObjectSetSpec struct {
 // ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 type ClusterObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// This field is not part of any API contract
 	// it will go away as soon as kubectl can print conditions!
 	// When evaluating object state in code, use .Conditions instead.
-	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
+	Conditions []metav1.Condition   `json:"conditions,omitempty"`
+	Phase      ObjectSetStatusPhase `json:"phase,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`
 	// Remote phases aka ClusterObjectSetPhase objects.
