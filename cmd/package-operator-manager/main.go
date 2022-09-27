@@ -21,6 +21,7 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
 	"package-operator.run/package-operator/internal/dynamiccache"
@@ -177,6 +178,21 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
+	}
+	// Object deployment controller
+	if err = (objectdeployments.NewObjectDeploymentController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectDeployment"),
+		mgr.GetScheme(),
+	)).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ObjectDeployment: %w", err)
+	}
+
+	// Cluster Object deployment controller
+	if err = (objectdeployments.NewClusterObjectDeploymentController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectDeployment"),
+		mgr.GetScheme(),
+	)).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
 	}
 
 	log.Info("starting manager")
