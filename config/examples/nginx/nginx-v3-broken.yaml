@@ -1,0 +1,59 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectDeployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      annotations:
+        description: A broken release, never to succeed.
+      labels:
+        app: nginx
+    spec:
+      phases:
+      - name: deploy
+        objects:
+        - object:
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: nginx-v1
+            data:
+              key1: test123
+        - object:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: nginx-deployment-v3
+              labels:
+                app: nginx
+            spec:
+              replicas: 2
+              selector:
+                matchLabels:
+                  app: nginx
+              template:
+                metadata:
+                  labels:
+                    app: nginx
+                spec:
+                  containers:
+                  - name: nginx
+                    image: nginx:i-dont-exist
+                    ports:
+                    - containerPort: 80
+      availabilityProbes:
+      - selector:
+          kind:
+            group: apps
+            kind: Deployment
+        probes:
+        - condition:
+            type: Available
+            status: "True"
+        - fieldsEqual:
+            fieldA: .status.updatedReplicas
+            fieldB: .status.replicas
