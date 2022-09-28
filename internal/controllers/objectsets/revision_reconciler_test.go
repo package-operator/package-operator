@@ -63,7 +63,7 @@ func Test_revisionReconciler(t *testing.T) {
 			On("Get", mock.Anything, client.ObjectKey{
 				Name:      "prev1",
 				Namespace: "xxx",
-			}, mock.Anything).
+			}, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*corev1alpha1.ObjectSet)
 				*out = *prev1
@@ -79,7 +79,7 @@ func Test_revisionReconciler(t *testing.T) {
 			On("Get", mock.Anything, client.ObjectKey{
 				Name:      "prev2",
 				Namespace: "xxx",
-			}, mock.Anything).
+			}, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*corev1alpha1.ObjectSet)
 				*out = *prev2
@@ -129,7 +129,7 @@ func Test_revisionReconciler(t *testing.T) {
 			On("Get", mock.Anything, client.ObjectKey{
 				Name:      "prev1",
 				Namespace: "xxx",
-			}, mock.Anything).
+			}, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*corev1alpha1.ObjectSet)
 				*out = *prev1

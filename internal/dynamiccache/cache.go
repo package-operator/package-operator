@@ -211,6 +211,7 @@ func (CacheNotStartedError) Error() string {
 func (c *Cache) Get(
 	ctx context.Context,
 	key client.ObjectKey, out client.Object,
+	opts ...client.GetOption,
 ) error {
 	gvk, err := apiutil.GVKForObject(out, c.scheme)
 	if err != nil {
@@ -230,7 +231,7 @@ func (c *Cache) Get(
 		return fmt.Errorf("getting Informer from Map: %w", err)
 	}
 
-	return reader.Get(ctx, key, out)
+	return reader.Get(ctx, key, out, opts...)
 }
 
 // List implements client.Reader.

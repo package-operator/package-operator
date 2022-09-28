@@ -33,8 +33,8 @@ func (c *CtrlClient) Status() client.StatusWriter {
 
 // Reader interface
 
-func (c *CtrlClient) Get(ctx context.Context, key types.NamespacedName, obj client.Object) error {
-	args := c.Called(ctx, key, obj)
+func (c *CtrlClient) Get(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+	args := c.Called(ctx, key, obj, opts)
 	return args.Error(0)
 }
 
