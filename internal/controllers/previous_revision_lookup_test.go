@@ -49,7 +49,7 @@ func TestPreviousRevisionLookup(t *testing.T) {
 		})
 
 	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	previous, err := rl.Lookup(ctx, owner)
@@ -61,5 +61,5 @@ func TestPreviousRevisionLookup(t *testing.T) {
 	clientMock.AssertCalled(t, "Get", mock.Anything, client.ObjectKey{
 		Name:      "test1",
 		Namespace: "test-ns",
-	}, prev.ClientObject())
+	}, prev.ClientObject(), mock.Anything)
 }

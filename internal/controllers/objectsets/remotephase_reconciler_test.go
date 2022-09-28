@@ -25,7 +25,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			name: "deletes object",
 			mockPrepare: func(clientMock *testutil.CtrlClient) {
 				clientMock.
-					On("Get", mock.Anything, mock.Anything, mock.Anything).
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
@@ -42,7 +42,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			name: "already gone",
 			mockPrepare: func(clientMock *testutil.CtrlClient) {
 				clientMock.
-					On("Get", mock.Anything, mock.Anything, mock.Anything).
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.NewNotFound(schema.GroupResource{}, ""))
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
@@ -52,7 +52,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			assertCalls: func(t *testing.T, clientMock *testutil.CtrlClient) {
 				t.Helper()
 				clientMock.AssertCalled(
-					t, "Get", mock.Anything, mock.Anything, mock.Anything)
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				clientMock.AssertNotCalled(
 					t, "Delete", mock.Anything, mock.Anything, mock.Anything)
 			},
@@ -61,7 +61,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			name: "already gone on delete",
 			mockPrepare: func(clientMock *testutil.CtrlClient) {
 				clientMock.
-					On("Get", mock.Anything, mock.Anything, mock.Anything).
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).

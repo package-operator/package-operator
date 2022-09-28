@@ -76,7 +76,7 @@ func TestCache_Watch(t *testing.T) {
 		c, cacheSource, informerMap := setupTestCache(t)
 
 		informerMap.
-			On("Get", mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
@@ -99,7 +99,7 @@ func TestCache_Watch(t *testing.T) {
 		informerMap.AssertCalled(t, "Get", mock.Anything, schema.GroupVersionKind{
 			Kind:    "Secret",
 			Version: "v1",
-		}, obj)
+		}, obj, mock.Anything)
 		cacheSource.AssertCalled(t, "handleNewInformer", mock.Anything)
 	})
 
@@ -111,7 +111,7 @@ func TestCache_Watch(t *testing.T) {
 		}] = map[OwnerReference]struct{}{}
 
 		informerMap.
-			On("Get", mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
@@ -131,7 +131,7 @@ func TestCache_Watch(t *testing.T) {
 		err := c.Watch(ctx, owner, obj)
 		require.NoError(t, err)
 
-		informerMap.AssertNotCalled(t, "Get", mock.Anything, mock.Anything, mock.Anything)
+		informerMap.AssertNotCalled(t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		cacheSource.AssertNotCalled(t, "handleNewInformer", mock.Anything)
 	})
 }
@@ -185,14 +185,14 @@ func TestCache_Reader(t *testing.T) {
 
 	reader := &readerMock{}
 	reader.
-		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 	reader.
 		On("List", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	informerMap.
-		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, reader, nil)
 
 	t.Run("Get", func(t *testing.T) {
@@ -203,7 +203,7 @@ func TestCache_Reader(t *testing.T) {
 		err = c.Get(ctx, key, obj)
 		require.NoError(t, err)
 
-		reader.AssertCalled(t, "Get", mock.Anything, key, obj)
+		reader.AssertCalled(t, "Get", mock.Anything, key, obj, mock.Anything)
 	})
 
 	t.Run("List", func(t *testing.T) {
@@ -322,8 +322,9 @@ var (
 func (m *readerMock) Get(
 	ctx context.Context,
 	key client.ObjectKey, out client.Object,
+	opts ...client.GetOption,
 ) error {
-	args := m.Called(ctx, key, out)
+	args := m.Called(ctx, key, out, opts)
 	return args.Error(0)
 }
 

@@ -51,7 +51,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 
 		dynamicCache.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
 		ctx := context.Background()
@@ -90,7 +90,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
@@ -149,7 +149,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
@@ -204,7 +204,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
 		dynamicCache.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
@@ -251,7 +251,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 	owner := &phaseObjectOwnerMock{}
 
 	dynamicCacheMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	testClient.
 		On("Create", mock.Anything, mock.Anything, mock.Anything).
@@ -287,7 +287,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 		Return(true, nil)
 
 	dynamicCacheMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	ownerStrategy.On("ReleaseController", mock.Anything)
