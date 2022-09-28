@@ -32,7 +32,7 @@ Package Operator is an open source operator for [Kubernetes](https://kubernetes.
 ## Project Status
 
 Package Operator is currently in early development and is neither complete nor ready for production use.
-APIs are not yet final and breaking changes might be introduced in every release.
+APIs have not been finalized and are subject to breaking changes with future releases.
 
 ## Features
 
