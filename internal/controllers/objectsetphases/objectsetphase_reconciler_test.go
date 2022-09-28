@@ -2,14 +2,20 @@ package objectsetphases
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"package-operator.run/package-operator/internal/probing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/probing"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -35,45 +41,58 @@ func (m *phaseReconcilerMock) TeardownPhase(
 }
 
 func TestPhaseReconciler_Reconcile(t *testing.T) {
-
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	prev := newGenericObjectSet(scheme)
-	prevObj := prev.ClientObject()
-	prevObj.SetName("test")
-
-	prm := &phaseReconcilerMock{}
-
-	prm.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-
-	r := newObjectSetPhaseReconciler(prm, func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-		return []controllers.PreviousObjectSet{prev}, nil
-	})
-
-	osp := &GenericObjectSetPhase{
-		ObjectSetPhase: corev1alpha1.ObjectSetPhase{
-			Spec: corev1alpha1.ObjectSetPhaseSpec{
-				Previous: []corev1alpha1.PreviousRevisionReference{
-					{
-						Name: "test",
-					},
-				},
-				AvailabilityProbes: []corev1alpha1.ObjectSetProbe{
-					{
-						Probes: []corev1alpha1.Probe{
-							{
-								FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-									FieldA: ".metadata.name",
-									FieldB: ".metadata.annotations.name",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+	prev.ClientObject().SetName("test")
+	prevList := []controllers.PreviousObjectSet{prev}
+	prevLookupFunc := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+		return prevList, nil
 	}
-	res, err := r.Reconcile(context.Background(), osp)
+
+	objectSetPhase := newGenericObjectSetPhase(scheme)
+	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+
+	m := &phaseReconcilerMock{}
+
+	r := newObjectSetPhaseReconciler(m, prevLookupFunc)
+
+	// The first call to ReconcilePhase throws PhaseProbingFailedError
+	m.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&controllers.PhaseProbingFailedError{}).Once()
+
+	res, err := r.Reconcile(context.Background(), objectSetPhase)
 	assert.Empty(t, res)
 	assert.NoError(t, err)
-	prm.AssertCalled(t, "ReconcilePhase", mock.Anything, osp, osp.GetPhase(), osp.ObjectSetPhase.Spec.Previous, osp.ObjectSetPhase.Spec.AvailabilityProbes)
+
+	prevTest := mock.MatchedBy(func(p []controllers.PreviousObjectSet) bool {
+		return reflect.DeepEqual(p, []controllers.PreviousObjectSet{prev})
+	})
+
+	m.AssertCalled(t, "ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, prevTest)
+	// Since we mocked the probe failing, the Availability conditions should be false
+	cond := (*objectSetPhase.GetConditions())[0]
+	expectedCond := metav1.Condition{
+		Type:   corev1alpha1.ObjectSetAvailable,
+		Status: metav1.ConditionFalse,
+		Reason: "ProbeFailure",
+	}
+	assert.True(t, !equality.Semantic.DeepEqual(cond, expectedCond))
+
+	// The second call to ReconcilePhase does not throw and error
+	m.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+	res, err = r.Reconcile(context.Background(), objectSetPhase)
+	assert.Empty(t, res)
+	assert.NoError(t, err)
+
+	// Since we mocked the probes running successfully, the Availability conditions should be false
+	m.AssertCalled(t, "ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, prevTest)
+	fmt.Println(objectSetPhase.GetConditions())
+	cond = (*objectSetPhase.GetConditions())[0]
+	expectedCond = metav1.Condition{
+		Type:   corev1alpha1.ObjectSetPhaseAvailable,
+		Status: metav1.ConditionTrue,
+		Reason: "Available",
+	}
+	assert.True(t, !equality.Semantic.DeepEqual(cond, expectedCond))
 }
