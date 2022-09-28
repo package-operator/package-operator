@@ -116,7 +116,7 @@ func (Build) Binaries() {
 	)
 }
 
-// Builds only the given container image, building binaries as prerequisite as required.
+// Builds the given container image, building binaries as prerequisite as required.
 func (Build) Image(image string) {
 	mg.Deps(
 		mg.F(Builder.Image, image),
