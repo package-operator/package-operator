@@ -56,7 +56,7 @@ The source of this website is our [website repository](https://github.com/packag
 
 Thank you for taking time to help to improve Package Operator!
 
-Feel free to open issues or propose pull requests, but please keep in mind that Package Operator is still in early development and response times for accessing contributions may vary.
+Feel free to open issues or propose pull requests, but please keep in mind that Package Operator is still in early development and response times for reviewing contributions may vary.
 
 We also are not yet ready to open project management and meetings to the general public.
 
