@@ -61,6 +61,7 @@ func init() {
 // -------------------
 type Test mg.Namespace
 
+// Runs linters.
 func (Test) Lint() error {
 	mg.Deps(
 		Generate.All, // ensure code generators are re-triggered
@@ -87,6 +88,7 @@ func (Test) Unit() error {
 	}, "go", "test", "-cover", "-v", "-race", "./internal/...", "./cmd/...")
 }
 
+// Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
 func (Test) Integration(ctx context.Context) error {
 	testErr := sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
@@ -106,6 +108,7 @@ func (Test) Integration(ctx context.Context) error {
 // --------
 type Build mg.Namespace
 
+// Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", "linux", "amd64"),
@@ -113,12 +116,14 @@ func (Build) Binaries() {
 	)
 }
 
+// Builds the given container image, building binaries as prerequisite as required.
 func (Build) Image(image string) {
 	mg.Deps(
 		mg.F(Builder.Image, image),
 	)
 }
 
+// Builds all PKO container images.
 func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
@@ -126,12 +131,14 @@ func (Build) Images() {
 	)
 }
 
+// Builds and pushes only the given container image to the default registry.
 func (Build) PushImage(image string) {
 	mg.Deps(
 		mg.F(Builder.Push, image),
 	)
 }
 
+// Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
@@ -153,6 +160,7 @@ const (
 
 type Dependency mg.Namespace
 
+// Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
 	mg.Deps(
 		Dependency.ControllerGen,
@@ -414,6 +422,7 @@ var (
 	devEnvironment *dev.Environment
 )
 
+// Creates an empty development environment via kind.
 func (d Dev) Setup(ctx context.Context) error {
 	mg.SerialDeps(
 		Dev.init,
@@ -425,6 +434,7 @@ func (d Dev) Setup(ctx context.Context) error {
 	return nil
 }
 
+// Tears the whole kind development environment down.
 func (d Dev) Teardown(ctx context.Context) error {
 	mg.SerialDeps(
 		Dev.init,
@@ -436,8 +446,7 @@ func (d Dev) Teardown(ctx context.Context) error {
 	return nil
 }
 
-// Deploy the Package Operator.
-// All components are deployed via static manifests.
+// Setup local cluster and deploy the Package Operator.
 func (d Dev) Deploy(ctx context.Context) error {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
@@ -589,6 +598,7 @@ func (d Dev) init() {
 // ---------------
 type Generate mg.Namespace
 
+// Run all code generators.
 func (Generate) All() {
 	mg.Deps(
 		Generate.code,
