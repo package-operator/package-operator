@@ -69,7 +69,7 @@ To get started hacking, you just need Go 1.18+ and podman or docker installed.
 ### Commands and local development
 
 > **Dev Note**
-> Assure you have `export CONTAINER_RUNTIME=docker` or similar for `podman`, or you will get cryptic errors from mage that may lead you to think there is a problem with the kind cluster.
+> Before running _mage_ targets run `export CONTAINER_RUNTIME=docker`, `export CONTAINER_RUNTIME=podman` if using `podman`, or you will get cryptic errors from mage that may lead you to think there is a problem with the kind cluster.
 
 Package Operator uses [Mage](https://magefile.org/) (Think make, but all targets are written in Go instead of Shell) as task manager and developer command interface.
 
