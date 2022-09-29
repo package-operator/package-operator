@@ -63,7 +63,8 @@ func (r *Recorder) RecordRolloutTime(objectSet GenericObjectSet) {
 	conds := objectSet.GetConditions()
 	for _, cond := range *conds {
 		if cond.Type == "Success" {
-			r.rolloutTime.WithLabelValues(obj.GetName()).Set(cond.LastTransitionTime.Sub(start.Time).Seconds())
+			t := cond.LastTransitionTime.Sub(start.Time).Seconds()
+			r.rolloutTime.WithLabelValues(obj.GetName()).Set(t)
 		}
 	}
 }
