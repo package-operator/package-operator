@@ -59,7 +59,7 @@ func (c *objectSetPhaseReconcilerMock) Teardown(
 	return args.Bool(0), args.Error(1)
 }
 
-func newControllerAndMocks() (*testutil.CtrlClient, *dynamicCacheMock, *objectSetPhaseReconcilerMock, *GenericObjectSetPhaseController) {
+func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhaseReconcilerMock) {
 	dc := &dynamicCacheMock{}
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
@@ -83,44 +83,44 @@ func newControllerAndMocks() (*testutil.CtrlClient, *dynamicCacheMock, *objectSe
 		pr,
 	}
 
-	return c, dc, pr, controller
+	return controller, c, dc, pr
 
 }
 func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 	tests := []struct {
-		name              string
-		getReturn         error
-		class             string
-		deletionTimestamp *metav1.Time
+		name                   string
+		getObjectSetPhaseError error
+		class                  string
+		deletionTimestamp      *metav1.Time
 	}{
 		{
-			name:              "object doesn't exist",
-			getReturn:         errors.NewNotFound(schema.GroupResource{}, ""),
-			class:             "",
-			deletionTimestamp: nil,
+			name:                   "object doesn't exist",
+			getObjectSetPhaseError: errors.NewNotFound(schema.GroupResource{}, ""),
+			class:                  "",
+			deletionTimestamp:      nil,
 		},
 		{
-			name:              "classes don't match",
-			getReturn:         nil,
-			class:             "notDefault",
-			deletionTimestamp: nil,
+			name:                   "classes don't match",
+			getObjectSetPhaseError: nil,
+			class:                  "notDefault",
+			deletionTimestamp:      nil,
 		},
 		{
-			name:              "already deleted",
-			getReturn:         nil,
-			class:             "default",
-			deletionTimestamp: &metav1.Time{Time: time.Now()},
+			name:                   "already deleted",
+			getObjectSetPhaseError: nil,
+			class:                  "default",
+			deletionTimestamp:      &metav1.Time{Time: time.Now()},
 		},
 		{
-			name:              "happy path",
-			getReturn:         nil,
-			class:             "default",
-			deletionTimestamp: nil,
+			name:                   "happy path",
+			getObjectSetPhaseError: nil,
+			class:                  "default",
+			deletionTimestamp:      nil,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c, dc, pr, controller := newControllerAndMocks()
+			controller, c, dc, pr := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -134,26 +134,21 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-			if test.getReturn != nil {
-				c.On("Get", mock.Anything, mock.Anything, mock.Anything).
-					Return(test.getReturn).Once()
-			} else {
-				objectSetPhase := GenericObjectSetPhase{}
-				objectSetPhase.Spec.Class = test.class
-				objectSetPhase.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
-				c.On("Get", mock.Anything, mock.Anything, mock.Anything).
-					Run(func(args mock.Arguments) {
-						arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
-						objectSetPhase.DeepCopyInto(arg)
-					}).
-					Return(nil)
-			}
+			objectSetPhase := GenericObjectSetPhase{}
+			objectSetPhase.Spec.Class = test.class
+			objectSetPhase.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
+			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+					objectSetPhase.DeepCopyInto(arg)
+				}).
+				Return(test.getObjectSetPhaseError)
 
 			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
 			assert.Empty(t, res)
 			assert.NoError(t, err)
 
-			if test.getReturn != nil || test.class != "default" {
+			if test.getObjectSetPhaseError != nil || test.class != "default" {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				c.StatusMock.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -177,7 +172,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 }
 
 func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T) {
-	_, dc, pr, controller := newControllerAndMocks()
+	controller, _, dc, pr := newControllerAndMocks()
 
 	pr.On("Teardown", mock.Anything, mock.Anything).
 		Return(false, nil).Once()
@@ -196,7 +191,7 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 }
 
 func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
-	_, _, _, controller := newControllerAndMocks()
+	controller, _, _, _ := newControllerAndMocks()
 
 	p := &GenericObjectSetPhase{}
 	p.Spec.Paused = true
