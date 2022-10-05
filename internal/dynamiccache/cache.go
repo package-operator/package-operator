@@ -61,12 +61,12 @@ type Cache struct {
 	informerReferencesMux sync.RWMutex
 	informerReferences    map[schema.GroupVersionKind]map[OwnerReference]struct{}
 
-	recorder MetricsRecorder
+	recorder metricsRecorder
 
 	cacheSource cacheSourcer
 }
 
-type MetricsRecorder interface {
+type metricsRecorder interface {
 	RecordDynamicCacheSizeGvk(int)
 	RecordDynamicCacheSizeObj(int)
 	GetDynamicCacheSizeGvk() prometheus.Gauge
@@ -77,7 +77,7 @@ func NewCache(
 	config *rest.Config,
 	scheme *runtime.Scheme,
 	mapper meta.RESTMapper,
-	recorder MetricsRecorder,
+	recorder metricsRecorder,
 	opts ...CacheOption,
 ) *Cache {
 	c := &Cache{

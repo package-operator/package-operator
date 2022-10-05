@@ -31,7 +31,7 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
-	recorder        MetricsRecorder
+	recorder        metricsRecorder
 	dynamicCache    dynamicCache
 	teardownHandler teardownHandler
 }
@@ -54,14 +54,14 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
-type MetricsRecorder interface {
+type metricsRecorder interface {
 	RecordRolloutTimeObjectSet(objectSet metrics.GenericObjectSet)
 }
 
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
-	r MetricsRecorder,
+	r metricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
@@ -73,7 +73,7 @@ func NewObjectSetController(
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
-	r MetricsRecorder,
+	r metricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
@@ -87,7 +87,7 @@ func newGenericObjectSetController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
-	recorder MetricsRecorder,
+	recorder metricsRecorder,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
