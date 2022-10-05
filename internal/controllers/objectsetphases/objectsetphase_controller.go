@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/package-operator/internal/metrics"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +29,11 @@ type dynamicCache interface {
 	Source() source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
+	SampleMetrics() error
+}
+
+type metricsRecorder interface {
+	RecordRolloutTimeObjectSetPhase(objectSetPhase metrics.GenericObjectSetPhase)
 }
 
 type ownerStrategy interface {
@@ -55,6 +62,7 @@ type GenericObjectSetPhaseController struct {
 	// ownerStrategy ownerStrategy
 	client          client.Client // client to get and update ObjectSetPhases.
 	dynamicCache    dynamicCache
+	recorder        metricsRecorder
 	ownerStrategy   ownerStrategy
 	teardownHandler teardownHandler
 
@@ -64,6 +72,7 @@ type GenericObjectSetPhaseController struct {
 func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	recorder metricsRecorder,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
@@ -72,14 +81,15 @@ func NewMultiClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme,
-		dynamicCache, class, client, targetWriter,
+		log, scheme, dynamicCache,
+		recorder, class, client, targetWriter,
 	)
 }
 
 func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	recorder metricsRecorder,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
@@ -88,14 +98,15 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme,
-		dynamicCache, class, client, targetWriter,
+		log, scheme, dynamicCache,
+		recorder, class, client, targetWriter,
 	)
 }
 
 func NewSameClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	recorder metricsRecorder,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 ) *GenericObjectSetPhaseController {
@@ -103,14 +114,15 @@ func NewSameClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme,
-		dynamicCache, class, client, client,
+		log, scheme, dynamicCache,
+		recorder, class, client, client,
 	)
 }
 
 func NewSameClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	recorder metricsRecorder,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 ) *GenericObjectSetPhaseController {
@@ -118,8 +130,8 @@ func NewSameClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme,
-		dynamicCache, class, client, client,
+		log, scheme, dynamicCache,
+		recorder, class, client, client,
 	)
 }
 
@@ -129,6 +141,7 @@ func NewGenericObjectSetPhaseController(
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	recorder metricsRecorder,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
@@ -142,6 +155,7 @@ func NewGenericObjectSetPhaseController(
 
 		client:        client,
 		dynamicCache:  dynamicCache,
+		recorder:      recorder,
 		ownerStrategy: ownerStrategy,
 	}
 
@@ -186,6 +200,10 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 		if err := c.handleDeletionAndArchival(ctx, objectSetPhase); err != nil {
 			return ctrl.Result{}, err
 		}
+		err := c.dynamicCache.SampleMetrics()
+		if err != nil {
+			log.Error(err, "sampling dynamicCache metrics")
+		}
 
 		return ctrl.Result{}, c.updateStatus(ctx, objectSetPhase)
 	}
@@ -206,6 +224,14 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	}
 	if err != nil {
 		return res, err
+	}
+
+	err = c.dynamicCache.SampleMetrics()
+	if err != nil {
+		log.Error(err, "sampling dynamicCache metrics")
+	}
+	if c.recorder != nil {
+		c.recorder.RecordRolloutTimeObjectSetPhase(objectSetPhase)
 	}
 
 	c.reportPausedCondition(ctx, objectSetPhase)

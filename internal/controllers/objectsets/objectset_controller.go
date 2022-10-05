@@ -55,7 +55,7 @@ type teardownHandler interface {
 }
 
 type MetricsRecorder interface {
-	RecordRolloutTime(objectSet metrics.GenericObjectSet)
+	RecordRolloutTimeObjectSet(objectSet metrics.GenericObjectSet)
 }
 
 func NewObjectSetController(
@@ -164,6 +164,10 @@ func (c *GenericObjectSetController) Reconcile(
 		if err := c.handleDeletionAndArchival(ctx, objectSet); err != nil {
 			return ctrl.Result{}, err
 		}
+		err := c.dynamicCache.SampleMetrics()
+		if err != nil {
+			log.Error(err, "sampling dynamicCache metrics")
+		}
 
 		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
 	}
@@ -195,7 +199,7 @@ func (c *GenericObjectSetController) Reconcile(
 		log.Error(err, "sampling dynamicCache metrics")
 	}
 	if c.recorder != nil {
-		c.recorder.RecordRolloutTime(objectSet)
+		c.recorder.RecordRolloutTimeObjectSet(objectSet)
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
