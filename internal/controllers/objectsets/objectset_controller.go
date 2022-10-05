@@ -55,7 +55,7 @@ type teardownHandler interface {
 }
 
 type metricsRecorder interface {
-	RecordRolloutTimeObjectSet(objectSet metrics.GenericObjectSet)
+	RecordRolloutTime(objectSet metrics.GenericObjectSet)
 }
 
 func NewObjectSetController(
@@ -199,7 +199,7 @@ func (c *GenericObjectSetController) Reconcile(
 		log.Error(err, "sampling dynamicCache metrics")
 	}
 	if c.recorder != nil {
-		c.recorder.RecordRolloutTimeObjectSet(objectSet)
+		c.recorder.RecordRolloutTime(objectSet)
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
