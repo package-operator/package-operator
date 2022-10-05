@@ -77,6 +77,7 @@ func (r *Recorder) RecordDynamicCacheSizeObj(count int) {
 	r.dynamicCacheSizeObjects.Set(float64(count))
 }
 
+// GetDynamicCacheSizeGvk is used for testing Cache.SampleMetrics.
 func (r *Recorder) GetDynamicCacheSizeGvk() prometheus.Gauge {
 	return r.dynamicCacheSizeGvk
 }

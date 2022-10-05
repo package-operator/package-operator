@@ -58,8 +58,6 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 
 			osMock := &genericObjectSetMock{}
 			osMock.On("ClientObject").Return(obj)
-
-			// Object does not have successful status condition yet, so nothing should be recorded
 			osMock.On("GetConditions").Return(&test.conditions).Once()
 
 			recorder := NewRecorder(false)

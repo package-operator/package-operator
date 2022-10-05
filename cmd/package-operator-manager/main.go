@@ -178,13 +178,13 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	const defaultObjectSetPhaseClass = "default"
 	if err = (objectsetphases.NewSameClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
-		mgr.GetScheme(), dc, recorder, defaultObjectSetPhaseClass, mgr.GetClient(),
+		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
 	if err = (objectsetphases.NewSameClusterClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-		mgr.GetScheme(), dc, recorder, defaultObjectSetPhaseClass, mgr.GetClient(),
+		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}
