@@ -46,7 +46,7 @@ func main() {
 		"The address the pprof web endpoint binds to.")
 	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
 		"The namespace the operator is deployed into.")
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election.", false,
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
