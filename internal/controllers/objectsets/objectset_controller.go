@@ -292,7 +292,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 			Reason:             "Archived",
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
-		objectSet.SetStatusActiveObjects(nil)
+		objectSet.SetStatusControllerOf(nil) // we are no longer controlling anything.
 	}
 
 	return nil

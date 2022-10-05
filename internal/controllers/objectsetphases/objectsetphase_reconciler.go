@@ -112,12 +112,12 @@ func (r *objectSetPhaseReconciler) Teardown(
 func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
 	ctx context.Context, objectSetPhase genericObjectSetPhase, actualObjects []client.Object,
 ) error {
-	activeObjects, err := controllers.FilterOwnActiveObjects(
+	activeObjects, err := controllers.GetControllerOf(
 		ctx, r.scheme, r.ownerStrategy,
 		objectSetPhase.ClientObject(), actualObjects)
 	if err != nil {
 		return err
 	}
-	objectSetPhase.SetStatusActiveObjects(activeObjects)
+	objectSetPhase.SetStatusControllerOf(activeObjects)
 	return nil
 }

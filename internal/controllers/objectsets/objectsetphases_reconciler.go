@@ -49,7 +49,7 @@ type remotePhaseReconciler interface {
 	Reconcile(
 		ctx context.Context, objectSet genericObjectSet,
 		phase corev1alpha1.ObjectSetTemplatePhase,
-	) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error)
+	) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error)
 	Teardown(
 		ctx context.Context, objectSet genericObjectSet,
 		phase corev1alpha1.ObjectSetTemplatePhase,
@@ -81,9 +81,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		return res, err
 	}
 
-	// Always update .status.activeObjects for reporting.
-	objectSet.SetStatusActiveObjects(activeObjects)
-
+	objectSet.SetStatusControllerOf(activeObjects)
 	if !probingResult.IsZero() {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
@@ -121,7 +119,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet genericObjectSet,
-) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
+) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
 		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
@@ -133,7 +131,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
-	var activeObjects []corev1alpha1.ActiveObjectReference
+	var activeObjects []corev1alpha1.ControlledObjectReference
 	for _, phase := range objectSet.GetPhases() {
 		active, probingResult, err := r.reconcilePhase(
 			ctx, objectSet, phase, probe, previous)
@@ -158,7 +156,7 @@ func (r *objectSetPhasesReconciler) reconcilePhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
+) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) > 0 {
 		return r.remotePhase.Reconcile(
 			ctx, objectSet, phase)
@@ -173,14 +171,14 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
+) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
 		ctx, objectSet, phase, probe, previous)
 	if err != nil {
 		return nil, probingResult, err
 	}
 
-	activeObjects, err := controllers.FilterOwnActiveObjects(
+	activeObjects, err := controllers.GetControllerOf(
 		ctx, r.scheme, r.ownerStrategy,
 		objectSet.ClientObject(), actualObjects)
 	if err != nil {

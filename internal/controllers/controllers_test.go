@@ -88,7 +88,7 @@ func TestReportOwnActiveObjects(t *testing.T) {
 		On("IsController", mock.Anything, mock.Anything).
 		Return(false)
 
-	activeObjects, err := FilterOwnActiveObjects(
+	activeObjects, err := GetControllerOf(
 		ctx, testScheme, ownerStrategy,
 		&corev1.ConfigMap{},
 		[]client.Object{
@@ -107,7 +107,7 @@ func TestReportOwnActiveObjects(t *testing.T) {
 		})
 	require.NoError(t, err)
 
-	assert.Equal(t, []corev1alpha1.ActiveObjectReference{
+	assert.Equal(t, []corev1alpha1.ControlledObjectReference{
 		{
 			Kind:      "Secret",
 			Group:     "", // core API group

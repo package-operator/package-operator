@@ -155,8 +155,8 @@ type RemotePhaseReference struct {
 	UID  types.UID `json:"uid"`
 }
 
-// References an object actively reconciled.
-type ActiveObjectReference struct {
+// References an object controlled by this ObjectSet/ObjectSetPhase.
+type ControlledObjectReference struct {
 	// Object Kind.
 	Kind string `json:"kind"`
 	// Object Group.

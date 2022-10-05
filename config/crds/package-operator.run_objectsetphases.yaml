@@ -213,30 +213,6 @@ spec:
           status:
             description: ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
             properties:
-              activeObjects:
-                description: References to all objects actively reconciled by this
-                  instance.
-                items:
-                  description: References an object actively reconciled.
-                  properties:
-                    group:
-                      description: Object Group.
-                      type: string
-                    kind:
-                      description: Object Kind.
-                      type: string
-                    name:
-                      description: Object Name.
-                      type: string
-                    namespace:
-                      description: Object Namespace.
-                      type: string
-                  required:
-                  - group
-                  - kind
-                  - name
-                  type: object
-                type: array
               conditions:
                 description: Conditions is a list of status conditions ths object
                   is in.
@@ -307,6 +283,29 @@ spec:
                   - reason
                   - status
                   - type
+                  type: object
+                type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
                   type: object
                 type: array
             type: object

@@ -73,7 +73,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 func (r *objectSetRemotePhaseReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
+) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) == 0 {
 		return nil, controllers.ProbingResult{}, nil
 	}
@@ -134,7 +134,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		currentObjectSetPhase.GetConditions(),
 		corev1alpha1.ObjectSetAvailable,
 	)
-	activeObjects := currentObjectSetPhase.GetStatusActiveObjects()
+	activeObjects := currentObjectSetPhase.GetStatusControllerOf()
 	if availableCond == nil ||
 		availableCond.ObservedGeneration !=
 			currentObjectSetPhase.ClientObject().GetGeneration() {

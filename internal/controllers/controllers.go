@@ -102,12 +102,12 @@ type isControllerChecker interface {
 	IsController(owner, obj metav1.Object) bool
 }
 
-// Returns a list of ActiveObjectReferences controlled by this instance.
-func FilterOwnActiveObjects(
+// Returns a list of ControlledObjectReferences controlled by this instance.
+func GetControllerOf(
 	ctx context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
 	owner client.Object, actualObjects []client.Object,
-) (activeObjects []corev1alpha1.ActiveObjectReference, err error) {
-	var ownActiveObjects []corev1alpha1.ActiveObjectReference
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	var controllerOf []corev1alpha1.ControlledObjectReference
 	for _, actualObj := range actualObjects {
 		if !ownerStrategy.IsController(owner, actualObj) {
 			continue
@@ -117,12 +117,12 @@ func FilterOwnActiveObjects(
 		if err != nil {
 			return nil, err
 		}
-		ownActiveObjects = append(ownActiveObjects, corev1alpha1.ActiveObjectReference{
+		controllerOf = append(controllerOf, corev1alpha1.ControlledObjectReference{
 			Kind:      gvk.Kind,
 			Group:     gvk.Group,
 			Name:      actualObj.GetName(),
 			Namespace: actualObj.GetNamespace(),
 		})
 	}
-	return ownActiveObjects, nil
+	return controllerOf, nil
 }

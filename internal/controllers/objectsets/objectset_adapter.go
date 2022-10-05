@@ -22,7 +22,7 @@ type genericObjectSet interface {
 	GetRevision() int64
 	GetRemotePhases() []corev1alpha1.RemotePhaseReference
 	SetRemotePhases([]corev1alpha1.RemotePhaseReference)
-	SetStatusActiveObjects([]corev1alpha1.ActiveObjectReference)
+	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 }
 
 type genericObjectSetFactory func(
@@ -134,8 +134,8 @@ func (a *GenericObjectSet) SetRemotePhases(remotes []corev1alpha1.RemotePhaseRef
 	a.Status.RemotePhases = remotes
 }
 
-func (a *GenericObjectSet) SetStatusActiveObjects(active []corev1alpha1.ActiveObjectReference) {
-	a.Status.ActiveObjects = active
+func (a *GenericObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+	a.Status.ControllerOf = controllerOf
 }
 
 type GenericClusterObjectSet struct {
@@ -214,6 +214,6 @@ func (a *GenericClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemoteP
 	a.Status.RemotePhases = remotes
 }
 
-func (a *GenericClusterObjectSet) SetStatusActiveObjects(active []corev1alpha1.ActiveObjectReference) {
-	a.Status.ActiveObjects = active
+func (a *GenericClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+	a.Status.ControllerOf = controllerOf
 }
