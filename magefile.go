@@ -95,10 +95,12 @@ func (Test) Integration(ctx context.Context) error {
 		"-timeout=20m", "./integration/...")
 
 	// always export logs
-	if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
-		"export", "logs", path.Join(cacheDir, "dev-env-logs"),
-		"--name", "package-operator-dev"); err != nil {
-		logger.Error(err, "exporting logs")
+	if devEnvironment != nil {
+		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
+			"export", "logs", path.Join(cacheDir, "dev-env-logs"),
+			"--name", "package-operator-dev"); err != nil {
+			logger.Error(err, "exporting logs")
+		}
 	}
 
 	return testErr

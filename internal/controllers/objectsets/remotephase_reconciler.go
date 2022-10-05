@@ -73,14 +73,14 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 func (r *objectSetRemotePhaseReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-) (err error) {
+) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) == 0 {
-		return
+		return nil, controllers.ProbingResult{}, nil
 	}
 
 	desiredObjectSetPhase, err := r.desiredObjectSetPhase(objectSet, phase)
 	if err != nil {
-		return err
+		return nil, controllers.ProbingResult{}, err
 	}
 
 	currentObjectSetPhase := r.newObjectSetPhase(r.scheme)
@@ -91,12 +91,12 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	if errors.IsNotFound(err) {
 		if err := r.client.Create(
 			ctx, desiredObjectSetPhase.ClientObject()); err != nil {
-			return fmt.Errorf("creating new ObjectSetPhase: %w", err)
+			return nil, controllers.ProbingResult{}, fmt.Errorf("creating new ObjectSetPhase: %w", err)
 		}
 		currentObjectSetPhase = desiredObjectSetPhase
 	}
 	if err != nil {
-		return fmt.Errorf("getting existing ObjectSetPhase: %w", err)
+		return nil, controllers.ProbingResult{}, fmt.Errorf("getting existing ObjectSetPhase: %w", err)
 	}
 
 	// Report ObjectSetPhase as part of this ObjectSet
@@ -124,7 +124,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		}
 		if err := r.client.Patch(
 			ctx, current, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
-			return fmt.Errorf("patching ObjectSetPhase: %w", err)
+			return nil, controllers.ProbingResult{}, fmt.Errorf("patching ObjectSetPhase: %w", err)
 		}
 	}
 
@@ -134,30 +134,31 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		currentObjectSetPhase.GetConditions(),
 		corev1alpha1.ObjectSetAvailable,
 	)
+	activeObjects := currentObjectSetPhase.GetStatusActiveObjects()
 	if availableCond == nil ||
 		availableCond.ObservedGeneration !=
 			currentObjectSetPhase.ClientObject().GetGeneration() {
 		// no status reported, wait longer
-		return &controllers.PhaseProbingFailedError{
+		return activeObjects, controllers.ProbingResult{
 			PhaseName: phase.Name,
 			FailedProbes: []string{
 				noStatusProbeFailure,
 			},
-		}
+		}, nil
 	}
 	if availableCond.Status == metav1.ConditionTrue {
 		// Remote Phase is Available!
-		return nil
+		return activeObjects, controllers.ProbingResult{}, nil
 	}
 
 	// Remote Phase is not Available!
 	// Reports its message as failed probe output.
-	return &controllers.PhaseProbingFailedError{
+	return activeObjects, controllers.ProbingResult{
 		PhaseName: phase.Name,
 		FailedProbes: []string{
 			availableCond.Message,
 		},
-	}
+	}, nil
 }
 
 func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(

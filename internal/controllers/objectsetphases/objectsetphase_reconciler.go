@@ -2,12 +2,13 @@ package objectsetphases
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
@@ -16,17 +17,23 @@ import (
 
 // objectSetPhaseReconciler reconciles objects within a phase.
 type objectSetPhaseReconciler struct {
+	scheme                  *runtime.Scheme
 	phaseReconciler         phaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
+	ownerStrategy           ownerStrategy
 }
 
 func newObjectSetPhaseReconciler(
+	scheme *runtime.Scheme,
 	phaseReconciler phaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
+	ownerStrategy ownerStrategy,
 ) *objectSetPhaseReconciler {
 	return &objectSetPhaseReconciler{
+		scheme:                  scheme,
 		phaseReconciler:         phaseReconciler,
 		lookupPreviousRevisions: lookupPreviousRevisions,
+		ownerStrategy:           ownerStrategy,
 	}
 }
 
@@ -35,7 +42,7 @@ type phaseReconciler interface {
 		ctx context.Context, owner controllers.PhaseObjectOwner,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 		probe probing.Prober, previous []controllers.PreviousObjectSet,
-	) error
+	) ([]client.Object, controllers.ProbingResult, error)
 
 	TeardownPhase(
 		ctx context.Context, owner controllers.PhaseObjectOwner,
@@ -61,23 +68,26 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, fmt.Errorf("parsing probes: %w", err)
 	}
 
-	err = r.phaseReconciler.ReconcilePhase(
+	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
 		ctx, objectSetPhase, objectSetPhase.GetPhase(), probe, previous)
-	var phaseProbingFailedError *controllers.PhaseProbingFailedError
-	if errors.As(err, &phaseProbingFailedError) {
+	if err != nil {
+		return res, err
+	}
+	if err := r.reportOwnActiveObjects(ctx, objectSetPhase, actualObjects); err != nil {
+		return res, fmt.Errorf("reporting active objects: %w", err)
+	}
+
+	if !probingResult.IsZero() {
 		meta.SetStatusCondition(
 			objectSetPhase.GetConditions(), metav1.Condition{
 				Type:               corev1alpha1.ObjectSetAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ProbeFailure",
-				Message:            phaseProbingFailedError.ErrorWithoutPhase(),
+				Message:            probingResult.StringWithoutPhase(),
 				ObservedGeneration: objectSetPhase.ClientObject().GetGeneration(),
 			})
 
 		return res, nil
-	}
-	if err != nil {
-		return res, err
 	}
 
 	meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
@@ -96,4 +106,18 @@ func (r *objectSetPhaseReconciler) Teardown(
 ) (cleanupDone bool, err error) {
 	return r.phaseReconciler.TeardownPhase(
 		ctx, objectSetPhase, objectSetPhase.GetPhase())
+}
+
+// Sets .status.activeObjects to all objects actively reconciled and controlled by this Phase.
+func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
+	ctx context.Context, objectSetPhase genericObjectSetPhase, actualObjects []client.Object,
+) error {
+	activeObjects, err := controllers.FilterOwnActiveObjects(
+		ctx, r.scheme, r.ownerStrategy,
+		objectSetPhase.ClientObject(), actualObjects)
+	if err != nil {
+		return err
+	}
+	objectSetPhase.SetStatusActiveObjects(activeObjects)
+	return nil
 }

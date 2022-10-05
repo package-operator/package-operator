@@ -154,3 +154,15 @@ type RemotePhaseReference struct {
 	Name string    `json:"name"`
 	UID  types.UID `json:"uid"`
 }
+
+// References an object actively reconciled.
+type ActiveObjectReference struct {
+	// Object Kind.
+	Kind string `json:"kind"`
+	// Object Group.
+	Group string `json:"group"`
+	// Object Name.
+	Name string `json:"name"`
+	// Object Namespace.
+	Namespace string `json:"namespace,omitempty"`
+}

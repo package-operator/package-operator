@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -75,4 +76,43 @@ func TestRemoveFinalizer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, `{"metadata":{"finalizers":["already-present"],"resourceVersion":"xxx-123"}}`, string(j))
 	}
+}
+
+func TestReportOwnActiveObjects(t *testing.T) {
+	ctx := context.Background()
+	ownerStrategy := &ownerStrategyMock{}
+	ownerStrategy.
+		On("IsController", mock.Anything, mock.AnythingOfType("*v1.Secret")).
+		Return(true)
+	ownerStrategy.
+		On("IsController", mock.Anything, mock.Anything).
+		Return(false)
+
+	activeObjects, err := FilterOwnActiveObjects(
+		ctx, testScheme, ownerStrategy,
+		&corev1.ConfigMap{},
+		[]client.Object{
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-1",
+					Namespace: "ns-1",
+				},
+			},
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod-1",
+					Namespace: "ns-2",
+				},
+			},
+		})
+	require.NoError(t, err)
+
+	assert.Equal(t, []corev1alpha1.ActiveObjectReference{
+		{
+			Kind:      "Secret",
+			Group:     "", // core API group
+			Name:      "secret-1",
+			Namespace: "ns-1",
+		},
+	}, activeObjects)
 }

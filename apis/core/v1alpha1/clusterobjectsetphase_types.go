@@ -52,6 +52,8 @@ type ClusterObjectSetPhaseStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	// +example=[{type: "Available", status: "True"}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// References to all objects actively reconciled by this instance.
+	ActiveObjects []ActiveObjectReference `json:"activeObjects,omitempty"`
 }
 
 func init() {

@@ -146,12 +146,14 @@ func NewGenericObjectSetPhaseController(
 	}
 
 	phaseReconciler := newObjectSetPhaseReconciler(
+		scheme,
 		controllers.NewPhaseReconciler(
 			scheme, targetWriter, dynamicCache, ownerStrategy),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
 			}, client).Lookup,
+		ownerStrategy,
 	)
 	controller.teardownHandler = phaseReconciler
 	controller.reconciler = []reconciler{
@@ -225,9 +227,7 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Contex
 
 func (c *GenericObjectSetPhaseController) updateStatus(
 	ctx context.Context, objectSetPhase genericObjectSetPhase) error {
-	// this controller owns status alone, so we can always update it without optimistic locking.
-	objectSetPhase.ClientObject().SetResourceVersion("")
-	if err := c.client.Status().Patch(ctx, objectSetPhase.ClientObject(), client.Merge); err != nil {
+	if err := c.client.Status().Update(ctx, objectSetPhase.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSetPhase status: %w", err)
 	}
 	return nil

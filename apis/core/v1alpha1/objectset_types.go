@@ -60,6 +60,8 @@ type ObjectSetStatus struct {
 	Revision int64 `json:"revision,omitempty"`
 	// Remote phases aka ObjectSetPhase objects.
 	RemotePhases []RemotePhaseReference `json:"remotePhases,omitempty"`
+	// References to all objects actively reconciled by this instance.
+	ActiveObjects []ActiveObjectReference `json:"activeObjects,omitempty"`
 }
 
 func init() {

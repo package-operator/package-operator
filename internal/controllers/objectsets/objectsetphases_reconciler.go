@@ -2,35 +2,46 @@ package objectsets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/ownerhandling"
 	"package-operator.run/package-operator/internal/probing"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
 type objectSetPhasesReconciler struct {
+	scheme                  *runtime.Scheme
 	phaseReconciler         phaseReconciler
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
+	ownerStrategy           ownerStrategy
+}
+
+type ownerStrategy interface {
+	IsController(owner, obj metav1.Object) bool
 }
 
 func newObjectSetPhasesReconciler(
+	scheme *runtime.Scheme,
 	phaseReconciler phaseReconciler,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
 ) *objectSetPhasesReconciler {
 	return &objectSetPhasesReconciler{
+		scheme:                  scheme,
 		phaseReconciler:         phaseReconciler,
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
+		ownerStrategy:           ownerhandling.NewNative(scheme),
 	}
 }
 
@@ -38,7 +49,7 @@ type remotePhaseReconciler interface {
 	Reconcile(
 		ctx context.Context, objectSet genericObjectSet,
 		phase corev1alpha1.ObjectSetTemplatePhase,
-	) (err error)
+	) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error)
 	Teardown(
 		ctx context.Context, objectSet genericObjectSet,
 		phase corev1alpha1.ObjectSetTemplatePhase,
@@ -54,7 +65,7 @@ type phaseReconciler interface {
 		ctx context.Context, owner controllers.PhaseObjectOwner,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 		probe probing.Prober, previous []controllers.PreviousObjectSet,
-	) (err error)
+	) ([]client.Object, controllers.ProbingResult, error)
 
 	TeardownPhase(
 		ctx context.Context, owner controllers.PhaseObjectOwner,
@@ -65,21 +76,24 @@ type phaseReconciler interface {
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
-	err = r.reconcile(ctx, objectSet)
-	var phaseProbingFailedError *controllers.PhaseProbingFailedError
-	if errors.As(err, &phaseProbingFailedError) {
+	activeObjects, probingResult, err := r.reconcile(ctx, objectSet)
+	if err != nil {
+		return res, err
+	}
+
+	// Always update .status.activeObjects for reporting.
+	objectSet.SetStatusActiveObjects(activeObjects)
+
+	if !probingResult.IsZero() {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "ProbeFailure",
-			Message:            phaseProbingFailedError.Error(),
+			Message:            probingResult.String(),
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 
 		return res, nil
-	}
-	if err != nil {
-		return res, err
 	}
 
 	if !meta.IsStatusConditionTrue(
@@ -107,26 +121,36 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet genericObjectSet,
-) error {
+) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
-		return fmt.Errorf("lookup previous revisions: %w", err)
+		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
 	}
 
 	probe, err := probing.Parse(
 		ctx, objectSet.GetAvailabilityProbes())
 	if err != nil {
-		return fmt.Errorf("parsing probes: %w", err)
+		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
+	var activeObjects []corev1alpha1.ActiveObjectReference
 	for _, phase := range objectSet.GetPhases() {
-		if err := r.reconcilePhase(
-			ctx, objectSet, phase, probe, previous); err != nil {
-			return err
+		active, probingResult, err := r.reconcilePhase(
+			ctx, objectSet, phase, probe, previous)
+		if err != nil {
+			return nil, controllers.ProbingResult{}, err
+		}
+
+		// always gather all active objects
+		activeObjects = append(activeObjects, active...)
+
+		if !probingResult.IsZero() {
+			// break on first failing probe
+			return activeObjects, probingResult, nil
 		}
 	}
 
-	return nil
+	return activeObjects, controllers.ProbingResult{}, nil
 }
 
 func (r *objectSetPhasesReconciler) reconcilePhase(
@@ -134,15 +158,13 @@ func (r *objectSetPhasesReconciler) reconcilePhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
-) (err error) {
+) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) > 0 {
-		err = r.remotePhase.Reconcile(
+		return r.remotePhase.Reconcile(
 			ctx, objectSet, phase)
-	} else {
-		err = r.reconcileLocalPhase(
-			ctx, objectSet, phase, probe, previous)
 	}
-	return
+	return r.reconcileLocalPhase(
+		ctx, objectSet, phase, probe, previous)
 }
 
 // Reconciles the Phase directly in-process.
@@ -151,9 +173,20 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
-) error {
-	return r.phaseReconciler.ReconcilePhase(
+) ([]corev1alpha1.ActiveObjectReference, controllers.ProbingResult, error) {
+	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
 		ctx, objectSet, phase, probe, previous)
+	if err != nil {
+		return nil, probingResult, err
+	}
+
+	activeObjects, err := controllers.FilterOwnActiveObjects(
+		ctx, r.scheme, r.ownerStrategy,
+		objectSet.ClientObject(), actualObjects)
+	if err != nil {
+		return nil, controllers.ProbingResult{}, err
+	}
+	return activeObjects, probingResult, nil
 }
 
 func (r *objectSetPhasesReconciler) Teardown(

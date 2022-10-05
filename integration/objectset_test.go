@@ -145,6 +145,15 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			require.NotNil(t, availableCond, "Available condition is expected to be reported")
 			assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
+			// expect cm-4 to be reported under "activeObjects"
+			require.Equal(t, []corev1alpha1.ActiveObjectReference{
+				{
+					Kind:      "ConfigMap",
+					Name:      cm4.Name,
+					Namespace: "default",
+				},
+			}, objectSet.Status.ActiveObjects)
+
 			// expect cm-4 to be present.
 			currentCM4 := &corev1.ConfigMap{}
 			require.NoError(t, Client.Get(ctx, cm4Key, currentCM4))
@@ -161,6 +170,20 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			// Expect ObjectSet to become Available.
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+
+			// expect cm-4 and cm-5 to be reported under "activeObjects"
+			require.Equal(t, []corev1alpha1.ActiveObjectReference{
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM4.Name,
+					Namespace: currentCM4.Namespace,
+				},
+				{
+					Kind:      "ConfigMap",
+					Name:      cm5.Name,
+					Namespace: "default",
+				},
+			}, objectSet.Status.ActiveObjects)
 
 			// Expect cm-5 to be present now.
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
@@ -241,6 +264,9 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			// expect cm-4 to be also gone.
 			require.EqualError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm4.Name, Namespace: objectSet.Namespace}, currentCM4), `configmaps "cm-4" not found`)
+
+			// expect no "activeObjects" left
+			require.Len(t, objectSet.Status.ActiveObjects, 0)
 		})
 	}
 }
@@ -417,11 +443,25 @@ func TestObjectSet_handover(t *testing.T) {
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm2.Name, Namespace: objectSetRev2.Namespace}, currentCM2))
 
+			// expect cm-1 and cm-2 to be reported under "activeObjects" in revision 1
+			require.Equal(t, []corev1alpha1.ActiveObjectReference{
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM1.Name,
+					Namespace: currentCM1.Namespace,
+				},
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM2.Name,
+					Namespace: currentCM2.Namespace,
+				},
+			}, objectSetRev1.Status.ActiveObjects)
+
 			// Create Revision 2
 			require.NoError(t, Client.Create(ctx, objectSetRev2))
 			cleanupOnSuccess(ctx, t, objectSetRev2)
 
-			// Expect ObjectSet Rev2 report not Available, due to failing probes.
+			// Expect ObjectSet Rev2 report not Available, due to failing probes on cm-1.
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, objectSetRev2, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
 			availableCond := meta.FindStatusCondition(objectSetRev2.Status.Conditions, corev1alpha1.ObjectSetAvailable)
@@ -431,7 +471,6 @@ func TestObjectSet_handover(t *testing.T) {
 			// expect cm-1 to still be present and now owned by Rev2.
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm1.Name, Namespace: objectSetRev1.Namespace}, currentCM1))
-			currentCM1.GetOwnerReferences()
 			assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
 
 			// expect cm-2 to still be present.
@@ -442,6 +481,30 @@ func TestObjectSet_handover(t *testing.T) {
 			currentCM3 := &corev1.ConfigMap{}
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm3.Name, Namespace: objectSetRev2.Namespace}, currentCM3))
+
+			// expect only cm-2 to be reported under "activeObjects" in revision 1
+			require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(objectSetRev1), objectSetRev1))
+			require.Equal(t, []corev1alpha1.ActiveObjectReference{
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM2.Name,
+					Namespace: currentCM2.Namespace,
+				},
+			}, objectSetRev1.Status.ActiveObjects)
+
+			// expect cm-1 and cm-3 to be reported under "activeObjects" in revision 2
+			require.Equal(t, []corev1alpha1.ActiveObjectReference{
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM3.Name,
+					Namespace: currentCM3.Namespace,
+				},
+				{
+					Kind:      "ConfigMap",
+					Name:      currentCM1.Name,
+					Namespace: currentCM1.Namespace,
+				},
+			}, objectSetRev2.Status.ActiveObjects)
 
 			// Patch cm-1 to pass probe.
 			require.NoError(t,
