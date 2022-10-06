@@ -51,11 +51,11 @@ type ObjectSetSpec struct {
 // ObjectSetStatus defines the observed state of a ObjectSet.
 type ObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
-	// This field is not part of any API contract
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Phase is not part of any API contract
 	// it will go away as soon as kubectl can print conditions!
 	// When evaluating object state in code, use .Conditions instead.
-	Conditions []metav1.Condition   `json:"conditions,omitempty"`
-	Phase      ObjectSetStatusPhase `json:"phase,omitempty"`
+	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`
 	// Remote phases aka ObjectSetPhase objects.

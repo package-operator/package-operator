@@ -6,7 +6,7 @@ linters:
     - deadcode
     - decorder
     - depguard
-    - dogsled
+    #- dogsled TODO: Disable until this is fixed https://github.com/alexkohler/dogsled/issues/3#issuecomment-1270159659
     - dupl
     - durationcheck
     - errcheck
