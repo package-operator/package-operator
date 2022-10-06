@@ -207,7 +207,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, _, _, _ := newControllerAndMocks()
+			controller, c, _, _, _ := newControllerAndMocks() //nolint:dogsled
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
 					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
@@ -232,7 +232,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 }
 
 func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testing.T) {
-	controller, c, _, _, _ := newControllerAndMocks()
+	controller, c, _, _, _ := newControllerAndMocks() //nolint:dogsled
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	os := &GenericObjectSet{}
@@ -291,7 +291,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, _, _, _ := newControllerAndMocks()
+			controller, c, _, _, _ := newControllerAndMocks() //nolint:dogsled
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
 					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
