@@ -172,34 +172,78 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 }
 
 func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T) {
-	controller, _, dc, pr := newControllerAndMocks()
+	tests := []struct {
+		name         string
+		teardownDone bool
+	}{
+		{
+			name:         "teardown not done",
+			teardownDone: false,
+		},
+		{
+			name:         "teardown done",
+			teardownDone: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			controller, _, dc, pr := newControllerAndMocks()
 
-	pr.On("Teardown", mock.Anything, mock.Anything).
-		Return(false, nil).Once()
+			pr.On("Teardown", mock.Anything, mock.Anything).
+				Return(test.teardownDone, nil).Maybe()
 
-	err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{})
-	assert.NoError(t, err)
-	dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+			dc.On("Free", mock.Anything, mock.Anything).
+				Return(nil).Maybe()
 
-	pr.On("Teardown", mock.Anything, mock.Anything).
-		Return(true, nil).Once()
-	dc.On("Free", mock.Anything, mock.Anything).Return(nil)
-
-	err = controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{})
-	assert.NoError(t, err)
-	dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
+			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{})
+			assert.NoError(t, err)
+			if test.teardownDone {
+				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
+			} else {
+				dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+			}
+		})
+	}
 }
 
 func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
-	controller, _, _, _ := newControllerAndMocks()
+	tests := []struct {
+		name               string
+		phasePaused        bool
+		startingConditions []metav1.Condition
+	}{
+		{
+			name:        "phase pause",
+			phasePaused: true,
+		},
+		{
+			name:        "phase not paused but has paused condition",
+			phasePaused: false,
+			startingConditions: []metav1.Condition{
+				{
+					Type:   corev1alpha1.ObjectSetPaused,
+					Status: metav1.ConditionTrue,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			controller, _, _, _ := newControllerAndMocks()
 
-	p := &GenericObjectSetPhase{}
-	p.Spec.Paused = true
+			p := &GenericObjectSetPhase{}
+			p.Spec.Paused = test.phasePaused
+			p.Status.Conditions = test.startingConditions
 
-	controller.reportPausedCondition(context.Background(), p)
-	conds := *p.GetConditions()
-	assert.Len(t, conds, 1)
-	cond := conds[0]
-	assert.Equal(t, cond.Type, corev1alpha1.ObjectSetPhasePaused)
-	assert.Equal(t, cond.Status, metav1.ConditionTrue)
+			controller.reportPausedCondition(context.Background(), p)
+			conds := *p.GetConditions()
+			if test.phasePaused {
+				assert.Len(t, conds, 1)
+				assert.Equal(t, conds[0].Type, corev1alpha1.ObjectSetPhasePaused)
+				assert.Equal(t, conds[0].Status, metav1.ConditionTrue)
+			} else {
+				assert.Len(t, conds, 0)
+			}
+		})
+	}
 }

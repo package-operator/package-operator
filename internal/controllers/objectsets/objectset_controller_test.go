@@ -13,81 +13,99 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
+type objectSetPhasesReconcilerMock struct {
+	mock.Mock
+}
+
+func (r *objectSetPhasesReconcilerMock) Reconcile(
+	ctx context.Context, objectSet genericObjectSet,
+) (res ctrl.Result, err error) {
+	args := r.Called(ctx, objectSet)
+	return args.Get(0).(ctrl.Result), args.Error(1)
+}
+
+func (r *objectSetPhasesReconcilerMock) Teardown(
+	ctx context.Context, objectSet genericObjectSet,
+) (cleanupDone bool, err error) {
+	args := r.Called(ctx, objectSet)
+	return args.Bool(0), args.Error(1)
+}
+
+type revisionReconcilerMock struct {
+	mock.Mock
+}
+
+func (r *revisionReconcilerMock) Reconcile(
+	ctx context.Context, objectSet genericObjectSet,
+) (res ctrl.Result, err error) {
+	args := r.Called(ctx, objectSet)
+	return args.Get(0).(ctrl.Result), args.Error(1)
+}
+
 func TestGenericObjectSetController_Reconcile(t *testing.T) {
-	//controller, c, dc, pr, remotePr := newControllerAndMocks()
-
-	//res, err := controller.Reconcile(context.Background(), ctrl.Request{})
-
 	tests := []struct {
 		name                   string
 		getObjectSetPhaseError error
-		class                  string
 		deletionTimestamp      *metav1.Time
 		condition              metav1.Condition
+		lifecycleState         corev1alpha1.ObjectSetLifecycleState
 	}{
 		{
-			name:                   "object doesn't exist",
+			name:                   "objectset does not exist",
 			getObjectSetPhaseError: errors.NewNotFound(schema.GroupResource{}, ""),
-			class:                  "",
-			deletionTimestamp:      nil,
 		},
 		{
-			name:                   "archived Condition",
-			getObjectSetPhaseError: nil,
-			class:                  "",
-			deletionTimestamp:      nil,
+			name: "archived condition",
 			condition: metav1.Condition{
 				Type:   corev1alpha1.ObjectSetArchived,
 				Status: metav1.ConditionTrue,
 			},
 		},
 		{
-			name:                   "classes don't match",
-			getObjectSetPhaseError: nil,
-			class:                  "notDefault",
-			deletionTimestamp:      nil,
+			name:           "archived lifecyclestate",
+			lifecycleState: corev1alpha1.ObjectSetLifecycleStateArchived,
 		},
 		{
-			name:                   "already deleted",
-			getObjectSetPhaseError: nil,
-			class:                  "default",
-			deletionTimestamp:      &metav1.Time{Time: time.Now()},
+			name:              "already deleted",
+			deletionTimestamp: &metav1.Time{Time: time.Now()},
 		},
 		{
-			name:                   "happy path",
-			getObjectSetPhaseError: nil,
-			class:                  "default",
-			deletionTimestamp:      nil,
+			name: "run all the way through",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, dc, pr, remotePr := newControllerAndMocks()
+			controller, c, dc, pr, rr := newControllerAndMocks()
 
-			//c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			//	Return(nil).Maybe()
-			//c.StatusMock.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			//	Return(nil).Maybe()
-			//
-			//pr.On("Teardown", mock.Anything, mock.Anything).
-			//	Return(true, nil).Once().Maybe()
-			//pr.On("Reconcile", mock.Anything, mock.Anything).
-			//	Return(ctrl.Result{}, nil).Maybe()
-			//
-			//dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Maybe()
+			c.StatusMock.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Maybe()
 
-			objectSetPhase := GenericObjectSet{}
-			objectSetPhase.Spec.Class = test.class
-			objectSetPhase.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
-			objectSetPhase.Status.Conditions = []metav1.Condition{test.condition}
+			pr.On("Reconcile", mock.Anything, mock.Anything).
+				Return(ctrl.Result{}, nil).Maybe()
+			pr.On("Teardown", mock.Anything, mock.Anything).
+				Return(true, nil).Once().Maybe()
+
+			rr.On("Reconcile", mock.Anything, mock.Anything).
+				Return(ctrl.Result{}, nil).Maybe()
+			rr.On("Teardown", mock.Anything).
+				Return(true, nil).Once().Maybe()
+
+			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+			objectSet := GenericObjectSet{}
+			objectSet.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
+			objectSet.Status.Conditions = []metav1.Condition{test.condition}
+			objectSet.Spec.LifecycleState = test.lifecycleState
+
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
-					objectSetPhase.DeepCopyInto(arg)
+					arg := args.Get(2).(*corev1alpha1.ObjectSet)
+					objectSet.DeepCopyInto(arg)
 				}).
 				Return(test.getObjectSetPhaseError)
 
@@ -95,14 +113,14 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			assert.Empty(t, res)
 			assert.NoError(t, err)
 
-			if test.getObjectSetPhaseError != nil || test.class != "default" {
+			if test.getObjectSetPhaseError != nil || test.condition.Type == corev1alpha1.ObjectSetArchived {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				c.StatusMock.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
 
-			if test.deletionTimestamp != nil {
+			if test.deletionTimestamp != nil || test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
@@ -110,9 +128,12 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				return
 			}
 
-			// Happy path
-			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
+			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
+			rr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
+			rr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
+			dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+			c.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			c.StatusMock.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
@@ -134,8 +155,6 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 	pausedPhase2.Name = "pausedPhase1"
 	pausedPhase2.Status.Conditions = []metav1.Condition{pausedCond}
 
-	//[]corev1alpha1.RemotePhaseReference {
-	//	return a.Status.RemotePhases
 	tests := []struct {
 		name     string
 		phase1   corev1alpha1.ObjectSetPhase
@@ -198,7 +217,152 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	assert.NoError(t, err)
 }
 
-func newControllerAndMocks() (*GenericObjectSetController, *testutil.CtrlClient, *dynamicCacheMock, *phaseReconcilerMock, *remotePhaseReconcilerMock) {
+func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(t *testing.T) {
+	pausedCond := metav1.Condition{
+		Type:   corev1alpha1.ObjectSetPaused,
+		Status: metav1.ConditionTrue,
+	}
+	unpausedPhase := corev1alpha1.ObjectSetPhase{}
+	pausedPhase := corev1alpha1.ObjectSetPhase{}
+	pausedPhase.Status.Conditions = []metav1.Condition{pausedCond}
+
+	tests := []struct {
+		name                  string
+		phase                 corev1alpha1.ObjectSetPhase
+		getPhaseError         error
+		objectSetPaused       bool
+		pausedConditionStatus metav1.ConditionStatus
+		startingConditions    []metav1.Condition
+	}{
+		{
+			name:                  "areRemotePhasesPaused unknown",
+			getPhaseError:         errors.NewNotFound(schema.GroupResource{}, ""),
+			pausedConditionStatus: metav1.ConditionUnknown,
+		},
+		{
+			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
+			objectSetPaused:       true,
+			phase:                 pausedPhase,
+			pausedConditionStatus: metav1.ConditionTrue,
+		},
+		{
+			name:               "areRemotePhasesPaused false",
+			objectSetPaused:    false,
+			phase:              unpausedPhase,
+			startingConditions: []metav1.Condition{pausedCond},
+		},
+		{
+			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
+			objectSetPaused:       true,
+			phase:                 unpausedPhase,
+			pausedConditionStatus: metav1.ConditionUnknown,
+		},
+		{
+			name:                  "areRemotePhasesPaused true, ObjectSet isPaused false",
+			objectSetPaused:       false,
+			phase:                 pausedPhase,
+			pausedConditionStatus: metav1.ConditionUnknown,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			controller, c, _, _, _ := newControllerAndMocks()
+			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+					test.phase.DeepCopyInto(arg)
+				}).
+				Return(test.getPhaseError).Once()
+
+			objectSet := &GenericObjectSet{}
+			objectSet.Status.RemotePhases = []corev1alpha1.RemotePhaseReference{
+				{},
+			}
+			if test.objectSetPaused {
+				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+			}
+			objectSet.Status.Conditions = test.startingConditions
+			err := controller.reportPausedCondition(context.Background(), objectSet)
+			assert.NoError(t, err)
+			conds := *objectSet.GetConditions()
+			if test.pausedConditionStatus != "" {
+				assert.Len(t, conds, 1)
+				assert.Equal(t, corev1alpha1.ObjectSetPaused, conds[0].Type)
+				assert.Equal(t, test.pausedConditionStatus, conds[0].Status)
+			} else {
+				assert.Len(t, conds, 0)
+			}
+		})
+	}
+}
+
+func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
+	tests := []struct {
+		name                    string
+		teardownDone            bool
+		lifecycleState          corev1alpha1.ObjectSetLifecycleState
+		archivedConditionStatus metav1.ConditionStatus
+	}{
+		{
+			name:                    "teardown not done and archived lifecycle state",
+			teardownDone:            false,
+			lifecycleState:          corev1alpha1.ObjectSetLifecycleStateArchived,
+			archivedConditionStatus: metav1.ConditionFalse,
+		},
+		{
+			name:                    "teardown done and archived lifecycle state",
+			teardownDone:            true,
+			lifecycleState:          corev1alpha1.ObjectSetLifecycleStateArchived,
+			archivedConditionStatus: metav1.ConditionTrue,
+		},
+		{
+			name:         "teardown done and no lifecycle state",
+			teardownDone: false,
+		},
+		{
+			name:         "teardown done and no lifecycle state",
+			teardownDone: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			controller, _, dc, pr, _ := newControllerAndMocks()
+
+			pr.On("Teardown", mock.Anything, mock.Anything).
+				Return(test.teardownDone, nil).Maybe()
+			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+			objectSet := &GenericObjectSet{}
+			objectSet.Spec.LifecycleState = test.lifecycleState
+			objectSet.Status.Conditions = []metav1.Condition{
+				{
+					Type:   corev1alpha1.ObjectSetAvailable,
+					Status: metav1.ConditionTrue,
+				},
+			}
+
+			err := controller.handleDeletionAndArchival(context.Background(), objectSet)
+			assert.NoError(t, err)
+			conds := *objectSet.GetConditions()
+
+			if test.teardownDone {
+				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
+			} else {
+				dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+			}
+
+			if test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
+				assert.Len(t, conds, 1)
+				assert.Equal(t, conds[0].Type, corev1alpha1.ObjectSetArchived)
+				assert.Equal(t, conds[0].Status, test.archivedConditionStatus)
+			} else {
+				assert.Len(t, conds, 0)
+			}
+		})
+	}
+}
+
+func newControllerAndMocks() (*GenericObjectSetController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhasesReconcilerMock, *revisionReconcilerMock) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	dc := &dynamicCacheMock{}
@@ -211,23 +375,14 @@ func newControllerAndMocks() (*GenericObjectSetController, *testutil.CtrlClient,
 		scheme:            scheme,
 		dynamicCache:      dc,
 	}
-	pr := &phaseReconcilerMock{}
-	remotePr := &remotePhaseReconcilerMock{}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-		return []controllers.PreviousObjectSet{}, nil
-	}
+	pr := &objectSetPhasesReconcilerMock{}
 
-	phasesReconciler := newObjectSetPhasesReconciler(pr, remotePr, lookup)
+	controller.teardownHandler = pr
 
-	controller.teardownHandler = phasesReconciler
-
+	rr := &revisionReconcilerMock{}
 	controller.reconciler = []reconciler{
-		&revisionReconciler{
-			scheme:       scheme,
-			client:       c,
-			newObjectSet: newGenericObjectSet,
-		},
-		phasesReconciler,
+		rr,
+		pr,
 	}
-	return controller, c, dc, pr, remotePr
+	return controller, c, dc, pr, rr
 }

@@ -103,6 +103,7 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 	m := &phaseReconcilerMock{}
 	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
 	r := newObjectSetPhaseReconciler(m, lookup)
-	r.Teardown(context.Background(), objectSetPhase)
+	_, err := r.Teardown(context.Background(), objectSetPhase)
+	assert.NoError(t, err)
 	m.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
 }
