@@ -86,7 +86,7 @@ func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlCl
 	return controller, c, dc, pr
 
 }
-func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
+func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add test for adding paused status
 	tests := []struct {
 		name                   string
 		getObjectSetPhaseError error
