@@ -236,8 +236,9 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	controller, c, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
-	os := &GenericObjectSet{}
-	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), os)
+	objectSet := &GenericObjectSet{}
+	objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
+	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
 	assert.False(t, arePaused)
 	assert.True(t, unknown)
 	assert.NoError(t, err)
