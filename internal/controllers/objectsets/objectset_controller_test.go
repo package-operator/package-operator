@@ -177,32 +177,32 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 	pausedPhase1.Name = "pausedPhase1"
 	pausedPhase1.Status.Conditions = []metav1.Condition{pausedCond}
 	pausedPhase2 := corev1alpha1.ObjectSetPhase{}
-	pausedPhase2.Name = "pausedPhase1"
+	pausedPhase2.Name = "pausedPhase2"
 	pausedPhase2.Status.Conditions = []metav1.Condition{pausedCond}
 
 	tests := []struct {
-		name     string
-		phase1   corev1alpha1.ObjectSetPhase
-		phase2   corev1alpha1.ObjectSetPhase
-		expected bool
+		name              string
+		phase1            corev1alpha1.ObjectSetPhase
+		phase2            corev1alpha1.ObjectSetPhase
+		arePausedExpected bool
 	}{
 		{
-			name:     "two unpaused phases",
-			phase1:   unpausedPhase1,
-			phase2:   unpausedPhase2,
-			expected: true,
+			name:              "two unpaused phases",
+			phase1:            unpausedPhase1,
+			phase2:            unpausedPhase2,
+			arePausedExpected: false,
 		},
 		{
-			name:     "one unpaused phase one paused phase",
-			phase1:   pausedPhase1,
-			phase2:   unpausedPhase2,
-			expected: false,
+			name:              "one unpaused phase one paused phase",
+			phase1:            pausedPhase1,
+			phase2:            unpausedPhase2,
+			arePausedExpected: false,
 		},
 		{
-			name:     "two paused phase",
-			phase1:   pausedPhase1,
-			phase2:   pausedPhase2,
-			expected: false,
+			name:              "two paused phase",
+			phase1:            pausedPhase1,
+			phase2:            pausedPhase2,
+			arePausedExpected: true,
 		},
 	}
 	for _, test := range tests {
@@ -222,9 +222,10 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 				}).
 				Return(nil).Once()
 
-			os := &GenericObjectSet{}
-			arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), os)
-			assert.Equal(t, test.expected, arePaused)
+			objectSet := &GenericObjectSet{}
+			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
+			arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
+			assert.Equal(t, test.arePausedExpected, arePaused)
 			assert.False(t, unknown)
 			assert.NoError(t, err)
 		})
@@ -300,9 +301,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 				Return(test.getPhaseError).Once()
 
 			objectSet := &GenericObjectSet{}
-			objectSet.Status.RemotePhases = []corev1alpha1.RemotePhaseReference{
-				{},
-			}
+			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 1)
 			if test.objectSetPaused {
 				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 			}
