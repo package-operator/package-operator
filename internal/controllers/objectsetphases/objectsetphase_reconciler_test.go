@@ -4,38 +4,32 @@ import (
 	"context"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"package-operator.run/package-operator/internal/probing"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/package-operator/internal/testutil/controllersmocks"
+	"package-operator.run/package-operator/internal/testutil/ownerhandlingmocks"
 )
 
-type phaseReconcilerMock struct {
-	mock.Mock
+var testScheme = runtime.NewScheme()
+
+func init() {
+	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+	if err := corev1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
 }
 
-func (m *phaseReconcilerMock) ReconcilePhase(
-	ctx context.Context, owner controllers.PhaseObjectOwner,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober, previous []controllers.PreviousObjectSet,
-) error {
-	args := m.Called(ctx, owner, phase, probe, previous)
-	return args.Error(0)
-}
-
-func (m *phaseReconcilerMock) TeardownPhase(
-	ctx context.Context, owner controllers.PhaseObjectOwner,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-) (cleanupDone bool, err error) {
-	args := m.Called(ctx, owner, phase)
-	return args.Bool(0), args.Error(1)
-}
+type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 
 func TestPhaseReconciler_Reconcile(t *testing.T) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
@@ -70,14 +64,19 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			objectSetPhase := newGenericObjectSetPhase(scheme)
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
 			m := &phaseReconcilerMock{}
-			r := newObjectSetPhaseReconciler(m, lookup)
+			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
+			r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
 
 			if test.condition.Reason == "ProbeFailure" {
-				m.On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
-					Return(&controllers.PhaseProbingFailedError{}).Once()
+				m.
+					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
+					Return([]client.Object{}, controllers.ProbingResult{PhaseName: "this"}, nil).
+					Once()
 			} else {
-				m.On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
-					Return(nil).Once()
+				m.
+					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
+					Return([]client.Object{}, controllers.ProbingResult{}, nil).
+					Once()
 			}
 
 			res, err := r.Reconcile(context.Background(), objectSetPhase)
@@ -100,9 +99,10 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := newGenericObjectSetPhase(scheme)
+	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	m := &phaseReconcilerMock{}
 	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-	r := newObjectSetPhaseReconciler(m, lookup)
+	r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
 	_, err := r.Teardown(context.Background(), objectSetPhase)
 	assert.NoError(t, err)
 	m.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)

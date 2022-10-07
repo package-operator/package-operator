@@ -64,11 +64,6 @@ type dynamicCache interface {
 	) error
 }
 
-type PhaseProbingFailedError struct {
-	FailedProbes []string
-	PhaseName    string
-}
-
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
