@@ -6,6 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 func NewTestSchemeWithCoreV1() *runtime.Scheme {
@@ -18,6 +20,12 @@ func NewTestSchemeWithCoreV1AppsV1() *runtime.Scheme {
 	testScheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(testScheme)
 	_ = appsv1.AddToScheme(testScheme)
+	return testScheme
+}
+
+func NewTestSchemeWithCoreV1Alpha1() *runtime.Scheme {
+	testScheme := runtime.NewScheme()
+	_ = corev1alpha1.AddToScheme(testScheme)
 	return testScheme
 }
 

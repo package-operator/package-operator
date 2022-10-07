@@ -82,15 +82,12 @@ func (a *GenericObjectSet) UpdateStatusPhase() {
 		return
 	}
 
-	availableCond := meta.FindStatusCondition(
+	if meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetAvailable,
-	)
-	if availableCond != nil {
-		if availableCond.Status == metav1.ConditionTrue {
-			a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-			return
-		}
+	) {
+		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
+		return
 	}
 
 	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady
@@ -161,15 +158,12 @@ func (a *GenericClusterObjectSet) UpdateStatusPhase() {
 		return
 	}
 
-	availableCond := meta.FindStatusCondition(
+	if meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetAvailable,
-	)
-	if availableCond != nil {
-		if availableCond.Status == metav1.ConditionTrue {
-			a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-			return
-		}
+	) {
+		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
+		return
 	}
 
 	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady

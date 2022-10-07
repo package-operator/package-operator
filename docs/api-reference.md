@@ -302,7 +302,7 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Phase is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ClusterObjectSetPhase objects. |
 
@@ -398,7 +398,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Phase is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ObjectSetPhase objects. |
 

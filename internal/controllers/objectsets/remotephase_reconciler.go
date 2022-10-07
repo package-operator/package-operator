@@ -151,7 +151,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	}
 
 	// Remote Phase is not Available!
-	// Reports it's message as failed probe output.
+	// Reports its message as failed probe output.
 	return &controllers.PhaseProbingFailedError{
 		PhaseName: phase.Name,
 		FailedProbes: []string{

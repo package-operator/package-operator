@@ -44,7 +44,7 @@ func EnsureFinalizer(
 	return nil
 }
 
-// Removes the given finalizer and persist the change.
+// Removes the given finalizer and persists the change.
 func RemoveFinalizer(
 	ctx context.Context, c client.Client,
 	obj client.Object, finalizer string,
