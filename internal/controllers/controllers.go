@@ -5,9 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 const (
@@ -91,4 +96,33 @@ func FreeCacheAndRemoveFinalizer(
 	}
 
 	return RemoveFinalizer(ctx, c, obj, CachedFinalizer)
+}
+
+type isControllerChecker interface {
+	IsController(owner, obj metav1.Object) bool
+}
+
+// Returns a list of ControlledObjectReferences controlled by this instance.
+func GetControllerOf(
+	ctx context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
+	owner client.Object, actualObjects []client.Object,
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	var controllerOf []corev1alpha1.ControlledObjectReference
+	for _, actualObj := range actualObjects {
+		if !ownerStrategy.IsController(owner, actualObj) {
+			continue
+		}
+
+		gvk, err := apiutil.GVKForObject(actualObj, scheme)
+		if err != nil {
+			return nil, err
+		}
+		controllerOf = append(controllerOf, corev1alpha1.ControlledObjectReference{
+			Kind:      gvk.Kind,
+			Group:     gvk.Group,
+			Name:      actualObj.GetName(),
+			Namespace: actualObj.GetNamespace(),
+		})
+	}
+	return controllerOf, nil
 }

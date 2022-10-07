@@ -64,20 +64,6 @@ type dynamicCache interface {
 	) error
 }
 
-type PhaseProbingFailedError struct {
-	FailedProbes []string
-	PhaseName    string
-}
-
-func (e *PhaseProbingFailedError) ErrorWithoutPhase() string {
-	return strings.Join(e.FailedProbes, ", ")
-}
-
-func (e *PhaseProbingFailedError) Error() string {
-	return fmt.Sprintf("Phase %q failed: %s",
-		e.PhaseName, e.ErrorWithoutPhase())
-}
-
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
@@ -100,17 +86,39 @@ type PhaseObjectOwner interface {
 	IsPaused() bool
 }
 
+type ProbingResult struct {
+	PhaseName    string
+	FailedProbes []string
+}
+
+func (e *ProbingResult) IsZero() bool {
+	if e == nil || len(e.PhaseName) == 0 && len(e.FailedProbes) == 0 {
+		return true
+	}
+	return false
+}
+
+func (e *ProbingResult) StringWithoutPhase() string {
+	return strings.Join(e.FailedProbes, ", ")
+}
+
+func (e *ProbingResult) String() string {
+	return fmt.Sprintf("Phase %q failed: %s",
+		e.PhaseName, e.StringWithoutPhase())
+}
+
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
-) error {
+) (actualObjects []client.Object, res ProbingResult, err error) {
 	var failedProbes []string
 	for _, phaseObject := range phase.Objects {
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
 		if err != nil {
-			return err
+			return nil, res, err
 		}
+		actualObjects = append(actualObjects, actualObj)
 
 		if success, message := probe.Probe(actualObj); !success {
 			gvk := actualObj.GroupVersionKind()
@@ -121,12 +129,12 @@ func (r *PhaseReconciler) ReconcilePhase(
 	}
 
 	if len(failedProbes) > 0 {
-		return &PhaseProbingFailedError{
+		return actualObjects, ProbingResult{
 			FailedProbes: failedProbes,
 			PhaseName:    phase.Name,
-		}
+		}, nil
 	}
-	return nil
+	return actualObjects, res, nil
 }
 
 func (r *PhaseReconciler) TeardownPhase(

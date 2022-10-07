@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/package-operator/internal/testutil/ownerhandlingmocks"
 )
 
 type previousOwnerMock struct {
@@ -27,27 +27,7 @@ func (m *previousOwnerMock) GetPrevious() []corev1alpha1.PreviousRevisionReferen
 	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
 }
 
-type ownerStrategyMock struct {
-	mock.Mock
-}
-
-func (m *ownerStrategyMock) IsController(owner, obj metav1.Object) bool {
-	args := m.Called(owner, obj)
-	return args.Bool(0)
-}
-
-func (m *ownerStrategyMock) RemoveOwner(owner, obj metav1.Object) {
-	m.Called(owner, obj)
-}
-
-func (m *ownerStrategyMock) ReleaseController(obj metav1.Object) {
-	m.Called(obj)
-}
-
-func (m *ownerStrategyMock) SetControllerReference(owner, obj metav1.Object) error {
-	args := m.Called(owner, obj)
-	return args.Error(0)
-}
+type ownerStrategyMock = ownerhandlingmocks.OwnerStrategyMock
 
 type phaseObjectOwnerMock struct {
 	mock.Mock

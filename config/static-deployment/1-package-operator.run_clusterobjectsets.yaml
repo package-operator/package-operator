@@ -305,6 +305,29 @@ spec:
                   - type
                   type: object
                 type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
               phase:
                 description: Phase is not part of any API contract it will go away
                   as soon as kubectl can print conditions! When evaluating object

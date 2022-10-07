@@ -107,7 +107,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
-			c.StatusMock.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
 			pr.On("Reconcile", mock.Anything, mock.Anything).
@@ -141,7 +141,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			if test.getObjectSetPhaseError != nil || test.condition.Type == corev1alpha1.ObjectSetArchived {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
-				c.StatusMock.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				c.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
 
@@ -149,7 +149,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
-				c.StatusMock.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
 
@@ -159,7 +159,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			rr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
 			c.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-			c.StatusMock.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }

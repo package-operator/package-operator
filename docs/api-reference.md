@@ -114,6 +114,11 @@ status:
   conditions:
   - status: "True"
     type: Available
+  controllerOf:
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -163,8 +168,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: consetetur
-    name: amet
+  - class: diam
+    name: sed
     objects:
     - object:
         apiVersion: apps/v1
@@ -216,8 +221,8 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: elitr
-  name: sadipscing
+  class: eirmod
+  name: nonumy
   objects:
   - object:
       apiVersion: apps/v1
@@ -232,6 +237,11 @@ status:
   conditions:
   - status: "True"
     type: Available
+  controllerOf:
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -273,6 +283,7 @@ ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhas
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
 
 Used in:
@@ -305,10 +316,30 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Phase is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ClusterObjectSetPhase objects. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
 
 Used in:
 * [ClusterObjectSet](#clusterobjectset)
+
+
+### ControlledObjectReference
+
+References an object controlled by this ObjectSet/ObjectSetPhase.
+
+| Field | Description |
+| ----- | ----------- |
+| `kind` <b>required</b><br>string | Object Kind. |
+| `group` <b>required</b><br>string | Object Group. |
+| `name` <b>required</b><br>string | Object Name. |
+| `namespace` <br>string | Object Namespace. |
+
+
+Used in:
+* [ClusterObjectSetPhaseStatus](#clusterobjectsetphasestatus)
+* [ClusterObjectSetStatus](#clusterobjectsetstatus)
+* [ObjectSetPhaseStatus](#objectsetphasestatus)
+* [ObjectSetStatus](#objectsetstatus)
 
 
 ### ObjectSetObject
@@ -352,6 +383,7 @@ ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
 
 Used in:
@@ -401,6 +433,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | `phase` <br><a href="#objectsetstatusphase">ObjectSetStatusPhase</a> | Phase is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ObjectSetPhase objects. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
 
 Used in:

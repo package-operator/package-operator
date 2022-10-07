@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"package-operator.run/package-operator/internal/probing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"package-operator.run/package-operator/internal/testutil/controllersmocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,26 +18,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers"
 )
 
-type phaseReconcilerMock struct {
-	mock.Mock
-}
-
-func (m *phaseReconcilerMock) ReconcilePhase(
-	ctx context.Context, owner controllers.PhaseObjectOwner,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober, previous []controllers.PreviousObjectSet,
-) error {
-	args := m.Called(ctx, owner, phase, probe, previous)
-	return args.Error(0)
-}
-
-func (m *phaseReconcilerMock) TeardownPhase(
-	ctx context.Context, owner controllers.PhaseObjectOwner,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-) (cleanupDone bool, err error) {
-	args := m.Called(ctx, owner, phase)
-	return args.Bool(0), args.Error(1)
-}
+type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 
 type remotePhaseReconcilerMock struct {
 	mock.Mock
@@ -44,9 +27,11 @@ type remotePhaseReconcilerMock struct {
 func (m *remotePhaseReconcilerMock) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-) (err error) {
+) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	args := m.Called(ctx, objectSet, phase)
-	return args.Error(0)
+	return args.Get(0).([]corev1alpha1.ControlledObjectReference),
+		args.Get(1).(controllers.ProbingResult),
+		args.Error(2)
 }
 
 func (m *remotePhaseReconcilerMock) Teardown(
@@ -63,7 +48,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
-	r := newObjectSetPhasesReconciler(pr, remotePr, lookup)
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
 
 	phase1 := corev1alpha1.ObjectSetTemplatePhase{
 		Name: "phase1",
@@ -80,9 +65,9 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	}
 
 	pr.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		Return([]client.Object{}, controllers.ProbingResult{}, nil)
 	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
 
 	res, err := r.Reconcile(context.Background(), os)
 	assert.Empty(t, res)
@@ -126,7 +111,7 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 				return []controllers.PreviousObjectSet{}, nil
 			}
-			r := newObjectSetPhasesReconciler(pr, remotePr, lookup)
+			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
 
 			phase1 := corev1alpha1.ObjectSetTemplatePhase{
 				Name: "phase1",

@@ -27,6 +27,9 @@ func init() {
 	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
+	if err := corev1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
 }
 
 func TestPhaseReconciler_TeardownPhase(t *testing.T) {

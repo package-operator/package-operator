@@ -17,6 +17,7 @@ type genericObjectSetPhase interface {
 	SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe)
 	SetRevision(revision int64)
 	SetPrevious([]corev1alpha1.PreviousRevisionReference)
+	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 }
 
 type genericObjectSetPhaseFactory func(
@@ -88,6 +89,10 @@ func (a *GenericObjectSetPhase) SetPrevious(previous []corev1alpha1.PreviousRevi
 	a.Spec.Previous = previous
 }
 
+func (a *GenericObjectSetPhase) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
+}
+
 type GenericClusterObjectSetPhase struct {
 	corev1alpha1.ClusterObjectSetPhase
 }
@@ -122,4 +127,8 @@ func (a *GenericClusterObjectSetPhase) SetRevision(revision int64) {
 
 func (a *GenericClusterObjectSetPhase) SetPrevious(previous []corev1alpha1.PreviousRevisionReference) {
 	a.Spec.Previous = previous
+}
+
+func (a *GenericClusterObjectSetPhase) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
 }

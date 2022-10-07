@@ -51,6 +51,8 @@ type ObjectSetPhaseStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	// +example=[{type: "Available", status: "True"}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// References all objects controlled by this instance.
+	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 
 func init() {

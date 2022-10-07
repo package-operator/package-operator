@@ -89,6 +89,7 @@ func newGenericObjectSetController(
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
+		scheme,
 		controllers.NewPhaseReconciler(
 			scheme, client,
 			dynamicCache, ownerhandling.NewNative(scheme)),
@@ -181,9 +182,7 @@ func (c *GenericObjectSetController) Reconcile(
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
 	objectSet.UpdateStatusPhase()
-	// this controller owns status alone, so we can always update it without optimistic locking.
-	objectSet.ClientObject().SetResourceVersion("")
-	if err := c.client.Status().Patch(ctx, objectSet.ClientObject(), client.Merge); err != nil {
+	if err := c.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSet status: %w", err)
 	}
 	return nil
@@ -293,6 +292,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 			Reason:             "Archived",
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
+		objectSet.SetStatusControllerOf(nil) // we are no longer controlling anything.
 	}
 
 	return nil

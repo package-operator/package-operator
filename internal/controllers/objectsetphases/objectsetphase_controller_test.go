@@ -124,7 +124,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
-			c.StatusMock.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
@@ -151,7 +151,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 			if test.getObjectSetPhaseError != nil || test.class != "default" {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
-				c.StatusMock.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				c.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
 
@@ -159,14 +159,14 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
-				c.StatusMock.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
 
 			// Happy path
 			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
-			c.StatusMock.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }

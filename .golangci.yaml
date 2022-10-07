@@ -38,7 +38,6 @@ linters:
     - nilnil
     - nolintlint
     - nosprintfhostport
-    - prealloc
     - predeclared
     - promlinter
     - revive
