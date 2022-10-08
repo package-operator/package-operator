@@ -86,7 +86,7 @@ func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlCl
 	return controller, c, dc, pr
 
 }
-func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add test for adding paused status
+func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 	tests := []struct {
 		name                   string
 		getObjectSetPhaseError error
@@ -112,7 +112,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 			deletionTimestamp:      &metav1.Time{Time: time.Now()},
 		},
 		{
-			name:                   "happy path",
+			name:                   "runs all the way through",
 			getObjectSetPhaseError: nil,
 			class:                  "default",
 			deletionTimestamp:      nil,
@@ -163,7 +163,6 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) { // TODO: Add 
 				return
 			}
 
-			// Happy path
 			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
