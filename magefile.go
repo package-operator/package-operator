@@ -141,6 +141,7 @@ func (Build) Images() {
 		mg.F(Builder.Image, "package-operator-manager"),
 		mg.F(Builder.Image, "package-loader"),
 		mg.F(Builder.Image, "package-operator-webhook"),
+		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
 
@@ -156,6 +157,7 @@ func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
 		mg.F(Builder.Push, "package-operator-webhook"),
+		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
 
@@ -465,12 +467,16 @@ func (d Dev) Deploy(ctx context.Context) error {
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
+		mg.F(Dev.LoadImage, "remote-phase-manager"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
 	}
 	if err := d.deployPackageOperatorWebhook(ctx, devEnvironment.Cluster); err != nil {
+		return fmt.Errorf("deploying: %w", err)
+	}
+	if err := d.deployRemotePhaseManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
 	}
 	return nil
@@ -561,6 +567,48 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	_ = cluster.CtrlClient.Delete(ctx, packageOperatorWebhookDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorWebhookDeployment); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook: %w", err)
+	}
+	return nil
+}
+
+// Remote phase manager from local files.
+func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) error {
+	objs, err := dev.LoadKubernetesObjectsFromFile(
+		"config/remote-phase-static-deployment/deployment.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
+	}
+
+	// Replace image
+	remotePhaseManagerDeployment := &appsv1.Deployment{}
+	if err := cluster.Scheme.Convert(
+		&objs[0], remotePhaseManagerDeployment, nil); err != nil {
+		return fmt.Errorf("converting to Deployment: %w", err)
+	}
+	packageOperatorWebhookImage := os.Getenv("REMOTE_PHASE_MANAGER_IMAGE")
+	if len(packageOperatorWebhookImage) == 0 {
+		packageOperatorWebhookImage = Builder.imageURL("remote-phase-manager")
+	}
+	for i := range remotePhaseManagerDeployment.Spec.Template.Spec.Containers {
+		container := &remotePhaseManagerDeployment.Spec.Template.Spec.Containers[i]
+
+		switch container.Name {
+		case "manager":
+			container.Image = packageOperatorWebhookImage
+		}
+	}
+
+	ctx = logr.NewContext(ctx, logger)
+
+	// Deploy
+	//if err := cluster.CreateAndWaitFromFolders(ctx, []string{
+	//	"config/remote-phase-static-deployment",
+	//}); err != nil {
+	//	return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
+	//}
+	_ = cluster.CtrlClient.Delete(ctx, remotePhaseManagerDeployment)
+	if err := cluster.CreateAndWaitForReadiness(ctx, remotePhaseManagerDeployment); err != nil {
+		return fmt.Errorf("deploy remote-phase-manager: %w", err)
 	}
 	return nil
 }
