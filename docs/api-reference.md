@@ -3,10 +3,67 @@
 The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
 containing basic building blocks that other auxiliary APIs can build on top of.
 
+* [ClusterObjectDeployment](#clusterobjectdeployment)
 * [ClusterObjectSet](#clusterobjectset)
 * [ClusterObjectSetPhase](#clusterobjectsetphase)
+* [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
+
+
+### ClusterObjectDeployment
+
+ClusterObjectDeployment is the Schema for the ClusterObjectDeployments API
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterObjectDeployment
+metadata:
+  name: example
+spec:
+  revisionHistoryLimit: 10
+  selector: metav1.LabelSelector
+  template:
+    metadata: metav1.ObjectMeta
+    spec:
+      availabilityProbes:
+      - probes:
+        - condition:
+            status: "True"
+            type: Available
+          fieldsEqual:
+            fieldA: .spec.fieldA
+            fieldB: .status.fieldB
+        selector:
+          kind:
+            group: apps
+            kind: Deployment
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: example-operator
+      phases:
+      - class: ipsum
+        name: lorem
+        objects:
+        - object:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: example-deployment
+status:
+  phase:Pending: null
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#clusterobjectdeploymentspec">ClusterObjectDeploymentSpec</a> | ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployment. |
+| `status` <br><a href="#clusterobjectdeploymentstatus">ClusterObjectDeploymentStatus</a> | ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment |
 
 
 ### ClusterObjectSet
@@ -46,8 +103,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: ipsum
-    name: lorem
+  - class: sit
+    name: dolor
     objects:
     - object:
         apiVersion: apps/v1
@@ -98,8 +155,8 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: sit
-  name: dolor
+  class: consetetur
+  name: amet
   objects:
   - object:
       apiVersion: apps/v1
@@ -115,10 +172,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
 
 ```
 
@@ -128,6 +185,62 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#clusterobjectsetphasespec">ClusterObjectSetPhaseSpec</a> | ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase. |
 | `status` <br><a href="#clusterobjectsetphasestatus">ClusterObjectSetPhaseStatus</a> | ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase. |
+
+
+### ObjectDeployment
+
+ObjectDeployment is the Schema for the ObjectDeployments API
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectDeployment
+metadata:
+  name: example
+  namespace: default
+spec:
+  revisionHistoryLimit: 10
+  selector: metav1.LabelSelector
+  template:
+    metadata: metav1.ObjectMeta
+    spec:
+      availabilityProbes:
+      - probes:
+        - condition:
+            status: "True"
+            type: Available
+          fieldsEqual:
+            fieldA: .spec.fieldA
+            fieldB: .status.fieldB
+        selector:
+          kind:
+            group: apps
+            kind: Deployment
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: example-operator
+      phases:
+      - class: eirmod
+        name: nonumy
+        objects:
+        - object:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: example-deployment
+status:
+  phase:Pending: null
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#objectdeploymentspec">ObjectDeploymentSpec</a> | ObjectDeploymentSpec defines the desired state of a ObjectDeployment. |
+| `status` <br><a href="#objectdeploymentstatus">ObjectDeploymentStatus</a> | ObjectDeploymentStatus defines the observed state of a ObjectDeployment |
 
 
 ### ObjectSet
@@ -168,8 +281,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: diam
-    name: sed
+  - class: lorem
+    name: tempor
     objects:
     - object:
         apiVersion: apps/v1
@@ -221,8 +334,8 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: eirmod
-  name: nonumy
+  class: dolor
+  name: ipsum
   objects:
   - object:
       apiVersion: apps/v1
@@ -238,10 +351,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
 
 ```
 
@@ -256,6 +369,38 @@ status:
 
 
 ---
+
+### ClusterObjectDeploymentSpec
+
+ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployment.
+
+| Field | Description |
+| ----- | ----------- |
+| `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
+| `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
+
+
+Used in:
+* [ClusterObjectDeployment](#clusterobjectdeployment)
+
+
+### ClusterObjectDeploymentStatus
+
+ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#objectdeploymentphase">ObjectDeploymentPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ClusterObjectDeployment. |
+| `templateHash` <br>string | Computed TemplateHash. |
+| `observedGeneration` <br>int64 | Last observed generation |
+
+
+Used in:
+* [ClusterObjectDeployment](#clusterobjectdeployment)
+
 
 ### ClusterObjectSetPhaseSpec
 
@@ -342,6 +487,38 @@ Used in:
 * [ObjectSetStatus](#objectsetstatus)
 
 
+### ObjectDeploymentSpec
+
+ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
+
+| Field | Description |
+| ----- | ----------- |
+| `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
+| `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
+
+
+Used in:
+* [ObjectDeployment](#objectdeployment)
+
+
+### ObjectDeploymentStatus
+
+ObjectDeploymentStatus defines the observed state of a ObjectDeployment
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#objectdeploymentphase">ObjectDeploymentPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ObjectDeployment. |
+| `templateHash` <br>string | Computed TemplateHash. |
+| `observedGeneration` <br>int64 | Last observed generation |
+
+
+Used in:
+* [ObjectDeployment](#objectdeployment)
+
+
 ### ObjectSetObject
 
 An object that is part of the phase of an ObjectSet.
@@ -405,6 +582,7 @@ Used in:
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
 * [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetSpec](#objectsetspec)
+* [ObjectSetTemplateSpec](#objectsettemplatespec)
 
 
 ### ObjectSetSpec
@@ -440,6 +618,21 @@ Used in:
 * [ObjectSet](#objectset)
 
 
+### ObjectSetTemplate
+
+ObjectSetTemplate describes the template to create new ObjectSets from.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <b>required</b><br>metav1.ObjectMeta | Common Object Metadata. |
+| `spec` <b>required</b><br><a href="#objectsettemplatespec">ObjectSetTemplateSpec</a> | ObjectSet specification. |
+
+
+Used in:
+* [ClusterObjectDeploymentSpec](#clusterobjectdeploymentspec)
+* [ObjectDeploymentSpec](#objectdeploymentspec)
+
+
 ### ObjectSetTemplatePhase
 
 ObjectSet reconcile phase.
@@ -454,6 +647,21 @@ ObjectSet reconcile phase.
 Used in:
 * [ClusterObjectSetSpec](#clusterobjectsetspec)
 * [ObjectSetSpec](#objectsetspec)
+* [ObjectSetTemplateSpec](#objectsettemplatespec)
+
+
+### ObjectSetTemplateSpec
+
+ObjectSet specification.
+
+| Field | Description |
+| ----- | ----------- |
+| `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
+| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+
+
+Used in:
+* [ObjectSetTemplate](#objectsettemplate)
 
 
 ### PackageProbeKindSpec
