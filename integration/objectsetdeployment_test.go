@@ -22,125 +22,12 @@ import (
 )
 
 func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
-	cm1 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "cm-1",
-			Labels: map[string]string{"test.package-operator.run/test": "True"},
-		},
-		Data: map[string]string{
-			"banana": "bread",
-			"name":   "cm-1",
-		},
-	}
-	cmGVK, err := apiutil.GVKForObject(cm1, Scheme)
-	require.NoError(t, err)
-	cm1.SetGroupVersionKind(cmGVK)
-
-	cm2 := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cm-2",
-		},
-	}
-	cm2.SetGroupVersionKind(cmGVK)
-
-	deployment1Probe := []corev1alpha1.ObjectSetProbe{
-		{
-			Selector: corev1alpha1.ProbeSelector{
-				Kind: &corev1alpha1.PackageProbeKindSpec{
-					Kind: "ConfigMap",
-				},
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-				},
-			},
-			Probes: []corev1alpha1.Probe{
-				{
-					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-						FieldA: ".metadata.name",
-						FieldB: ".data.name",
-					},
-				},
-			},
-		},
-	}
-
-	deployment2Probe := []corev1alpha1.ObjectSetProbe{
-		{
-			Selector: corev1alpha1.ProbeSelector{
-				Kind: &corev1alpha1.PackageProbeKindSpec{
-					Kind: "ConfigMap",
-				},
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-				},
-			},
-			Probes: []corev1alpha1.Probe{
-				{
-					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-						FieldA: ".metadata.name",
-						FieldB: ".metadata.annotations.name",
-					},
-				},
-			},
-		},
-	}
-
-	objectDeployment := func(probes []corev1alpha1.ObjectSetProbe) corev1alpha1.ObjectDeployment {
-		return corev1alpha1.ObjectDeployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-objectset-deployment",
-				Namespace: "default",
-			},
-			Spec: corev1alpha1.ObjectDeploymentSpec{
-				Selector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-				},
-				Template: corev1alpha1.ObjectSetTemplate{
-					Metadata: metav1.ObjectMeta{
-						Labels: map[string]string{"test.package-operator.run/test": "True"},
-					},
-					Spec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name: "phase-1",
-								Objects: []corev1alpha1.ObjectSetObject{
-									{
-										Object: runtime.RawExtension{
-											Object: cm1,
-										},
-									},
-								},
-							},
-							{
-								Name: "phase-2",
-								Objects: []corev1alpha1.ObjectSetObject{
-									{
-										Object: runtime.RawExtension{
-											Object: cm2,
-										},
-									},
-								},
-							},
-						},
-						AvailabilityProbes: probes,
-					},
-				},
-			},
-		}
-	}
-	cm1Key := client.ObjectKey{
-		Name: cm1.Name, Namespace: "default",
-	}
-	cm2Key := client.ObjectKey{
-		Name: cm2.Name, Namespace: "default",
-	}
-
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	testCases := []struct {
 		deploymentRevision           int
-		objectDeploymentFunc         func(probes []corev1alpha1.ObjectSetProbe) corev1alpha1.ObjectDeployment
 		probe                        []corev1alpha1.ObjectSetProbe
+		phases                       []corev1alpha1.ObjectSetTemplatePhase
 		expectedRevisionAvailability metav1.ConditionStatus // Objectset for the current deployment revision availability status
 		expectedObjectSetCount       int
 		expectedHashCollisionCount   int
@@ -148,9 +35,30 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		expectedArchivedRevisions    []string
 	}{
 		{
-			deploymentRevision:           1,
-			objectDeploymentFunc:         objectDeployment,
-			probe:                        deployment1Probe,
+			deploymentRevision: 1,
+			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
+			phases: []corev1alpha1.ObjectSetTemplatePhase{
+				{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							},
+						},
+					},
+				},
+				{
+					Name: "phase-2",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							},
+						},
+					},
+				},
+			},
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       1,
 			expectedHashCollisionCount:   0,
@@ -159,21 +67,67 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			},
 		},
 		{
-			deploymentRevision:           2,
-			objectDeploymentFunc:         objectDeployment,
-			probe:                        deployment2Probe,
+			deploymentRevision: 2,
+			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
+			phases: []corev1alpha1.ObjectSetTemplatePhase{
+				{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm1", map[string]string{"name": "cm2"}, t),
+							},
+						},
+					},
+				},
+				{
+					Name: "phase-2",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm2", map[string]string{"name": "fails"}, t),
+							},
+						},
+					},
+				},
+			},
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       2,
 			expectedHashCollisionCount:   0,
+			// We handover cm1 and cm2 and then modify them to fail the probes.(Both in this revision and
+			// the previous.)
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
+				// Now the previous revision which was earlier available also fails.
+				// Thus making the deployment unavailable :(
+				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionFalse,
 				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
 			},
 		},
 		{
-			deploymentRevision:           3,
-			objectDeploymentFunc:         objectDeployment,
-			probe:                        deployment1Probe,
+			deploymentRevision: 3,
+			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
+			phases: []corev1alpha1.ObjectSetTemplatePhase{
+				{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							},
+						},
+					},
+				},
+				{
+					Name: "phase-2",
+					Objects: []corev1alpha1.ObjectSetObject{
+						{
+							Object: runtime.RawExtension{
+								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							},
+						},
+					},
+				},
+			},
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       3,
 			expectedHashCollisionCount:   1,
@@ -186,7 +140,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		concernedDeployment := testCase.objectDeploymentFunc(testCase.probe)
+		t.Logf("Running revision: %d \n", testCase.deploymentRevision)
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probe, "test-objectdeployment")
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(&concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
@@ -241,15 +196,6 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation] ==
 				fmt.Sprint(concernedDeployment.GetGeneration()),
 		)
-
-		// expect cm-1 to be present.
-		currentCM1 := &corev1.ConfigMap{}
-		require.NoError(t, Client.Get(ctx, cm1Key, currentCM1))
-
-		// expect cm-2 to be present.
-		currentCM2 := &corev1.ConfigMap{}
-		require.NoError(t, Client.Get(ctx, cm2Key, currentCM2))
-
 		// Expect objectset to be created
 		currObjectSetList := &corev1alpha1.ObjectSetList{}
 		require.NoError(t, Client.List(ctx, currObjectSetList))
@@ -278,137 +224,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 }
 
-func TestObjectDeployment_objectset_archival(t *testing.T) {
-	objectDeploymentTemplate := func(
-		objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
-		probes []corev1alpha1.ObjectSetProbe) corev1alpha1.ObjectDeployment {
-		return corev1alpha1.ObjectDeployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-objectset-deployment",
-				Namespace: "default",
-			},
-			Spec: corev1alpha1.ObjectDeploymentSpec{
-				Selector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-				},
-				Template: corev1alpha1.ObjectSetTemplate{
-					Metadata: metav1.ObjectMeta{
-						Labels: map[string]string{"test.package-operator.run/test": "True"},
-					},
-					Spec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases:             objectSetPhases,
-						AvailabilityProbes: probes,
-					},
-				},
-			},
-		}
-	}
-
-	cmTemplate := func(name string, data map[string]string) *corev1.ConfigMap {
-		cm := corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: map[string]string{"test.package-operator.run/test": "True"},
-			},
-			Data: data,
-		}
-		cmGVK, err := apiutil.GVKForObject(&cm, Scheme)
-		require.NoError(t, err)
-		cm.SetGroupVersionKind(cmGVK)
-		return &cm
-	}
-
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "secret-1",
-			Labels: map[string]string{"test.package-operator.run/test": "True"},
-		},
-		Type: corev1.SecretTypeOpaque,
-		StringData: map[string]string{
-			"hello": "world",
-		},
-	}
-
-	secretGVK, err := apiutil.GVKForObject(&secret, Scheme)
-	require.NoError(t, err)
-	secret.SetGroupVersionKind(secretGVK)
-
-	deploymentTemplate := func(deploymentName string, podImage string) *appsv1.Deployment {
-		obj := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   deploymentName,
-				Labels: map[string]string{"test.package-operator.run/test": "True"},
-			},
-			Spec: appsv1.DeploymentSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"test.package-operator.run/test": "True"},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "nginx",
-						Labels: map[string]string{"test.package-operator.run/test": "True"},
-					},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  "nginx",
-								Image: podImage,
-							},
-						},
-					},
-				},
-			},
-		}
-		deploymentGVK, err := apiutil.GVKForObject(&obj, Scheme)
-		require.NoError(t, err)
-		obj.SetGroupVersionKind(deploymentGVK)
-		return &obj
-	}
-
-	probesTemplate := func(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
-		return []corev1alpha1.ObjectSetProbe{
-			{
-				Selector: corev1alpha1.ProbeSelector{
-					Kind: &corev1alpha1.PackageProbeKindSpec{
-						Kind: "ConfigMap",
-					},
-				},
-				Probes: []corev1alpha1.Probe{
-					{
-						FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-							FieldA: configmapFieldA,
-							FieldB: configmapFieldB,
-						},
-					},
-				},
-			},
-			{
-				Selector: corev1alpha1.ProbeSelector{
-					Kind: &corev1alpha1.PackageProbeKindSpec{
-						Kind:  "Deployment",
-						Group: "apps",
-					},
-				},
-				Probes: []corev1alpha1.Probe{
-					{
-						FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-							FieldA: ".status.updatedReplicas",
-							FieldB: ".status.replicas",
-						},
-					},
-					{
-						Condition: &corev1alpha1.ProbeConditionSpec{
-							Type:   "Available",
-							Status: "True",
-						},
-					},
-				},
-			},
-		}
-	}
-
+func TestObjectDeployment_objectsetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-
 	testCases := []struct {
 		revision                     string
 		phases                       []corev1alpha1.ObjectSetTemplatePhase
@@ -427,7 +244,7 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}),
+								Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}, t),
 							},
 						},
 					},
@@ -437,13 +254,13 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-1", "nginx:1.14.1"),
+								Object: deploymentTemplate("nginx-1", "nginx:1.14.1", t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       1,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -459,7 +276,7 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}),
+								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
 							},
 						},
 					},
@@ -469,13 +286,13 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-1", "nginx:1.14.2"),
+								Object: deploymentTemplate("nginx-1", "nginx:1.14.2", t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       2,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -493,7 +310,7 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}),
+								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
 							},
 						},
 					},
@@ -503,13 +320,13 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-2", "invalid-image"),
+								Object: deploymentTemplate("nginx-2", "invalid-image", t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       3,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -530,12 +347,12 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-2", "nginx:1.14.2"),
+								Object: deploymentTemplate("nginx-2", "nginx:1.14.2", t),
 							},
 						},
 						{
 							Object: runtime.RawExtension{
-								Object: &secret,
+								Object: secret("secret-1", t),
 							},
 						},
 					},
@@ -545,13 +362,13 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}),
+								Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}, t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       4,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -570,7 +387,7 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}),
+								Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}, t),
 							},
 						},
 					},
@@ -580,18 +397,18 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-3", "nginx:1.14.2"),
+								Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
 							},
 						},
 						{
 							Object: runtime.RawExtension{
-								Object: &secret,
+								Object: secret("secret-1", t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       5,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -610,7 +427,7 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: cmTemplate("cm4", map[string]string{"name": "cm4"}),
+								Object: cmTemplate("cm4", map[string]string{"name": "cm4"}, t),
 							},
 						},
 					},
@@ -620,18 +437,18 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
 							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-3", "nginx:1.14.2"),
+								Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
 							},
 						},
 						{
 							Object: runtime.RawExtension{
-								Object: &secret,
+								Object: secret("secret-1", t),
 							},
 						},
 					},
 				},
 			},
-			probes:                       probesTemplate(".metadata.name", ".data.name"),
+			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       6,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -645,7 +462,8 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes)
+		t.Logf("Running revision %s \n", testCase.revision)
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectset-deployment-1")
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(&concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
@@ -656,8 +474,8 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 			concernedDeployment.ResourceVersion = currentInClusterDeployment.ResourceVersion
 			require.NoError(t, Client.Update(ctx, &concernedDeployment))
 		}
-		cleanupOnSuccess(ctx, t, &concernedDeployment)
 
+		cleanupOnSuccess(ctx, t, &concernedDeployment)
 		// Assert that all the expected conditions are reported
 		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
 			require.NoError(t,
@@ -700,7 +518,6 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation] ==
 				fmt.Sprint(concernedDeployment.GetGeneration()),
 		)
-
 		// Expect objectset to be created
 		currObjectSetList := &corev1alpha1.ObjectSetList{}
 		require.NoError(t, Client.List(ctx, currObjectSetList))
@@ -728,4 +545,155 @@ func TestObjectDeployment_objectset_archival(t *testing.T) {
 
 func ExpectedObjectSetName(deployment *corev1alpha1.ObjectDeployment) string {
 	return fmt.Sprintf("%s-%s", deployment.GetName(), deployment.Status.TemplateHash)
+}
+
+func objectDeploymentTemplate(
+	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
+	probes []corev1alpha1.ObjectSetProbe, name string) corev1alpha1.ObjectDeployment {
+	label := fmt.Sprintf("test.package-operator.run/%s", name)
+	return corev1alpha1.ObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectDeploymentSpec{
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{label: "True"},
+			},
+			Template: corev1alpha1.ObjectSetTemplate{
+				Metadata: metav1.ObjectMeta{
+					Labels: map[string]string{label: "True"},
+				},
+				Spec: corev1alpha1.ObjectSetTemplateSpec{
+					Phases:             objectSetPhases,
+					AvailabilityProbes: probes,
+				},
+			},
+		},
+	}
+}
+
+func cmTemplate(name string, data map[string]string, t require.TestingT) *corev1.ConfigMap {
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+		},
+		Data: data,
+	}
+	GVK, err := apiutil.GVKForObject(&cm, Scheme)
+	require.NoError(t, err)
+	cm.SetGroupVersionKind(GVK)
+	return &cm
+}
+
+func secret(name string, t require.TestingT) *corev1.Secret {
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+		},
+		Type: corev1.SecretTypeOpaque,
+		StringData: map[string]string{
+			"hello": "world",
+		},
+	}
+	GVK, err := apiutil.GVKForObject(&secret, Scheme)
+	require.NoError(t, err)
+	secret.SetGroupVersionKind(GVK)
+	return &secret
+}
+
+func deploymentTemplate(deploymentName string, podImage string, t require.TestingT) *appsv1.Deployment {
+	obj := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   deploymentName,
+			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"test.package-operator.run/test-1": "True"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "nginx",
+					Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: podImage,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	GVK, err := apiutil.GVKForObject(&obj, Scheme)
+	require.NoError(t, err)
+	obj.SetGroupVersionKind(GVK)
+	return &obj
+}
+
+func archivalTestprobesTemplate(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
+	return []corev1alpha1.ObjectSetProbe{
+		{
+			Selector: corev1alpha1.ProbeSelector{
+				Kind: &corev1alpha1.PackageProbeKindSpec{
+					Kind: "ConfigMap",
+				},
+			},
+			Probes: []corev1alpha1.Probe{
+				{
+					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
+						FieldA: configmapFieldA,
+						FieldB: configmapFieldB,
+					},
+				},
+			},
+		},
+		{
+			Selector: corev1alpha1.ProbeSelector{
+				Kind: &corev1alpha1.PackageProbeKindSpec{
+					Kind:  "Deployment",
+					Group: "apps",
+				},
+			},
+			Probes: []corev1alpha1.Probe{
+				{
+					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
+						FieldA: ".status.updatedReplicas",
+						FieldB: ".status.replicas",
+					},
+				},
+				{
+					Condition: &corev1alpha1.ProbeConditionSpec{
+						Type:   string(appsv1.DeploymentAvailable),
+						Status: string(metav1.ConditionTrue),
+					},
+				},
+			},
+		},
+	}
+}
+func hashCollisionTestProbe(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
+	return []corev1alpha1.ObjectSetProbe{
+		{
+			Selector: corev1alpha1.ProbeSelector{
+				Kind: &corev1alpha1.PackageProbeKindSpec{
+					Kind: "ConfigMap",
+				},
+			},
+			Probes: []corev1alpha1.Probe{
+				{
+					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
+						FieldA: configmapFieldA,
+						FieldB: configmapFieldB,
+					},
+				},
+			},
+		},
+	}
 }
