@@ -162,10 +162,10 @@ func (od *GenericObjectDeploymentController) newOperandChild() genericObjectSet 
 	panic("Unsupported child resource GVK")
 }
 
-func (c *GenericObjectDeploymentController) newOperandChildList() genericObjectSetList {
-	childListGVK := c.childGvk.GroupVersion().
-		WithKind(c.childGvk.Kind + "List")
-	obj, err := c.scheme.New(childListGVK)
+func (od *GenericObjectDeploymentController) newOperandChildList() genericObjectSetList {
+	childListGVK := od.childGvk.GroupVersion().
+		WithKind(od.childGvk.Kind + "List")
+	obj, err := od.scheme.New(childListGVK)
 	if err != nil {
 		panic(err)
 	}
