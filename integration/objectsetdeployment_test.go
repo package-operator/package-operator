@@ -204,9 +204,19 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
+			currObjectSet := currObjectSet
 			currObjectSetRevision := currObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation]
 			if slices.Contains(testCase.expectedArchivedRevisions, currObjectSetRevision) {
-				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived)
+				require.NoError(t,
+					Waiter.WaitForCondition(ctx,
+						&currObjectSet,
+						corev1alpha1.ObjectSetArchived,
+						metav1.ConditionTrue,
+					),
+				)
+				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
+				require.NotNil(t, availableCond, "Available condition is expected to be reported")
+				require.True(t, availableCond.Status == metav1.ConditionTrue)
 			} else {
 				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
 			}
@@ -345,11 +355,11 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 				{
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
-						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-2", "nginx:1.14.2", t),
-							},
-						},
+						// {
+						// 	Object: runtime.RawExtension{
+						// 		Object: deploymentTemplate("nginx-2", "nginx:1.14.2", t),
+						// 	},
+						// },
 						{
 							Object: runtime.RawExtension{
 								Object: secret("secret-1", t),
@@ -518,17 +528,38 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation] ==
 				fmt.Sprint(concernedDeployment.GetGeneration()),
 		)
-		// Expect objectset to be created
+
+		// Expect concerned objectset to be created
+		labelSelector := concernedDeployment.Spec.Selector
+		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
+		require.NoError(t, err)
 		currObjectSetList := &corev1alpha1.ObjectSetList{}
+		err = Client.List(
+			ctx, currObjectSetList,
+			client.MatchingLabelsSelector{
+				Selector: objectSetSelector,
+			},
+			client.InNamespace(concernedDeployment.GetNamespace()),
+		)
 		require.NoError(t, Client.List(ctx, currObjectSetList))
 
 		require.Equal(t, len(currObjectSetList.Items), testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
-		for _, currObjectSet := range currObjectSetList.Items {
+		for _, item := range currObjectSetList.Items {
+			currObjectSet := item
 			currObjectSetRevision := currObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation]
 			if slices.Contains(testCase.expectedArchivedRevisions, currObjectSetRevision) {
-				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived)
+				require.NoError(t,
+					Waiter.WaitForCondition(ctx,
+						&currObjectSet,
+						corev1alpha1.ObjectSetArchived,
+						metav1.ConditionTrue,
+					),
+				)
+				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
+				require.NotNil(t, availableCond, "Available condition is expected to be reported")
+				require.True(t, availableCond.Status == metav1.ConditionTrue)
 			} else {
 				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
 			}

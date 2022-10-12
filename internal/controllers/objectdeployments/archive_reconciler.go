@@ -59,8 +59,8 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 			itemsDeleted++
 			continue
 		}
-		if !objectSet.IsArchived() {
-			// Mark everything else as archived
+		// Mark everything else as archived
+		if !objectSet.IsArchived() && objectSet.IsStatusPaused() {
 			objectSet.SetArchived()
 			if err := a.client.Update(ctx, objectSet.ClientObject()); err != nil {
 				return fmt.Errorf("failed to archive objectset: %w", err)
@@ -83,20 +83,22 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 		// Case 1: If currentRevision is available, then all
 		// later revisions can be archived.
 		if isAvailable(currentLatestRevision) {
-			for _, currPrev := range allObjectSets[:j] {
-				if currPrev.GetRevision() < currentLatestRevision.GetRevision() {
-					// Sanity check
-					// We always expect the  currentLatestRevision objectset to have a revision greater
-					// than the previous revision
-					objectSetsToArchive = append(objectSetsToArchive, currPrev)
-				}
+			laterRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
+			if err != nil {
+				return []genericObjectSet{}, err
 			}
-			break
+			return append(objectSetsToArchive, laterRevisionsToArchive...), nil
 		}
 
 		// If prev revision is present
 		if j > 0 {
 			previousRevision := allObjectSets[j-1]
+
+			// Already archived dont do anything
+			if previousRevision.IsArchived() {
+				continue
+			}
+
 			if currentLatestRevision.GetRevision() <= previousRevision.GetRevision() {
 				// Sanity check
 				// We always expect the  currentLatestRevision objectset to have a revision greater
@@ -104,40 +106,104 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 				continue
 			}
 
-			latestRevisionObjects, err := currentLatestRevision.GetObjects()
-
+			// Case 2 and 3 handled here:
+			shouldArchive, err := a.intermediateRevisionCanBeArchived(
+				ctx,
+				previousRevision,
+				currentLatestRevision,
+			)
 			if err != nil {
 				return []genericObjectSet{}, err
 			}
-			previousRevisionActivelyReconciledObjects := previousRevision.GetActivelyReconciledObjects()
-			// Actively reconciled status is not yet updated
-			if previousRevisionActivelyReconciledObjects == nil {
-				// Skip for now, this previousRevision's archival candidature will be checked
-				// when its controllerOf status block gets updated.
-				continue
-			}
-
-			// Case 2 and 3 handled here:
-
-			// Case 2:
-			// If a revision has no actively reconciled objects, it can be marked for archival.
-			// Here, if previousRevision has no actively reconciled objects, `commonObjects` will
-			// be an empty list and thus it will get marked for archival.
-
-			// Case 3:
-			// Latest revision is not containing any object still actively reconciled by an intermediate.
-			// Here if the current `latestRevisionObjects`` doesnt contain any objects in the previous
-			// revision's actively reconciled object list (previousRevisionActivelyReconciledObjects)
-			// then the current previous revision can be marked for archival. (IF the previous revision
-			// is not available).
-
-			commonObjects := intersection(latestRevisionObjects, previousRevisionActivelyReconciledObjects)
-			if len(commonObjects) == 0 && !isAvailable(previousRevision) {
+			if shouldArchive {
 				objectSetsToArchive = append(objectSetsToArchive, previousRevision)
 			}
 		}
 	}
 	return objectSetsToArchive, nil
+}
+
+func (a *archiveReconciler) archiveAllLaterRevisions(
+	ctx context.Context,
+	currentLatest genericObjectSet,
+	laterRevisions []genericObjectSet) ([]genericObjectSet, error) {
+	res := make([]genericObjectSet, 0)
+	for _, currPrev := range laterRevisions {
+		// revision already archived, we just skip.
+		if currPrev.IsArchived() {
+			continue
+		}
+		// Sanity check
+		// We always expect the  currentLatestRevision objectset to have a revision greater
+		// than the previous revision
+		if currPrev.GetRevision() < currentLatest.GetRevision() {
+			isPaused, err := a.ensurePaused(ctx, currPrev)
+			if err != nil {
+				return []genericObjectSet{}, err
+			}
+			if isPaused {
+				res = append(res, currPrev)
+			}
+		}
+	}
+	return res, nil
+}
+
+func (a *archiveReconciler) intermediateRevisionCanBeArchived(
+	ctx context.Context, previousRevision, currentLatestRevision genericObjectSet) (bool, error) {
+	latestRevisionObjects, err := currentLatestRevision.GetObjects()
+	if err != nil {
+		return false, err
+	}
+	previousRevisionActivelyReconciledObjects := previousRevision.GetActivelyReconciledObjects()
+	// Actively reconciled status is not yet updated
+	if previousRevisionActivelyReconciledObjects == nil {
+		// Skip for now, this previousRevision's archival candidature will be checked
+		// when its controllerOf status block gets updated.
+		return false, nil
+	}
+
+	// Case 2:
+	// If a revision has no actively reconciled objects, it can be marked for archival.
+	// Here, if previousRevision has no actively reconciled objects, `commonObjects` will
+	// be an empty list and thus it will get marked for archival.
+
+	// Case 3:
+	// Latest revision is not containing any object still actively reconciled by an intermediate.
+	// Here if the current `latestRevisionObjects`` doesnt contain any objects in the previous
+	// revision's actively reconciled object list (previousRevisionActivelyReconciledObjects)
+	// then the current previous revision can be marked for archival. (IF the previous revision
+	// is not available).
+	commonObjects := intersection(latestRevisionObjects, previousRevisionActivelyReconciledObjects)
+	if len(commonObjects) == 0 && !isAvailable(previousRevision) {
+		// This previousRevision is a candidate for archival but we only
+		// proceed to archive it after its paused.
+		isPaused, err := a.ensurePaused(ctx, previousRevision)
+		if err != nil {
+			return false, err
+		}
+		return isPaused, nil
+	}
+	return false, nil
+}
+
+func (a *archiveReconciler) ensurePaused(ctx context.Context, objectset genericObjectSet) (bool, error) {
+	if objectset.IsStatusPaused() {
+		return true, nil
+	}
+
+	if objectset.IsSpecPaused() {
+		// Revision is already marked for pausing but is
+		// not yet reflected in its status block
+		return false, nil
+	}
+
+	// Pause the revision
+	objectset.SetPaused()
+	if err := a.client.Update(ctx, objectset.ClientObject()); err != nil {
+		return false, fmt.Errorf("failed to pause objectset for archival: %w", err)
+	}
+	return false, nil
 }
 
 func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
