@@ -16,7 +16,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/apis/core/v1alpha1"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
@@ -61,7 +60,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: runtime.RawExtension{},
+					Object: unstructured.Unstructured{},
 				},
 			},
 		})
@@ -112,7 +111,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: runtime.RawExtension{},
+					Object: unstructured.Unstructured{},
 				},
 			},
 		})
@@ -171,7 +170,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: runtime.RawExtension{},
+					Object: unstructured.Unstructured{},
 				},
 			},
 		})
@@ -229,7 +228,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: runtime.RawExtension{},
+					Object: unstructured.Unstructured{},
 				},
 			},
 		})
@@ -337,8 +336,8 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 	owner.On("GetRevision").Return(int64(5))
 
 	phaseObject := corev1alpha1.ObjectSetObject{
-		Object: runtime.RawExtension{
-			Raw: []byte(`{"kind": "test"}`),
+		Object: unstructured.Unstructured{
+			Object: map[string]interface{}{"kind": "test"},
 		},
 	}
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
@@ -716,22 +715,6 @@ func Test_defaultPatcher_patchObject_noop(t *testing.T) {
 
 	clientMock.AssertNotCalled(
 		t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-}
-
-func Test_unstructuredFromObjectSetObject(t *testing.T) {
-	u, err := unstructuredFromObjectSetObject(
-		&v1alpha1.ObjectSetObject{
-			Object: runtime.RawExtension{
-				Raw: []byte(`{"kind":"test","metadata":{"name":"test"}}`),
-			},
-		})
-	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"kind": "test",
-		"metadata": map[string]interface{}{
-			"name": "test",
-		},
-	}, u.Object)
 }
 
 func Test_mergeKeysFrom(t *testing.T) {

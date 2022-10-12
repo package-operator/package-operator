@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,7 +26,15 @@ import (
 
 // Simple Setup, Pause and Teardown test.
 func TestObjectSet_setupPauseTeardown(t *testing.T) {
-	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap) *corev1alpha1.ObjectSet {
+	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+		cm4Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm4)
+		if err != nil {
+			return nil, err
+		}
+		cm5Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm5)
+		if err != nil {
+			return nil, err
+		}
 		return &corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-setup-teardown",
@@ -38,9 +47,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 							Name: "phase-1",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm4,
-									},
+									Object: unstructured.Unstructured{Object: cm4Obj},
 								},
 							},
 						},
@@ -48,9 +55,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 							Name: "phase-2",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm5,
-									},
+									Object: unstructured.Unstructured{Object: cm5Obj},
 								},
 							},
 						},
@@ -77,12 +82,12 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 					},
 				},
 			},
-		}
+		}, nil
 	}
 
 	tests := []struct {
 		name      string
-		objectSet func(cm4, cm5 *corev1.ConfigMap) *corev1alpha1.ObjectSet
+		objectSet func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error)
 	}{
 		{
 			name:      "without phase class",
@@ -90,11 +95,14 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 		},
 		{
 			name: "with phase class",
-			objectSet: func(cm4, cm5 *corev1.ConfigMap) *corev1alpha1.ObjectSet {
-				objectSet := defaultObjectSet(cm4, cm5)
+			objectSet: func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+				objectSet, err := defaultObjectSet(cm4, cm5)
+				if err != nil {
+					return nil, err
+				}
 				objectSet.Spec.Phases[0].Class = "default"
 				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet
+				return objectSet, nil
 			},
 		},
 	}
@@ -121,7 +129,8 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			}
 			cm5.SetGroupVersionKind(cmGVK)
 
-			objectSet := test.objectSet(cm4, cm5)
+			objectSet, err := test.objectSet(cm4, cm5)
+			require.NoError(t, err)
 
 			cm4Key := client.ObjectKey{
 				Name: cm4.Name, Namespace: objectSet.Namespace}
@@ -272,7 +281,15 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 }
 
 func TestObjectSet_handover(t *testing.T) {
-	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap) *corev1alpha1.ObjectSet {
+	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
+		if err != nil {
+			return nil, err
+		}
+		cm2Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm2)
+		if err != nil {
+			return nil, err
+		}
 		return &corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-rev1",
@@ -285,9 +302,7 @@ func TestObjectSet_handover(t *testing.T) {
 							Name: "phase-1",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm1,
-									},
+									Object: unstructured.Unstructured{Object: cm1Obj},
 								},
 							},
 						},
@@ -295,9 +310,7 @@ func TestObjectSet_handover(t *testing.T) {
 							Name: "phase-2",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm2,
-									},
+									Object: unstructured.Unstructured{Object: cm2Obj},
 								},
 							},
 						},
@@ -305,9 +318,17 @@ func TestObjectSet_handover(t *testing.T) {
 					AvailabilityProbes: []corev1alpha1.ObjectSetProbe{},
 				},
 			},
-		}
+		}, nil
 	}
-	defaultObjectSetRev2 := func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) *corev1alpha1.ObjectSet {
+	defaultObjectSetRev2 := func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error) {
+		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
+		if err != nil {
+			return nil, err
+		}
+		cm3Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm3)
+		if err != nil {
+			return nil, err
+		}
 		return &corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-rev2",
@@ -325,9 +346,7 @@ func TestObjectSet_handover(t *testing.T) {
 							Name: "phase-1",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm3, // replaces cm2
-									},
+									Object: unstructured.Unstructured{Object: cm3Obj}, // replaces cm2
 								},
 							},
 						},
@@ -335,9 +354,7 @@ func TestObjectSet_handover(t *testing.T) {
 							Name: "phase-2",
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
-									Object: runtime.RawExtension{
-										Object: cm1, // moved between phases
-									},
+									Object: unstructured.Unstructured{Object: cm1Obj}, // moved between phases
 								},
 							},
 						},
@@ -364,13 +381,13 @@ func TestObjectSet_handover(t *testing.T) {
 					},
 				},
 			},
-		}
+		}, nil
 	}
 
 	tests := []struct {
 		name          string
-		objectSetRev1 func(cm1, cm2 *corev1.ConfigMap) *corev1alpha1.ObjectSet
-		objectSetRev2 func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) *corev1alpha1.ObjectSet
+		objectSetRev1 func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error)
+		objectSetRev2 func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error)
 	}{
 		{
 			name:          "without phase class",
@@ -379,17 +396,23 @@ func TestObjectSet_handover(t *testing.T) {
 		},
 		{
 			name: "with phase class",
-			objectSetRev1: func(cm1, cm2 *corev1.ConfigMap) *corev1alpha1.ObjectSet {
-				objectSet := defaultObjectSetRev1(cm1, cm2)
+			objectSetRev1: func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+				objectSet, err := defaultObjectSetRev1(cm1, cm2)
+				if err != nil {
+					return nil, err
+				}
 				objectSet.Spec.Phases[0].Class = "default"
 				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet
+				return objectSet, nil
 			},
-			objectSetRev2: func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) *corev1alpha1.ObjectSet {
-				objectSet := defaultObjectSetRev2(cm1, cm3, rev1)
+			objectSetRev2: func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error) {
+				objectSet, err := defaultObjectSetRev2(cm1, cm3, rev1)
+				if err != nil {
+					return nil, err
+				}
 				objectSet.Spec.Phases[0].Class = "default"
 				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet
+				return objectSet, nil
 			},
 		},
 	}
@@ -413,7 +436,8 @@ func TestObjectSet_handover(t *testing.T) {
 			}
 			cm2.SetGroupVersionKind(cmGVK)
 
-			objectSetRev1 := test.objectSetRev1(cm1, cm2)
+			objectSetRev1, err := test.objectSetRev1(cm1, cm2)
+			require.NoError(t, err)
 
 			cm3 := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -422,7 +446,8 @@ func TestObjectSet_handover(t *testing.T) {
 			}
 			cm3.SetGroupVersionKind(cmGVK)
 
-			objectSetRev2 := test.objectSetRev2(cm1, cm3, objectSetRev1)
+			objectSetRev2, err := test.objectSetRev2(cm1, cm3, objectSetRev1)
+			require.NoError(t, err)
 
 			ctx := logr.NewContext(context.Background(), testr.New(t))
 
