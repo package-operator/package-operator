@@ -6,9 +6,11 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ClusterObjectDeployment](#clusterobjectdeployment)
 * [ClusterObjectSet](#clusterobjectset)
 * [ClusterObjectSetPhase](#clusterobjectsetphase)
+* [ClusterPackage](#clusterpackage)
 * [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
+* [Package](#package)
 
 
 ### ClusterObjectDeployment
@@ -187,6 +189,33 @@ status:
 | `status` <br><a href="#clusterobjectsetphasestatus">ClusterObjectSetPhaseStatus</a> | ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase. |
 
 
+### ClusterPackage
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: example
+spec:
+  image: nonumy
+status:
+  phase: Pending
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
+
+
 ### ObjectDeployment
 
 ObjectDeployment is the Schema for the ObjectDeployments API
@@ -222,8 +251,8 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: eirmod
-        name: nonumy
+      - class: tempor
+        name: eirmod
         objects:
         - object:
             apiVersion: apps/v1
@@ -281,8 +310,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: lorem
-    name: tempor
+  - class: ipsum
+    name: lorem
     objects:
     - object:
         apiVersion: apps/v1
@@ -334,8 +363,8 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: dolor
-  name: ipsum
+  class: sit
+  name: dolor
   objects:
   - object:
       apiVersion: apps/v1
@@ -351,10 +380,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: amet
-    kind: sit
-    name: consetetur
-    namespace: sadipscing
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -364,6 +393,34 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#objectsetphasespec">ObjectSetPhaseSpec</a> | ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase. |
 | `status` <br><a href="#objectsetphasestatus">ObjectSetPhaseStatus</a> | ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase. |
+
+
+### Package
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: example
+  namespace: default
+spec:
+  image: sed
+status:
+  phase: Pending
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
 
@@ -677,6 +734,35 @@ selects objects based on Kind and API Group.
 
 Used in:
 * [ProbeSelector](#probeselector)
+
+
+### PackageSpec
+
+Package specification.
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+
+
+Used in:
+* [ClusterPackage](#clusterpackage)
+* [Package](#package)
+
+
+### PackageStatus
+
+PackageStatus defines the observed state of a Package.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#packagestatusphase">PackageStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+
+
+Used in:
+* [ClusterPackage](#clusterpackage)
+* [Package](#package)
 
 
 ### PreviousRevisionReference
