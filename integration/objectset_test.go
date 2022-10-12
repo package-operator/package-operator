@@ -280,6 +280,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	}
 }
 
+// nolint:maintidx
 func TestObjectSet_handover(t *testing.T) {
 	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
 		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
