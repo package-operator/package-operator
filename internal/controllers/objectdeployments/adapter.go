@@ -183,6 +183,9 @@ type genericObjectSet interface {
 	SetArchived()
 	IsArchived() bool
 	GetRevision() int64
+	IsStatusPaused() bool
+	SetPaused()
+	IsSpecPaused() bool
 }
 
 var (
@@ -236,6 +239,21 @@ func (a *GenericObjectSet) GetActivelyReconciledObjects() []objectIdentifier {
 		res = append(res, currentObj)
 	}
 	return res
+}
+
+func (a *GenericObjectSet) IsStatusPaused() bool {
+	return meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetPaused,
+	)
+}
+
+func (a *GenericObjectSet) SetPaused() {
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+}
+
+func (a *GenericObjectSet) IsSpecPaused() bool {
+	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
 func (a *GenericObjectSet) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
@@ -345,6 +363,21 @@ func (a *GenericClusterObjectSet) GetRevision() int64 {
 
 func (a *GenericClusterObjectSet) IsArchived() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived
+}
+
+func (a *GenericClusterObjectSet) IsStatusPaused() bool {
+	return meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetPaused,
+	)
+}
+
+func (a *GenericClusterObjectSet) SetPaused() {
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+}
+
+func (a *GenericClusterObjectSet) IsSpecPaused() bool {
+	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
 func (a *GenericClusterObjectSet) GetActivelyReconciledObjects() []objectIdentifier {
