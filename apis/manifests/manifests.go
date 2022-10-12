@@ -1,16 +1,14 @@
-package apis
+package manifests
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/apis/core"
-	"package-operator.run/apis/manifests"
+	"package-operator.run/apis/manifests/v1alpha1"
 )
 
 // AddToSchemes may be used to add all resources defined in the project to a Scheme.
 var AddToSchemes runtime.SchemeBuilder = runtime.SchemeBuilder{
-	core.AddToScheme,
-	manifests.AddToScheme,
+	v1alpha1.SchemeBuilder.AddToScheme,
 }
 
 // AddToScheme adds all manifests Resources to the Scheme.
