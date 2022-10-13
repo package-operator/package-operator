@@ -72,8 +72,8 @@ func NewMultiClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme,
-		dynamicCache, class, client, targetWriter,
+		log, scheme, dynamicCache,
+		class, client, targetWriter,
 	)
 }
 
@@ -88,8 +88,8 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme,
-		dynamicCache, class, client, targetWriter,
+		log, scheme, dynamicCache,
+		class, client, targetWriter,
 	)
 }
 
@@ -103,8 +103,8 @@ func NewSameClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme,
-		dynamicCache, class, client, client,
+		log, scheme, dynamicCache,
+		class, client, client,
 	)
 }
 
@@ -118,8 +118,8 @@ func NewSameClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme,
-		dynamicCache, class, client, client,
+		log, scheme, dynamicCache,
+		class, client, client,
 	)
 }
 

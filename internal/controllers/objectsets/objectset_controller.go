@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/package-operator/internal/metrics"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -29,6 +31,7 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
+	recorder        metricsRecorder
 	dynamicCache    dynamicCache
 	teardownHandler teardownHandler
 }
@@ -50,25 +53,31 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
+type metricsRecorder interface {
+	RecordRolloutTime(objectSet metrics.GenericObjectSet)
+}
+
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
+	r metricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
-		c, log, scheme, dw,
+		c, log, scheme, dw, r,
 	)
 }
 
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
+	r metricsRecorder,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
-		c, log, scheme, dw,
+		c, log, scheme, dw, r,
 	)
 }
 
@@ -77,6 +86,7 @@ func newGenericObjectSetController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
+	recorder metricsRecorder,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -86,6 +96,7 @@ func newGenericObjectSetController(
 		log:          log,
 		scheme:       scheme,
 		dynamicCache: dynamicCache,
+		recorder:     recorder,
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
@@ -177,6 +188,11 @@ func (c *GenericObjectSetController) Reconcile(
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
 		return res, fmt.Errorf("getting paused status: %w", err)
 	}
+
+	if c.recorder != nil {
+		c.recorder.RecordRolloutTime(objectSet)
+	}
+
 	return res, c.updateStatus(ctx, objectSet)
 }
 

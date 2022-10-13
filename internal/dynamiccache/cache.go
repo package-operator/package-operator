@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,19 +60,28 @@ type Cache struct {
 	informerReferencesMux sync.RWMutex
 	informerReferences    map[schema.GroupVersionKind]map[OwnerReference]struct{}
 
+	recorder metricsRecorder
+
 	cacheSource cacheSourcer
+}
+
+type metricsRecorder interface {
+	RecordDynamicCacheInformers(total int)
+	RecordDynamicCacheObjects(gvk schema.GroupVersionKind, count int)
 }
 
 func NewCache(
 	config *rest.Config,
 	scheme *runtime.Scheme,
 	mapper meta.RESTMapper,
+	recorder metricsRecorder,
 	opts ...CacheOption,
 ) *Cache {
 	c := &Cache{
 		scheme:             scheme,
 		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
 		cacheSource:        &cacheSource{},
+		recorder:           recorder,
 	}
 	for _, opt := range opts {
 		opt.ApplyToCacheOptions(&c.opts)
@@ -126,6 +137,7 @@ func (c *Cache) Watch(
 ) error {
 	c.informerReferencesMux.Lock()
 	defer c.informerReferencesMux.Unlock()
+	defer c.sampleMetrics(ctx)
 
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -172,6 +184,7 @@ func (c *Cache) Free(
 ) error {
 	c.informerReferencesMux.Lock()
 	defer c.informerReferencesMux.Unlock()
+	defer c.sampleMetrics(ctx)
 
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -239,16 +252,24 @@ func (c *Cache) List(
 	ctx context.Context,
 	out client.ObjectList, opts ...client.ListOption,
 ) error {
+	// Ensure we are not allocating a new cache implicitly here
+	// And that the cache is not deleted while the list call is still in-flight.
+	c.informerReferencesMux.RLock()
+	defer c.informerReferencesMux.RUnlock()
+
+	return c.list(ctx, out, opts...)
+}
+
+func (c *Cache) list(
+	ctx context.Context,
+	out client.ObjectList, opts ...client.ListOption,
+) error {
 	gvk, err := apiutil.GVKForObject(out, c.scheme)
 	if err != nil {
 		return err
 	}
 	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
-	// Ensure we are not allocating a new cache implicitly here
-	// And that the cache is not deleted while the list call is still in-flight.
-	c.informerReferencesMux.RLock()
-	defer c.informerReferencesMux.RUnlock()
 	if _, ok := c.informerReferences[gvk]; !ok {
 		return &CacheNotStartedError{}
 	}
@@ -277,4 +298,29 @@ func (c *Cache) ownerRef(owner client.Object) (OwnerReference, error) {
 		Name:      owner.GetName(),
 		Namespace: owner.GetNamespace(),
 	}, nil
+}
+
+func (c *Cache) sampleMetrics(ctx context.Context) {
+	if c.recorder == nil {
+		return
+	}
+
+	log := logr.FromContextOrDiscard(ctx)
+
+	informerCount := len(c.informerReferences)
+	c.recorder.RecordDynamicCacheInformers(informerCount)
+
+	for gvk := range c.informerReferences {
+		listObj := &unstructured.UnstructuredList{}
+		listObj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind + "List",
+		})
+		if err := c.list(ctx, listObj); err != nil {
+			log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
+			continue
+		}
+		c.recorder.RecordDynamicCacheObjects(gvk, len(listObj.Items))
+	}
 }

@@ -186,7 +186,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	if !r.ownerStrategy.IsController(owner.ClientObject(), currentObj) {
 		// this object is owned by someone else
 		// so we don't have to delete it for cleanup,
-		// but we still want to remove ourself as owner.
+		// but we still want to remove ourselves as owner.
 		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
 		if err := r.writer.Update(ctx, currentObj); err != nil {
 			return false, fmt.Errorf("removing owner reference: %w", err)
