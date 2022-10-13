@@ -197,8 +197,19 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 				fmt.Sprint(concernedDeployment.GetGeneration()),
 		)
 		// Expect objectset to be created
+		// Expect concerned objectset to be created
+		labelSelector := concernedDeployment.Spec.Selector
+		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
+		require.NoError(t, err)
 		currObjectSetList := &corev1alpha1.ObjectSetList{}
-		require.NoError(t, Client.List(ctx, currObjectSetList))
+		err = Client.List(
+			ctx, currObjectSetList,
+			client.MatchingLabelsSelector{
+				Selector: objectSetSelector,
+			},
+			client.InNamespace(concernedDeployment.GetNamespace()),
+		)
+		require.NoError(t, err)
 
 		require.Equal(t, len(currObjectSetList.Items), testCase.expectedObjectSetCount)
 

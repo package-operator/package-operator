@@ -186,6 +186,7 @@ type genericObjectSet interface {
 	IsStatusPaused() bool
 	SetPaused()
 	IsSpecPaused() bool
+	IsAvailable() bool
 }
 
 var (
@@ -245,6 +246,13 @@ func (a *GenericObjectSet) IsStatusPaused() bool {
 	return meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetPaused,
+	)
+}
+
+func (a *GenericObjectSet) IsAvailable() bool {
+	return meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetAvailable,
 	)
 }
 
@@ -351,6 +359,13 @@ func (a *GenericClusterObjectSet) ClientObject() client.Object {
 
 func (a *GenericClusterObjectSet) GetConditions() []metav1.Condition {
 	return a.Status.Conditions
+}
+
+func (a *GenericClusterObjectSet) IsAvailable() bool {
+	return meta.IsStatusConditionTrue(
+		a.Status.Conditions,
+		corev1alpha1.ObjectSetAvailable,
+	)
 }
 
 func (a *GenericClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
@@ -482,7 +497,7 @@ func (a objectSetsByRevision) Less(i, j int) bool {
 	iClientObj := a[i].ClientObject()
 	jClientObj := a[j].ClientObject()
 	iObj := a[i]
-	jObj := a[i]
+	jObj := a[j]
 
 	if iObj.GetRevision() == 0 ||
 		jObj.GetRevision() == 0 {
