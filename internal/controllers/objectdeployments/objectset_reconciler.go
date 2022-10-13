@@ -91,7 +91,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	objectDeployment genericObjectDeployment,
 ) {
 	var oldRevisionAvailable bool
-	if currentObjectSet != nil && isAvailable(currentObjectSet) {
+	if currentObjectSet != nil && currentObjectSet.IsAvailable() {
 		// Latest revision is available, so we are no longer progressing.
 		meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectDeploymentProgressing,

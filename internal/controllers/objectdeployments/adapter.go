@@ -507,10 +507,3 @@ func (a objectSetsByRevision) Less(i, j int) bool {
 
 	return iObj.GetRevision() < jObj.GetRevision()
 }
-
-func isAvailable(obj genericObjectSet) bool {
-	return meta.IsStatusConditionTrue(
-		obj.GetConditions(),
-		corev1alpha1.ObjectSetAvailable,
-	)
-}

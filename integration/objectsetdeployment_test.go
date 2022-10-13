@@ -552,7 +552,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 			},
 			client.InNamespace(concernedDeployment.GetNamespace()),
 		)
-		require.NoError(t, Client.List(ctx, currObjectSetList))
+		require.NoError(t, err)
 
 		require.Equal(t, len(currObjectSetList.Items), testCase.expectedObjectSetCount)
 
