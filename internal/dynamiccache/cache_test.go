@@ -4,6 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"package-operator.run/package-operator/internal/testutil/metricsmocks"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -236,6 +240,49 @@ func TestCache_Reader(t *testing.T) {
 		err = c.List(ctx, obj)
 		require.ErrorIs(t, err, &CacheNotStartedError{})
 	})
+}
+
+func TestCache_sampleMetrics(t *testing.T) {
+	c, _, informerMap := setupTestCache(t)
+	recorderMock := &metricsmocks.RecorderMock{}
+	c.recorder = recorderMock
+	secretGVK := schema.GroupVersionKind{
+		Version: "v1",
+		Kind:    "Secret",
+	}
+	configMapGVK := schema.GroupVersionKind{
+		Version: "v1",
+		Kind:    "ConfigMap",
+	}
+	c.informerReferences[secretGVK] = map[OwnerReference]struct{}{}
+	c.informerReferences[configMapGVK] = map[OwnerReference]struct{}{}
+
+	recorderMock.On("RecordDynamicCacheInformers", mock.Anything)
+	recorderMock.On("RecordDynamicCacheObjects", mock.Anything, mock.Anything)
+
+	reader := &readerMock{}
+	reader.
+		On("List", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			list := args.Get(1).(*unstructured.UnstructuredList)
+			if list.GroupVersionKind().Kind == "SecretList" {
+				list.Items = make([]unstructured.Unstructured, 2)
+			} else {
+				// ConfigMap
+				list.Items = make([]unstructured.Unstructured, 1)
+			}
+		}).
+		Return(nil)
+	informerMap.
+		On("Get", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, reader, nil)
+
+	ctx := context.Background()
+
+	c.sampleMetrics(ctx)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheInformers", 2)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheObjects", secretGVK, 2)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheObjects", configMapGVK, 1)
 }
 
 func setupTestCache(t *testing.T) (*Cache, *cacheSourceMock, *informerMapMock) {

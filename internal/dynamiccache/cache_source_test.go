@@ -14,7 +14,7 @@ func TestCacheSource(t *testing.T) {
 	err := cs.Start(ctx, nil, nil)
 	require.NoError(t, err)
 
-	// just checking that he underlying function is called.
+	// just checking that the underlying function is called.
 	err = cs.handleNewInformer(nil)
 	require.EqualError(t, err, "must specify Informer.Informer")
 

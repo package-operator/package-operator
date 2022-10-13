@@ -8,6 +8,9 @@ import (
 	"net/http/pprof"
 	"os"
 	"runtime/debug"
+	"time"
+
+	"package-operator.run/package-operator/internal/metrics"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
@@ -48,7 +51,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit")
+	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -110,7 +113,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-		s := &http.Server{Addr: opts.pprofAddr, Handler: mux}
+		s := &http.Server{Addr: opts.pprofAddr, Handler: mux, ReadHeaderTimeout: 1 * time.Second}
 		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 			errCh := make(chan error)
 			defer func() {
@@ -135,9 +138,13 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
+	// Create metrics recorder
+	recorder := metrics.NewRecorder()
+	recorder.Register()
+
 	// DynamicCache
 	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(),
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
@@ -152,14 +159,14 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err = (objectsets.NewObjectSetController(
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ObjectSet"),
-		mgr.GetScheme(), dc,
+		mgr.GetScheme(), dc, recorder,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
 	}
 	if err = (objectsets.NewClusterObjectSetController(
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
-		mgr.GetScheme(), dc,
+		mgr.GetScheme(), dc, recorder,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
 	}
