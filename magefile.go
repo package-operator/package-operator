@@ -53,8 +53,10 @@ func init() {
 	depsDir = magedeps.DependencyDirectory(path.Join(workDir, ".deps"))
 	os.Setenv("PATH", depsDir.Bin()+":"+os.Getenv("PATH"))
 
-	logger = stdr.New(nil)
+	// Use a local directory to get around permission errors in OpenShift CI.
+	os.Setenv("GOLANGCI_LINT_CACHE", path.Join(cacheDir, "golangci-lint"))
 
+	logger = stdr.New(nil)
 }
 
 // Testing and Linting
