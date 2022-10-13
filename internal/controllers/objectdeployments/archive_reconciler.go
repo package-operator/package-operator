@@ -82,7 +82,7 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 
 		// Case 1: If currentRevision is available, then all
 		// later revisions can be archived.
-		if isAvailable(currentLatestRevision) {
+		if currentLatestRevision.IsAvailable() {
 			laterRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
 			if err != nil {
 				return []genericObjectSet{}, err
@@ -175,7 +175,7 @@ func (a *archiveReconciler) intermediateRevisionCanBeArchived(
 	// then the current previous revision can be marked for archival. (IF the previous revision
 	// is not available).
 	commonObjects := intersection(latestRevisionObjects, previousRevisionActivelyReconciledObjects)
-	if len(commonObjects) == 0 && !isAvailable(previousRevision) {
+	if len(commonObjects) == 0 && !previousRevision.IsAvailable() {
 		// This previousRevision is a candidate for archival but we only
 		// proceed to archive it after its paused.
 		isPaused, err := a.ensurePaused(ctx, previousRevision)
