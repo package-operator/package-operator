@@ -22,8 +22,7 @@ type GenericObjectSet interface {
 	GetConditions() *[]metav1.Condition
 }
 
-func NewRecorder(register bool) *Recorder {
-
+func NewRecorder() *Recorder {
 	dynamicCacheInformers := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "package_operator_dynamic_cache_informers",
@@ -41,22 +40,20 @@ func NewRecorder(register bool) *Recorder {
 		}, []string{"name", "namespace"},
 	)
 
-	// Register metrics if `register` is true
-	// This allows us to skip registering metrics
-	// and re-use the recorder when testing.
-	if register {
-		ctrlmetrics.Registry.MustRegister(
-			dynamicCacheInformers,
-			dynamicCacheObjects,
-			rolloutTime,
-		)
-	}
-
 	return &Recorder{
 		dynamicCacheInformers: dynamicCacheInformers,
 		dynamicCacheObjects:   dynamicCacheObjects,
 		rolloutTime:           rolloutTime,
 	}
+}
+
+// Register metrics into ctrl registry.
+func (r *Recorder) Register() {
+	ctrlmetrics.Registry.MustRegister(
+		r.dynamicCacheInformers,
+		r.dynamicCacheObjects,
+		r.rolloutTime,
+	)
 }
 
 func (r *Recorder) RecordRolloutTime(objectSet GenericObjectSet) {

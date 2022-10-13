@@ -62,7 +62,7 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 			osMock.On("ClientObject").Return(obj)
 			osMock.On("GetConditions").Return(&test.conditions).Once()
 
-			recorder := NewRecorder(false)
+			recorder := NewRecorder()
 			recorder.RecordRolloutTime(osMock)
 			if len(test.conditions) == 0 {
 				assert.Equal(t, 0, testutil.CollectAndCount(recorder.rolloutTime))

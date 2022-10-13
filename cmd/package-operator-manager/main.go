@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"package-operator.run/package-operator/internal/metrics"
 
@@ -29,13 +30,12 @@ import (
 )
 
 type opts struct {
-	metricsAddr           string
-	pprofAddr             string
-	namespace             string
-	enableLeaderElection  bool
-	probeAddr             string
-	enableMetricsRecorder bool
-	printVersion          bool
+	metricsAddr          string
+	pprofAddr            string
+	namespace            string
+	enableLeaderElection bool
+	probeAddr            string
+	printVersion         bool
 }
 
 func main() {
@@ -51,7 +51,6 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
-	flag.BoolVar(&opts.enableMetricsRecorder, "enable-metrics-recorder", true, "Enable recording metrics.")
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
 	flag.Parse()
 
@@ -114,7 +113,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-		s := &http.Server{Addr: opts.pprofAddr, Handler: mux}
+		s := &http.Server{Addr: opts.pprofAddr, Handler: mux, ReadHeaderTimeout: 1 * time.Second}
 		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 			errCh := make(chan error)
 			defer func() {
@@ -140,10 +139,8 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	// Create metrics recorder
-	var recorder *metrics.Recorder
-	if opts.enableMetricsRecorder {
-		recorder = metrics.NewRecorder(true)
-	}
+	recorder := metrics.NewRecorder()
+	recorder.Register()
 
 	// DynamicCache
 	dc := dynamiccache.NewCache(

@@ -252,16 +252,24 @@ func (c *Cache) List(
 	ctx context.Context,
 	out client.ObjectList, opts ...client.ListOption,
 ) error {
+	// Ensure we are not allocating a new cache implicitly here
+	// And that the cache is not deleted while the list call is still in-flight.
+	c.informerReferencesMux.RLock()
+	defer c.informerReferencesMux.RUnlock()
+
+	return c.list(ctx, out, opts...)
+}
+
+func (c *Cache) list(
+	ctx context.Context,
+	out client.ObjectList, opts ...client.ListOption,
+) error {
 	gvk, err := apiutil.GVKForObject(out, c.scheme)
 	if err != nil {
 		return err
 	}
 	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
-	// Ensure we are not allocating a new cache implicitly here
-	// And that the cache is not deleted while the list call is still in-flight.
-	c.informerReferencesMux.RLock()
-	defer c.informerReferencesMux.RUnlock()
 	if _, ok := c.informerReferences[gvk]; !ok {
 		return &CacheNotStartedError{}
 	}
@@ -309,7 +317,7 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 			Version: gvk.Version,
 			Kind:    gvk.Kind + "List",
 		})
-		if err := c.List(ctx, listObj); err != nil {
+		if err := c.list(ctx, listObj); err != nil {
 			log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
 			continue
 		}
