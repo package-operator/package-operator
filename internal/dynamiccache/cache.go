@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/go-logr/logr"
-	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,10 +66,8 @@ type Cache struct {
 }
 
 type metricsRecorder interface {
-	RecordDynamicCacheSizeGvk(int)
-	RecordDynamicCacheSizeObj(int)
-	GetDynamicCacheSizeGvk() prometheus.Gauge
-	GetDynamicCacheSizeObj() prometheus.Gauge
+	RecordDynamicCacheInformers(total int)
+	RecordDynamicCacheObjects(gvk schema.GroupVersionKind, count int)
 }
 
 func NewCache(
@@ -140,6 +137,7 @@ func (c *Cache) Watch(
 ) error {
 	c.informerReferencesMux.Lock()
 	defer c.informerReferencesMux.Unlock()
+	defer c.sampleMetrics(ctx)
 
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -186,6 +184,7 @@ func (c *Cache) Free(
 ) error {
 	c.informerReferencesMux.Lock()
 	defer c.informerReferencesMux.Unlock()
+	defer c.sampleMetrics(ctx)
 
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -293,22 +292,27 @@ func (c *Cache) ownerRef(owner client.Object) (OwnerReference, error) {
 	}, nil
 }
 
-func (c *Cache) SampleMetrics() error {
+func (c *Cache) sampleMetrics(ctx context.Context) {
 	if c.recorder == nil {
-		return nil
+		return
 	}
-	gvkCount := len(c.informerReferences)
-	c.recorder.RecordDynamicCacheSizeGvk(gvkCount)
-	objCount := 0
+
+	log := logr.FromContextOrDiscard(ctx)
+
+	informerCount := len(c.informerReferences)
+	c.recorder.RecordDynamicCacheInformers(informerCount)
+
 	for gvk := range c.informerReferences {
-		listObj := unstructured.UnstructuredList{}
-		gvk.Kind += "List"
-		listObj.SetGroupVersionKind(gvk)
-		if err := c.List(context.TODO(), &listObj); err != nil {
-			return fmt.Errorf("problem listing %v: %w", gvk, err)
+		listObj := &unstructured.UnstructuredList{}
+		listObj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind + "List",
+		})
+		if err := c.List(ctx, listObj); err != nil {
+			log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
+			continue
 		}
-		objCount += len(listObj.Items)
+		c.recorder.RecordDynamicCacheObjects(gvk, len(listObj.Items))
 	}
-	c.recorder.RecordDynamicCacheSizeObj(objCount)
-	return nil
 }

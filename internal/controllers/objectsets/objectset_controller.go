@@ -45,7 +45,6 @@ type dynamicCache interface {
 	Source() source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
-	SampleMetrics() error
 }
 
 type teardownHandler interface {
@@ -164,10 +163,6 @@ func (c *GenericObjectSetController) Reconcile(
 		if err := c.handleDeletionAndArchival(ctx, objectSet); err != nil {
 			return ctrl.Result{}, err
 		}
-		err := c.dynamicCache.SampleMetrics()
-		if err != nil {
-			log.Error(err, "sampling dynamicCache metrics")
-		}
 
 		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
 	}
@@ -194,10 +189,6 @@ func (c *GenericObjectSetController) Reconcile(
 		return res, fmt.Errorf("getting paused status: %w", err)
 	}
 
-	err = c.dynamicCache.SampleMetrics()
-	if err != nil {
-		log.Error(err, "sampling dynamicCache metrics")
-	}
 	if c.recorder != nil {
 		c.recorder.RecordRolloutTime(objectSet)
 	}

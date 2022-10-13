@@ -27,7 +27,6 @@ type dynamicCache interface {
 	Source() source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
-	SampleMetrics() error
 }
 
 type ownerStrategy interface {
@@ -187,10 +186,6 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 		if err := c.handleDeletionAndArchival(ctx, objectSetPhase); err != nil {
 			return ctrl.Result{}, err
 		}
-		err := c.dynamicCache.SampleMetrics()
-		if err != nil {
-			log.Error(err, "sampling dynamicCache metrics")
-		}
 
 		return ctrl.Result{}, c.updateStatus(ctx, objectSetPhase)
 	}
@@ -211,11 +206,6 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	}
 	if err != nil {
 		return res, err
-	}
-
-	err = c.dynamicCache.SampleMetrics()
-	if err != nil {
-		log.Error(err, "sampling dynamicCache metrics")
 	}
 
 	c.reportPausedCondition(ctx, objectSetPhase)

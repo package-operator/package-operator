@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +42,7 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 			name: "with success condition",
 			conditions: []metav1.Condition{
 				{
-					Type: "Success",
+					Type: corev1alpha1.ObjectSetSucceeded,
 					LastTransitionTime: metav1.NewTime(
 						time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)),
 					// Difference of 33 minutes and 17 seconds from `creationTimestamp`

@@ -1,18 +1,20 @@
 package metrics
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"github.com/prometheus/client_golang/prometheus"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // Recorder stores all the metrics related to Addons.
 type Recorder struct {
-	dynamicCacheSizeGvk     prometheus.Gauge
-	dynamicCacheSizeObjects prometheus.Gauge
-	rolloutTime             *prometheus.GaugeVec
+	dynamicCacheInformers prometheus.Gauge
+	dynamicCacheObjects   *prometheus.GaugeVec
+	rolloutTime           *prometheus.GaugeVec
 }
 
 type GenericObjectSet interface {
@@ -22,21 +24,21 @@ type GenericObjectSet interface {
 
 func NewRecorder(register bool) *Recorder {
 
-	dynamicCacheSizeGvk := prometheus.NewGauge(
+	dynamicCacheInformers := prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "package_operator_dynamic_cache_size_gvks",
-			Help: "Size of the dynamic cache in gvk's",
+			Name: "package_operator_dynamic_cache_informers",
+			Help: "Tracks the number of active Informers running for the dynamic cache.",
 		})
-	dynamicCacheSizeObjects := prometheus.NewGauge(
+	dynamicCacheObjects := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "package_operator_dynamic_cache_size_objects",
-			Help: "Size of the dynamic cache in objects",
-		})
+			Name: "package_operator_dynamic_cache_objects",
+			Help: "Number of objects for each GVK in the dynamic cache.",
+		}, []string{"gvk"})
 	rolloutTime := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "package_operator_object_set_rollout_time_seconds",
 			Help: "Rollout time",
-		}, []string{"name"},
+		}, []string{"name", "namespace"},
 	)
 
 	// Register metrics if `register` is true
@@ -44,16 +46,16 @@ func NewRecorder(register bool) *Recorder {
 	// and re-use the recorder when testing.
 	if register {
 		ctrlmetrics.Registry.MustRegister(
-			dynamicCacheSizeGvk,
-			dynamicCacheSizeObjects,
+			dynamicCacheInformers,
+			dynamicCacheObjects,
 			rolloutTime,
 		)
 	}
 
 	return &Recorder{
-		dynamicCacheSizeGvk:     dynamicCacheSizeGvk,
-		dynamicCacheSizeObjects: dynamicCacheSizeObjects,
-		rolloutTime:             rolloutTime,
+		dynamicCacheInformers: dynamicCacheInformers,
+		dynamicCacheObjects:   dynamicCacheObjects,
+		rolloutTime:           rolloutTime,
 	}
 }
 
@@ -62,27 +64,19 @@ func (r *Recorder) RecordRolloutTime(objectSet GenericObjectSet) {
 	start := obj.GetCreationTimestamp()
 	conds := objectSet.GetConditions()
 	for _, cond := range *conds {
-		if cond.Type == "Success" {
+		if cond.Type == corev1alpha1.ObjectSetSucceeded {
 			t := cond.LastTransitionTime.Sub(start.Time).Seconds()
-			r.rolloutTime.WithLabelValues(obj.GetName()).Set(t)
+			r.rolloutTime.WithLabelValues(obj.GetName(), obj.GetNamespace()).Set(t)
 		}
 	}
 }
 
-func (r *Recorder) RecordDynamicCacheSizeGvk(count int) {
-	r.dynamicCacheSizeGvk.Set(float64(count))
+// Records the number of active Informers for the cache.
+func (r *Recorder) RecordDynamicCacheInformers(total int) {
+	r.dynamicCacheInformers.Set(float64(total))
 }
 
-func (r *Recorder) RecordDynamicCacheSizeObj(count int) {
-	r.dynamicCacheSizeObjects.Set(float64(count))
-}
-
-// GetDynamicCacheSizeGvk is used for testing Cache.SampleMetrics.
-func (r *Recorder) GetDynamicCacheSizeGvk() prometheus.Gauge {
-	return r.dynamicCacheSizeGvk
-}
-
-// GetDynamicCacheSizeObj is used for testing Cache.SampleMetrics.
-func (r *Recorder) GetDynamicCacheSizeObj() prometheus.Gauge {
-	return r.dynamicCacheSizeObjects
+// Records the
+func (r *Recorder) RecordDynamicCacheObjects(gvk schema.GroupVersionKind, count int) {
+	r.dynamicCacheObjects.WithLabelValues(gvk.String()).Set(float64(count))
 }

@@ -4,10 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/package-operator/internal/testutil/metricsmocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -243,9 +242,10 @@ func TestCache_Reader(t *testing.T) {
 	})
 }
 
-func TestCache_SampleMetrics(t *testing.T) {
+func TestCache_sampleMetrics(t *testing.T) {
 	c, _, informerMap := setupTestCache(t)
-	c.recorder = metrics.NewRecorder(false)
+	recorderMock := &metricsmocks.RecorderMock{}
+	c.recorder = recorderMock
 	secretGVK := schema.GroupVersionKind{
 		Version: "v1",
 		Kind:    "Secret",
@@ -257,29 +257,32 @@ func TestCache_SampleMetrics(t *testing.T) {
 	c.informerReferences[secretGVK] = map[OwnerReference]struct{}{}
 	c.informerReferences[configMapGVK] = map[OwnerReference]struct{}{}
 
+	recorderMock.On("RecordDynamicCacheInformers", mock.Anything)
+	recorderMock.On("RecordDynamicCacheObjects", mock.Anything, mock.Anything)
+
 	reader := &readerMock{}
 	reader.
 		On("List", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			list := args.Get(1).(*unstructured.UnstructuredList)
-			list.Items = make([]unstructured.Unstructured, 2)
+			if list.GroupVersionKind().Kind == "SecretList" {
+				list.Items = make([]unstructured.Unstructured, 2)
+			} else {
+				// ConfigMap
+				list.Items = make([]unstructured.Unstructured, 1)
+			}
 		}).
-		Return(nil).Once()
-	reader.
-		On("List", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			list := args.Get(1).(*unstructured.UnstructuredList)
-			list.Items = make([]unstructured.Unstructured, 1)
-		}).
-		Return(nil).Once()
+		Return(nil)
 	informerMap.
 		On("Get", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, reader, nil)
 
-	err := c.SampleMetrics()
-	require.NoError(t, err)
-	assert.Equal(t, float64(2), testutil.ToFloat64(c.recorder.GetDynamicCacheSizeGvk()))
-	assert.Equal(t, float64(3), testutil.ToFloat64(c.recorder.GetDynamicCacheSizeObj()))
+	ctx := context.Background()
+
+	c.sampleMetrics(ctx)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheInformers", 2)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheObjects", secretGVK, 2)
+	recorderMock.AssertCalled(t, "RecordDynamicCacheObjects", configMapGVK, 1)
 }
 
 func setupTestCache(t *testing.T) (*Cache, *cacheSourceMock, *informerMapMock) {
