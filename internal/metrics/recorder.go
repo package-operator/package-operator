@@ -37,7 +37,7 @@ func NewRecorder(register bool) *Recorder {
 	rolloutTime := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "package_operator_object_set_rollout_time_seconds",
-			Help: "Rollout time",
+			Help: "Time between Object creationTimestamp and the transition to True of the Succeeded condition.",
 		}, []string{"name", "namespace"},
 	)
 
@@ -76,7 +76,7 @@ func (r *Recorder) RecordDynamicCacheInformers(total int) {
 	r.dynamicCacheInformers.Set(float64(total))
 }
 
-// Records the
+// Records the number of objects in the cache identified by GVK.
 func (r *Recorder) RecordDynamicCacheObjects(gvk schema.GroupVersionKind, count int) {
 	r.dynamicCacheObjects.WithLabelValues(gvk.String()).Set(float64(count))
 }
