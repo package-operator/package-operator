@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -359,55 +358,23 @@ func (p *defaultPatcher) Patch(
 	updatedObj *unstructured.Unstructured,
 ) error {
 	// Ensure desired labels and annotations are present
-	updatedObj.SetLabels(mergeKeysFrom(updatedObj.GetLabels(), desiredObj.GetLabels()))
-	updatedObj.SetAnnotations(mergeKeysFrom(updatedObj.GetAnnotations(), desiredObj.GetAnnotations()))
-
-	// At this point metadata of updatedObj is how we want it to look like.
-	// So we can persist our changes (if any) to the API server.
-	updatedObjMeta, _, err := unstructured.NestedFieldNoCopy(updatedObj.Object, "metadata")
-	if err != nil {
-		panic(err) // this key MUST always be present at this point
-	}
-	currentObjMeta, _, err := unstructured.NestedFieldNoCopy(currentObj.Object, "metadata")
-	if err != nil {
-		panic(err) // this key MUST always be present at this point
-	}
-
-	// DeepEqual check to prevent unnecessary PATCH calls to the API.
-	if !reflect.DeepEqual(updatedObjMeta, currentObjMeta) {
-		// Patch with optimisticLocking to make sure ResourceVersion is checked.
-		// OptimisticLocking is enabled by providing the resourceVersion property in the patch.
-		// Just overriding would risk loosing labels and annotations added by other participants of the system.
-
-		metadataPatch, err := json.Marshal(map[string]interface{}{
-			"metadata": updatedObjMeta,
-		})
-		if err != nil {
-			return fmt.Errorf("creating metadata patch: %w", err)
-		}
-
-		if err := p.writer.Patch(ctx, updatedObj, client.RawPatch(
-			types.MergePatchType, metadataPatch)); err != nil {
-			return fmt.Errorf("patching object metadata: %w", err)
-		}
-	}
+	desiredObj.SetLabels(mergeKeysFrom(updatedObj.GetLabels(), desiredObj.GetLabels()))
+	desiredObj.SetAnnotations(mergeKeysFrom(updatedObj.GetAnnotations(), desiredObj.GetAnnotations()))
 
 	patch := desiredObj.DeepCopy()
-	// metadata is already up-to-date and we don't want to patch it without optimistic locking.
-	unstructured.RemoveNestedField(patch.Object, "metadata")
 	// never patch status, even if specified
 	// we would just start a fight with whatever controller is realizing this object.
 	unstructured.RemoveNestedField(patch.Object, "status")
 
 	base := updatedObj.DeepCopy()
-	unstructured.RemoveNestedField(base.Object, "metadata")
 	unstructured.RemoveNestedField(base.Object, "status")
 
 	// Check for if an update is even needed.
 	if !equality.Semantic.DeepDerivative(patch, base) {
+		patch.SetResourceVersion(currentObj.GetResourceVersion())
 		objectPatch, err := json.Marshal(patch)
 		if err != nil {
-			return fmt.Errorf("creating metadata patch: %w", err)
+			return fmt.Errorf("creating patch: %w", err)
 		}
 		if err := p.writer.Patch(ctx, updatedObj, client.RawPatch(
 			types.MergePatchType, objectPatch)); err != nil {

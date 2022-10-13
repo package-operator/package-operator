@@ -690,7 +690,7 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			`{"spec":{"key":"val"}}`, string(patch))
+			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"},"resourceVersion":"123"},"spec":{"key":"val"}}`, string(patch))
 	}
 }
 
