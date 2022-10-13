@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/probing"
@@ -240,10 +239,7 @@ func (r *PhaseReconciler) desiredObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
-	desiredObj, err = unstructuredFromObjectSetObject(&phaseObject)
-	if err != nil {
-		return nil, err
-	}
+	desiredObj = &phaseObject.Object
 
 	// Default namespace to the owners namespace
 	if len(desiredObj.GetNamespace()) == 0 {
@@ -419,19 +415,6 @@ func (p *defaultPatcher) Patch(
 		}
 	}
 	return nil
-}
-
-func unstructuredFromObjectSetObject(
-	packageObject *corev1alpha1.ObjectSetObject,
-) (*unstructured.Unstructured, error) {
-	obj := &unstructured.Unstructured{}
-	// Warning!
-	// This MUST absolutely use sigs.k8s.io/yaml
-	// Any other yaml parser, might yield unexpected results.
-	if err := yaml.Unmarshal(packageObject.Object.Raw, obj); err != nil {
-		return nil, fmt.Errorf("converting RawExtension into unstructured: %w", err)
-	}
-	return obj, nil
 }
 
 func mergeKeysFrom(base, additional map[string]string) map[string]string {

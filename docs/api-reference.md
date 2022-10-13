@@ -582,7 +582,7 @@ An object that is part of the phase of an ObjectSet.
 
 | Field | Description |
 | ----- | ----------- |
-| `object` <b>required</b><br>runtime.RawExtension |  |
+| `object` <b>required</b><br>unstructured.Unstructured |  |
 
 
 Used in:
