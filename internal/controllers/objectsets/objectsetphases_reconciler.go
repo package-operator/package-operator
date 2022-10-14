@@ -82,18 +82,6 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
 
-	if !probingResult.IsZero() {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			Reason:             "ProbeFailure",
-			Message:            probingResult.String(),
-			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
-		})
-
-		return res, nil
-	}
-
 	inTransition := r.isObjectSetInTransition(objectSet, controllerOf)
 	if inTransition {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
@@ -105,6 +93,18 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		})
 	} else {
 		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetInTransition)
+	}
+
+	if !probingResult.IsZero() {
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			Reason:             "ProbeFailure",
+			Message:            probingResult.String(),
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+		})
+
+		return res, nil
 	}
 
 	if !meta.IsStatusConditionTrue(
@@ -258,11 +258,15 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 	for _, phase := range objectSet.GetPhases() {
 		for _, obj := range phase.Objects {
 			gvk := obj.Object.GroupVersionKind()
+			ns := obj.Object.GetNamespace()
+			if len(ns) == 0 {
+				ns = objectSet.ClientObject().GetNamespace()
+			}
 			ref := corev1alpha1.ControlledObjectReference{
 				Kind:      gvk.Kind,
 				Group:     gvk.Group,
 				Name:      obj.Object.GetName(),
-				Namespace: obj.Object.GetNamespace(),
+				Namespace: ns,
 			}
 			if _, isControlledByThisInstance := controlledIndex[ref]; !isControlledByThisInstance {
 				// This object is not yet reconciled by this instance or has been taken somewhere else.
