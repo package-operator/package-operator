@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/probing"
 )
 
@@ -27,11 +28,12 @@ type PhaseReconciler struct {
 	scheme *runtime.Scheme
 	// just specify a writer, because we don't want to ever read from another source than
 	// the dynamic cache that is managed to hold the objects we are reconciling.
-	writer          client.Writer
-	dynamicCache    dynamicCache
-	ownerStrategy   ownerStrategy
-	adoptionChecker adoptionChecker
-	patcher         patcher
+	writer           client.Writer
+	dynamicCache     dynamicCache
+	ownerStrategy    ownerStrategy
+	adoptionChecker  adoptionChecker
+	patcher          patcher
+	preflightChecker preflightChecker
 }
 
 type ownerStrategy interface {
@@ -62,19 +64,28 @@ type dynamicCache interface {
 	) error
 }
 
+type preflightChecker interface {
+	Check(
+		ctx context.Context, owner client.Object,
+		phase corev1alpha1.ObjectSetTemplatePhase,
+	) (violations []preflight.Violation, err error)
+}
+
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
 	dynamicCache dynamicCache,
 	ownerStrategy ownerStrategy,
+	preflightChecker preflightChecker,
 ) *PhaseReconciler {
 	return &PhaseReconciler{
-		scheme:          scheme,
-		writer:          writer,
-		dynamicCache:    dynamicCache,
-		ownerStrategy:   ownerStrategy,
-		adoptionChecker: &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
-		patcher:         &defaultPatcher{writer: writer},
+		scheme:           scheme,
+		writer:           writer,
+		dynamicCache:     dynamicCache,
+		ownerStrategy:    ownerStrategy,
+		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
+		patcher:          &defaultPatcher{writer: writer},
+		preflightChecker: preflightChecker,
 	}
 }
 
@@ -105,11 +116,31 @@ func (e *ProbingResult) String() string {
 		e.PhaseName, e.StringWithoutPhase())
 }
 
+type PreflightError struct {
+	Violations []preflight.Violation
+}
+
+func (e *PreflightError) Error() string {
+	var vs []string
+	for _, v := range e.Violations {
+		vs = append(vs, v.String())
+	}
+	return strings.Join(vs, ", ")
+}
+
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
+	violations, err := r.preflightChecker.Check(ctx, owner.ClientObject(), phase)
+	if err != nil {
+		return nil, ProbingResult{}, err
+	}
+	if len(violations) > 0 {
+		return nil, ProbingResult{}, &PreflightError{Violations: violations}
+	}
+
 	var failedProbes []string
 	for _, phaseObject := range phase.Objects {
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)

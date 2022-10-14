@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/package-operator/internal/preflight"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -60,24 +61,26 @@ type metricsRecorder interface {
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
-	r metricsRecorder,
+	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		c, log, scheme, dw, r,
+		restMapper,
 	)
 }
 
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dw dynamicCache,
-	r metricsRecorder,
+	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		c, log, scheme, dw, r,
+		restMapper,
 	)
 }
 
@@ -86,7 +89,7 @@ func newGenericObjectSetController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
-	recorder metricsRecorder,
+	recorder metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -103,7 +106,12 @@ func newGenericObjectSetController(
 		scheme,
 		controllers.NewPhaseReconciler(
 			scheme, client,
-			dynamicCache, ownerhandling.NewNative(scheme)),
+			dynamicCache, ownerhandling.NewNative(scheme),
+			preflight.List{
+				preflight.NewAPIExistence(restMapper),
+				preflight.NewNamespaceEscalation(restMapper),
+			},
+		),
 		newObjectSetRemotePhaseReconciler(
 			client, scheme, newObjectSetPhase),
 		controllers.NewPreviousRevisionLookup(
