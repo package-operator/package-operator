@@ -25,6 +25,7 @@ import (
 )
 
 // Simple Setup, Pause and Teardown test.
+//
 //nolint:maintidx
 func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
