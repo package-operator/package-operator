@@ -160,6 +160,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ObjectSet"),
 		mgr.GetScheme(), dc, recorder,
+		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
 	}
@@ -167,6 +168,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
 		mgr.GetScheme(), dc, recorder,
+		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
 	}
@@ -176,12 +178,14 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err = (objectsetphases.NewSameClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
+		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
 	if err = (objectsetphases.NewSameClusterClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
+		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}
