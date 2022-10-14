@@ -66,6 +66,9 @@ const (
 	// Succeeded condition is only set once,
 	// after a ObjectSet became Available for the first time.
 	ObjectSetSucceeded = "Succeeded"
+	// InTransition condition is True when the ObjectSet is not in control of all objects defined in spec.
+	// This holds true during rollout of the first instance or while handing over objects between two ObjectSets.
+	ObjectSetInTransition = "InTransition"
 )
 
 type ObjectSetStatusPhase string
@@ -81,8 +84,6 @@ const (
 	ObjectSetStatusPhaseNotReady ObjectSetStatusPhase = "NotReady"
 	// Paused maps to the Paused condition.
 	ObjectSetStatusPhasePaused ObjectSetStatusPhase = "Paused"
-	// Deprecated is reported, when only a subset of object is paused.
-	ObjectSetStatusPhaseDeprecated ObjectSetStatusPhase = "Deprecated"
 	// Archived maps to the Archived condition.
 	ObjectSetStatusPhaseArchived ObjectSetStatusPhase = "Archived"
 )
