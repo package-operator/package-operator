@@ -16,6 +16,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/package-operator/internal/preflight"
 )
 
 type reconciler interface {
@@ -45,6 +46,13 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
+type preflightChecker interface {
+	Check(
+		ctx context.Context, owner client.Object,
+		phase corev1alpha1.ObjectSetTemplatePhase,
+	) (violations []preflight.Violation, err error)
+}
+
 // Generic reconciler for both ObjectSetPhase and ClusterObjectSetPhase objects.
 type GenericObjectSetPhaseController struct {
 	newObjectSetPhase genericObjectSetPhaseFactory
@@ -67,6 +75,7 @@ func NewMultiClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
+	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
@@ -74,6 +83,9 @@ func NewMultiClusterObjectSetPhaseController(
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache,
 		class, client, targetWriter,
+		preflight.List{
+			preflight.NewAPIExistence(targetRESTMapper),
+		},
 	)
 }
 
@@ -83,6 +95,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
+	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
@@ -90,6 +103,9 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache,
 		class, client, targetWriter,
+		preflight.List{
+			preflight.NewAPIExistence(targetRESTMapper),
+		},
 	)
 }
 
@@ -98,6 +114,7 @@ func NewSameClusterObjectSetPhaseController(
 	dynamicCache dynamicCache,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
+	restMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
@@ -105,6 +122,10 @@ func NewSameClusterObjectSetPhaseController(
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache,
 		class, client, client,
+		preflight.List{
+			preflight.NewAPIExistence(restMapper),
+			preflight.NewNamespaceEscalation(restMapper),
+		},
 	)
 }
 
@@ -113,6 +134,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 	dynamicCache dynamicCache,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
+	restMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
@@ -120,6 +142,9 @@ func NewSameClusterClusterObjectSetPhaseController(
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache,
 		class, client, client,
+		preflight.List{
+			preflight.NewAPIExistence(restMapper),
+		},
 	)
 }
 
@@ -132,6 +157,7 @@ func NewGenericObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
+	preflightChecker preflightChecker,
 ) *GenericObjectSetPhaseController {
 	controller := &GenericObjectSetPhaseController{
 		newObjectSetPhase: newObjectSetPhase,
@@ -148,7 +174,7 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
-			scheme, targetWriter, dynamicCache, ownerStrategy),
+			scheme, targetWriter, dynamicCache, ownerStrategy, preflightChecker),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
