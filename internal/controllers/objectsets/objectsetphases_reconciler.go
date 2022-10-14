@@ -76,12 +76,25 @@ type phaseReconciler interface {
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
-	activeObjects, probingResult, err := r.reconcile(ctx, objectSet)
+	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
 	if err != nil {
 		return res, err
 	}
+	objectSet.SetStatusControllerOf(controllerOf)
 
-	objectSet.SetStatusControllerOf(activeObjects)
+	inTransition := r.isObjectSetInTransition(objectSet, controllerOf)
+	if inTransition {
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetInTransition,
+			Status:             metav1.ConditionTrue,
+			Reason:             "InTransition",
+			Message:            "ObjectSet is still rolling out or is being replaced by a newer version.",
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+		})
+	} else {
+		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetInTransition)
+	}
+
 	if !probingResult.IsZero() {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
@@ -95,13 +108,17 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	}
 
 	if !meta.IsStatusConditionTrue(
-		*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
+		*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) &&
+		// we don't want to record Succeeded during transition,
+		// because the object may become Available due to external
+		// (e.g. other ObjectSets) involvement.
+		!inTransition {
 		// Remember that this rollout worked!
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetSucceeded,
 			Status:             metav1.ConditionTrue,
-			Reason:             "AvailableOnce",
-			Message:            "Object was available once and passed all probes.",
+			Reason:             "RolloutSuccess",
+			Message:            "ObjectSet rolled out all objects successfully and was Available at least once.",
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 	}
@@ -131,24 +148,24 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
-	var activeObjects []corev1alpha1.ControlledObjectReference
+	var controllerOfAll []corev1alpha1.ControlledObjectReference
 	for _, phase := range objectSet.GetPhases() {
-		active, probingResult, err := r.reconcilePhase(
+		controllerOf, probingResult, err := r.reconcilePhase(
 			ctx, objectSet, phase, probe, previous)
 		if err != nil {
 			return nil, controllers.ProbingResult{}, err
 		}
 
-		// always gather all active objects
-		activeObjects = append(activeObjects, active...)
+		// always gather all objects we are controller of
+		controllerOfAll = append(controllerOfAll, controllerOf...)
 
 		if !probingResult.IsZero() {
 			// break on first failing probe
-			return activeObjects, probingResult, nil
+			return controllerOfAll, probingResult, nil
 		}
 	}
 
-	return activeObjects, controllers.ProbingResult{}, nil
+	return controllerOfAll, controllers.ProbingResult{}, nil
 }
 
 func (r *objectSetPhasesReconciler) reconcilePhase(
@@ -178,13 +195,13 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 		return nil, probingResult, err
 	}
 
-	activeObjects, err := controllers.GetControllerOf(
+	controllerOf, err := controllers.GetControllerOf(
 		ctx, r.scheme, r.ownerStrategy,
 		objectSet.ClientObject(), actualObjects)
 	if err != nil {
 		return nil, controllers.ProbingResult{}, err
 	}
-	return activeObjects, probingResult, nil
+	return controllerOf, probingResult, nil
 }
 
 func (r *objectSetPhasesReconciler) Teardown(
@@ -222,4 +239,40 @@ func reverse[T any](s []T) {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]
 	}
+}
+
+// Checks if an ObjectSet is in transition.
+// An ObjectSet is in transition if it is not yet or no longer
+// controlling all objects from spec.
+// This state is true until the ObjectSet has finished a successful rollout
+// or from the moment a newer revision is taking ownership until it has been archived.
+func (r *objectSetPhasesReconciler) isObjectSetInTransition(
+	objectSet genericObjectSet,
+	controllerOf []corev1alpha1.ControlledObjectReference,
+) bool {
+	controlledIndex := map[corev1alpha1.ControlledObjectReference]struct{}{}
+	for _, controlled := range controllerOf {
+		controlledIndex[controlled] = struct{}{}
+	}
+
+	for _, phase := range objectSet.GetPhases() {
+		for _, obj := range phase.Objects {
+			gvk := obj.Object.GroupVersionKind()
+			ns := obj.Object.GetNamespace()
+			if len(ns) == 0 {
+				ns = objectSet.ClientObject().GetNamespace()
+			}
+			ref := corev1alpha1.ControlledObjectReference{
+				Kind:      gvk.Kind,
+				Group:     gvk.Group,
+				Name:      obj.Object.GetName(),
+				Namespace: ns,
+			}
+			if _, isControlledByThisInstance := controlledIndex[ref]; !isControlledByThisInstance {
+				// This object is not yet reconciled by this instance or has been taken somewhere else.
+				return true
+			}
+		}
+	}
+	return false
 }
