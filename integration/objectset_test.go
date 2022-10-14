@@ -163,6 +163,14 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 				},
 			}, objectSet.Status.ControllerOf)
 
+			// expect Succeeded condition to be not present
+			succeededCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
+			assert.Nil(t, succeededCond, "expected Succeeded condition to not be reported")
+
+			// expect InTransition to be reported and True
+			inTransition := meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetInTransition)
+			assert.True(t, inTransition, "expected InTransition to be reported and True")
+
 			// expect cm-4 to be present.
 			currentCM4 := &corev1.ConfigMap{}
 			require.NoError(t, Client.Get(ctx, cm4Key, currentCM4))
@@ -172,6 +180,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			require.EqualError(t, Client.Get(ctx, cm5Key, currentCM5), `configmaps "cm-5" not found`)
 
 			// Patch cm-4 to pass probe.
+			// -------------------------
 			require.NoError(t,
 				Client.Patch(ctx, currentCM4,
 					client.RawPatch(types.MergePatchType, []byte(`{"metadata":{"annotations":{"name":"cm-4"}}}`))))
@@ -179,6 +188,14 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			// Expect ObjectSet to become Available.
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+
+			// expect Succeeded condition to be True
+			isSucceeded := meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
+			assert.True(t, isSucceeded, "expected Succeeded condition to be True")
+
+			// expect InTransition condition to be not present
+			inTransitionCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetInTransition)
+			assert.Nil(t, inTransitionCond, "expected InTransition condition to not be reported")
 
 			// expect cm-4 and cm-5 to be reported under "ControllerOf"
 			require.Equal(t, []corev1alpha1.ControlledObjectReference{
