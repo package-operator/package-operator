@@ -25,6 +25,7 @@ import (
 )
 
 // Simple Setup, Pause and Teardown test.
+//nolint:maintidx
 func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
 		cm4Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm4)
@@ -165,11 +166,11 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 			// expect Succeeded condition to be not present
 			succeededCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
-			assert.Nil(t, succeededCond, "expected Succeeded condition to not be reported")
+			require.Nil(t, succeededCond, "expected Succeeded condition to not be reported")
 
 			// expect InTransition to be reported and True
 			inTransition := meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetInTransition)
-			assert.True(t, inTransition, "expected InTransition to be reported and True")
+			require.True(t, inTransition, "expected InTransition to be reported and True")
 
 			// expect cm-4 to be present.
 			currentCM4 := &corev1.ConfigMap{}
@@ -191,11 +192,11 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 			// expect Succeeded condition to be True
 			isSucceeded := meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
-			assert.True(t, isSucceeded, "expected Succeeded condition to be True")
+			require.True(t, isSucceeded, "expected Succeeded condition to be True")
 
 			// expect InTransition condition to be not present
 			inTransitionCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetInTransition)
-			assert.Nil(t, inTransitionCond, "expected InTransition condition to not be reported")
+			require.Nil(t, inTransitionCond, "expected InTransition condition to not be reported")
 
 			// expect cm-4 and cm-5 to be reported under "ControllerOf"
 			require.Equal(t, []corev1alpha1.ControlledObjectReference{
