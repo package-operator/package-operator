@@ -9,9 +9,9 @@ require (
 	github.com/mt-sre/devkube v0.4.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/stretchr/testify v1.8.0
-	k8s.io/api v0.25.2
-	k8s.io/apimachinery v0.25.2
-	k8s.io/client-go v0.25.2
+	k8s.io/api v0.25.3
+	k8s.io/apimachinery v0.25.3
+	k8s.io/client-go v0.25.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	package-operator.run/apis v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.13.0
