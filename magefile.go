@@ -158,7 +158,7 @@ const (
 	controllerGenVersion = "0.6.2"
 	goimportsVersion     = "0.1.5"
 	golangciLintVersion  = "1.46.2"
-	kindVersion          = "0.11.1"
+	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
 )
 
