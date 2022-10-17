@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -42,9 +43,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
-							},
+							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -52,9 +51,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
-							},
+							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -74,9 +71,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "cm2"}, t),
-							},
+							Object: cmTemplate("cm1", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -84,9 +79,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm2", map[string]string{"name": "fails"}, t),
-							},
+							Object: cmTemplate("cm2", map[string]string{"name": "fails"}, t),
 						},
 					},
 				},
@@ -111,9 +104,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
-							},
+							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -121,9 +112,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
-							},
+							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -245,6 +234,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 }
 
+// nolint:maintidx
 func TestObjectDeployment_objectsetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
@@ -264,9 +254,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}, t),
-							},
+							Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -274,9 +262,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-1", "nginx:1.14.1", t),
-							},
+							Object: deploymentTemplate("nginx-1", "nginx:1.14.1", t),
 						},
 					},
 				},
@@ -296,9 +282,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
-							},
+							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -306,9 +290,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-1", "nginx:1.14.2", t),
-							},
+							Object: deploymentTemplate("nginx-1", "nginx:1.14.2", t),
 						},
 					},
 				},
@@ -330,9 +312,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
-							},
+							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -340,9 +320,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-2", "invalid-image", t),
-							},
+							Object: deploymentTemplate("nginx-2", "invalid-image", t),
 						},
 					},
 				},
@@ -367,14 +345,10 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						// {
-						// 	Object: runtime.RawExtension{
-						// 		Object: deploymentTemplate("nginx-2", "nginx:1.14.2", t),
-						// 	},
+						// 	Object: deploymentTemplate("nginx-2", "nginx:1.14.2", t),
 						// },
 						{
-							Object: runtime.RawExtension{
-								Object: secret("secret-1", t),
-							},
+							Object: secret("secret-1", t),
 						},
 					},
 				},
@@ -382,9 +356,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}, t),
-							},
+							Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -407,9 +379,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}, t),
-							},
+							Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -417,14 +387,10 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
-							},
+							Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
 						},
 						{
-							Object: runtime.RawExtension{
-								Object: secret("secret-1", t),
-							},
+							Object: secret("secret-1", t),
 						},
 					},
 				},
@@ -447,9 +413,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: cmTemplate("cm4", map[string]string{"name": "cm4"}, t),
-							},
+							Object: cmTemplate("cm4", map[string]string{"name": "cm4"}, t),
 						},
 					},
 				},
@@ -457,14 +421,10 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: runtime.RawExtension{
-								Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
-							},
+							Object: deploymentTemplate("nginx-3", "nginx:1.14.2", t),
 						},
 						{
-							Object: runtime.RawExtension{
-								Object: secret("secret-1", t),
-							},
+							Object: secret("secret-1", t),
 						},
 					},
 				},
@@ -615,7 +575,7 @@ func objectDeploymentTemplate(
 	}
 }
 
-func cmTemplate(name string, data map[string]string, t require.TestingT) *corev1.ConfigMap {
+func cmTemplate(name string, data map[string]string, t require.TestingT) unstructured.Unstructured {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -626,10 +586,13 @@ func cmTemplate(name string, data map[string]string, t require.TestingT) *corev1
 	GVK, err := apiutil.GVKForObject(&cm, Scheme)
 	require.NoError(t, err)
 	cm.SetGroupVersionKind(GVK)
-	return &cm
+
+	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cm)
+	require.NoError(t, err)
+	return unstructured.Unstructured{Object: resObj}
 }
 
-func secret(name string, t require.TestingT) *corev1.Secret {
+func secret(name string, t require.TestingT) unstructured.Unstructured {
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -643,10 +606,12 @@ func secret(name string, t require.TestingT) *corev1.Secret {
 	GVK, err := apiutil.GVKForObject(&secret, Scheme)
 	require.NoError(t, err)
 	secret.SetGroupVersionKind(GVK)
-	return &secret
+	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&secret)
+	require.NoError(t, err)
+	return unstructured.Unstructured{Object: resObj}
 }
 
-func deploymentTemplate(deploymentName string, podImage string, t require.TestingT) *appsv1.Deployment {
+func deploymentTemplate(deploymentName string, podImage string, t require.TestingT) unstructured.Unstructured {
 	obj := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   deploymentName,
@@ -676,7 +641,9 @@ func deploymentTemplate(deploymentName string, podImage string, t require.Testin
 	GVK, err := apiutil.GVKForObject(&obj, Scheme)
 	require.NoError(t, err)
 	obj.SetGroupVersionKind(GVK)
-	return &obj
+	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+	require.NoError(t, err)
+	return unstructured.Unstructured{Object: resObj}
 }
 
 func archivalTestprobesTemplate(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {

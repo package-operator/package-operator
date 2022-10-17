@@ -308,16 +308,16 @@ func (a *GenericObjectSet) GetObjects() ([]objectIdentifier, error) {
 	var result []objectIdentifier
 	objects := utils.GetObjectsFromPhases(a.Spec.Phases)
 	for i := range objects {
-		unstructuredObj, err := utils.UnstructuredFromObjectObject(&objects[i])
-		if err != nil {
-			return []objectIdentifier{}, err
-		}
+		unstructuredObj := objects[i].Object
+		var objNamespace string
 		if len(unstructuredObj.GetNamespace()) == 0 {
-			unstructuredObj.SetNamespace(a.Namespace)
+			objNamespace = a.Namespace
+		} else {
+			objNamespace = unstructuredObj.GetNamespace()
 		}
 		result = append(result, objectSetObjectIdentifier{
 			name:      unstructuredObj.GetName(),
-			namespace: unstructuredObj.GetNamespace(),
+			namespace: objNamespace,
 			group:     unstructuredObj.GroupVersionKind().Group,
 			kind:      unstructuredObj.GroupVersionKind().Kind,
 		})
@@ -424,18 +424,17 @@ func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
 	var result []objectIdentifier
 	objects := utils.GetObjectsFromPhases(a.Spec.Phases)
 	for i := range objects {
-		unstructuredObj, err := utils.UnstructuredFromObjectObject(&objects[i])
-		if err != nil {
-			return []objectIdentifier{}, err
-		}
-
+		unstructuredObj := objects[i].Object
+		var objNamespace string
 		if len(unstructuredObj.GetNamespace()) == 0 {
-			unstructuredObj.SetNamespace(a.Namespace)
+			objNamespace = a.Namespace
+		} else {
+			objNamespace = unstructuredObj.GetNamespace()
 		}
 
 		result = append(result, objectSetObjectIdentifier{
 			name:      unstructuredObj.GetName(),
-			namespace: unstructuredObj.GetNamespace(),
+			namespace: objNamespace,
 			group:     unstructuredObj.GroupVersionKind().Group,
 			kind:      unstructuredObj.GroupVersionKind().Kind,
 		})

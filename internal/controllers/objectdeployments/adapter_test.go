@@ -1,8 +1,6 @@
 package objectdeployments
 
 import (
-	"bytes"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,10 +8,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	pkoapis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
@@ -33,7 +33,7 @@ func init() {
 func genObjectSet(
 	name string,
 	namespace string,
-	phaseAndObjectMap map[string][][]byte,
+	phaseAndObjectMap map[string][]client.Object,
 	controllerOf []corev1alpha1.ControlledObjectReference) GenericObjectSet {
 	objectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -62,14 +62,16 @@ func genObjectSet(
 	}
 }
 
-func clientObjs2ObjectSetObjects(runtimeObjs [][]byte) []corev1alpha1.ObjectSetObject {
+func clientObjs2ObjectSetObjects(runtimeObjs []client.Object) []corev1alpha1.ObjectSetObject {
 	res := make([]corev1alpha1.ObjectSetObject, len(runtimeObjs))
 	for i := range runtimeObjs {
 		obj := runtimeObjs[i]
+		unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			panic(err)
+		}
 		res[i] = corev1alpha1.ObjectSetObject{
-			Object: runtime.RawExtension{
-				Raw: obj,
-			},
+			Object: unstructured.Unstructured{Object: unstructuredObj},
 		}
 	}
 	return res
@@ -81,7 +83,7 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 		expectedObjectIDs []string
 	}{
 		{
-			objectSet: genObjectSet("test-1", "default", map[string][][]byte{
+			objectSet: genObjectSet("test-1", "default", map[string][]client.Object{
 				"phase1": {
 					cmTemplate("cm1", "namespace1", t),
 					cmTemplate("cm2", "namespace2", t),
@@ -95,7 +97,7 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 			expectedObjectIDs: []string{"/ConfigMap/namespace1/cm1", "/ConfigMap/namespace2/cm2", "apps/Deployment/default/deployment1", "/Secret/default/secret1"},
 		},
 		{
-			objectSet: genObjectSet("test-2", "default-1", map[string][][]byte{
+			objectSet: genObjectSet("test-2", "default-1", map[string][]client.Object{
 				"phase1": {
 					cmTemplate("cm1", "", t),
 					cmTemplate("cm2", "", t),
@@ -153,7 +155,7 @@ func TestGenericObjectSet_GetActivelyReconciledObjects(t *testing.T) {
 	}
 }
 
-func cmTemplate(name string, namespace string, t require.TestingT) []byte {
+func cmTemplate(name string, namespace string, t require.TestingT) client.Object {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -164,13 +166,10 @@ func cmTemplate(name string, namespace string, t require.TestingT) []byte {
 	GVK, err := apiutil.GVKForObject(cm, testScheme)
 	assert.NoError(t, err)
 	cm.SetGroupVersionKind(GVK)
-	res := new(bytes.Buffer)
-	err = json.NewEncoder(res).Encode(cm)
-	assert.NoError(t, err)
-	return res.Bytes()
+	return cm
 }
 
-func secretTemplate(name string, t require.TestingT) []byte {
+func secretTemplate(name string, t require.TestingT) client.Object {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -184,12 +183,10 @@ func secretTemplate(name string, t require.TestingT) []byte {
 	GVK, err := apiutil.GVKForObject(secret, testScheme)
 	assert.NoError(t, err)
 	secret.SetGroupVersionKind(GVK)
-	res := new(bytes.Buffer)
-	err = json.NewEncoder(res).Encode(secret)
-	assert.NoError(t, err)
-	return res.Bytes()
+	return secret
 }
-func deploymentTemplate(deploymentName string, t require.TestingT) []byte {
+
+func deploymentTemplate(deploymentName string, t require.TestingT) client.Object {
 	obj := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   deploymentName,
@@ -219,8 +216,5 @@ func deploymentTemplate(deploymentName string, t require.TestingT) []byte {
 	GVK, err := apiutil.GVKForObject(obj, testScheme)
 	assert.NoError(t, err)
 	obj.SetGroupVersionKind(GVK)
-	res := new(bytes.Buffer)
-	err = json.NewEncoder(res).Encode(obj)
-	assert.NoError(t, err)
-	return res.Bytes()
+	return obj
 }
