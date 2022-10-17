@@ -144,11 +144,6 @@ func (o *genericObjectDeploymentMock) GetSelector() metav1.LabelSelector {
 	return args.Get(0).(metav1.LabelSelector)
 }
 
-func (o *genericObjectDeploymentMock) IsSpecPaused() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
 func (o *genericObjectDeploymentMock) UpdatePhase() {
 	o.Called()
 }
@@ -156,39 +151,6 @@ func (o *genericObjectDeploymentMock) UpdatePhase() {
 func (o *genericObjectDeploymentMock) GetConditions() *[]metav1.Condition {
 	args := o.Called()
 	return args.Get(0).(*[]metav1.Condition)
-}
-
-func (o *genericObjectDeploymentMock) IsArchived() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
-func (o *genericObjectDeploymentMock) SetArchived() {
-	o.Called()
-}
-
-func (o *genericObjectDeploymentMock) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
-	args := o.Called()
-	return args.Get(0).([]corev1alpha1.ObjectSetTemplatePhase)
-}
-
-func (o *genericObjectDeploymentMock) GetActivelyReconciledObjects() []objectIdentifier {
-	args := o.Called()
-	return args.Get(0).([]objectIdentifier)
-}
-
-func (o *genericObjectDeploymentMock) GetObjects() ([]objectIdentifier, error) {
-	args := o.Called()
-	err, _ := args.Get(1).(error)
-	return args.Get(0).([]objectIdentifier), err
-}
-
-func (o *genericObjectDeploymentMock) SetPreviousRevisions(prev []genericObjectSet) {
-	o.Called(prev)
-}
-
-func (o *genericObjectDeploymentMock) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
-	o.Called(templateSpec)
 }
 
 func (o *genericObjectDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
