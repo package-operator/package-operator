@@ -5,6 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -27,6 +28,34 @@ type genericObjectSet interface {
 	SetPaused()
 	IsSpecPaused() bool
 	IsAvailable() bool
+}
+
+type genericObjectSetFactory func(
+	scheme *runtime.Scheme) genericObjectSet
+
+var (
+	objectSetGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSet")
+	clusterObjectSetGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSet")
+)
+
+func newGenericObjectSet(scheme *runtime.Scheme) genericObjectSet {
+	obj, err := scheme.New(objectSetGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericObjectSet{
+		ObjectSet: *obj.(*corev1alpha1.ObjectSet)}
+}
+
+func newGenericClusterObjectSet(scheme *runtime.Scheme) genericObjectSet {
+	obj, err := scheme.New(clusterObjectSetGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericClusterObjectSet{
+		ClusterObjectSet: *obj.(*corev1alpha1.ClusterObjectSet)}
 }
 
 var (
@@ -280,52 +309,6 @@ func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
 		})
 	}
 	return result, nil
-}
-
-type genericObjectSetList interface {
-	ClientObjectList() client.ObjectList
-	GetItems() []genericObjectSet
-}
-
-var (
-	_ genericObjectSetList = (*GenericObjectSetList)(nil)
-	_ genericObjectSetList = (*GenericClusterObjectSetList)(nil)
-)
-
-type GenericObjectSetList struct {
-	corev1alpha1.ObjectSetList
-}
-
-func (a *GenericObjectSetList) ClientObjectList() client.ObjectList {
-	return &a.ObjectSetList
-}
-
-func (a *GenericObjectSetList) GetItems() []genericObjectSet {
-	out := make([]genericObjectSet, len(a.Items))
-	for i := range a.Items {
-		out[i] = &GenericObjectSet{
-			ObjectSet: a.Items[i],
-		}
-	}
-	return out
-}
-
-type GenericClusterObjectSetList struct {
-	corev1alpha1.ClusterObjectSetList
-}
-
-func (a *GenericClusterObjectSetList) ClientObjectList() client.ObjectList {
-	return &a.ClusterObjectSetList
-}
-
-func (a *GenericClusterObjectSetList) GetItems() []genericObjectSet {
-	out := make([]genericObjectSet, len(a.Items))
-	for i := range a.Items {
-		out[i] = &GenericClusterObjectSet{
-			ClusterObjectSet: a.Items[i],
-		}
-	}
-	return out
 }
 
 type objectSetsByRevisionAscending []genericObjectSet

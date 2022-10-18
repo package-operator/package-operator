@@ -3,6 +3,7 @@ package objectdeployments
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -19,6 +20,34 @@ type genericObjectDeployment interface {
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string
 	SetStatusTemplateHash(templateHash string)
+}
+
+type genericObjectDeploymentFactory func(
+	scheme *runtime.Scheme) genericObjectDeployment
+
+var (
+	objectDeploymentGVK        = corev1alpha1.GroupVersion.WithKind("ObjectDeployment")
+	clusterObjectDeploymentGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment")
+)
+
+func newGenericObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(objectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericObjectDeployment{
+		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
+}
+
+func newGenericClusterObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(clusterObjectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericClusterObjectDeployment{
+		ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
 }
 
 var (

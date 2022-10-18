@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
@@ -79,7 +80,7 @@ func Test_new_revision_reconciler(t *testing.T) {
 			deploymentController := NewObjectDeploymentController(testCase.client, logr.Discard(), testScheme)
 			r := newRevisionReconciler{
 				client:       client,
-				newObjectSet: deploymentController.newOperandChild,
+				newObjectSet: deploymentController.newObjectSet,
 				scheme:       testScheme,
 			}
 
