@@ -65,7 +65,7 @@ status:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#clusterobjectdeploymentspec">ClusterObjectDeploymentSpec</a> | ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployment. |
-| `status` <br><a href="#clusterobjectdeploymentstatus">ClusterObjectDeploymentStatus</a> | ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment |
+| `status` <br><a href="#clusterobjectdeploymentstatus">ClusterObjectDeploymentStatus</a> | ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment. |
 
 
 ### ClusterObjectSet
@@ -269,7 +269,7 @@ status:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#objectdeploymentspec">ObjectDeploymentSpec</a> | ObjectDeploymentSpec defines the desired state of a ObjectDeployment. |
-| `status` <br><a href="#objectdeploymentstatus">ObjectDeploymentStatus</a> | ObjectDeploymentStatus defines the observed state of a ObjectDeployment |
+| `status` <br><a href="#objectdeploymentstatus">ObjectDeploymentStatus</a> | ObjectDeploymentStatus defines the observed state of a ObjectDeployment. |
 
 
 ### ObjectSet
@@ -444,7 +444,7 @@ Used in:
 
 ### ClusterObjectDeploymentStatus
 
-ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment
+ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment.
 
 | Field | Description |
 | ----- | ----------- |
@@ -452,7 +452,6 @@ ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeplo
 | `phase` <br><a href="#objectdeploymentphase">ObjectDeploymentPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ClusterObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
-| `observedGeneration` <br>int64 | Last observed generation |
 
 
 Used in:
@@ -561,7 +560,7 @@ Used in:
 
 ### ObjectDeploymentStatus
 
-ObjectDeploymentStatus defines the observed state of a ObjectDeployment
+ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
 
 | Field | Description |
 | ----- | ----------- |
@@ -569,7 +568,6 @@ ObjectDeploymentStatus defines the observed state of a ObjectDeployment
 | `phase` <br><a href="#objectdeploymentphase">ObjectDeploymentPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
-| `observedGeneration` <br>int64 | Last observed generation |
 
 
 Used in:

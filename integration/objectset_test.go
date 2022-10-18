@@ -299,7 +299,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	}
 }
 
-// nolint:maintidx
+//nolint:maintidx
 func TestObjectSet_handover(t *testing.T) {
 	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
 		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
@@ -526,6 +526,10 @@ func TestObjectSet_handover(t *testing.T) {
 			currentCM3 := &corev1.ConfigMap{}
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm3.Name, Namespace: objectSetRev2.Namespace}, currentCM3))
+
+			// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
 
 			// expect only cm-2 to be reported under "ControllerOf" in revision 1
 			require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(objectSetRev1), objectSetRev1))

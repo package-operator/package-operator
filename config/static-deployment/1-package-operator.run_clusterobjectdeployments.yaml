@@ -301,7 +301,7 @@ spec:
             default:
               phase: Pending
             description: ClusterObjectDeploymentStatus defines the observed state
-              of a ClusterObjectDeployment
+              of a ClusterObjectDeployment.
             properties:
               collisionCount:
                 description: Count of hash collisions of the ClusterObjectDeployment.
@@ -379,10 +379,6 @@ spec:
                   - type
                   type: object
                 type: array
-              observedGeneration:
-                description: Last observed generation
-                format: int64
-                type: integer
               phase:
                 description: This field is not part of any API contract it will go
                   away as soon as kubectl can print conditions! When evaluating object

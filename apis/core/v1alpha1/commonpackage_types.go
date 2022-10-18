@@ -12,7 +12,7 @@ type PackageStatus struct {
 	Phase PackageStatusPhase `json:"phase,omitempty"`
 }
 
-// Package condition types
+// Package condition types.
 const (
 	// A Packages "Available" condition tracks the availability of the underlying ObjectDeployment objects.
 	// When the Package is reporting "Available" = True, it's expected that whatever the Package installs is up and operational.

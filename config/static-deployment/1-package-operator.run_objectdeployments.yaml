@@ -298,7 +298,7 @@ spec:
           status:
             default:
               phase: Pending
-            description: ObjectDeploymentStatus defines the observed state of a ObjectDeployment
+            description: ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
             properties:
               collisionCount:
                 description: Count of hash collisions of the ObjectDeployment.
@@ -376,10 +376,6 @@ spec:
                   - type
                   type: object
                 type: array
-              observedGeneration:
-                description: Last observed generation
-                format: int64
-                type: integer
               phase:
                 description: This field is not part of any API contract it will go
                   away as soon as kubectl can print conditions! When evaluating object

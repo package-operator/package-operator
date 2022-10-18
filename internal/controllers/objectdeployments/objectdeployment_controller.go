@@ -9,9 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 const (
@@ -24,25 +25,34 @@ type reconciler interface {
 }
 
 type GenericObjectDeploymentController struct {
-	gvk        schema.GroupVersionKind
-	childGvk   schema.GroupVersionKind
-	client     client.Client
-	log        logr.Logger
-	scheme     *runtime.Scheme
-	reconciler []reconciler
+	gvk                 schema.GroupVersionKind
+	childGvk            schema.GroupVersionKind
+	client              client.Client
+	log                 logr.Logger
+	scheme              *runtime.Scheme
+	newObjectDeployment genericObjectDeploymentFactory
+	newObjectSet        genericObjectSetFactory
+	newObjectSetList    genericObjectSetListFactory
+	reconciler          []reconciler
 }
 
-func NewGenericObjectDeploymentController(
+func newGenericObjectDeploymentController(
 	gvk schema.GroupVersionKind,
 	childGVK schema.GroupVersionKind,
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
+	newObjectDeployment genericObjectDeploymentFactory,
+	newObjectSet genericObjectSetFactory,
+	newObjectSetList genericObjectSetListFactory,
 ) *GenericObjectDeploymentController {
 	controller := &GenericObjectDeploymentController{
-		gvk:      gvk,
-		childGvk: childGVK,
-		client:   c,
-		log:      log,
-		scheme:   scheme,
+		gvk:                 gvk,
+		childGvk:            childGVK,
+		client:              c,
+		log:                 log,
+		scheme:              scheme,
+		newObjectDeployment: newObjectDeployment,
+		newObjectSet:        newObjectSet,
+		newObjectSetList:    newObjectSetList,
 	}
 	controller.reconciler = []reconciler{
 		&hashReconciler{
@@ -54,7 +64,7 @@ func NewGenericObjectDeploymentController(
 			reconcilers: []objectSetSubReconciler{
 				&newRevisionReconciler{
 					client:       c,
-					newObjectSet: controller.newOperandChild,
+					newObjectSet: newObjectSet,
 					scheme:       scheme,
 				},
 				&archiveReconciler{
@@ -70,24 +80,30 @@ func NewGenericObjectDeploymentController(
 func NewObjectDeploymentController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 ) *GenericObjectDeploymentController {
-	return NewGenericObjectDeploymentController(
+	return newGenericObjectDeploymentController(
 		corev1alpha1.GroupVersion.WithKind("ObjectDeployment"),
 		corev1alpha1.GroupVersion.WithKind("ObjectSet"),
 		c,
 		log,
 		scheme,
+		newGenericObjectDeployment,
+		newGenericObjectSet,
+		newGenericObjectSetList,
 	)
 }
 
 func NewClusterObjectDeploymentController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 ) *GenericObjectDeploymentController {
-	return NewGenericObjectDeploymentController(
+	return newGenericObjectDeploymentController(
 		corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment"),
 		corev1alpha1.GroupVersion.WithKind("ClusterObjectSet"),
 		c,
 		log,
 		scheme,
+		newGenericClusterObjectDeployment,
+		newGenericClusterObjectSet,
+		newGenericClusterObjectSetList,
 	)
 }
 
@@ -96,7 +112,7 @@ func (od *GenericObjectDeploymentController) Reconcile(
 	log := od.log.WithValues("ObjectDeployment", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
-	objectDeployment := od.newOperand()
+	objectDeployment := od.newObjectDeployment(od.scheme)
 	if err := od.client.Get(ctx, req.NamespacedName, objectDeployment.ClientObject()); err != nil {
 		// Ignore not found errors on delete
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -116,67 +132,17 @@ func (od *GenericObjectDeploymentController) Reconcile(
 		return res, err
 	}
 	objectDeployment.UpdatePhase()
-	objectDeployment.SetObservedGeneration(objectDeployment.GetGeneration())
 	return res, od.client.Status().Update(ctx, objectDeployment.ClientObject())
 }
 
 func (od *GenericObjectDeploymentController) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(od.newOperand().ClientObject()).
-		Owns(od.newOperandChild().ClientObject()).
+	objectDeployment := od.newObjectDeployment(od.scheme).ClientObject()
+	objectSet := od.newObjectSet(od.scheme).ClientObject()
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(objectDeployment).
+		Owns(objectSet).
 		Complete(od)
-}
-
-func (od *GenericObjectDeploymentController) newOperand() genericObjectDeployment {
-	genericObjectDeployment, err := od.scheme.New(od.gvk)
-	if err != nil {
-		panic(err)
-	}
-	switch object := genericObjectDeployment.(type) {
-	case *corev1alpha1.ObjectDeployment:
-		return &GenericObjectDeployment{
-			*object,
-		}
-	case *corev1alpha1.ClusterObjectDeployment:
-		return &GenericClusterObjectDeployment{
-			*object,
-		}
-	}
-	panic("Unsupported GVK")
-}
-
-func (od *GenericObjectDeploymentController) newOperandChild() genericObjectSet {
-	object, err := od.scheme.New(od.childGvk)
-	if err != nil {
-		panic(err)
-	}
-	switch o := object.(type) {
-	case *corev1alpha1.ObjectSet:
-		return &GenericObjectSet{
-			*o,
-		}
-	case *corev1alpha1.ClusterObjectSet:
-		return &GenericClusterObjectSet{
-			*o,
-		}
-	}
-	panic("Unsupported child resource GVK")
-}
-
-func (od *GenericObjectDeploymentController) newOperandChildList() genericObjectSetList {
-	childListGVK := od.childGvk.GroupVersion().
-		WithKind(od.childGvk.Kind + "List")
-	obj, err := od.scheme.New(childListGVK)
-	if err != nil {
-		panic(err)
-	}
-
-	switch o := obj.(type) {
-	case *corev1alpha1.ObjectSetList:
-		return &GenericObjectSetList{*o}
-	case *corev1alpha1.ClusterObjectSetList:
-		return &GenericClusterObjectSetList{*o}
-	}
-	panic("unsupported gvk")
 }
 
 func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
@@ -189,7 +155,7 @@ func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 		return nil, fmt.Errorf("invalid selector: %w", err)
 	}
 
-	objectSetList := od.newOperandChildList()
+	objectSetList := od.newObjectSetList(od.scheme)
 	if err := od.client.List(
 		ctx, objectSetList.ClientObjectList(),
 		client.MatchingLabelsSelector{
@@ -203,6 +169,6 @@ func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	items := objectSetList.GetItems()
 
 	// Ensure everything is sorted by revision.
-	sort.Sort(objectSetsByRevision(items))
+	sort.Sort(objectSetsByRevisionAscending(items))
 	return items, nil
 }

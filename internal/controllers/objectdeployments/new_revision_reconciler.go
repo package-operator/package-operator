@@ -14,11 +14,9 @@ import (
 
 type newRevisionReconciler struct {
 	client       client.Client
-	newObjectSet newObjectSetFn
+	newObjectSet genericObjectSetFactory
 	scheme       *runtime.Scheme
 }
-
-type newObjectSetFn func() genericObjectSet
 
 func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	currentObject genericObjectSet,
@@ -46,7 +44,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	}
 	// Hash collision
 	log.Info("Got hash collision")
-	conflictingObjectSet := r.newObjectSet()
+	conflictingObjectSet := r.newObjectSet(r.scheme)
 	if err := r.client.Get(
 		ctx, client.ObjectKeyFromObject(newObjectSet.ClientObject()),
 		conflictingObjectSet.ClientObject()); err != nil {
@@ -55,7 +53,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 
 	// sanity check, before we increment the collision counter
 	conflictAnnotations := conflictingObjectSet.ClientObject().GetAnnotations()
-	currentDeploymentGeneration := fmt.Sprint(objectDeployment.GetGeneration())
+	currentDeploymentGeneration := fmt.Sprint(objectDeployment.ClientObject().GetGeneration())
 	if conflictAnnotations != nil && conflictAnnotations[DeploymentRevisionAnnotation] == currentDeploymentGeneration {
 		// Objectset for the current deployment revision already present, do nothing!
 		return ctrl.Result{}, nil
@@ -81,7 +79,7 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	prevObjectSets []genericObjectSet,
 ) (genericObjectSet, error) {
 	deploymentClientObj := objectDeployment.ClientObject()
-	newObjectSet := r.newObjectSet()
+	newObjectSet := r.newObjectSet(r.scheme)
 	newObjectSetClientObj := newObjectSet.ClientObject()
 	newObjectSetClientObj.SetName(deploymentClientObj.GetName() + "-" + objectDeployment.GetStatusTemplateHash())
 	newObjectSetClientObj.SetNamespace(deploymentClientObj.GetNamespace())
