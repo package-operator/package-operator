@@ -4,8 +4,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -22,11 +24,13 @@ import (
 	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
 	module          = "github.com/package-operator/package-operator"
 	defaultImageOrg = "quay.io/nschiede"
+	clusterName     = "package-operator-dev"
 )
 
 var (
@@ -101,7 +105,7 @@ func (Test) Integration(ctx context.Context) error {
 	if devEnvironment != nil {
 		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
 			"export", "logs", path.Join(cacheDir, "dev-env-logs"),
-			"--name", "package-operator-dev"); err != nil {
+			"--name", clusterName); err != nil {
 			logger.Error(err, "exporting logs")
 		}
 	}
@@ -113,11 +117,12 @@ func (Test) Integration(ctx context.Context) error {
 // --------
 type Build mg.Namespace
 
-// Build all PKO binaries for the architecture of this machine.
+// Build all PKO binaries for the architecture of this machine. 
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "package-loader", runtime.GOOS, runtime.GOARCH),
+		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
 	)
 }
@@ -598,14 +603,52 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
+	// Replace kubeconfig path in secret
+	secret := &corev1.Secret{}
+	objs, err = dev.LoadKubernetesObjectsFromFile(
+		"config/remote-phase-static-deployment/2-secret.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
+	}
+
+	if err := cluster.Scheme.Convert(
+		&objs[0], secret, nil); err != nil {
+		return fmt.Errorf("converting to Secret: %w", err)
+	}
+
+	target_kubeconfig_path := os.Getenv("TARGET_KUBECONFIG_PATH")
+	var kubeconfig_bytes []byte
+	if len(target_kubeconfig_path) == 0 {
+		kubeconfig_buf := new(bytes.Buffer)
+		err = devEnvironment.RunKindCommand(ctx, kubeconfig_buf, os.Stderr,
+			"export", "kubeconfig",
+			"--name", clusterName, "--internal")
+		if err != nil {
+			return fmt.Errorf("exporting internal kubeconfig: %w", err)
+		}
+		kubeconfig_bytes = kubeconfig_buf.Bytes()
+	} else {
+		kubeconfig_bytes, err = ioutil.ReadFile(target_kubeconfig_path)
+		if err != nil {
+			return fmt.Errorf("reading in kubeconfig: %w", err)
+		}
+	}
+
+	secret.Data = map[string][]byte{"kubeconfig": kubeconfig_bytes}
+
 	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
-	//if err := cluster.CreateAndWaitFromFolders(ctx, []string{
-	//	"config/remote-phase-static-deployment",
-	//}); err != nil {
-	//	return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
-	//}
+	// TODO: Create and wait is kind of annoying because it doesn't update anything
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
+		"config/remote-phase-static-deployment",
+	}); err != nil {
+		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
+	}
+	_ = cluster.CtrlClient.Delete(ctx, secret)
+	if err := cluster.CreateAndWaitForReadiness(ctx, secret); err != nil {
+		return fmt.Errorf("deploy kubeconfig secret: %w", err)
+	}
 	_ = cluster.CtrlClient.Delete(ctx, remotePhaseManagerDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, remotePhaseManagerDeployment); err != nil {
 		return fmt.Errorf("deploy remote-phase-manager: %w", err)
@@ -644,7 +687,7 @@ func (d Dev) init() {
 	)
 
 	devEnvironment = dev.NewEnvironment(
-		"package-operator-dev",
+		clusterName,
 		path.Join(cacheDir, "dev-env"),
 		dev.WithClusterOptions([]dev.ClusterOption{
 			dev.WithWaitOptions([]dev.WaitOption{

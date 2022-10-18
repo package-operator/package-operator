@@ -73,8 +73,8 @@ func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
 	class string,
-	client client.Client, // client to get and update ObjectSetPhases.
-	targetWriter client.Writer, // client to patch objects with.
+	client client.Client, // client to get and update ObjectSetPhases (management cluster).
+	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
@@ -93,8 +93,8 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
 	class string,
-	client client.Client, // client to get and update ObjectSetPhases.
-	targetWriter client.Writer, // client to patch objects with.
+	client client.Client, // client to get and update ObjectSetPhases (management cluster).
+	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(

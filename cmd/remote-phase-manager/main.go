@@ -14,10 +14,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"package-operator.run/package-operator/internal/metrics"
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
@@ -66,6 +71,10 @@ func main() {
 		panic(err)
 	}
 
+	targetScheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(targetScheme); err != nil {
+		panic(err)
+	}
 	if opts.printVersion {
 		version := "binary compiled without version info"
 
@@ -77,13 +86,13 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := run(setupLog, scheme, opts); err != nil {
+	if err := run(setupLog, scheme, targetScheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 }
 
-func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,
@@ -139,9 +148,29 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
-	// DynamicCache
+	targetCfg, err := clientcmd.BuildConfigFromFlags("", opts.targetClusterKubeconfigFile)
+	if err != nil {
+		return fmt.Errorf("reading target cluster kubeconfig: %w", err)
+	}
+	targetMapper, err := apiutil.NewDiscoveryRESTMapper(targetCfg)
+	if err != nil {
+		return fmt.Errorf("creating target cluster rest mapper: %w", err)
+	}
+	targetClient, err := client.New(targetCfg, client.Options{
+		Scheme: targetScheme,
+		Mapper: targetMapper,
+	})
+	if err != nil {
+		return fmt.Errorf("creating target cluster client: %w", err)
+	}
+
+	// Create metrics recorder
+	recorder := metrics.NewRecorder()
+	recorder.Register()
+
+	// TODO: Only watch objectSets in the package operator namespace?
 	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(),
+		mgr.GetConfig(), mgr.GetScheme(), targetMapper, recorder,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
@@ -152,20 +181,20 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			},
 		})
 
-	hostedClusterClient := mgr.GetClient()
+	managementClusterClient := mgr.GetClient()
 
 	if err = objectsetphases.NewMultiClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
-		mgr.GetScheme(), dc, opts.class, mgr.GetClient(),
-		hostedClusterClient,
+		mgr.GetScheme(), dc, opts.class, managementClusterClient,
+		targetClient, targetMapper,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
 
 	if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-		mgr.GetScheme(), dc, opts.class, mgr.GetClient(),
-		hostedClusterClient,
+		mgr.GetScheme(), dc, opts.class, managementClusterClient,
+		targetClient, targetMapper,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}

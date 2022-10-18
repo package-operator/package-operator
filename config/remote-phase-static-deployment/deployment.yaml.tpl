@@ -15,7 +15,7 @@ spec:
       labels:
         app.kubernetes.io/name: remote-phase-operator
     spec:
-      # serviceAccountName: remote-phase-operator
+      serviceAccountName: remote-phase-operator
       volumes:
       - name: kubeconfig
         secret:
