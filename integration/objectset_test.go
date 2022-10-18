@@ -527,6 +527,10 @@ func TestObjectSet_handover(t *testing.T) {
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm3.Name, Namespace: objectSetRev2.Namespace}, currentCM3))
 
+			// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
+
 			// expect only cm-2 to be reported under "ControllerOf" in revision 1
 			require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(objectSetRev1), objectSetRev1))
 			require.Equal(t, []corev1alpha1.ControlledObjectReference{
