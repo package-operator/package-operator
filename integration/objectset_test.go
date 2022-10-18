@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -541,8 +542,8 @@ func TestObjectSet_handover(t *testing.T) {
 				},
 			}, objectSetRev1.Status.ControllerOf)
 
-			// expect cm-1 and cm-3 to be reported under "ControllerOf" in revision 2
-			require.Equal(t, []corev1alpha1.ControlledObjectReference{
+			// Wait for cm-1 and cm-3 to be reported under "ControllerOf" in revision 2
+			expectedControllerOf := []corev1alpha1.ControlledObjectReference{
 				{
 					Kind:      "ConfigMap",
 					Name:      currentCM3.Name,
@@ -553,7 +554,13 @@ func TestObjectSet_handover(t *testing.T) {
 					Name:      currentCM1.Name,
 					Namespace: currentCM1.Namespace,
 				},
-			}, objectSetRev2.Status.ControllerOf)
+			}
+			assert.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
+				"Waiting for .status.controllerOf to be updated",
+				func(obj client.Object) (done bool, err error) {
+					return reflect.DeepEqual(objectSetRev2.Status.ControllerOf, expectedControllerOf), nil
+				}))
+			require.Equal(t, expectedControllerOf, objectSetRev2.Status.ControllerOf)
 
 			// Patch cm-1 to pass probe.
 			require.NoError(t,

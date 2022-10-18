@@ -31,10 +31,10 @@ func Test_new_revision_reconciler(t *testing.T) {
 			{
 				client: testutil.NewClient(),
 				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", false),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", true),
+					makeObjectSet("rev3", 3, "abcd", false),
+					makeObjectSet("rev1", 1, "xyz", false),
+					makeObjectSet("rev2", 2, "pqr", false),
+					makeObjectSet("rev4", 4, "abc", true),
 				},
 				deploymentGeneration:       5,
 				deploymentHash:             "test1",
@@ -45,15 +45,15 @@ func Test_new_revision_reconciler(t *testing.T) {
 			{
 				client: testutil.NewClient(),
 				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", true),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", false),
+					makeObjectSet("rev3", 3, "abcd", false),
+					makeObjectSet("rev1", 1, "xyz", true),
+					makeObjectSet("rev2", 2, "pqr", false),
+					makeObjectSet("rev4", 4, "abc", false),
 				},
 				deploymentGeneration:       5,
 				deploymentHash:             "xyz",
 				conflict:                   true,
-				conflictObject:             makeObjectSet("rev1", "1", "xyz", true),
+				conflictObject:             makeObjectSet("rev1", 1, "xyz", true),
 				expectedHashCollisionCount: 1,
 			},
 			// Object already present, but sanity check kicks in
@@ -61,15 +61,15 @@ func Test_new_revision_reconciler(t *testing.T) {
 			{
 				client: testutil.NewClient(),
 				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", true),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", false),
+					makeObjectSet("rev3", 3, "abcd", false),
+					makeObjectSet("rev1", 1, "xyz", true),
+					makeObjectSet("rev2", 2, "pqr", false),
+					makeObjectSet("rev4", 4, "abc", false),
 				},
 				deploymentGeneration:       4,
 				deploymentHash:             "abc",
 				conflict:                   true,
-				conflictObject:             makeObjectSet("rev4", "4", "abc", true),
+				conflictObject:             makeObjectSet("rev4", 4, "abc", true),
 				expectedHashCollisionCount: 0,
 			},
 		}
@@ -170,9 +170,6 @@ func assertObject(t *testing.T,
 	hash, ok1 := obj.Annotations[ObjectSetHashAnnotation]
 	require.True(t, ok1)
 	require.Equal(t, hash, expectedHash)
-	revision, ok2 := obj.Annotations[DeploymentRevisionAnnotation]
-	require.True(t, ok2)
-	require.Equal(t, revision, expectedRevision)
 	require.True(t, len(prevs) == len(obj.Spec.Previous))
 
 	objprevs := make([]string, len(obj.Spec.Previous))

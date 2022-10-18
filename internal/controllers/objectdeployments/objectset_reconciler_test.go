@@ -2,11 +2,13 @@ package objectdeployments
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/mock"
@@ -14,81 +16,63 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/strings/slices"
+
 	"package-operator.run/package-operator/internal/testutil"
 )
 
 func Test_ObjectSetReconciler(t *testing.T) {
-	t.Run("Currently calls the subsreconcilers and sets the correct condition", func(t *testing.T) {
-		testCases := []struct {
-			client                  *testutil.CtrlClient
-			revisions               []corev1alpha1.ObjectSet
-			deploymentGeneration    int
-			deploymentHash          string
-			expectedCurrentRevision string
-			expectedPrevRevisions   []string
-			expectedConditions      map[string]metav1.ConditionStatus
-		}{
-			{
-				client: testutil.NewClient(),
-				revisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", false),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", true),
-				},
-				deploymentGeneration:    4,
-				deploymentHash:          "abc",
-				expectedCurrentRevision: "rev4",
-				expectedPrevRevisions:   []string{"rev1", "rev2", "rev3"},
-				expectedConditions: map[string]metav1.ConditionStatus{
-					corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-					corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
-				},
+	testCases := []struct {
+		client                  *testutil.CtrlClient
+		revisions               []corev1alpha1.ObjectSet
+		deploymentGeneration    int
+		deploymentHash          string
+		expectedCurrentRevision string
+		expectedPrevRevisions   []string
+		expectedConditions      map[string]metav1.ConditionStatus
+	}{
+		{
+			client: testutil.NewClient(),
+			revisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", 3, "abcd", false),
+				makeObjectSet("rev1", 1, "xyz", false),
+				makeObjectSet("rev2", 2, "pqr", false),
+				makeObjectSet("rev4", 4, "abc", true),
 			},
-			// No current revision
-			{
-				client: testutil.NewClient(),
-				revisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", false),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", true),
-				},
-				deploymentGeneration:    5,
-				deploymentHash:          "hhh",
-				expectedCurrentRevision: "",
-				expectedPrevRevisions:   []string{"rev1", "rev2", "rev3", "rev4"},
-				expectedConditions: map[string]metav1.ConditionStatus{
-					// rev4 still available
-					corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-					corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
-				},
+			deploymentGeneration:    4,
+			deploymentHash:          "abc",
+			expectedCurrentRevision: "rev4",
+			expectedPrevRevisions:   []string{"rev1", "rev2", "rev3"},
+			expectedConditions: map[string]metav1.ConditionStatus{
+				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
+				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
 			},
-			// No current revision coz of hash collision
-			{
-				client: testutil.NewClient(),
-				revisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "3", "abcd", false),
-					makeObjectSet("rev1", "1", "xyz", false),
-					makeObjectSet("rev2", "2", "pqr", false),
-					makeObjectSet("rev4", "4", "abc", false),
-				},
-				deploymentGeneration:    5,
-				deploymentHash:          "abcd",
-				expectedCurrentRevision: "",
-				expectedPrevRevisions:   []string{"rev1", "rev2", "rev3", "rev4"},
-				expectedConditions: map[string]metav1.ConditionStatus{
-					// no revisions available
-					corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionFalse,
-					corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
-				},
+		},
+		// No current revision
+		{
+			client: testutil.NewClient(),
+			revisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", 3, "abcd", false),
+				makeObjectSet("rev1", 1, "xyz", false),
+				makeObjectSet("rev2", 2, "pqr", false),
+				makeObjectSet("rev4", 4, "abc", true),
 			},
-		}
+			deploymentGeneration:    5,
+			deploymentHash:          "hhh",
+			expectedCurrentRevision: "",
+			expectedPrevRevisions:   []string{"rev1", "rev2", "rev3", "rev4"},
+			expectedConditions: map[string]metav1.ConditionStatus{
+				// rev4 still available
+				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
+				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+			},
+		},
+	}
 
-		for _, testCase := range testCases {
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d:Currently calls the subsreconcilers and sets the correct condition", i), func(t *testing.T) {
 			client := testCase.client
 
-			// Setup reconiler
+			// Setup reconciler
 			deploymentController := NewObjectDeploymentController(client, logr.Discard(), testScheme)
 			mockedSubreconciler := &objectSetSubReconcilerMock{}
 
@@ -181,8 +165,8 @@ func Test_ObjectSetReconciler(t *testing.T) {
 				require.NotNil(t, cond)
 				require.True(t, cond.Status == expectedStatus)
 			}
-		}
-	})
+		})
+	}
 }
 
 func makeObjectDeploymentMock(name string, namespace string,
@@ -225,14 +209,16 @@ func makeObjectDeploymentMock(name string, namespace string,
 	return res
 }
 
-func makeObjectSet(name, deploymentRevision, hash string, available bool) corev1alpha1.ObjectSet {
+func makeObjectSet(name string, deploymentRevision int64, hash string, available bool) corev1alpha1.ObjectSet {
 	obj := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
-				ObjectSetHashAnnotation:      hash,
-				DeploymentRevisionAnnotation: deploymentRevision,
+				ObjectSetHashAnnotation: hash,
 			},
+		},
+		Status: corev1alpha1.ObjectSetStatus{
+			Revision: deploymentRevision,
 		},
 	}
 	if available {

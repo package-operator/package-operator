@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	ObjectSetHashAnnotation      = "package-operator.run/hash"
-	DeploymentRevisionAnnotation = "package-operator.run/deployment-revision"
+	ObjectSetHashAnnotation = "package-operator.run/hash"
 )
 
 type reconciler interface {
