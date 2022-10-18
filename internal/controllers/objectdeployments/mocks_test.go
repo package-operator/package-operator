@@ -5,9 +5,10 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 type genericObjectSetMock struct {
