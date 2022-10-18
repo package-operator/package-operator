@@ -26,8 +26,8 @@ type ClusterObjectSetPhaseList struct {
 
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 type ClusterObjectSetPhaseSpec struct {
-	// Disables reconciliation of the ObjectSet.
-	// Only Status updates will still propagated, but object changes will not be reconciled.
+	// Disables reconciliation of the ClusterObjectSet.
+	// Only Status updates will still be propagated, but object changes will not be reconciled.
 	// +optional
 	Paused bool `json:"paused,omitempty"`
 
