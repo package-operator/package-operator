@@ -9,9 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 const (
@@ -116,7 +117,6 @@ func (od *GenericObjectDeploymentController) Reconcile(
 		return res, err
 	}
 	objectDeployment.UpdatePhase()
-	objectDeployment.SetObservedGeneration(objectDeployment.GetGeneration())
 	return res, od.client.Status().Update(ctx, objectDeployment.ClientObject())
 }
 
@@ -203,6 +203,6 @@ func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	items := objectSetList.GetItems()
 
 	// Ensure everything is sorted by revision.
-	sort.Sort(objectSetsByRevision(items))
+	sort.Sort(objectSetsByRevisionAscending(items))
 	return items, nil
 }

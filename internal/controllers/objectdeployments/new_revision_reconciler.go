@@ -55,7 +55,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 
 	// sanity check, before we increment the collision counter
 	conflictAnnotations := conflictingObjectSet.ClientObject().GetAnnotations()
-	currentDeploymentGeneration := fmt.Sprint(objectDeployment.GetGeneration())
+	currentDeploymentGeneration := fmt.Sprint(objectDeployment.ClientObject().GetGeneration())
 	if conflictAnnotations != nil && conflictAnnotations[DeploymentRevisionAnnotation] == currentDeploymentGeneration {
 		// Objectset for the current deployment revision already present, do nothing!
 		return ctrl.Result{}, nil

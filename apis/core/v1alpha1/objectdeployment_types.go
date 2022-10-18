@@ -23,7 +23,7 @@ type ObjectSetTemplate struct {
 	Spec ObjectSetTemplateSpec `json:"spec"`
 }
 
-// ObjectDeploymentStatus defines the observed state of a ObjectDeployment
+// ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
 type ObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -35,11 +35,9 @@ type ObjectDeploymentStatus struct {
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 	// Computed TemplateHash.
 	TemplateHash string `json:"templateHash,omitempty"`
-	// Last observed generation
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-// ObjectDeployment Condition Types
+// ObjectDeployment Condition Types.
 const (
 	ObjectDeploymentAvailable   = "Available"
 	ObjectDeploymentProgressing = "Progressing"

@@ -15,7 +15,7 @@ type ClusterObjectDeploymentSpec struct {
 	Template ObjectSetTemplate `json:"template"`
 }
 
-// ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment
+// ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment.
 type ClusterObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -27,8 +27,6 @@ type ClusterObjectDeploymentStatus struct {
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 	// Computed TemplateHash.
 	TemplateHash string `json:"templateHash,omitempty"`
-	// Last observed generation
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // ClusterObjectDeployment is the Schema for the ClusterObjectDeployments API

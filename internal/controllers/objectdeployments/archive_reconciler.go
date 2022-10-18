@@ -19,17 +19,18 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 	currentObjectSet genericObjectSet,
 	prevObjectSets []genericObjectSet,
 	objectDeployment genericObjectDeployment) (ctrl.Result, error) {
-	if currentObjectSet != nil {
-		objsetsEligibleForArchival, err := a.objectSetsToBeArchived(
-			ctx,
-			append(prevObjectSets, currentObjectSet),
-		)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("errored when trying to compute objects for archival: %w", err)
-		}
-		return ctrl.Result{}, a.markObjectSetsForArchival(ctx, objsetsEligibleForArchival, objectDeployment)
+	if currentObjectSet == nil {
+		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{}, nil
+
+	objsetsEligibleForArchival, err := a.objectSetsToBeArchived(
+		ctx,
+		append(prevObjectSets, currentObjectSet),
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("errored when trying to compute objects for archival: %w", err)
+	}
+	return ctrl.Result{}, a.markObjectSetsForArchival(ctx, objsetsEligibleForArchival, objectDeployment)
 }
 
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
@@ -41,7 +42,7 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 
 	// We sort the objectsets to be archived in the increasing order
 	// of revision so that the earlier revisions get deleted first.
-	sort.Sort(objectSetsByRevision(objectsToArchive))
+	sort.Sort(objectSetsByRevisionAscending(objectsToArchive))
 
 	revisionLimit := defaultRevisionLimit
 	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()
@@ -59,6 +60,7 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 			itemsDeleted++
 			continue
 		}
+
 		// Mark everything else as archived
 		if !objectSet.IsArchived() && objectSet.IsStatusPaused() {
 			objectSet.SetArchived()
@@ -74,20 +76,21 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 	ctx context.Context,
 	allObjectSets []genericObjectSet,
 ) ([]genericObjectSet, error) {
-	// Sort all the objectsets in the increasing order of revision
-	sort.Sort(objectSetsByRevision(allObjectSets))
+	// Sort all ObjectSets by their ascending revision number.
+	sort.Sort(objectSetsByRevisionAscending(allObjectSets))
 	objectSetsToArchive := make([]genericObjectSet, 0)
 	for j := len(allObjectSets) - 1; j >= 0; j-- {
 		currentLatestRevision := allObjectSets[j]
 
-		// Case 1: If currentRevision is available, then all
-		// later revisions can be archived.
+		// Case 1:
+		// currentRevision is "Available",
+		// so all previous revisions can be archived.
 		if currentLatestRevision.IsAvailable() {
-			laterRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
+			prevRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
 			if err != nil {
 				return []genericObjectSet{}, err
 			}
-			return append(objectSetsToArchive, laterRevisionsToArchive...), nil
+			return append(objectSetsToArchive, prevRevisionsToArchive...), nil
 		}
 
 		// If prev revision is present
