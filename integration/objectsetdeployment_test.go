@@ -16,10 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 )
 
 func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
@@ -132,22 +133,22 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		t.Logf("Running revision: %d \n", testCase.deploymentRevision)
 		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probe, "test-objectdeployment")
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
-		err := Client.Get(ctx, client.ObjectKeyFromObject(&concernedDeployment), currentInClusterDeployment)
+		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
 			// Create the deployment
-			require.NoError(t, Client.Create(ctx, &concernedDeployment))
+			require.NoError(t, Client.Create(ctx, concernedDeployment))
 		} else {
 			// Update the existing deployment
 			concernedDeployment.ResourceVersion = currentInClusterDeployment.ResourceVersion
-			require.NoError(t, Client.Update(ctx, &concernedDeployment))
+			require.NoError(t, Client.Update(ctx, concernedDeployment))
 		}
-		cleanupOnSuccess(ctx, t, &concernedDeployment)
+		cleanupOnSuccess(ctx, t, concernedDeployment)
 
 		// Assert that all the expected conditions are reported
 		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx,
-					&concernedDeployment,
+					concernedDeployment,
 					expectedCond,
 					expectedStatus,
 				),
@@ -161,7 +162,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		require.NoError(t,
 			Client.Get(ctx,
 				client.ObjectKey{
-					Name:      ExpectedObjectSetName(&concernedDeployment),
+					Name:      ExpectedObjectSetName(concernedDeployment),
 					Namespace: concernedDeployment.Namespace},
 				currentObjectSet,
 			),
@@ -234,7 +235,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 }
 
-// nolint:maintidx
+//nolint:maintidx
 func TestObjectDeployment_objectsetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
@@ -446,28 +447,28 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 		t.Logf("Running revision %s \n", testCase.revision)
 		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectset-deployment-1")
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
-		err := Client.Get(ctx, client.ObjectKeyFromObject(&concernedDeployment), currentInClusterDeployment)
+		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
 			// Create the deployment
-			require.NoError(t, Client.Create(ctx, &concernedDeployment))
+			require.NoError(t, Client.Create(ctx, concernedDeployment))
 		} else {
 			// Update the existing deployment
 			concernedDeployment.ResourceVersion = currentInClusterDeployment.ResourceVersion
-			require.NoError(t, Client.Update(ctx, &concernedDeployment))
+			require.NoError(t, Client.Update(ctx, concernedDeployment))
 		}
 
-		cleanupOnSuccess(ctx, t, &concernedDeployment)
+		cleanupOnSuccess(ctx, t, concernedDeployment)
 		// Assert that all the expected conditions are reported
 		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx,
-					&concernedDeployment,
+					concernedDeployment,
 					expectedCond,
 					expectedStatus,
 				),
 			)
-			availableCond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, availableCond.Status == expectedStatus)
+			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
+			require.True(t, cond.Status == expectedStatus)
 		}
 
 		// objectset for the current deployment revision should be present
@@ -475,7 +476,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 		require.NoError(t,
 			Client.Get(ctx,
 				client.ObjectKey{
-					Name:      ExpectedObjectSetName(&concernedDeployment),
+					Name:      ExpectedObjectSetName(concernedDeployment),
 					Namespace: concernedDeployment.Namespace},
 				currentObjectSet,
 			),
@@ -494,10 +495,10 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
 
 		// Assert that objectset has the revision annotation
-		require.True(
+		require.Equal(
 			t,
-			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation] ==
-				fmt.Sprint(concernedDeployment.GetGeneration()),
+			fmt.Sprint(concernedDeployment.GetGeneration()),
+			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation],
 		)
 
 		// Expect concerned objectset to be created
@@ -551,9 +552,9 @@ func ExpectedObjectSetName(deployment *corev1alpha1.ObjectDeployment) string {
 
 func objectDeploymentTemplate(
 	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
-	probes []corev1alpha1.ObjectSetProbe, name string) corev1alpha1.ObjectDeployment {
+	probes []corev1alpha1.ObjectSetProbe, name string) *corev1alpha1.ObjectDeployment {
 	label := fmt.Sprintf("test.package-operator.run/%s", name)
-	return corev1alpha1.ObjectDeployment{
+	return &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "default",
@@ -687,6 +688,7 @@ func archivalTestprobesTemplate(configmapFieldA, configmapFieldB string) []corev
 		},
 	}
 }
+
 func hashCollisionTestProbe(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
 	return []corev1alpha1.ObjectSetProbe{
 		{
