@@ -153,8 +153,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					expectedStatus,
 				),
 			)
-			availableCond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, availableCond.Status == expectedStatus)
+			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
+			require.True(t, cond.Status == expectedStatus)
 		}
 
 		// objectset for the current deployment revision should be present
@@ -215,9 +215,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 						metav1.ConditionTrue,
 					),
 				)
-				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
-				require.NotNil(t, availableCond, "Available condition is expected to be reported")
-				require.True(t, availableCond.Status == metav1.ConditionTrue)
+				archivedCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
+				require.NotNil(t, archivedCond, "Archived condition is expected to be reported")
+				require.True(t, archivedCond.Status == metav1.ConditionTrue)
 			} else {
 				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
 			}
