@@ -64,7 +64,6 @@ func (r *jobReconciler) Reconcile(
 
 		if cond.Type == batchv1.JobFailed &&
 			cond.Status == corev1.ConditionTrue {
-			jobCompleted = true
 			meta.SetStatusCondition(
 				pkg.GetConditions(), metav1.Condition{
 					Type:               corev1alpha1.PackageUnpacked,
