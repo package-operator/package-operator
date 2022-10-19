@@ -37,7 +37,7 @@ func TestEnsureFinalizer(t *testing.T) {
 		}).
 		Return(nil)
 
-	err := EnsureFinalizer(ctx, clientMock, obj, finalizer)
+	err := EnsureFinalizers(ctx, clientMock, obj, finalizer)
 	require.NoError(t, err)
 	if assert.NotNil(t, patch) {
 		j, err := patch.Data(obj)
@@ -69,7 +69,7 @@ func TestRemoveFinalizer(t *testing.T) {
 		}).
 		Return(nil)
 
-	err := RemoveFinalizer(ctx, clientMock, obj, finalizer)
+	err := RemoveFinalizers(ctx, clientMock, obj, finalizer)
 	require.NoError(t, err)
 	if assert.NotNil(t, patch) {
 		j, err := patch.Data(obj)

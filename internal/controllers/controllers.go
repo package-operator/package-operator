@@ -22,16 +22,23 @@ const (
 	CachedFinalizer = "package-operator.run/cached"
 )
 
-// Ensures the given finalizer is set and persisted on the given object.
-func EnsureFinalizer(
+// Ensures the given finalizers are set and persisted on the given object.
+func EnsureFinalizers(
 	ctx context.Context, c client.Client,
-	obj client.Object, finalizer string,
+	obj client.Object, finalizers ...string,
 ) error {
-	if controllerutil.ContainsFinalizer(obj, finalizer) {
+	noFinalizersToPatch := true
+	for _, finalizer := range finalizers {
+		if controllerutil.ContainsFinalizer(obj, finalizer) {
+			continue
+		}
+		noFinalizersToPatch = false
+		controllerutil.AddFinalizer(obj, finalizer)
+	}
+	if noFinalizersToPatch {
 		return nil
 	}
 
-	controllerutil.AddFinalizer(obj, finalizer)
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"resourceVersion": obj.GetResourceVersion(),
@@ -49,16 +56,22 @@ func EnsureFinalizer(
 	return nil
 }
 
-// Removes the given finalizer and persists the change.
-func RemoveFinalizer(
+// Removes the given finalizers and persist the change.
+func RemoveFinalizers(
 	ctx context.Context, c client.Client,
-	obj client.Object, finalizer string,
+	obj client.Object, finalizers ...string,
 ) error {
-	if !controllerutil.ContainsFinalizer(obj, finalizer) {
+	noFinalizersToPatch := true
+	for _, finalizer := range finalizers {
+		if !controllerutil.ContainsFinalizer(obj, finalizer) {
+			continue
+		}
+		noFinalizersToPatch = false
+		controllerutil.RemoveFinalizer(obj, finalizer)
+	}
+	if noFinalizersToPatch {
 		return nil
 	}
-
-	controllerutil.RemoveFinalizer(obj, finalizer)
 
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -79,7 +92,7 @@ func RemoveFinalizer(
 func EnsureCachedFinalizer(
 	ctx context.Context, c client.Client, obj client.Object,
 ) error {
-	return EnsureFinalizer(ctx, c, obj, CachedFinalizer)
+	return EnsureFinalizers(ctx, c, obj, CachedFinalizer)
 }
 
 type cacheFreer interface {
@@ -95,7 +108,7 @@ func FreeCacheAndRemoveFinalizer(
 		return fmt.Errorf("free cache: %w", err)
 	}
 
-	return RemoveFinalizer(ctx, c, obj, CachedFinalizer)
+	return RemoveFinalizers(ctx, c, obj, CachedFinalizer)
 }
 
 type isControllerChecker interface {

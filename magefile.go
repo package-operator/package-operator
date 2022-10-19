@@ -33,8 +33,8 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-  defaultImageOrg = "quay.io/package-operator"
-  clusterName     = "package-operator-dev"
+	defaultImageOrg = "quay.io/package-operator"
+	clusterName     = "package-operator-dev"
 )
 
 var (
