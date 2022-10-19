@@ -316,16 +316,8 @@ type objectSetsByRevisionAscending []genericObjectSet
 func (a objectSetsByRevisionAscending) Len() int      { return len(a) }
 func (a objectSetsByRevisionAscending) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a objectSetsByRevisionAscending) Less(i, j int) bool {
-	iClientObj := a[i].ClientObject()
-	jClientObj := a[j].ClientObject()
 	iObj := a[i]
 	jObj := a[j]
-
-	if iObj.GetRevision() == 0 ||
-		jObj.GetRevision() == 0 {
-		return iClientObj.GetCreationTimestamp().UTC().Before(
-			jClientObj.GetCreationTimestamp().UTC())
-	}
 
 	return iObj.GetRevision() < jObj.GetRevision()
 }

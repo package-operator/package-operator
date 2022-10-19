@@ -51,14 +51,6 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("errored when getting conflicting ObjectSet: %w", err)
 	}
 
-	// sanity check, before we increment the collision counter
-	conflictAnnotations := conflictingObjectSet.ClientObject().GetAnnotations()
-	currentDeploymentGeneration := fmt.Sprint(objectDeployment.ClientObject().GetGeneration())
-	if conflictAnnotations != nil && conflictAnnotations[DeploymentRevisionAnnotation] == currentDeploymentGeneration {
-		// Objectset for the current deployment revision already present, do nothing!
-		return ctrl.Result{}, nil
-	}
-
 	// Hash collision, we update the collision counter of the objectdeployment
 	currentCollisionCount := objectDeployment.GetStatusCollisionCount()
 	if currentCollisionCount == nil {
@@ -94,7 +86,6 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 		newObjectSetClientObj.SetAnnotations(map[string]string{})
 	}
 	newObjectSetClientObj.GetAnnotations()[ObjectSetHashAnnotation] = objectDeployment.GetStatusTemplateHash()
-	newObjectSetClientObj.GetAnnotations()[DeploymentRevisionAnnotation] = fmt.Sprint(deploymentClientObj.GetGeneration())
 	if err := controllerutil.SetControllerReference(
 		deploymentClientObj, newObjectSetClientObj, r.scheme); err != nil {
 		return nil, err

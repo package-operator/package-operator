@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -105,26 +104,6 @@ func Test_ArchivalReconciler(t *testing.T) {
 		revisionLimit := int32(10)
 		objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
-		// Setup client
-
-		// Return an error when updating to pause revision 5
-		client := testutil.NewClient()
-		client.On("Update",
-			mock.Anything,
-			mock.MatchedBy(func(obj ctrlclient.Object) bool {
-				unstructured := obj.(*unstructured.Unstructured)
-				return unstructured.GetAnnotations()[DeploymentRevisionAnnotation] == "5"
-			}),
-			mock.Anything,
-		).Return(errors.New("Failed to update revision 5 for pausing"))
-
-		// No errors on other updates
-		client.On("Update",
-			mock.Anything,
-			mock.Anything,
-			mock.Anything,
-		).Return(nil)
-
 		// Setup revisions
 
 		// Unavailable
@@ -155,6 +134,23 @@ func Test_ArchivalReconciler(t *testing.T) {
 			makeObjectSetMock(2, "", makeControllerOfObjects("p"), makeObjects("p", "q"), nil, false, false, false, Unavailable),
 			makeObjectSetMock(1, "", makeControllerOfObjects("q"), makeObjects("q", "z"), nil, false, false, false, Unavailable),
 		}
+
+		// Setup client
+
+		// Return an error when updating to pause revision 5
+		client := testutil.NewClient()
+		client.On("Update",
+			mock.Anything,
+			prevs[2].ClientObject(),
+			mock.Anything,
+		).Return(errors.New("Failed to update revision 5 for pausing"))
+
+		// No errors on other updates
+		client.On("Update",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+		).Return(nil)
 
 		prevCasted := make([]genericObjectSet, len(prevs))
 		for i := range prevs {
@@ -265,10 +261,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 		client.AssertCalled(t,
 			"Delete",
 			mock.Anything,
-			mock.MatchedBy(func(obj ctrlclient.Object) bool {
-				unstructured := obj.(*unstructured.Unstructured)
-				return unstructured.GetAnnotations()[DeploymentRevisionAnnotation] == "1"
-			}),
+			prevs[6].ClientObject(),
 			mock.Anything,
 		)
 		assertShouldNotBeArchived(t, prevs[6])
@@ -293,14 +286,14 @@ func assertShouldNotBeArchived(t *testing.T, obj *genericObjectSetMock) {
 
 func assertShouldBeArchived(t *testing.T, obj *genericObjectSetMock) {
 	t.Helper()
-	obj.AssertCalled(t, "SetArchived")
 	obj.AssertNumberOfCalls(t, "SetArchived", 1)
+	obj.AssertCalled(t, "SetArchived")
 }
 
 func assertShouldBePaused(t *testing.T, obj *genericObjectSetMock) {
 	t.Helper()
-	obj.AssertCalled(t, "SetPaused")
 	obj.AssertNumberOfCalls(t, "SetPaused", 1)
+	obj.AssertCalled(t, "SetPaused")
 }
 
 func assertShouldNotBePaused(t *testing.T, obj *genericObjectSetMock) {
@@ -515,7 +508,7 @@ func makeObjectSetMock(
 	mock.On("GetRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{
-		DeploymentRevisionAnnotation: fmt.Sprint(revision),
+		"important_for_mock_to_not_confuse_calls": fmt.Sprint(revision),
 		// Use revision as the hash in tests
 		ObjectSetHashAnnotation: hash,
 	})

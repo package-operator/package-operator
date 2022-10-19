@@ -30,41 +30,37 @@ type listObjectSetsForDeploymentFn func(
 
 func (o *objectSetReconciler) Reconcile(ctx context.Context, objectDeployment genericObjectDeployment) (ctrl.Result, error) {
 	objectSets, err := o.listObjectSetsForDeployment(ctx, objectDeployment)
-	currentDeploymentGeneration := fmt.Sprint(objectDeployment.ClientObject().GetGeneration())
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("listing objectsets under deployment errored: %w", err)
 	}
 
+	// Delay any action until all ObjectSets under management report .status.revision
+	for _, objectSet := range objectSets {
+		if objectSet.GetRevision() == 0 {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	// objectSets is already sorted ascending by .status.revision
+	// check if the latest revision is up-to-date, by comparing their hash.
 	var (
 		currentObjectSet genericObjectSet
 		prevObjectSets   []genericObjectSet
 	)
-
-	for _, currObjectSet := range objectSets {
-		annotations := currObjectSet.ClientObject().GetAnnotations()
-		var (
-			templateHashFound       bool
-			deploymentRevisionFound bool
-			currTemplateHash        string
-			deploymentRevision      string
-		)
+	if len(objectSets) > 0 {
+		maybeCurrentObjectSet := objectSets[len(objectSets)-1]
+		annotations := maybeCurrentObjectSet.ClientObject().GetAnnotations()
 		if annotations != nil {
-			currTemplateHash, templateHashFound = annotations[ObjectSetHashAnnotation]
-			deploymentRevision, deploymentRevisionFound = annotations[DeploymentRevisionAnnotation]
-
+			if hash, ok := annotations[ObjectSetHashAnnotation]; ok &&
+				hash == objectDeployment.GetStatusTemplateHash() {
+				currentObjectSet = maybeCurrentObjectSet
+				prevObjectSets = objectSets[0 : len(objectSets)-1] // previous is everything excluding current
+			}
 		}
-		if !templateHashFound || !deploymentRevisionFound {
-			// The deployment didnt create this objectset, we just ignore?
-			continue
-		}
-
-		if objectDeployment.GetStatusTemplateHash() == currTemplateHash &&
-			deploymentRevision == currentDeploymentGeneration {
-			// objectset for this revision already exists
-			currentObjectSet = currObjectSet
-			continue
-		}
-		prevObjectSets = append(prevObjectSets, currObjectSet)
+	}
+	if currentObjectSet == nil {
+		// all ObjectSets are outdated.
+		prevObjectSets = objectSets
 	}
 
 	var (

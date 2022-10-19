@@ -157,7 +157,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			require.True(t, cond.Status == expectedStatus)
 		}
 
-		// objectset for the current deployment revision should be present
+		// ObjectSet for the current deployment revision should be present
 		currentObjectSet := &corev1alpha1.ObjectSet{}
 		require.NoError(t,
 			Client.Get(ctx,
@@ -168,7 +168,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			),
 		)
 
-		// Assert that the objectset for the current revision has the expected availability status
+		// Assert that the ObjectSet for the current revision has the expected availability status
 		require.NoError(t,
 			Waiter.WaitForCondition(ctx,
 				currentObjectSet,
@@ -180,14 +180,18 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
 		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
 
-		// Assert that objectset has the revision annotation
-		require.True(
-			t,
-			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation] ==
-				fmt.Sprint(concernedDeployment.GetGeneration()),
+		// Assert that the ObjectSet reports the right TemplateHash
+		require.Equal(t,
+			concernedDeployment.Status.TemplateHash,
+			currentObjectSet.GetAnnotations()[objectdeployments.ObjectSetHashAnnotation],
 		)
-		// Expect objectset to be created
-		// Expect concerned objectset to be created
+		// Assert that the ObjectSet reports the right revision number
+		require.Equal(t,
+			concernedDeployment.Generation,
+			currentObjectSet.Status.Revision)
+
+		// Expect ObjectSet to be created
+		// Expect concerned ObjectSet to be created
 		labelSelector := concernedDeployment.Spec.Selector
 		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 		require.NoError(t, err)
@@ -206,8 +210,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSet := currObjectSet
-			currObjectSetRevision := currObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation]
-			if slices.Contains(testCase.expectedArchivedRevisions, currObjectSetRevision) {
+			currObjectSetRevision := currObjectSet.Status.Revision
+			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
 				require.NoError(t,
 					Waiter.WaitForCondition(ctx,
 						&currObjectSet,
@@ -236,7 +240,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 }
 
 //nolint:maintidx
-func TestObjectDeployment_objectsetArchival(t *testing.T) {
+func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
 		revision                     string
@@ -445,7 +449,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Logf("Running revision %s \n", testCase.revision)
-		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectset-deployment-1")
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectdeployment-1")
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
@@ -471,7 +475,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 			require.True(t, cond.Status == expectedStatus)
 		}
 
-		// objectset for the current deployment revision should be present
+		// ObjectSet for the current deployment revision should be present
 		currentObjectSet := &corev1alpha1.ObjectSet{}
 		require.NoError(t,
 			Client.Get(ctx,
@@ -482,7 +486,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 			),
 		)
 
-		// Assert that the objectset for the current revision has the expected availability status
+		// Assert that the ObjectSet for the current revision has the expected availability status
 		require.NoError(t,
 			Waiter.WaitForCondition(ctx,
 				currentObjectSet,
@@ -494,14 +498,17 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
 		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
 
-		// Assert that objectset has the revision annotation
-		require.Equal(
-			t,
-			fmt.Sprint(concernedDeployment.GetGeneration()),
-			currentObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation],
+		// Assert that the ObjectSet reports the right TemplateHash
+		require.Equal(t,
+			concernedDeployment.Status.TemplateHash,
+			currentObjectSet.GetAnnotations()[objectdeployments.ObjectSetHashAnnotation],
 		)
+		// Assert that the ObjectSet reports the right revision number
+		require.Equal(t,
+			concernedDeployment.Generation,
+			currentObjectSet.Status.Revision)
 
-		// Expect concerned objectset to be created
+		// Expect concerned ObjectSet to be created
 		labelSelector := concernedDeployment.Spec.Selector
 		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 		require.NoError(t, err)
@@ -520,8 +527,8 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 		// Assert that the expected revisions are archived (and others active)
 		for _, item := range currObjectSetList.Items {
 			currObjectSet := item
-			currObjectSetRevision := currObjectSet.GetAnnotations()[objectdeployments.DeploymentRevisionAnnotation]
-			if slices.Contains(testCase.expectedArchivedRevisions, currObjectSetRevision) {
+			currObjectSetRevision := currObjectSet.Status.Revision
+			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
 				require.NoError(t,
 					Waiter.WaitForCondition(ctx,
 						&currObjectSet,
@@ -537,7 +544,7 @@ func TestObjectDeployment_objectsetArchival(t *testing.T) {
 			}
 
 			// Assert that that expected revision is available
-			if currObjectSetRevision == testCase.expectedAvailableRevision {
+			if fmt.Sprint(currObjectSetRevision) == testCase.expectedAvailableRevision {
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
 				require.True(t, availableCond.Status == metav1.ConditionTrue)
