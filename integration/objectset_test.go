@@ -97,7 +97,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			objectSet: defaultObjectSet,
 		},
 		{
-			name: "with phase class",
+			name: "with default phase class",
 			objectSet: func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
 				objectSet, err := defaultObjectSet(cm4, cm5)
 				if err != nil {
@@ -105,6 +105,18 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 				}
 				objectSet.Spec.Phases[0].Class = "default"
 				objectSet.Spec.Phases[1].Class = "default"
+				return objectSet, nil
+			},
+		},
+		{
+			name: "with hosted-cluster phase class",
+			objectSet: func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+				objectSet, err := defaultObjectSet(cm4, cm5)
+				if err != nil {
+					return nil, err
+				}
+				objectSet.Spec.Phases[0].Class = "hosted-cluster"
+				objectSet.Spec.Phases[1].Class = "hosted-cluster"
 				return objectSet, nil
 			},
 		},
@@ -416,7 +428,7 @@ func TestObjectSet_handover(t *testing.T) {
 			objectSetRev2: defaultObjectSetRev2,
 		},
 		{
-			name: "with phase class",
+			name: "with default phase class",
 			objectSetRev1: func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
 				objectSet, err := defaultObjectSetRev1(cm1, cm2)
 				if err != nil {
@@ -433,6 +445,29 @@ func TestObjectSet_handover(t *testing.T) {
 				}
 				objectSet.Spec.Phases[0].Class = "default"
 				objectSet.Spec.Phases[1].Class = "default"
+				return objectSet, nil
+			},
+		},
+		{
+			name: "with hosted-cluster phase class",
+			objectSetRev1: func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+				// TODO: Error because of this https://github.com/kubernetes/kubernetes/issues/82130#issuecomment-527665796
+				// maybe the error is caused because the cache is not correctly cleared
+				objectSet, err := defaultObjectSetRev1(cm1, cm2)
+				if err != nil {
+					return nil, err
+				}
+				objectSet.Spec.Phases[0].Class = "hosted-cluster"
+				objectSet.Spec.Phases[1].Class = "hosted-cluster"
+				return objectSet, nil
+			},
+			objectSetRev2: func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error) {
+				objectSet, err := defaultObjectSetRev2(cm1, cm3, rev1)
+				if err != nil {
+					return nil, err
+				}
+				objectSet.Spec.Phases[0].Class = "hosted-cluster"
+				objectSet.Spec.Phases[1].Class = "hosted-cluster"
 				return objectSet, nil
 			},
 		},
@@ -604,9 +639,7 @@ func assertControllerNameHasPrefix(t *testing.T, ownerNamePrefix string, obj cli
 	t.Helper()
 	found := controllerNameHasPrefix(ownerNamePrefix, obj)
 
-	if !found {
-		t.Errorf("controller name of %s not prefixed with %s", client.ObjectKeyFromObject(obj), ownerNamePrefix)
-	}
+	require.True(t, found, "controller name of %s not prefixed with %s", client.ObjectKeyFromObject(obj), ownerNamePrefix)
 }
 
 func controllerNameHasPrefix(ownerNamePrefix string, obj client.Object) bool {

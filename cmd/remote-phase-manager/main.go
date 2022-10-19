@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -147,6 +148,10 @@ func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error
 			return fmt.Errorf("unable to create pprof server: %w", err)
 		}
 	}
+
+	// TODO: Delete
+	kubeconfigContents, err := ioutil.ReadFile(opts.targetClusterKubeconfigFile)
+	fmt.Println(string(kubeconfigContents))
 
 	targetCfg, err := clientcmd.BuildConfigFromFlags("", opts.targetClusterKubeconfigFile)
 	if err != nil {

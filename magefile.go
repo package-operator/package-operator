@@ -603,6 +603,14 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
+	// TODO: Create and wait is kind of annoying because it doesn't update anything
+	// Create the service accounts before exporting the kubeconfig
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
+		"config/remote-phase-static-deployment",
+	}); err != nil {
+		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
+	}
+
 	// Replace kubeconfig path in secret
 	secret := &corev1.Secret{}
 	objs, err = dev.LoadKubernetesObjectsFromFile(
@@ -638,13 +646,6 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	ctx = logr.NewContext(ctx, logger)
 
-	// Deploy
-	// TODO: Create and wait is kind of annoying because it doesn't update anything
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
-		"config/remote-phase-static-deployment",
-	}); err != nil {
-		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
-	}
 	_ = cluster.CtrlClient.Delete(ctx, secret)
 	if err := cluster.CreateAndWaitForReadiness(ctx, secret); err != nil {
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
