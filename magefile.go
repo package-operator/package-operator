@@ -629,7 +629,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 	if len(target_kubeconfig_path) == 0 {
 		kubeconfig_buf := new(bytes.Buffer)
 		err = devEnvironment.RunKindCommand(ctx, kubeconfig_buf, os.Stderr,
-			"export", "kubeconfig",
+			"get", "kubeconfig",
 			"--name", clusterName, "--internal")
 		if err != nil {
 			return fmt.Errorf("exporting internal kubeconfig: %w", err)
