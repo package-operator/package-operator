@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/magefile/mage/mg"
@@ -25,6 +27,8 @@ import (
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -624,25 +628,41 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		return fmt.Errorf("converting to Secret: %w", err)
 	}
 
-	target_kubeconfig_path := os.Getenv("TARGET_KUBECONFIG_PATH")
-	var kubeconfig_bytes []byte
-	if len(target_kubeconfig_path) == 0 {
-		kubeconfig_buf := new(bytes.Buffer)
-		err = devEnvironment.RunKindCommand(ctx, kubeconfig_buf, os.Stderr,
+	targetKubeconfigPath := os.Getenv("TARGET_KUBECONFIG_PATH")
+	var kubeconfigBytes []byte
+	if len(targetKubeconfigPath) == 0 {
+		kubeconfigBuf := new(bytes.Buffer)
+		err = devEnvironment.RunKindCommand(ctx, kubeconfigBuf, os.Stderr,
 			"get", "kubeconfig",
 			"--name", clusterName, "--internal")
 		if err != nil {
 			return fmt.Errorf("exporting internal kubeconfig: %w", err)
 		}
-		kubeconfig_bytes = kubeconfig_buf.Bytes()
+		kubeconfigBytes = kubeconfigBuf.Bytes()
 	} else {
-		kubeconfig_bytes, err = ioutil.ReadFile(target_kubeconfig_path)
+		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
 		if err != nil {
 			return fmt.Errorf("reading in kubeconfig: %w", err)
 		}
 	}
 
-	secret.Data = map[string][]byte{"kubeconfig": kubeconfig_bytes}
+	fmt.Println("here 1")
+	var kubeconfigMap map[string][]string
+	yaml.Unmarshal(kubeconfigBytes, kubeconfigMap)
+	fmt.Println("here 2")
+	var targetSASecret *corev1.Secret
+	err = cluster.CtrlClient.Get(context.TODO(),
+		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target"}, targetSASecret)
+	if err != nil {
+		return fmt.Errorf("reading in service account secret: %w", err)
+	}
+
+	fmt.Println("here 3")
+	fmt.Println(targetSASecret)
+	fmt.Println(targetSASecret.Data["token"])
+	os.Exit(1)
+
+	secret.Data = map[string][]byte{"kubeconfig": kubeconfigBytes}
 
 	ctx = logr.NewContext(ctx, logger)
 

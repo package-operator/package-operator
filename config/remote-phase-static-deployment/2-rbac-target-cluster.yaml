@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: remote-phase-operator-target
+  namespace: package-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: remote-phase-operator-cluster-target
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+  verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - create
+    - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: remote-phase-operator-cluster-target
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: remote-phase-operator-cluster-target
+subjects:
+  - kind: ServiceAccount
+    name: remote-phase-operator-target
+    namespace: package-operator-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: remote-phase-operator-target
+  namespace: package-operator-system
+  annotations:
+    kubernetes.io/service-account.name: remote-phase-operator-target
+type: kubernetes.io/service-account-token
