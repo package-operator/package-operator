@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -115,8 +116,15 @@ type Build mg.Namespace
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
 	mg.Deps(
-		mg.F(Builder.Cmd, "package-operator-manager", "linux", "amd64"),
+		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
+		mg.F(Builder.Cmd, "package-loader", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
+	)
+}
+
+func (Build) Binary(cmd string) {
+	mg.Deps(
+		mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH),
 	)
 }
 
@@ -131,6 +139,7 @@ func (Build) Image(image string) {
 func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
+		mg.F(Builder.Image, "package-loader"),
 		mg.F(Builder.Image, "package-operator-webhook"),
 	)
 }
