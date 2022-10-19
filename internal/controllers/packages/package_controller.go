@@ -150,7 +150,6 @@ func (c *GenericPackageController) Reconcile(
 		err error
 	)
 	for _, r := range c.reconciler {
-
 		res, err = r.Reconcile(ctx, pkg)
 		if err != nil || !res.IsZero() {
 			break

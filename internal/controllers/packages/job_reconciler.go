@@ -41,11 +41,6 @@ func (r *jobReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	if ComputeHash(foundJob.Spec.Template.Spec, nil) != ComputeHash(desiredJob.Spec.Template.Spec, nil) {
-		foundJob.Spec.Template.Spec = desiredJob.Spec.Template.Spec
-		return ctrl.Result{}, r.client.Update(ctx, foundJob) // the update should automatically trigger another control loop of the package controller (and hence, this reconciler), next time continuing further execution
-	}
-
 	var jobCompleted bool
 	for _, cond := range foundJob.Status.Conditions {
 		if cond.Type == batchv1.JobComplete &&
