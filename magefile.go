@@ -33,8 +33,8 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-  defaultImageOrg = "quay.io/package-operator"
-  clusterName     = "package-operator-dev"
+	defaultImageOrg = "quay.io/package-operator"
+	clusterName     = "package-operator-dev"
 )
 
 var (
@@ -481,6 +481,7 @@ func (d Dev) Deploy(ctx context.Context) error {
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
 		mg.F(Dev.LoadImage, "remote-phase-manager"),
+		mg.F(Dev.LoadImage, "package-loader"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {

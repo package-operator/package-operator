@@ -27,6 +27,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
+	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
 )
 
@@ -147,7 +148,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	dc := dynamiccache.NewCache(
 		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
 		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,
+			// Only cache objects with our label selector,=
 			// so we prevent our caches from exploding!
 			schema.GroupVersionKind{}: dynamiccache.Selector{
 				Label: labels.SelectorFromSet(labels.Set{
@@ -204,6 +205,18 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
+	}
+
+	if err = (packages.NewPackageController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for Package: %w", err)
+	}
+
+	if err = (packages.NewClusterPackageController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
 
 	log.Info("starting manager")

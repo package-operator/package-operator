@@ -719,6 +719,34 @@ Used in:
 * [ObjectSetTemplate](#objectsettemplate)
 
 
+### PackageManifestSpec
+
+PackageManifest specification.
+
+| Field | Description |
+| ----- | ----------- |
+| `packageImage` <b>required</b><br>string | the image digests corresponding to the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `packageNamespace` <b>required</b><br>string |  |
+
+
+Used in:
+* [PackageManifest](#packagemanifest)
+
+
+### PackageManifestStatus
+
+PackageManifestStatus defines the observed state of a PackageManifest.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#packagemanifeststatusphase">PackageManifestStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+
+
+Used in:
+* [PackageManifest](#packagemanifest)
+
+
 ### PackageProbeKindSpec
 
 Kind package probe parameters.
