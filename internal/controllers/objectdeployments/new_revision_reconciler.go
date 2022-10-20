@@ -42,15 +42,8 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return ctrl.Result{}, fmt.Errorf("errored while creating new ObjectSet: %w", err)
 	}
-	// Hash collision
-	log.Info("Got hash collision")
-	conflictingObjectSet := r.newObjectSet(r.scheme)
-	if err := r.client.Get(
-		ctx, client.ObjectKeyFromObject(newObjectSet.ClientObject()),
-		conflictingObjectSet.ClientObject()); err != nil {
-		return ctrl.Result{}, fmt.Errorf("errored when getting conflicting ObjectSet: %w", err)
-	}
 
+	log.Info("Got hash collision")
 	// Hash collision, we update the collision counter of the objectdeployment
 	currentCollisionCount := objectDeployment.GetStatusCollisionCount()
 	if currentCollisionCount == nil {
