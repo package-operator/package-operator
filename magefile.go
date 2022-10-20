@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -622,7 +622,6 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
 	}
-
 	if err := cluster.Scheme.Convert(
 		&objs[0], secret, nil); err != nil {
 		return fmt.Errorf("converting to Secret: %w", err)
@@ -646,23 +645,34 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
-	fmt.Println("here 1")
-	var kubeconfigMap map[string][]string
-	yaml.Unmarshal(kubeconfigBytes, kubeconfigMap)
-	fmt.Println("here 2")
-	var targetSASecret *corev1.Secret
+	kubeconfigMap := map[string]interface{}{} // TODO: There is no corev1 type for this, right?
+	err = yaml.UnmarshalStrict(kubeconfigBytes, &kubeconfigMap)
+	if err != nil {
+		return fmt.Errorf("unmarshalling kubeconfig: %w", err)
+	}
+
+	targetSASecret := &corev1.Secret{}
 	err = cluster.CtrlClient.Get(context.TODO(),
 		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target"}, targetSASecret)
 	if err != nil {
 		return fmt.Errorf("reading in service account secret: %w", err)
 	}
 
-	fmt.Println("here 3")
-	fmt.Println(targetSASecret)
-	fmt.Println(targetSASecret.Data["token"])
-	os.Exit(1)
+	kubeconfigMap["users"] = []map[string]interface{}{
+		{
+			"name": "kind-package-operator-dev",
+			"user": map[string]string{
+				"token": string(targetSASecret.Data["token"]),
+			},
+		},
+	}
 
-	secret.Data = map[string][]byte{"kubeconfig": kubeconfigBytes}
+	newKubeconfigBytes, err := yaml.Marshal(kubeconfigMap)
+	if err != nil {
+		return fmt.Errorf("marshalling new kubeconfig back to yaml: %w", err)
+	}
+
+	secret.Data = map[string][]byte{"kubeconfig": newKubeconfigBytes}
 
 	ctx = logr.NewContext(ctx, logger)
 

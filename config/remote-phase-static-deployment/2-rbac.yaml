@@ -64,15 +64,10 @@ rules:
 - apiGroups:
     - ""
   resources:
-    - configmaps  # TODO: this has to be done better
+    - configmaps
   verbs:
-    - get
-    - list
     - watch
-    - update
-    - patch
-    - create
-    - delete
+    - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
