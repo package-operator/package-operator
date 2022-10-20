@@ -56,22 +56,6 @@ func Test_new_revision_reconciler(t *testing.T) {
 				conflictObject:             makeObjectSet("rev1", 1, "xyz", true),
 				expectedHashCollisionCount: 1,
 			},
-			// Object already present, but sanity check kicks in
-			// so no collision count not incremented.
-			{
-				client: testutil.NewClient(),
-				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", 3, "abcd", false),
-					makeObjectSet("rev1", 1, "xyz", true),
-					makeObjectSet("rev2", 2, "pqr", false),
-					makeObjectSet("rev4", 4, "abc", false),
-				},
-				deploymentGeneration:       4,
-				deploymentHash:             "abc",
-				conflict:                   true,
-				conflictObject:             makeObjectSet("rev4", 4, "abc", true),
-				expectedHashCollisionCount: 0,
-			},
 		}
 
 		for _, testCase := range testCases {
@@ -100,17 +84,6 @@ func Test_new_revision_reconciler(t *testing.T) {
 					mock.Anything,
 					[]ctrlclient.CreateOption(nil),
 				).Return(errors.NewAlreadyExists(schema.GroupResource{}, testCase.conflictObject.Name))
-
-				client.On("Get",
-					mock.Anything,
-					mock.Anything,
-					mock.Anything,
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2)
-					obj := arg.(*corev1alpha1.ObjectSet)
-					*obj = testCase.conflictObject
-				}).Return(nil)
 			} else {
 				client.On("Create",
 					mock.Anything,
@@ -137,7 +110,7 @@ func Test_new_revision_reconciler(t *testing.T) {
 				expectedCollison := int32(testCase.expectedHashCollisionCount)
 				objectDeploymentmock.AssertCalled(t, "SetStatusCollisionCount", &expectedCollison)
 			} else {
-				objectDeploymentmock.AssertNotCalled(t, "SetStatusCollisionCount")
+				objectDeploymentmock.AssertNotCalled(t, "SetStatusCollisionCount", mock.AnythingOfType("*int32"))
 			}
 
 			// Assert correct new revision is created
