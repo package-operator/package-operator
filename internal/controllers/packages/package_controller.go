@@ -124,22 +124,26 @@ func (c *GenericPackageController) Reconcile(
 	}
 
 	pkgClientObject := pkg.ClientObject()
+	if err := controllers.EnsureFinalizers(ctx, c.client, pkgClientObject, packageFinalizers()...); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
-		for finalizer, cleaner := range FinalizersToCleaners {
+		for _, finalizer := range pkgClientObject.GetFinalizers() {
+			cleaner, ok := FinalizersToCleaners[Finalizer(finalizer)]
+			if !ok {
+				continue
+			}
 			if err := cleaner(c.client, pkg); err != nil {
 				return ctrl.Result{}, fmt.Errorf("error occurred while cleaning up the '%s' finalizer of PackageManifest: %w", finalizer, err)
 			}
-			if err := controllers.RemoveFinalizers(ctx, c.client, pkgClientObject, string(finalizer)); err != nil {
+			if err := controllers.RemoveFinalizers(ctx, c.client, pkgClientObject, finalizer); err != nil {
 				return ctrl.Result{}, fmt.Errorf("error occurred while removing the '%s' finalizer from the PackageManifest: %w", finalizer, err)
 			}
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if err := controllers.EnsureFinalizers(ctx, c.client, pkgClientObject, packageFinalizers()...); err != nil {
-		return ctrl.Result{}, err
-	}
 	var (
 		res ctrl.Result
 		err error
