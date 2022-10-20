@@ -17,18 +17,6 @@ type objectDeploymentStatusReconciler struct {
 	newObjectDeployment genericObjectDeploymentFactory
 }
 
-func newObjectDeploymentStatusReconciler(
-	c client.Client,
-	scheme *runtime.Scheme,
-	newObjectDeployment genericObjectDeploymentFactory,
-) *objectDeploymentStatusReconciler {
-	return &objectDeploymentStatusReconciler{
-		client:              c,
-		scheme:              scheme,
-		newObjectDeployment: newObjectDeployment,
-	}
-}
-
 func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj genericPackage) (ctrl.Result, error) {
 	objDep := r.newObjectDeployment(r.scheme)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(packageObj.ClientObject()), objDep.ClientObject()); err != nil {
