@@ -30,6 +30,7 @@ func init() {
 	}
 }
 
+// nolint:dupl
 func Test_jobReconciler(t *testing.T) {
 	t.Run("create desiredJob with ownerReference when no job found", func(t *testing.T) {
 		testClient := testutil.NewClient()

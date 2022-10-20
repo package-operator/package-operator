@@ -361,21 +361,3 @@ var (
 	objectDeploymentGVK        = corev1alpha1.GroupVersion.WithKind("ObjectDeployment")
 	clusterObjectDeploymentGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment")
 )
-
-func newObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
-	obj, err := scheme.New(objectDeploymentGVK)
-	if err != nil {
-		panic(err)
-	}
-
-	return &GenericObjectDeployment{ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
-}
-
-func newClusterObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
-	obj, err := scheme.New(clusterObjectDeploymentGVK)
-	if err != nil {
-		panic(err)
-	}
-
-	return &GenericClusterObjectDeployment{ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
-}
