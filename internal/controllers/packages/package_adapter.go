@@ -17,11 +17,12 @@ type genericPackage interface {
 	ClientObject() client.Object
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
-	RenderPackageLoaderJob() (*batchv1.Job, error)
+	RenderPackageLoaderJob() *batchv1.Job
 	GetImage() string
 }
 
 type genericPackageFactory func(scheme *runtime.Scheme) genericPackage
+type genericObjectDeploymentFactory func(scheme *runtime.Scheme) genericObjectDeployment
 
 var (
 	packageGVK        = corev1alpha1.GroupVersion.WithKind("Package")
@@ -46,6 +47,26 @@ func newGenericClusterPackage(scheme *runtime.Scheme) genericPackage {
 
 	return &GenericClusterPackage{
 		ClusterPackage: *obj.(*corev1alpha1.ClusterPackage)}
+}
+
+func newGenericClusterObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(clusterObjectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericClusterObjectDeployment{
+		ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
+}
+
+func newGenericObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(objectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericObjectDeployment{
+		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
 }
 
 var (
@@ -105,7 +126,7 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericPackage) RenderPackageLoaderJob() (*batchv1.Job, error) {
+func (a *GenericPackage) RenderPackageLoaderJob() *batchv1.Job {
 	packageName, packageNamespace, packageImage := a.Package.Name, a.Package.Namespace, a.Package.Spec.Image
 	jobName := fmt.Sprintf("job-%s", packageName)
 	job := &batchv1.Job{
@@ -165,10 +186,10 @@ func (a *GenericPackage) RenderPackageLoaderJob() (*batchv1.Job, error) {
 			},
 		},
 	}
-	return job, nil
+	return job
 }
 
-func (a *GenericClusterPackage) RenderPackageLoaderJob() (*batchv1.Job, error) {
+func (a *GenericClusterPackage) RenderPackageLoaderJob() *batchv1.Job {
 	packageName, packageImage := a.ClusterPackage.Name, a.ClusterPackage.Spec.Image
 	jobName := fmt.Sprintf("job-%s", packageName)
 	job := &batchv1.Job{
@@ -227,7 +248,7 @@ func (a *GenericClusterPackage) RenderPackageLoaderJob() (*batchv1.Job, error) {
 			},
 		},
 	}
-	return job, nil
+	return job
 }
 
 func (a *GenericClusterPackage) UpdatePhase() {
@@ -264,4 +285,97 @@ func (a *GenericPackage) GetImage() string {
 
 func (a *GenericClusterPackage) GetImage() string {
 	return a.Spec.Image
+}
+
+type genericObjectDeployment interface {
+	ClientObject() client.Object
+	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
+	SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase)
+	GetConditions() []metav1.Condition
+	GetObjectMeta() metav1.ObjectMeta
+	SetObjectMeta(metav1.ObjectMeta)
+}
+
+var (
+	_ genericObjectDeployment = (*GenericObjectDeployment)(nil)
+	_ genericObjectDeployment = (*GenericClusterObjectDeployment)(nil)
+)
+
+type GenericObjectDeployment struct {
+	corev1alpha1.ObjectDeployment
+}
+
+func (a *GenericObjectDeployment) ClientObject() client.Object {
+	return &a.ObjectDeployment
+}
+
+func (a *GenericObjectDeployment) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+	return a.Spec.Template.Spec.Phases
+}
+
+func (a *GenericObjectDeployment) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Template.Spec.Phases = phases
+}
+
+func (a *GenericObjectDeployment) GetConditions() []metav1.Condition {
+	return a.Status.Conditions
+}
+
+func (a *GenericObjectDeployment) GetObjectMeta() metav1.ObjectMeta {
+	return a.ObjectMeta
+}
+
+func (a *GenericObjectDeployment) SetObjectMeta(m metav1.ObjectMeta) {
+	a.ObjectMeta = m
+}
+
+type GenericClusterObjectDeployment struct {
+	corev1alpha1.ClusterObjectDeployment
+}
+
+func (a *GenericClusterObjectDeployment) ClientObject() client.Object {
+	return &a.ClusterObjectDeployment
+}
+
+func (a *GenericClusterObjectDeployment) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+	return a.Spec.Template.Spec.Phases
+}
+
+func (a *GenericClusterObjectDeployment) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Template.Spec.Phases = phases
+}
+
+func (a *GenericClusterObjectDeployment) GetConditions() []metav1.Condition {
+	return a.Status.Conditions
+}
+
+func (a *GenericClusterObjectDeployment) GetObjectMeta() metav1.ObjectMeta {
+	return a.ObjectMeta
+}
+
+func (a *GenericClusterObjectDeployment) SetObjectMeta(m metav1.ObjectMeta) {
+	a.ObjectMeta = m
+}
+
+var (
+	objectDeploymentGVK        = corev1alpha1.GroupVersion.WithKind("ObjectDeployment")
+	clusterObjectDeploymentGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment")
+)
+
+func newObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(objectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericObjectDeployment{ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
+}
+
+func newClusterObjectDeployment(scheme *runtime.Scheme) genericObjectDeployment {
+	obj, err := scheme.New(clusterObjectDeploymentGVK)
+	if err != nil {
+		panic(err)
+	}
+
+	return &GenericClusterObjectDeployment{ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
 }

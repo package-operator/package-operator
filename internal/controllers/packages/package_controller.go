@@ -9,14 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
@@ -27,7 +23,8 @@ type reconciler interface {
 
 // Generic reconciler for both Package and ClusterPackage objects.
 type GenericPackageController struct {
-	newPackage genericPackageFactory
+	newPackage          genericPackageFactory
+	newObjectDeployment genericObjectDeploymentFactory
 
 	client     client.Client
 	log        logr.Logger
@@ -49,7 +46,7 @@ func NewPackageController(
 	scheme *runtime.Scheme,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericPackage,
+		newGenericPackage, newGenericObjectDeployment,
 		c, log, scheme, ownerhandling.NewAnnotation(scheme),
 	)
 }
@@ -59,23 +56,25 @@ func NewClusterPackageController(
 	scheme *runtime.Scheme,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericClusterPackage,
+		newGenericClusterPackage, newGenericClusterObjectDeployment,
 		c, log, scheme, ownerhandling.NewNative(scheme),
 	)
 }
 
 func newGenericPackageController(
 	newPackage genericPackageFactory,
+	newObjectDeployment genericObjectDeploymentFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
-		newPackage:       newPackage,
-		client:           client,
-		log:              log,
-		scheme:           scheme,
-		jobOwnerStrategy: jobOwnerStrategy,
+		newPackage:          newPackage,
+		newObjectDeployment: newObjectDeployment,
+		client:              client,
+		log:                 log,
+		scheme:              scheme,
+		jobOwnerStrategy:    jobOwnerStrategy,
 	}
 
 	controller.reconciler = []reconciler{
@@ -85,6 +84,11 @@ func newGenericPackageController(
 			newPackage:       newPackage,
 			jobOwnerStrategy: jobOwnerStrategy,
 		},
+		&objectDeploymentStatusReconciler{
+			client:              client,
+			scheme:              scheme,
+			newObjectDeployment: newObjectDeployment,
+		},
 	}
 
 	return controller
@@ -92,6 +96,7 @@ func newGenericPackageController(
 
 func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
 	pkg := c.newPackage(c.scheme).ClientObject()
+	objDep := c.newObjectDeployment(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(pkg).
@@ -101,17 +106,7 @@ func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			c.jobOwnerStrategy.EnqueueRequestForOwner(pkg, true),
 		).
-		Watches(
-			&source.Kind{Type: &corev1alpha1.ObjectDeployment{}},
-			&handler.EnqueueRequestForOwner{
-				IsController: true,
-				OwnerType:    &corev1alpha1.Package{},
-			},
-			builder.WithPredicates(predicate.Funcs{
-				CreateFunc:  func(ce event.CreateEvent) bool { return false },
-				GenericFunc: func(ge event.GenericEvent) bool { return false },
-			}),
-		).
+		Owns(objDep).
 		Complete(c)
 }
 

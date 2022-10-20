@@ -27,10 +27,7 @@ func (r *jobReconciler) Reconcile(
 	ctx context.Context, pkg genericPackage,
 ) (res ctrl.Result, err error) {
 	foundJob := &batchv1.Job{}
-	desiredJob, err := pkg.RenderPackageLoaderJob()
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to render the job resource from packageManifest: %w", err)
-	}
+	desiredJob := pkg.RenderPackageLoaderJob()
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredJob), foundJob); err != nil {
 		if errors.IsNotFound(err) {
 			if err := r.jobOwnerStrategy.SetControllerReference(pkg.ClientObject(), desiredJob); err != nil {
@@ -64,7 +61,7 @@ func (r *jobReconciler) Reconcile(
 					Type:               corev1alpha1.PackageUnpacked,
 					Status:             metav1.ConditionFalse,
 					Reason:             "PackageLoaderFailed",
-					Message:            "Job to load the package failed",
+					Message:            fmt.Sprintf("Job to load the package failed: %s", cond.Message),
 					ObservedGeneration: pkg.ClientObject().GetGeneration(),
 				})
 			return ctrl.Result{}, r.client.Delete(ctx, foundJob)
