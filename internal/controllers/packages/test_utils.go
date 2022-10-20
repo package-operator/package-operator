@@ -67,3 +67,29 @@ func (r *jobReconcilerMock) Reconcile(
 	args := r.Called(ctx, pkg)
 	return args.Get(0).(ctrl.Result), args.Error(1)
 }
+
+func sortInsensitiveStringSlicesMatch(slice1, slice2 []string) bool {
+	if len(slice1) != len(slice2) {
+		return false
+	}
+	map1 := map[string]int{}
+	map2 := map[string]int{}
+
+	for _, s := range slice1 {
+		map1[s]++
+	}
+	for _, s := range slice2 {
+		map2[s]++
+	}
+
+	if len(map1) != len(map2) {
+		return false
+	}
+
+	for k := range map1 {
+		if map1[k] != map2[k] {
+			return false
+		}
+	}
+	return true
+}
