@@ -3,7 +3,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -58,7 +57,7 @@ func TestGenericPackageController(t *testing.T) {
 		},
 		{
 			name:                                "package found with no finalizers and both objectDeployment and job reconciler err-ing out",
-			finalizersOnPkg:                     []string{},
+			finalizersOnPkg:                     packageFinalizers(),
 			jobReconcilerErr:                    errWithStatusError{errMsg: "job reconciliation failed"},
 			objectDeploymentStatusReconcilerErr: errWithStatusError{errMsg: "objectDeployment reconciliation failed"},
 		},
@@ -104,7 +103,7 @@ func TestGenericPackageController(t *testing.T) {
 
 			testClient.AssertCalled(t, "Get", mock.Anything, types.NamespacedName{Name: pkgName, Namespace: pkgNamespace}, mock.Anything, mock.Anything)
 
-			if !reflect.DeepEqual(packageFinalizers(), testCase.finalizersOnPkg) {
+			if !sortInsensitiveStringSlicesMatch(packageFinalizers(), testCase.finalizersOnPkg) || !foundPkg.DeletionTimestamp.IsZero() {
 				testClient.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			} else {
 				testClient.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
