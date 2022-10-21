@@ -21,13 +21,14 @@ type jobReconciler struct {
 	newPackage       genericPackageFactory
 	client           client.Client
 	jobOwnerStrategy ownerStrategy
+	pkoNamespace     string
 }
 
 func (r *jobReconciler) Reconcile(
 	ctx context.Context, pkg genericPackage,
 ) (res ctrl.Result, err error) {
 	foundJob := &batchv1.Job{}
-	desiredJob := pkg.RenderPackageLoaderJob()
+	desiredJob := pkg.RenderPackageLoaderJob(r.pkoNamespace)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredJob), foundJob); err != nil {
 		if errors.IsNotFound(err) {
 			if err := r.jobOwnerStrategy.SetControllerReference(pkg.ClientObject(), desiredJob); err != nil {

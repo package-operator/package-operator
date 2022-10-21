@@ -32,6 +32,7 @@ type GenericPackageController struct {
 	reconciler []reconciler
 
 	jobOwnerStrategy ownerStrategy
+	pkoNamespace     string
 }
 
 type ownerStrategy interface {
@@ -44,20 +45,21 @@ type ownerStrategy interface {
 func NewPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
+	pkoNamespace string,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericPackage, newGenericObjectDeployment,
-		c, log, scheme, ownerhandling.NewAnnotation(scheme),
+		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace,
 	)
 }
 
 func NewClusterPackageController(
 	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme,
+	scheme *runtime.Scheme, pkoNamespace string,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericClusterPackage, newGenericClusterObjectDeployment,
-		c, log, scheme, ownerhandling.NewNative(scheme),
+		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace,
 	)
 }
 
@@ -67,6 +69,7 @@ func newGenericPackageController(
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,
+	pkoNamespace string,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -75,6 +78,7 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		jobOwnerStrategy:    jobOwnerStrategy,
+		pkoNamespace:        pkoNamespace,
 	}
 
 	controller.reconciler = []reconciler{
@@ -83,6 +87,7 @@ func newGenericPackageController(
 			client:           client,
 			newPackage:       newPackage,
 			jobOwnerStrategy: jobOwnerStrategy,
+			pkoNamespace:     pkoNamespace,
 		},
 		&objectDeploymentStatusReconciler{
 			client:              client,
@@ -124,17 +129,17 @@ func (c *GenericPackageController) Reconcile(
 	}
 
 	pkgClientObject := pkg.ClientObject()
-	if err := controllers.EnsureFinalizers(ctx, c.client, pkgClientObject, packageFinalizers()...); err != nil {
+	if err := controllers.EnsureFinalizers(ctx, c.client, pkgClientObject, getPackageFinalizerNames()...); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
 		for _, finalizer := range pkgClientObject.GetFinalizers() {
-			cleaner, ok := FinalizersToCleaners[Finalizer(finalizer)]
+			packageFinalizer, ok := findFinalizerByName(finalizer)
 			if !ok {
 				continue
 			}
-			if err := cleaner(c.client, pkg); err != nil {
+			if err := packageFinalizer.cleaner(ctx, c.client, pkg, c.pkoNamespace); err != nil {
 				return ctrl.Result{}, fmt.Errorf("error occurred while cleaning up the '%s' finalizer of PackageManifest: %w", finalizer, err)
 			}
 			if err := controllers.RemoveFinalizers(ctx, c.client, pkgClientObject, finalizer); err != nil {

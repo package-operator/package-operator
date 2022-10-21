@@ -17,7 +17,7 @@ type genericPackage interface {
 	ClientObject() client.Object
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
-	RenderPackageLoaderJob() *batchv1.Job
+	RenderPackageLoaderJob(jobNamespace string) *batchv1.Job
 	GetImage() string
 }
 
@@ -126,13 +126,13 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericPackage) RenderPackageLoaderJob() *batchv1.Job {
+func (a *GenericPackage) RenderPackageLoaderJob(jobNamespace string) *batchv1.Job {
 	packageName, packageNamespace, packageImage := a.Package.Name, a.Package.Namespace, a.Package.Spec.Image
 	jobName := fmt.Sprintf("job-%s", packageName)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      jobName,
-			Namespace: "package-operator-system", // TODO: sort out all the blockers hurdling us to spin up this job in the `packageNamespace`
+			Namespace: jobNamespace, // TODO: sort out all the blockers hurdling us to spin up this job in the `packageNamespace`
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -189,13 +189,13 @@ func (a *GenericPackage) RenderPackageLoaderJob() *batchv1.Job {
 	return job
 }
 
-func (a *GenericClusterPackage) RenderPackageLoaderJob() *batchv1.Job {
+func (a *GenericClusterPackage) RenderPackageLoaderJob(jobNamespace string) *batchv1.Job {
 	packageName, packageImage := a.ClusterPackage.Name, a.ClusterPackage.Spec.Image
 	jobName := fmt.Sprintf("job-%s", packageName)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      jobName,
-			Namespace: "package-operator-system",
+			Namespace: jobNamespace,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{

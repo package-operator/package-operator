@@ -30,12 +30,13 @@ func init() {
 	}
 }
 
-// nolint:dupl
+// nolint:dupl,maintidx
 func Test_jobReconciler(t *testing.T) {
 	t.Run("create desiredJob with ownerReference when no job found", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		pkoNamespace := "package-operator-system"
 		pkgName, pkgNamespace := "foo", "foo-ns"
-		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), "package-operator-system"
+		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), pkoNamespace
 
 		pkg := &GenericPackage{
 			corev1alpha1.Package{
@@ -66,9 +67,10 @@ func Test_jobReconciler(t *testing.T) {
 			newPackage:       newGenericPackage,
 			client:           testClient,
 			jobOwnerStrategy: jobOwnerStrategy,
+			pkoNamespace:     pkoNamespace,
 		}
 
-		desiredJob := pkg.RenderPackageLoaderJob()
+		desiredJob := pkg.RenderPackageLoaderJob(jobNamespace)
 
 		ctx := context.Background()
 		res, err := r.Reconcile(ctx, pkg)
@@ -82,8 +84,9 @@ func Test_jobReconciler(t *testing.T) {
 
 	t.Run("job found with succeeded completion", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		pkoNamespace := "package-operator-system"
 		pkgName, pkgNamespace := "foo", "foo-ns"
-		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), "package-operator-system"
+		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), pkoNamespace
 
 		pkg := &GenericPackage{
 			corev1alpha1.Package{
@@ -116,9 +119,10 @@ func Test_jobReconciler(t *testing.T) {
 			Return(nil)
 
 		r := &jobReconciler{
-			scheme:     testScheme,
-			newPackage: newGenericPackage,
-			client:     testClient,
+			scheme:       testScheme,
+			newPackage:   newGenericPackage,
+			client:       testClient,
+			pkoNamespace: pkoNamespace,
 		}
 
 		ctx := context.Background()
@@ -148,8 +152,9 @@ func Test_jobReconciler(t *testing.T) {
 
 	t.Run("job found with failed completion", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		pkoNamespace := "package-operator-system"
 		pkgName, pkgNamespace := "foo", "foo-ns"
-		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), "package-operator-system"
+		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), pkoNamespace
 
 		pkg := &GenericPackage{
 			corev1alpha1.Package{
@@ -189,9 +194,10 @@ func Test_jobReconciler(t *testing.T) {
 			Return(nil)
 
 		r := &jobReconciler{
-			scheme:     testScheme,
-			newPackage: newGenericPackage,
-			client:     testClient,
+			scheme:       testScheme,
+			newPackage:   newGenericPackage,
+			client:       testClient,
+			pkoNamespace: pkoNamespace,
 		}
 
 		ctx := context.Background()
@@ -223,8 +229,9 @@ func Test_jobReconciler(t *testing.T) {
 
 	t.Run("job found to under progress", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		pkoNamespace := "package-operator-system"
 		pkgName, pkgNamespace := "foo", "foo-ns"
-		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), "package-operator-system"
+		jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), pkoNamespace
 
 		pkg := &GenericPackage{
 			corev1alpha1.Package{
@@ -258,9 +265,10 @@ func Test_jobReconciler(t *testing.T) {
 			Return(nil)
 
 		r := &jobReconciler{
-			scheme:     testScheme,
-			newPackage: newGenericPackage,
-			client:     testClient,
+			scheme:       testScheme,
+			newPackage:   newGenericPackage,
+			client:       testClient,
+			pkoNamespace: pkoNamespace,
 		}
 
 		ctx := context.Background()
