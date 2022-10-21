@@ -96,7 +96,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		Port:                       9443,
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
-		LeaderElectionID:           "klsdfu452p3.package-operator-lock", // TODO: Check this, just put random chars
+		LeaderElectionID:           "klsdfu452p3.package-operator-lock",
 	})
 	if err != nil {
 		return fmt.Errorf("creating manager: %w", err)
