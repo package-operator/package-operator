@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"sigs.k8s.io/yaml"
 
 	"github.com/go-logr/logr"
@@ -27,8 +29,6 @@ import (
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -588,7 +588,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
 
-	// Replace image
+	// Insert new image in remote-phase-manager deployment manifest
 	remotePhaseManagerDeployment := &appsv1.Deployment{}
 	if err := cluster.Scheme.Convert(
 		&objs[0], remotePhaseManagerDeployment, nil); err != nil {
@@ -607,26 +607,15 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
-	// TODO: Create and wait is kind of annoying because it doesn't update anything
-	// Create the service accounts before exporting the kubeconfig
+	// TODO: Beware, CreateAndWaitFromFolders doesn't update anything
+	// Create the service accounts and related dependencies
 	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
 		"config/remote-phase-static-deployment",
 	}); err != nil {
 		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
 	}
 
-	// Replace kubeconfig path in secret
-	secret := &corev1.Secret{}
-	objs, err = dev.LoadKubernetesObjectsFromFile(
-		"config/remote-phase-static-deployment/2-secret.yaml.tpl")
-	if err != nil {
-		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
-	}
-	if err := cluster.Scheme.Convert(
-		&objs[0], secret, nil); err != nil {
-		return fmt.Errorf("converting to Secret: %w", err)
-	}
-
+	// Get Kubeconfig, will be edited for the target service account
 	targetKubeconfigPath := os.Getenv("TARGET_KUBECONFIG_PATH")
 	var kubeconfigBytes []byte
 	if len(targetKubeconfigPath) == 0 {
@@ -651,6 +640,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		return fmt.Errorf("unmarshalling kubeconfig: %w", err)
 	}
 
+	// Get target cluster service account
 	targetSASecret := &corev1.Secret{}
 	err = cluster.CtrlClient.Get(context.TODO(),
 		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target"}, targetSASecret)
@@ -658,6 +648,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		return fmt.Errorf("reading in service account secret: %w", err)
 	}
 
+	// Insert target cluster service account token into kubeconfig
 	kubeconfigMap["users"] = []map[string]interface{}{
 		{
 			"name": "kind-package-operator-dev",
@@ -672,14 +663,29 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		return fmt.Errorf("marshalling new kubeconfig back to yaml: %w", err)
 	}
 
+	// Create a new secret for the kubeconfig
+	secret := &corev1.Secret{}
+	objs, err = dev.LoadKubernetesObjectsFromFile(
+		"config/remote-phase-static-deployment/2-secret.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
+	}
+	if err := cluster.Scheme.Convert(
+		&objs[0], secret, nil); err != nil {
+		return fmt.Errorf("converting to Secret: %w", err)
+	}
+
+	// insert the new kubeconfig into the secret
 	secret.Data = map[string][]byte{"kubeconfig": newKubeconfigBytes}
 
 	ctx = logr.NewContext(ctx, logger)
 
+	// Deploy the secret with the new kubeconfig
 	_ = cluster.CtrlClient.Delete(ctx, secret)
 	if err := cluster.CreateAndWaitForReadiness(ctx, secret); err != nil {
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
 	}
+	// Deploy the remote phase manager deployment
 	_ = cluster.CtrlClient.Delete(ctx, remotePhaseManagerDeployment)
 	if err := cluster.CreateAndWaitForReadiness(ctx, remotePhaseManagerDeployment); err != nil {
 		return fmt.Errorf("deploy remote-phase-manager: %w", err)

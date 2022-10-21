@@ -50,7 +50,7 @@ rules:
 - apiGroups:
     - package-operator.run
   resources:
-    - objectsets  # TODO: for some reason it wants to list objects for the TestObjectSet_handover/with_hosted-cluster_phase_class, stop if from
+    #- objectsets  # TODO: for some reason it wants to list objects for the TestObjectSet_handover/with_hosted-cluster_phase_class, stop if from
     - objectsetphases
     - objectsetphases/status
     - clusterobjectsetphases

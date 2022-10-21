@@ -71,10 +71,6 @@ func main() {
 		panic(err)
 	}
 
-	targetScheme := runtime.NewScheme()
-	if err := clientgoscheme.AddToScheme(targetScheme); err != nil {
-		panic(err)
-	}
 	if opts.printVersion {
 		version := "binary compiled without version info"
 
@@ -82,17 +78,17 @@ func main() {
 			version = info.String()
 		}
 
-		fmt.Fprintln(os.Stderr, version)
+		_, _ = fmt.Fprintln(os.Stderr, version)
 		os.Exit(2)
 	}
 
-	if err := run(setupLog, scheme, targetScheme, opts); err != nil {
+	if err := run(setupLog, scheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 }
 
-func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error {
+func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,
@@ -139,7 +135,7 @@ func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error
 			case err := <-errCh:
 				return err
 			case <-ctx.Done():
-				s.Close()
+				_ = s.Close()
 				return nil
 			}
 		}))
@@ -157,7 +153,7 @@ func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error
 		return fmt.Errorf("creating target cluster rest mapper: %w", err)
 	}
 	targetClient, err := client.New(targetCfg, client.Options{
-		Scheme: targetScheme,
+		Scheme: scheme,
 		Mapper: targetMapper,
 	})
 	if err != nil {
@@ -170,7 +166,7 @@ func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error
 
 	// TODO: Only watch objectSets in the package operator namespace?
 	dc := dynamiccache.NewCache(
-		targetCfg, targetScheme, targetMapper, recorder,
+		targetCfg, scheme, targetMapper, recorder,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
