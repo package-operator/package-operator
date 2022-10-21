@@ -121,7 +121,7 @@ func (Test) Integration(ctx context.Context) error {
 // --------
 type Build mg.Namespace
 
-// Build all PKO binaries for the architecture of this machine. 
+// Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
@@ -607,7 +607,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
-	// TODO: Beware, CreateAndWaitFromFolders doesn't update anything
+	// Beware: CreateAndWaitFromFolders doesn't update anything
 	// Create the service accounts and related dependencies
 	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
 		"config/remote-phase-static-deployment",
@@ -634,7 +634,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 		}
 	}
 
-	kubeconfigMap := map[string]interface{}{} // TODO: There is no corev1 type for this, right?
+	kubeconfigMap := map[string]interface{}{}
 	err = yaml.UnmarshalStrict(kubeconfigBytes, &kubeconfigMap)
 	if err != nil {
 		return fmt.Errorf("unmarshalling kubeconfig: %w", err)

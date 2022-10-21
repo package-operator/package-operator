@@ -164,7 +164,6 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	recorder := metrics.NewRecorder()
 	recorder.Register()
 
-	// TODO: Only watch objectSets in the package operator namespace?
 	dc := dynamiccache.NewCache(
 		targetCfg, scheme, targetMapper, recorder,
 		dynamiccache.SelectorsByGVK{
