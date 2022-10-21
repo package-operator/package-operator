@@ -150,6 +150,10 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		res.RequeueAfter = time.Until(progressDeadline)
 
 		if progressDeadline.After(time.Now()) {
+			deadlineExceededCond := meta.FindStatusCondition(
+				*objectDeployment.GetConditions(),
+				corev1alpha1.ObjectDeploymentProgressDeadlineExceeded)
+
 			// Deadline exceeded
 			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
 				Type:    corev1alpha1.ObjectDeploymentProgressDeadlineExceeded,
@@ -157,13 +161,16 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 				Reason:  "ProgressDeadlineExceeded",
 				Message: fmt.Sprintf("ObjectDeployment exceeded it's progress deadline of %s", progressDeadlineDuration),
 			})
-			//nolint:goerr113
-			sentry.
-				CaptureException(fmt.Errorf(
-					"ObjectDeployment %q exceeded it's progress deadline of %s",
-					client.ObjectKeyFromObject(objectDeployment.ClientObject()),
-					progressDeadlineDuration),
-				)
+
+			if deadlineExceededCond == nil {
+				key := client.ObjectKeyFromObject(objectDeployment.ClientObject())
+				//nolint:goerr113
+				sentry.
+					CaptureException(fmt.Errorf(
+						"ObjectDeployment %q exceeded it's progress deadline of %s",
+						key, progressDeadlineDuration),
+					)
+			}
 		}
 	}
 

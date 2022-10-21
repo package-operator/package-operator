@@ -62,11 +62,14 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 
 	if len(opts.sentryDSN) > 0 {
-		setupLog.Info("setting up sentry")
+		setupLog.Info("setting up sentry", "dsn", opts.sentryDSN)
 		err := sentry.Init(sentry.ClientOptions{
-			Dsn:     opts.sentryDSN,
-			Release: "v0.0.0",
-			Debug:   true,
+			Dsn:         opts.sentryDSN,
+			Release:     "Package Operator v1.0.0",
+			Debug:       true,
+			SampleRate:  1.0,
+			ServerName:  "test",
+			Environment: "my-notebook",
 		})
 		if err != nil {
 			panic(err)
