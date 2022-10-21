@@ -170,7 +170,7 @@ func run(log logr.Logger, scheme, targetScheme *runtime.Scheme, opts opts) error
 
 	// TODO: Only watch objectSets in the package operator namespace?
 	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), targetMapper, recorder,
+		targetCfg, targetScheme, targetMapper, recorder,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
