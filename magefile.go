@@ -643,7 +643,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 	// Get target cluster service account
 	targetSASecret := &corev1.Secret{}
 	err = cluster.CtrlClient.Get(context.TODO(),
-		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target"}, targetSASecret)
+		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target-cluster"}, targetSASecret)
 	if err != nil {
 		return fmt.Errorf("reading in service account secret: %w", err)
 	}
