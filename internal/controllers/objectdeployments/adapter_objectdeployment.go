@@ -16,6 +16,7 @@ type genericObjectDeployment interface {
 	GetSelector() metav1.LabelSelector
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
 	GetRevisionHistoryLimit() *int32
+	GetProgressDeadlineSeconds() *int32
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string
@@ -113,6 +114,10 @@ func (a *GenericObjectDeployment) GetStatusTemplateHash() string {
 	return a.Status.TemplateHash
 }
 
+func (a *GenericObjectDeployment) GetProgressDeadlineSeconds() *int32 {
+	return a.Spec.ProgressDeadlineSeconds
+}
+
 type GenericClusterObjectDeployment struct {
 	corev1alpha1.ClusterObjectDeployment
 }
@@ -169,4 +174,8 @@ func (a *GenericClusterObjectDeployment) SetStatusTemplateHash(templateHash stri
 
 func (a *GenericClusterObjectDeployment) GetStatusTemplateHash() string {
 	return a.Status.TemplateHash
+}
+
+func (a *GenericClusterObjectDeployment) GetProgressDeadlineSeconds() *int32 {
+	return a.Spec.ProgressDeadlineSeconds
 }

@@ -159,6 +159,11 @@ func (o *genericObjectDeploymentMock) GetObjectSetTemplate() corev1alpha1.Object
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
 }
 
+func (o *genericObjectDeploymentMock) GetProgressDeadlineSeconds() *int32 {
+	args := o.Called()
+	return args.Get(0).(*int32)
+}
+
 type objectSetSubReconcilerMock struct {
 	mock.Mock
 }

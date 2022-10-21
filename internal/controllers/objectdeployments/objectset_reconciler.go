@@ -3,6 +3,7 @@ package objectdeployments
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,7 +87,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	currentObjectSet genericObjectSet,
 	prevObjectSets []genericObjectSet,
 	objectDeployment genericObjectDeployment,
-) {
+) (res ctrl.Result) {
 	var oldRevisionAvailable bool
 	if currentObjectSet != nil && currentObjectSet.IsAvailable() {
 		// Latest revision is available, so we are no longer progressing.
@@ -105,8 +106,11 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			Message:            "Latest ObjectSet is Available.",
 			ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
 		})
-		return
+		// ensure to clear ProgressDeadlineExceeded condition, if present
+		meta.RemoveStatusCondition(objectDeployment.GetConditions(), corev1alpha1.ObjectDeploymentProgressDeadlineExceeded)
+		return res
 	}
+
 	// latest object revision is not present or available
 	for _, objectSet := range prevObjectSets {
 		availableCond := meta.FindStatusCondition(
@@ -122,8 +126,8 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		}
 	}
 
-	// Since the latest objectRevision is not present/available, we are progressing to a
-	// new revision
+	// Since the latest objectRevision is not present/available,
+	// we are progressing to a new revision
 	meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
 		Type:               corev1alpha1.ObjectDeploymentProgressing,
 		Status:             metav1.ConditionTrue,
@@ -131,6 +135,29 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		Message:            "Progressing to a new ObjectSet.",
 		ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
 	})
+
+	progressDeadlineSeconds := objectDeployment.GetProgressDeadlineSeconds()
+	if progressDeadlineSeconds != nil {
+		progressingCondition := meta.FindStatusCondition(*objectDeployment.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
+		// We should resync this deployment at some point in the future[1]
+		// and check whether it has timed out.
+		//
+		// For example, if a Deployment updated its Progressing condition 3 minutes ago and has a
+		// deadline of 10 minutes, it would need to be resynced for a progress check after 7 minutes.
+		progressDeadlineDuration := time.Duration(*progressDeadlineSeconds) * time.Second
+		progressDeadline := progressingCondition.LastTransitionTime.Add(progressDeadlineDuration)
+		res.RequeueAfter = time.Until(progressDeadline)
+
+		if progressDeadline.After(time.Now()) {
+			// Deadline exceeded
+			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
+				Type:    corev1alpha1.ObjectDeploymentProgressDeadlineExceeded,
+				Status:  metav1.ConditionTrue,
+				Reason:  "ProgressDeadlineExceeded",
+				Message: fmt.Sprintf("ObjectDeployment exceeded it's progress deadline of %s", progressDeadlineDuration),
+			})
+		}
+	}
 
 	// Atleast one objectset old revision is still ava
 	if oldRevisionAvailable {
@@ -150,4 +177,5 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
 		})
 	}
+	return res
 }
