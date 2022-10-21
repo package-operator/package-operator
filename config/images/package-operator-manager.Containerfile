@@ -1,9 +1,8 @@
-FROM scratch
+FROM alpine
 
 WORKDIR /
-COPY passwd /etc/passwd
 COPY package-operator-manager /
 
-USER "noroot"
-
+RUN apk add ca-certificates --no-cache
+USER noroot
 ENTRYPOINT ["/package-operator-manager"]
