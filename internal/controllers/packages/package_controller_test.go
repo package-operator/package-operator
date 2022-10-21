@@ -19,10 +19,10 @@ import (
 
 func TestGenericPackageController(t *testing.T) {
 	t.Run("Package not found", func(t *testing.T) {
-
+		pkoNamespace := "package-operator-system"
 		pkgName, pkgNamespace := "foo", "foo-ns"
 
-		controller, testClient, _, _ := newControllerAndMocks()
+		controller, testClient, _, _ := newControllerAndMocks(pkoNamespace)
 		testClient.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errWithStatusError{errStatusReason: metav1.StatusReasonNotFound})
 		res, err := controller.Reconcile(context.TODO(), ctrl.Request{NamespacedName: types.NamespacedName{Name: pkgName, Namespace: pkgNamespace}})
 		testClient.AssertCalled(t, "Get", mock.Anything, types.NamespacedName{Name: pkgName, Namespace: pkgNamespace}, mock.Anything, mock.Anything)
@@ -45,7 +45,7 @@ func TestGenericPackageController(t *testing.T) {
 		},
 		{
 			name:                                "package found with job reconciler err-ing out",
-			finalizersOnPkg:                     packageFinalizers(),
+			finalizersOnPkg:                     getPackageFinalizerNames(),
 			jobReconcilerErr:                    errWithStatusError{errMsg: "job reconciliation failed"},
 			objectDeploymentStatusReconcilerErr: nil,
 		},
@@ -57,7 +57,7 @@ func TestGenericPackageController(t *testing.T) {
 		},
 		{
 			name:                                "package found with no finalizers and both objectDeployment and job reconciler err-ing out",
-			finalizersOnPkg:                     packageFinalizers(),
+			finalizersOnPkg:                     getPackageFinalizerNames(),
 			jobReconcilerErr:                    errWithStatusError{errMsg: "job reconciliation failed"},
 			objectDeploymentStatusReconcilerErr: errWithStatusError{errMsg: "objectDeployment reconciliation failed"},
 		},
@@ -72,9 +72,10 @@ func TestGenericPackageController(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			pkoNamespace := "package-operator-system"
 			pkgName, pkgNamespace := "foo", "foo-ns"
 
-			controller, testClient, or, jr := newControllerAndMocks()
+			controller, testClient, or, jr := newControllerAndMocks(pkoNamespace)
 			foundPkg := &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              pkgName,
@@ -89,7 +90,6 @@ func TestGenericPackageController(t *testing.T) {
 			}).Return(nil)
 
 			testClient.On("Get", mock.Anything, mock.Anything, &batchv1.Job{}, mock.Anything).Return(nil)
-			testClient.On("Get", mock.Anything, mock.Anything, &corev1alpha1.ObjectDeployment{}, mock.Anything).Return(nil)
 			testClient.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			testClient.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -103,17 +103,16 @@ func TestGenericPackageController(t *testing.T) {
 
 			testClient.AssertCalled(t, "Get", mock.Anything, types.NamespacedName{Name: pkgName, Namespace: pkgNamespace}, mock.Anything, mock.Anything)
 
-			if !sortInsensitiveStringSlicesMatch(packageFinalizers(), testCase.finalizersOnPkg) || !foundPkg.DeletionTimestamp.IsZero() {
+			if !sortInsensitiveStringSlicesMatch(getPackageFinalizerNames(), testCase.finalizersOnPkg) || !foundPkg.DeletionTimestamp.IsZero() {
 				testClient.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			} else {
 				testClient.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			}
 
 			if !foundPkg.DeletionTimestamp.IsZero() {
-				jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), "package-operator-system"
+				jobName, jobNamespace := fmt.Sprintf("job-%s", pkgName), pkoNamespace
 				testClient.AssertCalled(t, "Get", mock.Anything, types.NamespacedName{Name: jobName, Namespace: jobNamespace}, mock.Anything, mock.Anything)
-				objDepName, objDepNamespace := pkgName, pkgNamespace
-				testClient.AssertCalled(t, "Get", mock.Anything, types.NamespacedName{Name: objDepName, Namespace: objDepNamespace}, mock.Anything, mock.Anything)
+				testClient.AssertCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
 				or.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				jr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				testClient.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -145,7 +144,7 @@ func TestGenericPackageController(t *testing.T) {
 
 }
 
-func newControllerAndMocks() (*GenericPackageController, *testutil.CtrlClient, *objectDeploymentStatusReconcilerMock, *jobReconcilerMock) {
+func newControllerAndMocks(pkoNamespace string) (*GenericPackageController, *testutil.CtrlClient, *objectDeploymentStatusReconcilerMock, *jobReconcilerMock) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 
@@ -155,6 +154,7 @@ func newControllerAndMocks() (*GenericPackageController, *testutil.CtrlClient, *
 		client:              c,
 		log:                 ctrl.Log.WithName("controllers"),
 		scheme:              scheme,
+		pkoNamespace:        pkoNamespace,
 	}
 	or := &objectDeploymentStatusReconcilerMock{}
 	jr := &jobReconcilerMock{}
