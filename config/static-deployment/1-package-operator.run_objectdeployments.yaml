@@ -43,6 +43,15 @@ spec:
           spec:
             description: ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
             properties:
+              progressDeadlineSeconds:
+                default: 600
+                description: The maximum time in seconds for a ObjectDeployment to
+                  make progress before it is considered to be failed. The ObjectDeployment
+                  controller will continue to process failed objectdeployments and
+                  a condition of type ProgressDeadlineExceeded will be surfaced in
+                  the ObjectDeployment status.
+                format: int32
+                type: integer
               revisionHistoryLimit:
                 default: 10
                 description: Number of old revisions in the form of archived ObjectSets
