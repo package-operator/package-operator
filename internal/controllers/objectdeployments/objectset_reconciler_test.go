@@ -203,6 +203,8 @@ func makeObjectDeploymentMock(name string, namespace string,
 	res.On("GetStatusCollisionCount").Return(nil)
 	res.On("GetNamespace").Return(namespace)
 	res.On("GetAnnotations").Return(map[string]string{})
+	var deadlineSeconds *int32
+	res.On("GetProgressDeadlineSeconds").Return(deadlineSeconds)
 	res.On("GetObjectSetTemplate").Return(
 		corev1alpha1.ObjectSetTemplate{},
 	)

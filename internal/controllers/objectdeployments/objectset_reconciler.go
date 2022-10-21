@@ -11,6 +11,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
+	"github.com/getsentry/sentry-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -156,6 +157,13 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 				Reason:  "ProgressDeadlineExceeded",
 				Message: fmt.Sprintf("ObjectDeployment exceeded it's progress deadline of %s", progressDeadlineDuration),
 			})
+			//nolint:goerr113
+			sentry.
+				CaptureException(fmt.Errorf(
+					"ObjectDeployment %q exceeded it's progress deadline of %s",
+					client.ObjectKeyFromObject(objectDeployment.ClientObject()),
+					progressDeadlineDuration),
+				)
 		}
 	}
 

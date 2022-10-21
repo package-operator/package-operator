@@ -12,6 +12,7 @@ import (
 
 	"package-operator.run/package-operator/internal/metrics"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +38,7 @@ type opts struct {
 	enableLeaderElection bool
 	probeAddr            string
 	printVersion         bool
+	sentryDSN            string
 }
 
 func main() {
@@ -53,12 +55,23 @@ func main() {
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
+	flag.StringVar(&opts.sentryDSN, "sentry-dsn", os.Getenv("PKO_SENTRY_DSN"), "Sentry DSN.")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	setupLog := ctrl.Log.WithName("setup")
+
+	if len(opts.sentryDSN) > 0 {
+		setupLog.Info("setting up sentry")
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn: opts.sentryDSN,
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	scheme := runtime.NewScheme()
-	setupLog := ctrl.Log.WithName("setup")
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
