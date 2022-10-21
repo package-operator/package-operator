@@ -64,7 +64,9 @@ func main() {
 	if len(opts.sentryDSN) > 0 {
 		setupLog.Info("setting up sentry")
 		err := sentry.Init(sentry.ClientOptions{
-			Dsn: opts.sentryDSN,
+			Dsn:     opts.sentryDSN,
+			Release: "v0.0.0",
+			Debug:   true,
 		})
 		if err != nil {
 			panic(err)
