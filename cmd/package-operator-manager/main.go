@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"package-operator.run/package-operator/internal/metrics"
@@ -16,8 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -28,15 +31,18 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	"package-operator.run/package-operator/internal/packages"
 )
 
 type opts struct {
 	metricsAddr          string
 	pprofAddr            string
 	namespace            string
+	image                string
 	enableLeaderElection bool
 	probeAddr            string
 	printVersion         bool
+	loadPackage          string
 }
 
 func main() {
@@ -47,12 +53,15 @@ func main() {
 		"The address the pprof web endpoint binds to.")
 	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
 		"The namespace the operator is deployed into.")
+	flag.StringVar(&opts.image, "image", os.Getenv("PKO_IMAGE"),
+		"Image package operator is deployed with.")
 	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
+	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -77,13 +86,56 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := run(setupLog, scheme, opts); err != nil {
+	if len(opts.loadPackage) > 0 {
+		namespace, name, found := strings.Cut(opts.loadPackage, string(types.Separator))
+		if !found {
+			fmt.Fprintln(os.Stderr, "invalid argument to --load-package, expected NamespaceName")
+			os.Exit(1)
+		}
+
+		packageKey := client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		}
+		if err := runLoader(scheme, packageKey); err != nil {
+			setupLog.Error(err, "unable to run package-loader")
+			os.Exit(1)
+		}
+	}
+
+	if err := runManager(setupLog, scheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 }
 
-func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+const packageFolderPath = "/package"
+
+func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return fmt.Errorf("creating target cluster client: %w", err)
+	}
+
+	var packageLoader *packages.PackageLoader
+	if len(packageKey.Namespace) > 0 {
+		// Package API
+		packageLoader = packages.NewPackageLoader(c, scheme)
+	} else {
+		// ClusterPackage API
+		packageLoader = packages.NewClusterPackageLoader(c, scheme)
+	}
+
+	ctx := logr.NewContext(context.Background(), ctrl.Log.WithName("package-loader"))
+	if err := packageLoader.Load(ctx, packageKey, packageFolderPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,

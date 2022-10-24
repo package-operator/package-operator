@@ -18,7 +18,7 @@ spec:
       serviceAccountName: package-operator
       containers:
       - name: manager
-        image: quay.io/openshift/package:latest
+        image: quay.io/package-operator/package-operator-manager:latest
         args:
         - --enable-leader-election
         env:
@@ -26,6 +26,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: PKO_IMAGE
+          value: "quay.io/package-operator/package-operator-manager:latest"
         livenessProbe:
           httpGet:
             path: /healthz

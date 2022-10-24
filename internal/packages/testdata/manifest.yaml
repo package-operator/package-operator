@@ -1,5 +1,7 @@
 apiVersion: manifests.package-operator.run/v1alpha1
 kind: PackageManifest
+metadata:
+  name: cool-package
 catalog:
   displayName: Cool Package
   shortDescription: xxx xxx xxx
@@ -17,6 +19,8 @@ catalog:
   - email: cool-package-people@example.com
     name: Cool package maintainers
 spec:
+  scopes:
+  - Namespaced
   phases:
   - name: pre-requisites
   - name: main-stuff

@@ -33,8 +33,8 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-  defaultImageOrg = "quay.io/package-operator"
-  clusterName     = "package-operator-dev"
+	defaultImageOrg = "quay.io/package-operator"
+	clusterName     = "package-operator-dev"
 )
 
 var (
@@ -129,7 +129,6 @@ type Build mg.Namespace
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "package-loader", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
 	)
@@ -152,7 +151,6 @@ func (Build) Image(image string) {
 func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
-		mg.F(Builder.Image, "package-loader"),
 		mg.F(Builder.Image, "package-operator-webhook"),
 		mg.F(Builder.Image, "remote-phase-manager"),
 	)
@@ -519,6 +517,13 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 		switch container.Name {
 		case "manager":
 			container.Image = packageOperatorManagerImage
+
+			for j := range container.Env {
+				env := &container.Env[j]
+				if env.Name == "PKO_IMAGE" {
+					env.Value = packageOperatorManagerImage
+				}
+			}
 		}
 	}
 
