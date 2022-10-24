@@ -26,7 +26,7 @@ type ObjectSetPhaseList struct {
 // ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 type ObjectSetPhaseSpec struct {
 	// Disables reconciliation of the ObjectSet.
-	// Only Status updates will still propagated, but object changes will not be reconciled.
+	// Only Status updates will still be propagated, but object changes will not be reconciled.
 	// +optional
 	Paused bool `json:"paused,omitempty"`
 
@@ -35,7 +35,7 @@ type ObjectSetPhaseSpec struct {
 	// Revision of the parent ObjectSet to use during object adoption.
 	Revision int64 `json:"revision"`
 
-	// Previous revisions of the ClusterObjectSet to adopt objects from.
+	// Previous revisions of the ObjectSet to adopt objects from.
 	Previous []PreviousRevisionReference `json:"previous,omitempty"`
 
 	// Availability Probes check objects that are part of the package.

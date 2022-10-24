@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ import (
 //
 //nolint:maintidx
 func TestObjectSet_setupPauseTeardown(t *testing.T) {
-	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+	defaultObjectSet := func(cm4, cm5 *corev1.ConfigMap, class string) (*corev1alpha1.ObjectSet, error) {
 		cm4Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm4)
 		if err != nil {
 			return nil, err
@@ -47,7 +48,8 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 				ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 					Phases: []corev1alpha1.ObjectSetTemplatePhase{
 						{
-							Name: "phase-1",
+							Name:  "phase-1",
+							Class: class,
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
 									Object: unstructured.Unstructured{Object: cm4Obj},
@@ -55,7 +57,8 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 							},
 						},
 						{
-							Name: "phase-2",
+							Name:  "phase-2",
+							Class: class,
 							Objects: []corev1alpha1.ObjectSetObject{
 								{
 									Object: unstructured.Unstructured{Object: cm5Obj},
@@ -89,24 +92,20 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		objectSet func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error)
+		name  string
+		class string
 	}{
 		{
-			name:      "without phase class",
-			objectSet: defaultObjectSet,
+			name:  "run without objectsetphase objects",
+			class: "",
 		},
 		{
-			name: "with phase class",
-			objectSet: func(cm4, cm5 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
-				objectSet, err := defaultObjectSet(cm4, cm5)
-				if err != nil {
-					return nil, err
-				}
-				objectSet.Spec.Phases[0].Class = "default"
-				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet, nil
-			},
+			name:  "run with sameclusterobjectsetphasecontroller",
+			class: "default",
+		},
+		{
+			name:  "run with remote phase manager",
+			class: "hosted-cluster",
 		},
 	}
 
@@ -132,7 +131,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			}
 			cm5.SetGroupVersionKind(cmGVK)
 
-			objectSet, err := test.objectSet(cm4, cm5)
+			objectSet, err := defaultObjectSet(cm4, cm5, test.class)
 			require.NoError(t, err)
 
 			cm4Key := client.ObjectKey{
@@ -302,7 +301,7 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 //nolint:maintidx
 func TestObjectSet_handover(t *testing.T) {
-	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
+	defaultObjectSetRev1 := func(cm1, cm2 *corev1.ConfigMap, class string) (*corev1alpha1.ObjectSet, error) {
 		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
 		if err != nil {
 			return nil, err
@@ -341,7 +340,7 @@ func TestObjectSet_handover(t *testing.T) {
 			},
 		}, nil
 	}
-	defaultObjectSetRev2 := func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error) {
+	defaultObjectSetRev2 := func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet, class string) (*corev1alpha1.ObjectSet, error) {
 		cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
 		if err != nil {
 			return nil, err
@@ -406,38 +405,22 @@ func TestObjectSet_handover(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		objectSetRev1 func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error)
-		objectSetRev2 func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error)
+		name  string
+		class string
 	}{
 		{
-			name:          "without phase class",
-			objectSetRev1: defaultObjectSetRev1,
-			objectSetRev2: defaultObjectSetRev2,
+			name:  "run without objectsetphase objects",
+			class: "",
 		},
 		{
-			name: "with phase class",
-			objectSetRev1: func(cm1, cm2 *corev1.ConfigMap) (*corev1alpha1.ObjectSet, error) {
-				objectSet, err := defaultObjectSetRev1(cm1, cm2)
-				if err != nil {
-					return nil, err
-				}
-				objectSet.Spec.Phases[0].Class = "default"
-				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet, nil
-			},
-			objectSetRev2: func(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet) (*corev1alpha1.ObjectSet, error) {
-				objectSet, err := defaultObjectSetRev2(cm1, cm3, rev1)
-				if err != nil {
-					return nil, err
-				}
-				objectSet.Spec.Phases[0].Class = "default"
-				objectSet.Spec.Phases[1].Class = "default"
-				return objectSet, nil
-			},
+			name:  "run with sameclusterobjectsetphasecontroller",
+			class: "default",
+		},
+		{
+			name:  "run with remote phase manager",
+			class: "hosted-cluster",
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cm1 := &corev1.ConfigMap{
@@ -457,7 +440,7 @@ func TestObjectSet_handover(t *testing.T) {
 			}
 			cm2.SetGroupVersionKind(cmGVK)
 
-			objectSetRev1, err := test.objectSetRev1(cm1, cm2)
+			objectSetRev1, err := defaultObjectSetRev1(cm1, cm2, test.class)
 			require.NoError(t, err)
 
 			cm3 := &corev1.ConfigMap{
@@ -467,7 +450,7 @@ func TestObjectSet_handover(t *testing.T) {
 			}
 			cm3.SetGroupVersionKind(cmGVK)
 
-			objectSetRev2, err := test.objectSetRev2(cm1, cm3, objectSetRev1)
+			objectSetRev2, err := defaultObjectSetRev2(cm1, cm3, objectSetRev1, test.class)
 			require.NoError(t, err)
 
 			ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -514,9 +497,10 @@ func TestObjectSet_handover(t *testing.T) {
 			require.NotNil(t, availableCond, "Available condition is expected to be reported")
 			assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
-			// expect cm-1 to still be present and now owned by Rev2.
+			// expect cm-1 to still be present and now controlled by Rev2.
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: cm1.Name, Namespace: objectSetRev1.Namespace}, currentCM1))
+
 			assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
 
 			// expect cm-2 to still be present.
@@ -600,17 +584,19 @@ func cleanupOnSuccess(ctx context.Context, t *testing.T, obj client.Object) {
 	})
 }
 
+// assertControllerNameHasPrefix can be used to check if an object is controlled by an owner object, or if it
+// is controlled by an object, which is controlled by an owner object. For example, given a configMap, you can
+// check if the ObjectSetPhase which controls the configMap is controlled by an ObjectSet.
 func assertControllerNameHasPrefix(t *testing.T, ownerNamePrefix string, obj client.Object) {
 	t.Helper()
 	found := controllerNameHasPrefix(ownerNamePrefix, obj)
 
-	if !found {
-		t.Errorf("controller name of %s not prefixed with %s", client.ObjectKeyFromObject(obj), ownerNamePrefix)
-	}
+	require.True(t, found, "controller name of %s not prefixed with %s", client.ObjectKeyFromObject(obj), ownerNamePrefix)
 }
 
 func controllerNameHasPrefix(ownerNamePrefix string, obj client.Object) bool {
-	for _, ownerRef := range obj.GetOwnerReferences() {
+	ownerRefs := append(getOwnerRefsFromAnnotations(obj), obj.GetOwnerReferences()...)
+	for _, ownerRef := range ownerRefs {
 		if ownerRef.Controller == nil || !*ownerRef.Controller {
 			continue
 		}
@@ -619,4 +605,20 @@ func controllerNameHasPrefix(ownerNamePrefix string, obj client.Object) bool {
 		}
 	}
 	return false
+}
+
+func getOwnerRefsFromAnnotations(obj client.Object) []metav1.OwnerReference {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return nil
+	}
+	if len(annotations["package-operator.run/owners"]) == 0 {
+		return nil
+	}
+
+	var ownerReferences []metav1.OwnerReference
+	if err := json.Unmarshal([]byte(annotations["package-operator.run/owners"]), &ownerReferences); err != nil {
+		panic(err)
+	}
+	return ownerReferences
 }

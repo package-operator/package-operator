@@ -4,8 +4,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -15,6 +17,10 @@ import (
 	"strings"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"sigs.k8s.io/yaml"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/magefile/mage/mg"
@@ -22,11 +28,13 @@ import (
 	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
 	module          = "github.com/package-operator/package-operator"
-	defaultImageOrg = "quay.io/package-operator"
+  defaultImageOrg = "quay.io/package-operator"
+  clusterName     = "package-operator-dev"
 )
 
 var (
@@ -105,7 +113,7 @@ func (Test) Integration(ctx context.Context) error {
 	if devEnvironment != nil {
 		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
 			"export", "logs", path.Join(cacheDir, "dev-env-logs"),
-			"--name", "package-operator-dev"); err != nil {
+			"--name", clusterName); err != nil {
 			logger.Error(err, "exporting logs")
 		}
 	}
@@ -122,6 +130,7 @@ func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "package-loader", runtime.GOOS, runtime.GOARCH),
+		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
 	)
 }
@@ -145,6 +154,7 @@ func (Build) Images() {
 		mg.F(Builder.Image, "package-operator-manager"),
 		mg.F(Builder.Image, "package-loader"),
 		mg.F(Builder.Image, "package-operator-webhook"),
+		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
 
@@ -160,6 +170,7 @@ func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
 		mg.F(Builder.Push, "package-operator-webhook"),
+		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
 
@@ -469,12 +480,16 @@ func (d Dev) Deploy(ctx context.Context) error {
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
+		mg.F(Dev.LoadImage, "remote-phase-manager"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
 	}
 	if err := d.deployPackageOperatorWebhook(ctx, devEnvironment.Cluster); err != nil {
+		return fmt.Errorf("deploying: %w", err)
+	}
+	if err := d.deployRemotePhaseManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
 	}
 	return nil
@@ -569,6 +584,119 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 	return nil
 }
 
+// Remote phase manager from local files.
+func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) error {
+	objs, err := dev.LoadKubernetesObjectsFromFile(
+		"config/remote-phase-static-deployment/deployment.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
+	}
+
+	// Insert new image in remote-phase-manager deployment manifest
+	remotePhaseManagerDeployment := &appsv1.Deployment{}
+	if err := cluster.Scheme.Convert(
+		&objs[0], remotePhaseManagerDeployment, nil); err != nil {
+		return fmt.Errorf("converting to Deployment: %w", err)
+	}
+	packageOperatorWebhookImage := os.Getenv("REMOTE_PHASE_MANAGER_IMAGE")
+	if len(packageOperatorWebhookImage) == 0 {
+		packageOperatorWebhookImage = Builder.imageURL("remote-phase-manager")
+	}
+	for i := range remotePhaseManagerDeployment.Spec.Template.Spec.Containers {
+		container := &remotePhaseManagerDeployment.Spec.Template.Spec.Containers[i]
+
+		switch container.Name {
+		case "manager":
+			container.Image = packageOperatorWebhookImage
+		}
+	}
+
+	// Beware: CreateAndWaitFromFolders doesn't update anything
+	// Create the service accounts and related dependencies
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
+		"config/remote-phase-static-deployment",
+	}); err != nil {
+		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
+	}
+
+	// Get Kubeconfig, will be edited for the target service account
+	targetKubeconfigPath := os.Getenv("TARGET_KUBECONFIG_PATH")
+	var kubeconfigBytes []byte
+	if len(targetKubeconfigPath) == 0 {
+		kubeconfigBuf := new(bytes.Buffer)
+		err = devEnvironment.RunKindCommand(ctx, kubeconfigBuf, os.Stderr,
+			"get", "kubeconfig",
+			"--name", clusterName, "--internal")
+		if err != nil {
+			return fmt.Errorf("exporting internal kubeconfig: %w", err)
+		}
+		kubeconfigBytes = kubeconfigBuf.Bytes()
+	} else {
+		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
+		if err != nil {
+			return fmt.Errorf("reading in kubeconfig: %w", err)
+		}
+	}
+
+	kubeconfigMap := map[string]interface{}{}
+	err = yaml.UnmarshalStrict(kubeconfigBytes, &kubeconfigMap)
+	if err != nil {
+		return fmt.Errorf("unmarshalling kubeconfig: %w", err)
+	}
+
+	// Get target cluster service account
+	targetSASecret := &corev1.Secret{}
+	err = cluster.CtrlClient.Get(context.TODO(),
+		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target-cluster"}, targetSASecret)
+	if err != nil {
+		return fmt.Errorf("reading in service account secret: %w", err)
+	}
+
+	// Insert target cluster service account token into kubeconfig
+	kubeconfigMap["users"] = []map[string]interface{}{
+		{
+			"name": "kind-package-operator-dev",
+			"user": map[string]string{
+				"token": string(targetSASecret.Data["token"]),
+			},
+		},
+	}
+
+	newKubeconfigBytes, err := yaml.Marshal(kubeconfigMap)
+	if err != nil {
+		return fmt.Errorf("marshalling new kubeconfig back to yaml: %w", err)
+	}
+
+	// Create a new secret for the kubeconfig
+	secret := &corev1.Secret{}
+	objs, err = dev.LoadKubernetesObjectsFromFile(
+		"config/remote-phase-static-deployment/2-secret.yaml.tpl")
+	if err != nil {
+		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
+	}
+	if err := cluster.Scheme.Convert(
+		&objs[0], secret, nil); err != nil {
+		return fmt.Errorf("converting to Secret: %w", err)
+	}
+
+	// insert the new kubeconfig into the secret
+	secret.Data = map[string][]byte{"kubeconfig": newKubeconfigBytes}
+
+	ctx = logr.NewContext(ctx, logger)
+
+	// Deploy the secret with the new kubeconfig
+	_ = cluster.CtrlClient.Delete(ctx, secret)
+	if err := cluster.CreateAndWaitForReadiness(ctx, secret); err != nil {
+		return fmt.Errorf("deploy kubeconfig secret: %w", err)
+	}
+	// Deploy the remote phase manager deployment
+	_ = cluster.CtrlClient.Delete(ctx, remotePhaseManagerDeployment)
+	if err := cluster.CreateAndWaitForReadiness(ctx, remotePhaseManagerDeployment); err != nil {
+		return fmt.Errorf("deploy remote-phase-manager: %w", err)
+	}
+	return nil
+}
+
 // Setup local dev environment with the package operator installed and run the integration test suite.
 func (d Dev) Integration(ctx context.Context) error {
 	mg.SerialDeps(
@@ -600,7 +728,7 @@ func (d Dev) init() {
 	)
 
 	devEnvironment = dev.NewEnvironment(
-		"package-operator-dev",
+		clusterName,
 		path.Join(cacheDir, "dev-env"),
 		dev.WithClusterOptions([]dev.ClusterOption{
 			dev.WithWaitOptions([]dev.WaitOption{

@@ -185,8 +185,9 @@ spec:
                   type: object
                 type: array
               paused:
-                description: Disables reconciliation of the ObjectSet. Only Status
-                  updates will still propagated, but object changes will not be reconciled.
+                description: Disables reconciliation of the ClusterObjectSet. Only
+                  Status updates will still be propagated, but object changes will
+                  not be reconciled.
                 type: boolean
               previous:
                 description: Previous revisions of the ClusterObjectSet to adopt objects
