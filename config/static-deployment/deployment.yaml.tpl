@@ -27,7 +27,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: PKO_SENTRY_DSN
-          value: "https://2a9bea4b2ee04fafa940ee32b0e4660b@glitchtip.stage.devshift.net/17"
+          value: ""
         livenessProbe:
           httpGet:
             path: /healthz
