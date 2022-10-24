@@ -26,7 +26,7 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-	defaultImageOrg = "quay.io/nschiede"
+	defaultImageOrg = "quay.io/package-operator"
 )
 
 var (
@@ -58,6 +58,10 @@ func init() {
 	os.Setenv("GOLANGCI_LINT_CACHE", path.Join(cacheDir, "golangci-lint"))
 
 	logger = stdr.New(nil)
+
+	if err := Builder.init(); err != nil {
+		panic(err)
+	}
 }
 
 // Testing and Linting
@@ -660,4 +664,20 @@ func (Generate) docs() error {
 	mg.Deps(Dependency.Docgen)
 
 	return sh.Run("./hack/docgen.sh")
+}
+
+func Deploy(ctx context.Context) error {
+	cluster, err := dev.NewCluster(path.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
+	if err != nil {
+		return nil
+	}
+
+	var d Dev
+	if err := d.deployPackageOperatorManager(ctx, cluster); err != nil {
+		return fmt.Errorf("deploying: %w", err)
+	}
+	if err := d.deployPackageOperatorWebhook(ctx, cluster); err != nil {
+		return fmt.Errorf("deploying: %w", err)
+	}
+	return nil
 }
