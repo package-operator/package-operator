@@ -763,7 +763,7 @@ func (Generate) code() error {
 	mg.Deps(Dependency.ControllerGen)
 
 	manifestsCmd := exec.Command("controller-gen",
-		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./...",
+		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...",
 		"output:crd:artifacts:config=../config/crds")
 	manifestsCmd.Dir = workDir + "/apis"
 	manifestsCmd.Stdout = os.Stdout

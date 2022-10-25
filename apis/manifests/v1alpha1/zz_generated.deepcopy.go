@@ -14,6 +14,7 @@ import (
 func (in *PackageManifest) DeepCopyInto(out *PackageManifest) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
 }
 
