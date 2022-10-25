@@ -32,7 +32,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectsets"
 	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/packages"
+	packageloader "package-operator.run/package-operator/internal/packages"
 )
 
 type opts struct {
@@ -120,13 +120,13 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 		return fmt.Errorf("creating target cluster client: %w", err)
 	}
 
-	var packageLoader *packages.PackageLoader
+	var packageLoader *packageloader.PackageLoader
 	if len(packageKey.Namespace) > 0 {
 		// Package API
-		packageLoader = packages.NewPackageLoader(c, scheme)
+		packageLoader = packageloader.NewPackageLoader(c, scheme)
 	} else {
 		// ClusterPackage API
-		packageLoader = packages.NewClusterPackageLoader(c, scheme)
+		packageLoader = packageloader.NewClusterPackageLoader(c, scheme)
 	}
 
 	ctx := logr.NewContext(context.Background(), ctrl.Log.WithName("package-loader"))

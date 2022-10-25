@@ -303,10 +303,10 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 }
 
 func (b *builder) Image(name string) error {
-	switch name {
-	case "package-operator", "coordination-operator", "nginx":
+	if strings.HasSuffix(name, "-package") {
 		return b.buildPackageImage(name)
 	}
+
 	return b.buildCmdImage(name)
 }
 
@@ -376,18 +376,20 @@ func (b *builder) buildCmdImage(cmd string) error {
 	return nil
 }
 
-func (b *builder) buildPackageImage(packageName string) error {
+func (b *builder) buildPackageImage(packageImageName string) error {
 	mg.SerialDeps(
 		b.init,
 		determineContainerRuntime,
 	)
 
-	imageCacheDir, err := b.cleanImageCacheDir(packageName)
+	imageCacheDir, err := b.cleanImageCacheDir(packageImageName)
 	if err != nil {
 		return err
 	}
 
-	imageTag := b.imageURL(packageName)
+	imageTag := b.imageURL(packageImageName)
+	packageName := strings.TrimSuffix(packageImageName, "-package")
+
 	for _, command := range [][]string{
 		// Copy files for build environment
 		{"cp", "-a",
@@ -479,6 +481,7 @@ func (d Dev) Deploy(ctx context.Context) error {
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
 		mg.F(Dev.LoadImage, "remote-phase-manager"),
+		mg.F(Dev.LoadImage, "nginx-package"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{.Metadata.Name}}-v1"
+  labels:
+    app: nginx
+    instance: "{{.Metadata.Name}}"
+  annotations:
+    package-operator.run/phase: deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+      instance: "{{.Metadata.Name}}"
+  template:
+    metadata:
+      labels:
+        app: nginx
+        instance: "{{.Metadata.Name}}"
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80

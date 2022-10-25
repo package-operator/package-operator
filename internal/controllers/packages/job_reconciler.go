@@ -17,21 +17,23 @@ import (
 )
 
 type jobReconciler struct {
-	scheme           *runtime.Scheme
-	newPackage       genericPackageFactory
-	client           client.Client
-	jobOwnerStrategy ownerStrategy
-	pkoNamespace     string
+	scheme        *runtime.Scheme
+	client        client.Client
+	ownerStrategy ownerStrategy
+
+	pkoNamespace string
+	pkoImage     string
 }
 
 func (r *jobReconciler) Reconcile(
 	ctx context.Context, pkg genericPackage,
 ) (res ctrl.Result, err error) {
 	foundJob := &batchv1.Job{}
-	desiredJob := pkg.RenderPackageLoaderJob(r.pkoNamespace)
+
+	desiredJob := desiredJob(pkg, r.pkoNamespace, r.pkoImage)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredJob), foundJob); err != nil {
 		if errors.IsNotFound(err) {
-			if err := r.jobOwnerStrategy.SetControllerReference(pkg.ClientObject(), desiredJob); err != nil {
+			if err := r.ownerStrategy.SetControllerReference(pkg.ClientObject(), desiredJob); err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to set owner reference of the Package on the job '%s': %w", desiredJob.Name, err)
 			}
 			return ctrl.Result{}, r.client.Create(ctx, desiredJob)
@@ -80,4 +82,70 @@ func (r *jobReconciler) Reconcile(
 			})
 	}
 	return ctrl.Result{}, nil
+}
+
+func desiredJob(pkg genericPackage, pkoNamespace, pkoImage string) *batchv1.Job {
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobName(pkg),
+			Namespace: pkoNamespace,
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					RestartPolicy:      corev1.RestartPolicyOnFailure,
+					ServiceAccountName: "package-operator",
+					InitContainers: []corev1.Container{
+						{
+							Image: pkoImage,
+							Name:  "prepare-loader",
+							Command: []string{
+								"cp", "-a", "/package-operator-manager", "/loader-bin/package-loader",
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "shared-dir",
+									MountPath: "/loader-bin",
+								},
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Image: pkg.GetImage(),
+							Name:  "package-loader",
+							Command: []string{
+								"/.loader-bin/package-loader",
+								"-load-package=" + client.ObjectKeyFromObject(pkg.ClientObject()).String(),
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "shared-dir",
+									MountPath: "/.loader-bin",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "shared-dir",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return job
+}
+
+func jobName(pkg genericPackage) string {
+	name := pkg.ClientObject().GetName()
+	ns := pkg.ClientObject().GetNamespace()
+	if len(ns) == 0 {
+		return name + "-loader"
+	}
+	return fmt.Sprintf("%s-%s-loader", ns, name)
 }

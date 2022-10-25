@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-v1
+  annotations:
+    package-operator.run/phase: deploy
+data:
+  key1: test123

@@ -17,6 +17,8 @@ import (
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
+const loaderJobFinalizer = "package-operator.run/loader-job"
+
 type reconciler interface {
 	Reconcile(ctx context.Context, pkg genericPackage) (ctrl.Result, error)
 }
@@ -83,11 +85,10 @@ func newGenericPackageController(
 
 	controller.reconciler = []reconciler{
 		&jobReconciler{
-			scheme:           scheme,
-			client:           client,
-			newPackage:       newPackage,
-			jobOwnerStrategy: jobOwnerStrategy,
-			pkoNamespace:     pkoNamespace,
+			scheme:        scheme,
+			client:        client,
+			ownerStrategy: jobOwnerStrategy,
+			pkoNamespace:  pkoNamespace,
 		},
 		&objectDeploymentStatusReconciler{
 			client:              client,
@@ -129,22 +130,13 @@ func (c *GenericPackageController) Reconcile(
 	}
 
 	pkgClientObject := pkg.ClientObject()
-	if err := controllers.EnsureFinalizers(ctx, c.client, pkgClientObject, getPackageFinalizerNames()...); err != nil {
+	if err := controllers.EnsureFinalizer(ctx, c.client, pkgClientObject, loaderJobFinalizer); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
-		for _, finalizer := range pkgClientObject.GetFinalizers() {
-			packageFinalizer, ok := findFinalizerByName(finalizer)
-			if !ok {
-				continue
-			}
-			if err := packageFinalizer.cleaner(ctx, c.client, pkg, c.pkoNamespace); err != nil {
-				return ctrl.Result{}, fmt.Errorf("error occurred while cleaning up the '%s' finalizer of PackageManifest: %w", finalizer, err)
-			}
-			if err := controllers.RemoveFinalizers(ctx, c.client, pkgClientObject, finalizer); err != nil {
-				return ctrl.Result{}, fmt.Errorf("error occurred while removing the '%s' finalizer from the PackageManifest: %w", finalizer, err)
-			}
+		if err := c.handleDeletion(ctx, pkg); err != nil {
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -171,4 +163,17 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg generic
 		return fmt.Errorf("updating Package status: %w", err)
 	}
 	return nil
+}
+
+func (c *GenericPackageController) handleDeletion(
+	ctx context.Context, pkg genericPackage,
+) error {
+	// ensure
+
+	if err := controllers.RemoveFinalizer(
+		ctx, c.client, pkg.ClientObject(), loaderJobFinalizer); err != nil {
+		return err
+	}
+
+	return c.client.Update(ctx, pkg.ClientObject())
 }

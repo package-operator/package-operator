@@ -172,6 +172,12 @@ func (c *GenericObjectSetController) Reconcile(
 			return ctrl.Result{}, err
 		}
 
+		if !objectSet.IsArchived() {
+			// Object was deleted an not just archived.
+			// no way to update status now :)
+			return ctrl.Result{}, nil
+		}
+
 		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
 	}
 
