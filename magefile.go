@@ -398,16 +398,26 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 		{"cp", "-a",
 			"config/images/package.Containerfile",
 			path.Join(imageCacheDir, "Containerfile")},
-
-		// Build image!
-		{containerRuntime, "build", "-t", imageTag, imageCacheDir},
-		{containerRuntime, "image", "save",
-			"-o", imageCacheDir + ".tar", imageTag},
 	} {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
 		}
 	}
+
+	for _, command := range [][]string{
+		// Build image!
+		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
+		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
+	} {
+		buildCmd := exec.Command(command[0], command[1:]...)
+		buildCmd.Stderr = os.Stderr
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Dir = imageCacheDir
+		if err := buildCmd.Run(); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+
 	return nil
 }
 
