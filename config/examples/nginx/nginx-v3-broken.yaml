@@ -3,6 +3,7 @@ kind: ObjectDeployment
 metadata:
   name: nginx
 spec:
+  progressDeadlineSeconds: 10
   selector:
     matchLabels:
       app: nginx

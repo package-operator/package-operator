@@ -9,6 +9,12 @@ type ClusterObjectDeploymentSpec struct {
 	// Number of old revisions in the form of archived ObjectSets to keep.
 	// +kubebuilder:default=10
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+	// The maximum time in seconds for a ObjectDeployment to make progress before it
+	// is considered to be failed. The ObjectDeployment controller will continue to
+	// process failed objectdeployments and a condition of type ProgressDeadlineExceeded
+	// will be surfaced in the ObjectDeployment status.
+	// +kubebuilder:default=600
+	ProgressDeadlineSeconds *int32 `json:"progressDeadlineSeconds,omitempty"`
 	// Selector targets ObjectSets managed by this Deployment.
 	Selector metav1.LabelSelector `json:"selector"`
 	// Template to create new ObjectSets from.

@@ -26,6 +26,7 @@ kind: ClusterObjectDeployment
 metadata:
   name: example
 spec:
+  progressDeadlineSeconds: 600
   revisionHistoryLimit: 10
   selector: metav1.LabelSelector
   template:
@@ -230,6 +231,7 @@ metadata:
   name: example
   namespace: default
 spec:
+  progressDeadlineSeconds: 600
   revisionHistoryLimit: 10
   selector: metav1.LabelSelector
   template:
@@ -434,6 +436,7 @@ ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployme
 | Field | Description |
 | ----- | ----------- |
 | `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `progressDeadlineSeconds` <br><a href="#int32">int32</a> | The maximum time in seconds for a ObjectDeployment to make progress before it<br>is considered to be failed. The ObjectDeployment controller will continue to<br>process failed objectdeployments and a condition of type ProgressDeadlineExceeded<br>will be surfaced in the ObjectDeployment status. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
 
@@ -550,6 +553,7 @@ ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
 | Field | Description |
 | ----- | ----------- |
 | `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `progressDeadlineSeconds` <br><a href="#int32">int32</a> | The maximum time in seconds for a ObjectDeployment to make progress before it<br>is considered to be failed. The ObjectDeployment controller will continue to<br>process failed objectdeployments and a condition of type ProgressDeadlineExceeded<br>will be surfaced in the ObjectDeployment status. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
 
