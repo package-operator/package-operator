@@ -1,0 +1,6 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: my-nginx
+spec:
+  image: quay.io/package-operator/nginx-package:e9e4e0e

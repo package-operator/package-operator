@@ -25,6 +25,22 @@ type jobReconciler struct {
 	pkoImage     string
 }
 
+func newJobReconciler(
+	scheme *runtime.Scheme,
+	client client.Client,
+	ownerStrategy ownerStrategy,
+	pkoNamespace string,
+	pkoImage string,
+) *jobReconciler {
+	return &jobReconciler{
+		scheme:        scheme,
+		client:        client,
+		ownerStrategy: ownerStrategy,
+		pkoNamespace:  pkoNamespace,
+		pkoImage:      pkoImage,
+	}
+}
+
 func (r *jobReconciler) Reconcile(
 	ctx context.Context, pkg genericPackage,
 ) (res ctrl.Result, err error) {
@@ -99,8 +115,8 @@ func desiredJob(pkg genericPackage, pkoNamespace, pkoImage string) *batchv1.Job 
 						{
 							Image: pkoImage,
 							Name:  "prepare-loader",
-							Command: []string{
-								"cp", "-a", "/package-operator-manager", "/loader-bin/package-loader",
+							Args: []string{
+								"-copy-to=/loader-bin/package-loader",
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

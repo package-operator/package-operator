@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,21 +48,22 @@ type ownerStrategy interface {
 func NewPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	pkoNamespace string,
+	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericPackage, newGenericObjectDeployment,
-		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace,
+		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace, pkoImage,
 	)
 }
 
 func NewClusterPackageController(
 	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme, pkoNamespace string,
+	scheme *runtime.Scheme,
+	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericClusterPackage, newGenericClusterObjectDeployment,
-		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace,
+		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace, pkoImage,
 	)
 }
 
@@ -71,7 +73,7 @@ func newGenericPackageController(
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,
-	pkoNamespace string,
+	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -84,12 +86,7 @@ func newGenericPackageController(
 	}
 
 	controller.reconciler = []reconciler{
-		&jobReconciler{
-			scheme:        scheme,
-			client:        client,
-			ownerStrategy: jobOwnerStrategy,
-			pkoNamespace:  pkoNamespace,
-		},
+		newJobReconciler(scheme, client, jobOwnerStrategy, pkoNamespace, pkoImage),
 		&objectDeploymentStatusReconciler{
 			client:              client,
 			scheme:              scheme,
@@ -168,7 +165,13 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg generic
 func (c *GenericPackageController) handleDeletion(
 	ctx context.Context, pkg genericPackage,
 ) error {
-	// ensure
+	background := metav1.DeletePropagationBackground
+	err := c.client.Delete(ctx, &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: jobName(pkg), Namespace: c.pkoNamespace},
+	}, &client.DeleteOptions{PropagationPolicy: &background})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
 
 	if err := controllers.RemoveFinalizer(
 		ctx, c.client, pkg.ClientObject(), loaderJobFinalizer); err != nil {

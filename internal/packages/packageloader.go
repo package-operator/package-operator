@@ -2,6 +2,8 @@ package packages
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -114,6 +116,9 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 		pkg.ClientObject(), deploy.ClientObject(), l.scheme); err != nil {
 		return err
 	}
+
+	j, _ := json.Marshal(deploy)
+	fmt.Println(string(j))
 
 	if errors.IsNotFound(err) {
 		if err := l.client.Create(ctx, deploy.ClientObject()); err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -43,6 +44,7 @@ type opts struct {
 	enableLeaderElection bool
 	probeAddr            string
 	printVersion         bool
+	copyTo               string
 	loadPackage          string
 }
 
@@ -62,6 +64,7 @@ func main() {
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
+	flag.StringVar(&opts.copyTo, "copy-to", "", "(internal) copy this binary to a new location")
 	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
 	flag.Parse()
 
@@ -102,12 +105,47 @@ func main() {
 			setupLog.Error(err, "unable to run package-loader")
 			os.Exit(1)
 		}
+		return
+	}
+
+	if len(opts.copyTo) > 0 {
+		if err := runCopyTo(opts.copyTo); err != nil {
+			setupLog.Error(err, "unable to run copy-to")
+			os.Exit(1)
+		}
+		return
 	}
 
 	if err := runManager(setupLog, scheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+}
+
+func runCopyTo(target string) error {
+	src, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("looking up current executable path: %w", err)
+	}
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("opening source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(target)
+	if err != nil {
+		return fmt.Errorf("opening destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		return fmt.Errorf("copy: %w", err)
+	}
+
+	return os.Chmod(destFile.Name(), 0755)
 }
 
 const packageFolderPath = "/package"
@@ -260,13 +298,15 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	if err = (packages.NewPackageController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(), opts.namespace,
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
+		opts.namespace, opts.image,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
 	if err = (packages.NewClusterPackageController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(), opts.namespace,
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
+		opts.namespace, opts.image,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
