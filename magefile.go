@@ -33,8 +33,8 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-  defaultImageOrg = "quay.io/package-operator"
-  clusterName     = "package-operator-dev"
+	defaultImageOrg = "quay.io/package-operator"
+	clusterName     = "package-operator-dev"
 )
 
 var (
@@ -589,7 +589,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 	objs, err := dev.LoadKubernetesObjectsFromFile(
 		"config/remote-phase-static-deployment/deployment.yaml.tpl")
 	if err != nil {
-		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
+		return fmt.Errorf("loading remote-phase-manager deployment.yaml.tpl: %w", err)
 	}
 
 	// Insert new image in remote-phase-manager deployment manifest
