@@ -1,6 +1,7 @@
 ## Package-Loader
 
-package-loader is a minimalistic CLI tool meant to take a Package's bundles as an input and load (upsert) the correspondingly desired `ObjectDeployment` in the respective Kubernetes cluster.
+package-loader is a minimalistic CLI tool meant to take a Package's bundles as an input and load (upsert) the corresponding
+desired `ObjectDeployment` into the respective Kubernetes cluster.
 
 ## Installation
 
@@ -14,7 +15,8 @@ package-loader is a minimalistic CLI tool meant to take a Package's bundles as a
 
 This will save the package-loader binary at `./bin/$(go env GOOS)_$(go env GOARCH)/package-loader`.
 
-Meaning, if you run the above `mage` command on a `linux/amd64` machine, the package-loader binary will end up at `./bin/linux_amd64/package-loader` (GOOS: linux, GOARCH: amd64)
+Meaning, if you run the above `mage` command on a `linux/amd64` machine, the package-loader binary will end up at
+`./bin/linux_amd64/package-loader` (GOOS: linux, GOARCH: amd64)
 
 ### Building the docker image
 
@@ -44,24 +46,24 @@ Package-bundles are supposed to be organized in the following format:
 For example, say, the following `manifest.yaml` is present in the package-bundles directory
 
 ```yaml
-          apiVersion: manifests.package-operator.run/v1alpha1
-					kind: PackageManifest
-					spec:
-					  phases:
-					  - name: pre-requisites
-					  - name: main-stuff
-					  availabilityProbes:
-					  - probes:
-						- condition:
-							type: Available
-							status: "True"
-						- fieldsEqual:
-							fieldA: .status.updatedReplicas
-							fieldB: .status.replicas
-						selector:
-						  kind:
-							group: apps
-							kind: Deployment
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+spec:
+  phases:
+  - name: pre-requisites
+  - name: main-stuff
+  availabilityProbes:
+  - probes:
+    - condition:
+        type: Available
+        status: "True"
+    - fieldsEqual:
+        fieldA: .status.updatedReplicas
+        fieldB: .status.replicas
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
 ```
 
 This shows that the ObjectDeployment formed by the package-loader would contain the following availabilityProbes:
