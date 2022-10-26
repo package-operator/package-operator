@@ -127,7 +127,9 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
-				c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				if test.deletionTimestamp == nil {
+					c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				}
 				return
 			}
 
