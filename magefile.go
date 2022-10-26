@@ -105,6 +105,7 @@ func (Test) Unit() error {
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
 func (Test) Integration(ctx context.Context) error {
+	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("nginx-package"))
 	testErr := sh.Run("go", "test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
 		"-timeout=20m", "./integration/...")
