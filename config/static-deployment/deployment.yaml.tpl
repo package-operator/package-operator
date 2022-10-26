@@ -26,6 +26,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: PACKAGE_LOADER_IMAGE
+          value: quay.io/mtsre/package-loader:latest
         livenessProbe:
           httpGet:
             path: /healthz

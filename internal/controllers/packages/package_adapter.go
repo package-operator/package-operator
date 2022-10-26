@@ -2,6 +2,7 @@ package packages
 
 import (
 	"fmt"
+	"os"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -141,7 +142,7 @@ func (a *GenericPackage) RenderPackageLoaderJob(jobNamespace string) *batchv1.Jo
 					ServiceAccountName: "package-operator",
 					InitContainers: []corev1.Container{
 						{
-							Image: "quay.io/mtsre/package-loader:test",
+							Image: os.Getenv("PACKAGE_LOADER_IMAGE"),
 							Name:  "prepare-loader",
 							Command: []string{
 								"cp", "/package-loader", "/loader-bin/package-loader",
@@ -204,7 +205,7 @@ func (a *GenericClusterPackage) RenderPackageLoaderJob(jobNamespace string) *bat
 					ServiceAccountName: "package-operator",
 					InitContainers: []corev1.Container{
 						{
-							Image: "quay.io/mtsre/package-loader:test",
+							Image: os.Getenv("PACKAGE_LOADER_IMAGE"),
 							Name:  "prepare-loader",
 							Command: []string{
 								"cp", "/package-loader", "/loader-bin/package-loader",

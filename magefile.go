@@ -312,6 +312,47 @@ func (b *builder) Image(name string) error {
 	return b.buildCmdImage(name)
 }
 
+func (b *builder) TestPackageImage(pkg string) error {
+	mg.SerialDeps(
+		b.init,
+		determineContainerRuntime,
+	)
+
+	testImageCacheDir, err := b.cleanTestImageCacheDir()
+	if err != nil {
+		return err
+	}
+
+	// prepare build context
+	imageTag := b.testImageURL(pkg)
+	for _, command := range [][]string{
+		{"cp", "-a",
+			path.Join("testdata", "packages", pkg),
+			testImageCacheDir},
+	} {
+		if err := sh.Run(command[0], command[1:]...); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+
+	for _, command := range [][]string{
+		// Build image!
+		{containerRuntime, "build", "-t", imageTag, "-f", "Dockerfile", "."},
+		{containerRuntime, "image", "save",
+			"-o", path.Join(testImageCacheDir, pkg) + ".tar", imageTag},
+	} {
+		buildCmd := exec.Command(command[0], command[1:]...)
+		buildCmd.Stderr = os.Stderr
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Dir = path.Join(testImageCacheDir, pkg)
+		if err := buildCmd.Run(); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+
+	return nil
+}
+
 // clean/prepare cache directory
 func (b *builder) cleanImageCacheDir(name string) (dir string, err error) {
 	imageCacheDir := path.Join(cacheDir, "image", name)
@@ -325,6 +366,21 @@ func (b *builder) cleanImageCacheDir(name string) (dir string, err error) {
 		return "", fmt.Errorf("create image cache dir: %w", err)
 	}
 	return imageCacheDir, nil
+}
+
+// clean/prepare cache directory
+func (b *builder) cleanTestImageCacheDir() (dir string, err error) {
+	testImageCacheDir := path.Join(cacheDir, "test", "image")
+	if err := os.RemoveAll(testImageCacheDir); err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("deleting test image cache: %w", err)
+	}
+	if err := os.Remove(testImageCacheDir + ".tar"); err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("deleting tes image cache: %w", err)
+	}
+	if err := os.MkdirAll(testImageCacheDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("create test image cache dir: %w", err)
+	}
+	return testImageCacheDir, nil
 }
 
 // generic image build function, when the image just relies on
@@ -441,6 +497,14 @@ func (b *builder) imageURL(name string) string {
 	return b.imageOrg + "/" + name + ":" + b.version
 }
 
+func (b *builder) testImageURL(name string) string {
+	envvar := strings.ReplaceAll(strings.ToUpper(name), "-", "_") + "_IMAGE"
+	if url := os.Getenv(envvar); len(url) != 0 {
+		return url
+	}
+	return b.imageOrg + "/" + name + ":test"
+}
+
 // Development
 // -----------
 
@@ -514,12 +578,27 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	if len(packageOperatorManagerImage) == 0 {
 		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
 	}
+	packageLoaderImage := os.Getenv("PACKAGE_LOADER_IMAGE")
+	if len(packageLoaderImage) == 0 {
+		packageLoaderImage = Builder.imageURL("package-loader")
+	}
 	for i := range packageOperatorDeployment.Spec.Template.Spec.Containers {
 		container := &packageOperatorDeployment.Spec.Template.Spec.Containers[i]
 
 		switch container.Name {
 		case "manager":
 			container.Image = packageOperatorManagerImage
+			packageLoaderImageEnvFound := false
+			for i, env := range container.Env {
+				if env.Name == "PACKAGE_LOADER_IMAGE" {
+					packageLoaderImageEnvFound = true
+					container.Env[i].Value = packageLoaderImage
+					break
+				}
+			}
+			if !packageLoaderImageEnvFound {
+				container.Env = append(container.Env, corev1.EnvVar{Name: "PACKAGE_LOADER_IMAGE", Value: packageLoaderImage})
+			}
 		}
 	}
 
@@ -706,7 +785,9 @@ func (d Dev) Integration(ctx context.Context) error {
 
 	os.Setenv("KUBECONFIG", devEnvironment.Cluster.Kubeconfig())
 
-	mg.SerialDeps(Test.Integration)
+	mg.SerialDeps(
+		mg.F(Dev.LoadTestdataPackageImage, "foo"),
+		Test.Integration)
 	return nil
 }
 
@@ -716,6 +797,18 @@ func (d Dev) LoadImage(ctx context.Context, image string) error {
 	)
 
 	imageTar := path.Join(cacheDir, "image", image+".tar")
+	if err := devEnvironment.LoadImageFromTar(ctx, imageTar); err != nil {
+		return fmt.Errorf("load image from tar: %w", err)
+	}
+	return nil
+}
+
+func (d Dev) LoadTestdataPackageImage(ctx context.Context, pkg string) error {
+	mg.Deps(
+		mg.F(Builder.TestPackageImage, pkg),
+	)
+
+	imageTar := path.Join(cacheDir, "test", "image", pkg+".tar")
 	if err := devEnvironment.LoadImageFromTar(ctx, imageTar); err != nil {
 		return fmt.Errorf("load image from tar: %w", err)
 	}
