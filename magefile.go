@@ -104,11 +104,20 @@ func (Test) Unit() error {
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-func (Test) Integration(ctx context.Context) error {
-	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("nginx-package"))
-	testErr := sh.Run("go", "test", "-v", "-failfast",
+func (Test) Integration(ctx context.Context, filter string) error {
+	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("test-stub-package"))
+	os.Setenv("PKO_TEST_STUB_IMAGE", Builder.imageURL("test-stub"))
+
+	args := []string{
+		"test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
-		"-timeout=20m", "./integration/...")
+		"-timeout=20m",
+	}
+	if len(filter) > 0 {
+		args = append(args, "-run", filter)
+	}
+	args = append(args, "./integration/...")
+	testErr := sh.Run("go", args...)
 
 	// always export logs
 	if devEnvironment != nil {
@@ -492,7 +501,8 @@ func (d Dev) Deploy(ctx context.Context) error {
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
 		mg.F(Dev.LoadImage, "remote-phase-manager"),
-		mg.F(Dev.LoadImage, "nginx-package"),
+		mg.F(Dev.LoadImage, "test-stub"),
+		mg.F(Dev.LoadImage, "test-stub-package"),
 	)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {

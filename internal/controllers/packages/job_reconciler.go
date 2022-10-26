@@ -57,22 +57,7 @@ func (r *jobReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	var jobCompleted bool
 	for _, cond := range foundJob.Status.Conditions {
-		if cond.Type == batchv1.JobComplete &&
-			cond.Status == corev1.ConditionTrue {
-			jobCompleted = true
-			meta.SetStatusCondition(
-				pkg.GetConditions(), metav1.Condition{
-					Type:               corev1alpha1.PackageUnpacked,
-					Status:             metav1.ConditionTrue,
-					Reason:             "PackageLoaderSucceeded",
-					Message:            "Job to load the package succeeded",
-					ObservedGeneration: pkg.ClientObject().GetGeneration(),
-				})
-			break
-		}
-
 		if cond.Type == batchv1.JobFailed &&
 			cond.Status == corev1.ConditionTrue {
 			meta.SetStatusCondition(
@@ -85,17 +70,6 @@ func (r *jobReconciler) Reconcile(
 				})
 			return ctrl.Result{}, r.client.Delete(ctx, foundJob)
 		}
-	}
-
-	if !jobCompleted {
-		meta.SetStatusCondition(
-			pkg.GetConditions(), metav1.Condition{
-				Type:               corev1alpha1.PackageUnpacked,
-				Status:             metav1.ConditionFalse,
-				Reason:             "PackageLoaderInProgress",
-				Message:            "Job to load the package is in progress",
-				ObservedGeneration: pkg.ClientObject().GetGeneration(),
-			})
 	}
 	return ctrl.Result{}, nil
 }

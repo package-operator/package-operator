@@ -36,14 +36,20 @@ var (
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
 	PackageOperatorNamespace string
 
+	TestStubImage string
 	// SuccessTestPackageImage points to an image to use to test Package installation.
 	SuccessTestPackageImage string
+	FailureTestPackageImage = "localhost/does-not-exist"
 )
 
 func init() {
 	SuccessTestPackageImage = os.Getenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE")
 	if len(SuccessTestPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_PACKAGE_IMAGE not set!")
+	}
+	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
+	if len(TestStubImage) == 0 {
+		panic("PKO_TEST_STUB_IMAGE not set!")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

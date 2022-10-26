@@ -138,8 +138,13 @@ func (l *folderLoadOperation) loadKubernetesObjectsFromBytes(fileYaml []byte) ([
 				"executing template from yaml document at index %d: %w", i, err)
 		}
 
+		docTrimmed := bytes.TrimSpace(doc.Bytes())
+		if len(docTrimmed) == 0 {
+			continue
+		}
+
 		obj := unstructured.Unstructured{}
-		if err := yaml.Unmarshal(doc.Bytes(), &obj); err != nil {
+		if err := yaml.Unmarshal(docTrimmed, &obj); err != nil {
 			return nil, fmt.Errorf(
 				"unmarshalling yaml document at index %d: %w", i, err)
 		}

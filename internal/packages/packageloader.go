@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +61,8 @@ func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLo
 }
 
 func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, folderPath string) error {
+	log := logr.FromContextOrDiscard(ctx)
+
 	pkg := l.newPackage(l.scheme)
 	if err := l.client.Get(ctx, packageKey, pkg.ClientObject()); err != nil {
 		return err
@@ -69,7 +72,14 @@ func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, f
 		return err
 	}
 
+	unpackedCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
+	if unpackedCondition == nil {
+		return nil
+	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		log.Info("trying to report Package status...")
+
+		meta.SetStatusCondition(pkg.GetConditions(), *unpackedCondition) // reapply condition after update
 		if err := l.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
 			return err
 		}
@@ -119,6 +129,14 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 		if err := l.client.Create(ctx, deploy.ClientObject()); err != nil {
 			return err
 		}
+
+		meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.PackageUnpacked,
+			Status:             metav1.ConditionTrue,
+			Reason:             "LoadSuccess",
+			ObservedGeneration: pkg.ClientObject().GetGeneration(),
+		})
+
 		return nil
 	}
 

@@ -13,69 +13,60 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-// Simple Setup and Teardown test.
-func TestPackage_creationAndDeletion(t *testing.T) {
-	packageGen := func(packageName string, packageImage string) *corev1alpha1.Package {
-		return &corev1alpha1.Package{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      packageName,
-				Namespace: "default",
-			},
-			Spec: corev1alpha1.PackageSpec{
-				Image: packageImage,
-			},
-		}
-	}
-
-	testCases := []struct {
-		packageName                     string
-		packageImage                    string
-		jobShouldBeCreated              bool
-		objectDeploymentShouldBeCreated bool
-		becomesAvailable                bool
-		expectedPackageConditionType    string
-		expectedPackageConditionStatus  metav1.ConditionStatus
+func TestPackage_success(t *testing.T) {
+	tests := []struct {
+		name             string
+		pkg              client.Object
+		objectDeployment client.Object
 	}{
 		{
-			packageName:                     "foo",
-			packageImage:                    SuccessTestPackageImage,
-			objectDeploymentShouldBeCreated: true,
-			becomesAvailable:                true,
-			expectedPackageConditionType:    corev1alpha1.PackageUnpacked,
-			expectedPackageConditionStatus:  metav1.ConditionTrue,
+			name: "namespaced",
+			pkg: &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "success",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"package-operator.run/test-stub-image": TestStubImage,
+					},
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestPackageImage,
+				},
+			},
+			objectDeployment: &corev1alpha1.ObjectDeployment{},
 		},
 		{
-			packageName:                     "bar",
-			packageImage:                    "quay.io/non-existent/image:test",
-			objectDeploymentShouldBeCreated: false,
-			expectedPackageConditionType:    corev1alpha1.PackageUnpacked,
-			expectedPackageConditionStatus:  metav1.ConditionFalse,
+			name: "cluster",
+			pkg: &corev1alpha1.ClusterPackage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "success",
+					Annotations: map[string]string{
+						"package-operator.run/test-stub-image": TestStubImage,
+					},
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestPackageImage,
+				},
+			},
+			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	for _, testCase := range testCases {
-		pkg := packageGen(testCase.packageName, testCase.packageImage)
-		require.NoError(t, Client.Create(ctx, pkg))
-		cleanupOnSuccess(ctx, t, pkg)
+			require.NoError(t, Client.Create(ctx, test.pkg))
+			cleanupOnSuccess(ctx, t, test.pkg)
 
-		// Wait for Unpacked condition to be reported.
-		require.NoError(t, Waiter.WaitForCondition(
-			ctx, pkg, testCase.expectedPackageConditionType, testCase.expectedPackageConditionStatus))
-
-		if testCase.objectDeploymentShouldBeCreated {
-			expectedObjectDeployment := &corev1alpha1.ObjectDeployment{
-				ObjectMeta: metav1.ObjectMeta{}}
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue))
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
 
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
-				Name: pkg.Name, Namespace: "default",
-			}, expectedObjectDeployment))
-		}
-
-		if testCase.becomesAvailable {
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
-		}
+				Name: test.pkg.GetName(), Namespace: test.pkg.GetNamespace(),
+			}, test.objectDeployment))
+		})
 	}
 }

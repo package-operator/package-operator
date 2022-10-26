@@ -84,6 +84,12 @@ func (l *FolderLoader) Load(
 				Object: obj,
 			})
 		}
+
+		if len(phase.Objects) == 0 {
+			// empty phases may happen due to templating for scope or topology restrictions.
+			continue
+		}
+
 		res.TemplateSpec.Phases = append(res.TemplateSpec.Phases, phase)
 	}
 
