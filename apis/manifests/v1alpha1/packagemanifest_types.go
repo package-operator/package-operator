@@ -13,7 +13,7 @@ const (
 )
 
 const (
-	// PackageLabel contains the name of the Package in the PackageManifest.
+	// PackageLabel contains the name of the Package from the PackageManifest.
 	PackageLabel = "package-operator.run/package"
 	// PackageInstanceLabel contains the name of the Package instance.
 	PackageInstanceLabel = "package-operator.run/instance"
