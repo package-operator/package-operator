@@ -148,7 +148,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	dc := dynamiccache.NewCache(
 		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
 		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,=
+			// Only cache objects with our label selector,
 			// so we prevent our caches from exploding!
 			schema.GroupVersionKind{}: dynamiccache.Selector{
 				Label: labels.SelectorFromSet(labels.Set{
