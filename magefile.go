@@ -104,7 +104,17 @@ func (Test) Unit() error {
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-func (Test) Integration(ctx context.Context, filter string) error {
+func (t Test) Integration(ctx context.Context) error {
+	return t.integration(ctx, "")
+}
+
+// Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
+// Also allows specifying only sub tests to run e.g. ./mage test:integrationrun TestPackage_success
+func (t Test) IntegrationRun(ctx context.Context, filter string) error {
+	return t.integration(ctx, filter)
+}
+
+func (Test) integration(ctx context.Context, filter string) error {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("test-stub-package"))
 	os.Setenv("PKO_TEST_STUB_IMAGE", Builder.imageURL("test-stub"))
 
@@ -494,8 +504,8 @@ func (d Dev) Teardown(ctx context.Context) error {
 	return nil
 }
 
-// Setup local cluster and deploy the Package Operator.
-func (d Dev) Deploy(ctx context.Context) error {
+// Load images into the development environment.
+func (d Dev) Load() {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 		mg.F(Dev.LoadImage, "package-operator-manager"),
@@ -504,6 +514,11 @@ func (d Dev) Deploy(ctx context.Context) error {
 		mg.F(Dev.LoadImage, "test-stub"),
 		mg.F(Dev.LoadImage, "test-stub-package"),
 	)
+}
+
+// Setup local cluster and deploy the Package Operator.
+func (d Dev) Deploy(ctx context.Context) error {
+	mg.SerialDeps(Dev.Load)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
