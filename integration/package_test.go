@@ -40,7 +40,7 @@ func TestPackage_creationAndDeletion(t *testing.T) {
 		{
 			packageName:                     "foo",
 			packageNamespace:                "foo-ns",
-			packageImage:                    "quay.io/nschiede/foo:test", // this gets loaded as a part of integration setup defined in magefile.go
+			packageImage:                    "quay.io/package-operator/foo:test", // this gets loaded as a part of integration setup defined in magefile.go
 			jobShouldBeCreated:              true,
 			objectDeploymentShouldBeCreated: true,
 			cleanupOnExit:                   true,
@@ -137,7 +137,7 @@ func TestClusterPackage_creationAndDeletion(t *testing.T) {
 	}{
 		{
 			packageName:                            "foo",
-			packageImage:                           "quay.io/nschiede/foo:test", // this gets loaded as a part of integration setup defined in magefile.go
+			packageImage:                           "quay.io/package-operator/foo:test", // this gets loaded as a part of integration setup defined in magefile.go
 			jobShouldBeCreated:                     true,
 			clusterObjectDeploymentShouldBeCreated: true,
 			cleanupOnExit:                          true,
