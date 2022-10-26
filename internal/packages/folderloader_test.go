@@ -37,7 +37,10 @@ func TestLoader(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, map[string]string{}, res.Annotations)
-	assert.Equal(t, map[string]string{}, res.Labels)
+	assert.Equal(t, map[string]string{
+		manifestsv1alpha1.PackageInstanceLabel: "pack-1",
+		manifestsv1alpha1.PackageLabel:         "cool-package",
+	}, res.Labels)
 	assert.Equal(t, []corev1alpha1.ObjectSetProbe{
 		{
 			Selector: corev1alpha1.ProbeSelector{

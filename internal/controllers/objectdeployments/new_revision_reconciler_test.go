@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -31,10 +32,10 @@ func Test_new_revision_reconciler(t *testing.T) {
 			{
 				client: testutil.NewClient(),
 				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", 3, "abcd", false),
-					makeObjectSet("rev1", 1, "xyz", false),
-					makeObjectSet("rev2", 2, "pqr", false),
-					makeObjectSet("rev4", 4, "abc", true),
+					makeObjectSet("rev3", "test", 3, "abcd", false),
+					makeObjectSet("rev1", "test", 1, "xyz", false),
+					makeObjectSet("rev2", "test", 2, "pqr", false),
+					makeObjectSet("rev4", "test", 4, "abc", true),
 				},
 				deploymentGeneration:       5,
 				deploymentHash:             "test1",
@@ -45,25 +46,25 @@ func Test_new_revision_reconciler(t *testing.T) {
 			{
 				client: testutil.NewClient(),
 				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", 3, "abcd", false),
-					makeObjectSet("rev1", 1, "xyz", true),
-					makeObjectSet("rev2", 2, "pqr", false),
-					makeObjectSet("rev4", 4, "abc", false),
+					makeObjectSet("rev3", "test", 3, "abcd", false),
+					makeObjectSet("rev1", "test", 1, "xyz", true),
+					makeObjectSet("rev2", "test", 2, "pqr", false),
+					makeObjectSet("rev4", "test", 4, "abc", false),
 				},
 				deploymentGeneration:       5,
 				deploymentHash:             "xyz",
 				conflict:                   true,
-				conflictObject:             makeObjectSet("rev1", 1, "xyz", true),
+				conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true),
 				expectedHashCollisionCount: 1,
 			},
 		}
 
 		for _, testCase := range testCases {
-			client := testCase.client
+			clientMock := testCase.client
 			// Setup reconciler
 			deploymentController := NewObjectDeploymentController(testCase.client, logr.Discard(), testScheme)
 			r := newRevisionReconciler{
-				client:       client,
+				client:       clientMock,
 				newObjectSet: deploymentController.newObjectSet,
 				scheme:       testScheme,
 			}
@@ -79,13 +80,26 @@ func Test_new_revision_reconciler(t *testing.T) {
 			// If conflict object is present
 			// make the client return an AlreadyExists error
 			if testCase.conflict {
-				client.On("Create",
+				clientMock.On("Create",
 					mock.Anything,
 					mock.Anything,
 					[]ctrlclient.CreateOption(nil),
 				).Return(errors.NewAlreadyExists(schema.GroupResource{}, testCase.conflictObject.Name))
+				clientMock.On("Get",
+					mock.Anything,
+					client.ObjectKey{
+						Name:      testCase.conflictObject.Name,
+						Namespace: testCase.conflictObject.Namespace,
+					},
+					mock.Anything,
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					obj := args.Get(2).(*corev1alpha1.ObjectSet)
+					*obj = testCase.conflictObject
+				}).
+					Return(nil)
 			} else {
-				client.On("Create",
+				clientMock.On("Create",
 					mock.Anything,
 					mock.Anything,
 					[]ctrlclient.CreateOption(nil),
@@ -114,7 +128,7 @@ func Test_new_revision_reconciler(t *testing.T) {
 			}
 
 			// Assert correct new revision is created
-			client.AssertCalled(
+			clientMock.AssertCalled(
 				t,
 				"Create",
 				mock.Anything,

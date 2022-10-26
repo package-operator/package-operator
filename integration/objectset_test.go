@@ -157,13 +157,18 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 			assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
 			// expect cm-4 to be reported under "ControllerOf"
-			require.Equal(t, []corev1alpha1.ControlledObjectReference{
+			expectedControllerOf := []corev1alpha1.ControlledObjectReference{
 				{
 					Kind:      "ConfigMap",
 					Name:      cm4.Name,
 					Namespace: "default",
 				},
-			}, objectSet.Status.ControllerOf)
+			}
+			assert.NoError(t, Waiter.WaitForObject(ctx, objectSet,
+				"Waiting for .status.controllerOf to be updated",
+				func(obj client.Object) (done bool, err error) {
+					return reflect.DeepEqual(objectSet.Status.ControllerOf, expectedControllerOf), nil
+				}))
 
 			// expect Succeeded condition to be not present
 			succeededCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
