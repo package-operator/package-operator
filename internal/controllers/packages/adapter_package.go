@@ -108,6 +108,11 @@ func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusP
 }
 
 func updatePackagePhase(pkg genericPackage) {
+	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.PackageInvalid) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseInvalid)
+		return
+	}
+
 	unpackCond := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
 	if unpackCond == nil {
 		pkg.setStatusPhase(corev1alpha1.PackagePhaseUnpacking)

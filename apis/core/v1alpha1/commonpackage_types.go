@@ -41,6 +41,7 @@ const (
 	PackagePhaseProgressing PackageStatusPhase = "Progressing"
 	PackagePhaseUnpacking   PackageStatusPhase = "Unpacking"
 	PackagePhaseNotReady    PackageStatusPhase = "NotReady"
+	PackagePhaseInvalid     PackageStatusPhase = "Invalid"
 )
 
 // Package specification.
