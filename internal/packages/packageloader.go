@@ -2,9 +2,10 @@ package packages
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,19 +91,13 @@ func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, f
 func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath string) error {
 	res, err := l.loadFromFolder(ctx, pkg, folderPath)
 	if err != nil {
-		meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.PackageUnpacked,
-			Status:             metav1.ConditionFalse,
-			Reason:             "LoadError",
-			Message:            err.Error(),
-			ObservedGeneration: pkg.ClientObject().GetGeneration(),
-		})
+		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil
 	}
 
 	deploy := l.newObjectDeployment(l.scheme)
 	err = l.client.Get(ctx, client.ObjectKeyFromObject(pkg.ClientObject()), deploy.ClientObject())
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
@@ -125,18 +120,17 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 		return err
 	}
 
-	if errors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		if err := l.client.Create(ctx, deploy.ClientObject()); err != nil {
 			return err
 		}
 
 		meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.PackageUnpacked,
-			Status:             metav1.ConditionTrue,
+			Type:               corev1alpha1.PackageInvalid,
+			Status:             metav1.ConditionFalse,
 			Reason:             "LoadSuccess",
 			ObservedGeneration: pkg.ClientObject().GetGeneration(),
 		})
-
 		return nil
 	}
 
@@ -151,8 +145,8 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 	}
 
 	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-		Type:               corev1alpha1.PackageUnpacked,
-		Status:             metav1.ConditionTrue,
+		Type:               corev1alpha1.PackageInvalid,
+		Status:             metav1.ConditionFalse,
 		Reason:             "LoadSuccess",
 		ObservedGeneration: pkg.ClientObject().GetGeneration(),
 	})
@@ -185,6 +179,36 @@ func contains[T comparable](elems []T, v T) bool {
 		}
 	}
 	return false
+}
+
+func setInvalidConditionBasedOnLoadError(pkg genericPackage, err error) {
+	reason := "LoadError"
+
+	var (
+		notFoundErr        *PackageManifestNotFoundError
+		invalidManifestErr *PackageManifestInvalidError
+		invalidScopeErr    *PackageInvalidScopeError
+		objectInvalidErr   *PackageObjectInvalidError
+	)
+	switch {
+	case errors.As(err, &notFoundErr):
+		reason = "PackageManifestNotFound"
+	case errors.As(err, &invalidManifestErr):
+		reason = "PackageManifestInvalid"
+	case errors.As(err, &invalidScopeErr):
+		reason = "InvalidScope"
+	case errors.As(err, &objectInvalidErr):
+		reason = "InvalidObject"
+	}
+
+	// Can not be determined more precisely
+	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
+		Type:               corev1alpha1.PackageInvalid,
+		Status:             metav1.ConditionTrue,
+		Reason:             reason,
+		Message:            err.Error(),
+		ObservedGeneration: pkg.ClientObject().GetGeneration(),
+	})
 }
 
 func mergeKeysFrom(base, additional map[string]string) map[string]string {

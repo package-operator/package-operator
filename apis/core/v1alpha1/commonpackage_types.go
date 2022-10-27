@@ -17,9 +17,18 @@ const (
 	// A Packages "Available" condition tracks the availability of the underlying ObjectDeployment objects.
 	// When the Package is reporting "Available" = True, it's expected that whatever the Package installs is up and operational.
 	// Package "Availability" may change multiple times during it's lifecycle.
-	PackageAvailable   = "Available"
+	PackageAvailable = "Available"
+	// Progressing indicates that a new release is being rolled out.
 	PackageProgressing = "Progressing"
-	PackageUnpacked    = "Unpacked"
+	// Unpacked tracks the completion or failure of the image unpack operation.
+	PackageUnpacked = "Unpacked"
+	// Invalid condition tracks unrecoverable validation and loading issues of the Package.
+	// A package might be invalid because of multiple reasons:
+	// - Does not support the right scope -> Namespaced vs. Cluster
+	// - Missing or malformed PackageManifest
+	// - Malformed Yaml
+	// - Issues resulting from the template process.
+	PackageInvalid = "Invalid"
 )
 
 type PackageStatusPhase string

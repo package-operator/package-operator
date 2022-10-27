@@ -15,12 +15,14 @@ import (
 	"package-operator.run/package-operator/internal/metrics"
 
 	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -183,6 +185,17 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: cache.SelectorsByObject{
+				// We create Jobs to unpack package images.
+				// Limit caches to only contain Jobs that we create ourselves.
+				&batchv1.Job{}: {
+					Label: labels.SelectorFromSet(labels.Set{
+						controllers.DynamicCacheLabel: "True",
+					}),
+				},
+			},
+		}),
 	})
 	if err != nil {
 		return fmt.Errorf("creating manager: %w", err)

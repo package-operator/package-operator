@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/utils"
 )
 
 type genericPackage interface {
@@ -14,6 +15,8 @@ type genericPackage interface {
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetImage() string
+	GetSpecHash() string
+	setStatusPhase(phase corev1alpha1.PackageStatusPhase)
 }
 
 type genericPackageFactory func(scheme *runtime.Scheme) genericPackage
@@ -61,31 +64,15 @@ func (a *GenericPackage) GetConditions() *[]metav1.Condition {
 }
 
 func (a *GenericPackage) UpdatePhase() {
-	if meta.IsStatusConditionFalse(
-		a.Status.Conditions,
-		corev1alpha1.PackageUnpacked,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseUnpacking
-		return
-	}
+	updatePackagePhase(a)
+}
 
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.PackageProgressing,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseProgressing
-		return
-	}
+func (a *GenericPackage) GetSpecHash() string {
+	return utils.ComputeHash(a.Spec, nil)
+}
 
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.PackageAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.PackagePhaseNotReady
+func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
+	a.Status.Phase = phase
 }
 
 type GenericClusterPackage struct {
@@ -101,31 +88,7 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 }
 
 func (a *GenericClusterPackage) UpdatePhase() {
-	if meta.IsStatusConditionFalse(
-		a.Status.Conditions,
-		corev1alpha1.PackageUnpacked,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseUnpacking
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.PackageProgressing,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseProgressing
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.PackageAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.PackagePhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.PackagePhaseNotReady
+	updatePackagePhase(a)
 }
 
 func (a *GenericPackage) GetImage() string {
@@ -134,4 +97,38 @@ func (a *GenericPackage) GetImage() string {
 
 func (a *GenericClusterPackage) GetImage() string {
 	return a.Spec.Image
+}
+
+func (a *GenericClusterPackage) GetSpecHash() string {
+	return utils.ComputeHash(a.Spec, nil)
+}
+
+func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
+	a.Status.Phase = phase
+}
+
+func updatePackagePhase(pkg genericPackage) {
+	unpackCond := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
+	if unpackCond == nil {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseUnpacking)
+		return
+	}
+
+	if meta.IsStatusConditionTrue(
+		*pkg.GetConditions(),
+		corev1alpha1.PackageProgressing,
+	) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseProgressing)
+		return
+	}
+
+	if meta.IsStatusConditionTrue(
+		*pkg.GetConditions(),
+		corev1alpha1.PackageAvailable,
+	) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseAvailable)
+		return
+	}
+
+	pkg.setStatusPhase(corev1alpha1.PackagePhaseNotReady)
 }

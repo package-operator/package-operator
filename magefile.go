@@ -508,6 +508,8 @@ func (d Dev) Teardown(ctx context.Context) error {
 func (d Dev) Load() {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
+	)
+	mg.Deps(
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
 		mg.F(Dev.LoadImage, "remote-phase-manager"),
