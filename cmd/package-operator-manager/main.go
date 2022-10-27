@@ -157,7 +157,7 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 		Scheme: scheme,
 	})
 	if err != nil {
-		return fmt.Errorf("creating target cluster client: %w", err)
+		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var packageLoader *packageloader.PackageLoader
