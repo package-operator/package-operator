@@ -42,7 +42,8 @@ type opts struct {
 	metricsAddr          string
 	pprofAddr            string
 	namespace            string
-	image                string
+	managerImage         string
+	selfBootstrap        string
 	enableLeaderElection bool
 	probeAddr            string
 	printVersion         bool
@@ -58,7 +59,7 @@ func main() {
 		"The address the pprof web endpoint binds to.")
 	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
 		"The namespace the operator is deployed into.")
-	flag.StringVar(&opts.image, "image", os.Getenv("PKO_IMAGE"),
+	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"),
 		"Image package operator is deployed with.")
 	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -68,6 +69,8 @@ func main() {
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
 	flag.StringVar(&opts.copyTo, "copy-to", "", "(internal) copy this binary to a new location")
 	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
+	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "",
+		"(internal) bootstraps Package Operator with Package Operator using the given Package Operator Package Image")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -113,6 +116,14 @@ func main() {
 	if len(opts.copyTo) > 0 {
 		if err := runCopyTo(opts.copyTo); err != nil {
 			setupLog.Error(err, "unable to run copy-to")
+			os.Exit(1)
+		}
+		return
+	}
+
+	if len(opts.selfBootstrap) > 0 {
+		if err := runBootstrap(setupLog, scheme, opts); err != nil {
+			setupLog.Error(err, "unable to run self-bootstrap")
 			os.Exit(1)
 		}
 		return
@@ -312,14 +323,14 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	if err = (packages.NewPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
-		opts.namespace, opts.image,
+		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
 	if err = (packages.NewClusterPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
-		opts.namespace, opts.image,
+		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
