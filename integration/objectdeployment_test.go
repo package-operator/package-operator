@@ -87,7 +87,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			},
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       2,
-			expectedHashCollisionCount:   0,
+			expectedHashCollisionCount:   1,
 			// We handover cm1 and cm2 and then modify them to fail the probes.(Both in this revision and
 			// the previous.)
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -97,37 +97,24 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
 			},
 		},
-		{
-			deploymentRevision: 3,
-			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
-			phases: []corev1alpha1.ObjectSetTemplatePhase{
-				{
-					Name: "phase-1",
-					Objects: []corev1alpha1.ObjectSetObject{
-						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
-						},
-					},
-				},
-				{
-					Name: "phase-2",
-					Objects: []corev1alpha1.ObjectSetObject{
-						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
-						},
-					},
-				},
+	}
+
+	// Pre-Creating a ObjectSet that should conflict with Generation 2.
+	existingConflictObjectSet := &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-objectdeployment-84f99894fd",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			LifecycleState: corev1alpha1.ObjectSetLifecycleStatePaused,
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				AvailabilityProbes: hashCollisionTestProbe(".metadata.name", ".data.name"),
+				Phases:             testCases[1].phases,
 			},
-			expectedRevisionAvailability: metav1.ConditionTrue,
-			expectedObjectSetCount:       3,
-			expectedHashCollisionCount:   1,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
-			},
-			expectedArchivedRevisions: []string{"1", "2"},
 		},
 	}
+	require.NoError(t, Client.Create(ctx, existingConflictObjectSet))
+	cleanupOnSuccess(ctx, t, existingConflictObjectSet)
 
 	for _, testCase := range testCases {
 		t.Logf("Running revision: %d \n", testCase.deploymentRevision)

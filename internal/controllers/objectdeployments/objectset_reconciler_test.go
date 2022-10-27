@@ -33,10 +33,10 @@ func Test_ObjectSetReconciler(t *testing.T) {
 		{
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", 3, "abcd", false),
-				makeObjectSet("rev1", 1, "xyz", false),
-				makeObjectSet("rev2", 2, "pqr", false),
-				makeObjectSet("rev4", 4, "abc", true),
+				makeObjectSet("rev3", "test", 3, "abcd", false),
+				makeObjectSet("rev1", "test", 1, "xyz", false),
+				makeObjectSet("rev2", "test", 2, "pqr", false),
+				makeObjectSet("rev4", "test", 4, "abc", true),
 			},
 			deploymentGeneration:    4,
 			deploymentHash:          "abc",
@@ -51,10 +51,10 @@ func Test_ObjectSetReconciler(t *testing.T) {
 		{
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", 3, "abcd", false),
-				makeObjectSet("rev1", 1, "xyz", false),
-				makeObjectSet("rev2", 2, "pqr", false),
-				makeObjectSet("rev4", 4, "abc", true),
+				makeObjectSet("rev3", "test", 3, "abcd", false),
+				makeObjectSet("rev1", "test", 1, "xyz", false),
+				makeObjectSet("rev2", "test", 2, "pqr", false),
+				makeObjectSet("rev4", "test", 4, "abc", true),
 			},
 			deploymentGeneration:    5,
 			deploymentHash:          "hhh",
@@ -209,10 +209,11 @@ func makeObjectDeploymentMock(name string, namespace string,
 	return res
 }
 
-func makeObjectSet(name string, deploymentRevision int64, hash string, available bool) corev1alpha1.ObjectSet {
+func makeObjectSet(name, namespace string, deploymentRevision int64, hash string, available bool) corev1alpha1.ObjectSet {
 	obj := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 			Annotations: map[string]string{
 				ObjectSetHashAnnotation: hash,
 			},

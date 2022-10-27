@@ -4,20 +4,26 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"package-operator.run/package-operator/internal/metrics"
 
 	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -27,16 +33,21 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
+	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	packageloader "package-operator.run/package-operator/internal/packages"
 )
 
 type opts struct {
 	metricsAddr          string
 	pprofAddr            string
 	namespace            string
+	image                string
 	enableLeaderElection bool
 	probeAddr            string
 	printVersion         bool
+	copyTo               string
+	loadPackage          string
 }
 
 func main() {
@@ -47,12 +58,16 @@ func main() {
 		"The address the pprof web endpoint binds to.")
 	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
 		"The namespace the operator is deployed into.")
+	flag.StringVar(&opts.image, "image", os.Getenv("PKO_IMAGE"),
+		"Image package operator is deployed with.")
 	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to.")
 	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
+	flag.StringVar(&opts.copyTo, "copy-to", "", "(internal) copy this binary to a new location")
+	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -77,13 +92,91 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := run(setupLog, scheme, opts); err != nil {
+	if len(opts.loadPackage) > 0 {
+		namespace, name, found := strings.Cut(opts.loadPackage, string(types.Separator))
+		if !found {
+			fmt.Fprintln(os.Stderr, "invalid argument to --load-package, expected NamespaceName")
+			os.Exit(1)
+		}
+
+		packageKey := client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		}
+		if err := runLoader(scheme, packageKey); err != nil {
+			setupLog.Error(err, "unable to run package-loader")
+			os.Exit(1)
+		}
+		return
+	}
+
+	if len(opts.copyTo) > 0 {
+		if err := runCopyTo(opts.copyTo); err != nil {
+			setupLog.Error(err, "unable to run copy-to")
+			os.Exit(1)
+		}
+		return
+	}
+
+	if err := runManager(setupLog, scheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 }
 
-func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+func runCopyTo(target string) error {
+	src, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("looking up current executable path: %w", err)
+	}
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("opening source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(target)
+	if err != nil {
+		return fmt.Errorf("opening destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		return fmt.Errorf("copy: %w", err)
+	}
+
+	return os.Chmod(destFile.Name(), 0755)
+}
+
+const packageFolderPath = "/package"
+
+func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var packageLoader *packageloader.PackageLoader
+	if len(packageKey.Namespace) > 0 {
+		// Package API
+		packageLoader = packageloader.NewPackageLoader(c, scheme)
+	} else {
+		// ClusterPackage API
+		packageLoader = packageloader.NewClusterPackageLoader(c, scheme)
+	}
+
+	ctx := logr.NewContext(context.Background(), ctrl.Log.WithName("package-loader"))
+	if err := packageLoader.Load(ctx, packageKey, packageFolderPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,
@@ -92,6 +185,17 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
+		NewCache: cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: cache.SelectorsByObject{
+				// We create Jobs to unpack package images.
+				// Limit caches to only contain Jobs that we create ourselves.
+				&batchv1.Job{}: {
+					Label: labels.SelectorFromSet(labels.Set{
+						controllers.DynamicCacheLabel: "True",
+					}),
+				},
+			},
+		}),
 	})
 	if err != nil {
 		return fmt.Errorf("creating manager: %w", err)
@@ -147,7 +251,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	dc := dynamiccache.NewCache(
 		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
 		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,
+			// Only cache objects with our label selector,=
 			// so we prevent our caches from exploding!
 			schema.GroupVersionKind{}: dynamiccache.Selector{
 				Label: labels.SelectorFromSet(labels.Set{
@@ -204,6 +308,20 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
+	}
+
+	if err = (packages.NewPackageController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
+		opts.namespace, opts.image,
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for Package: %w", err)
+	}
+
+	if err = (packages.NewClusterPackageController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
+		opts.namespace, opts.image,
+	).SetupWithManager(mgr)); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
 
 	log.Info("starting manager")

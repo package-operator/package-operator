@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +43,22 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return ctrl.Result{}, fmt.Errorf("errored while creating new ObjectSet: %w", err)
+	}
+
+	conflictingObjectSet := r.newObjectSet(r.scheme)
+	if err := r.client.Get(
+		ctx, client.ObjectKeyFromObject(newObjectSet.ClientObject()), conflictingObjectSet.ClientObject(),
+	); err != nil {
+		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
+	}
+	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
+	if controllerRef != nil &&
+		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
+		equality.Semantic.DeepEqual(newObjectSet.GetTemplateSpec(), conflictingObjectSet.GetTemplateSpec()) {
+		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the desired new ObjectSet.
+		// So no conflict :) This case can happen if the local cache is a little bit slow to record the ObjectSet Create event.
+		log.Info("Slow cache, no collision")
+		return ctrl.Result{}, nil
 	}
 
 	log.Info("Got hash collision")

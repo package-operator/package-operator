@@ -2,8 +2,8 @@ FROM scratch
 
 WORKDIR /
 COPY passwd /etc/passwd
-COPY package-loader /
+COPY test-stub /
 
 USER "noroot"
 
-ENTRYPOINT ["/package-loader"]
+ENTRYPOINT ["/test-stub"]

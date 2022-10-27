@@ -33,8 +33,8 @@ import (
 
 const (
 	module          = "github.com/package-operator/package-operator"
-  defaultImageOrg = "quay.io/package-operator"
-  clusterName     = "package-operator-dev"
+	defaultImageOrg = "quay.io/package-operator"
+	clusterName     = "package-operator-dev"
 )
 
 var (
@@ -104,10 +104,30 @@ func (Test) Unit() error {
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-func (Test) Integration(ctx context.Context) error {
-	testErr := sh.Run("go", "test", "-v", "-failfast",
+func (t Test) Integration(ctx context.Context) error {
+	return t.integration(ctx, "")
+}
+
+// Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
+// Also allows specifying only sub tests to run e.g. ./mage test:integrationrun TestPackage_success
+func (t Test) IntegrationRun(ctx context.Context, filter string) error {
+	return t.integration(ctx, filter)
+}
+
+func (Test) integration(ctx context.Context, filter string) error {
+	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("test-stub-package"))
+	os.Setenv("PKO_TEST_STUB_IMAGE", Builder.imageURL("test-stub"))
+
+	args := []string{
+		"test", "-v", "-failfast",
 		"-count=1", // will force a new run, instead of using the cache
-		"-timeout=20m", "./integration/...")
+		"-timeout=20m",
+	}
+	if len(filter) > 0 {
+		args = append(args, "-run", filter)
+	}
+	args = append(args, "./integration/...")
+	testErr := sh.Run("go", args...)
 
 	// always export logs
 	if devEnvironment != nil {
@@ -129,7 +149,6 @@ type Build mg.Namespace
 func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "package-loader", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
 	)
@@ -152,7 +171,6 @@ func (Build) Image(image string) {
 func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
-		mg.F(Builder.Image, "package-loader"),
 		mg.F(Builder.Image, "package-operator-webhook"),
 		mg.F(Builder.Image, "remote-phase-manager"),
 	)
@@ -305,10 +323,10 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 }
 
 func (b *builder) Image(name string) error {
-	switch name {
-	case "package-operator", "coordination-operator", "nginx":
+	if strings.HasSuffix(name, "-package") {
 		return b.buildPackageImage(name)
 	}
+
 	return b.buildCmdImage(name)
 }
 
@@ -378,18 +396,20 @@ func (b *builder) buildCmdImage(cmd string) error {
 	return nil
 }
 
-func (b *builder) buildPackageImage(packageName string) error {
+func (b *builder) buildPackageImage(packageImageName string) error {
 	mg.SerialDeps(
 		b.init,
 		determineContainerRuntime,
 	)
 
-	imageCacheDir, err := b.cleanImageCacheDir(packageName)
+	imageCacheDir, err := b.cleanImageCacheDir(packageImageName)
 	if err != nil {
 		return err
 	}
 
-	imageTag := b.imageURL(packageName)
+	imageTag := b.imageURL(packageImageName)
+	packageName := strings.TrimSuffix(packageImageName, "-package")
+
 	for _, command := range [][]string{
 		// Copy files for build environment
 		{"cp", "-a",
@@ -398,16 +418,26 @@ func (b *builder) buildPackageImage(packageName string) error {
 		{"cp", "-a",
 			"config/images/package.Containerfile",
 			path.Join(imageCacheDir, "Containerfile")},
-
-		// Build image!
-		{containerRuntime, "build", "-t", imageTag, imageCacheDir},
-		{containerRuntime, "image", "save",
-			"-o", imageCacheDir + ".tar", imageTag},
 	} {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
 		}
 	}
+
+	for _, command := range [][]string{
+		// Build image!
+		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
+		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
+	} {
+		buildCmd := exec.Command(command[0], command[1:]...)
+		buildCmd.Stderr = os.Stderr
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Dir = imageCacheDir
+		if err := buildCmd.Run(); err != nil {
+			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
+		}
+	}
+
 	return nil
 }
 
@@ -474,14 +504,23 @@ func (d Dev) Teardown(ctx context.Context) error {
 	return nil
 }
 
-// Setup local cluster and deploy the Package Operator.
-func (d Dev) Deploy(ctx context.Context) error {
+// Load images into the development environment.
+func (d Dev) Load() {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
+	)
+	mg.Deps(
 		mg.F(Dev.LoadImage, "package-operator-manager"),
 		mg.F(Dev.LoadImage, "package-operator-webhook"),
 		mg.F(Dev.LoadImage, "remote-phase-manager"),
+		mg.F(Dev.LoadImage, "test-stub"),
+		mg.F(Dev.LoadImage, "test-stub-package"),
 	)
+}
+
+// Setup local cluster and deploy the Package Operator.
+func (d Dev) Deploy(ctx context.Context) error {
+	mg.SerialDeps(Dev.Load)
 
 	if err := d.deployPackageOperatorManager(ctx, devEnvironment.Cluster); err != nil {
 		return fmt.Errorf("deploying: %w", err)
@@ -519,6 +558,13 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 		switch container.Name {
 		case "manager":
 			container.Image = packageOperatorManagerImage
+
+			for j := range container.Env {
+				env := &container.Env[j]
+				if env.Name == "PKO_IMAGE" {
+					env.Value = packageOperatorManagerImage
+				}
+			}
 		}
 	}
 
@@ -755,7 +801,7 @@ func (Generate) code() error {
 	mg.Deps(Dependency.ControllerGen)
 
 	manifestsCmd := exec.Command("controller-gen",
-		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./...",
+		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...",
 		"output:crd:artifacts:config=../config/crds")
 	manifestsCmd.Dir = workDir + "/apis"
 	manifestsCmd.Stdout = os.Stdout
