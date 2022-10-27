@@ -847,9 +847,9 @@ func (Generate) installYamlFile() error {
 	return dumpManifestsFromFolder("config/static-deployment/", "install.yaml")
 }
 
-// Loads kubernets objects from all files in the given folder.
-// Does not recurse into subfolders.
-// Preserves lexical file order.
+// dumpManifestsFromFolder dumps all kubernets manifests from all files
+// in the given folder into the output file. It does not recurse into subfolders.
+// It dumps the manifests in lexical order based on file name.
 func dumpManifestsFromFolder(folderPath string, outputPath string) error {
 	folder, err := os.Open(folderPath)
 	if err != nil {
@@ -859,20 +859,20 @@ func dumpManifestsFromFolder(folderPath string, outputPath string) error {
 
 	files, err := folder.Readdir(-1)
 	if err != nil {
-		return fmt.Errorf("read directory: %w", err)
+		return fmt.Errorf("reading directory: %w", err)
 	}
 	sort.Sort(fileInfosByName(files))
 
 	if _, err = os.Stat(outputPath); err == nil {
 		err = os.Remove(outputPath)
 		if err != nil {
-			log.Fatalf("removing old file: %s", err)
+			return fmt.Errorf("removing old file: %s", err)
 		}
 	}
 
 	outputFile, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		log.Fatalf("failed opening file: %s", err)
+		return fmt.Errorf("failed opening file: %s", err)
 	}
 	defer outputFile.Close()
 	for i, file := range files {
@@ -889,17 +889,17 @@ func dumpManifestsFromFolder(folderPath string, outputPath string) error {
 
 		_, err = outputFile.Write(cleanFileYaml)
 		if err != nil {
-			log.Fatalf("failed appending manifest from file %s to output file: %s", file, err)
+			return fmt.Errorf("failed appending manifest from file %s to output file: %s", file, err)
 		}
 		if i != len(files)-1 {
 			_, err = outputFile.WriteString("\n---\n")
 			if err != nil {
-				log.Fatalf("failed appending --- %s to output file: %s", file, err)
+				return fmt.Errorf("failed appending --- %s to output file: %s", file, err)
 			}
 		} else {
 			_, err = outputFile.WriteString("\n")
 			if err != nil {
-				log.Fatalf("failed appending new line %s to output file: %s", file, err)
+				return fmt.Errorf("failed appending new line %s to output file: %s", file, err)
 			}
 		}
 	}
