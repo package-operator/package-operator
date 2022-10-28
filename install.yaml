@@ -1,0 +1,2582 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: package-operator-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: clusterobjectdeployments.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ClusterObjectDeployment
+    listKind: ClusterObjectDeploymentList
+    plural: clusterobjectdeployments
+    singular: clusterobjectdeployment
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterObjectDeployment is the Schema for the ClusterObjectDeployments
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterObjectDeploymentSpec defines the desired state of
+              a ClusterObjectDeployment.
+            properties:
+              revisionHistoryLimit:
+                default: 10
+                description: Number of old revisions in the form of archived ObjectSets
+                  to keep.
+                format: int32
+                type: integer
+              selector:
+                description: Selector targets ObjectSets managed by this Deployment.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                type: object
+              template:
+                description: Template to create new ObjectSets from.
+                properties:
+                  metadata:
+                    description: Common Object Metadata.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      finalizers:
+                        items:
+                          type: string
+                        type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  spec:
+                    description: ObjectSet specification.
+                    properties:
+                      availabilityProbes:
+                        description: Availability Probes check objects that are part
+                          of the package. All probes need to succeed for a package
+                          to be considered Available. Failing probes will prevent
+                          the reconciliation of objects in later phases.
+                        items:
+                          description: ObjectSetProbe define how ObjectSets check
+                            their children for their status.
+                          properties:
+                            probes:
+                              description: Probe configuration parameters.
+                              items:
+                                description: Defines probe parameters. Only one can
+                                  be filled.
+                                properties:
+                                  condition:
+                                    description: Checks whether or not the object
+                                      reports a condition with given type and status.
+                                    properties:
+                                      status:
+                                        default: "True"
+                                        description: Condition status to probe for.
+                                        type: string
+                                      type:
+                                        description: Condition type to probe for.
+                                        type: string
+                                    required:
+                                    - status
+                                    - type
+                                    type: object
+                                  fieldsEqual:
+                                    description: Compares two fields specified by
+                                      JSON Paths.
+                                    properties:
+                                      fieldA:
+                                        description: First field for comparison.
+                                        type: string
+                                      fieldB:
+                                        description: Second field for comparison.
+                                        type: string
+                                    required:
+                                    - fieldA
+                                    - fieldB
+                                    type: object
+                                type: object
+                              type: array
+                            selector:
+                              description: Selector specifies which objects this probe
+                                should target.
+                              properties:
+                                kind:
+                                  description: Kind and API Group of the object to
+                                    probe.
+                                  properties:
+                                    group:
+                                      description: Object Group to apply a probe to.
+                                      type: string
+                                    kind:
+                                      description: Object Kind to apply a probe to.
+                                      type: string
+                                  required:
+                                  - group
+                                  - kind
+                                  type: object
+                                selector:
+                                  description: Further sub-selects objects based on
+                                    a Label Selector.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: A label selector requirement
+                                          is a selector that contains values, a key,
+                                          and an operator that relates the key and
+                                          values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's
+                                              relationship to a set of values. Valid
+                                              operators are In, NotIn, Exists and
+                                              DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: values is an array of string
+                                              values. If the operator is In or NotIn,
+                                              the values array must be non-empty.
+                                              If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This
+                                              array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value}
+                                        pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions,
+                                        whose key field is "key", the operator is
+                                        "In", and the values array contains only "value".
+                                        The requirements are ANDed.
+                                      type: object
+                                  type: object
+                              required:
+                              - kind
+                              type: object
+                          required:
+                          - probes
+                          - selector
+                          type: object
+                        type: array
+                      phases:
+                        description: Reconcile phase configuration for a ObjectSet.
+                          Phases will be reconciled in order and the contained objects
+                          checked against given probes before continuing with the
+                          next phase.
+                        items:
+                          description: ObjectSet reconcile phase.
+                          properties:
+                            class:
+                              description: If non empty, the ObjectSet controller
+                                will delegate phase reconciliation to another controller,
+                                by creating an ObjectSetPhase object. If set to the
+                                string "default" the built-in Package Operator ObjectSetPhase
+                                controller will reconcile the object in the same way
+                                the ObjectSet would. If set to any other string, an
+                                out-of-tree controller needs to be present to handle
+                                ObjectSetPhase objects.
+                              type: string
+                            name:
+                              description: Name of the reconcile phase. Must be unique
+                                within a ObjectSet.
+                              type: string
+                            objects:
+                              description: Objects belonging to this phase.
+                              items:
+                                description: An object that is part of the phase of
+                                  an ObjectSet.
+                                properties:
+                                  object:
+                                    type: object
+                                    x-kubernetes-embedded-resource: true
+                                    x-kubernetes-preserve-unknown-fields: true
+                                required:
+                                - object
+                                type: object
+                              type: array
+                          required:
+                          - name
+                          - objects
+                          type: object
+                        type: array
+                    required:
+                    - availabilityProbes
+                    - phases
+                    type: object
+                required:
+                - metadata
+                - spec
+                type: object
+            required:
+            - selector
+            - template
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ClusterObjectDeploymentStatus defines the observed state
+              of a ClusterObjectDeployment.
+            properties:
+              collisionCount:
+                description: Count of hash collisions of the ClusterObjectDeployment.
+                format: int32
+                type: integer
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+              templateHash:
+                description: Computed TemplateHash.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: clusterobjectsetphases.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ClusterObjectSetPhase
+    listKind: ClusterObjectSetPhaseList
+    plural: clusterobjectsetphases
+    singular: clusterobjectsetphase
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterObjectSetPhase is an internal API, allowing a ClusterObjectSet
+          to delegate a single phase to another custom controller. ClusterObjectSets
+          will create subordinate ClusterObjectSetPhases when `.class` is set within
+          the phase specification.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterObjectSetPhaseSpec defines the desired state of a
+              ClusterObjectSetPhase.
+            properties:
+              availabilityProbes:
+                description: Availability Probes check objects that are part of the
+                  package. All probes need to succeed for a package to be considered
+                  Available. Failing probes will prevent the reconciliation of objects
+                  in later phases.
+                items:
+                  description: ObjectSetProbe define how ObjectSets check their children
+                    for their status.
+                  properties:
+                    probes:
+                      description: Probe configuration parameters.
+                      items:
+                        description: Defines probe parameters. Only one can be filled.
+                        properties:
+                          condition:
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
+                            properties:
+                              status:
+                                default: "True"
+                                description: Condition status to probe for.
+                                type: string
+                              type:
+                                description: Condition type to probe for.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          fieldsEqual:
+                            description: Compares two fields specified by JSON Paths.
+                            properties:
+                              fieldA:
+                                description: First field for comparison.
+                                type: string
+                              fieldB:
+                                description: Second field for comparison.
+                                type: string
+                            required:
+                            - fieldA
+                            - fieldB
+                            type: object
+                        type: object
+                      type: array
+                    selector:
+                      description: Selector specifies which objects this probe should
+                        target.
+                      properties:
+                        kind:
+                          description: Kind and API Group of the object to probe.
+                          properties:
+                            group:
+                              description: Object Group to apply a probe to.
+                              type: string
+                            kind:
+                              description: Object Kind to apply a probe to.
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          type: object
+                        selector:
+                          description: Further sub-selects objects based on a Label
+                            Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector
+                                  that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship
+                                      to a set of values. Valid operators are In,
+                                      NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values.
+                                      If the operator is In or NotIn, the values array
+                                      must be non-empty. If the operator is Exists
+                                      or DoesNotExist, the values array must be empty.
+                                      This array is replaced during a strategic merge
+                                      patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs.
+                                A single {key,value} in the matchLabels map is equivalent
+                                to an element of matchExpressions, whose key field
+                                is "key", the operator is "In", and the values array
+                                contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                      required:
+                      - kind
+                      type: object
+                  required:
+                  - probes
+                  - selector
+                  type: object
+                type: array
+              class:
+                description: If non empty, the ObjectSet controller will delegate
+                  phase reconciliation to another controller, by creating an ObjectSetPhase
+                  object. If set to the string "default" the built-in Package Operator
+                  ObjectSetPhase controller will reconcile the object in the same
+                  way the ObjectSet would. If set to any other string, an out-of-tree
+                  controller needs to be present to handle ObjectSetPhase objects.
+                type: string
+              name:
+                description: Name of the reconcile phase. Must be unique within a
+                  ObjectSet.
+                type: string
+              objects:
+                description: Objects belonging to this phase.
+                items:
+                  description: An object that is part of the phase of an ObjectSet.
+                  properties:
+                    object:
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - object
+                  type: object
+                type: array
+              paused:
+                description: Disables reconciliation of the ClusterObjectSet. Only
+                  Status updates will still be propagated, but object changes will
+                  not be reconciled.
+                type: boolean
+              previous:
+                description: Previous revisions of the ClusterObjectSet to adopt objects
+                  from.
+                items:
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
+                  properties:
+                    name:
+                      description: Name of a previous revision.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              revision:
+                description: Revision of the parent ObjectSet to use during object
+                  adoption.
+                format: int64
+                type: integer
+            required:
+            - availabilityProbes
+            - name
+            - objects
+            - revision
+            type: object
+          status:
+            description: ClusterObjectSetPhaseStatus defines the observed state of
+              a ClusterObjectSetPhase.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: clusterobjectsets.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ClusterObjectSet
+    listKind: ClusterObjectSetList
+    plural: clusterobjectsets
+    singular: clusterobjectset
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: "ClusterObjectSet reconciles a collection of objects through
+          ordered phases and aggregates their status. \n ClusterObjectSets behave
+          similarly to Kubernetes ReplicaSets, by managing a collection of objects
+          and being itself mostly immutable. This object type is able to suspend/pause
+          reconciliation of specific objects to facilitate the transition between
+          revisions. \n Archived ClusterObjectSets may stay on the cluster, to store
+          information about previous revisions. \n A Namespace-scoped version of this
+          API is available as ObjectSet."
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
+            properties:
+              availabilityProbes:
+                description: Availability Probes check objects that are part of the
+                  package. All probes need to succeed for a package to be considered
+                  Available. Failing probes will prevent the reconciliation of objects
+                  in later phases.
+                items:
+                  description: ObjectSetProbe define how ObjectSets check their children
+                    for their status.
+                  properties:
+                    probes:
+                      description: Probe configuration parameters.
+                      items:
+                        description: Defines probe parameters. Only one can be filled.
+                        properties:
+                          condition:
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
+                            properties:
+                              status:
+                                default: "True"
+                                description: Condition status to probe for.
+                                type: string
+                              type:
+                                description: Condition type to probe for.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          fieldsEqual:
+                            description: Compares two fields specified by JSON Paths.
+                            properties:
+                              fieldA:
+                                description: First field for comparison.
+                                type: string
+                              fieldB:
+                                description: Second field for comparison.
+                                type: string
+                            required:
+                            - fieldA
+                            - fieldB
+                            type: object
+                        type: object
+                      type: array
+                    selector:
+                      description: Selector specifies which objects this probe should
+                        target.
+                      properties:
+                        kind:
+                          description: Kind and API Group of the object to probe.
+                          properties:
+                            group:
+                              description: Object Group to apply a probe to.
+                              type: string
+                            kind:
+                              description: Object Kind to apply a probe to.
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          type: object
+                        selector:
+                          description: Further sub-selects objects based on a Label
+                            Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector
+                                  that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship
+                                      to a set of values. Valid operators are In,
+                                      NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values.
+                                      If the operator is In or NotIn, the values array
+                                      must be non-empty. If the operator is Exists
+                                      or DoesNotExist, the values array must be empty.
+                                      This array is replaced during a strategic merge
+                                      patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs.
+                                A single {key,value} in the matchLabels map is equivalent
+                                to an element of matchExpressions, whose key field
+                                is "key", the operator is "In", and the values array
+                                contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                      required:
+                      - kind
+                      type: object
+                  required:
+                  - probes
+                  - selector
+                  type: object
+                type: array
+              lifecycleState:
+                default: Active
+                description: Specifies the lifecycle state of the ClusterObjectSet.
+                enum:
+                - Active
+                - Paused
+                - Archived
+                type: string
+              phases:
+                description: Reconcile phase configuration for a ObjectSet. Phases
+                  will be reconciled in order and the contained objects checked against
+                  given probes before continuing with the next phase.
+                items:
+                  description: ObjectSet reconcile phase.
+                  properties:
+                    class:
+                      description: If non empty, the ObjectSet controller will delegate
+                        phase reconciliation to another controller, by creating an
+                        ObjectSetPhase object. If set to the string "default" the
+                        built-in Package Operator ObjectSetPhase controller will reconcile
+                        the object in the same way the ObjectSet would. If set to
+                        any other string, an out-of-tree controller needs to be present
+                        to handle ObjectSetPhase objects.
+                      type: string
+                    name:
+                      description: Name of the reconcile phase. Must be unique within
+                        a ObjectSet.
+                      type: string
+                    objects:
+                      description: Objects belonging to this phase.
+                      items:
+                        description: An object that is part of the phase of an ObjectSet.
+                        properties:
+                          object:
+                            type: object
+                            x-kubernetes-embedded-resource: true
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - object
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - objects
+                  type: object
+                type: array
+              previous:
+                description: Previous revisions of the ClusterObjectSet to adopt objects
+                  from.
+                items:
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
+                  properties:
+                    name:
+                      description: Name of a previous revision.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - availabilityProbes
+            - phases
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              phase:
+                description: Phase is not part of any API contract it will go away
+                  as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+              remotePhases:
+                description: Remote phases aka ClusterObjectSetPhase objects.
+                items:
+                  description: References remote phases aka ObjectSetPhase/ClusterObjectSetPhase
+                    objects to which a phase is delegated.
+                  properties:
+                    name:
+                      type: string
+                    uid:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - name
+                  - uid
+                  type: object
+                type: array
+              revision:
+                description: Computed revision number, monotonically increasing.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: clusterpackages.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ClusterPackage
+    listKind: ClusterPackageList
+    plural: clusterpackages
+    singular: clusterpackage
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Package specification.
+            properties:
+              image:
+                description: the image containing the contents of the package this
+                  image will be unpacked by the package-loader to render the ObjectDeployment
+                  for propagating the installation of the package.
+                type: string
+            required:
+            - image
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: PackageStatus defines the observed state of a Package.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: objectdeployments.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ObjectDeployment
+    listKind: ObjectDeploymentList
+    plural: objectdeployments
+    singular: objectdeployment
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ObjectDeployment is the Schema for the ObjectDeployments API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
+            properties:
+              revisionHistoryLimit:
+                default: 10
+                description: Number of old revisions in the form of archived ObjectSets
+                  to keep.
+                format: int32
+                type: integer
+              selector:
+                description: Selector targets ObjectSets managed by this Deployment.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                type: object
+              template:
+                description: Template to create new ObjectSets from.
+                properties:
+                  metadata:
+                    description: Common Object Metadata.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      finalizers:
+                        items:
+                          type: string
+                        type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  spec:
+                    description: ObjectSet specification.
+                    properties:
+                      availabilityProbes:
+                        description: Availability Probes check objects that are part
+                          of the package. All probes need to succeed for a package
+                          to be considered Available. Failing probes will prevent
+                          the reconciliation of objects in later phases.
+                        items:
+                          description: ObjectSetProbe define how ObjectSets check
+                            their children for their status.
+                          properties:
+                            probes:
+                              description: Probe configuration parameters.
+                              items:
+                                description: Defines probe parameters. Only one can
+                                  be filled.
+                                properties:
+                                  condition:
+                                    description: Checks whether or not the object
+                                      reports a condition with given type and status.
+                                    properties:
+                                      status:
+                                        default: "True"
+                                        description: Condition status to probe for.
+                                        type: string
+                                      type:
+                                        description: Condition type to probe for.
+                                        type: string
+                                    required:
+                                    - status
+                                    - type
+                                    type: object
+                                  fieldsEqual:
+                                    description: Compares two fields specified by
+                                      JSON Paths.
+                                    properties:
+                                      fieldA:
+                                        description: First field for comparison.
+                                        type: string
+                                      fieldB:
+                                        description: Second field for comparison.
+                                        type: string
+                                    required:
+                                    - fieldA
+                                    - fieldB
+                                    type: object
+                                type: object
+                              type: array
+                            selector:
+                              description: Selector specifies which objects this probe
+                                should target.
+                              properties:
+                                kind:
+                                  description: Kind and API Group of the object to
+                                    probe.
+                                  properties:
+                                    group:
+                                      description: Object Group to apply a probe to.
+                                      type: string
+                                    kind:
+                                      description: Object Kind to apply a probe to.
+                                      type: string
+                                  required:
+                                  - group
+                                  - kind
+                                  type: object
+                                selector:
+                                  description: Further sub-selects objects based on
+                                    a Label Selector.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: A label selector requirement
+                                          is a selector that contains values, a key,
+                                          and an operator that relates the key and
+                                          values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's
+                                              relationship to a set of values. Valid
+                                              operators are In, NotIn, Exists and
+                                              DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: values is an array of string
+                                              values. If the operator is In or NotIn,
+                                              the values array must be non-empty.
+                                              If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This
+                                              array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value}
+                                        pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions,
+                                        whose key field is "key", the operator is
+                                        "In", and the values array contains only "value".
+                                        The requirements are ANDed.
+                                      type: object
+                                  type: object
+                              required:
+                              - kind
+                              type: object
+                          required:
+                          - probes
+                          - selector
+                          type: object
+                        type: array
+                      phases:
+                        description: Reconcile phase configuration for a ObjectSet.
+                          Phases will be reconciled in order and the contained objects
+                          checked against given probes before continuing with the
+                          next phase.
+                        items:
+                          description: ObjectSet reconcile phase.
+                          properties:
+                            class:
+                              description: If non empty, the ObjectSet controller
+                                will delegate phase reconciliation to another controller,
+                                by creating an ObjectSetPhase object. If set to the
+                                string "default" the built-in Package Operator ObjectSetPhase
+                                controller will reconcile the object in the same way
+                                the ObjectSet would. If set to any other string, an
+                                out-of-tree controller needs to be present to handle
+                                ObjectSetPhase objects.
+                              type: string
+                            name:
+                              description: Name of the reconcile phase. Must be unique
+                                within a ObjectSet.
+                              type: string
+                            objects:
+                              description: Objects belonging to this phase.
+                              items:
+                                description: An object that is part of the phase of
+                                  an ObjectSet.
+                                properties:
+                                  object:
+                                    type: object
+                                    x-kubernetes-embedded-resource: true
+                                    x-kubernetes-preserve-unknown-fields: true
+                                required:
+                                - object
+                                type: object
+                              type: array
+                          required:
+                          - name
+                          - objects
+                          type: object
+                        type: array
+                    required:
+                    - availabilityProbes
+                    - phases
+                    type: object
+                required:
+                - metadata
+                - spec
+                type: object
+            required:
+            - selector
+            - template
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
+            properties:
+              collisionCount:
+                description: Count of hash collisions of the ObjectDeployment.
+                format: int32
+                type: integer
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+              templateHash:
+                description: Computed TemplateHash.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: objectsetphases.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ObjectSetPhase
+    listKind: ObjectSetPhaseList
+    plural: objectsetphases
+    singular: objectsetphase
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ObjectSetPhase is an internal API, allowing an ObjectSet to delegate
+          a single phase to another custom controller. ObjectSets will create subordinate
+          ObjectSetPhases when `.class` within the phase specification is set.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
+            properties:
+              availabilityProbes:
+                description: Availability Probes check objects that are part of the
+                  package. All probes need to succeed for a package to be considered
+                  Available. Failing probes will prevent the reconciliation of objects
+                  in later phases.
+                items:
+                  description: ObjectSetProbe define how ObjectSets check their children
+                    for their status.
+                  properties:
+                    probes:
+                      description: Probe configuration parameters.
+                      items:
+                        description: Defines probe parameters. Only one can be filled.
+                        properties:
+                          condition:
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
+                            properties:
+                              status:
+                                default: "True"
+                                description: Condition status to probe for.
+                                type: string
+                              type:
+                                description: Condition type to probe for.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          fieldsEqual:
+                            description: Compares two fields specified by JSON Paths.
+                            properties:
+                              fieldA:
+                                description: First field for comparison.
+                                type: string
+                              fieldB:
+                                description: Second field for comparison.
+                                type: string
+                            required:
+                            - fieldA
+                            - fieldB
+                            type: object
+                        type: object
+                      type: array
+                    selector:
+                      description: Selector specifies which objects this probe should
+                        target.
+                      properties:
+                        kind:
+                          description: Kind and API Group of the object to probe.
+                          properties:
+                            group:
+                              description: Object Group to apply a probe to.
+                              type: string
+                            kind:
+                              description: Object Kind to apply a probe to.
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          type: object
+                        selector:
+                          description: Further sub-selects objects based on a Label
+                            Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector
+                                  that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship
+                                      to a set of values. Valid operators are In,
+                                      NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values.
+                                      If the operator is In or NotIn, the values array
+                                      must be non-empty. If the operator is Exists
+                                      or DoesNotExist, the values array must be empty.
+                                      This array is replaced during a strategic merge
+                                      patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs.
+                                A single {key,value} in the matchLabels map is equivalent
+                                to an element of matchExpressions, whose key field
+                                is "key", the operator is "In", and the values array
+                                contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                      required:
+                      - kind
+                      type: object
+                  required:
+                  - probes
+                  - selector
+                  type: object
+                type: array
+              class:
+                description: If non empty, the ObjectSet controller will delegate
+                  phase reconciliation to another controller, by creating an ObjectSetPhase
+                  object. If set to the string "default" the built-in Package Operator
+                  ObjectSetPhase controller will reconcile the object in the same
+                  way the ObjectSet would. If set to any other string, an out-of-tree
+                  controller needs to be present to handle ObjectSetPhase objects.
+                type: string
+              name:
+                description: Name of the reconcile phase. Must be unique within a
+                  ObjectSet.
+                type: string
+              objects:
+                description: Objects belonging to this phase.
+                items:
+                  description: An object that is part of the phase of an ObjectSet.
+                  properties:
+                    object:
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - object
+                  type: object
+                type: array
+              paused:
+                description: Disables reconciliation of the ObjectSet. Only Status
+                  updates will still be propagated, but object changes will not be
+                  reconciled.
+                type: boolean
+              previous:
+                description: Previous revisions of the ObjectSet to adopt objects
+                  from.
+                items:
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
+                  properties:
+                    name:
+                      description: Name of a previous revision.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              revision:
+                description: Revision of the parent ObjectSet to use during object
+                  adoption.
+                format: int64
+                type: integer
+            required:
+            - availabilityProbes
+            - name
+            - objects
+            - revision
+            type: object
+          status:
+            description: ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: objectsets.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ObjectSet
+    listKind: ObjectSetList
+    plural: objectsets
+    singular: objectset
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: "ObjectSet reconciles a collection of objects through ordered
+          phases and aggregates their status. \n ObjectSets behave similarly to Kubernetes
+          ReplicaSets, by managing a collection of objects and being itself mostly
+          immutable. This object type is able to suspend/pause reconciliation of specific
+          objects to facilitate the transition between revisions. \n Archived ObjectSets
+          may stay on the cluster, to store information about previous revisions.
+          \n A Cluster-scoped version of this API is available as ClusterObjectSet."
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ObjectSetSpec defines the desired state of a ObjectSet.
+            properties:
+              availabilityProbes:
+                description: Availability Probes check objects that are part of the
+                  package. All probes need to succeed for a package to be considered
+                  Available. Failing probes will prevent the reconciliation of objects
+                  in later phases.
+                items:
+                  description: ObjectSetProbe define how ObjectSets check their children
+                    for their status.
+                  properties:
+                    probes:
+                      description: Probe configuration parameters.
+                      items:
+                        description: Defines probe parameters. Only one can be filled.
+                        properties:
+                          condition:
+                            description: Checks whether or not the object reports
+                              a condition with given type and status.
+                            properties:
+                              status:
+                                default: "True"
+                                description: Condition status to probe for.
+                                type: string
+                              type:
+                                description: Condition type to probe for.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          fieldsEqual:
+                            description: Compares two fields specified by JSON Paths.
+                            properties:
+                              fieldA:
+                                description: First field for comparison.
+                                type: string
+                              fieldB:
+                                description: Second field for comparison.
+                                type: string
+                            required:
+                            - fieldA
+                            - fieldB
+                            type: object
+                        type: object
+                      type: array
+                    selector:
+                      description: Selector specifies which objects this probe should
+                        target.
+                      properties:
+                        kind:
+                          description: Kind and API Group of the object to probe.
+                          properties:
+                            group:
+                              description: Object Group to apply a probe to.
+                              type: string
+                            kind:
+                              description: Object Kind to apply a probe to.
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          type: object
+                        selector:
+                          description: Further sub-selects objects based on a Label
+                            Selector.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector
+                                  that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship
+                                      to a set of values. Valid operators are In,
+                                      NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values.
+                                      If the operator is In or NotIn, the values array
+                                      must be non-empty. If the operator is Exists
+                                      or DoesNotExist, the values array must be empty.
+                                      This array is replaced during a strategic merge
+                                      patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs.
+                                A single {key,value} in the matchLabels map is equivalent
+                                to an element of matchExpressions, whose key field
+                                is "key", the operator is "In", and the values array
+                                contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                      required:
+                      - kind
+                      type: object
+                  required:
+                  - probes
+                  - selector
+                  type: object
+                type: array
+              lifecycleState:
+                default: Active
+                description: Specifies the lifecycle state of the ObjectSet.
+                enum:
+                - Active
+                - Paused
+                - Archived
+                type: string
+              phases:
+                description: Reconcile phase configuration for a ObjectSet. Phases
+                  will be reconciled in order and the contained objects checked against
+                  given probes before continuing with the next phase.
+                items:
+                  description: ObjectSet reconcile phase.
+                  properties:
+                    class:
+                      description: If non empty, the ObjectSet controller will delegate
+                        phase reconciliation to another controller, by creating an
+                        ObjectSetPhase object. If set to the string "default" the
+                        built-in Package Operator ObjectSetPhase controller will reconcile
+                        the object in the same way the ObjectSet would. If set to
+                        any other string, an out-of-tree controller needs to be present
+                        to handle ObjectSetPhase objects.
+                      type: string
+                    name:
+                      description: Name of the reconcile phase. Must be unique within
+                        a ObjectSet.
+                      type: string
+                    objects:
+                      description: Objects belonging to this phase.
+                      items:
+                        description: An object that is part of the phase of an ObjectSet.
+                        properties:
+                          object:
+                            type: object
+                            x-kubernetes-embedded-resource: true
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - object
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - objects
+                  type: object
+                type: array
+              previous:
+                description: Previous revisions of the ObjectSet to adopt objects
+                  from.
+                items:
+                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
+                  properties:
+                    name:
+                      description: Name of a previous revision.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - availabilityProbes
+            - phases
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ObjectSetStatus defines the observed state of a ObjectSet.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              controllerOf:
+                description: References all objects controlled by this instance.
+                items:
+                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              phase:
+                description: Phase is not part of any API contract it will go away
+                  as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+              remotePhases:
+                description: Remote phases aka ObjectSetPhase objects.
+                items:
+                  description: References remote phases aka ObjectSetPhase/ClusterObjectSetPhase
+                    objects to which a phase is delegated.
+                  properties:
+                    name:
+                      type: string
+                    uid:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - name
+                  - uid
+                  type: object
+                type: array
+              revision:
+                description: Computed revision number, monotonically increasing.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.2
+  creationTimestamp: null
+  name: packages.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: Package
+    listKind: PackageList
+    plural: packages
+    singular: package
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Package specification.
+            properties:
+              image:
+                description: the image containing the contents of the package this
+                  image will be unpacked by the package-loader to render the ObjectDeployment
+                  for propagating the installation of the package.
+                type: string
+            required:
+            - image
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: PackageStatus defines the observed state of a Package.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: package-operator
+  namespace: package-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: package-operator
+  namespace: package-operator-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: package-operator
+  namespace: package-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: package-operator
+subjects:
+- kind: ServiceAccount
+  name: package-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: package-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: package-operator
+  namespace: package-operator-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: package-operator-manager
+  namespace: package-operator-system
+  labels:
+    app.kubernetes.io/name: package-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: package-operator
+    spec:
+      serviceAccountName: package-operator
+      containers:
+      - name: manager
+        image: quay.io/package-operator/package-operator-manager:latest
+        args:
+        - --enable-leader-election
+        env:
+        - name: PKO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_IMAGE
+          value: "quay.io/package-operator/package-operator-manager:latest"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 100m
+            memory: 400Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -791,9 +793,10 @@ type Generate mg.Namespace
 
 // Run all code generators.
 func (Generate) All() {
-	mg.Deps(
+	mg.SerialDeps(
 		Generate.code,
 		Generate.docs,
+		Generate.installYamlFile, // installYamlFile has to come after code generation
 	)
 }
 
@@ -839,6 +842,82 @@ func (Generate) docs() error {
 
 	return sh.Run("./hack/docgen.sh")
 }
+
+func (Generate) installYamlFile() error {
+	return dumpManifestsFromFolder("config/static-deployment/", "install.yaml")
+}
+
+// dumpManifestsFromFolder dumps all kubernets manifests from all files
+// in the given folder into the output file. It does not recurse into subfolders.
+// It dumps the manifests in lexical order based on file name.
+func dumpManifestsFromFolder(folderPath string, outputPath string) error {
+	folder, err := os.Open(folderPath)
+	if err != nil {
+		return fmt.Errorf("open %q: %w", folderPath, err)
+	}
+	defer folder.Close()
+
+	files, err := folder.Readdir(-1)
+	if err != nil {
+		return fmt.Errorf("reading directory: %w", err)
+	}
+	sort.Sort(fileInfosByName(files))
+
+	if _, err = os.Stat(outputPath); err == nil {
+		err = os.Remove(outputPath)
+		if err != nil {
+			return fmt.Errorf("removing old file: %s", err)
+		}
+	}
+
+	outputFile, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed opening file: %s", err)
+	}
+	defer outputFile.Close()
+	for i, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		filePath := path.Join(folderPath, file.Name())
+		fileYaml, err := ioutil.ReadFile(filePath)
+		cleanFileYaml := bytes.Trim(fileYaml, "-\n")
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", filePath, err)
+		}
+
+		_, err = outputFile.Write(cleanFileYaml)
+		if err != nil {
+			return fmt.Errorf("failed appending manifest from file %s to output file: %s", file, err)
+		}
+		if i != len(files)-1 {
+			_, err = outputFile.WriteString("\n---\n")
+			if err != nil {
+				return fmt.Errorf("failed appending --- %s to output file: %s", file, err)
+			}
+		} else {
+			_, err = outputFile.WriteString("\n")
+			if err != nil {
+				return fmt.Errorf("failed appending new line %s to output file: %s", file, err)
+			}
+		}
+	}
+	return nil
+}
+
+// Sorts fs.FileInfo objects by basename.
+type fileInfosByName []fs.FileInfo
+
+func (x fileInfosByName) Len() int { return len(x) }
+
+func (x fileInfosByName) Less(i, j int) bool {
+	iName := path.Base(x[i].Name())
+	jName := path.Base(x[j].Name())
+	return iName < jName
+}
+
+func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 func Deploy(ctx context.Context) error {
 	cluster, err := dev.NewCluster(path.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
