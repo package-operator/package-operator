@@ -190,7 +190,7 @@ func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
 		mg.F(Builder.Push, "package-operator-webhook"),
-		mg.F(Builder.Image, "remote-phase-manager"),
+		mg.F(Builder.Push, "remote-phase-manager"),
 	)
 }
 
