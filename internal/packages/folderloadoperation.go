@@ -94,7 +94,7 @@ func (l *folderLoadOperation) walkPackageFolder(path string, d fs.DirEntry, err 
 			}
 		}
 
-		obj.SetLabels(mergeKeysFrom(obj.GetLabels(), commonLabels(l.manifest, l.templateContext.Metadata.Name)))
+		obj.SetLabels(mergeKeysFrom(obj.GetLabels(), commonLabels(l.manifest, l.templateContext.Package.Name)))
 
 		annotations := obj.GetAnnotations()
 		phase := annotations[manifestsv1alpha1.PackagePhaseAnnotation]

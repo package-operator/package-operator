@@ -45,7 +45,11 @@ func NewFolderLoader(scheme *runtime.Scheme) *FolderLoader {
 
 // Template Context provided when executing file templates.
 type FolderLoaderTemplateContext struct {
-	Metadata metav1.ObjectMeta
+	Package PackageTemplateContext
+}
+
+type PackageTemplateContext struct {
+	metav1.ObjectMeta
 }
 
 // Result of a loading operation.
@@ -70,7 +74,7 @@ func (l *FolderLoader) Load(
 	}
 
 	res.Annotations = map[string]string{}
-	res.Labels = commonLabels(res.Manifest, templateContext.Metadata.Name)
+	res.Labels = commonLabels(res.Manifest, templateContext.Package.Name)
 	res.TemplateSpec.AvailabilityProbes = res.Manifest.Spec.AvailabilityProbes
 
 	for _, phase := range res.Manifest.Spec.Phases {

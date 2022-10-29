@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "test-stub-{{.Metadata.Name}}"
-{{if eq .Metadata.Namespace ""}}
-  namespace: "{{.Metadata.Name}}"
+  name: "test-stub-{{.Package.Name}}"
+{{if eq .Package.Namespace ""}}
+  namespace: "{{.Package.Name}}"
 {{end}}
   labels:
     app: test-stub
-    instance: "{{.Metadata.Name}}"
+    instance: "{{.Package.Name}}"
   annotations:
     package-operator.run/phase: deploy
 spec:
@@ -15,14 +15,14 @@ spec:
   selector:
     matchLabels:
       app: test-stub
-      instance: "{{.Metadata.Name}}"
+      instance: "{{.Package.Name}}"
   template:
     metadata:
       labels:
         app: test-stub
-        instance: "{{.Metadata.Name}}"
+        instance: "{{.Package.Name}}"
     spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: '{{index .Metadata.Annotations "package-operator.run/test-stub-image"}}'
+        image: '{{index .Package.Annotations "package-operator.run/test-stub-image"}}'

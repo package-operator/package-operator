@@ -29,9 +29,11 @@ func TestLoader(t *testing.T) {
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	res, err := l.Load(ctx, "./testdata", FolderLoaderTemplateContext{
-		Metadata: metav1.ObjectMeta{
-			Name:      "pack-1",
-			Namespace: "test123-ns",
+		Package: PackageTemplateContext{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pack-1",
+				Namespace: "test123-ns",
+			},
 		},
 	})
 	require.NoError(t, err)

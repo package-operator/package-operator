@@ -1,8 +1,8 @@
-{{if eq .Metadata.Namespace ""}}
+{{if eq .Package.Namespace ""}}
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: "{{.Metadata.Name}}"
+  name: "{{.Package.Name}}"
   annotations:
     package-operator.run/phase: namespace
 {{end}}
