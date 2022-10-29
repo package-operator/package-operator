@@ -7,3 +7,5 @@ const (
 	// Paused indicates that object changes are not reconciled, but status is still reported.
 	ObjectSetPhasePaused = "Paused"
 )
+
+const ObjectSetPhaseClassLabel = "package-operator.run/phase-class"

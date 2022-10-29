@@ -78,7 +78,11 @@ func (a *GenericObjectSetPhase) IsPaused() bool {
 }
 
 func (a *GenericObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
-	a.Spec.ObjectSetTemplatePhase = phase
+	if a.Labels == nil {
+		a.Labels = map[string]string{}
+	}
+	a.Labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
+	a.Spec.Objects = phase.Objects
 }
 
 func (a *GenericObjectSetPhase) SetRevision(revision int64) {
@@ -118,7 +122,11 @@ func (a *GenericClusterObjectSetPhase) SetAvailabilityProbes(probes []corev1alph
 }
 
 func (a *GenericClusterObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
-	a.Spec.ObjectSetTemplatePhase = phase
+	if a.Labels == nil {
+		a.Labels = map[string]string{}
+	}
+	a.Labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
+	a.Spec.Objects = phase.Objects
 }
 
 func (a *GenericClusterObjectSetPhase) SetRevision(revision int64) {

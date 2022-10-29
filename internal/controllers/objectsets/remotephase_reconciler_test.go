@@ -142,7 +142,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(
 	objectSetPhase := genObjectSetPhase.
 		ClientObject().(*corev1alpha1.ObjectSetPhase)
 
-	assert.Equal(t, phase, objectSetPhase.Spec.ObjectSetTemplatePhase)
+	assert.Equal(t, phase.Objects, objectSetPhase.Spec.Objects)
 	assert.Equal(t, objectSet.Spec.AvailabilityProbes, objectSetPhase.Spec.AvailabilityProbes)
 	assert.Equal(t, objectSet.Status.Revision, objectSetPhase.Spec.Revision)
 	assert.Equal(t, objectSet.Spec.Previous, objectSetPhase.Spec.Previous)

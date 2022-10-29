@@ -9,9 +9,11 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 type objectSetPhases interface {
@@ -98,39 +100,48 @@ func validateGenericObjectSetPhaseImmutability[T objectSetPhases](obj, oldObj *T
 	oldFields := objectSetPhaseImmutableFields(oldObj)
 	newFields := objectSetPhaseImmutableFields(obj)
 
+	var allErrs field.ErrorList
+	specFields := field.NewPath("spec")
 	if !equality.Semantic.DeepEqual(
-		newFields.ObjectSetTemplatePhase,
-		oldFields.ObjectSetTemplatePhase) {
-		return errObjectSetTemplatePhaseImmutable
+		newFields.Objects,
+		oldFields.Objects) {
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("objects"), "", "is immutable"))
 	}
 
 	if !equality.Semantic.DeepEqual(
 		newFields.Previous, oldFields.Previous) {
-		return errPreviousImmutable
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("previous"), "", "is immutable"))
 	}
 
 	if newFields.Revision != oldFields.Revision {
-		return errRevisionImmutable
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("revision"), "", "is immutable"))
 	}
 
 	if !equality.Semantic.DeepEqual(newFields.AvailabilityProbes, oldFields.AvailabilityProbes) {
-		return errAvailabilityProbesImmutable
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("availabilityProbes"), "", "is immutable"))
 	}
 
-	return nil
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return allErrs.ToAggregate()
 }
 
 type genericObjectSetPhaseImmutableFields struct {
-	Previous                            []corev1alpha1.PreviousRevisionReference `json:"previous,omitempty"`
-	corev1alpha1.ObjectSetTemplatePhase `json:",inline"`
-	Revision                            int64                         `json:"revision"`
-	AvailabilityProbes                  []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
+	Previous           []corev1alpha1.PreviousRevisionReference `json:"previous,omitempty"`
+	Objects            []corev1alpha1.ObjectSetObject           `json:",inline"`
+	Revision           int64                                    `json:"revision"`
+	AvailabilityProbes []corev1alpha1.ObjectSetProbe            `json:"availabilityProbes"`
 }
 
 func objectSetPhaseImmutableFields[T objectSetPhases](obj *T) genericObjectSetPhaseImmutableFields {
 	var (
 		previous []corev1alpha1.PreviousRevisionReference
-		template *corev1alpha1.ObjectSetTemplatePhase
+		objects  []corev1alpha1.ObjectSetObject
 		revision int64
 		probes   []corev1alpha1.ObjectSetProbe
 	)
@@ -138,20 +149,20 @@ func objectSetPhaseImmutableFields[T objectSetPhases](obj *T) genericObjectSetPh
 	switch v := any(obj).(type) {
 	case *corev1alpha1.ClusterObjectSetPhase:
 		previous = v.Spec.Previous
-		template = &v.Spec.ObjectSetTemplatePhase
+		objects = v.Spec.Objects
 		revision = v.Spec.Revision
 		probes = v.Spec.AvailabilityProbes
 	case *corev1alpha1.ObjectSetPhase:
 		previous = v.Spec.Previous
-		template = &v.Spec.ObjectSetTemplatePhase
+		objects = v.Spec.Objects
 		revision = v.Spec.Revision
 		probes = v.Spec.AvailabilityProbes
 	}
 
 	return genericObjectSetPhaseImmutableFields{
-		Previous:               previous,
-		ObjectSetTemplatePhase: *template,
-		Revision:               revision,
-		AvailabilityProbes:     probes,
+		Previous:           previous,
+		Objects:            objects,
+		Revision:           revision,
+		AvailabilityProbes: probes,
 	}
 }
