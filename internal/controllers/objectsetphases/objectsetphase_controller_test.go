@@ -135,7 +135,9 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 			objectSetPhase := GenericObjectSetPhase{}
-			objectSetPhase.Spec.Class = test.class
+			objectSetPhase.Labels = map[string]string{
+				corev1alpha1.ObjectSetPhaseClassLabel: test.class,
+			}
 			objectSetPhase.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {

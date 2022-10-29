@@ -66,7 +66,7 @@ func (a *GenericObjectSetPhase) GetConditions() *[]metav1.Condition {
 }
 
 func (a *GenericObjectSetPhase) GetClass() string {
-	return a.Spec.Class
+	return a.Labels[corev1alpha1.ObjectSetPhaseClassLabel]
 }
 
 func (a *GenericObjectSetPhase) GetPrevious() []corev1alpha1.PreviousRevisionReference {
@@ -74,7 +74,9 @@ func (a *GenericObjectSetPhase) GetPrevious() []corev1alpha1.PreviousRevisionRef
 }
 
 func (a *GenericObjectSetPhase) GetPhase() corev1alpha1.ObjectSetTemplatePhase {
-	return a.Spec.ObjectSetTemplatePhase
+	return corev1alpha1.ObjectSetTemplatePhase{
+		Objects: a.Spec.Objects,
+	}
 }
 
 func (a *GenericObjectSetPhase) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
@@ -106,7 +108,7 @@ func (a *GenericClusterObjectSetPhase) GetConditions() *[]metav1.Condition {
 }
 
 func (a *GenericClusterObjectSetPhase) GetClass() string {
-	return a.Spec.Class
+	return a.Labels[corev1alpha1.ObjectSetPhaseClassLabel]
 }
 
 func (a *GenericClusterObjectSetPhase) GetPrevious() []corev1alpha1.PreviousRevisionReference {
@@ -114,7 +116,9 @@ func (a *GenericClusterObjectSetPhase) GetPrevious() []corev1alpha1.PreviousRevi
 }
 
 func (a *GenericClusterObjectSetPhase) GetPhase() corev1alpha1.ObjectSetTemplatePhase {
-	return a.Spec.ObjectSetTemplatePhase
+	return corev1alpha1.ObjectSetTemplatePhase{
+		Objects: a.Spec.Objects,
+	}
 }
 
 func (a *GenericClusterObjectSetPhase) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {

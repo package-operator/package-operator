@@ -44,7 +44,8 @@ type ClusterObjectSetPhaseSpec struct {
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes"`
 
-	ObjectSetTemplatePhase `json:",inline"`
+	// Objects belonging to this phase.
+	Objects []ObjectSetObject `json:"objects"`
 }
 
 // ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase.

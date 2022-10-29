@@ -562,18 +562,6 @@ spec:
                   - selector
                   type: object
                 type: array
-              class:
-                description: If non empty, the ObjectSet controller will delegate
-                  phase reconciliation to another controller, by creating an ObjectSetPhase
-                  object. If set to the string "default" the built-in Package Operator
-                  ObjectSetPhase controller will reconcile the object in the same
-                  way the ObjectSet would. If set to any other string, an out-of-tree
-                  controller needs to be present to handle ObjectSetPhase objects.
-                type: string
-              name:
-                description: Name of the reconcile phase. Must be unique within a
-                  ObjectSet.
-                type: string
               objects:
                 description: Objects belonging to this phase.
                 items:
@@ -612,7 +600,6 @@ spec:
                 type: integer
             required:
             - availabilityProbes
-            - name
             - objects
             - revision
             type: object
@@ -1796,18 +1783,6 @@ spec:
                   - selector
                   type: object
                 type: array
-              class:
-                description: If non empty, the ObjectSet controller will delegate
-                  phase reconciliation to another controller, by creating an ObjectSetPhase
-                  object. If set to the string "default" the built-in Package Operator
-                  ObjectSetPhase controller will reconcile the object in the same
-                  way the ObjectSet would. If set to any other string, an out-of-tree
-                  controller needs to be present to handle ObjectSetPhase objects.
-                type: string
-              name:
-                description: Name of the reconcile phase. Must be unique within a
-                  ObjectSet.
-                type: string
               objects:
                 description: Objects belonging to this phase.
                 items:
@@ -1846,7 +1821,6 @@ spec:
                 type: integer
             required:
             - availabilityProbes
-            - name
             - objects
             - revision
             type: object

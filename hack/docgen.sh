@@ -6,3 +6,5 @@ set -euo pipefail
 # --------------
 ./.deps/bin/k8s-docgen apis/core/v1alpha1 > ./docs/api-reference.md
 echo >> ./docs/api-reference.md
+./.deps/bin/k8s-docgen apis/manifests/v1alpha1 >> ./docs/api-reference.md
+echo >> ./docs/api-reference.md

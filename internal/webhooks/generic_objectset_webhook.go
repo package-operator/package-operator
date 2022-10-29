@@ -9,9 +9,11 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 type objectSets interface {
@@ -98,17 +100,28 @@ func validateGenericObjectSetImmutability[T objectSets](obj, oldObj *T) error {
 	oldFields := objectSetImmutableFields(oldObj)
 	newFields := objectSetImmutableFields(obj)
 
+	var allErrs field.ErrorList
+
+	specFields := field.NewPath("spec")
 	if !equality.Semantic.DeepEqual(
 		newFields.ObjectSetTemplateSpec,
 		oldFields.ObjectSetTemplateSpec) {
-		return errObjectSetTemplateSpecImmutable
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("phases"), "", "is immutable"))
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("availabilityProbes"), "", "is immutable"))
 	}
 
 	if !equality.Semantic.DeepEqual(
 		newFields.Previous, oldFields.Previous) {
-		return errPreviousImmutable
+		allErrs = append(allErrs,
+			field.Invalid(specFields.Child("previous"), "", "is immutable"))
 	}
-	return nil
+
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return allErrs.ToAggregate()
 }
 
 type genericImmutableFields struct {

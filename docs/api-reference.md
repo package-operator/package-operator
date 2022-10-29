@@ -157,8 +157,6 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: consetetur
-  name: amet
   objects:
   - object:
       apiVersion: apps/v1
@@ -174,10 +172,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: elitr
-    kind: sadipscing
-    name: sed
-    namespace: diam
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -202,7 +200,7 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  image: nonumy
+  image: sed
 status:
   phase: Pending
 
@@ -251,8 +249,8 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: tempor
-        name: eirmod
+      - class: nonumy
+        name: diam
         objects:
         - object:
             apiVersion: apps/v1
@@ -310,8 +308,8 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: ipsum
-    name: lorem
+  - class: tempor
+    name: eirmod
     objects:
     - object:
         apiVersion: apps/v1
@@ -363,8 +361,6 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
-  class: sit
-  name: dolor
   objects:
   - object:
       apiVersion: apps/v1
@@ -380,10 +376,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: ipsum
+    kind: lorem
+    name: dolor
+    namespace: sit
 
 ```
 
@@ -409,7 +405,7 @@ metadata:
   name: example
   namespace: default
 spec:
-  image: sed
+  image: amet
 status:
   phase: Pending
 
@@ -468,8 +464,6 @@ ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
-| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 
 
@@ -599,8 +593,6 @@ ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
 | `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
-| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 
 
@@ -849,3 +841,73 @@ References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to whi
 Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetStatus](#objectsetstatus)
+## manifests.package-operator.run/v1alpha1
+
+The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
+containing file-based manifests for the packaging infrastructure.
+
+* [PackageManifest](#packagemanifest)
+
+
+### PackageManifest
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: example
+  namespace: default
+spec:
+  availabilityProbes:
+  - corev1alpha1.ObjectSetProbe
+  phases:
+  - class: ipsum
+    name: lorem
+  scopes:
+  - PackageManifestScope
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#packagemanifestspec">PackageManifestSpec</a> | PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes. |
+
+
+
+
+---
+
+### PackageManifestPhase
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a PackageManifest |
+| `class` <br>string | If non empty, phase reconciliation is delegated to another controller.<br>If set to the string "default" the built-in controller reconciling the object.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestSpec
+
+PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
+
+| Field | Description |
+| ----- | ----------- |
+| `scopes` <b>required</b><br><a href="#packagemanifestscope">[]PackageManifestScope</a> | Scopes declare the available installation scopes for the package.<br>Either Cluster, Namespaced, or both. |
+| `phases` <b>required</b><br><a href="#packagemanifestphase">[]PackageManifestPhase</a> | Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment. |
+| `availabilityProbes` <b>required</b><br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+
+
+Used in:
+* [PackageManifest](#packagemanifest)
