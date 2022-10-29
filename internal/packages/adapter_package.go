@@ -63,7 +63,9 @@ func (a *GenericPackage) Scope() manifestsv1alpha1.PackageManifestScope {
 
 func (a *GenericPackage) TemplateContext() FolderLoaderTemplateContext {
 	return FolderLoaderTemplateContext{
-		Metadata: a.ObjectMeta,
+		Package: PackageTemplateContext{
+			ObjectMeta: a.ObjectMeta,
+		},
 	}
 }
 
@@ -85,7 +87,9 @@ func (a *GenericClusterPackage) Scope() manifestsv1alpha1.PackageManifestScope {
 
 func (a *GenericClusterPackage) TemplateContext() FolderLoaderTemplateContext {
 	return FolderLoaderTemplateContext{
-		Metadata: a.ObjectMeta,
+		Package: PackageTemplateContext{
+			ObjectMeta: a.ObjectMeta,
+		},
 	}
 }
 
