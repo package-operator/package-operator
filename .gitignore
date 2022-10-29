@@ -17,6 +17,7 @@ bin
 .cache
 .deps
 config/static-deployment/deployment.yaml
+config/current-self-bootstrap-job.yaml
 
 # JetBrains IDEs (e.g. GoLand)
 .idea/

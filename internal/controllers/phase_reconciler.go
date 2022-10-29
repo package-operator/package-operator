@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -438,6 +439,10 @@ func (c *defaultAdoptionChecker) Check(
 	ctx context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
+	if len(os.Getenv("PKO_FORCE_ADOPTION")) > 0 {
+		return true, nil
+	}
+
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
 		return false, nil
@@ -533,6 +538,10 @@ const (
 func getObjectRevision(obj client.Object) (int64, error) {
 	a := obj.GetAnnotations()
 	if a == nil {
+		return 0, nil
+	}
+
+	if len(a[revisionAnnotation]) == 0 {
 		return 0, nil
 	}
 

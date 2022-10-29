@@ -19,10 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"sigs.k8s.io/yaml"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/magefile/mage/mg"
@@ -31,6 +27,12 @@ import (
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	clientScheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -174,6 +176,7 @@ func (Build) Images() {
 	mg.Deps(
 		mg.F(Builder.Image, "package-operator-manager"),
 		mg.F(Builder.Image, "package-operator-webhook"),
+		mg.F(Builder.Image, "package-operator-package"),
 		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
@@ -190,7 +193,11 @@ func (Build) PushImages() {
 	mg.Deps(
 		mg.F(Builder.Push, "package-operator-manager"),
 		mg.F(Builder.Push, "package-operator-webhook"),
+		mg.F(Builder.Push, "package-operator-package"),
 		mg.F(Builder.Push, "remote-phase-manager"),
+	)
+	mg.SerialDeps(
+		Generate.SelfBootstrapJob,
 	)
 }
 
@@ -403,6 +410,11 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 		b.init,
 		determineContainerRuntime,
 	)
+	if packageImageName == "package-operator-package" {
+		mg.SerialDeps(
+			Generate.packageOperatorPackage, // inject digests into package
+		)
+	}
 
 	imageCacheDir, err := b.cleanImageCacheDir(packageImageName)
 	if err != nil {
@@ -458,7 +470,13 @@ func (b *builder) Push(imageName string) error {
 		}
 	}
 
-	if err := sh.Run(containerRuntime, "push", b.imageURL(imageName)); err != nil {
+	args := []string{"push"}
+	if containerRuntime == string(dev.ContainerRuntimePodman) {
+		args = append(args, "--digestfile="+digestFile(imageName))
+	}
+	args = append(args, b.imageURL(imageName))
+
+	if err := sh.Run(containerRuntime, args...); err != nil {
 		return fmt.Errorf("pushing image: %w", err)
 	}
 
@@ -466,11 +484,33 @@ func (b *builder) Push(imageName string) error {
 }
 
 func (b *builder) imageURL(name string) string {
+	return b.internalImageURL(name, false)
+}
+
+func (b *builder) imageURLWithDigest(name string) string {
+	return b.internalImageURL(name, true)
+}
+
+func digestFile(imageName string) string {
+	return path.Join(cacheDir, imageName+".digest")
+}
+
+func (b *builder) internalImageURL(name string, useDigest bool) string {
 	envvar := strings.ReplaceAll(strings.ToUpper(name), "-", "_") + "_IMAGE"
 	if url := os.Getenv(envvar); len(url) != 0 {
 		return url
 	}
-	return b.imageOrg + "/" + name + ":" + b.version
+	image := b.imageOrg + "/" + name + ":" + b.version
+	if !useDigest {
+		return image
+	}
+
+	digest, err := os.ReadFile(digestFile(name))
+	if err != nil {
+		panic(err)
+	}
+
+	return b.imageOrg + "/" + name + "@" + string(digest)
 }
 
 // Development
@@ -511,13 +551,28 @@ func (d Dev) Load() {
 	mg.SerialDeps(
 		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
 	)
-	mg.Deps(
-		mg.F(Dev.LoadImage, "package-operator-manager"),
-		mg.F(Dev.LoadImage, "package-operator-webhook"),
-		mg.F(Dev.LoadImage, "remote-phase-manager"),
-		mg.F(Dev.LoadImage, "test-stub"),
-		mg.F(Dev.LoadImage, "test-stub-package"),
+	images := []string{
+		"package-operator-manager", "package-operator-webhook",
+		"remote-phase-manager", "test-stub", "test-stub-package",
+		"package-operator-package",
+	}
+	deps := make([]interface{}, len(images))
+	for i := range images {
+		deps[i] = mg.F(Dev.LoadImage, images[i])
+	}
+	mg.Deps(deps...)
+
+	mg.SerialDeps(
+		Generate.SelfBootstrapJob,
 	)
+
+	// Print all Loaded images, so we can reference them manually.
+	fmt.Println("----------------------------")
+	fmt.Println("loaded images into kind cluster:")
+	for i := range images {
+		fmt.Println(Builder.imageURL(images[i]))
+	}
+	fmt.Println("----------------------------")
 }
 
 // Setup local cluster and deploy the Package Operator.
@@ -538,20 +593,51 @@ func (d Dev) Deploy(ctx context.Context) error {
 
 // deploy the Package Operator Manager from local files.
 func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Cluster) error {
+	packageOperatorDeployment, err := templatePackageOperatorManager(cluster.Scheme)
+	if err != nil {
+		return err
+	}
+
+	ctx = logr.NewContext(ctx, logger)
+
+	// Deploy
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
+		"config/static-deployment",
+	}); err != nil {
+		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
+	}
+	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
+	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
+		return fmt.Errorf("deploy package-operator-manager: %w", err)
+	}
+	return nil
+}
+
+func templatePackageOperatorManager(scheme *k8sruntime.Scheme) (deploy *appsv1.Deployment, err error) {
 	objs, err := dev.LoadKubernetesObjectsFromFile(
 		"config/static-deployment/deployment.yaml.tpl")
 	if err != nil {
-		return fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err)
+		return nil, fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err)
 	}
 
+	return patchPackageOperatorManager(scheme, &objs[0])
+}
+
+func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Unstructured) (deploy *appsv1.Deployment, err error) {
 	// Replace image
 	packageOperatorDeployment := &appsv1.Deployment{}
-	if err := cluster.Scheme.Convert(
-		&objs[0], packageOperatorDeployment, nil); err != nil {
-		return fmt.Errorf("converting to Deployment: %w", err)
+	if err := scheme.Convert(
+		obj, packageOperatorDeployment, nil); err != nil {
+		return nil, fmt.Errorf("converting to Deployment: %w", err)
 	}
-	packageOperatorManagerImage := os.Getenv("PACKAGE_OPERATOR_MANAGER_IMAGE")
-	if len(packageOperatorManagerImage) == 0 {
+
+	var packageOperatorManagerImage string
+	if len(os.Getenv("USE_DIGESTS")) > 0 {
+		mg.Deps(
+			mg.F(Builder.Push, "package-operator-manager"), // to use digests the image needs to be pushed to a registry first.
+		)
+		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
+	} else {
 		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
 	}
 	for i := range packageOperatorDeployment.Spec.Template.Spec.Containers {
@@ -569,20 +655,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 			}
 		}
 	}
-
-	ctx = logr.NewContext(ctx, logger)
-
-	// Deploy
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
-		"config/static-deployment",
-	}); err != nil {
-		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
-	}
-	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
-	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
-		return fmt.Errorf("deploy package-operator-manager: %w", err)
-	}
-	return nil
+	return packageOperatorDeployment, nil
 }
 
 // Package Operator Webhook server from local files.
@@ -918,6 +991,144 @@ func (x fileInfosByName) Less(i, j int) bool {
 }
 
 func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+
+// Includes all static-deployment files in the package-operator-package.
+func (Generate) packageOperatorPackage() error {
+	return filepath.WalkDir("config/static-deployment", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		return includeInPackageOperatorPackage(path)
+	})
+}
+
+// generates a self-bootstrap-job.yaml based on the current VERSION.
+// requires the images to have been build beforehand.
+func (Generate) SelfBootstrapJob() error {
+	mg.Deps(determineContainerRuntime)
+
+	const (
+		pkoDefaultManagerImage = "quay.io/package-operator/package-operator-manager:latest"
+		pkoDefaultPackageImage = "quay.io/package-operator/package-operator-package:latest"
+	)
+
+	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml")
+	if err != nil {
+		return err
+	}
+
+	var (
+		packageOperatorManagerImage string
+		packageOperatorPackageImage string
+	)
+	if len(os.Getenv("USE_DIGESTS")) > 0 {
+		mg.Deps(
+			mg.F(Builder.Push, "package-operator-manager"),
+			mg.F(Builder.Push, "package-operator-package"),
+		)
+		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
+		packageOperatorPackageImage = Builder.imageURLWithDigest("package-operator-package")
+	} else {
+		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
+		packageOperatorPackageImage = Builder.imageURL("package-operator-package")
+	}
+
+	latestJob = bytes.ReplaceAll(
+		latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
+	latestJob = bytes.ReplaceAll(
+		latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
+
+	if err := os.WriteFile("config/current-self-bootstrap-job.yaml", latestJob, os.ModePerm); err != nil {
+		return err
+	}
+	return nil
+}
+
+func includeInPackageOperatorPackage(file string) error {
+	fileContent, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	objs, err := dev.LoadKubernetesObjectsFromBytes(fileContent)
+	if err != nil {
+		return err
+	}
+	for _, obj := range objs {
+		if len(obj.Object) == 0 {
+			continue
+		}
+
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		gk := obj.GroupVersionKind().GroupKind()
+
+		var (
+			subfolder    string
+			objToMarshal interface{}
+		)
+		switch gk {
+		case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:
+			annotations["package-operator.run/phase"] = "crds"
+			subfolder = "crds"
+			objToMarshal = obj.Object
+
+		case schema.GroupKind{Group: "", Kind: "Namespace"}:
+			annotations["package-operator.run/phase"] = "namespace"
+			objToMarshal = obj.Object
+
+		case schema.GroupKind{Group: "", Kind: "ServiceAccount"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}:
+			annotations["package-operator.run/phase"] = "rbac"
+			subfolder = "rbac"
+			objToMarshal = obj.Object
+
+		case schema.GroupKind{Group: "apps", Kind: "Deployment"}:
+			annotations["package-operator.run/phase"] = "deploy"
+			obj.SetAnnotations(annotations)
+			deploy, err := patchPackageOperatorManager(clientScheme.Scheme, &obj)
+			if err != nil {
+				return err
+			}
+			deploy.SetGroupVersionKind(schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"})
+			objToMarshal = deploy
+		}
+		obj.SetAnnotations(annotations)
+
+		outFilePath := path.Join(
+			"config", "packages", "package-operator")
+		if len(subfolder) > 0 {
+			outFilePath = path.Join(outFilePath, subfolder)
+		}
+		outFilePath = path.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), gk.Kind))
+
+		outFile, err := os.Create(outFilePath)
+		if err != nil {
+			return fmt.Errorf("creating output file: %w", err)
+		}
+		defer outFile.Close()
+
+		yamlBytes, err := yaml.Marshal(objToMarshal)
+		if err != nil {
+			return err
+		}
+
+		if _, err := outFile.Write(yamlBytes); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func Deploy(ctx context.Context) error {
 	cluster, err := dev.NewCluster(path.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
