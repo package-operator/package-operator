@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -47,10 +47,10 @@ jobs:
       with:
         name: bootstrap-job
         path: |
-          config/current-self-bootstrap-job.yaml
+          config/self-bootstrap-job.yaml
 
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          config/current-self-bootstrap-job.yaml
+          config/self-bootstrap-job.yaml

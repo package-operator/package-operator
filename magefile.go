@@ -1019,7 +1019,7 @@ func (Generate) SelfBootstrapJob() error {
 		pkoDefaultPackageImage = "quay.io/package-operator/package-operator-package:latest"
 	)
 
-	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml")
+	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
 	if err != nil {
 		return err
 	}
@@ -1045,7 +1045,7 @@ func (Generate) SelfBootstrapJob() error {
 	latestJob = bytes.ReplaceAll(
 		latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
 
-	if err := os.WriteFile("config/current-self-bootstrap-job.yaml", latestJob, os.ModePerm); err != nil {
+	if err := os.WriteFile("config/self-bootstrap-job.yaml", latestJob, os.ModePerm); err != nil {
 		return err
 	}
 	return nil
