@@ -1,0 +1,56 @@
+name: release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '>=1.18.0'
+
+    - name: Delete non-semver tags
+      run: 'git tag -d $(git tag -l | grep -v "^v")'
+
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Build&Push
+      run: ./mage build:pushImages
+      env:
+        USE_DIGESTS: "true"
+        VERSION: ${{github.ref_name}}
+        QUAY_USER: ${{ secrets.QUAY_USER }}
+        QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+
+    - uses: cytopia/upload-artifact-retry-action@v0.1.2
+      if: ${{ always() }}
+      with:
+        name: bootstrap-job
+        path: |
+          config/current-self-bootstrap-job.yaml
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          config/current-self-bootstrap-job.yaml

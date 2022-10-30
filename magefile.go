@@ -461,8 +461,10 @@ func (b *builder) Push(imageName string) error {
 	)
 
 	// Login to container registry when running on AppSRE Jenkins.
-	if _, ok := os.LookupEnv("JENKINS_HOME"); ok {
-		log.Println("running in Jenkins, calling container runtime login")
+	_, isJenkins := os.LookupEnv("JENKINS_HOME")
+	_, isCI := os.LookupEnv("CI")
+	if isJenkins || isCI {
+		log.Println("running in CI, calling container runtime login")
 		if err := sh.Run(containerRuntime,
 			"login", "-u="+os.Getenv("QUAY_USER"),
 			"-p="+os.Getenv("QUAY_TOKEN"), "quay.io"); err != nil {
