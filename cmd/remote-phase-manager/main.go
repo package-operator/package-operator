@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
@@ -119,7 +120,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-		s := &http.Server{Addr: opts.pprofAddr, Handler: mux}
+		s := &http.Server{Addr: opts.pprofAddr, Handler: mux, ReadHeaderTimeout: 1 * time.Second}
 		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 			errCh := make(chan error)
 			defer func() {
