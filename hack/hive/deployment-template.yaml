@@ -101,4 +101,4 @@ objects:
                 volumes:
                   - name: "shared-dir"
                     emptyDir: {}
-            backoffLimit: 3
+            backoffLimit: 20

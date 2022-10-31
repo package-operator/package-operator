@@ -166,9 +166,11 @@ func forcedCleanup(
 		if err := c.Delete(ctx, clusterObjectDeployment); err != nil {
 			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
 		}
-		clusterObjectDeployment.Finalizers = nil
-		if err := c.Update(ctx, clusterObjectDeployment); err != nil {
-			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
+		if len(clusterObjectDeployment.Finalizers) > 0 {
+			clusterObjectDeployment.Finalizers = nil
+			if err := c.Update(ctx, clusterObjectDeployment); err != nil {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
+			}
 		}
 	}
 
@@ -185,9 +187,11 @@ func forcedCleanup(
 		if err := c.Delete(ctx, clusterObjectSet); err != nil {
 			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
 		}
-		clusterObjectSet.Finalizers = nil
-		if err := c.Update(ctx, clusterObjectSet); err != nil {
-			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+		if len(clusterObjectSet.Finalizers) > 0 {
+			clusterObjectSet.Finalizers = nil
+			if err := c.Update(ctx, clusterObjectSet); err != nil {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+			}
 		}
 	}
 	return nil
