@@ -148,7 +148,7 @@ func forcedCleanup(
 	if err := c.Delete(ctx, packageOperatorPackage); err != nil {
 		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
 	}
-	if len(packageOperatorPackage.Finalizers) == 0 {
+	if len(packageOperatorPackage.Finalizers) > 0 {
 		packageOperatorPackage.Finalizers = []string{}
 		if err := c.Update(ctx, packageOperatorPackage); err != nil {
 			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
