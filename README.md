@@ -31,8 +31,8 @@ Package Operator is an open source operator for [Kubernetes](https://kubernetes.
 
 ## Project Status
 
-Package Operator is currently in early development and is neither complete nor ready for production use.
-APIs have not been finalized and are subject to breaking changes with future releases.
+Package Operator had it's first stable release and is in limited production use.
+The APIs have not been finalized and may be subject to breaking changes with future releases.
 
 ## Features
 
@@ -56,9 +56,9 @@ The source of this website is our [website repository](https://github.com/packag
 
 Thank you for taking time to help to improve Package Operator!
 
-Feel free to open issues or propose pull requests, but please keep in mind that Package Operator is still in early development and response times for reviewing contributions may vary.
+Feel free to open issues or propose pull requests, but please keep in mind that Package Operator is still very fresh and response times for reviewing contributions may vary.
 
-We also are not yet ready to open project management and meetings to the general public.
+We also are not yet ready to open project management and meetings to the general public, but will try to be accommodating.
 
 ## Development
 
