@@ -71,35 +71,45 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	err = c.Get(ctx, client.ObjectKey{
 		Name: "package-operator",
 	}, packageOperatorPackage)
-	if err == nil && meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageUnpacked) {
+	if err == nil &&
+		meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageAvailable) {
 		// Package Operator is already installed
 		log.Info("Package Operator already installed, updating via in-cluster Package Operator")
 		packageOperatorPackage.Spec.Image = opts.selfBootstrap
 		return c.Update(ctx, packageOperatorPackage)
 	}
-
-	if err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-		return err
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error looking up Package Operator ClusterPackage: %w", err)
 	}
 
-	log.Info("Package Operator NOT installed, self-bootstrapping")
+	log.Info("Package Operator NOT Available, self-bootstrapping")
+	if errors.IsNotFound(err) {
+		// Create ClusterPackage Object
+		// Create PackageOperator ClusterPackage
+		packageOperatorPackage = &corev1alpha1.ClusterPackage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageOperatorClusterPackageName,
+			},
+			Spec: corev1alpha1.PackageSpec{
+				Image: opts.selfBootstrap,
+			},
+		}
+		if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("creating Package Operator ClusterPackage: %w", err)
+		}
+	}
+	if err == nil {
+		// Cluster Package already present.
+		// Ensure the right image is set to load.
+		packageOperatorPackage.Spec.Image = opts.selfBootstrap
+		if err := c.Update(ctx, packageOperatorPackage); err != nil {
+			return nil
+		}
+	}
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
 	// CRDs, Namespace, ServiceAccount and ClusterRoleBinding.
 	if err := os.Setenv("PKO_FORCE_ADOPTION", "1"); err != nil {
-		return err
-	}
-
-	// Create PackageOperator ClusterPackage
-	packageOperatorPackage = &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: packageOperatorClusterPackageName,
-		},
-		Spec: corev1alpha1.PackageSpec{
-			Image: opts.selfBootstrap,
-		},
-	}
-	if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 
