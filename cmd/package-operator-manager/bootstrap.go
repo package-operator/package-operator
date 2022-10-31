@@ -149,12 +149,12 @@ func forcedCleanup(
 		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
 	}
 	if len(packageOperatorPackage.Finalizers) == 0 {
-		packageOperatorPackage.Finalizers = nil
+		packageOperatorPackage.Finalizers = []string{}
 		if err := c.Update(ctx, packageOperatorPackage); err != nil {
 			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
 		}
 	}
-	log.Info("deleted ClusterObjectSet", "obj", packageOperatorPackage)
+	log.Info("deleted ClusterPackage", "obj", packageOperatorPackage)
 	if err := c.Get(
 		ctx, client.ObjectKeyFromObject(packageOperatorPackage), packageOperatorPackage,
 	); !errors.IsNotFound(err) {
@@ -175,7 +175,7 @@ func forcedCleanup(
 			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
 		}
 		if len(clusterObjectDeployment.Finalizers) > 0 {
-			clusterObjectDeployment.Finalizers = nil
+			clusterObjectDeployment.Finalizers = []string{}
 			if err := c.Update(ctx, clusterObjectDeployment); err != nil {
 				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
 			}
@@ -202,7 +202,7 @@ func forcedCleanup(
 			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
 		}
 		if len(clusterObjectSet.Finalizers) > 0 {
-			clusterObjectSet.Finalizers = nil
+			clusterObjectSet.Finalizers = []string{}
 			if err := c.Update(ctx, clusterObjectSet); err != nil {
 				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
 			}
