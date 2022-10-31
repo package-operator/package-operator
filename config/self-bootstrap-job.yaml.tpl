@@ -36,6 +36,8 @@ metadata:
 spec:
   # delete right after completion
   ttlSecondsAfterFinished: 0
+  # set deadline to 5min
+  activeDeadlineSeconds: 300
   template:
     spec:
       restartPolicy: OnFailure
