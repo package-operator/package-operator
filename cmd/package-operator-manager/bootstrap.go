@@ -144,13 +144,21 @@ func forcedCleanup(
 	ctx context.Context, c client.Client,
 	packageOperatorPackage *corev1alpha1.ClusterPackage,
 ) error {
-
+	log := logr.FromContextOrDiscard(ctx)
 	if err := c.Delete(ctx, packageOperatorPackage); err != nil {
 		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
 	}
-	packageOperatorPackage.Finalizers = nil
-	if err := c.Update(ctx, packageOperatorPackage); err != nil {
-		return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
+	if len(packageOperatorPackage.Finalizers) == 0 {
+		packageOperatorPackage.Finalizers = nil
+		if err := c.Update(ctx, packageOperatorPackage); err != nil {
+			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
+		}
+	}
+	log.Info("deleted ClusterObjectSet", "obj", packageOperatorPackage)
+	if err := c.Get(
+		ctx, client.ObjectKeyFromObject(packageOperatorPackage), packageOperatorPackage,
+	); !errors.IsNotFound(err) {
+		return fmt.Errorf("ensuring ClusterPackage is gone: %w", err)
 	}
 
 	// Also nuke all the ClusterObjectDeployment belonging to it.
@@ -171,6 +179,12 @@ func forcedCleanup(
 			if err := c.Update(ctx, clusterObjectDeployment); err != nil {
 				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
 			}
+		}
+		log.Info("deleted ClusterObjectDeployment", "name", clusterObjectDeployment.Name, "obj", clusterObjectDeployment)
+		if err := c.Get(
+			ctx, client.ObjectKeyFromObject(clusterObjectDeployment), clusterObjectDeployment,
+		); !errors.IsNotFound(err) {
+			return fmt.Errorf("ensuring ClusterObjectDeployment is gone: %w", err)
 		}
 	}
 
@@ -193,6 +207,13 @@ func forcedCleanup(
 				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
 			}
 		}
+		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
+		if err := c.Get(
+			ctx, client.ObjectKeyFromObject(clusterObjectSet), clusterObjectSet,
+		); !errors.IsNotFound(err) {
+			return fmt.Errorf("ensuring ClusterObjectSet is gone: %w", err)
+		}
 	}
+
 	return nil
 }

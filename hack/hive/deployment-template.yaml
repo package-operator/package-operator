@@ -32,7 +32,7 @@ objects:
     spec:
       clusterDeploymentSelector:
         matchLabels:
-          ext-hypershift.openshift.io/cluster-type: management-cluster
+          ext-hypershift.openshift.io/cluster-type: notavalidlabel
       resourceApplyMode: Sync
       resources:
         - apiVersion: v1
@@ -71,8 +71,8 @@ objects:
           spec:
             # delete right after completion
             ttlSecondsAfterFinished: 0
-            # set deadline to 30min
-            activeDeadlineSeconds: 1800
+            # set deadline to 10min
+            activeDeadlineSeconds: 600
             template:
               spec:
                 restartPolicy: OnFailure
@@ -101,4 +101,4 @@ objects:
                 volumes:
                   - name: "shared-dir"
                     emptyDir: {}
-            backoffLimit: 20
+            backoffLimit: 6
