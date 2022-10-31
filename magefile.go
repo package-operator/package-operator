@@ -412,7 +412,7 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 	)
 	if packageImageName == "package-operator-package" {
 		mg.SerialDeps(
-			Generate.packageOperatorPackage, // inject digests into package
+			Generate.PackageOperatorPackage, // inject digests into package
 		)
 	}
 
@@ -995,7 +995,7 @@ func (x fileInfosByName) Less(i, j int) bool {
 func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 // Includes all static-deployment files in the package-operator-package.
-func (Generate) packageOperatorPackage() error {
+func (Generate) PackageOperatorPackage() error {
 	return filepath.WalkDir("config/static-deployment", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -1111,6 +1111,10 @@ func includeInPackageOperatorPackage(file string) error {
 		if len(subfolder) > 0 {
 			outFilePath = path.Join(outFilePath, subfolder)
 		}
+
+		if err := os.MkdirAll(outFilePath, os.ModePerm); err != nil {
+			return fmt.Errorf("creating output directory")
+		}
 		outFilePath = path.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), gk.Kind))
 
 		outFile, err := os.Create(outFilePath)
@@ -1122,6 +1126,15 @@ func includeInPackageOperatorPackage(file string) error {
 		yamlBytes, err := yaml.Marshal(objToMarshal)
 		if err != nil {
 			return err
+		}
+
+		packageNamespaceOverride := os.Getenv("PKO_PACKAGE_NAMESPACE_OVERRIDE")
+		if len(packageNamespaceOverride) > 0 {
+			logger.Info(
+				"replacing default package-operator-system namespace",
+				"new namespace", packageNamespaceOverride)
+			yamlBytes = bytes.ReplaceAll(
+				yamlBytes, []byte("package-operator-system"), []byte(packageNamespaceOverride))
 		}
 
 		if _, err := outFile.Write(yamlBytes); err != nil {

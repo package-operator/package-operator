@@ -19,6 +19,7 @@ app-interface-push-images:
 			-e QUAY_TOKEN=${QUAY_TOKEN} \
 			-e IMAGE_ORG="${IMAGE_ORG}" \
 			-e REMOTE_PHASE_MANAGER_IMAGE="${IMAGE_ORG}/package-operator-hs-connector:${VERSION}" \
+			-e PKO_PACKAGE_NAMESPACE_OVERRIDE="openshift-package-operator" \
 			"${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" \
 			./mage build:pushImages; \
 	echo) 2>&1 | sed 's/^/  /'
