@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -90,9 +91,15 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	// Create PackageOperator ClusterPackage
-	packageOperatorPackage.Name = packageOperatorClusterPackageName
-	packageOperatorPackage.Spec.Image = opts.selfBootstrap
-	if err := c.Create(ctx, packageOperatorPackage); err != nil {
+	packageOperatorPackage = &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: packageOperatorClusterPackageName,
+		},
+		Spec: corev1alpha1.PackageSpec{
+			Image: opts.selfBootstrap,
+		},
+	}
+	if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 
