@@ -4,7 +4,7 @@ metadata:
   annotations:
     package-operator.run/phase: rbac
   name: package-operator
-  namespace: package-operator-system
+  namespace: openshift-package-operator
 rules:
 - apiGroups:
   - ""

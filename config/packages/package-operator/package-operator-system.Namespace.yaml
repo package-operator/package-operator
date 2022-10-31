@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   annotations:
     package-operator.run/phase: namespace
-  name: package-operator-system
+  name: openshift-package-operator

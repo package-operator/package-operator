@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: package-operator-system
+  name: openshift-package-operator
   labels:
     package-operator.run/cache: "True"
 ---
@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: package-operator
-  namespace: package-operator-system
+  namespace: openshift-package-operator
   labels:
     package-operator.run/cache: "True"
 ---
@@ -26,13 +26,13 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: package-operator
-  namespace: package-operator-system
+  namespace: openshift-package-operator
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: package-operator-bootstrap
-  namespace: package-operator-system
+  namespace: openshift-package-operator
 spec:
   # delete right after completion
   ttlSecondsAfterFinished: 0
