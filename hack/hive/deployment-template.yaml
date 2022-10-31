@@ -85,14 +85,14 @@ objects:
                 containers:
                   - name: package-operator
                     image: ${PACKAGE_IMG}:${IMAGE_TAG}
-                    command: ["/.bootstrap-bin/pko",  "-self-bootstrap=${REGISTRY_IMG}:${IMAGE_TAG}"]
+                    command: ["/.bootstrap-bin/pko",  "-self-bootstrap=${PACKAGE_IMG}:${IMAGE_TAG}"]
                     env:
                       - name: PKO_NAMESPACE
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: PKO_IMAGE
-                        value: "${PACKAGE_IMG}:${IMAGE_TAG}"
+                        value: "${REGISTRY_IMG}:${IMAGE_TAG}"
                     volumeMounts:
                       - name: shared-dir
                         mountPath: /.bootstrap-bin
