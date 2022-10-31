@@ -83,28 +83,27 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	log.Info("Package Operator NOT Available, self-bootstrapping")
-	if errors.IsNotFound(err) {
-		// Create ClusterPackage Object
-		// Create PackageOperator ClusterPackage
-		packageOperatorPackage = &corev1alpha1.ClusterPackage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: packageOperatorClusterPackageName,
-			},
-			Spec: corev1alpha1.PackageSpec{
-				Image: opts.selfBootstrap,
-			},
-		}
-		if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("creating Package Operator ClusterPackage: %w", err)
+
+	if err == nil {
+		// Cluster Package already present but broken for some reason.
+		// Ensure clean install by re-creating ClusterPackage.
+		if err := forcedCleanup(ctx, c, packageOperatorPackage); err != nil {
+			return fmt.Errorf("forced cleanup: %w", err)
 		}
 	}
-	if err == nil {
-		// Cluster Package already present.
-		// Ensure the right image is set to load.
-		packageOperatorPackage.Spec.Image = opts.selfBootstrap
-		if err := c.Update(ctx, packageOperatorPackage); err != nil {
-			return nil
-		}
+
+	// Create ClusterPackage Object
+	// Create PackageOperator ClusterPackage
+	packageOperatorPackage = &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: packageOperatorClusterPackageName,
+		},
+		Spec: corev1alpha1.PackageSpec{
+			Image: opts.selfBootstrap,
+		},
+	}
+	if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
+		return fmt.Errorf("creating Package Operator ClusterPackage: %w", err)
 	}
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
@@ -139,4 +138,57 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	// Run Manager until it has bootstrapped itself.
 	return runManager(log, scheme, opts)
+}
+
+func forcedCleanup(
+	ctx context.Context, c client.Client,
+	packageOperatorPackage *corev1alpha1.ClusterPackage,
+) error {
+
+	if err := c.Delete(ctx, packageOperatorPackage); err != nil {
+		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
+	}
+	packageOperatorPackage.Finalizers = nil
+	if err := c.Update(ctx, packageOperatorPackage); err != nil {
+		return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
+	}
+
+	// Also nuke all the ClusterObjectDeployment belonging to it.
+	clusterObjectDeploymentList := &corev1alpha1.ClusterObjectDeploymentList{}
+	if err := c.List(ctx, clusterObjectDeploymentList, client.MatchingLabels{
+		"package-operator.run/instance": packageOperatorClusterPackageName,
+		"package-operator.run/package":  packageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectDeployments: %w", err)
+	}
+	for i := range clusterObjectDeploymentList.Items {
+		clusterObjectDeployment := &clusterObjectDeploymentList.Items[i]
+		if err := c.Delete(ctx, clusterObjectDeployment); err != nil {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
+		}
+		clusterObjectDeployment.Finalizers = nil
+		if err := c.Update(ctx, clusterObjectDeployment); err != nil {
+			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
+		}
+	}
+
+	// Also nuke all the ClusterObjectSets belonging to it.
+	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
+	if err := c.List(ctx, clusterObjectSetList, client.MatchingLabels{
+		"package-operator.run/instance": packageOperatorClusterPackageName,
+		"package-operator.run/package":  packageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
+	}
+	for i := range clusterObjectSetList.Items {
+		clusterObjectSet := &clusterObjectSetList.Items[i]
+		if err := c.Delete(ctx, clusterObjectSet); err != nil {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
+		}
+		clusterObjectSet.Finalizers = nil
+		if err := c.Update(ctx, clusterObjectSet); err != nil {
+			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+		}
+	}
+	return nil
 }
