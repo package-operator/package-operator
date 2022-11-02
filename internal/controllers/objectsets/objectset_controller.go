@@ -66,6 +66,7 @@ func NewObjectSetController(
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
+		newGenericObjectSlice,
 		c, log, scheme, dw, r,
 		restMapper,
 	)
@@ -79,6 +80,7 @@ func NewClusterObjectSetController(
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
+		newGenericClusterObjectSlice,
 		c, log, scheme, dw, r,
 		restMapper,
 	)
@@ -87,6 +89,7 @@ func NewClusterObjectSetController(
 func newGenericObjectSetController(
 	newObjectSet genericObjectSetFactory,
 	newObjectSetPhase genericObjectSetPhaseFactory,
+	newObjectSlice genericObjectSliceFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
@@ -128,6 +131,7 @@ func newGenericObjectSetController(
 			client:       client,
 			newObjectSet: newObjectSet,
 		},
+		newObjectSliceLoadReconciler(scheme, client, newObjectSlice),
 		phasesReconciler,
 	}
 

@@ -17,6 +17,7 @@ type genericObjectSet interface {
 	IsPaused() bool
 	GetPrevious() []corev1alpha1.PreviousRevisionReference
 	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
+	SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase)
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	SetRevision(revision int64)
 	GetRevision() int64
@@ -114,6 +115,10 @@ func (a *GenericObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.Phases
 }
 
+func (a *GenericObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Phases = phases
+}
+
 func (a *GenericObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
 	return a.Spec.AvailabilityProbes
 }
@@ -192,6 +197,10 @@ func (a *GenericClusterObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionR
 
 func (a *GenericClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.Phases
+}
+
+func (a *GenericClusterObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Phases = phases
 }
 
 func (a *GenericClusterObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
