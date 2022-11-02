@@ -165,11 +165,11 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg generic
 func (c *GenericPackageController) handleDeletion(
 	ctx context.Context, pkg genericPackage,
 ) error {
+	// Jobs need this setting or Pods created by a Job will not be deleted.
 	background := metav1.DeletePropagationBackground
-	err := c.client.Delete(ctx, &batchv1.Job{
+	if err := c.client.Delete(ctx, &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: jobName(pkg), Namespace: c.pkoNamespace},
-	}, &client.DeleteOptions{PropagationPolicy: &background})
-	if err != nil && !errors.IsNotFound(err) {
+	}, &client.DeleteOptions{PropagationPolicy: &background}); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 

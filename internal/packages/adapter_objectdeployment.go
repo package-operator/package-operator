@@ -11,6 +11,7 @@ import (
 type genericObjectDeployment interface {
 	ClientObject() client.Object
 	SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec)
+	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
 	SetSelector(labels map[string]string)
 }
 
@@ -59,6 +60,10 @@ func (a *GenericObjectDeployment) SetTemplateSpec(spec corev1alpha1.ObjectSetTem
 	a.Spec.Template.Spec = spec
 }
 
+func (a *GenericObjectDeployment) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+	return a.Spec.Template.Spec
+}
+
 func (a *GenericObjectDeployment) SetSelector(labels map[string]string) {
 	a.Spec.Selector = metav1.LabelSelector{
 		MatchLabels: labels,
@@ -76,6 +81,10 @@ func (a *GenericClusterObjectDeployment) ClientObject() client.Object {
 
 func (a *GenericClusterObjectDeployment) SetTemplateSpec(spec corev1alpha1.ObjectSetTemplateSpec) {
 	a.Spec.Template.Spec = spec
+}
+
+func (a *GenericClusterObjectDeployment) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+	return a.Spec.Template.Spec
 }
 
 func (a *GenericClusterObjectDeployment) SetSelector(labels map[string]string) {

@@ -65,17 +65,24 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 		},
 	}
 
+	var slice *corev1alpha1.ObjectSlice
 	c.
 		On("Get", mock.Anything, client.ObjectKey{
 			Name:      "slice-1",
 			Namespace: "test-ns",
 		}, mock.AnythingOfType("*v1alpha1.ObjectSlice"), mock.Anything).
 		Run(func(args mock.Arguments) {
-			slice := args.Get(2).(*corev1alpha1.ObjectSlice)
+			slice = args.Get(2).(*corev1alpha1.ObjectSlice)
+			slice.Name = "slice-1"
+			slice.Namespace = "test-ns"
 			slice.Objects = []corev1alpha1.ObjectSetObject{
 				object2,
 			}
 		}).
+		Return(nil)
+
+	c.
+		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSlice"), mock.Anything).
 		Return(nil)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -83,6 +90,13 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, res.IsZero())
 
+	assert.Equal(t, []metav1.OwnerReference{
+		{
+			APIVersion: "package-operator.run/v1alpha1",
+			Kind:       "ObjectSet",
+			Name:       "test",
+		},
+	}, slice.OwnerReferences)
 	assert.Equal(t, []corev1alpha1.ObjectSetObject{
 		object1, object2,
 	}, objectSet.Spec.Phases[0].Objects)

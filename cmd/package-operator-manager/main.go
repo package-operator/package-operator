@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	pkoapis "package-operator.run/apis"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
@@ -257,6 +258,13 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	// Create metrics recorder
 	recorder := metrics.NewRecorder()
 	recorder.Register()
+	ctx := context.Background()
+
+	if err := controllers.RegisterControllerFieldIndex(
+		ctx, mgr.GetFieldIndexer(), &corev1alpha1.ClusterObjectSlice{}, &corev1alpha1.ObjectSlice{},
+	); err != nil {
+		return fmt.Errorf("register controllers field index: %w", err)
+	}
 
 	// DynamicCache
 	dc := dynamiccache.NewCache(

@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	pkoapis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -19,7 +20,7 @@ import (
 var testScheme = runtime.NewScheme()
 
 func init() {
-	if err := manifestsv1alpha1.AddToScheme(testScheme); err != nil {
+	if err := pkoapis.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }

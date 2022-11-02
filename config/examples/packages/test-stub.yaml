@@ -3,6 +3,7 @@ kind: Package
 metadata:
   name: test-stub
   annotations:
-    package-operator.run/test-stub-image: "quay.io/package-operator/test-stub:b897f26"
+    package-operator.run/test-stub-image: "quay.io/package-operator/test-stub:8ff789b"
+    packages.package-operator.run/chunking-strategy: EachObject
 spec:
-  image: "quay.io/package-operator/test-stub-package:b897f26"
+  image: "quay.io/package-operator/test-stub-package:8ff789b"

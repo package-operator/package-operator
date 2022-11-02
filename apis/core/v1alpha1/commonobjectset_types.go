@@ -26,11 +26,11 @@ type ObjectSetTemplateSpec struct {
 	// Reconcile phase configuration for a ObjectSet.
 	// Phases will be reconciled in order and the contained objects checked
 	// against given probes before continuing with the next phase.
-	Phases []ObjectSetTemplatePhase `json:"phases"`
+	Phases []ObjectSetTemplatePhase `json:"phases,omitempty"`
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
-	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes"`
+	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes,omitempty"`
 }
 
 // ObjectSet reconcile phase.
@@ -42,7 +42,7 @@ type ObjectSetTemplatePhase struct {
 	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
 	Class string `json:"class,omitempty"`
 	// Objects belonging to this phase.
-	Objects []ObjectSetObject `json:"objects"`
+	Objects []ObjectSetObject `json:"objects,omitempty"`
 	// References to ObjectSlices containing objects for this phase.
 	Slices []string `json:"slices,omitempty"`
 }

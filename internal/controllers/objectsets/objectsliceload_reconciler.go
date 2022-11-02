@@ -7,24 +7,29 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
 // objectSliceLoadReconciler loads ObjectSlices to inline all objects into the ObjectSet again.
 type objectSliceLoadReconciler struct {
 	scheme         *runtime.Scheme
-	reader         client.Reader
+	client         client.Client
 	newObjectSlice genericObjectSliceFactory
+	ownerStrategy  ownerStrategy
 }
 
 func newObjectSliceLoadReconciler(
 	scheme *runtime.Scheme,
-	reader client.Reader,
+	client client.Client,
 	newObjectSlice genericObjectSliceFactory,
 ) *objectSliceLoadReconciler {
 	return &objectSliceLoadReconciler{
 		scheme:         scheme,
-		reader:         reader,
+		client:         client,
 		newObjectSlice: newObjectSlice,
+		ownerStrategy:  ownerhandling.NewNative(scheme),
 	}
 }
 
@@ -36,11 +41,22 @@ func (r *objectSliceLoadReconciler) Reconcile(
 		phase := &phases[i]
 		for _, slice := range phase.Slices {
 			objSlice := r.newObjectSlice(r.scheme)
-			if err := r.reader.Get(ctx, client.ObjectKey{
+			if err := r.client.Get(ctx, client.ObjectKey{
 				Name:      slice,
 				Namespace: objectSet.ClientObject().GetNamespace(),
 			}, objSlice.ClientObject()); err != nil {
 				return res, fmt.Errorf("getting ObjectSlice: %w", err)
+			}
+
+			if !r.ownerStrategy.IsOwner(objectSet.ClientObject(), objSlice.ClientObject()) {
+				if err := controllerutil.SetOwnerReference(
+					objectSet.ClientObject(), objSlice.ClientObject(), r.scheme); err != nil {
+					return res, fmt.Errorf("set ObjectSlice OwnerReference: %w", err)
+				}
+
+				if err := r.client.Update(ctx, objSlice.ClientObject()); err != nil {
+					return res, fmt.Errorf("update ObjectSlice OwnerReferences: %w", err)
+				}
 			}
 
 			phase.Objects = append(phase.Objects, objSlice.GetObjects()...)

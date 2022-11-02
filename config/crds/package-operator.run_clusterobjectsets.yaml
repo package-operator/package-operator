@@ -214,7 +214,6 @@ spec:
                       type: array
                   required:
                   - name
-                  - objects
                   type: object
                 type: array
               previous:
@@ -230,9 +229,6 @@ spec:
                   - name
                   type: object
                 type: array
-            required:
-            - availabilityProbes
-            - phases
             type: object
           status:
             default:

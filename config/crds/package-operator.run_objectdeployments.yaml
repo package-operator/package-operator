@@ -286,12 +286,8 @@ spec:
                               type: array
                           required:
                           - name
-                          - objects
                           type: object
                         type: array
-                    required:
-                    - availabilityProbes
-                    - phases
                     type: object
                 required:
                 - metadata

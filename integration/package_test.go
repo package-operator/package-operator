@@ -50,6 +50,39 @@ func TestPackage_success(t *testing.T) {
 			},
 			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
 		},
+		{
+			name: "namespaced with slices",
+			pkg: &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "success",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"package-operator.run/test-stub-image":            TestStubImage,
+						"packages.package-operator.run/chunking-strategy": "EachObject",
+					},
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestPackageImage,
+				},
+			},
+			objectDeployment: &corev1alpha1.ObjectDeployment{},
+		},
+		{
+			name: "cluster with slices",
+			pkg: &corev1alpha1.ClusterPackage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "success",
+					Annotations: map[string]string{
+						"package-operator.run/test-stub-image":            TestStubImage,
+						"packages.package-operator.run/chunking-strategy": "EachObject",
+					},
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestPackageImage,
+				},
+			},
+			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
+		},
 	}
 
 	for _, test := range tests {
