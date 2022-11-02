@@ -205,6 +205,12 @@ spec:
                         - object
                         type: object
                       type: array
+                    slices:
+                      description: References to ObjectSlices containing objects for
+                        this phase.
+                      items:
+                        type: string
+                      type: array
                   required:
                   - name
                   - objects

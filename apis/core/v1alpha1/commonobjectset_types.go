@@ -43,6 +43,8 @@ type ObjectSetTemplatePhase struct {
 	Class string `json:"class,omitempty"`
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects"`
+	// References to ObjectSlices containing objects for this phase.
+	Slices []string `json:"slices,omitempty"`
 }
 
 // An object that is part of the phase of an ObjectSet.

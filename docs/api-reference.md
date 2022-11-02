@@ -57,6 +57,8 @@ spec:
             kind: Deployment
             metadata:
               name: example-deployment
+        slices:
+        - dolor
 status:
   phase:Pending: null
 
@@ -107,14 +109,16 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sit
-    name: dolor
+  - class: amet
+    name: sit
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+    slices:
+    - consetetur
   previous:
   - name: previous-revision
 status:
@@ -174,10 +178,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
 
 ```
 
@@ -232,7 +236,7 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  image: sed
+  image: nonumy
 status:
   phase: Pending
 
@@ -281,14 +285,16 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: nonumy
-        name: diam
+      - class: tempor
+        name: eirmod
         objects:
         - object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
+        slices:
+        - lorem
 status:
   phase:Pending: null
 
@@ -340,14 +346,16 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: tempor
-    name: eirmod
+  - class: dolor
+    name: ipsum
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+    slices:
+    - sit
   previous:
   - name: previous-revision
 status:
@@ -408,10 +416,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: ipsum
-    kind: lorem
-    name: dolor
-    namespace: sit
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -468,7 +476,7 @@ metadata:
   name: example
   namespace: default
 spec:
-  image: amet
+  image: sed
 status:
   phase: Pending
 
@@ -754,6 +762,7 @@ ObjectSet reconcile phase.
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `slices` <br>[]string | References to ObjectSlices containing objects for this phase. |
 
 
 Used in:
