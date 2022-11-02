@@ -6,10 +6,12 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ClusterObjectDeployment](#clusterobjectdeployment)
 * [ClusterObjectSet](#clusterobjectset)
 * [ClusterObjectSetPhase](#clusterobjectsetphase)
+* [ClusterObjectSlice](#clusterobjectslice)
 * [ClusterPackage](#clusterpackage)
 * [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
+* [ObjectSlice](#objectslice)
 * [Package](#package)
 
 
@@ -185,6 +187,36 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#clusterobjectsetphasespec">ClusterObjectSetPhaseSpec</a> | ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase. |
 | `status` <br><a href="#clusterobjectsetphasestatus">ClusterObjectSetPhaseStatus</a> | ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase. |
+
+
+### ClusterObjectSlice
+
+ClusterObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+limit the size of ObjectSet and ObjectDeployments when big packages are installed.
+This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterObjectSlice
+metadata:
+  name: example
+objects:
+- object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
 ### ClusterPackage
@@ -391,6 +423,37 @@ status:
 | `status` <br><a href="#objectsetphasestatus">ObjectSetPhaseStatus</a> | ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase. |
 
 
+### ObjectSlice
+
+ObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+limit the size of ObjectSet and ObjectDeployments when big packages are installed.
+This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectSlice
+metadata:
+  name: example
+  namespace: default
+objects:
+- object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
+
+
 ### Package
 
 
@@ -581,6 +644,8 @@ Used in:
 * [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
 * [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetTemplatePhase](#objectsettemplatephase)
+* [ClusterObjectSlice](#clusterobjectslice)
+* [ObjectSlice](#objectslice)
 
 
 ### ObjectSetPhaseSpec
