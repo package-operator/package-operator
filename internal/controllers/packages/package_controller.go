@@ -24,6 +24,11 @@ type reconciler interface {
 	Reconcile(ctx context.Context, pkg genericPackage) (ctrl.Result, error)
 }
 
+type lease interface {
+	CanGo() bool
+	ReportFinished()
+}
+
 // Generic reconciler for both Package and ClusterPackage objects.
 type GenericPackageController struct {
 	newPackage          genericPackageFactory
@@ -36,6 +41,8 @@ type GenericPackageController struct {
 
 	jobOwnerStrategy ownerStrategy
 	pkoNamespace     string
+
+	lease lease
 }
 
 type ownerStrategy interface {
@@ -49,10 +56,11 @@ func NewPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	pkoNamespace, pkoImage string,
+	lease lease,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericPackage, newGenericObjectDeployment,
-		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace, pkoImage,
+		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace, pkoImage, lease,
 	)
 }
 
@@ -60,10 +68,11 @@ func NewClusterPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	pkoNamespace, pkoImage string,
+	lease lease,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		newGenericClusterPackage, newGenericClusterObjectDeployment,
-		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace, pkoImage,
+		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace, pkoImage, lease,
 	)
 }
 
@@ -74,6 +83,7 @@ func newGenericPackageController(
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,
 	pkoNamespace, pkoImage string,
+	lease lease,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -83,10 +93,11 @@ func newGenericPackageController(
 		scheme:              scheme,
 		jobOwnerStrategy:    jobOwnerStrategy,
 		pkoNamespace:        pkoNamespace,
+		lease:               lease,
 	}
 
 	controller.reconciler = []reconciler{
-		newJobReconciler(scheme, client, jobOwnerStrategy, pkoNamespace, pkoImage),
+		newJobReconciler(scheme, client, jobOwnerStrategy, pkoNamespace, pkoImage, lease),
 		&objectDeploymentStatusReconciler{
 			client:              client,
 			scheme:              scheme,

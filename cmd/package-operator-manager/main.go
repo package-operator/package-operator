@@ -271,6 +271,8 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			},
 		})
 
+	unpackJobLease := packageloader.NewLease(2)
+
 	// ObjectSet
 	if err = (objectsets.NewObjectSetController(
 		mgr.GetClient(),
@@ -323,14 +325,14 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	if err = (packages.NewPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
-		opts.namespace, opts.managerImage,
+		opts.namespace, opts.managerImage, unpackJobLease,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
 	if err = (packages.NewClusterPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
-		opts.namespace, opts.managerImage,
+		opts.namespace, opts.managerImage, unpackJobLease,
 	).SetupWithManager(mgr)); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}

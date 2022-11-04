@@ -29,6 +29,7 @@ type jobReconciler struct {
 
 	pkoNamespace string
 	pkoImage     string
+	lease        lease
 }
 
 func newJobReconciler(
@@ -37,6 +38,7 @@ func newJobReconciler(
 	ownerStrategy ownerStrategy,
 	pkoNamespace string,
 	pkoImage string,
+	lease lease,
 ) *jobReconciler {
 	return &jobReconciler{
 		scheme:        scheme,
@@ -44,6 +46,7 @@ func newJobReconciler(
 		ownerStrategy: ownerStrategy,
 		pkoNamespace:  pkoNamespace,
 		pkoImage:      pkoImage,
+		lease:         lease,
 	}
 }
 
@@ -87,6 +90,9 @@ func (r *jobReconciler) Reconcile(
 			}
 		}
 	}
+	if jobCompleted {
+		r.lease.ReportFinished()
+	}
 
 	if !jobCompleted {
 		meta.SetStatusCondition(
@@ -112,6 +118,10 @@ func (r *jobReconciler) ensureUnpackJob(
 
 	existingJob := &batchv1.Job{}
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredJob), existingJob); err != nil && errors.IsNotFound(err) {
+		if !r.lease.CanGo() {
+			return nil, fmt.Errorf("couldn't get lease") // TODO: Should this be an error or should we do it somehow else
+		}
+
 		if err := r.client.Create(ctx, desiredJob); err != nil {
 			return nil, fmt.Errorf("creating Job: %w", err)
 		}
