@@ -42,7 +42,7 @@ jobs:
         QUAY_USER: ${{ secrets.QUAY_USER }}
         QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
-    - uses: cytopia/upload-artifact-retry-action@v0.1.2
+    - uses: cytopia/upload-artifact-retry-action@v0.1.6
       if: ${{ always() }}
       with:
         name: bootstrap-job
