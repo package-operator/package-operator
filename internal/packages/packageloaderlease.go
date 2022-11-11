@@ -5,6 +5,8 @@ type Lease interface {
 	ReportFinished()
 }
 
+//type LeaseManager map[string]
+
 // TODO: I don't know if this acutally qualifies as a lease
 type ConcurrentLease struct {
 	count int
@@ -20,6 +22,7 @@ type lease struct {
 func NewLease(max int) Lease {
 	// TODO: Should we read in all existing jobs on startup, or can we assume it is okay (package controller will run an
 	// create a lease
+	//now, _, _ := time.Now()
 	return &ConcurrentLease{
 		count: 0,
 		max:   max,
