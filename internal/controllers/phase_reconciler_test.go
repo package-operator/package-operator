@@ -576,7 +576,7 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 					APIVersion: corev1alpha1.GroupVersion.String(),
 					Kind:       "ObjectSetPhase",
 					Name:       "phase-1",
-					Controller: pointer.BoolPtr(true),
+					Controller: pointer.Bool(true),
 				},
 			},
 		},
