@@ -9,14 +9,14 @@ require (
 	github.com/magefile/mage v1.14.0
 	github.com/mt-sre/devkube v0.4.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.13.0
-	github.com/stretchr/testify v1.8.0
-	k8s.io/api v0.25.3
+	github.com/prometheus/client_golang v1.14.0
+	github.com/stretchr/testify v1.8.1
+	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
-	k8s.io/client-go v0.25.3
+	k8s.io/client-go v0.25.4
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	package-operator.run/apis v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/controller-runtime v0.13.0
+	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -47,11 +47,11 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
