@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -87,7 +86,7 @@ func Test_new_revision_reconciler(t *testing.T) {
 				).Return(errors.NewAlreadyExists(schema.GroupResource{}, testCase.conflictObject.Name))
 				clientMock.On("Get",
 					mock.Anything,
-					client.ObjectKey{
+					ctrlclient.ObjectKey{
 						Name:      testCase.conflictObject.Name,
 						Namespace: testCase.conflictObject.Namespace,
 					},

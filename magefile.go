@@ -208,7 +208,7 @@ func (Build) PushImages() {
 const (
 	controllerGenVersion = "0.6.2"
 	goimportsVersion     = "0.1.5"
-	golangciLintVersion  = "1.46.2"
+	golangciLintVersion  = "1.50.1"
 	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
 )

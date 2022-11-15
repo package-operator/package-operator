@@ -530,7 +530,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
 			}
 
-			// Assert that that expected revision is available
+			// Assert that expected revision is available
 			if fmt.Sprint(currObjectSetRevision) == testCase.expectedAvailableRevision {
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
