@@ -1,12 +1,12 @@
 linters:
   disable-all: true
   enable:
+    - asasalint
     - asciicheck
     - bidichk
-    - deadcode
+    - bodyclose
     - decorder
     - depguard
-    #- dogsled TODO: Disable until this is fixed https://github.com/alexkohler/dogsled/issues/3#issuecomment-1270159659
     - dupl
     - durationcheck
     - errcheck
@@ -16,7 +16,9 @@ linters:
     - execinquery
     - exportloopref
     - forbidigo
+    - goconst
     - gocritic
+    - gocyclo
     - godot
     - goerr113
     - gofmt
@@ -30,24 +32,29 @@ linters:
     - grouper
     - importas
     - ineffassign
-    - ifshort
+    - loggercheck
     - maintidx
     - makezero
     - misspell
     - nestif
+    - nilerr
     - nilnil
+    - noctx
     - nolintlint
     - nosprintfhostport
     - predeclared
     - promlinter
+    - reassign
     - revive
     - staticcheck
+    - stylecheck
     - tenv
+    - testableexamples
     - thelper
     - typecheck
     - unconvert
     - unused
-    - varcheck
+    - usestdlibvars
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0

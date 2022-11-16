@@ -8,8 +8,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	apimetav1 "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,13 +28,13 @@ type mapEntry struct {
 // usually fulfilled by meta.RESTMapper.
 type restMapper interface {
 	RESTMapping(gk schema.GroupKind, versions ...string) (
-		*meta.RESTMapping, error)
+		*apimetav1.RESTMapping, error)
 }
 
 func NewInformerMap(
 	config *rest.Config,
 	scheme *runtime.Scheme,
-	mapper meta.RESTMapper,
+	mapper apimetav1.RESTMapper,
 	resync time.Duration,
 	selectors SelectorsByGVK,
 	indexers FieldIndexersByGVK,
@@ -231,7 +230,7 @@ func indexFuncForExtractor(field string, extractor client.IndexerFunc) func(objR
 			//nolint:goerr113
 			return nil, fmt.Errorf("object of type %T is not an Object", objRaw)
 		}
-		meta, err := apimeta.Accessor(obj)
+		meta, err := apimetav1.Accessor(obj)
 		if err != nil {
 			return nil, err
 		}

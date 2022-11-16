@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	module          = "github.com/package-operator/package-operator"
+	module          = "package-operator.run/package-operator"
 	defaultImageOrg = "quay.io/package-operator"
 	clusterName     = "package-operator-dev"
 )
@@ -154,6 +154,7 @@ func (Build) Binaries() {
 	mg.Deps(
 		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
+		mg.F(Builder.Cmd, "kubectl-package", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
 	)
 }
@@ -208,7 +209,7 @@ func (Build) PushImages() {
 const (
 	controllerGenVersion = "0.6.2"
 	goimportsVersion     = "0.1.5"
-	golangciLintVersion  = "1.46.2"
+	golangciLintVersion  = "1.50.1"
 	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
 )
@@ -280,16 +281,15 @@ type builder struct {
 
 // init build variables
 func (b *builder) init() error {
-	// version
+	// Use version from VERSION env if present, use "git describe" elsewise.
 	b.version = strings.TrimSpace(os.Getenv("VERSION"))
 	if len(b.version) == 0 {
-		// commit id
-		shortCommitIDCmd := exec.Command("git", "rev-parse", "--short", "HEAD")
-		shortCommitIDBytes, err := shortCommitIDCmd.Output()
+		gitDescribeCmd := exec.Command("git", "describe", "--tags")
+		version, err := gitDescribeCmd.Output()
 		if err != nil {
-			panic(fmt.Errorf("getting git short commit id"))
+			panic(fmt.Errorf("git describe: %w", err))
 		}
-		b.version = strings.TrimSpace(string(shortCommitIDBytes))
+		b.version = strings.TrimSpace(string(version))
 	}
 
 	// image org
@@ -317,9 +317,10 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 		env["GOARCH"] = goarch
 	}
 
+	ldflags := "-w -s --extldflags '-zrelro -znow -O1'" + fmt.Sprintf("-X '%s/internal/version.version=%s'", module, b.version)
 	cmdline := []string{
 		"build",
-		"--ldflags", "-w -s --extldflags '-zrelro -znow -O1'",
+		"--ldflags", ldflags,
 		"--trimpath", "--mod=readonly",
 		"-v", "-o", bin, "./cmd/" + cmd,
 	}
