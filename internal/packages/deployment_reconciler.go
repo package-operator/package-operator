@@ -4,18 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/ownerhandling"
 	"package-operator.run/package-operator/internal/utils"
 )
+
+const sliceOwnerLabel = "slices.package-operator.run/owner"
 
 // DeploymentReconciler creates or updates an (Cluster)ObjectDeployment.
 // Will respect the given chunking strategy to create multiple ObjectSlices.
@@ -24,6 +27,8 @@ type DeploymentReconciler struct {
 	client              client.Client
 	newObjectDeployment genericObjectDeploymentFactory
 	newObjectSlice      genericObjectSliceFactory
+	newObjectSliceList  genericObjectSliceListFactory
+	newObjectSetList    genericObjectSetListFactory
 	ownerStrategy       ownerStrategy
 }
 
@@ -37,12 +42,16 @@ func newDeploymentReconciler(
 	client client.Client,
 	newObjectDeployment genericObjectDeploymentFactory,
 	newObjectSlice genericObjectSliceFactory,
+	newObjectSliceList genericObjectSliceListFactory,
+	newObjectSetList genericObjectSetListFactory,
 ) *DeploymentReconciler {
 	return &DeploymentReconciler{
 		scheme:              scheme,
 		client:              client,
 		newObjectDeployment: newObjectDeployment,
 		newObjectSlice:      newObjectSlice,
+		newObjectSliceList:  newObjectSliceList,
+		newObjectSetList:    newObjectSetList,
 		ownerStrategy:       ownerhandling.NewNative(scheme),
 	}
 }
@@ -68,8 +77,7 @@ func (r *DeploymentReconciler) Reconcile(
 			return err
 		}
 		actualDeploy = desiredDeploy
-	}
-	if err != nil {
+	} else if err != nil {
 		return fmt.Errorf("getting ObjectDeployment: %w", err)
 	}
 
@@ -80,21 +88,105 @@ func (r *DeploymentReconciler) Reconcile(
 		if err != nil {
 			return fmt.Errorf("reconcile phase: %w", err)
 		}
-
 	}
 	desiredDeploy.SetTemplateSpec(templateSpec)
 
 	// Update Deployment
-	annotations := mergeKeysFrom(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
-	labels := mergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
-	actualDeploy.ClientObject().SetAnnotations(annotations)
-	actualDeploy.ClientObject().SetLabels(labels)
-	actualDeploy.SetTemplateSpec(desiredDeploy.GetTemplateSpec())
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		annotations := mergeKeysFrom(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
+		labels := mergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
+		actualDeploy.ClientObject().SetAnnotations(annotations)
+		actualDeploy.ClientObject().SetLabels(labels)
+		actualDeploy.SetTemplateSpec(desiredDeploy.GetTemplateSpec())
 
-	if err := r.client.Update(ctx, actualDeploy.ClientObject()); err != nil {
-		return fmt.Errorf("updating ObjectDeployment: %w", err)
+		if err := r.client.Update(ctx, actualDeploy.ClientObject()); err != nil {
+			return fmt.Errorf("updating ObjectDeployment: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := r.sliceGarbageCollection(ctx, actualDeploy); err != nil {
+		return fmt.Errorf("slice garbage collection: %w", err)
 	}
 	return nil
+}
+
+// GarbageCollect Slices that are no longer referenced.
+func (r *DeploymentReconciler) sliceGarbageCollection(
+	ctx context.Context, deploy genericObjectDeployment,
+) error {
+	objectSets, err := r.listObjectSetsForDeployment(ctx, deploy)
+	if err != nil {
+		return fmt.Errorf("listing Deployments ObjectSets for GC evaluation: %w", err)
+	}
+
+	referencedSlices := map[string]struct{}{}
+	for _, phase := range deploy.GetTemplateSpec().Phases {
+		for _, slice := range phase.Slices {
+			referencedSlices[slice] = struct{}{}
+		}
+	}
+	for _, objectSet := range objectSets {
+		for _, phase := range objectSet.GetPhases() {
+			for _, slice := range phase.Slices {
+				referencedSlices[slice] = struct{}{}
+			}
+		}
+	}
+
+	// List all Slices controlled by this Deployment.
+	controlledSlicesList := r.newObjectSliceList(r.scheme)
+	if err := r.client.List(
+		ctx, controlledSlicesList.ClientObjectList(),
+		client.MatchingLabels{
+			sliceOwnerLabel: deploy.ClientObject().GetName(),
+		},
+		client.InNamespace(
+			deploy.ClientObject().GetNamespace()),
+	); err != nil {
+		return fmt.Errorf("listing all controlled slices: %w", err)
+	}
+
+	// Delete Slices not referenced anymore.
+	for _, slice := range controlledSlicesList.GetItems() {
+		if _, referenced := referencedSlices[slice.ClientObject().GetName()]; referenced {
+			continue
+		}
+
+		// Slice is not referenced anymore.
+		if err := r.client.Delete(ctx, slice.ClientObject()); err != nil {
+			return fmt.Errorf("garbage collect ObjectSlice: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *DeploymentReconciler) listObjectSetsForDeployment(
+	ctx context.Context, deploy genericObjectDeployment,
+) ([]genericObjectSet, error) {
+	labelSelector := deploy.GetSelector()
+	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
+	if err != nil {
+		return nil, fmt.Errorf("invalid selector: %w", err)
+	}
+
+	objectSetList := r.newObjectSetList(r.scheme)
+	if err := r.client.List(
+		ctx, objectSetList.ClientObjectList(),
+		client.MatchingLabelsSelector{
+			Selector: objectSetSelector,
+		},
+		client.InNamespace(deploy.ClientObject().GetNamespace()),
+	); err != nil {
+		return nil, fmt.Errorf("listing ObjectSets: %w", err)
+	}
+
+	items := objectSetList.GetItems()
+	return items, nil
 }
 
 func (r *DeploymentReconciler) chunkPhase(
@@ -109,6 +201,7 @@ func (r *DeploymentReconciler) chunkPhase(
 		return fmt.Errorf("chunking strategy: %w", err)
 	}
 	if len(objectsForSlices) == 0 {
+		log.Info("no chunking taking place", "phase", phase.Name)
 		return nil
 	}
 
@@ -117,6 +210,9 @@ func (r *DeploymentReconciler) chunkPhase(
 	for _, objectsForSlice := range objectsForSlices {
 		slice := r.newObjectSlice(r.scheme)
 		slice.ClientObject().SetNamespace(deploy.ClientObject().GetNamespace())
+		slice.ClientObject().SetLabels(map[string]string{
+			sliceOwnerLabel: deploy.ClientObject().GetName(),
+		})
 		slice.SetObjects(objectsForSlice)
 
 		if err := r.reconcileSlice(ctx, deploy, slice); err != nil {
@@ -125,6 +221,7 @@ func (r *DeploymentReconciler) chunkPhase(
 		sliceNames = append(sliceNames, slice.ClientObject().GetName())
 
 		log.Info("reconciled Slice for phase",
+			"phase", phase.Name,
 			"ObjectDeployment", client.ObjectKeyFromObject(deploy.ClientObject()),
 			"ObjectSlice", client.ObjectKeyFromObject(slice.ClientObject()))
 	}
@@ -143,6 +240,7 @@ func (r *DeploymentReconciler) reconcileSlice(
 		var collisionError *sliceCollisionError
 		if errors.As(err, &collisionError) {
 			collisionCount++
+
 			continue
 		}
 		if err != nil {
@@ -171,6 +269,7 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	name := deploy.ClientObject().GetName() + "-" + hash
 	slice.ClientObject().SetName(name)
 
+	// controller ref, so Slices get auto garbage collected when the Deployment get's deleted.
 	if err := r.ownerStrategy.SetControllerReference(deploy.ClientObject(), slice.ClientObject()); err != nil {
 		return fmt.Errorf("set controller reference: %w", err)
 	}
@@ -181,24 +280,39 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 		return nil
 	}
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("errored creating new ObjectSlice: %w", err)
+		return fmt.Errorf("creating new ObjectSlice: %w", err)
 	}
 
 	// There is already a Slice with this name!
 	conflictingSlice := r.newObjectSlice(r.scheme)
+	sliceKey := client.ObjectKeyFromObject(slice.ClientObject())
 	if err := r.client.Get(
-		ctx, client.ObjectKeyFromObject(slice.ClientObject()),
+		ctx, sliceKey,
 		conflictingSlice.ClientObject(),
 	); err != nil {
 		return fmt.Errorf("getting conflicting ObjectSlice: %w", err)
 	}
 	// object already exists, check for hash collision
-	if r.ownerStrategy.IsController(deploy.ClientObject(), slice.ClientObject()) &&
-		equality.Semantic.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects()) {
-		// we are owner and object is equal
-		// -> all good :)
+	isController := r.ownerStrategy.IsController(deploy.ClientObject(), conflictingSlice.ClientObject())
+	// isEqual := equality.Semantic.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects())
+	isEqual := reflect.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects())
+	if !isEqual {
+		fmt.Println("not equal: ", conflictingSlice.GetObjects(), slice.GetObjects())
+	}
+	if isController && isEqual {
+		// we are controller and object is equal
+		// -> all good, just a slow cache :)
 		return nil
 	}
+
+	log := logr.FromContextOrDiscard(ctx)
+	log.Info(
+		"ObjectSlice hash collision",
+		"ObjectSlice", sliceKey,
+		"isController", isController,
+		"isEqual", isEqual,
+		"collisionCount", collisionCount,
+	)
 
 	return &sliceCollisionError{
 		newSlice:         slice,

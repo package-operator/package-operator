@@ -42,7 +42,6 @@ func newGenericObjectDeploymentController(
 	newObjectDeployment genericObjectDeploymentFactory,
 	newObjectSet genericObjectSetFactory,
 	newObjectSetList genericObjectSetListFactory,
-	newObjectSliceList genericObjectSliceListFactory,
 ) *GenericObjectDeploymentController {
 	controller := &GenericObjectDeploymentController{
 		gvk:                 gvk,
@@ -70,11 +69,6 @@ func newGenericObjectDeploymentController(
 				&archiveReconciler{
 					client: c,
 				},
-				&sliceGCReconciler{
-					scheme:             scheme,
-					client:             c,
-					newObjectSliceList: newObjectSliceList,
-				},
 			},
 		},
 	}
@@ -94,7 +88,6 @@ func NewObjectDeploymentController(
 		newGenericObjectDeployment,
 		newGenericObjectSet,
 		newGenericObjectSetList,
-		newGenericObjectSliceList,
 	)
 }
 
@@ -110,7 +103,6 @@ func NewClusterObjectDeploymentController(
 		newGenericClusterObjectDeployment,
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetList,
-		newGenericClusterObjectSliceList,
 	)
 }
 

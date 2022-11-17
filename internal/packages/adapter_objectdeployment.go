@@ -13,6 +13,7 @@ type genericObjectDeployment interface {
 	SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec)
 	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
 	SetSelector(labels map[string]string)
+	GetSelector() metav1.LabelSelector
 }
 
 type genericObjectDeploymentFactory func(
@@ -71,6 +72,10 @@ func (a *GenericObjectDeployment) SetSelector(labels map[string]string) {
 	a.Spec.Template.Metadata.Labels = labels
 }
 
+func (a *GenericObjectDeployment) GetSelector() metav1.LabelSelector {
+	return a.Spec.Selector
+}
+
 type GenericClusterObjectDeployment struct {
 	corev1alpha1.ClusterObjectDeployment
 }
@@ -92,4 +97,8 @@ func (a *GenericClusterObjectDeployment) SetSelector(labels map[string]string) {
 		MatchLabels: labels,
 	}
 	a.Spec.Template.Metadata.Labels = labels
+}
+
+func (a *GenericClusterObjectDeployment) GetSelector() metav1.LabelSelector {
+	return a.Spec.Selector
 }

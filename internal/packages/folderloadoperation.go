@@ -99,6 +99,13 @@ func (l *folderLoadOperation) walkPackageFolder(path string, d fs.DirEntry, err 
 		annotations := obj.GetAnnotations()
 		phase := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
 		delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
+		if len(annotations) == 0 {
+			// This is important!
+			// When submitted to the API server empty maps will be dropped.
+			// Semantic equality checking is considering a nil map to ne not equal to an empty map.
+			// And if semantic equality checking fails, hash collision checks will always find a hash collision if the ObjectSlice already exists.
+			annotations = nil
+		}
 		obj.SetAnnotations(annotations)
 		l.objectsByPhase[phase] = append(l.objectsByPhase[phase], obj)
 	}

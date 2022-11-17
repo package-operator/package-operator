@@ -52,8 +52,12 @@ func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
 		newPackage:          newGenericPackage,
 		newObjectDeployment: newGenericObjectDeployment,
 
-		folderLoader:         NewFolderLoader(scheme),
-		deploymentReconciler: newDeploymentReconciler(scheme, c, newGenericObjectDeployment, newGenericObjectSlice),
+		folderLoader: NewFolderLoader(scheme),
+		deploymentReconciler: newDeploymentReconciler(
+			scheme, c,
+			newGenericObjectDeployment, newGenericObjectSlice,
+			newGenericObjectSliceList, newGenericObjectSetList,
+		),
 	}
 }
 
@@ -66,8 +70,10 @@ func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLo
 		newPackage:          newGenericClusterPackage,
 		newObjectDeployment: newGenericClusterObjectDeployment,
 
-		folderLoader:         NewFolderLoader(scheme),
-		deploymentReconciler: newDeploymentReconciler(scheme, c, newGenericClusterObjectDeployment, newGenericClusterObjectSlice),
+		folderLoader: NewFolderLoader(scheme),
+		deploymentReconciler: newDeploymentReconciler(scheme, c, newGenericClusterObjectDeployment, newGenericClusterObjectSlice,
+			newGenericClusterObjectSliceList, newGenericClusterObjectSetList,
+		),
 	}
 }
 

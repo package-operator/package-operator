@@ -7,7 +7,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -21,8 +20,6 @@ const (
 	DynamicCacheLabel = "package-operator.run/cache"
 	// Common finalizer to free allocated caches when objects are deleted.
 	CachedFinalizer = "package-operator.run/cached"
-	// OwnerReference Controller gk:name/namespace local field index.
-	ControllerIndexFieldKey = "package-operator.run/controller"
 )
 
 // Ensures the given finalizer is set and persisted on the given object.
@@ -128,56 +125,4 @@ func GetControllerOf(
 		})
 	}
 	return controllerOf, nil
-}
-
-// Registers a local field index for the controller referenced in .metadata.ownerReferences.
-func RegisterControllerFieldIndex(ctx context.Context, fi client.FieldIndexer, objs ...client.Object) error {
-	for _, obj := range objs {
-		if err := fi.IndexField(ctx, obj, ControllerIndexFieldKey, indexController); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func ControllerFieldIndexValue(
-	controller client.Object, scheme *runtime.Scheme,
-) (string, error) {
-	gvk, err := apiutil.GVKForObject(controller, scheme)
-	if err != nil {
-		return "", err
-	}
-
-	key := client.ObjectKeyFromObject(controller)
-	return controllerFieldIndexValue(gvk.GroupKind(), key), nil
-}
-
-func controllerFieldIndexValue(gk schema.GroupKind, key client.ObjectKey) string {
-	return fmt.Sprintf("%s:%s", gk, key)
-}
-
-func indexController(o client.Object) []string {
-	for _, ref := range o.GetOwnerReferences() {
-		if ref.Controller == nil || !*ref.Controller {
-			continue
-		}
-
-		key := client.ObjectKey{
-			Name:      ref.Name,
-			Namespace: o.GetNamespace(),
-		}
-		// ref.Kind
-		gv, err := schema.ParseGroupVersion(ref.APIVersion)
-		if err != nil {
-			panic(err)
-		}
-
-		return []string{
-			controllerFieldIndexValue(schema.GroupKind{
-				Group: gv.Group, Kind: ref.Kind,
-			}, key),
-		}
-	}
-
-	return nil
 }
