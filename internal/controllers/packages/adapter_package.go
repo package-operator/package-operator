@@ -67,6 +67,10 @@ func (a *GenericPackage) UpdatePhase() {
 	updatePackagePhase(a)
 }
 
+func (a *GenericPackage) GetImage() string {
+	return a.Spec.Image
+}
+
 func (a *GenericPackage) GetSpecHash() string {
 	return utils.ComputeHash(a.Spec, nil)
 }
@@ -89,10 +93,6 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 
 func (a *GenericClusterPackage) UpdatePhase() {
 	updatePackagePhase(a)
-}
-
-func (a *GenericPackage) GetImage() string {
-	return a.Spec.Image
 }
 
 func (a *GenericClusterPackage) GetImage() string {

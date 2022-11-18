@@ -44,7 +44,7 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	templateSpec := packgeContent.ToTemplateSpec()
 
-	// Install CRDs or the manager wont start
+	// Install CRDs or the manager won't start
 	crdGK := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
 	for _, phase := range templateSpec.Phases {
 		for _, obj := range phase.Objects {

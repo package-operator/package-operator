@@ -1,0 +1,21 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: remote-phase-manager
+spec:
+  scopes:
+  - Namespaced
+  phases:
+  - name: hosted-control-plane
+  availabilityProbes:
+  - probes:
+    - condition:
+        type: Available
+        status: "True"
+    - fieldsEqual:
+        fieldA: .status.updatedReplicas
+        fieldB: .status.replicas
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
