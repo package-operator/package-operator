@@ -25,8 +25,8 @@ type reconciler interface {
 }
 
 type lease interface {
-	CanGo() bool
-	ReportFinished()
+	GetLease(name string) bool
+	ReportFinished(name string)
 }
 
 // Generic reconciler for both Package and ClusterPackage objects.

@@ -1,47 +1,32 @@
 package packages
 
+import (
+	"time"
+)
+
 type Lease interface {
-	CanGo() bool
-	ReportFinished()
+	GetLease(name string) bool
+	ReportFinished(name string)
 }
 
-//type LeaseManager map[string]
+var _ Lease = &ConcurrentLease{}
 
-// TODO: I don't know if this acutally qualifies as a lease
+// TODO: Should we read in all existing jobs on startup, or can we assume it is okay (package controller will run an
+// create a lease
+// TODO: Should we kill jobs that time out?
 type ConcurrentLease struct {
-	count int
-	max   int
+	leases map[string]time.Time
+	max    int
 }
 
-// TODO: No! Map of package name to timestamp
-type lease struct {
-	name string
-	// timestamp
-}
-
-func NewLease(max int) Lease {
-	// TODO: Should we read in all existing jobs on startup, or can we assume it is okay (package controller will run an
-	// create a lease
-	//now, _, _ := time.Now()
-	return &ConcurrentLease{
-		count: 0,
-		max:   max,
-	}
-}
-
-func (l *ConcurrentLease) CanGo() bool {
-	if l.count >= l.max {
+func (c *ConcurrentLease) GetLease(name string) bool {
+	if len(c.leases) >= c.max {
 		return false
 	}
-	l.count++
+	c.leases[name] = time.Now()
 	return true
 }
 
-func (l *ConcurrentLease) ReportFinished() {
-	l.count--
-}
-
-func remove(s []int, i int) []int {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+func (c *ConcurrentLease) ReportFinished(name string) {
+	delete(c.leases, name)
 }
