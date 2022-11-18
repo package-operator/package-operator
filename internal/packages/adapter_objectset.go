@@ -1,7 +1,6 @@
 package packages
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -10,34 +9,6 @@ import (
 type genericObjectSet interface {
 	ClientObject() client.Object
 	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
-}
-
-type genericObjectSetFactory func(
-	scheme *runtime.Scheme) genericObjectSet
-
-var (
-	objectSetGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSet")
-	clusterObjectSetGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSet")
-)
-
-func newGenericObjectSet(scheme *runtime.Scheme) genericObjectSet {
-	obj, err := scheme.New(objectSetGVK)
-	if err != nil {
-		panic(err)
-	}
-
-	return &GenericObjectSet{
-		ObjectSet: *obj.(*corev1alpha1.ObjectSet)}
-}
-
-func newGenericClusterObjectSet(scheme *runtime.Scheme) genericObjectSet {
-	obj, err := scheme.New(clusterObjectSetGVK)
-	if err != nil {
-		panic(err)
-	}
-
-	return &GenericClusterObjectSet{
-		ClusterObjectSet: *obj.(*corev1alpha1.ClusterObjectSet)}
 }
 
 var (

@@ -108,6 +108,8 @@ func main() {
 		}
 		if err := runLoader(scheme, packageKey); err != nil {
 			setupLog.Error(err, "unable to run package-loader")
+
+			time.Sleep(1 * time.Hour)
 			os.Exit(1)
 		}
 		return

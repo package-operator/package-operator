@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,18 +90,31 @@ func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, f
 		return err
 	}
 
-	unpackedCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
-	if unpackedCondition == nil {
+	invalidCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageInvalid)
+	if invalidCondition == nil {
 		return nil
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		log.Info("trying to report Package status...")
 
-		meta.SetStatusCondition(pkg.GetConditions(), *unpackedCondition) // reapply condition after update
-		if err := l.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
-			return err
+		meta.SetStatusCondition(pkg.GetConditions(), *invalidCondition) // reapply condition after update
+		err := l.client.Status().Update(ctx, pkg.ClientObject())
+		if err == nil {
+			return nil
 		}
-		return nil
+
+		if apierrors.IsConflict(err) {
+			// Get latest version of the ObjectDeployment to resolve conflict.
+			if err := l.client.Get(
+				ctx,
+				client.ObjectKeyFromObject(pkg.ClientObject()),
+				pkg.ClientObject(),
+			); err != nil {
+				return fmt.Errorf("getting ObjectDeployment to resolve conflict: %w", err)
+			}
+		}
+
+		return err
 	})
 }
 

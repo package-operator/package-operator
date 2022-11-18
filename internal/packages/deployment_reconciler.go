@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,7 +89,6 @@ func (r *DeploymentReconciler) Reconcile(
 			return fmt.Errorf("reconcile phase: %w", err)
 		}
 	}
-	desiredDeploy.SetTemplateSpec(templateSpec)
 
 	// Update Deployment
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -97,12 +96,24 @@ func (r *DeploymentReconciler) Reconcile(
 		labels := mergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
 		actualDeploy.ClientObject().SetAnnotations(annotations)
 		actualDeploy.ClientObject().SetLabels(labels)
-		actualDeploy.SetTemplateSpec(desiredDeploy.GetTemplateSpec())
+		actualDeploy.SetTemplateSpec(templateSpec)
 
-		if err := r.client.Update(ctx, actualDeploy.ClientObject()); err != nil {
-			return fmt.Errorf("updating ObjectDeployment: %w", err)
+		err := r.client.Update(ctx, actualDeploy.ClientObject())
+		if err == nil {
+			return nil
 		}
-		return nil
+
+		if apierrors.IsConflict(err) {
+			// Get latest version of the ObjectDeployment to resolve conflict.
+			if err := r.client.Get(
+				ctx,
+				client.ObjectKeyFromObject(desiredDeploy.ClientObject()),
+				actualDeploy.ClientObject(),
+			); err != nil {
+				return fmt.Errorf("getting ObjectDeployment to resolve conflict: %w", err)
+			}
+		}
+		return fmt.Errorf("updating ObjectDeployment: %w", err)
 	})
 	if err != nil {
 		return err
@@ -294,11 +305,7 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	}
 	// object already exists, check for hash collision
 	isController := r.ownerStrategy.IsController(deploy.ClientObject(), conflictingSlice.ClientObject())
-	// isEqual := equality.Semantic.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects())
-	isEqual := reflect.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects())
-	if !isEqual {
-		fmt.Println("not equal: ", conflictingSlice.GetObjects(), slice.GetObjects())
-	}
+	isEqual := equality.Semantic.DeepEqual(conflictingSlice.GetObjects(), slice.GetObjects())
 	if isController && isEqual {
 		// we are controller and object is equal
 		// -> all good, just a slow cache :)
