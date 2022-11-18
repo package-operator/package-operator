@@ -102,13 +102,27 @@ func (Test) Lint() error {
 // Runs unittests.
 func (Test) Unit() error {
 	codeCov := path.Join(cacheDir, "unit/cov.out")
+	execReport := path.Join(cacheDir, "unit/exec.json")
 	if err := os.MkdirAll(path.Dir(codeCov), os.ModePerm); err != nil {
 		return err
 	}
+
+	_, isCI := os.LookupEnv("CI")
+	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", codeCov)
+	if isCI {
+		// test output in json format
+		testCmd += " -json"
+	}
+	testCmd += " ./internal/... ./cmd/..."
+
+	if isCI {
+		testCmd = testCmd + " > " + execReport
+	}
+
 	return sh.RunWithV(map[string]string{
 		// needed to enable race detector -race
 		"CGO_ENABLED": "1",
-	}, "go", "test", "-coverprofile="+codeCov, "-v", "-race", "./internal/...", "./cmd/...")
+	}, "bash", "-c", testCmd)
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
