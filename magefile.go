@@ -101,10 +101,14 @@ func (Test) Lint() error {
 
 // Runs unittests.
 func (Test) Unit() error {
+	codeCov := path.Join(cacheDir, "unit/cov.out")
+	if err := os.MkdirAll(path.Dir(codeCov), os.ModePerm); err != nil {
+		return err
+	}
 	return sh.RunWithV(map[string]string{
 		// needed to enable race detector -race
 		"CGO_ENABLED": "1",
-	}, "go", "test", "-cover", "-v", "-race", "./internal/...", "./cmd/...")
+	}, "go", "test", "-coverprofile="+codeCov, "-v", "-race", "./internal/...", "./cmd/...")
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
