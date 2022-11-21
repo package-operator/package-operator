@@ -263,14 +263,11 @@ func (r *DeploymentReconciler) reconcileSlice(
 }
 
 type sliceCollisionError struct {
-	newSlice         adapters.ObjectSliceAccessor
-	conflictingSlice adapters.ObjectSliceAccessor
+	key client.ObjectKey
 }
 
 func (e sliceCollisionError) Error() string {
-	newKey := client.ObjectKeyFromObject(e.newSlice.ClientObject())
-	conflictingKey := client.ObjectKeyFromObject(e.conflictingSlice.ClientObject())
-	return newKey.String() + " collision with " + conflictingKey.String()
+	return "ObjectSlice collision with " + e.key.String()
 }
 
 func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
@@ -323,7 +320,6 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	)
 
 	return &sliceCollisionError{
-		newSlice:         slice,
-		conflictingSlice: conflictingSlice,
+		key: sliceKey,
 	}
 }

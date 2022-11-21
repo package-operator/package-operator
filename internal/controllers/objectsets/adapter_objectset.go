@@ -68,31 +68,7 @@ func (a *GenericObjectSet) ClientObject() client.Object {
 }
 
 func (a *GenericObjectSet) UpdateStatusPhase() {
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetArchived,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseArchived
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetPaused,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady
+	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericObjectSet) GetConditions() *[]metav1.Condition {
@@ -152,31 +128,7 @@ func (a *GenericClusterObjectSet) ClientObject() client.Object {
 }
 
 func (a *GenericClusterObjectSet) UpdateStatusPhase() {
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetArchived,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseArchived
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetPaused,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady
+	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericClusterObjectSet) GetConditions() *[]metav1.Condition {
@@ -225,4 +177,29 @@ func (a *GenericClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemoteP
 
 func (a *GenericClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
+}
+
+func objectSetStatusPhase(conditions []metav1.Condition) corev1alpha1.ObjectSetStatusPhase {
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetArchived,
+	) {
+		return corev1alpha1.ObjectSetStatusPhaseArchived
+	}
+
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetPaused,
+	) {
+		return corev1alpha1.ObjectSetStatusPhasePaused
+	}
+
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetAvailable,
+	) {
+		return corev1alpha1.ObjectSetStatusPhaseAvailable
+	}
+
+	return corev1alpha1.ObjectSetStatusPhaseNotReady
 }
