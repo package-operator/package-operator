@@ -28,7 +28,7 @@ type folderLoader interface {
 
 type deploymentReconciler interface {
 	Reconcile(
-		ctx context.Context, desiredDeploy objectDeploymentAccessor,
+		ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor,
 		chunker objectChunker,
 	) error
 }
@@ -57,8 +57,8 @@ func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
 		folderLoader: NewFolderLoader(scheme),
 		deploymentReconciler: newDeploymentReconciler(
 			scheme, c,
-			adapters.NewObjectDeployment, newGenericObjectSlice,
-			newGenericObjectSliceList, newGenericObjectSetList,
+			adapters.NewObjectDeployment, adapters.NewObjectSlice,
+			adapters.NewObjectSliceList, newGenericObjectSetList,
 		),
 	}
 }
@@ -73,8 +73,8 @@ func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLo
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
 		folderLoader: NewFolderLoader(scheme),
-		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, newGenericClusterObjectSlice,
-			newGenericClusterObjectSliceList, newGenericClusterObjectSetList,
+		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, adapters.NewClusterObjectSlice,
+			adapters.NewClusterObjectSliceList, newGenericClusterObjectSetList,
 		),
 	}
 }
@@ -147,7 +147,7 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 
 func (l *PackageLoader) desiredObjectDeployment(
 	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
-) (deploy objectDeploymentAccessor, err error) {
+) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	deploy = l.newObjectDeployment(l.scheme)
 	return deploy, l.setObjectDeploymentFields(ctx, pkg, res, deploy)
 }
@@ -155,7 +155,7 @@ func (l *PackageLoader) desiredObjectDeployment(
 // Sets fields in the ObjectDeployment to the desired values.
 func (l *PackageLoader) setObjectDeploymentFields(
 	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
-	deploy objectDeploymentAccessor,
+	deploy adapters.ObjectDeploymentAccessor,
 ) error {
 	annotations := mergeKeysFrom(deploy.ClientObject().GetAnnotations(), res.Annotations)
 	labels := mergeKeysFrom(deploy.ClientObject().GetLabels(), res.Labels)

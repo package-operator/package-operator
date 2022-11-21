@@ -14,13 +14,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
 func TestObjectSliceLoadReconciler(t *testing.T) {
 	c := testutil.NewClient()
 
-	r := newObjectSliceLoadReconciler(testScheme, c, newGenericObjectSlice)
+	r := newObjectSliceLoadReconciler(testScheme, c, adapters.NewObjectSlice)
 
 	object1 := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{

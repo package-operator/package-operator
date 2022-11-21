@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
@@ -16,14 +17,14 @@ import (
 type objectSliceLoadReconciler struct {
 	scheme         *runtime.Scheme
 	client         client.Client
-	newObjectSlice genericObjectSliceFactory
+	newObjectSlice adapters.ObjectSliceFactory
 	ownerStrategy  ownerStrategy
 }
 
 func newObjectSliceLoadReconciler(
 	scheme *runtime.Scheme,
 	client client.Client,
-	newObjectSlice genericObjectSliceFactory,
+	newObjectSlice adapters.ObjectSliceFactory,
 ) *objectSliceLoadReconciler {
 	return &objectSliceLoadReconciler{
 		scheme:         scheme,

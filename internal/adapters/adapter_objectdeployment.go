@@ -9,7 +9,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type objectDeploymentAccessor interface {
+type ObjectDeploymentAccessor interface {
 	ClientObject() client.Object
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
@@ -26,14 +26,14 @@ type objectDeploymentAccessor interface {
 }
 
 type ObjectDeploymentFactory func(
-	scheme *runtime.Scheme) objectDeploymentAccessor
+	scheme *runtime.Scheme) ObjectDeploymentAccessor
 
 var (
 	objectDeploymentGVK        = corev1alpha1.GroupVersion.WithKind("ObjectDeployment")
 	clusterObjectDeploymentGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment")
 )
 
-func NewObjectDeployment(scheme *runtime.Scheme) objectDeploymentAccessor {
+func NewObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
 	obj, err := scheme.New(objectDeploymentGVK)
 	if err != nil {
 		panic(err)
@@ -43,7 +43,7 @@ func NewObjectDeployment(scheme *runtime.Scheme) objectDeploymentAccessor {
 		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
 }
 
-func NewClusterObjectDeployment(scheme *runtime.Scheme) objectDeploymentAccessor {
+func NewClusterObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
 	obj, err := scheme.New(clusterObjectDeploymentGVK)
 	if err != nil {
 		panic(err)
@@ -54,8 +54,8 @@ func NewClusterObjectDeployment(scheme *runtime.Scheme) objectDeploymentAccessor
 }
 
 var (
-	_ objectDeploymentAccessor = (*ObjectDeployment)(nil)
-	_ objectDeploymentAccessor = (*ClusterObjectDeployment)(nil)
+	_ ObjectDeploymentAccessor = (*ObjectDeployment)(nil)
+	_ ObjectDeploymentAccessor = (*ClusterObjectDeployment)(nil)
 )
 
 type ObjectDeployment struct {
