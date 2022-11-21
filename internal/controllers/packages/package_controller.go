@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
@@ -27,7 +28,7 @@ type reconciler interface {
 // Generic reconciler for both Package and ClusterPackage objects.
 type GenericPackageController struct {
 	newPackage          genericPackageFactory
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 
 	client     client.Client
 	log        logr.Logger
@@ -51,7 +52,7 @@ func NewPackageController(
 	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericPackage, newGenericObjectDeployment,
+		newGenericPackage, adapters.NewObjectDeployment,
 		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace, pkoImage,
 	)
 }
@@ -62,14 +63,14 @@ func NewClusterPackageController(
 	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericClusterPackage, newGenericClusterObjectDeployment,
+		newGenericClusterPackage, adapters.NewClusterObjectDeployment,
 		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace, pkoImage,
 	)
 }
 
 func newGenericPackageController(
 	newPackage genericPackageFactory,
-	newObjectDeployment genericObjectDeploymentFactory,
+	newObjectDeployment adapters.ObjectDeploymentFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,

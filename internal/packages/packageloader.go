@@ -16,6 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 type folderLoader interface {
@@ -27,7 +28,7 @@ type folderLoader interface {
 
 type deploymentReconciler interface {
 	Reconcile(
-		ctx context.Context, desiredDeploy genericObjectDeployment,
+		ctx context.Context, desiredDeploy objectDeploymentAccessor,
 		chunker objectChunker,
 	) error
 }
@@ -38,7 +39,7 @@ type PackageLoader struct {
 	scheme *runtime.Scheme
 
 	newPackage          genericPackageFactory
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 
 	deploymentReconciler deploymentReconciler
 	folderLoader         folderLoader
@@ -51,12 +52,12 @@ func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
 		scheme: scheme,
 
 		newPackage:          newGenericPackage,
-		newObjectDeployment: newGenericObjectDeployment,
+		newObjectDeployment: adapters.NewObjectDeployment,
 
 		folderLoader: NewFolderLoader(scheme),
 		deploymentReconciler: newDeploymentReconciler(
 			scheme, c,
-			newGenericObjectDeployment, newGenericObjectSlice,
+			adapters.NewObjectDeployment, newGenericObjectSlice,
 			newGenericObjectSliceList, newGenericObjectSetList,
 		),
 	}
@@ -69,10 +70,10 @@ func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLo
 		scheme: scheme,
 
 		newPackage:          newGenericClusterPackage,
-		newObjectDeployment: newGenericClusterObjectDeployment,
+		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
 		folderLoader: NewFolderLoader(scheme),
-		deploymentReconciler: newDeploymentReconciler(scheme, c, newGenericClusterObjectDeployment, newGenericClusterObjectSlice,
+		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, newGenericClusterObjectSlice,
 			newGenericClusterObjectSliceList, newGenericClusterObjectSetList,
 		),
 	}
@@ -146,7 +147,7 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 
 func (l *PackageLoader) desiredObjectDeployment(
 	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
-) (deploy genericObjectDeployment, err error) {
+) (deploy objectDeploymentAccessor, err error) {
 	deploy = l.newObjectDeployment(l.scheme)
 	return deploy, l.setObjectDeploymentFields(ctx, pkg, res, deploy)
 }
@@ -154,7 +155,7 @@ func (l *PackageLoader) desiredObjectDeployment(
 // Sets fields in the ObjectDeployment to the desired values.
 func (l *PackageLoader) setObjectDeploymentFields(
 	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
-	deploy genericObjectDeployment,
+	deploy objectDeploymentAccessor,
 ) error {
 	annotations := mergeKeysFrom(deploy.ClientObject().GetAnnotations(), res.Annotations)
 	labels := mergeKeysFrom(deploy.ClientObject().GetLabels(), res.Labels)

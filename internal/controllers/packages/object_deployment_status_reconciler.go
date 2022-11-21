@@ -9,12 +9,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 type objectDeploymentStatusReconciler struct {
 	client              client.Client
 	scheme              *runtime.Scheme
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 }
 
 func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj genericPackage) (ctrl.Result, error) {
@@ -23,7 +24,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	objDepAvailableCondition := meta.FindStatusCondition(objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
+	objDepAvailableCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
 	if objDepAvailableCondition != nil && objDepAvailableCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
 		packageAvailableCond := objDepAvailableCondition.DeepCopy()
 		packageAvailableCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
@@ -31,7 +32,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageAvailableCond)
 	}
 
-	objDepProgressingCondition := meta.FindStatusCondition(objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
+	objDepProgressingCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
 	if objDepProgressingCondition != nil && objDepProgressingCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
 		packageProgressingCond := objDepProgressingCondition.DeepCopy()
 		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()

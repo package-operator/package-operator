@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/ownerhandling"
 	"package-operator.run/package-operator/internal/utils"
 )
@@ -25,7 +26,7 @@ const sliceOwnerLabel = "slices.package-operator.run/owner"
 type DeploymentReconciler struct {
 	scheme              *runtime.Scheme
 	client              client.Client
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 	newObjectSlice      genericObjectSliceFactory
 	newObjectSliceList  genericObjectSliceListFactory
 	newObjectSetList    genericObjectSetListFactory
@@ -40,7 +41,7 @@ type ownerStrategy interface {
 func newDeploymentReconciler(
 	scheme *runtime.Scheme,
 	client client.Client,
-	newObjectDeployment genericObjectDeploymentFactory,
+	newObjectDeployment adapters.ObjectDeploymentFactory,
 	newObjectSlice genericObjectSliceFactory,
 	newObjectSliceList genericObjectSliceListFactory,
 	newObjectSetList genericObjectSetListFactory,
@@ -57,13 +58,13 @@ func newDeploymentReconciler(
 }
 
 func (r *DeploymentReconciler) Reconcile(
-	ctx context.Context, desiredDeploy genericObjectDeployment,
+	ctx context.Context, desiredDeploy objectDeploymentAccessor,
 	chunker objectChunker,
 ) error {
 	templateSpec := desiredDeploy.GetTemplateSpec()
 
 	// Get existing ObjectDeployment
-	actualDeploy := r.newObjectDeployment(r.scheme)
+	actualDeploy := r.newObjectDeployment(r.scheme).(objectDeploymentAccessor)
 	err := r.client.Get(
 		ctx,
 		client.ObjectKeyFromObject(desiredDeploy.ClientObject()),
@@ -127,7 +128,7 @@ func (r *DeploymentReconciler) Reconcile(
 
 // GarbageCollect Slices that are no longer referenced.
 func (r *DeploymentReconciler) sliceGarbageCollection(
-	ctx context.Context, deploy genericObjectDeployment,
+	ctx context.Context, deploy objectDeploymentAccessor,
 ) error {
 	objectSets, err := r.listObjectSetsForDeployment(ctx, deploy)
 	if err != nil {
@@ -177,7 +178,7 @@ func (r *DeploymentReconciler) sliceGarbageCollection(
 }
 
 func (r *DeploymentReconciler) listObjectSetsForDeployment(
-	ctx context.Context, deploy genericObjectDeployment,
+	ctx context.Context, deploy objectDeploymentAccessor,
 ) ([]genericObjectSet, error) {
 	labelSelector := deploy.GetSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
@@ -201,7 +202,7 @@ func (r *DeploymentReconciler) listObjectSetsForDeployment(
 }
 
 func (r *DeploymentReconciler) chunkPhase(
-	ctx context.Context, deploy genericObjectDeployment,
+	ctx context.Context, deploy objectDeploymentAccessor,
 	phase *corev1alpha1.ObjectSetTemplatePhase,
 	chunker objectChunker,
 ) error {
@@ -242,7 +243,7 @@ func (r *DeploymentReconciler) chunkPhase(
 
 // reconcile ObjectSlice and retry on hash collision.
 func (r *DeploymentReconciler) reconcileSlice(
-	ctx context.Context, deploy genericObjectDeployment,
+	ctx context.Context, deploy objectDeploymentAccessor,
 	slice genericObjectSlice,
 ) error {
 	var collisionCount int32
@@ -273,7 +274,7 @@ func (e sliceCollisionError) Error() string {
 }
 
 func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
-	ctx context.Context, deploy genericObjectDeployment,
+	ctx context.Context, deploy objectDeploymentAccessor,
 	slice genericObjectSlice, collisionCount int32,
 ) error {
 	hash := utils.ComputeHash(slice.GetObjects(), &collisionCount)

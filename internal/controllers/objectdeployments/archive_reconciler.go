@@ -18,7 +18,7 @@ type archiveReconciler struct {
 func (a *archiveReconciler) Reconcile(ctx context.Context,
 	currentObjectSet genericObjectSet,
 	prevObjectSets []genericObjectSet,
-	objectDeployment genericObjectDeployment) (ctrl.Result, error) {
+	objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
 	if currentObjectSet == nil {
 		return ctrl.Result{}, nil
 	}
@@ -35,7 +35,7 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	objectsToArchive []genericObjectSet,
-	objectDeployment genericObjectDeployment) error {
+	objectDeployment objectDeploymentAccessor) error {
 	if len(objectsToArchive) == 0 {
 		return nil
 	}

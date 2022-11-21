@@ -8,6 +8,8 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,58 +19,88 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-func Test_new_revision_reconciler(t *testing.T) {
-	t.Run("Creates a new objectset with the correct attributes or handles hash collision", func(t *testing.T) {
-		testCases := []struct {
-			client                     *testutil.CtrlClient
-			prevRevisions              []corev1alpha1.ObjectSet
-			deploymentGeneration       int
-			deploymentHash             string
-			conflict                   bool
-			conflictObject             corev1alpha1.ObjectSet
-			expectedHashCollisionCount int
-		}{
-			{
-				client: testutil.NewClient(),
-				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "test", 3, "abcd", false),
-					makeObjectSet("rev1", "test", 1, "xyz", false),
-					makeObjectSet("rev2", "test", 2, "pqr", false),
-					makeObjectSet("rev4", "test", 4, "abc", true),
-				},
-				deploymentGeneration:       5,
-				deploymentHash:             "test1",
-				conflict:                   false,
-				expectedHashCollisionCount: 0,
-			},
-			// hash collision
-			{
-				client: testutil.NewClient(),
-				prevRevisions: []corev1alpha1.ObjectSet{
-					makeObjectSet("rev3", "test", 3, "abcd", false),
-					makeObjectSet("rev1", "test", 1, "xyz", true),
-					makeObjectSet("rev2", "test", 2, "pqr", false),
-					makeObjectSet("rev4", "test", 4, "abc", false),
-				},
-				deploymentGeneration:       5,
-				deploymentHash:             "xyz",
-				conflict:                   true,
-				conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true),
-				expectedHashCollisionCount: 1,
-			},
-		}
+func Test_newRevisionReconciler_delaysObjectSetCreation(
+	t *testing.T,
+) {
+	log := testr.New(t)
+	ctx := logr.NewContext(context.Background(), log)
+	clientMock := testutil.NewClient()
+	deploymentController := NewObjectDeploymentController(clientMock, log, testScheme)
+	r := newRevisionReconciler{
+		client:       clientMock,
+		newObjectSet: deploymentController.newObjectSet,
+		scheme:       testScheme,
+	}
 
-		for _, testCase := range testCases {
+	objectDeploymentMock := &genericObjectDeploymentMock{}
+	objectDeploymentMock.
+		On("GetObjectSetTemplate").
+		Return(corev1alpha1.ObjectSetTemplate{})
+
+	res, err := r.Reconcile(ctx, nil, nil, objectDeploymentMock)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero())
+
+	clientMock.AssertNotCalled(
+		t, "Create", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
+	testCases := []struct {
+		name                       string
+		client                     *testutil.CtrlClient
+		prevRevisions              []corev1alpha1.ObjectSet
+		deploymentGeneration       int
+		deploymentHash             string
+		conflict                   bool
+		conflictObject             corev1alpha1.ObjectSet
+		expectedHashCollisionCount int
+	}{
+		{
+			name:   "success",
+			client: testutil.NewClient(),
+			prevRevisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", "test", 3, "abcd", false),
+				makeObjectSet("rev1", "test", 1, "xyz", false),
+				makeObjectSet("rev2", "test", 2, "pqr", false),
+				makeObjectSet("rev4", "test", 4, "abc", true),
+			},
+			deploymentGeneration:       5,
+			deploymentHash:             "test1",
+			conflict:                   false,
+			expectedHashCollisionCount: 0,
+		},
+		{
+			name:   "hash collision",
+			client: testutil.NewClient(),
+			prevRevisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", "test", 3, "abcd", false),
+				makeObjectSet("rev1", "test", 1, "xyz", true),
+				makeObjectSet("rev2", "test", 2, "pqr", false),
+				makeObjectSet("rev4", "test", 4, "abc", false),
+			},
+			deploymentGeneration:       5,
+			deploymentHash:             "xyz",
+			conflict:                   true,
+			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true),
+			expectedHashCollisionCount: 1,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			log := testr.New(t)
+			ctx := logr.NewContext(context.Background(), log)
 			clientMock := testCase.client
 			// Setup reconciler
-			deploymentController := NewObjectDeploymentController(testCase.client, logr.Discard(), testScheme)
+			deploymentController := NewObjectDeploymentController(testCase.client, log, testScheme)
 			r := newRevisionReconciler{
 				client:       clientMock,
 				newObjectSet: deploymentController.newObjectSet,
 				scheme:       testScheme,
 			}
 
-			objectDeploymentmock := makeObjectDeploymentMock(
+			objectDeploymentMock := makeObjectDeploymentMock(
 				"test",
 				"test",
 				testCase.deploymentGeneration,
@@ -114,16 +146,16 @@ func Test_new_revision_reconciler(t *testing.T) {
 			}
 
 			// Invoke reconciler
-			res, err := r.Reconcile(context.Background(), nil, revisions, objectDeploymentmock)
+			res, err := r.Reconcile(ctx, nil, revisions, objectDeploymentMock)
 			require.NoError(t, err, "unexpected error")
 			require.True(t, res.IsZero(), "unexpected requeue")
 
 			// assert hash collisions
 			if testCase.expectedHashCollisionCount > 0 {
 				expectedCollison := int32(testCase.expectedHashCollisionCount)
-				objectDeploymentmock.AssertCalled(t, "SetStatusCollisionCount", &expectedCollison)
+				objectDeploymentMock.AssertCalled(t, "SetStatusCollisionCount", &expectedCollison)
 			} else {
-				objectDeploymentmock.AssertNotCalled(t, "SetStatusCollisionCount", mock.AnythingOfType("*int32"))
+				objectDeploymentMock.AssertNotCalled(t, "SetStatusCollisionCount", mock.AnythingOfType("*int32"))
 			}
 
 			// Assert correct new revision is created
@@ -142,9 +174,8 @@ func Test_new_revision_reconciler(t *testing.T) {
 				}),
 				[]ctrlclient.CreateOption(nil),
 			)
-		}
-	})
-
+		})
+	}
 }
 
 func assertObject(t *testing.T,

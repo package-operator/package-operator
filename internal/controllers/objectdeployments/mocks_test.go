@@ -16,9 +16,9 @@ type genericObjectSetMock struct {
 }
 
 var (
-	_ genericObjectSet        = (*genericObjectSetMock)(nil)
-	_ genericObjectDeployment = (*genericObjectDeploymentMock)(nil)
-	_ objectSetSubReconciler  = (*objectSetSubReconcilerMock)(nil)
+	_ genericObjectSet         = (*genericObjectSetMock)(nil)
+	_ objectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
+	_ objectSetSubReconciler   = (*objectSetSubReconcilerMock)(nil)
 )
 
 func (o *genericObjectSetMock) ClientObject() client.Object {
@@ -164,7 +164,7 @@ type objectSetSubReconcilerMock struct {
 }
 
 func (o *objectSetSubReconcilerMock) Reconcile(ctx context.Context,
-	currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment genericObjectDeployment) (ctrl.Result, error) {
+	currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
 	args := o.Called(ctx, currentObjectSet, prevObjectSets, objectDeployment)
 	err, _ := args.Get(1).(error)
 	return args.Get(0).(ctrl.Result), err
