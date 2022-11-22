@@ -10,9 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"package-operator.run/package-operator/internal/testutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"package-operator.run/package-operator/internal/testutil"
 )
 
 func TestEnqueueWatchingObjects(t *testing.T) {
