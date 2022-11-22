@@ -29,6 +29,7 @@ type jobReconciler struct {
 
 	pkoNamespace string
 	pkoImage     string
+	lease        lease
 }
 
 func newJobReconciler(
@@ -37,6 +38,7 @@ func newJobReconciler(
 	ownerStrategy ownerStrategy,
 	pkoNamespace string,
 	pkoImage string,
+	lease lease,
 ) *jobReconciler {
 	return &jobReconciler{
 		scheme:        scheme,
@@ -44,6 +46,7 @@ func newJobReconciler(
 		ownerStrategy: ownerStrategy,
 		pkoNamespace:  pkoNamespace,
 		pkoImage:      pkoImage,
+		lease:         lease,
 	}
 }
 
@@ -52,6 +55,12 @@ func (r *jobReconciler) Reconcile(
 ) (res ctrl.Result, err error) {
 	job, err := r.ensureUnpackJob(ctx, pkg)
 	if err != nil {
+		//if err.Error() == "couldn't get lease" {
+		//	return ctrl.Result{
+		//		Requeue:      true,
+		//		RequeueAfter: 1 * time.Minute,
+		//	}, nil // TODO: or do we want a queue?
+		//}
 		return res, fmt.Errorf("ensure unpack job: %w", err)
 	}
 
@@ -87,6 +96,9 @@ func (r *jobReconciler) Reconcile(
 			}
 		}
 	}
+	if jobCompleted {
+		r.lease.ReportFinished(job.Name)
+	}
 
 	if !jobCompleted {
 		meta.SetStatusCondition(
@@ -112,6 +124,10 @@ func (r *jobReconciler) ensureUnpackJob(
 
 	existingJob := &batchv1.Job{}
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredJob), existingJob); err != nil && errors.IsNotFound(err) {
+		if !r.lease.GetLease(desiredJob.Name) {
+			return nil, fmt.Errorf("couldn't get lease") // TODO: Should this be an error or should we do it somehow else
+		}
+
 		if err := r.client.Create(ctx, desiredJob); err != nil {
 			return nil, fmt.Errorf("creating Job: %w", err)
 		}
