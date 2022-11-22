@@ -37,7 +37,7 @@ jobs:
             fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/unit-test-results.zip`, Buffer.from(download.data));
 
       - name: 'Unzip code coverage'
-        run: unzip unit-test-results.zip -d .
+        run: mkdir -p .cache/unit && unzip unit-test-results.zip -d .cache/unit/
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
