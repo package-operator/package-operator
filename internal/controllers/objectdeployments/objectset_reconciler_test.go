@@ -204,7 +204,9 @@ func makeObjectDeploymentMock(name string, namespace string,
 	res.On("GetNamespace").Return(namespace)
 	res.On("GetAnnotations").Return(map[string]string{})
 	res.On("GetObjectSetTemplate").Return(
-		corev1alpha1.ObjectSetTemplate{},
+		corev1alpha1.ObjectSetTemplate{Spec: corev1alpha1.ObjectSetTemplateSpec{
+			Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
+		}},
 	)
 	return res
 }

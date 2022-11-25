@@ -17,6 +17,7 @@ type genericObjectSet interface {
 	IsPaused() bool
 	GetPrevious() []corev1alpha1.PreviousRevisionReference
 	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
+	SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase)
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	SetRevision(revision int64)
 	GetRevision() int64
@@ -67,31 +68,7 @@ func (a *GenericObjectSet) ClientObject() client.Object {
 }
 
 func (a *GenericObjectSet) UpdateStatusPhase() {
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetArchived,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseArchived
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetPaused,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady
+	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericObjectSet) GetConditions() *[]metav1.Condition {
@@ -112,6 +89,10 @@ func (a *GenericObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionReferenc
 
 func (a *GenericObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.Phases
+}
+
+func (a *GenericObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Phases = phases
 }
 
 func (a *GenericObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
@@ -147,31 +128,7 @@ func (a *GenericClusterObjectSet) ClientObject() client.Object {
 }
 
 func (a *GenericClusterObjectSet) UpdateStatusPhase() {
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetArchived,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseArchived
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetPaused,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhasePaused
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		a.Status.Conditions,
-		corev1alpha1.ObjectSetAvailable,
-	) {
-		a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseAvailable
-		return
-	}
-
-	a.Status.Phase = corev1alpha1.ObjectSetStatusPhaseNotReady
+	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericClusterObjectSet) GetConditions() *[]metav1.Condition {
@@ -192,6 +149,10 @@ func (a *GenericClusterObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionR
 
 func (a *GenericClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.Phases
+}
+
+func (a *GenericClusterObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+	a.Spec.Phases = phases
 }
 
 func (a *GenericClusterObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
@@ -216,4 +177,29 @@ func (a *GenericClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemoteP
 
 func (a *GenericClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
+}
+
+func objectSetStatusPhase(conditions []metav1.Condition) corev1alpha1.ObjectSetStatusPhase {
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetArchived,
+	) {
+		return corev1alpha1.ObjectSetStatusPhaseArchived
+	}
+
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetPaused,
+	) {
+		return corev1alpha1.ObjectSetStatusPhasePaused
+	}
+
+	if meta.IsStatusConditionTrue(
+		conditions,
+		corev1alpha1.ObjectSetAvailable,
+	) {
+		return corev1alpha1.ObjectSetStatusPhaseAvailable
+	}
+
+	return corev1alpha1.ObjectSetStatusPhaseNotReady
 }

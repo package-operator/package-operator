@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 )
 
 type reconciler interface {
-	Reconcile(ctx context.Context, objectSetDeployment genericObjectDeployment) (ctrl.Result, error)
+	Reconcile(ctx context.Context, objectSetDeployment objectDeploymentAccessor) (ctrl.Result, error)
 }
 
 type GenericObjectDeploymentController struct {
@@ -29,7 +30,7 @@ type GenericObjectDeploymentController struct {
 	client              client.Client
 	log                 logr.Logger
 	scheme              *runtime.Scheme
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 	newObjectSet        genericObjectSetFactory
 	newObjectSetList    genericObjectSetListFactory
 	reconciler          []reconciler
@@ -39,7 +40,7 @@ func newGenericObjectDeploymentController(
 	gvk schema.GroupVersionKind,
 	childGVK schema.GroupVersionKind,
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
-	newObjectDeployment genericObjectDeploymentFactory,
+	newObjectDeployment adapters.ObjectDeploymentFactory,
 	newObjectSet genericObjectSetFactory,
 	newObjectSetList genericObjectSetListFactory,
 ) *GenericObjectDeploymentController {
@@ -85,7 +86,7 @@ func NewObjectDeploymentController(
 		c,
 		log,
 		scheme,
-		newGenericObjectDeployment,
+		adapters.NewObjectDeployment,
 		newGenericObjectSet,
 		newGenericObjectSetList,
 	)
@@ -100,7 +101,7 @@ func NewClusterObjectDeploymentController(
 		c,
 		log,
 		scheme,
-		newGenericClusterObjectDeployment,
+		adapters.NewClusterObjectDeployment,
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetList,
 	)
@@ -146,7 +147,7 @@ func (od *GenericObjectDeploymentController) SetupWithManager(mgr ctrl.Manager) 
 
 func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	ctx context.Context,
-	objectDeployment genericObjectDeployment,
+	objectDeployment objectDeploymentAccessor,
 ) ([]genericObjectSet, error) {
 	labelSelector := objectDeployment.GetSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)

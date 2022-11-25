@@ -773,6 +773,9 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 			return fmt.Errorf("exporting internal kubeconfig: %w", err)
 		}
 		kubeconfigBytes = kubeconfigBuf.Bytes()
+		kubeconfigBytes = bytes.Replace(kubeconfigBytes,
+			[]byte("package-operator-dev-control-plane:6443"),
+			[]byte("kubernetes.default"), -1) // use in-cluster DNS
 	} else {
 		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
 		if err != nil {

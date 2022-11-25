@@ -102,7 +102,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	// Pre-Creating a ObjectSet that should conflict with Generation 2.
 	existingConflictObjectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-objectdeployment-84f99894fd",
+			Name:      "test-objectdeployment-548c9df448",
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{

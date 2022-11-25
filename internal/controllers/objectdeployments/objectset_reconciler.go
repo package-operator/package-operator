@@ -21,14 +21,14 @@ type objectSetReconciler struct {
 
 type objectSetSubReconciler interface {
 	Reconcile(ctx context.Context,
-		currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment genericObjectDeployment) (ctrl.Result, error)
+		currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor) (ctrl.Result, error)
 }
 
 type listObjectSetsForDeploymentFn func(
-	ctx context.Context, objectDeployment genericObjectDeployment,
+	ctx context.Context, objectDeployment objectDeploymentAccessor,
 ) ([]genericObjectSet, error)
 
-func (o *objectSetReconciler) Reconcile(ctx context.Context, objectDeployment genericObjectDeployment) (ctrl.Result, error) {
+func (o *objectSetReconciler) Reconcile(ctx context.Context, objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
 	objectSets, err := o.listObjectSetsForDeployment(ctx, objectDeployment)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("listing objectsets under deployment errored: %w", err)
@@ -85,7 +85,7 @@ func (o *objectSetReconciler) Reconcile(ctx context.Context, objectDeployment ge
 func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	currentObjectSet genericObjectSet,
 	prevObjectSets []genericObjectSet,
-	objectDeployment genericObjectDeployment,
+	objectDeployment objectDeploymentAccessor,
 ) {
 	var (
 		oldRevisionAvailable      bool

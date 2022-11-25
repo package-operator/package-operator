@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/preflight"
 
@@ -66,6 +67,7 @@ func NewObjectSetController(
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
+		adapters.NewObjectSlice,
 		c, log, scheme, dw, r,
 		restMapper,
 	)
@@ -79,6 +81,7 @@ func NewClusterObjectSetController(
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
+		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, r,
 		restMapper,
 	)
@@ -87,6 +90,7 @@ func NewClusterObjectSetController(
 func newGenericObjectSetController(
 	newObjectSet genericObjectSetFactory,
 	newObjectSetPhase genericObjectSetPhaseFactory,
+	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme, dynamicCache dynamicCache,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
@@ -128,6 +132,7 @@ func newGenericObjectSetController(
 			client:       client,
 			newObjectSet: newObjectSet,
 		},
+		newObjectSliceLoadReconciler(scheme, client, newObjectSlice),
 		phasesReconciler,
 	}
 

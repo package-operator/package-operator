@@ -206,9 +206,14 @@ spec:
                         - object
                         type: object
                       type: array
+                    slices:
+                      description: References to ObjectSlices containing objects for
+                        this phase.
+                      items:
+                        type: string
+                      type: array
                   required:
                   - name
-                  - objects
                   type: object
                 type: array
               previous:
@@ -224,9 +229,6 @@ spec:
                   - name
                   type: object
                 type: array
-            required:
-            - availabilityProbes
-            - phases
             type: object
           status:
             default:

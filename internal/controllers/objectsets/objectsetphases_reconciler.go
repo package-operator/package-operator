@@ -28,6 +28,7 @@ type objectSetPhasesReconciler struct {
 
 type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
+	IsOwner(owner, obj metav1.Object) bool
 }
 
 func newObjectSetPhasesReconciler(

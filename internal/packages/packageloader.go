@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 type folderLoader interface {
@@ -24,15 +26,23 @@ type folderLoader interface {
 	) (res FolderLoaderResult, err error)
 }
 
+type deploymentReconciler interface {
+	Reconcile(
+		ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor,
+		chunker objectChunker,
+	) error
+}
+
 // PackageLoader loads an ObjectDeployment from file, wraps it into an ObjectDeployment and updates/creates it on the cluster.
 type PackageLoader struct {
 	client client.Client
 	scheme *runtime.Scheme
 
 	newPackage          genericPackageFactory
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 
-	folderLoader folderLoader
+	deploymentReconciler deploymentReconciler
+	folderLoader         folderLoader
 }
 
 // Returns a new namespace-scoped loader for the Package API.
@@ -42,9 +52,14 @@ func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
 		scheme: scheme,
 
 		newPackage:          newGenericPackage,
-		newObjectDeployment: newGenericObjectDeployment,
+		newObjectDeployment: adapters.NewObjectDeployment,
 
 		folderLoader: NewFolderLoader(scheme),
+		deploymentReconciler: newDeploymentReconciler(
+			scheme, c,
+			adapters.NewObjectDeployment, adapters.NewObjectSlice,
+			adapters.NewObjectSliceList, newGenericObjectSetList,
+		),
 	}
 }
 
@@ -55,9 +70,12 @@ func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLo
 		scheme: scheme,
 
 		newPackage:          newGenericClusterPackage,
-		newObjectDeployment: newGenericClusterObjectDeployment,
+		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
 		folderLoader: NewFolderLoader(scheme),
+		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, adapters.NewClusterObjectSlice,
+			adapters.NewClusterObjectSliceList, newGenericClusterObjectSetList,
+		),
 	}
 }
 
@@ -73,18 +91,31 @@ func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, f
 		return err
 	}
 
-	unpackedCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
-	if unpackedCondition == nil {
+	invalidCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageInvalid)
+	if invalidCondition == nil {
 		return nil
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		log.Info("trying to report Package status...")
 
-		meta.SetStatusCondition(pkg.GetConditions(), *unpackedCondition) // reapply condition after update
-		if err := l.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
-			return err
+		meta.SetStatusCondition(pkg.GetConditions(), *invalidCondition) // reapply condition after update
+		err := l.client.Status().Update(ctx, pkg.ClientObject())
+		if err == nil {
+			return nil
 		}
-		return nil
+
+		if apierrors.IsConflict(err) {
+			// Get latest version of the ObjectDeployment to resolve conflict.
+			if err := l.client.Get(
+				ctx,
+				client.ObjectKeyFromObject(pkg.ClientObject()),
+				pkg.ClientObject(),
+			); err != nil {
+				return fmt.Errorf("getting ObjectDeployment to resolve conflict: %w", err)
+			}
+		}
+
+		return err
 	})
 }
 
@@ -95,12 +126,37 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 		return nil
 	}
 
-	deploy := l.newObjectDeployment(l.scheme)
-	err = l.client.Get(ctx, client.ObjectKeyFromObject(pkg.ClientObject()), deploy.ClientObject())
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
+	desiredDeploy, err := l.desiredObjectDeployment(ctx, pkg, res)
+	if err != nil {
+		return fmt.Errorf("creating desired ObjectDeployment: %w", err)
 	}
 
+	chunker := determineChunkingStrategyForPackage(pkg)
+	if err := l.deploymentReconciler.Reconcile(ctx, desiredDeploy, chunker); err != nil {
+		return fmt.Errorf("reconciling ObjectDeployment: %w", err)
+	}
+
+	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
+		Type:               corev1alpha1.PackageInvalid,
+		Status:             metav1.ConditionFalse,
+		Reason:             "LoadSuccess",
+		ObservedGeneration: pkg.ClientObject().GetGeneration(),
+	})
+	return nil
+}
+
+func (l *PackageLoader) desiredObjectDeployment(
+	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
+) (deploy adapters.ObjectDeploymentAccessor, err error) {
+	deploy = l.newObjectDeployment(l.scheme)
+	return deploy, l.setObjectDeploymentFields(ctx, pkg, res, deploy)
+}
+
+// Sets fields in the ObjectDeployment to the desired values.
+func (l *PackageLoader) setObjectDeploymentFields(
+	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
+	deploy adapters.ObjectDeploymentAccessor,
+) error {
 	annotations := mergeKeysFrom(deploy.ClientObject().GetAnnotations(), res.Annotations)
 	labels := mergeKeysFrom(deploy.ClientObject().GetLabels(), res.Labels)
 
@@ -119,37 +175,6 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 		pkg.ClientObject(), deploy.ClientObject(), l.scheme); err != nil {
 		return err
 	}
-
-	if apierrors.IsNotFound(err) {
-		if err := l.client.Create(ctx, deploy.ClientObject()); err != nil {
-			return err
-		}
-
-		meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.PackageInvalid,
-			Status:             metav1.ConditionFalse,
-			Reason:             "LoadSuccess",
-			ObservedGeneration: pkg.ClientObject().GetGeneration(),
-		})
-		return nil
-	}
-
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := l.client.Update(ctx, deploy.ClientObject()); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-		Type:               corev1alpha1.PackageInvalid,
-		Status:             metav1.ConditionFalse,
-		Reason:             "LoadSuccess",
-		ObservedGeneration: pkg.ClientObject().GetGeneration(),
-	})
 	return nil
 }
 

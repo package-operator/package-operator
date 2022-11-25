@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
@@ -27,7 +28,7 @@ type reconciler interface {
 // Generic reconciler for both Package and ClusterPackage objects.
 type GenericPackageController struct {
 	newPackage          genericPackageFactory
-	newObjectDeployment genericObjectDeploymentFactory
+	newObjectDeployment adapters.ObjectDeploymentFactory
 
 	client     client.Client
 	log        logr.Logger
@@ -51,7 +52,7 @@ func NewPackageController(
 	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericPackage, newGenericObjectDeployment,
+		newGenericPackage, adapters.NewObjectDeployment,
 		c, log, scheme, ownerhandling.NewAnnotation(scheme), pkoNamespace, pkoImage,
 	)
 }
@@ -62,14 +63,14 @@ func NewClusterPackageController(
 	pkoNamespace, pkoImage string,
 ) *GenericPackageController {
 	return newGenericPackageController(
-		newGenericClusterPackage, newGenericClusterObjectDeployment,
+		newGenericClusterPackage, adapters.NewClusterObjectDeployment,
 		c, log, scheme, ownerhandling.NewNative(scheme), pkoNamespace, pkoImage,
 	)
 }
 
 func newGenericPackageController(
 	newPackage genericPackageFactory,
-	newObjectDeployment genericObjectDeploymentFactory,
+	newObjectDeployment adapters.ObjectDeploymentFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	jobOwnerStrategy ownerStrategy,
@@ -165,11 +166,11 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg generic
 func (c *GenericPackageController) handleDeletion(
 	ctx context.Context, pkg genericPackage,
 ) error {
+	// Jobs need this setting or Pods created by a Job will not be deleted.
 	background := metav1.DeletePropagationBackground
-	err := c.client.Delete(ctx, &batchv1.Job{
+	if err := c.client.Delete(ctx, &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: jobName(pkg), Namespace: c.pkoNamespace},
-	}, &client.DeleteOptions{PropagationPolicy: &background})
-	if err != nil && !errors.IsNotFound(err) {
+	}, &client.DeleteOptions{PropagationPolicy: &background}); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 

@@ -6,10 +6,12 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ClusterObjectDeployment](#clusterobjectdeployment)
 * [ClusterObjectSet](#clusterobjectset)
 * [ClusterObjectSetPhase](#clusterobjectsetphase)
+* [ClusterObjectSlice](#clusterobjectslice)
 * [ClusterPackage](#clusterpackage)
 * [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
+* [ObjectSlice](#objectslice)
 * [Package](#package)
 
 
@@ -55,6 +57,8 @@ spec:
             kind: Deployment
             metadata:
               name: example-deployment
+        slices:
+        - dolor
 status:
   phase:Pending: null
 
@@ -105,14 +109,16 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sit
-    name: dolor
+  - class: amet
+    name: sit
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+    slices:
+    - consetetur
   previous:
   - name: previous-revision
 status:
@@ -172,10 +178,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
 
 ```
 
@@ -185,6 +191,36 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#clusterobjectsetphasespec">ClusterObjectSetPhaseSpec</a> | ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase. |
 | `status` <br><a href="#clusterobjectsetphasestatus">ClusterObjectSetPhaseStatus</a> | ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase. |
+
+
+### ClusterObjectSlice
+
+ClusterObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+limit the size of ObjectSet and ObjectDeployments when big packages are installed.
+This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterObjectSlice
+metadata:
+  name: example
+objects:
+- object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
 ### ClusterPackage
@@ -200,7 +236,7 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  image: sed
+  image: nonumy
 status:
   phase: Pending
 
@@ -249,14 +285,16 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: nonumy
-        name: diam
+      - class: tempor
+        name: eirmod
         objects:
         - object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
+        slices:
+        - lorem
 status:
   phase:Pending: null
 
@@ -308,14 +346,16 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: tempor
-    name: eirmod
+  - class: dolor
+    name: ipsum
     objects:
     - object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
+    slices:
+    - sit
   previous:
   - name: previous-revision
 status:
@@ -376,10 +416,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: ipsum
-    kind: lorem
-    name: dolor
-    namespace: sit
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -389,6 +429,37 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#objectsetphasespec">ObjectSetPhaseSpec</a> | ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase. |
 | `status` <br><a href="#objectsetphasestatus">ObjectSetPhaseStatus</a> | ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase. |
+
+
+### ObjectSlice
+
+ObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+limit the size of ObjectSets and ObjectDeployments when big packages are installed.
+This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectSlice
+metadata:
+  name: example
+  namespace: default
+objects:
+- object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: example-deployment
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
 ### Package
@@ -405,7 +476,7 @@ metadata:
   name: example
   namespace: default
 spec:
-  image: amet
+  image: sed
 status:
   phase: Pending
 
@@ -493,8 +564,8 @@ ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSet. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
-| `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
-| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
+| `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 
 
 Used in:
@@ -581,6 +652,8 @@ Used in:
 * [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
 * [ObjectSetPhaseSpec](#objectsetphasespec)
 * [ObjectSetTemplatePhase](#objectsettemplatephase)
+* [ClusterObjectSlice](#clusterobjectslice)
+* [ObjectSlice](#objectslice)
 
 
 ### ObjectSetPhaseSpec
@@ -640,8 +713,8 @@ ObjectSetSpec defines the desired state of a ObjectSet.
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSet. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
-| `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
-| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
+| `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 
 
 Used in:
@@ -688,7 +761,8 @@ ObjectSet reconcile phase.
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
-| `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `objects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `slices` <br>[]string | References to ObjectSlices containing objects for this phase. |
 
 
 Used in:
@@ -703,8 +777,8 @@ ObjectSet specification.
 
 | Field | Description |
 | ----- | ----------- |
-| `phases` <b>required</b><br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
-| `availabilityProbes` <b>required</b><br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
+| `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 
 
 Used in:

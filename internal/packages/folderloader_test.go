@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	pkoapis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -19,7 +20,7 @@ import (
 var testScheme = runtime.NewScheme()
 
 func init() {
-	if err := manifestsv1alpha1.AddToScheme(testScheme); err != nil {
+	if err := pkoapis.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }
@@ -83,9 +84,8 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "v1",
 							"kind":       "ConfigMap",
 							"metadata": map[string]interface{}{
-								"annotations": map[string]interface{}{},
-								"labels":      commonLabels,
-								"name":        "some-configmap",
+								"labels": commonLabels,
+								"name":   "some-configmap",
 							},
 							"data": map[string]interface{}{
 								"foo":   "bar",
@@ -100,9 +100,8 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "v1",
 							"kind":       "ServiceAccount",
 							"metadata": map[string]interface{}{
-								"annotations": map[string]interface{}{},
-								"labels":      commonLabels,
-								"name":        "some-service-account",
+								"labels": commonLabels,
+								"name":   "some-service-account",
 							},
 						},
 					},
@@ -118,10 +117,9 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "apps/v1",
 							"kind":       "Deployment",
 							"metadata": map[string]interface{}{
-								"annotations": map[string]interface{}{},
-								"labels":      commonLabels,
-								"name":        "controller-manager",
-								"namespace":   "test123-ns",
+								"labels":    commonLabels,
+								"name":      "controller-manager",
+								"namespace": "test123-ns",
 							},
 							"spec": map[string]interface{}{
 								"replicas": int64(1),
@@ -135,9 +133,8 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "apps/v1",
 							"kind":       "StatefulSet",
 							"metadata": map[string]interface{}{
-								"annotations": map[string]interface{}{},
-								"labels":      commonLabels,
-								"name":        "some-stateful-set-1",
+								"labels": commonLabels,
+								"name":   "some-stateful-set-1",
 							},
 							"spec": map[string]interface{}{},
 						},
