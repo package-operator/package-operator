@@ -32,7 +32,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	log := logr.FromContextOrDiscard(ctx)
 
 	if len(objectDeployment.GetObjectSetTemplate().Spec.Phases) == 0 {
-		// ObjectDeployment is empty, don't create a ObjectSet and wait for spec.
+		// ObjectDeployment is empty. Don't create a ObjectSet, wait for spec.
 		log.Info("empty ObjectDeployment, waiting for initialization")
 		return ctrl.Result{}, nil
 	}
