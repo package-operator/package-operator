@@ -18,7 +18,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
 
 const (
@@ -27,10 +27,10 @@ const (
 )
 
 func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
-	folderLoader := packages.NewFolderLoader(scheme)
+	loader := packagestructure.NewLoader(scheme)
 
 	ctx := logr.NewContext(context.Background(), log.WithName("bootstrap"))
-	res, err := folderLoader.Load(ctx, "/package", packages.FolderLoaderTemplateContext{})
+	packgeContent, err := loader.Load(ctx, "/package")
 	if err != nil {
 		return err
 	}
@@ -42,9 +42,11 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
+	templateSpec := packgeContent.ToTemplateSpec()
+
 	// Install CRDs or the manager wont start
 	crdGK := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
-	for _, phase := range res.TemplateSpec.Phases {
+	for _, phase := range templateSpec.Phases {
 		for _, obj := range phase.Objects {
 			gk := obj.Object.GetObjectKind().GroupVersionKind().GroupKind()
 			if gk != crdGK {

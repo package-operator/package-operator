@@ -1,4 +1,4 @@
-package packages
+package packagedeploy
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -6,13 +6,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/packages/packagebytes"
 )
 
 type genericPackage interface {
 	ClientObject() client.Object
-	Scope() manifestsv1alpha1.PackageManifestScope
-	TemplateContext() FolderLoaderTemplateContext
+	TemplateContext() packagebytes.TemplateContext
 	GetConditions() *[]metav1.Condition
 }
 
@@ -57,13 +56,9 @@ func (a *GenericPackage) ClientObject() client.Object {
 	return &a.Package
 }
 
-func (a *GenericPackage) Scope() manifestsv1alpha1.PackageManifestScope {
-	return manifestsv1alpha1.PackageManifestScopeNamespaced
-}
-
-func (a *GenericPackage) TemplateContext() FolderLoaderTemplateContext {
-	return FolderLoaderTemplateContext{
-		Package: PackageTemplateContext{
+func (a *GenericPackage) TemplateContext() packagebytes.TemplateContext {
+	return packagebytes.TemplateContext{
+		Package: packagebytes.PackageTemplateContext{
 			ObjectMeta: a.ObjectMeta,
 		},
 	}
@@ -81,13 +76,9 @@ func (a *GenericClusterPackage) ClientObject() client.Object {
 	return &a.ClusterPackage
 }
 
-func (a *GenericClusterPackage) Scope() manifestsv1alpha1.PackageManifestScope {
-	return manifestsv1alpha1.PackageManifestScopeCluster
-}
-
-func (a *GenericClusterPackage) TemplateContext() FolderLoaderTemplateContext {
-	return FolderLoaderTemplateContext{
-		Package: PackageTemplateContext{
+func (a *GenericClusterPackage) TemplateContext() packagebytes.TemplateContext {
+	return packagebytes.TemplateContext{
+		Package: packagebytes.PackageTemplateContext{
 			ObjectMeta: a.ObjectMeta,
 		},
 	}
