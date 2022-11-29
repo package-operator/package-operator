@@ -242,12 +242,23 @@ type Build mg.Namespace
 
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
-	mg.Deps(
-		mg.F(Builder.Cmd, pkoManagerBinaryImageName, runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "kubectl-package", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "mage", "", ""),
-	)
+	targets := []interface{}{mg.F(Builder.Cmd, "mage", "", "")}
+	for _, cmd := range allCommands() {
+		targets = append(targets, mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH))
+	}
+
+	mg.Deps(targets...)
+}
+
+func (Build) MultiArchBinaries() {
+	targets := []interface{}{mg.F(Builder.Cmd, "mage", "", "")}
+	for _, cmd := range allCommands() {
+		for _, archTarget := range multiArchTargets {
+			targets = append(targets, mg.F(Builder.Cmd, cmd, archTarget[0], archTarget[1]))
+		}
+	}
+
+	mg.Deps(targets...)
 }
 
 func (Build) Binary(cmd string) { mg.Deps(mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH)) }
