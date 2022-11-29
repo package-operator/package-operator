@@ -149,11 +149,13 @@ func (Test) Lint() error {
 		Dependency.GolangciLint,
 	)
 
-	for _, cmd := range [][]string{
+	cmds := [][]string{
 		{"go", "fmt", "./..."},
+		{"golangci-lint", "run", "./...", "--deadline=15m", "--fix"},
 		{"bash", "./hack/validate-directory-clean.sh"},
-		{"golangci-lint", "run", "./...", "--deadline=15m"},
-	} {
+	}
+
+	for _, cmd := range cmds {
 		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
 		}
