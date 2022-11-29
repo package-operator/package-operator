@@ -200,10 +200,8 @@ func (Test) Unit() error {
 		testCmd = testCmd + " > " + execReport
 	}
 
-	return sh.RunWithV(map[string]string{
-		// needed to enable race detector -race
-		"CGO_ENABLED": "1",
-	}, "bash", "-c", testCmd)
+	// cgo needed to enable race detector -race
+	return sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
@@ -649,7 +647,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 }
 
 func templatePackageOperatorManager(scheme *k8sruntime.Scheme) (deploy *appsv1.Deployment, err error) {
-	objs, err := dev.LoadKubernetesObjectsFromFile(staticDeploymentPath + "/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join(staticDeploymentPath, "deployment.yaml.tpl"))
 	if err != nil {
 		return nil, fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err)
 	}
@@ -739,7 +737,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 
 // Remote phase manager from local files.
 func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) error {
-	objs, err := dev.LoadKubernetesObjectsFromFile(remotePhaseManagerStaticDeploymentPath + "/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join(remotePhaseManagerStaticDeploymentPath, "deployment.yaml.tpl"))
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
@@ -820,7 +818,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Create a new secret for the kubeconfig
 	secret := &corev1.Secret{}
-	objs, err = dev.LoadKubernetesObjectsFromFile(remotePhaseManagerStaticDeploymentPath + "/2-secret.yaml.tpl")
+	objs, err = dev.LoadKubernetesObjectsFromFile(filepath.Join(remotePhaseManagerStaticDeploymentPath, "2-secret.yaml.tpl"))
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
 	}
