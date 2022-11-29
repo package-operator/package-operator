@@ -129,7 +129,23 @@ func allPackageImages() []string {
 	images := []string{}
 	for _, entry := range entries {
 		if entry.IsDir() {
-			images = append(images, filepath.Base(entry.Name()))
+			images = append(images, entry.Name())
+		}
+	}
+
+	return images
+}
+
+func allCommandImages() []string {
+	entries, err := os.ReadDir(commandImagePath)
+	if err != nil {
+		panic(fmt.Errorf("finding command images: %w", err))
+	}
+	images := []string{}
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() && strings.HasSuffix(name, containerFileSuffix) {
+			images = append(images, strings.TrimSuffix(name, containerFileSuffix))
 		}
 	}
 
