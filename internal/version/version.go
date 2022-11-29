@@ -7,7 +7,7 @@ import (
 // Info contains build information supplied during compile time.
 type Info struct {
 	*debug.BuildInfo
-	Version string `json:"version"`
+	ApplicationVersion string `json:"version"`
 }
 
 // version gets filled by a linker argument and should contain the app version.
