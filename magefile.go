@@ -703,7 +703,7 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 
 // Package Operator Webhook server from local files.
 func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Cluster) error {
-	objs, err := dev.LoadKubernetesObjectsFromFile("config/deploy/webhook/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join(webhookPath, "deployment.yaml.tpl"))
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
@@ -730,12 +730,12 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 
 	// Deploy
 	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
-		"config/deploy/webhook/00-tls-secret.yaml",
-		"config/deploy/webhook/service.yaml.tpl",
-		"config/deploy/webhook/objectsetvalidatingwebhookconfig.yaml",
-		"config/deploy/webhook/objectsetphasevalidatingwebhookconfig.yaml",
-		"config/deploy/webhook/clusterobjectsetvalidatingwebhookconfig.yaml",
-		"config/deploy/webhook/clusterobjectsetphasevalidatingwebhookconfig.yaml",
+		filepath.Join(webhookPath, "00-tls-secret.yaml"),
+		filepath.Join(webhookPath, "service.yaml.tpl"),
+		filepath.Join(webhookPath, "objectsetvalidatingwebhookconfig.yaml"),
+		filepath.Join(webhookPath, "objectsetphasevalidatingwebhookconfig.yaml"),
+		filepath.Join(webhookPath, "clusterobjectsetvalidatingwebhookconfig.yaml"),
+		filepath.Join(webhookPath, "clusterobjectsetphasevalidatingwebhookconfig.yaml"),
 	}); err != nil {
 		return fmt.Errorf("deploy package-operator-webhook dependencies: %w", err)
 	}
