@@ -62,12 +62,12 @@ var (
 )
 
 var (
-	commandImagePath                       = "config/images/commands"
-	packageImagePath                       = "config/images/packages"
-	packageImageContainerFile              = "config/images/packages/package.Containerfile"
-	webhookPath                            = "config/deploy/webhook"
-	staticDeploymentPath                   = "config/static-deployment"
-	remotePhaseManagerStaticDeploymentPath = "config/remote-phase-static-deployment"
+	commandImagePath                       = filepath.Join("config", "images", "commands")
+	packageImagePath                       = filepath.Join("config", "images", "packages")
+	packageImageContainerFile              = filepath.Join("config", "images", "packages", "package.Containerfile")
+	webhookPath                            = filepath.Join("config", "deploy", "webhook")
+	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
+	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
 	containerFileSuffix                    = ".Containerfile"
 )
 
