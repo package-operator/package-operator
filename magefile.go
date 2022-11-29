@@ -484,25 +484,25 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 	imageTag := b.imageURL(packageImageName)
 	packageName := strings.TrimSuffix(packageImageName, "-package")
 
-	for _, command := range [][]string{
-		// Copy files for build environment
-		{"cp", "-a",
-			filepath.Join("config/packages", packageName) + "/.",
-			imageCacheDir + "/"},
-		{"cp", "-a",
-			"config/images/package.Containerfile",
-			filepath.Join(imageCacheDir, "Containerfile")},
-	} {
+	// Copy files for build environment
+	cmds := [][]string{
+		{"cp", "-a", filepath.Join("config/packages", packageName) + "/.", imageCacheDir + "/"},
+		{"cp", "-a", "config/images/package.Containerfile", filepath.Join(imageCacheDir, "Containerfile")},
+	}
+
+	for _, command := range cmds {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
 		}
 	}
 
-	for _, command := range [][]string{
-		// Build image!
+	// Build image!
+	cmds = [][]string{
 		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
 		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
-	} {
+	}
+
+	for _, command := range cmds {
 		buildCmd := exec.Command(command[0], command[1:]...)
 		buildCmd.Stderr = os.Stderr
 		buildCmd.Stdout = os.Stdout
@@ -523,9 +523,8 @@ func (b *builder) Push(imageName string) error {
 	_, isCI := os.LookupEnv("CI")
 	if isJenkins || isCI {
 		log.Println("running in CI, calling container runtime login")
-		if err := sh.Run(containerRuntime,
-			"login", "-u="+os.Getenv("QUAY_USER"),
-			"-p="+os.Getenv("QUAY_TOKEN"), "quay.io"); err != nil {
+		args := []string{"login", "-u=" + os.Getenv("QUAY_USER"), "-p=" + os.Getenv("QUAY_TOKEN"), "quay.io"}
+		if err := sh.Run(containerRuntime, args...); err != nil {
 			return fmt.Errorf("registry login: %w", err)
 		}
 	}
@@ -689,6 +688,7 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 	} else {
 		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
 	}
+
 	for i := range packageOperatorDeployment.Spec.Template.Spec.Containers {
 		container := &packageOperatorDeployment.Spec.Template.Spec.Containers[i]
 
@@ -813,8 +813,8 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Get target cluster service account
 	targetSASecret := &corev1.Secret{}
-	err = cluster.CtrlClient.Get(context.TODO(),
-		client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target-cluster"}, targetSASecret)
+	key := client.ObjectKey{Namespace: "package-operator-system", Name: "remote-phase-operator-target-cluster"}
+	err = cluster.CtrlClient.Get(context.TODO(), key, targetSASecret)
 	if err != nil {
 		return fmt.Errorf("reading in service account secret: %w", err)
 	}
@@ -909,9 +909,13 @@ func (Generate) All() {
 func (Generate) code() error {
 	mg.Deps(Dependency.ControllerGen)
 
-	manifestsCmd := exec.Command("controller-gen",
-		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...",
-		"output:crd:artifacts:config=../config/crds")
+	args := []string{
+		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true",
+		"paths=./core/...",
+		"output:crd:artifacts:config=../config/crds",
+	}
+
+	manifestsCmd := exec.Command("controller-gen", args...)
 	manifestsCmd.Dir = workDir + "/apis"
 	manifestsCmd.Stdout = os.Stdout
 	manifestsCmd.Stderr = os.Stderr
