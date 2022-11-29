@@ -62,13 +62,18 @@ var (
 )
 
 var (
-	commandImagePath                       = filepath.Join("config", "images", "commands")
-	packageImagePath                       = filepath.Join("config", "images", "packages")
-	packageImageContainerFile              = filepath.Join("config", "images", "packages", "package.Containerfile")
+	commandImagePath                       = filepath.Join("config", "newcommands")
+	packageImagePath                       = filepath.Join("config", "newpackages")
+	packageImageContainerFile              = filepath.Join(packageImagePath, "package.Containerfile")
 	webhookPath                            = filepath.Join("config", "deploy", "webhook")
 	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
 	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
 	containerFileSuffix                    = ".Containerfile"
+
+	config         = "config"
+	configImages   = "config/images"
+	configPackages = "config/packages"
+	configCrds     = "config/crds"
 )
 
 var (
@@ -436,8 +441,8 @@ func (b *builder) buildCmdImage(cmd string) error {
 	// Copy files for build environment
 	cmds := [][]string{
 		{"cp", "-a", filepath.Join("bin/linux_amd64", cmd), filepath.Join(imageCacheDir, cmd)},
-		{"cp", "-a", filepath.Join("config/images", cmd+".Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
-		{"cp", "-a", filepath.Join("config/images", "passwd"), filepath.Join(imageCacheDir, "passwd")},
+		{"cp", "-a", filepath.Join(configImages, cmd+".Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
+		{"cp", "-a", filepath.Join(configImages, "passwd"), filepath.Join(imageCacheDir, "passwd")},
 	}
 	for _, command := range cmds {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
@@ -481,8 +486,8 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 
 	// Copy files for build environment
 	cmds := [][]string{
-		{"cp", "-a", filepath.Join("config/packages", packageName) + "/.", imageCacheDir + "/"},
-		{"cp", "-a", "config/images/package.Containerfile", filepath.Join(imageCacheDir, "Containerfile")},
+		{"cp", "-a", filepath.Join(configPackages, packageName) + "/.", imageCacheDir + "/"},
+		{"cp", "-a", filepath.Join(configImages, "package.Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
 	}
 
 	for _, command := range cmds {
@@ -924,7 +929,7 @@ func (Generate) code() error {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
-	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))
+	crds, err := filepath.Glob(filepath.Join(configCrds, "*.yaml"))
 	if err != nil {
 		return fmt.Errorf("finding CRDs: %w", err)
 	}
@@ -1046,7 +1051,7 @@ func (Generate) SelfBootstrapJob() error {
 		pkoDefaultPackageImage = "quay.io/package-operator/package-operator-package:latest"
 	)
 
-	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
+	latestJob, err := os.ReadFile(filepath.Join(config, "self-bootstrap-job.yaml.tpl"))
 	if err != nil {
 		return err
 	}
@@ -1067,7 +1072,7 @@ func (Generate) SelfBootstrapJob() error {
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
 
-	if err := os.WriteFile("config/self-bootstrap-job.yaml", latestJob, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(config, "self-bootstrap-job.yaml"), latestJob, os.ModePerm); err != nil {
 		return err
 	}
 	return nil
@@ -1128,7 +1133,7 @@ func includeInPackageOperatorPackage(file string) error {
 		}
 		obj.SetAnnotations(annotations)
 
-		outFilePath := filepath.Join("config", "packages", "package-operator")
+		outFilePath := filepath.Join(configPackages, "package-operator")
 		if len(subfolder) > 0 {
 			outFilePath = filepath.Join(outFilePath, subfolder)
 		}
