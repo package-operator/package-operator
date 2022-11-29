@@ -62,16 +62,24 @@ var (
 )
 
 var (
-	// Working directory of the project.
-	workDir string
-	// Dependency directory.
-	depsDir  magedeps.DependencyDirectory
+	commandImagePath                       = filepath.Join("config", "images", "commands")
+	packageImagePath                       = filepath.Join("config", "images", "packages")
+	packageImageContainerFile              = filepath.Join("config", "images", "packages", "package.Containerfile")
+	webhookPath                            = filepath.Join("config", "deploy", "webhook")
+	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
+	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
+	containerFileSuffix                    = ".Containerfile"
+)
+
+var (
+	workDir  string                       // Working directory of the project.
+	depsDir  magedeps.DependencyDirectory // Dependency directory.
 	cacheDir string
 
-	logger           logr.Logger
 	containerRuntime string
 
 	// components
+	logger  logr.Logger
 	Builder = &builder{}
 )
 
@@ -96,6 +104,40 @@ func init() {
 	}
 }
 
+func allCommands() []string {
+	cmdEntries, err := os.ReadDir("cmd")
+	if err != nil {
+		panic(fmt.Errorf("search for project commands: %w", err))
+	}
+
+	cmds := []string{}
+	for _, entry := range cmdEntries {
+		name := entry.Name()
+		if entry.IsDir() && name != "mage" {
+			cmds = append(cmds, name)
+		}
+	}
+
+	return cmds
+}
+
+func allPackageImages() []string {
+	entries, err := os.ReadDir(packageImagePath)
+	if err != nil {
+		panic(fmt.Errorf("finding package images: %w", err))
+	}
+	images := []string{}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			images = append(images, filepath.Base(entry.Name()))
+		}
+	}
+
+	return images
+}
+
+func allImages() []string { return append(allPackageImages(), allCommandImages()...) }
+
 // Testing and Linting
 // -------------------
 type Test mg.Namespace
@@ -116,6 +158,7 @@ func (Test) Lint() error {
 			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
 		}
 	}
+
 	return nil
 }
 
@@ -247,40 +290,34 @@ type Dependency mg.Namespace
 
 // Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
-	mg.Deps(
-		Dependency.ControllerGen,
-		Dependency.Goimports,
-		Dependency.GolangciLint,
-		Dependency.Kind,
-		Dependency.Docgen,
-	)
+	mg.Deps(Dependency.ControllerGen, Dependency.Goimports, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
 func (d Dependency) ControllerGen() error {
-	return depsDir.GoInstall("controller-gen",
-		"sigs.k8s.io/controller-tools/cmd/controller-gen", controllerGenVersion)
+	url := "sigs.k8s.io/controller-tools/cmd/controller-gen"
+	return depsDir.GoInstall("controller-gen", url, controllerGenVersion)
 }
 
 func (d Dependency) Goimports() error {
-	return depsDir.GoInstall("go-imports",
-		"golang.org/x/tools/cmd/goimports", goimportsVersion)
+	url := "golang.org/x/tools/cmd/goimports"
+	return depsDir.GoInstall("go-imports", url, goimportsVersion)
 }
 
 func (d Dependency) GolangciLint() error {
-	return depsDir.GoInstall("golangci-lint",
-		"github.com/golangci/golangci-lint/cmd/golangci-lint", golangciLintVersion)
+	url := "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	return depsDir.GoInstall("golangci-lint", url, golangciLintVersion)
 }
 
 func (d Dependency) Docgen() error {
-	return depsDir.GoInstall("k8s-docgen",
-		"github.com/thetechnick/k8s-docgen", k8sDocGenVersion)
+	url := "github.com/thetechnick/k8s-docgen"
+	return depsDir.GoInstall("k8s-docgen", url, k8sDocGenVersion)
 }
 
 // Ensure Kind dependency - Kubernetes in Docker (or Podman)
 func (d Dependency) Kind() error {
-	return depsDir.GoInstall("kind",
-		"sigs.k8s.io/kind", kindVersion)
+	url := "sigs.k8s.io/kind"
+	return depsDir.GoInstall("kind", url, kindVersion)
 }
 
 // Utility
@@ -332,9 +369,7 @@ func (b *builder) init() error {
 
 // Builds binaries from /cmd directory.
 func (b *builder) Cmd(cmd, goos, goarch string) error {
-	mg.SerialDeps(
-		b.init,
-	)
+	mg.SerialDeps(b.init)
 
 	env := map[string]string{"CGO_ENABLED": "0"}
 
@@ -347,12 +382,7 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 	}
 
 	ldflags := "-w -s --extldflags '-zrelro -znow -O1'" + fmt.Sprintf("-X '%s/internal/version.version=%s'", module, b.version)
-	cmdline := []string{
-		"build",
-		"--ldflags", ldflags,
-		"--trimpath", "--mod=readonly",
-		"-v", "-o", bin, "./cmd/" + cmd,
-	}
+	cmdline := []string{"build", "--ldflags", ldflags, "--trimpath", "--mod=readonly", "-v", "-o", bin, "./cmd/" + cmd}
 
 	if err := sh.RunWithV(env, "go", cmdline...); err != nil {
 		return fmt.Errorf("compiling cmd/%s: %w", cmd, err)
@@ -387,11 +417,7 @@ func (b *builder) cleanImageCacheDir(name string) (dir string, err error) {
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
 func (b *builder) buildCmdImage(cmd string) error {
-	mg.SerialDeps(
-		b.init,
-		determineContainerRuntime,
-		mg.F(b.Cmd, cmd, "linux", "amd64"),
-	)
+	mg.SerialDeps(b.init, determineContainerRuntime, mg.F(b.Cmd, cmd, "linux", "amd64"))
 
 	imageCacheDir, err := b.cleanImageCacheDir(cmd)
 	if err != nil {
@@ -556,9 +582,7 @@ var (
 
 // Creates an empty development environment via kind.
 func (d Dev) Setup(ctx context.Context) error {
-	mg.SerialDeps(
-		Dev.init,
-	)
+	mg.SerialDeps(Dev.init)
 
 	if err := devEnvironment.Init(ctx); err != nil {
 		return fmt.Errorf("initializing dev environment: %w", err)
@@ -568,9 +592,7 @@ func (d Dev) Setup(ctx context.Context) error {
 
 // Tears the whole kind development environment down.
 func (d Dev) Teardown(ctx context.Context) error {
-	mg.SerialDeps(
-		Dev.init,
-	)
+	mg.SerialDeps(Dev.init)
 
 	if err := devEnvironment.Destroy(ctx); err != nil {
 		return fmt.Errorf("tearing down dev environment: %w", err)
@@ -594,9 +616,7 @@ func (d Dev) Load() {
 	}
 	mg.Deps(deps...)
 
-	mg.SerialDeps(
-		Generate.SelfBootstrapJob,
-	)
+	mg.SerialDeps(Generate.SelfBootstrapJob)
 
 	// Print all Loaded images, so we can reference them manually.
 	fmt.Println("----------------------------")
@@ -665,9 +685,8 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 
 	var packageOperatorManagerImage string
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
-		mg.Deps(
-			mg.F(Builder.Push, "package-operator-manager"), // to use digests the image needs to be pushed to a registry first.
-		)
+		// to use digests the image needs to be pushed to a registry first.
+		mg.Deps(mg.F(Builder.Push, "package-operator-manager"))
 		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
 	} else {
 		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
@@ -692,16 +711,14 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 
 // Package Operator Webhook server from local files.
 func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Cluster) error {
-	objs, err := dev.LoadKubernetesObjectsFromFile(
-		"config/deploy/webhook/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile("config/deploy/webhook/deployment.yaml.tpl")
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
 
 	// Replace image
 	packageOperatorWebhookDeployment := &appsv1.Deployment{}
-	if err := cluster.Scheme.Convert(
-		&objs[0], packageOperatorWebhookDeployment, nil); err != nil {
+	if err := cluster.Scheme.Convert(&objs[0], packageOperatorWebhookDeployment, nil); err != nil {
 		return fmt.Errorf("converting to Deployment: %w", err)
 	}
 	packageOperatorWebhookImage := os.Getenv("PACKAGE_OPERATOR_WEBHOOK_IMAGE")
@@ -747,8 +764,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Insert new image in remote-phase-manager deployment manifest
 	remotePhaseManagerDeployment := &appsv1.Deployment{}
-	if err := cluster.Scheme.Convert(
-		&objs[0], remotePhaseManagerDeployment, nil); err != nil {
+	if err := cluster.Scheme.Convert(&objs[0], remotePhaseManagerDeployment, nil); err != nil {
 		return fmt.Errorf("converting to Deployment: %w", err)
 	}
 	packageOperatorWebhookImage := os.Getenv("REMOTE_PHASE_MANAGER_IMAGE")
@@ -766,9 +782,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Beware: CreateAndWaitFromFolders doesn't update anything
 	// Create the service accounts and related dependencies
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
-		"config/remote-phase-static-deployment",
-	}); err != nil {
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{"config/remote-phase-static-deployment"}); err != nil {
 		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
 	}
 
@@ -948,7 +962,7 @@ func (Generate) code() error {
 func (Generate) docs() error {
 	mg.Deps(Dependency.Docgen)
 
-	return sh.Run("./hack/docgen.sh")
+	return sh.Run(filepath.Join("hack", "docgen.sh"))
 }
 
 func (Generate) installYamlFile() error {
@@ -1139,8 +1153,7 @@ func includeInPackageOperatorPackage(file string) error {
 		}
 		obj.SetAnnotations(annotations)
 
-		outFilePath := filepath.Join(
-			"config", "packages", "package-operator")
+		outFilePath := filepath.Join("config", "packages", "package-operator")
 		if len(subfolder) > 0 {
 			outFilePath = filepath.Join(outFilePath, subfolder)
 		}
@@ -1163,11 +1176,8 @@ func includeInPackageOperatorPackage(file string) error {
 
 		packageNamespaceOverride := os.Getenv("PKO_PACKAGE_NAMESPACE_OVERRIDE")
 		if len(packageNamespaceOverride) > 0 {
-			logger.Info(
-				"replacing default package-operator-system namespace",
-				"new namespace", packageNamespaceOverride)
-			yamlBytes = bytes.ReplaceAll(
-				yamlBytes, []byte("package-operator-system"), []byte(packageNamespaceOverride))
+			logger.Info("replacing default package-operator-system namespace", "new namespace", packageNamespaceOverride)
+			yamlBytes = bytes.ReplaceAll(yamlBytes, []byte("package-operator-system"), []byte(packageNamespaceOverride))
 		}
 
 		if _, err := outFile.Write(yamlBytes); err != nil {
@@ -1179,7 +1189,8 @@ func includeInPackageOperatorPackage(file string) error {
 }
 
 func Deploy(ctx context.Context) error {
-	cluster, err := dev.NewCluster(filepath.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
+	workDir := filepath.Join(cacheDir, "deploy")
+	cluster, err := dev.NewCluster(workDir, dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
 	if err != nil {
 		return nil
 	}
