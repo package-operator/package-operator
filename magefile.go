@@ -35,9 +35,30 @@ import (
 )
 
 const (
-	module          = "package-operator.run/package-operator"
-	defaultImageOrg = "quay.io/package-operator"
-	clusterName     = "package-operator-dev"
+	module                    = "package-operator.run/package-operator"
+	defaultImageOrg           = "quay.io/package-operator"
+	clusterName               = "package-operator-dev"
+	pkoPackageName            = "package-operator-package"
+	pkoManagerBinaryImageName = "package-operator-manager"
+)
+
+// Dependency Versions
+const (
+	controllerGenVersion = "0.6.2"
+	goimportsVersion     = "0.1.5"
+	golangciLintVersion  = "1.50.1"
+	kindVersion          = "0.16.0"
+	k8sDocGenVersion     = "0.5.1"
+)
+
+var (
+	multiArchTargets = [][2]string{
+		{"linux", "amd64"},
+		{"linux", "arm64"},
+		{"windows", "amd64"},
+		{"darwin", "amd64"},
+		{"darwin", "arm64"},
+	}
 )
 
 var (
@@ -221,15 +242,6 @@ func (Build) PushImages() {
 
 // Dependencies
 // ------------
-
-// Dependency Versions
-const (
-	controllerGenVersion = "0.6.2"
-	goimportsVersion     = "0.1.5"
-	golangciLintVersion  = "1.50.1"
-	kindVersion          = "0.16.0"
-	k8sDocGenVersion     = "0.5.1"
-)
 
 type Dependency mg.Namespace
 
