@@ -62,12 +62,11 @@ var (
 )
 
 var (
-	commandImagePath                       = filepath.Join("config", "newcommands")
-	packageImagePath                       = filepath.Join("config", "newpackages")
-	webhookPath                            = filepath.Join("config", "deploy", "webhook")
-	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
-	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
-	containerFileSuffix                    = ".Containerfile"
+	containerFileSuffix = ".Containerfile"
+
+	webhookPath                            = "config/deploy/webhook"
+	staticDeploymentPath                   = "config/deploy/static"
+	remotePhaseManagerStaticDeploymentPath = "config/deploy/remote-phase-static"
 
 	config                    = "config"
 	configImages              = "config/images"
@@ -126,8 +125,9 @@ func allCommands() []string {
 	return cmds
 }
 
+/*
 func allPackageImages() []string {
-	entries, err := os.ReadDir(packageImagePath)
+	entries, err := os.ReadDir(configPackages)
 	if err != nil {
 		panic(fmt.Errorf("finding package images: %w", err))
 	}
@@ -142,7 +142,7 @@ func allPackageImages() []string {
 }
 
 func allCommandImages() []string {
-	entries, err := os.ReadDir(commandImagePath)
+	entries, err := os.ReadDir(configImages)
 	if err != nil {
 		panic(fmt.Errorf("finding command images: %w", err))
 	}
@@ -158,6 +158,8 @@ func allCommandImages() []string {
 }
 
 func allImages() []string { return append(allPackageImages(), allCommandImages()...) }
+
+*/
 
 // Testing and Linting
 // -------------------
@@ -255,6 +257,7 @@ func (Build) Binaries() {
 	mg.Deps(targets...)
 }
 
+/*
 func (Build) MultiArchBinaries() {
 	targets := []interface{}{mg.F(Builder.Cmd, "mage", "", "")}
 	for _, cmd := range allCommands() {
@@ -265,6 +268,7 @@ func (Build) MultiArchBinaries() {
 
 	mg.Deps(targets...)
 }
+*/
 
 func (Build) Binary(cmd string) { mg.Deps(mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH)) }
 
