@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -62,12 +61,12 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("getting work dir: %w", err))
 	}
-	cacheDir = path.Join(workDir + "/" + ".cache")
-	depsDir = magedeps.DependencyDirectory(path.Join(workDir, ".deps"))
+	cacheDir = filepath.Join(workDir + "/" + ".cache")
+	depsDir = magedeps.DependencyDirectory(filepath.Join(workDir, ".deps"))
 	os.Setenv("PATH", depsDir.Bin()+":"+os.Getenv("PATH"))
 
 	// Use a local directory to get around permission errors in OpenShift CI.
-	os.Setenv("GOLANGCI_LINT_CACHE", path.Join(cacheDir, "golangci-lint"))
+	os.Setenv("GOLANGCI_LINT_CACHE", filepath.Join(cacheDir, "golangci-lint"))
 
 	logger = stdr.New(nil)
 
@@ -101,9 +100,9 @@ func (Test) Lint() error {
 
 // Runs unittests.
 func (Test) Unit() error {
-	codeCov := path.Join(cacheDir, "unit/cov.out")
-	execReport := path.Join(cacheDir, "unit/exec.json")
-	if err := os.MkdirAll(path.Dir(codeCov), os.ModePerm); err != nil {
+	codeCov := filepath.Join(cacheDir, "unit/cov.out")
+	execReport := filepath.Join(cacheDir, "unit/exec.json")
+	if err := os.MkdirAll(filepath.Dir(codeCov), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -154,7 +153,7 @@ func (Test) integration(ctx context.Context, filter string) error {
 	// always export logs
 	if devEnvironment != nil {
 		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
-			"export", "logs", path.Join(cacheDir, "dev-env-logs"),
+			"export", "logs", filepath.Join(cacheDir, "dev-env-logs"),
 			"--name", clusterName); err != nil {
 			logger.Error(err, "exporting logs")
 		}
@@ -327,10 +326,10 @@ func (b *builder) Cmd(cmd, goos, goarch string) error {
 
 	env := map[string]string{"CGO_ENABLED": "0"}
 
-	bin := path.Join("bin", cmd)
+	bin := filepath.Join("bin", cmd)
 	if len(goos) != 0 && len(goarch) != 0 {
 		// change bin path to point to a sudirectory when cross compiling
-		bin = path.Join("bin", goos+"_"+goarch, cmd)
+		bin = filepath.Join("bin", goos+"_"+goarch, cmd)
 		env["GOOS"] = goos
 		env["GOARCH"] = goarch
 	}
@@ -360,7 +359,7 @@ func (b *builder) Image(name string) error {
 
 // clean/prepare cache directory
 func (b *builder) cleanImageCacheDir(name string) (dir string, err error) {
-	imageCacheDir := path.Join(cacheDir, "image", name)
+	imageCacheDir := filepath.Join(cacheDir, "image", name)
 	if err := os.RemoveAll(imageCacheDir); err != nil && !os.IsNotExist(err) {
 		return "", fmt.Errorf("deleting image cache: %w", err)
 	}
@@ -392,14 +391,14 @@ func (b *builder) buildCmdImage(cmd string) error {
 	for _, command := range [][]string{
 		// Copy files for build environment
 		{"cp", "-a",
-			path.Join("bin/linux_amd64", cmd),
-			path.Join(imageCacheDir, cmd)},
+			filepath.Join("bin/linux_amd64", cmd),
+			filepath.Join(imageCacheDir, cmd)},
 		{"cp", "-a",
-			path.Join("config/images", cmd+".Containerfile"),
-			path.Join(imageCacheDir, "Containerfile")},
+			filepath.Join("config/images", cmd+".Containerfile"),
+			filepath.Join(imageCacheDir, "Containerfile")},
 		{"cp", "-a",
-			path.Join("config/images", "passwd"),
-			path.Join(imageCacheDir, "passwd")},
+			filepath.Join("config/images", "passwd"),
+			filepath.Join(imageCacheDir, "passwd")},
 	} {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
@@ -446,11 +445,11 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 	for _, command := range [][]string{
 		// Copy files for build environment
 		{"cp", "-a",
-			path.Join("config/packages", packageName) + "/.",
+			filepath.Join("config/packages", packageName) + "/.",
 			imageCacheDir + "/"},
 		{"cp", "-a",
 			"config/images/package.Containerfile",
-			path.Join(imageCacheDir, "Containerfile")},
+			filepath.Join(imageCacheDir, "Containerfile")},
 	} {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
@@ -513,7 +512,7 @@ func (b *builder) imageURLWithDigest(name string) string {
 }
 
 func digestFile(imageName string) string {
-	return path.Join(cacheDir, imageName+".digest")
+	return filepath.Join(cacheDir, imageName+".digest")
 }
 
 func (b *builder) internalImageURL(name string, useDigest bool) string {
@@ -859,7 +858,7 @@ func (d Dev) LoadImage(ctx context.Context, image string) error {
 		mg.F(Build.Image, image),
 	)
 
-	imageTar := path.Join(cacheDir, "image", image+".tar")
+	imageTar := filepath.Join(cacheDir, "image", image+".tar")
 	if err := devEnvironment.LoadImageFromTar(ctx, imageTar); err != nil {
 		return fmt.Errorf("load image from tar: %w", err)
 	}
@@ -874,7 +873,7 @@ func (d Dev) init() {
 
 	devEnvironment = dev.NewEnvironment(
 		clusterName,
-		path.Join(cacheDir, "dev-env"),
+		filepath.Join(cacheDir, "dev-env"),
 		dev.WithClusterOptions([]dev.ClusterOption{
 			dev.WithWaitOptions([]dev.WaitOption{
 				dev.WithTimeout(2 * time.Minute),
@@ -924,7 +923,7 @@ func (Generate) code() error {
 
 	for _, crd := range crds {
 		cmd := []string{
-			"cp", crd, path.Join("config/static-deployment", "1-"+path.Base(crd)),
+			"cp", crd, filepath.Join("config/static-deployment", "1-"+filepath.Base(crd)),
 		}
 		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
@@ -977,7 +976,7 @@ func dumpManifestsFromFolder(folderPath string, outputPath string) error {
 			continue
 		}
 
-		filePath := path.Join(folderPath, file.Name())
+		filePath := filepath.Join(folderPath, file.Name())
 		fileYaml, err := ioutil.ReadFile(filePath)
 		cleanFileYaml := bytes.Trim(fileYaml, "-\n")
 		if err != nil {
@@ -1009,8 +1008,8 @@ type fileInfosByName []fs.FileInfo
 func (x fileInfosByName) Len() int { return len(x) }
 
 func (x fileInfosByName) Less(i, j int) bool {
-	iName := path.Base(x[i].Name())
-	jName := path.Base(x[j].Name())
+	iName := filepath.Base(x[i].Name())
+	jName := filepath.Base(x[j].Name())
 	return iName < jName
 }
 
@@ -1128,16 +1127,16 @@ func includeInPackageOperatorPackage(file string) error {
 		}
 		obj.SetAnnotations(annotations)
 
-		outFilePath := path.Join(
+		outFilePath := filepath.Join(
 			"config", "packages", "package-operator")
 		if len(subfolder) > 0 {
-			outFilePath = path.Join(outFilePath, subfolder)
+			outFilePath = filepath.Join(outFilePath, subfolder)
 		}
 
 		if err := os.MkdirAll(outFilePath, os.ModePerm); err != nil {
 			return fmt.Errorf("creating output directory")
 		}
-		outFilePath = path.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), gk.Kind))
+		outFilePath = filepath.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), gk.Kind))
 
 		outFile, err := os.Create(outFilePath)
 		if err != nil {
@@ -1168,7 +1167,7 @@ func includeInPackageOperatorPackage(file string) error {
 }
 
 func Deploy(ctx context.Context) error {
-	cluster, err := dev.NewCluster(path.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
+	cluster, err := dev.NewCluster(filepath.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
 	if err != nil {
 		return nil
 	}
