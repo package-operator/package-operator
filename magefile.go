@@ -64,16 +64,16 @@ var (
 var (
 	commandImagePath                       = filepath.Join("config", "newcommands")
 	packageImagePath                       = filepath.Join("config", "newpackages")
-	packageImageContainerFile              = filepath.Join(packageImagePath, "package.Containerfile")
 	webhookPath                            = filepath.Join("config", "deploy", "webhook")
 	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
 	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
 	containerFileSuffix                    = ".Containerfile"
 
-	config         = "config"
-	configImages   = "config/images"
-	configPackages = "config/packages"
-	configCrds     = "config/crds"
+	config                    = "config"
+	configImages              = "config/images"
+	configPackages            = "config/packages"
+	configCrds                = "config/crds"
+	packageImageContainerFile = configImages + "/package.Containerfile"
 )
 
 var (
@@ -440,7 +440,7 @@ func (b *builder) buildCmdImage(cmd string) error {
 	imageTag := b.imageURL(cmd)
 	// Copy files for build environment
 	cmds := [][]string{
-		{"cp", "-a", filepath.Join("bin/linux_amd64", cmd), filepath.Join(imageCacheDir, cmd)},
+		{"cp", "-a", filepath.Join("bin", "linux_amd64", cmd), filepath.Join(imageCacheDir, cmd)},
 		{"cp", "-a", filepath.Join(configImages, cmd+".Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
 		{"cp", "-a", filepath.Join(configImages, "passwd"), filepath.Join(imageCacheDir, "passwd")},
 	}
@@ -487,7 +487,7 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 	// Copy files for build environment
 	cmds := [][]string{
 		{"cp", "-a", filepath.Join(configPackages, packageName) + "/.", imageCacheDir + "/"},
-		{"cp", "-a", filepath.Join(configImages, "package.Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
+		{"cp", "-a", packageImageContainerFile, filepath.Join(imageCacheDir, "Containerfile")},
 	}
 
 	for _, command := range cmds {
@@ -929,7 +929,7 @@ func (Generate) code() error {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
-	crds, err := filepath.Glob(filepath.Join(configCrds, "*.yaml"))
+	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))
 	if err != nil {
 		return fmt.Errorf("finding CRDs: %w", err)
 	}
