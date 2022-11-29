@@ -1,4 +1,4 @@
-package packages
+package packagedeploy
 
 import (
 	"context"
@@ -93,8 +93,8 @@ func (r *DeploymentReconciler) Reconcile(
 
 	// Update Deployment
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		annotations := mergeKeysFrom(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
-		labels := mergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
+		annotations := utils.MergeKeysFrom(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
+		labels := utils.MergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
 		actualDeploy.ClientObject().SetAnnotations(annotations)
 		actualDeploy.ClientObject().SetLabels(labels)
 		actualDeploy.SetTemplateSpec(templateSpec)

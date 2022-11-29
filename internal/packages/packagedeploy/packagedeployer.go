@@ -1,8 +1,7 @@
-package packages
+package packagedeploy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -17,13 +16,13 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/packages/packagebytes"
+	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
 
-type folderLoader interface {
-	Load(
-		ctx context.Context, rootPath string,
-		templateContext FolderLoaderTemplateContext,
-	) (res FolderLoaderResult, err error)
+type packageContentLoader interface {
+	Load(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (
+		*packagestructure.PackageContent, error)
 }
 
 type deploymentReconciler interface {
@@ -33,8 +32,8 @@ type deploymentReconciler interface {
 	) error
 }
 
-// PackageLoader loads an ObjectDeployment from file, wraps it into an ObjectDeployment and updates/creates it on the cluster.
-type PackageLoader struct {
+// PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.
+type PackageDeployer struct {
 	client client.Client
 	scheme *runtime.Scheme
 
@@ -42,19 +41,25 @@ type PackageLoader struct {
 	newObjectDeployment adapters.ObjectDeploymentFactory
 
 	deploymentReconciler deploymentReconciler
-	folderLoader         folderLoader
+	packageContentLoader packageContentLoader
 }
 
 // Returns a new namespace-scoped loader for the Package API.
-func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
-	return &PackageLoader{
+func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeployer {
+	return &PackageDeployer{
 		client: c,
 		scheme: scheme,
 
 		newPackage:          newGenericPackage,
 		newObjectDeployment: adapters.NewObjectDeployment,
 
-		folderLoader: NewFolderLoader(scheme),
+		packageContentLoader: packagestructure.NewLoader(
+			scheme, packagestructure.WithManifestValidators(
+				packagestructure.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeNamespaced),
+				&packagestructure.ObjectPhaseAnnotationValidator{},
+			),
+		),
+
 		deploymentReconciler: newDeploymentReconciler(
 			scheme, c,
 			adapters.NewObjectDeployment, adapters.NewObjectSlice,
@@ -64,22 +69,28 @@ func NewPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
 }
 
 // Returns a new cluster-scoped loader for the ClusterPackage API.
-func NewClusterPackageLoader(c client.Client, scheme *runtime.Scheme) *PackageLoader {
-	return &PackageLoader{
+func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeployer {
+	return &PackageDeployer{
 		client: c,
 		scheme: scheme,
 
 		newPackage:          newGenericClusterPackage,
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
-		folderLoader: NewFolderLoader(scheme),
+		packageContentLoader: packagestructure.NewLoader(
+			scheme, packagestructure.WithManifestValidators(
+				packagestructure.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeCluster),
+				&packagestructure.ObjectPhaseAnnotationValidator{},
+			),
+		),
+
 		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, adapters.NewClusterObjectSlice,
 			adapters.NewClusterObjectSliceList, newGenericClusterObjectSetList,
 		),
 	}
 }
 
-func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, folderPath string) error {
+func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey, folderPath string) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	pkg := l.newPackage(l.scheme)
@@ -119,14 +130,25 @@ func (l *PackageLoader) Load(ctx context.Context, packageKey client.ObjectKey, f
 	})
 }
 
-func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath string) error {
-	res, err := l.loadFromFolder(ctx, pkg, folderPath)
+func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, folderPath string) error {
+	packageContent, err := l.packageContentLoader.Load(
+		ctx, folderPath,
+		packagestructure.WithByteTransformers(
+			&packagebytes.TemplateTransformer{
+				TemplateContext: pkg.TemplateContext(),
+			},
+		),
+		packagestructure.WithManifestTransformers(
+			&packagestructure.CommonObjectLabelsTransformer{
+				Package: pkg.ClientObject(),
+			},
+		))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil
 	}
 
-	desiredDeploy, err := l.desiredObjectDeployment(ctx, pkg, res)
+	desiredDeploy, err := l.desiredObjectDeployment(ctx, pkg, packageContent)
 	if err != nil {
 		return fmt.Errorf("creating desired ObjectDeployment: %w", err)
 	}
@@ -145,86 +167,32 @@ func (l *PackageLoader) load(ctx context.Context, pkg genericPackage, folderPath
 	return nil
 }
 
-func (l *PackageLoader) desiredObjectDeployment(
-	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
+func (l *PackageDeployer) desiredObjectDeployment(
+	ctx context.Context, pkg genericPackage, packageContent *packagestructure.PackageContent,
 ) (deploy adapters.ObjectDeploymentAccessor, err error) {
+	labels := map[string]string{
+		manifestsv1alpha1.PackageLabel:         packageContent.PackageManifest.Name,
+		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
+	}
+
 	deploy = l.newObjectDeployment(l.scheme)
-	return deploy, l.setObjectDeploymentFields(ctx, pkg, res, deploy)
-}
-
-// Sets fields in the ObjectDeployment to the desired values.
-func (l *PackageLoader) setObjectDeploymentFields(
-	ctx context.Context, pkg genericPackage, res FolderLoaderResult,
-	deploy adapters.ObjectDeploymentAccessor,
-) error {
-	annotations := mergeKeysFrom(deploy.ClientObject().GetAnnotations(), res.Annotations)
-	labels := mergeKeysFrom(deploy.ClientObject().GetLabels(), res.Labels)
-
-	deploy.ClientObject().SetAnnotations(annotations)
 	deploy.ClientObject().SetLabels(labels)
 	deploy.ClientObject().SetName(pkg.ClientObject().GetName())
 	deploy.ClientObject().SetNamespace(pkg.ClientObject().GetNamespace())
 
-	deploy.SetTemplateSpec(res.TemplateSpec)
-	deploy.SetSelector(map[string]string{
-		manifestsv1alpha1.PackageLabel:         res.Manifest.Name,
-		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
-	})
+	deploy.SetTemplateSpec(packageContent.ToTemplateSpec())
+	deploy.SetSelector(labels)
 
 	if err := controllerutil.SetControllerReference(
 		pkg.ClientObject(), deploy.ClientObject(), l.scheme); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (l *PackageLoader) loadFromFolder(
-	ctx context.Context, pkg genericPackage, folderPath string,
-) (res FolderLoaderResult, err error) {
-	res, err = l.folderLoader.Load(ctx, folderPath, pkg.TemplateContext())
-	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	if !contains(res.Manifest.Spec.Scopes, pkg.Scope()) {
-		// Package does not support installation in this context scope.
-		return res, &PackageInvalidScopeError{
-			RequiredScope:   pkg.Scope(),
-			SupportedScopes: res.Manifest.Spec.Scopes,
-		}
-	}
-
-	return res, nil
-}
-
-func contains[T comparable](elems []T, v T) bool {
-	for _, s := range elems {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return deploy, nil
 }
 
 func setInvalidConditionBasedOnLoadError(pkg genericPackage, err error) {
 	reason := "LoadError"
-
-	var (
-		notFoundErr        *PackageManifestNotFoundError
-		invalidManifestErr *PackageManifestInvalidError
-		invalidScopeErr    *PackageInvalidScopeError
-		objectInvalidErr   *PackageObjectInvalidError
-	)
-	switch {
-	case errors.As(err, &notFoundErr):
-		reason = "PackageManifestNotFound"
-	case errors.As(err, &invalidManifestErr):
-		reason = "PackageManifestInvalid"
-	case errors.As(err, &invalidScopeErr):
-		reason = "InvalidScope"
-	case errors.As(err, &objectInvalidErr):
-		reason = "InvalidObject"
-	}
 
 	// Can not be determined more precisely
 	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
@@ -234,17 +202,4 @@ func setInvalidConditionBasedOnLoadError(pkg genericPackage, err error) {
 		Message:            err.Error(),
 		ObservedGeneration: pkg.ClientObject().GetGeneration(),
 	})
-}
-
-func mergeKeysFrom(base, additional map[string]string) map[string]string {
-	if base == nil {
-		base = map[string]string{}
-	}
-	for k, v := range additional {
-		base[k] = v
-	}
-	if len(base) == 0 {
-		return nil
-	}
-	return base
 }

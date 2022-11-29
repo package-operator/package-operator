@@ -24,6 +24,7 @@ spec:
   phases:
   - name: pre-requisites
   - name: main-stuff
+  - name: empty
   availabilityProbes:
   - probes:
     - condition:

@@ -1,4 +1,4 @@
-package packages
+package packagestructure
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	pkoapis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/packages/packagebytes"
 )
 
 var testScheme = runtime.NewScheme()
@@ -26,25 +27,22 @@ func init() {
 }
 
 func TestLoader(t *testing.T) {
-	l := NewFolderLoader(testScheme)
+	l := NewLoader(testScheme)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	res, err := l.Load(ctx, "./testdata", FolderLoaderTemplateContext{
-		Package: PackageTemplateContext{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pack-1",
-				Namespace: "test123-ns",
+	pc, err := l.Load(ctx, "testdata", WithByteTransformers(
+		&packagebytes.TemplateTransformer{
+			TemplateContext: packagebytes.TemplateContext{
+				Package: packagebytes.PackageTemplateContext{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test123-ns",
+					},
+				},
 			},
-		},
-	})
+		}))
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]string{}, res.Annotations)
-	assert.Equal(t, map[string]string{
-		manifestsv1alpha1.PackageInstanceLabel: "pack-1",
-		manifestsv1alpha1.PackageLabel:         "cool-package",
-	}, res.Labels)
-	assert.Equal(t, []corev1alpha1.ObjectSetProbe{
+	expectedProbes := []corev1alpha1.ObjectSetProbe{
 		{
 			Selector: corev1alpha1.ProbeSelector{
 				Kind: &corev1alpha1.PackageProbeKindSpec{
@@ -67,13 +65,27 @@ func TestLoader(t *testing.T) {
 				},
 			},
 		},
-	}, res.TemplateSpec.AvailabilityProbes)
-
-	commonLabels := map[string]interface{}{
-		manifestsv1alpha1.PackageLabel:         "cool-package",
-		manifestsv1alpha1.PackageInstanceLabel: "pack-1",
 	}
 
+	assert.Equal(t, &manifestsv1alpha1.PackageManifest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cool-package",
+		},
+		Spec: manifestsv1alpha1.PackageManifestSpec{
+			Scopes: []manifestsv1alpha1.PackageManifestScope{
+				manifestsv1alpha1.PackageManifestScopeNamespaced,
+			},
+			Phases: []manifestsv1alpha1.PackageManifestPhase{
+				{Name: "pre-requisites"},
+				{Name: "main-stuff"},
+				{Name: "empty"},
+			},
+			AvailabilityProbes: expectedProbes,
+		},
+	}, pc.PackageManifest)
+
+	spec := pc.ToTemplateSpec()
+	assert.Equal(t, expectedProbes, spec.AvailabilityProbes)
 	assert.Equal(t, []corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name: "pre-requisites",
@@ -84,8 +96,7 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "v1",
 							"kind":       "ConfigMap",
 							"metadata": map[string]interface{}{
-								"labels": commonLabels,
-								"name":   "some-configmap",
+								"name": "some-configmap",
 							},
 							"data": map[string]interface{}{
 								"foo":   "bar",
@@ -100,8 +111,7 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "v1",
 							"kind":       "ServiceAccount",
 							"metadata": map[string]interface{}{
-								"labels": commonLabels,
-								"name":   "some-service-account",
+								"name": "some-service-account",
 							},
 						},
 					},
@@ -117,7 +127,6 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "apps/v1",
 							"kind":       "Deployment",
 							"metadata": map[string]interface{}{
-								"labels":    commonLabels,
 								"name":      "controller-manager",
 								"namespace": "test123-ns",
 							},
@@ -133,8 +142,7 @@ func TestLoader(t *testing.T) {
 							"apiVersion": "apps/v1",
 							"kind":       "StatefulSet",
 							"metadata": map[string]interface{}{
-								"labels": commonLabels,
-								"name":   "some-stateful-set-1",
+								"name": "some-stateful-set-1",
 							},
 							"spec": map[string]interface{}{},
 						},
@@ -142,5 +150,33 @@ func TestLoader(t *testing.T) {
 				},
 			},
 		},
-	}, res.TemplateSpec.Phases)
+	}, spec.Phases)
+}
+
+func TestLoaderOptions(t *testing.T) {
+	opts := LoaderOptions{
+		bytesTransformers: packagebytes.TransformerList{
+			packagebytes.TransformerList{},
+		},
+		bytesValidators: packagebytes.ValidatorList{
+			packagebytes.ValidatorList{},
+		},
+		manifestTransformers: TransformerList{
+			TransformerList{},
+		},
+		manifestValidators: ValidatorList{
+			ValidatorList{},
+		},
+	}
+	WithByteTransformers(packagebytes.TransformerList{})(&opts)
+	assert.Len(t, opts.bytesTransformers, 2)
+
+	WithByteValidators(packagebytes.ValidatorList{})(&opts)
+	assert.Len(t, opts.bytesValidators, 2)
+
+	WithManifestTransformers(TransformerList{})(&opts)
+	assert.Len(t, opts.bytesTransformers, 2)
+
+	WithManifestValidators(ValidatorList{})(&opts)
+	assert.Len(t, opts.bytesValidators, 2)
 }
