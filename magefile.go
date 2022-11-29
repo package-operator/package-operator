@@ -90,7 +90,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("getting work dir: %w", err))
 	}
-	cacheDir = filepath.Join(workDir + "/" + ".cache")
+	cacheDir = filepath.Join(workDir, ".cache")
 	depsDir = magedeps.DependencyDirectory(filepath.Join(workDir, ".deps"))
 	os.Setenv("PATH", depsDir.Bin()+":"+os.Getenv("PATH"))
 
@@ -168,7 +168,7 @@ func (Test) Lint() error {
 	cmds := [][]string{
 		{"go", "fmt", "./..."},
 		{"golangci-lint", "run", "./...", "--deadline=15m", "--fix"},
-		{"bash", "./hack/validate-directory-clean.sh"},
+		{"bash", filepath.Join("hack", "validate-directory-clean.sh")},
 	}
 
 	for _, cmd := range cmds {
@@ -182,8 +182,8 @@ func (Test) Lint() error {
 
 // Runs unittests.
 func (Test) Unit() error {
-	codeCov := filepath.Join(cacheDir, "unit/cov.out")
-	execReport := filepath.Join(cacheDir, "unit/exec.json")
+	codeCov := filepath.Join(cacheDir, "unit", "cov.out")
+	execReport := filepath.Join(cacheDir, "unit", "exec.json")
 	if err := os.MkdirAll(filepath.Dir(codeCov), os.ModePerm); err != nil {
 		return err
 	}
@@ -207,9 +207,7 @@ func (Test) Unit() error {
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-func (t Test) Integration(ctx context.Context) error {
-	return t.integration(ctx, "")
-}
+func (t Test) Integration(ctx context.Context) error { return t.integration(ctx, "") }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
 // Also allows specifying only sub tests to run e.g. ./mage test:integrationrun TestPackage_success
@@ -231,9 +229,8 @@ func (Test) integration(ctx context.Context, filter string) error {
 
 	// always export logs
 	if devEnvironment != nil {
-		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr,
-			"export", "logs", filepath.Join(cacheDir, "dev-env-logs"),
-			"--name", clusterName); err != nil {
+		args := []string{"export", "logs", filepath.Join(cacheDir, "dev-env-logs"), "--name", clusterName}
+		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr, args...); err != nil {
 			logger.Error(err, "exporting logs")
 		}
 	}
@@ -255,18 +252,10 @@ func (Build) Binaries() {
 	)
 }
 
-func (Build) Binary(cmd string) {
-	mg.Deps(
-		mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH),
-	)
-}
+func (Build) Binary(cmd string) { mg.Deps(mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH)) }
 
 // Builds the given container image, building binaries as prerequisite as required.
-func (Build) Image(image string) {
-	mg.Deps(
-		mg.F(Builder.Image, image),
-	)
-}
+func (Build) Image(image string) { mg.Deps(mg.F(Builder.Image, image)) }
 
 // Builds all PKO container images.
 func (Build) Images() {
@@ -279,11 +268,7 @@ func (Build) Images() {
 }
 
 // Builds and pushes only the given container image to the default registry.
-func (Build) PushImage(image string) {
-	mg.Deps(
-		mg.F(Builder.Push, image),
-	)
-}
+func (Build) PushImage(image string) { mg.Deps(mg.F(Builder.Push, image)) }
 
 // Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
@@ -293,9 +278,7 @@ func (Build) PushImages() {
 		mg.F(Builder.Push, "package-operator-package"),
 		mg.F(Builder.Push, "remote-phase-manager"),
 	)
-	mg.SerialDeps(
-		Generate.SelfBootstrapJob,
-	)
+	mg.SerialDeps(Generate.SelfBootstrapJob)
 }
 
 // Dependencies
@@ -441,22 +424,25 @@ func (b *builder) buildCmdImage(cmd string) error {
 
 	// prepare build context
 	imageTag := b.imageURL(cmd)
-	for _, command := range [][]string{
-		// Copy files for build environment
+	// Copy files for build environment
+	cmds := [][]string{
 		{"cp", "-a", filepath.Join("bin/linux_amd64", cmd), filepath.Join(imageCacheDir, cmd)},
 		{"cp", "-a", filepath.Join("config/images", cmd+".Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
 		{"cp", "-a", filepath.Join("config/images", "passwd"), filepath.Join(imageCacheDir, "passwd")},
-	} {
+	}
+	for _, command := range cmds {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
 		}
 	}
 
-	for _, command := range [][]string{
-		// Build image!
+	// Build image!
+	cmds = [][]string{
 		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
 		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
-	} {
+	}
+
+	for _, command := range cmds {
 		buildCmd := exec.Command(command[0], command[1:]...)
 		buildCmd.Stderr = os.Stderr
 		buildCmd.Stdout = os.Stdout
@@ -606,9 +592,8 @@ func (d Dev) Load() {
 	// setup is a pre-requisite and needs to run before we can load images.
 	mg.SerialDeps(Dev.Setup)
 	images := []string{
-		"package-operator-manager", "package-operator-webhook",
+		"package-operator-package", "package-operator-manager", "package-operator-webhook",
 		"remote-phase-manager", "test-stub", "test-stub-package",
-		"package-operator-package",
 	}
 	deps := make([]interface{}, len(images))
 	for i := range images {
@@ -788,16 +773,15 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 	var kubeconfigBytes []byte
 	if len(targetKubeconfigPath) == 0 {
 		kubeconfigBuf := new(bytes.Buffer)
-		err = devEnvironment.RunKindCommand(ctx, kubeconfigBuf, os.Stderr,
-			"get", "kubeconfig",
-			"--name", clusterName, "--internal")
+		args := []string{"get", "kubeconfig", "--name", clusterName, "--internal"}
+		err = devEnvironment.RunKindCommand(ctx, kubeconfigBuf, os.Stderr, args...)
 		if err != nil {
 			return fmt.Errorf("exporting internal kubeconfig: %w", err)
 		}
 		kubeconfigBytes = kubeconfigBuf.Bytes()
-		kubeconfigBytes = bytes.Replace(kubeconfigBytes,
-			[]byte("package-operator-dev-control-plane:6443"),
-			[]byte("kubernetes.default"), -1) // use in-cluster DNS
+		old := []byte("package-operator-dev-control-plane:6443")
+		new := []byte("kubernetes.default")
+		kubeconfigBytes = bytes.Replace(kubeconfigBytes, old, new, -1) // use in-cluster DNS
 	} else {
 		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
 		if err != nil {
@@ -908,6 +892,7 @@ func (Generate) All() {
 
 func (Generate) code() error {
 	mg.Deps(Dependency.ControllerGen)
+	apiPath := filepath.Join(workDir, "apis")
 
 	args := []string{
 		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true",
@@ -916,7 +901,7 @@ func (Generate) code() error {
 	}
 
 	manifestsCmd := exec.Command("controller-gen", args...)
-	manifestsCmd.Dir = workDir + "/apis"
+	manifestsCmd.Dir = apiPath
 	manifestsCmd.Stdout = os.Stdout
 	manifestsCmd.Stderr = os.Stderr
 	if err := manifestsCmd.Run(); err != nil {
@@ -925,12 +910,12 @@ func (Generate) code() error {
 
 	// code gen
 	codeCmd := exec.Command("controller-gen", "object", "paths=./...")
-	codeCmd.Dir = workDir + "/apis"
+	codeCmd.Dir = apiPath
 	if err := codeCmd.Run(); err != nil {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
-	crds, err := filepath.Glob("config/crds/*.yaml")
+	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))
 	if err != nil {
 		return fmt.Errorf("finding CRDs: %w", err)
 	}
