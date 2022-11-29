@@ -62,12 +62,12 @@ var (
 )
 
 var (
-	commandImagePath                       = filepath.Join("config", "images", "commands")
-	packageImagePath                       = filepath.Join("config", "images", "packages")
-	packageImageContainerFile              = filepath.Join("config", "images", "packages", "package.Containerfile")
-	webhookPath                            = filepath.Join("config", "deploy", "webhook")
-	staticDeploymentPath                   = filepath.Join("config", "static-deployment")
-	remotePhaseManagerStaticDeploymentPath = filepath.Join("config", "remote-phase-static-deployment")
+	commandImagePath                       = "config/images/commands"
+	packageImagePath                       = "config/images/packages"
+	packageImageContainerFile              = "config/images/packages/package.Containerfile"
+	webhookPath                            = "config/deploy/webhook"
+	staticDeploymentPath                   = "config/static-deployment"
+	remotePhaseManagerStaticDeploymentPath = "config/remote-phase-static-deployment"
 	containerFileSuffix                    = ".Containerfile"
 )
 
@@ -245,7 +245,7 @@ type Build mg.Namespace
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
 	mg.Deps(
-		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
+		mg.F(Builder.Cmd, pkoManagerBinaryImageName, runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "kubectl-package", runtime.GOOS, runtime.GOARCH),
 		mg.F(Builder.Cmd, "mage", "", ""),
@@ -260,9 +260,9 @@ func (Build) Image(image string) { mg.Deps(mg.F(Builder.Image, image)) }
 // Builds all PKO container images.
 func (Build) Images() {
 	mg.Deps(
-		mg.F(Builder.Image, "package-operator-manager"),
+		mg.F(Builder.Image, pkoManagerBinaryImageName),
 		mg.F(Builder.Image, "package-operator-webhook"),
-		mg.F(Builder.Image, "package-operator-package"),
+		mg.F(Builder.Image, pkoPackageName),
 		mg.F(Builder.Image, "remote-phase-manager"),
 	)
 }
@@ -273,9 +273,9 @@ func (Build) PushImage(image string) { mg.Deps(mg.F(Builder.Push, image)) }
 // Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
 	mg.Deps(
-		mg.F(Builder.Push, "package-operator-manager"),
+		mg.F(Builder.Push, pkoManagerBinaryImageName),
 		mg.F(Builder.Push, "package-operator-webhook"),
-		mg.F(Builder.Push, "package-operator-package"),
+		mg.F(Builder.Push, pkoPackageName),
 		mg.F(Builder.Push, "remote-phase-manager"),
 	)
 	mg.SerialDeps(Generate.SelfBootstrapJob)
@@ -457,7 +457,7 @@ func (b *builder) buildCmdImage(cmd string) error {
 
 func (b *builder) buildPackageImage(packageImageName string) error {
 	mg.SerialDeps(b.init, determineContainerRuntime)
-	if packageImageName == "package-operator-package" {
+	if packageImageName == pkoPackageName {
 		// inject digests into package
 		mg.SerialDeps(Generate.PackageOperatorPackage)
 	}
@@ -592,7 +592,7 @@ func (d Dev) Load() {
 	// setup is a pre-requisite and needs to run before we can load images.
 	mg.SerialDeps(Dev.Setup)
 	images := []string{
-		"package-operator-package", "package-operator-manager", "package-operator-webhook",
+		pkoPackageName, pkoManagerBinaryImageName, "package-operator-webhook",
 		"remote-phase-manager", "test-stub", "test-stub-package",
 	}
 	deps := make([]interface{}, len(images))
@@ -638,7 +638,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{"config/static-deployment"}); err != nil {
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{staticDeploymentPath}); err != nil {
 		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
 	}
 	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
@@ -649,7 +649,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 }
 
 func templatePackageOperatorManager(scheme *k8sruntime.Scheme) (deploy *appsv1.Deployment, err error) {
-	objs, err := dev.LoadKubernetesObjectsFromFile("config/static-deployment/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile(staticDeploymentPath + "/deployment.yaml.tpl")
 	if err != nil {
 		return nil, fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err)
 	}
@@ -668,10 +668,10 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 	var packageOperatorManagerImage string
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
 		// to use digests the image needs to be pushed to a registry first.
-		mg.Deps(mg.F(Builder.Push, "package-operator-manager"))
-		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
+		mg.Deps(mg.F(Builder.Push, pkoManagerBinaryImageName))
+		packageOperatorManagerImage = Builder.imageURLWithDigest(pkoManagerBinaryImageName)
 	} else {
-		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
+		packageOperatorManagerImage = Builder.imageURL(pkoManagerBinaryImageName)
 	}
 
 	for i := range packageOperatorDeployment.Spec.Template.Spec.Containers {
@@ -739,7 +739,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 
 // Remote phase manager from local files.
 func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) error {
-	objs, err := dev.LoadKubernetesObjectsFromFile("config/remote-phase-static-deployment/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile(remotePhaseManagerStaticDeploymentPath + "/deployment.yaml.tpl")
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
@@ -764,7 +764,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Beware: CreateAndWaitFromFolders doesn't update anything
 	// Create the service accounts and related dependencies
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{"config/remote-phase-static-deployment"}); err != nil {
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{remotePhaseManagerStaticDeploymentPath}); err != nil {
 		return fmt.Errorf("deploy remote-phase-manager dependencies: %w", err)
 	}
 
@@ -820,7 +820,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Create a new secret for the kubeconfig
 	secret := &corev1.Secret{}
-	objs, err = dev.LoadKubernetesObjectsFromFile("config/remote-phase-static-deployment/2-secret.yaml.tpl")
+	objs, err = dev.LoadKubernetesObjectsFromFile(remotePhaseManagerStaticDeploymentPath + "/2-secret.yaml.tpl")
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
 	}
@@ -921,7 +921,7 @@ func (Generate) code() error {
 	}
 
 	for _, crd := range crds {
-		cmd := []string{"cp", crd, filepath.Join("config/static-deployment", "1-"+filepath.Base(crd))}
+		cmd := []string{"cp", crd, filepath.Join(staticDeploymentPath, "1-"+filepath.Base(crd))}
 		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
 		}
@@ -937,7 +937,7 @@ func (Generate) docs() error {
 }
 
 func (Generate) installYamlFile() error {
-	return dumpManifestsFromFolder("config/static-deployment/", "install.yaml")
+	return dumpManifestsFromFolder(staticDeploymentPath, "install.yaml")
 }
 
 // dumpManifestsFromFolder dumps all kubernets manifests from all files
@@ -1014,7 +1014,7 @@ func (x fileInfosByName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 // Includes all static-deployment files in the package-operator-package.
 func (Generate) PackageOperatorPackage() error {
-	return filepath.WalkDir("config/static-deployment", func(path string, d fs.DirEntry, err error) error {
+	return filepath.WalkDir(staticDeploymentPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -1047,12 +1047,12 @@ func (Generate) SelfBootstrapJob() error {
 		packageOperatorPackageImage string
 	)
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
-		mg.Deps(mg.F(Builder.Push, "package-operator-manager"), mg.F(Builder.Push, "package-operator-package"))
-		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
-		packageOperatorPackageImage = Builder.imageURLWithDigest("package-operator-package")
+		mg.Deps(mg.F(Builder.Push, pkoManagerBinaryImageName), mg.F(Builder.Push, pkoPackageName))
+		packageOperatorManagerImage = Builder.imageURLWithDigest(pkoManagerBinaryImageName)
+		packageOperatorPackageImage = Builder.imageURLWithDigest(pkoPackageName)
 	} else {
-		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
-		packageOperatorPackageImage = Builder.imageURL("package-operator-package")
+		packageOperatorManagerImage = Builder.imageURL(pkoManagerBinaryImageName)
+		packageOperatorPackageImage = Builder.imageURL(pkoPackageName)
 	}
 
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
