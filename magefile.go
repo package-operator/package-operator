@@ -203,11 +203,8 @@ func (Test) integration(ctx context.Context, filter string) error {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", Builder.imageURL("test-stub-package"))
 	os.Setenv("PKO_TEST_STUB_IMAGE", Builder.imageURL("test-stub"))
 
-	args := []string{
-		"test", "-v", "-failfast",
-		"-count=1", // will force a new run, instead of using the cache
-		"-timeout=20m",
-	}
+	// count=1 will force a new run, instead of using the cache
+	args := []string{"test", "-v", "-failfast", "-count=1", "-timeout=20m"}
 	if len(filter) > 0 {
 		args = append(args, "-run", filter)
 	}
@@ -428,15 +425,9 @@ func (b *builder) buildCmdImage(cmd string) error {
 	imageTag := b.imageURL(cmd)
 	for _, command := range [][]string{
 		// Copy files for build environment
-		{"cp", "-a",
-			filepath.Join("bin/linux_amd64", cmd),
-			filepath.Join(imageCacheDir, cmd)},
-		{"cp", "-a",
-			filepath.Join("config/images", cmd+".Containerfile"),
-			filepath.Join(imageCacheDir, "Containerfile")},
-		{"cp", "-a",
-			filepath.Join("config/images", "passwd"),
-			filepath.Join(imageCacheDir, "passwd")},
+		{"cp", "-a", filepath.Join("bin/linux_amd64", cmd), filepath.Join(imageCacheDir, cmd)},
+		{"cp", "-a", filepath.Join("config/images", cmd+".Containerfile"), filepath.Join(imageCacheDir, "Containerfile")},
+		{"cp", "-a", filepath.Join("config/images", "passwd"), filepath.Join(imageCacheDir, "passwd")},
 	} {
 		if err := sh.Run(command[0], command[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(command, " "), err)
@@ -446,8 +437,7 @@ func (b *builder) buildCmdImage(cmd string) error {
 	for _, command := range [][]string{
 		// Build image!
 		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
-		{containerRuntime, "image", "save",
-			"-o", imageCacheDir + ".tar", imageTag},
+		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
 	} {
 		buildCmd := exec.Command(command[0], command[1:]...)
 		buildCmd.Stderr = os.Stderr
@@ -462,14 +452,10 @@ func (b *builder) buildCmdImage(cmd string) error {
 }
 
 func (b *builder) buildPackageImage(packageImageName string) error {
-	mg.SerialDeps(
-		b.init,
-		determineContainerRuntime,
-	)
+	mg.SerialDeps(b.init, determineContainerRuntime)
 	if packageImageName == "package-operator-package" {
-		mg.SerialDeps(
-			Generate.PackageOperatorPackage, // inject digests into package
-		)
+		// inject digests into package
+		mg.SerialDeps(Generate.PackageOperatorPackage)
 	}
 
 	imageCacheDir, err := b.cleanImageCacheDir(packageImageName)
@@ -512,9 +498,7 @@ func (b *builder) buildPackageImage(packageImageName string) error {
 }
 
 func (b *builder) Push(imageName string) error {
-	mg.SerialDeps(
-		mg.F(b.Image, imageName),
-	)
+	mg.SerialDeps(mg.F(b.Image, imageName))
 
 	// Login to container registry when running on AppSRE Jenkins.
 	_, isJenkins := os.LookupEnv("JENKINS_HOME")
@@ -602,9 +586,8 @@ func (d Dev) Teardown(ctx context.Context) error {
 
 // Load images into the development environment.
 func (d Dev) Load() {
-	mg.SerialDeps(
-		Dev.Setup, // setup is a pre-requisite and needs to run before we can load images.
-	)
+	// setup is a pre-requisite and needs to run before we can load images.
+	mg.SerialDeps(Dev.Setup)
 	images := []string{
 		"package-operator-manager", "package-operator-webhook",
 		"remote-phase-manager", "test-stub", "test-stub-package",
@@ -653,9 +636,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 	ctx = logr.NewContext(ctx, logger)
 
 	// Deploy
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{
-		"config/static-deployment",
-	}); err != nil {
+	if err := cluster.CreateAndWaitFromFolders(ctx, []string{"config/static-deployment"}); err != nil {
 		return fmt.Errorf("deploy package-operator-manager dependencies: %w", err)
 	}
 	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
@@ -666,8 +647,7 @@ func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Clus
 }
 
 func templatePackageOperatorManager(scheme *k8sruntime.Scheme) (deploy *appsv1.Deployment, err error) {
-	objs, err := dev.LoadKubernetesObjectsFromFile(
-		"config/static-deployment/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile("config/static-deployment/deployment.yaml.tpl")
 	if err != nil {
 		return nil, fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err)
 	}
@@ -756,8 +736,7 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 
 // Remote phase manager from local files.
 func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) error {
-	objs, err := dev.LoadKubernetesObjectsFromFile(
-		"config/remote-phase-static-deployment/deployment.yaml.tpl")
+	objs, err := dev.LoadKubernetesObjectsFromFile("config/remote-phase-static-deployment/deployment.yaml.tpl")
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err)
 	}
@@ -839,8 +818,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Create a new secret for the kubeconfig
 	secret := &corev1.Secret{}
-	objs, err = dev.LoadKubernetesObjectsFromFile(
-		"config/remote-phase-static-deployment/2-secret.yaml.tpl")
+	objs, err = dev.LoadKubernetesObjectsFromFile("config/remote-phase-static-deployment/2-secret.yaml.tpl")
 	if err != nil {
 		return fmt.Errorf("loading package-operator-webhook 2-secret.yaml.tpl: %w", err)
 	}
@@ -869,9 +847,7 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 // Setup local dev environment with the package operator installed and run the integration test suite.
 func (d Dev) Integration(ctx context.Context) error {
-	mg.SerialDeps(
-		Dev.Deploy,
-	)
+	mg.SerialDeps(Dev.Deploy)
 
 	os.Setenv("KUBECONFIG", devEnvironment.Cluster.Kubeconfig())
 
@@ -880,9 +856,7 @@ func (d Dev) Integration(ctx context.Context) error {
 }
 
 func (d Dev) LoadImage(ctx context.Context, image string) error {
-	mg.Deps(
-		mg.F(Build.Image, image),
-	)
+	mg.Deps(mg.F(Build.Image, image))
 
 	imageTar := filepath.Join(cacheDir, "image", image+".tar")
 	if err := devEnvironment.LoadImageFromTar(ctx, imageTar); err != nil {
@@ -892,18 +866,13 @@ func (d Dev) LoadImage(ctx context.Context, image string) error {
 }
 
 func (d Dev) init() {
-	mg.SerialDeps(
-		determineContainerRuntime,
-		Dependency.Kind,
-	)
+	mg.SerialDeps(determineContainerRuntime, Dependency.Kind)
 
 	devEnvironment = dev.NewEnvironment(
 		clusterName,
 		filepath.Join(cacheDir, "dev-env"),
 		dev.WithClusterOptions([]dev.ClusterOption{
-			dev.WithWaitOptions([]dev.WaitOption{
-				dev.WithTimeout(2 * time.Minute),
-			}),
+			dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
 		}),
 		dev.WithContainerRuntime(containerRuntime),
 	)
@@ -915,11 +884,8 @@ type Generate mg.Namespace
 
 // Run all code generators.
 func (Generate) All() {
-	mg.SerialDeps(
-		Generate.code,
-		Generate.docs,
-		Generate.installYamlFile, // installYamlFile has to come after code generation
-	)
+	// installYamlFile has to come after code generation
+	mg.SerialDeps(Generate.code, Generate.docs, Generate.installYamlFile)
 }
 
 func (Generate) code() error {
@@ -948,9 +914,7 @@ func (Generate) code() error {
 	}
 
 	for _, crd := range crds {
-		cmd := []string{
-			"cp", crd, filepath.Join("config/static-deployment", "1-"+filepath.Base(crd)),
-		}
+		cmd := []string{"cp", crd, filepath.Join("config/static-deployment", "1-"+filepath.Base(crd))}
 		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
 			return fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err)
 		}
@@ -1076,10 +1040,7 @@ func (Generate) SelfBootstrapJob() error {
 		packageOperatorPackageImage string
 	)
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
-		mg.Deps(
-			mg.F(Builder.Push, "package-operator-manager"),
-			mg.F(Builder.Push, "package-operator-package"),
-		)
+		mg.Deps(mg.F(Builder.Push, "package-operator-manager"), mg.F(Builder.Push, "package-operator-package"))
 		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
 		packageOperatorPackageImage = Builder.imageURLWithDigest("package-operator-package")
 	} else {
@@ -1087,10 +1048,8 @@ func (Generate) SelfBootstrapJob() error {
 		packageOperatorPackageImage = Builder.imageURL("package-operator-package")
 	}
 
-	latestJob = bytes.ReplaceAll(
-		latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
-	latestJob = bytes.ReplaceAll(
-		latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
 
 	if err := os.WriteFile("config/self-bootstrap-job.yaml", latestJob, os.ModePerm); err != nil {
 		return err
