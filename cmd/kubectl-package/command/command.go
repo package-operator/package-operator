@@ -46,6 +46,7 @@ func CobraRoot() *cobra.Command {
 		(&Build{}).CobraCommand(),
 		(&Validate{}).CobraCommand(),
 		(&Version{}).CobraCommand(),
+		(&Tree{}).CobraCommand(),
 	)
 
 	return cmd
