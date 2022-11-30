@@ -17,6 +17,7 @@ app-interface-push-images:
 			-e JENKINS_HOME=${JENKINS_HOME} \
 			-e QUAY_USER=${QUAY_USER} \
 			-e QUAY_TOKEN=${QUAY_TOKEN} \
+			-e VERSION=${VERSION} \
 			-e IMAGE_ORG="${IMAGE_ORG}" \
 			-e REMOTE_PHASE_MANAGER_IMAGE="${IMAGE_ORG}/package-operator-hs-connector:${VERSION}" \
 			-e PKO_PACKAGE_NAMESPACE_OVERRIDE="openshift-package-operator" \
