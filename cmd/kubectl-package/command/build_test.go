@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"package-operator.run/package-operator/cmd/kubectl-package/command"
 )
@@ -16,14 +16,14 @@ func TestBuildOutput(t *testing.T) {
 	t.Parallel()
 
 	f, err := os.CreateTemp("", "pko-*.tar.gz")
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
-	defer func() { assert.Nil(t, os.Remove(f.Name())) }()
-	defer func() { assert.Nil(t, f.Close()) }()
+	defer func() { require.Nil(t, os.Remove(f.Name())) }()
+	defer func() { require.Nil(t, f.Close()) }()
 
 	wd, err := os.Getwd()
-	assert.Nil(t, err)
-	packagePath := filepath.Join(wd, "../../../config/packages/test-stub")
+	require.Nil(t, err)
+	packagePath := filepath.Join(wd, "testdata")
 
 	cmd := command.CobraRoot()
 	stdout := &bytes.Buffer{}
@@ -32,14 +32,14 @@ func TestBuildOutput(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build", packagePath, "--tag", "chicken:oldest", "--output", f.Name()})
 
-	assert.Nil(t, cmd.Execute())
-	assert.Len(t, stdout.String(), 0)
-	assert.Len(t, stderr.String(), 0)
+	require.Nil(t, cmd.Execute())
+	require.Len(t, stdout.String(), 0)
+	require.Len(t, stderr.String(), 0)
 
 	i, err := tarball.ImageFromPath(f.Name(), nil)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	_, err = i.Manifest()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 }
 
 func TestBuildEmptySource(t *testing.T) {
@@ -51,7 +51,7 @@ func TestBuildEmptySource(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build", ""})
 
-	assert.NotNil(t, cmd.Execute())
+	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildNoSource(t *testing.T) {
@@ -63,7 +63,7 @@ func TestBuildNoSource(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build"})
 
-	assert.NotNil(t, cmd.Execute())
+	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildPushWOTags(t *testing.T) {
@@ -75,7 +75,7 @@ func TestBuildPushWOTags(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build", ".", "--push"})
 
-	assert.NotNil(t, cmd.Execute())
+	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildOutputWOTags(t *testing.T) {
@@ -87,7 +87,7 @@ func TestBuildOutputWOTags(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build", ".", "--output /tmp/yes"})
 
-	assert.NotNil(t, cmd.Execute())
+	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildInvalidTag(t *testing.T) {
@@ -99,5 +99,5 @@ func TestBuildInvalidTag(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"build", ".", "--tag", "bread:a:b"})
 
-	assert.NotNil(t, cmd.Execute())
+	require.NotNil(t, cmd.Execute())
 }

@@ -3,8 +3,11 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
 
 	"package-operator.run/package-operator/internal/version"
@@ -39,7 +42,17 @@ func CobraRoot() *cobra.Command {
 	// Add additional subcommands here. Bear in mind that the top level context
 	// can be fetched by calling the Context method of the command reference that
 	// is passed to all RunX methods.
-	cmd.AddCommand((&Version{}).CobraCommand(), (&Build{}).CobraCommand())
+	cmd.AddCommand(
+		(&Build{}).CobraCommand(),
+		(&Validate{}).CobraCommand(),
+		(&Version{}).CobraCommand(),
+	)
 
 	return cmd
+}
+
+func NewCobraContext(cmd *cobra.Command) context.Context {
+	logOut := cmd.ErrOrStderr()
+	log := funcr.New(func(p, a string) { fmt.Fprintln(logOut, p, a) }, funcr.Options{})
+	return logr.NewContext(cmd.Context(), log)
 }

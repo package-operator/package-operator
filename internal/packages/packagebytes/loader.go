@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // Maps filenames to file contents.
@@ -63,6 +65,42 @@ func (l *Loader) FromFS(ctx context.Context, src fs.FS) (FileMap, error) {
 	}
 
 	return bundle, nil
+}
+
+func (l *Loader) FromImage(ctx context.Context, image v1.Image) (FileMap, error) {
+	layers, err := image.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("access layers: %w", err)
+	}
+
+	fileMap := FileMap{}
+
+	for _, layer := range layers {
+		reader, err := layer.Uncompressed()
+		if err != nil {
+			return nil, fmt.Errorf("access layer: %w", err)
+		}
+
+		layerFileMap, err := fromTaredReader(ctx, reader)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range layerFileMap {
+			fileMap[k] = v
+		}
+	}
+
+	return fileMap, nil
+}
+
+func (l *Loader) FromPulledImage(ctx context.Context, ref string) (FileMap, error) {
+	img, err := crane.Pull(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.FromImage(ctx, img)
 }
 
 func isFileToBeExcluded(entry fs.DirEntry) bool {

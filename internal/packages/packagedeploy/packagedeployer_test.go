@@ -82,7 +82,7 @@ func TestPackageDeployer_Load(t *testing.T) {
 			"file1.yaml": []unstructured.Unstructured{obj1},
 		},
 	}
-	pcl.On("Load",
+	pcl.On("LoadFromPath",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -154,7 +154,7 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 		manifestsv1alpha1.PackagePhaseAnnotation: "phase-1",
 	})
 	var res *packagestructure.PackageContent
-	pcl.On("Load",
+	pcl.On("LoadFromPath",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -217,7 +217,7 @@ type packageContentLoaderMock struct {
 	mock.Mock
 }
 
-func (m *packageContentLoaderMock) Load(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (
+func (m *packageContentLoaderMock) LoadFromPath(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (
 	*packagestructure.PackageContent, error) {
 	args := m.Called(ctx, path)
 	return args.Get(0).(*packagestructure.PackageContent), args.Error(1)

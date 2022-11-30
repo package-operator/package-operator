@@ -2,7 +2,10 @@ package packagestructure
 
 import (
 	"context"
+	"io/fs"
+	"os"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -10,7 +13,8 @@ import (
 )
 
 type fileMapLoader interface {
-	FromFolder(ctx context.Context, path string) (packagebytes.FileMap, error)
+	FromFS(ctx context.Context, fs fs.FS) (packagebytes.FileMap, error)
+	FromImage(ctx context.Context, image v1.Image) (packagebytes.FileMap, error)
 }
 
 type packageManifestLoader interface {
@@ -76,33 +80,51 @@ func NewLoader(scheme *runtime.Scheme, opts ...LoaderOption) *Loader {
 	return l
 }
 
-func (l *Loader) Load(ctx context.Context, path string, opts ...LoaderOption) (*PackageContent, error) {
+func (l *Loader) LoadFromPath(ctx context.Context, path string, opts ...LoaderOption) (*PackageContent, error) {
+	return l.LoadFromFS(ctx, os.DirFS(path), opts...)
+}
+
+func (l *Loader) LoadFromFS(ctx context.Context, fs fs.FS, opts ...LoaderOption) (*PackageContent, error) {
+	fm, err := l.fileMapLoader.FromFS(ctx, fs)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.LoadFromFileMap(ctx, fm, opts...)
+}
+
+func (l *Loader) LoadFromImage(ctx context.Context, image v1.Image, opts ...LoaderOption) (*PackageContent, error) {
+	fm, err := l.fileMapLoader.FromImage(ctx, image)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.LoadFromFileMap(ctx, fm, opts...)
+}
+
+func (l *Loader) LoadFromFileMap(ctx context.Context, fileMap map[string][]byte, opts ...LoaderOption) (*PackageContent, error) {
 	options := l.opts // copy struct
 	for _, opt := range opts {
 		opt(&options)
 	}
 
-	fm, err := l.fileMapLoader.FromFolder(ctx, path)
+	// Parse PackageManifest
+	manifest, err := l.packageManifestLoader.FromFileMap(ctx, fileMap)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse PackageManifest
-	manifest, err := l.packageManifestLoader.FromFileMap(ctx, fm)
-	if err != nil {
-		return nil, err
-	}
 	packageContent := &PackageContent{PackageManifest: manifest}
 
 	// Byte based transformations and validations
-	if err := options.bytesTransformers.Transform(ctx, fm); err != nil {
+	if err := options.bytesTransformers.Transform(ctx, fileMap); err != nil {
 		return nil, err
 	}
-	if err := options.bytesValidators.Validate(ctx, fm); err != nil {
+	if err := options.bytesValidators.Validate(ctx, fileMap); err != nil {
 		return nil, err
 	}
 
-	packageContent.Manifests, err = l.manifestMapLoader.FromFileMap(ctx, fm)
+	packageContent.Manifests, err = l.manifestMapLoader.FromFileMap(ctx, fileMap)
 	if err != nil {
 		return nil, err
 	}
