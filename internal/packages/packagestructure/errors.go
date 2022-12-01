@@ -83,5 +83,7 @@ const (
 	ViolationReasonPackageManifestInvalid    = "PackageManifest invalid"
 	ViolationReasonInvalidYAML               = "Invalid YAML"
 	ViolationReasonMissingPhaseAnnotation    = "Missing " + manifestsv1alpha1.PackagePhaseAnnotation + " Annotation"
+	ViolationReasonMissingGVK                = "GroupVersionKind not set"
+	ViolationReasonLabelsInvalid             = "Labels invalid"
 	ViolationReasonUnsupportedScope          = "Package unsupported scope"
 )

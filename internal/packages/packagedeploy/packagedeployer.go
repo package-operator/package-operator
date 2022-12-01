@@ -55,7 +55,7 @@ func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeploye
 		packageContentLoader: packagestructure.NewLoader(
 			scheme, packagestructure.WithManifestValidators(
 				packagestructure.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeNamespaced),
-				&packagestructure.ObjectPhaseAnnotationValidator{},
+				packagestructure.DefaultValidators,
 			),
 		),
 

@@ -69,7 +69,11 @@ func (v Validate) Run(ctx context.Context) (err error) {
 		}
 	}
 
-	structureLoaderOpts := []packagestructure.LoaderOption{packagestructure.WithManifestValidators(&packagestructure.ObjectPhaseAnnotationValidator{})}
+	structureLoaderOpts := []packagestructure.LoaderOption{
+		packagestructure.WithManifestValidators(
+			packagestructure.DefaultValidators,
+		),
+	}
 	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
 
 	if _, err := structureLoader.LoadFromFileMap(ctx, filemap); err != nil {

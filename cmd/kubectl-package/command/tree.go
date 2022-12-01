@@ -76,7 +76,7 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 	l := packagestructure.NewLoader(treeScheme,
 		packagestructure.WithManifestValidators(
 			packagestructure.PackageScopeValidator(scope),
-			&packagestructure.ObjectPhaseAnnotationValidator{},
+			packagestructure.DefaultValidators,
 		),
 		packagestructure.WithByteTransformers(
 			&packagebytes.TemplateTransformer{

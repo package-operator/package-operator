@@ -75,7 +75,11 @@ func (b Build) Run(ctx context.Context) error {
 
 	verboseLog.Info("validating package image")
 
-	structureLoaderOpts := []packagestructure.LoaderOption{packagestructure.WithManifestValidators(&packagestructure.ObjectPhaseAnnotationValidator{})}
+	structureLoaderOpts := []packagestructure.LoaderOption{
+		packagestructure.WithManifestValidators(
+			packagestructure.DefaultValidators,
+		),
+	}
 	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
 
 	if _, err := structureLoader.LoadFromImage(ctx, image); err != nil {
