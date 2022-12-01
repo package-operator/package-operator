@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"text/template"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,15 +54,16 @@ func (t *TemplateTransformer) Transform(ctx context.Context, fileMap FileMap) er
 		if err != nil {
 			return err
 		}
-		fileMap[path] = content
+		// save back to file map without the template suffix
+		fileMap[strings.TrimSuffix(path, packages.TemplateFileSuffix)] = content
 	}
 
 	return nil
 }
 
 func (t *TemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
-	if !packages.IsYAMLFile(path) || packages.IsManifestFile(path) {
-		// It is the package manifest file or not a YAML file, skipping
+	if !packages.IsTemplateFile(path) {
+		// Not a template file, skip.
 		return content, nil
 	}
 
