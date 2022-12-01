@@ -15,7 +15,6 @@
 # vendor/
 bin
 .cache
-.deps
 config/static-deployment/deployment.yaml
 config/self-bootstrap-job.yaml
 
