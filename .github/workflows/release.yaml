@@ -34,7 +34,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Build&Push
+    - name: Build & Push images
       run: ./mage build:pushImages
       env:
         USE_DIGESTS: "true"
@@ -49,8 +49,14 @@ jobs:
         path: |
           config/self-bootstrap-job.yaml
 
+    - name: Build release binaries
+      run: ./mage build:releaseBinaries
+
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
           config/self-bootstrap-job.yaml
+          bin/kubectl-package_darwin_amd64
+          bin/kubectl-package_darwin_arm64
+          bin/kubectl-package_linux_amd64

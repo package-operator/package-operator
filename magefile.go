@@ -44,10 +44,27 @@ const (
 	golangciLintVersion  = "1.50.1"
 	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
+
+	cliCmdName = "kubectl-package"
 )
 
+type archTarget struct {
+	OS, Arch string
+}
+
+type command struct {
+	ReleaseArchitectures []archTarget
+}
+
 var (
-	cliExtraArch = [][2]string{{"linux", "amd64"}, {"darwin", "amd64"}, {"darwin", "arm64"}}
+	commands = map[string]command{
+		"package-operator-manager": {nil},
+		"remote-phase-manager":     {nil},
+		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
+	}
+
+	nativeArch     = archTarget{runtime.GOOS, runtime.GOARCH}
+	linuxAMD64Arch = archTarget{"linux", "amd64"}
 )
 
 var (
@@ -83,6 +100,18 @@ func init() {
 	logger = stdr.New(nil)
 
 	Builder.init()
+}
+
+func binaryPath(name string, arch archTarget) string {
+	if arch == nativeArch {
+		return filepath.Join("bin", name)
+	}
+
+	if len(arch.OS) == 0 || len(arch.Arch) == 0 {
+		panic("invalid os or arch")
+	}
+
+	return filepath.Join("bin", arch.OS+"_"+arch.Arch, name)
 }
 
 func digestFile(imageName string) string { return filepath.Join(cacheDir, imageName+".digest") }
@@ -391,20 +420,29 @@ type Build mg.Namespace
 
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
-	mg.Deps(
-		mg.F(Builder.Cmd, "package-operator-manager", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "remote-phase-manager", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "kubectl-package", runtime.GOOS, runtime.GOARCH),
-		mg.F(Builder.Cmd, "mage", "", ""),
-	)
+	targets := []interface{}{mg.F(Builder.Cmd, "mage", "", "")}
+	for name := range commands {
+		targets = append(targets, mg.F(Builder.Cmd, name, nativeArch.OS, nativeArch.Arch))
+	}
+
+	mg.Deps(targets...)
 }
 
-func (Build) MultiArchBinaries() {
-	targets := []mg.Fn{mg.F(Build.Binaries)}
-	for _, tuple := range cliExtraArch {
-		targets = append(targets, mg.F(Builder.Cmd, "kubectl-package", tuple[0], tuple[1]))
+func (Build) ReleaseBinaries() {
+	targets := []interface{}{}
+	for name, cmd := range commands {
+		for _, arch := range cmd.ReleaseArchitectures {
+			targets = append(targets, mg.F(Builder.Cmd, name, arch.OS, arch.Arch))
+		}
 	}
-	mg.Deps(targets)
+	mg.Deps(targets...)
+
+	for name, cmd := range commands {
+		for _, arch := range cmd.ReleaseArchitectures {
+			dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", name, arch.OS, arch.Arch))
+			must(sh.Copy(dst, binaryPath(name, arch)))
+		}
+	}
 }
 
 func (Build) Binary(cmd string) { mg.Deps(mg.F(Builder.Cmd, cmd, runtime.GOOS, runtime.GOARCH)) }
@@ -508,10 +546,9 @@ func (b *builder) Cmd(cmd, goos, goarch string) {
 
 	env := map[string]string{"CGO_ENABLED": "0"}
 
-	bin := filepath.Join("bin", cmd)
-	if len(goos) != 0 && len(goarch) != 0 {
-		// change bin path to point to a sudirectory when cross compiling
-		bin = filepath.Join("bin", goos+"_"+goarch, cmd)
+	bin := binaryPath(cmd, nativeArch)
+	if len(goos) != 0 || len(goarch) != 0 {
+		bin = binaryPath(cmd, archTarget{goos, goarch})
 		env["GOOS"] = goos
 		env["GOARCH"] = goarch
 	}
@@ -550,14 +587,14 @@ func (b *builder) cleanImageCacheDir(name string) string {
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
 func (b *builder) buildCmdImage(cmd string) {
-	mg.SerialDeps(b.init, determineContainerRuntime, mg.F(b.Cmd, cmd, "linux", "amd64"))
+	mg.SerialDeps(b.init, determineContainerRuntime, mg.F(b.Cmd, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch))
 
 	imageCacheDir := b.cleanImageCacheDir(cmd)
 
 	// prepare build context
 	imageTag := b.imageURL(cmd)
 
-	must(sh.Copy(filepath.Join(imageCacheDir, cmd), filepath.Join("bin", "linux_amd64", cmd)))
+	must(sh.Copy(filepath.Join(imageCacheDir, cmd), binaryPath(cmd, linuxAMD64Arch)))
 	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", cmd+".Containerfile")))
 	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
 
