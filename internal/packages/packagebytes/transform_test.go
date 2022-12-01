@@ -68,9 +68,10 @@ func TestTemplateTransformer(t *testing.T) {
 
 		template := []byte("#{{.Package.Name}}#")
 		fm := FileMap{
-			"something": template,
-			"test.yaml": template,
-			"test.yml":  template,
+			"something":        template,
+			"something.yaml":   template,
+			"test.yaml.gotmpl": template,
+			"test.yml.gotmpl":  template,
 		}
 
 		ctx := context.Background()
@@ -97,7 +98,7 @@ func TestTemplateTransformer(t *testing.T) {
 
 		template := []byte("#{{.Package.Name}#")
 		fm := FileMap{
-			"test.yaml": template,
+			"test.yaml.gotmpl": template,
 		}
 
 		ctx := context.Background()
@@ -118,7 +119,7 @@ func TestTemplateTransformer(t *testing.T) {
 
 		template := []byte("#{{.Package.Banana}}#")
 		fm := FileMap{
-			"test.yaml": template,
+			"test.yaml.gotmpl": template,
 		}
 
 		ctx := context.Background()
