@@ -192,6 +192,10 @@ func includeInPackageOperatorPackage(file string) {
 }
 
 func Deploy(ctx context.Context) {
+	if _, ok := os.LookupEnv("VERSION"); ok {
+		panic("VERSION environment variable not set, please set an explicit version to deploy")
+	}
+
 	cluster, err := dev.NewCluster(filepath.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
 	if err != nil {
 		panic(err)
