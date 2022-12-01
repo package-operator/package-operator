@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -25,6 +26,7 @@ type PackageManifest struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec PackageManifestSpec `json:"spec,omitempty"`
+	Test PackageManifestTest `json:"test,omitempty"`
 }
 
 // PackageManifestScope declares the available scopes to install this package in.
@@ -58,6 +60,38 @@ type PackageManifestPhase struct {
 	// If set to the string "default" the built-in controller reconciling the object.
 	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
 	Class string `json:"class,omitempty"`
+}
+
+// PackageManifestTest configures test cases.
+type PackageManifestTest struct {
+	// Template testing configuration.
+	Template []PackageManifestTestCaseTemplate `json:"template,omitempty"`
+}
+
+// PackageManifestTestCaseTemplate template testing configuration.
+type PackageManifestTestCaseTemplate struct {
+	// Name describing the test case.
+	Name string `json:"name"`
+	// Template data to use in the test case.
+	Context TemplateContext `json:"context,omitempty"`
+}
+
+// TemplateContext is available within the package templating process.
+type TemplateContext struct {
+	Package TemplateContextPackage `json:"package"`
+}
+
+// TemplateContextPackage represents the (Cluster)Package object requesting this package content.
+type TemplateContextPackage struct {
+	TemplateContextObjectMeta `json:"metadata"`
+}
+
+// TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates.
+type TemplateContextObjectMeta struct {
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // Validates the PackageManifest and returns an aggregated list of all errors.
@@ -98,6 +132,15 @@ func (m *PackageManifest) Validate() error {
 		if len(probe.Probes) == 0 {
 			allErrs = append(allErrs,
 				field.Required(specProbes.Index(i).Child("probes"), ""))
+		}
+	}
+
+	testTemplate := field.NewPath("test").Child("template")
+	for i, template := range m.Test.Template {
+		el := validation.IsConfigMapKey(template.Name)
+		if len(el) > 0 {
+			allErrs = append(allErrs,
+				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, allErrs.ToAggregate().Error()))
 		}
 	}
 

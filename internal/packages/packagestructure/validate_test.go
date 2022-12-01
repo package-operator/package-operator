@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/packages"
 )
 
 func TestValidatorList(t *testing.T) {
@@ -38,9 +39,11 @@ func TestValidatorList(t *testing.T) {
 		t2 := &ValidatorMock{}
 
 		t1.On("Validate", mock.Anything, mock.Anything).
-			Return(NewInvalidError(Violation{Reason: "too wet"}))
+			Return(packages.NewInvalidError(
+				packages.Violation{Reason: "too wet"}))
 		t2.On("Validate", mock.Anything, mock.Anything).
-			Return(NewInvalidError(Violation{Reason: "on fire"}))
+			Return(packages.NewInvalidError(
+				packages.Violation{Reason: "on fire"}))
 
 		tl := ValidatorList{
 			t1, t2,
@@ -50,8 +53,7 @@ func TestValidatorList(t *testing.T) {
 		err := tl.Validate(ctx, nil)
 		assert.EqualError(t, err, `Package validation errors:
 - too wet
-- on fire
-`)
+- on fire`)
 
 		t1.AssertCalled(t, "Validate", mock.Anything, mock.Anything)
 		t2.AssertCalled(t, "Validate", mock.Anything, mock.Anything)
@@ -66,9 +68,9 @@ type ValidatorMock struct {
 	mock.Mock
 }
 
-func (m *ValidatorMock) Validate(ctx context.Context, packageContent *PackageContent) *InvalidError {
+func (m *ValidatorMock) Validate(ctx context.Context, packageContent *PackageContent) error {
 	args := m.Called(ctx, packageContent)
-	if e, ok := args.Get(0).(*InvalidError); ok {
+	if e, ok := args.Get(0).(*packages.InvalidError); ok {
 		return e
 	}
 	return nil
@@ -91,7 +93,7 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := opav.Validate(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- Missing package-operator.run/phase Annotation in test.yaml#0\n")
+	require.EqualError(t, err, "Package validation errors:\n- Missing package-operator.run/phase Annotation in test.yaml#0")
 }
 
 func TestObjectGVKValidator(t *testing.T) {
@@ -112,7 +114,7 @@ func TestObjectGVKValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := ogvkv.Validate(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- GroupVersionKind not set in test.yaml#0\n")
+	require.EqualError(t, err, "Package validation errors:\n- GroupVersionKind not set in test.yaml#0")
 }
 
 func TestObjectLabelsValidator(t *testing.T) {
@@ -132,7 +134,7 @@ func TestObjectLabelsValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := olv.Validate(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- Labels invalid metadata.labels: Invalid value: \"/123\": prefix part must be non-empty in test.yaml#1\n")
+	require.EqualError(t, err, "Package validation errors:\n- Labels invalid in test.yaml#1:\n  metadata.labels: Invalid value: \"/123\": prefix part must be non-empty")
 }
 
 func TestPackageScopeValidator(t *testing.T) {
@@ -149,5 +151,5 @@ func TestPackageScopeValidator(t *testing.T) {
 			},
 		},
 	})
-	require.EqualError(t, err, "Package validation errors:\n- Package unsupported scope in manifest.yaml\n")
+	require.EqualError(t, err, "Package validation errors:\n- Package unsupported scope in manifest.yaml")
 }

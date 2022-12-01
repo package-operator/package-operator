@@ -32,9 +32,9 @@ func TestLoader(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	pc, err := l.LoadFromPath(ctx, "testdata", WithByteTransformers(
 		&packagebytes.TemplateTransformer{
-			TemplateContext: packagebytes.TemplateContext{
-				Package: packagebytes.PackageTemplateContext{
-					ObjectMeta: metav1.ObjectMeta{
+			TemplateContext: manifestsv1alpha1.TemplateContext{
+				Package: manifestsv1alpha1.TemplateContextPackage{
+					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
 						Namespace: "test123-ns",
 					},
 				},

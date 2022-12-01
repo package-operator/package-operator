@@ -1,7 +1,9 @@
-package packagestructure
+package packages
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -16,13 +18,19 @@ func NewInvalidError(violations ...Violation) *InvalidError {
 	}
 }
 
-func NewInvalidAggregate(invalidErrors ...*InvalidError) *InvalidError {
+func NewInvalidAggregate(errorList ...error) error {
 	var violations []Violation
-	for _, e := range invalidErrors {
+	for _, e := range errorList {
 		if e == nil {
 			continue
 		}
-		violations = append(violations, e.Violations...)
+
+		var ie *InvalidError
+		if errors.As(e, &ie) {
+			violations = append(violations, ie.Violations...)
+			continue
+		}
+		return e
 	}
 	if len(violations) == 0 {
 		return nil
@@ -36,8 +44,11 @@ func (e *InvalidError) Error() string {
 	}
 
 	msg := "Package validation errors:\n"
-	for _, v := range e.Violations {
-		msg += "- " + v.String() + "\n"
+	for i, v := range e.Violations {
+		if i != 0 {
+			msg += "\n"
+		}
+		msg += "- " + strings.ReplaceAll(v.String(), "\n", "\n  ")
 	}
 	return msg
 }
@@ -51,14 +62,14 @@ type Violation struct {
 
 func (v Violation) String() string {
 	msg := v.Reason
-	if len(v.Details) > 0 {
-		msg += " " + v.Details
-	}
-	if v.Location == nil {
-		return msg
+	if v.Location != nil {
+		msg = fmt.Sprintf("%s in %s", msg, v.Location.String())
 	}
 
-	return fmt.Sprintf("%s in %s", msg, v.Location.String())
+	if len(v.Details) > 0 {
+		msg += ":\n" + v.Details
+	}
+	return msg
 }
 
 type ViolationLocation struct {
@@ -86,4 +97,5 @@ const (
 	ViolationReasonMissingGVK                = "GroupVersionKind not set"
 	ViolationReasonLabelsInvalid             = "Labels invalid"
 	ViolationReasonUnsupportedScope          = "Package unsupported scope"
+	ViolationReasonFixtureMismatch           = "File mismatch against fixture"
 )

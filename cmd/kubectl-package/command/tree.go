@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -57,9 +56,9 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("loading source from disk", "path", t.SourcePath)
 
-	templateContext := packagebytes.TemplateContext{
-		Package: packagebytes.PackageTemplateContext{
-			ObjectMeta: metav1.ObjectMeta{
+	templateContext := manifestsv1alpha1.TemplateContext{
+		Package: manifestsv1alpha1.TemplateContextPackage{
+			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
 				Name:      "name",
 				Namespace: "namespace",
 			},

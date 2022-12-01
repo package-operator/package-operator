@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var errExample = errors.New("example error")
@@ -51,80 +50,6 @@ func TestTransformerList(t *testing.T) {
 
 		t1.AssertCalled(t, "Transform", mock.Anything, mock.Anything)
 		t2.AssertNotCalled(t, "Transform", mock.Anything, mock.Anything)
-	})
-}
-
-func TestTemplateTransformer(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		tt := &TemplateTransformer{
-			TemplateContext: TemplateContext{
-				Package: PackageTemplateContext{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-				},
-			},
-		}
-
-		template := []byte("#{{.Package.Name}}#")
-		fm := FileMap{
-			"something":        template,
-			"something.yaml":   template,
-			"test.yaml.gotmpl": template,
-			"test.yml.gotmpl":  template,
-		}
-
-		ctx := context.Background()
-		err := tt.Transform(ctx, fm)
-		require.NoError(t, err)
-
-		templateResult := "#test#"
-		assert.Equal(t, templateResult, string(fm["test.yaml"]))
-		assert.Equal(t, templateResult, string(fm["test.yml"]))
-		// only touches YAML files
-		assert.Equal(t, string(template), string(fm["something"]))
-	})
-
-	t.Run("invalid template", func(t *testing.T) {
-		tt := &TemplateTransformer{
-			TemplateContext: TemplateContext{
-				Package: PackageTemplateContext{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-				},
-			},
-		}
-
-		template := []byte("#{{.Package.Name}#")
-		fm := FileMap{
-			"test.yaml.gotmpl": template,
-		}
-
-		ctx := context.Background()
-		err := tt.Transform(ctx, fm)
-		require.Error(t, err)
-	})
-
-	t.Run("execution template error", func(t *testing.T) {
-		tt := &TemplateTransformer{
-			TemplateContext: TemplateContext{
-				Package: PackageTemplateContext{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-				},
-			},
-		}
-
-		template := []byte("#{{.Package.Banana}}#")
-		fm := FileMap{
-			"test.yaml.gotmpl": template,
-		}
-
-		ctx := context.Background()
-		err := tt.Transform(ctx, fm)
-		require.Error(t, err)
 	})
 }
 
