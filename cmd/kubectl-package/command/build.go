@@ -11,8 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"package-operator.run/package-operator/cmd/kubectl-package/export"
-	"package-operator.run/package-operator/cmd/kubectl-package/filemap"
-	"package-operator.run/package-operator/cmd/kubectl-package/prepare"
+	"package-operator.run/package-operator/internal/packages/packagebytes"
+	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
 
 const (
@@ -58,21 +58,28 @@ func (b Build) Run(ctx context.Context) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("loading source from disk", "path", b.SourcePath)
 
-	fileMap, err := filemap.FromFS(ctx, os.DirFS(b.SourcePath))
+	loader := packagebytes.NewLoader()
+	saver := packagebytes.NewSaver()
+
+	fileMap, err := loader.FromFS(ctx, os.DirFS(b.SourcePath))
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", b.SourcePath, err)
 	}
 
-	fileMap, err = prepare.FileMap(ctx, fileMap)
-	if err != nil {
-		return fmt.Errorf("prepare source: %w", err)
-	}
-
 	verboseLog.Info("creating image")
 
-	image, err := filemap.ToImage(fileMap)
+	image, err := saver.ToImage(fileMap)
 	if err != nil {
 		return fmt.Errorf("image source: %w", err)
+	}
+
+	verboseLog.Info("validating package image")
+
+	structureLoaderOpts := []packagestructure.LoaderOption{packagestructure.WithManifestValidators(&packagestructure.ObjectPhaseAnnotationValidator{})}
+	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
+
+	if _, err := structureLoader.LoadFromImage(ctx, image); err != nil {
+		return err
 	}
 
 	if b.OutputPath != "" {

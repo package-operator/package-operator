@@ -30,7 +30,7 @@ func TestLoader(t *testing.T) {
 	l := NewLoader(testScheme)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	pc, err := l.Load(ctx, "testdata", WithByteTransformers(
+	pc, err := l.LoadFromPath(ctx, "testdata", WithByteTransformers(
 		&packagebytes.TemplateTransformer{
 			TemplateContext: packagebytes.TemplateContext{
 				Package: packagebytes.PackageTemplateContext{

@@ -1,4 +1,4 @@
-package filemap
+package packagebytes
 
 import (
 	"bytes"
@@ -11,8 +11,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func ToImage(fileMap FileMap) (v1.Image, error) {
-	tarData, err := ToTar(fileMap)
+type Saver struct{}
+
+func NewSaver() *Saver {
+	return &Saver{}
+}
+
+func (s Saver) ToImage(fileMap FileMap) (v1.Image, error) {
+	tarData, err := toTar(fileMap)
 	if err != nil {
 		return nil, err
 	}
@@ -30,31 +36,4 @@ func ToImage(fileMap FileMap) (v1.Image, error) {
 	}
 
 	return image, nil
-}
-
-func FromImage(image v1.Image) (FileMap, error) {
-	layers, err := image.Layers()
-	if err != nil {
-		return nil, fmt.Errorf("access layers: %w", err)
-	}
-
-	fileMap := FileMap{}
-
-	for _, layer := range layers {
-		reader, err := layer.Uncompressed()
-		if err != nil {
-			return nil, fmt.Errorf("access layer: %w", err)
-		}
-
-		layerFileMap, err := FromTaredReader(reader)
-		if err != nil {
-			return nil, err
-		}
-
-		for k, v := range layerFileMap {
-			fileMap[k] = v
-		}
-	}
-
-	return fileMap, nil
 }

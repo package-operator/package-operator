@@ -30,7 +30,7 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	loader := packagestructure.NewLoader(scheme)
 
 	ctx := logr.NewContext(context.Background(), log.WithName("bootstrap"))
-	packgeContent, err := loader.Load(ctx, "/package")
+	packgeContent, err := loader.LoadFromPath(ctx, "/package")
 	if err != nil {
 		return err
 	}

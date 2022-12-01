@@ -21,8 +21,7 @@ import (
 )
 
 type packageContentLoader interface {
-	Load(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (
-		*packagestructure.PackageContent, error)
+	LoadFromPath(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (*packagestructure.PackageContent, error)
 }
 
 type deploymentReconciler interface {
@@ -131,7 +130,7 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 }
 
 func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, folderPath string) error {
-	packageContent, err := l.packageContentLoader.Load(
+	packageContent, err := l.packageContentLoader.LoadFromPath(
 		ctx, folderPath,
 		packagestructure.WithByteTransformers(
 			&packagebytes.TemplateTransformer{
