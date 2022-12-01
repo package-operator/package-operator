@@ -49,13 +49,31 @@ const (
 	cliCmdName = "kubectl-package"
 )
 
-type archTarget struct {
-	OS, Arch string
-}
+var (
+	commands = map[string]command{
+		"package-operator-manager": {nil},
+		"remote-phase-manager":     {nil},
+		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
+	}
 
-type command struct {
-	ReleaseArchitectures []archTarget
-}
+	packageImages = map[string]PackageImage{
+		"package-operator-package": {},
+	}
+	commandImages = map[string]CommandImage{
+		"package-operator-manager": {},
+		"package-operator-webhook": {},
+		"remote-phase-manager":     {},
+		"kubectl-package":          {},
+	}
+)
+
+type PackageImage struct{}
+
+type CommandImage struct{}
+
+type archTarget struct{ OS, Arch string }
+
+type command struct{ ReleaseArchitectures []archTarget }
 
 type Paths struct {
 	// Dependency directory.
@@ -108,6 +126,17 @@ func (p Paths) ImageCache() string               { return filepath.Join(p.cache,
 func (p Paths) DevCache() string                 { return filepath.Join(p.cache, "dev-env") }
 func (p Paths) DigestFile(imgName string) string { return filepath.Join(p.cache, imgName+".digest") }
 func (p Paths) APIReference() string             { return filepath.Join("docs", "api-reference.md") }
+func (p Paths) binaryDst(name string, arch archTarget) string {
+	if arch == nativeArch {
+		return filepath.Join("bin", name)
+	}
+
+	if len(arch.OS) == 0 || len(arch.Arch) == 0 {
+		panic("invalid os or arch")
+	}
+
+	return filepath.Join("bin", arch.OS+"_"+arch.Arch, name)
+}
 
 func newPathSelector() Paths {
 	p := Paths{}
@@ -121,17 +150,9 @@ func newPathSelector() Paths {
 }
 
 var (
-	commands = map[string]command{
-		"package-operator-manager": {nil},
-		"remote-phase-manager":     {nil},
-		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
-	}
-
 	nativeArch     = archTarget{runtime.GOOS, runtime.GOARCH}
 	linuxAMD64Arch = archTarget{"linux", "amd64"}
-)
 
-var (
 	devEnvironment *dev.Environment
 
 	paths = newPathSelector()
@@ -152,18 +173,6 @@ func init() {
 	logger = stdr.New(nil)
 
 	Builder.init()
-}
-
-func (p Paths) binaryDst(name string, arch archTarget) string {
-	if arch == nativeArch {
-		return filepath.Join("bin", name)
-	}
-
-	if len(arch.OS) == 0 || len(arch.Arch) == 0 {
-		panic("invalid os or arch")
-	}
-
-	return filepath.Join("bin", arch.OS+"_"+arch.Arch, name)
 }
 
 // dependency for all targets requiring a container runtime
@@ -520,12 +529,15 @@ func (Build) Image(image string) { mg.Deps(mg.F(Builder.Image, image)) }
 
 // Builds all PKO container images.
 func (Build) Images() {
-	mg.Deps(
-		mg.F(Builder.Image, "package-operator-manager"),
-		mg.F(Builder.Image, "package-operator-webhook"),
-		mg.F(Builder.Image, "package-operator-package"),
-		mg.F(Builder.Image, "remote-phase-manager"),
-	)
+	targets := []interface{}{}
+	for name := range packageImages {
+		targets = append(targets, mg.F(Builder.Image, name))
+	}
+
+	for name := range commandImages {
+		targets = append(targets, mg.F(Builder.Image, name))
+	}
+	mg.Deps(targets...)
 }
 
 // Builds and pushes only the given container image to the default registry.
@@ -533,12 +545,15 @@ func (Build) PushImage(image string) { mg.Deps(mg.F(Builder.Push, image)) }
 
 // Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
-	mg.Deps(
-		mg.F(Builder.Push, "package-operator-manager"),
-		mg.F(Builder.Push, "package-operator-webhook"),
-		mg.F(Builder.Push, "package-operator-package"),
-		mg.F(Builder.Push, "remote-phase-manager"),
-	)
+	targets := []interface{}{}
+	for name := range packageImages {
+		targets = append(targets, mg.F(Builder.Image, name))
+	}
+
+	for name := range commandImages {
+		targets = append(targets, mg.F(Builder.Image, name))
+	}
+	mg.Deps(targets...)
 	mg.SerialDeps(Generate.SelfBootstrapJob)
 }
 
