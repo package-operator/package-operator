@@ -39,27 +39,29 @@ const (
 	module          = "package-operator.run/package-operator"
 	defaultImageOrg = "quay.io/package-operator"
 	clusterName     = "package-operator-dev"
+	cliCmdName      = "kubectl-package"
+	pkoPackageName  = "package-operator-package"
 
 	controllerGenVersion = "0.6.2"
 	goimportsVersion     = "0.1.5"
 	golangciLintVersion  = "1.50.1"
 	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
-
-	cliCmdName = "kubectl-package"
 )
 
 var (
-	commands = map[string]command{
+	commands = map[string]*command{
 		"package-operator-manager": {nil},
 		"remote-phase-manager":     {nil},
 		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
 	}
 
-	packageImages = map[string]PackageImage{
-		"package-operator-package": {},
+	packageImages = map[string]*PackageImage{
+		pkoPackageName: {
+			SourcePath: filepath.Join("config", "packages", "package-operator"),
+		},
 	}
-	commandImages = map[string]CommandImage{
+	commandImages = map[string]*CommandImage{
 		"package-operator-manager": {},
 		"package-operator-webhook": {},
 		"remote-phase-manager":     {},
@@ -67,7 +69,10 @@ var (
 	}
 )
 
-type PackageImage struct{}
+type PackageImage struct {
+	ExtraDeps  []interface{}
+	SourcePath string
+}
 
 type CommandImage struct{}
 
@@ -173,6 +178,8 @@ func init() {
 	logger = stdr.New(nil)
 
 	Builder.init()
+
+	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
 }
 
 // dependency for all targets requiring a container runtime
@@ -644,11 +651,18 @@ func (b *builder) Cmd(cmd, goos, goarch string) {
 	}
 }
 
-func (b *builder) Image(name string) {
-	if strings.HasSuffix(name, "-package") {
-		b.buildPackageImage(name)
-	} else {
+func (b *builder) Image(ctx context.Context, name string) {
+	_, isPkg := packageImages[name]
+	_, isCmd := commandImages[name]
+	switch {
+	case isPkg && isCmd:
+		panic("ambiguous image name")
+	case isPkg:
+		b.buildPackageImage(ctx, name)
+	case isCmd:
 		b.buildCmdImage(name)
+	default:
+		panic("unknown image")
 	}
 }
 
@@ -696,16 +710,25 @@ func (b *builder) buildCmdImage(cmd string) {
 	}
 }
 
-func (b *builder) buildPackageImage(packageImageName string) {
-	mg.SerialDeps(b.init, determineContainerRuntime)
-	if packageImageName == "package-operator-package" {
-		// inject digests into package
-		mg.SerialDeps(Generate.PackageOperatorPackage)
+func (b *builder) buildPackageImage(ctx context.Context, name string) {
+	opts, ok := packageImages[name]
+	if !ok {
+		panic(fmt.Sprintf("unknown package: %s", name))
 	}
 
-	imageCacheDir := b.cleanImageCacheDir(packageImageName)
-	imageTag := b.imageURL(packageImageName)
-	packageName := strings.TrimSuffix(packageImageName, "-package")
+	predeps := []interface{}{b.init, determineContainerRuntime}
+	for _, d := range opts.ExtraDeps {
+		predeps = append(predeps, d)
+	}
+	mg.SerialDeps(predeps...)
+
+	imageCacheDir := b.cleanImageCacheDir(name)
+	imageTag := b.imageURL(name)
+
+	// TODO
+	panic("reimplement")
+
+	packageName := "chicken"
 
 	// Copy files for build environment
 	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", "package.Containerfile")))
@@ -805,7 +828,7 @@ func (d Dev) Load() {
 	images := []string{
 		"package-operator-manager", "package-operator-webhook",
 		"remote-phase-manager", "test-stub", "test-stub-package",
-		"package-operator-package",
+		pkoPackageName,
 	}
 	deps := make([]interface{}, len(images))
 	for i := range images {
@@ -1146,12 +1169,12 @@ func (Generate) SelfBootstrapJob() {
 		packageOperatorPackageImage string
 	)
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
-		mg.Deps(mg.F(Builder.Push, "package-operator-manager"), mg.F(Builder.Push, "package-operator-package"))
+		mg.Deps(mg.F(Builder.Push, "package-operator-manager"), mg.F(Builder.Push, pkoPackageName))
 		packageOperatorManagerImage = Builder.imageURLWithDigest("package-operator-manager")
-		packageOperatorPackageImage = Builder.imageURLWithDigest("package-operator-package")
+		packageOperatorPackageImage = Builder.imageURLWithDigest(pkoPackageName)
 	} else {
 		packageOperatorManagerImage = Builder.imageURL("package-operator-manager")
-		packageOperatorPackageImage = Builder.imageURL("package-operator-package")
+		packageOperatorPackageImage = Builder.imageURL(pkoPackageName)
 	}
 
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
