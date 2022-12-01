@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 

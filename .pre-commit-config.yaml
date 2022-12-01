@@ -27,15 +27,9 @@ repos:
 
 - repo: local
   hooks:
-  - id: goimports
-    name: goimports
-    entry: hack/ensure-and-run-goimports.sh
-    language: system
-    types: [go]
-
-  - id: go-mod-tidy
-    name: go-mod-tidy
-    entry: go mod tidy
+  - id: lint
+    name: lint
+    entry: ./mage test:lint
     language: system
     exclude: ".*"
     always_run: true

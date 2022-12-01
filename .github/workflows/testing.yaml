@@ -28,6 +28,7 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: |
+          ~/.cache/package-operator
           ~/.cache/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -63,6 +64,7 @@ jobs:
     - uses: actions/cache@v3
       with:
         path: |
+          ~/.cache/package-operator
           ~/.cache/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
