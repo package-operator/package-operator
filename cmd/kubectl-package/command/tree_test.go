@@ -27,9 +27,9 @@ func TestTree(t *testing.T) {
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
-Package <namespace>/<name>
+Package namespace/name
 └── Phase deploy
-    └── apps/v1, Kind=Deployment /test-stub-<name>
+    └── apps/v1, Kind=Deployment /test-stub-name
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
@@ -48,11 +48,11 @@ Package <namespace>/<name>
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
-ClusterPackage /<name>
+ClusterPackage /name
 └── Phase namespace
-│   ├── /v1, Kind=Namespace /<name>
+│   ├── /v1, Kind=Namespace /name
 └── Phase deploy
-    └── apps/v1, Kind=Deployment <name>/test-stub-<name>
+    └── apps/v1, Kind=Deployment name/test-stub-name
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})

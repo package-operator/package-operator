@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -91,6 +92,47 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 	ctx := context.Background()
 	err := opav.Validate(ctx, packageContent)
 	require.EqualError(t, err, "Package validation errors:\n- Missing package-operator.run/phase Annotation in test.yaml#0\n")
+}
+
+func TestObjectGVKValidator(t *testing.T) {
+	ogvkv := &ObjectGVKValidator{}
+
+	okObj := unstructured.Unstructured{}
+	okObj.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: "v1",
+		Kind:    "Secret",
+	})
+	packageContent := &PackageContent{
+		Manifests: ManifestMap{
+			"test.yaml": []unstructured.Unstructured{
+				{}, okObj,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	err := ogvkv.Validate(ctx, packageContent)
+	require.EqualError(t, err, "Package validation errors:\n- GroupVersionKind not set in test.yaml#0\n")
+}
+
+func TestObjectLabelsValidator(t *testing.T) {
+	olv := &ObjectLabelsValidator{}
+
+	failObj := unstructured.Unstructured{}
+	failObj.SetLabels(map[string]string{
+		"/123": "test",
+	})
+	packageContent := &PackageContent{
+		Manifests: ManifestMap{
+			"test.yaml": []unstructured.Unstructured{
+				{}, failObj,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	err := olv.Validate(ctx, packageContent)
+	require.EqualError(t, err, "Package validation errors:\n- Labels invalid metadata.labels: Invalid value: \"/123\": prefix part must be non-empty in test.yaml#1\n")
 }
 
 func TestPackageScopeValidator(t *testing.T) {
