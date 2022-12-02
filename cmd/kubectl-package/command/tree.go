@@ -60,8 +60,8 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 	templateContext := packagebytes.TemplateContext{
 		Package: packagebytes.PackageTemplateContext{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "<name>",
-				Namespace: "<namespace>",
+				Name:      "name",
+				Namespace: "namespace",
 			},
 		},
 	}
