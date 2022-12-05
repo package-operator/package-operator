@@ -27,24 +27,22 @@ const (
 type Build struct {
 	SourcePath string
 	OutputPath string
-	Tags       []name.Reference
+	Tags       []string
 	Push       bool
-	tags       []string
 }
 
 func (b *Build) Complete(args []string) (err error) {
 	switch {
 	case len(args) != 1:
 		return fmt.Errorf("%w: got %v positional args. Need one argument containing the source path", ErrInvalidArgs, len(args))
-	case (b.OutputPath != "" || b.Push) && len(b.tags) == 0:
+	case (b.OutputPath != "" || b.Push) && len(b.Tags) == 0:
 		return fmt.Errorf("%w: output or push is requested but no tags are set", ErrInvalidArgs)
 	case args[0] == "":
 		return fmt.Errorf("%w: source path empty", ErrInvalidArgs)
 	}
 
-	b.Tags = make([]name.Reference, len(b.tags))
-	for i, stringReference := range b.tags {
-		b.Tags[i], err = name.ParseReference(stringReference)
+	for _, stringReference := range b.Tags {
+		_, err = name.ParseReference(stringReference)
 		if err != nil {
 			return fmt.Errorf("invalid tag specified as parameter %s: %w", stringReference, err)
 		}
@@ -89,7 +87,7 @@ func (b Build) Run(ctx context.Context) error {
 	if b.OutputPath != "" {
 		verboseLog.Info("writing tagged image to disk", "path", b.OutputPath)
 
-		if err := export.ComressedTarToDisk(b.OutputPath, b.Tags, image); err != nil {
+		if err := export.TarToDisk(b.OutputPath, b.Tags, image); err != nil {
 			return err
 		}
 	}
@@ -110,7 +108,7 @@ func (b *Build) CobraCommand() *cobra.Command {
 		Long:  buildLong,
 	}
 	f := cmd.Flags()
-	f.StringSliceVarP(&b.tags, "tag", "t", []string{}, buildTagUse)
+	f.StringSliceVarP(&b.Tags, "tag", "t", []string{}, buildTagUse)
 	f.BoolVar(&b.Push, "push", false, buildPushUse)
 	f.StringVarP(&b.OutputPath, "output", "o", "", buildOutputUse)
 

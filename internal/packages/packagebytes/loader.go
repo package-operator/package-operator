@@ -1,8 +1,11 @@
 package packagebytes
 
 import (
+	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -11,6 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 )
 
 // Maps filenames to file contents.
@@ -67,28 +71,38 @@ func (l *Loader) FromFS(ctx context.Context, src fs.FS) (FileMap, error) {
 	return bundle, nil
 }
 
-func (l *Loader) FromImage(ctx context.Context, image v1.Image) (FileMap, error) {
-	layers, err := image.Layers()
-	if err != nil {
-		return nil, fmt.Errorf("access layers: %w", err)
-	}
-
+func (l *Loader) FromImage(ctx context.Context, image v1.Image) (m FileMap, err error) {
 	fileMap := FileMap{}
+	reader := mutate.Extract(image)
+	defer func() {
+		if cErr := reader.Close(); err == nil && cErr != nil {
+			err = cErr
+		}
+	}()
+	tarReader := tar.NewReader(reader)
 
-	for _, layer := range layers {
-		reader, err := layer.Uncompressed()
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil && errors.Is(err, io.EOF) {
+			break
+		}
+
+		tarPath := hdr.Name
+		path, err := filepath.Rel(tarPrefixPath, tarPath)
 		if err != nil {
-			return nil, fmt.Errorf("access layer: %w", err)
+			return nil, fmt.Errorf("package image contains files not under the dir %s: %w", tarPrefixPath, err)
 		}
 
-		layerFileMap, err := fromTaredReader(ctx, reader)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read file header from layer: %w", err)
 		}
 
-		for k, v := range layerFileMap {
-			fileMap[k] = v
+		data, err := io.ReadAll(tarReader)
+		if err != nil {
+			return nil, fmt.Errorf("read file header from layer: %w", err)
 		}
+
+		fileMap[path] = data
 	}
 
 	return fileMap, nil
