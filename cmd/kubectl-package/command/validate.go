@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
@@ -56,7 +57,17 @@ func (v *Validate) Complete(args []string) (err error) {
 func (v Validate) Run(ctx context.Context) (err error) {
 	bytesLoader := packagebytes.NewLoader()
 
-	var filemap packagebytes.FileMap
+	structureLoaderOpts := []packagestructure.LoaderOption{
+		packagestructure.WithManifestValidators(
+			packagestructure.DefaultValidators,
+		),
+	}
+	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
+
+	var (
+		filemap   packagebytes.FileMap
+		extraOpts []packagestructure.LoaderOption
+	)
 	if v.Pull {
 		filemap, err = bytesLoader.FromPulledImage(ctx, v.TargetReference.String())
 		if err != nil {
@@ -67,16 +78,19 @@ func (v Validate) Run(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+
+		ttv := packagebytes.NewTemplateTestValidator(
+			filepath.Join(v.Target, ".test-fixtures"),
+			func(ctx context.Context, fileMap packagebytes.FileMap) error {
+				_, err := structureLoader.LoadFromFileMap(ctx, fileMap)
+				return err
+			},
+			packagestructure.NewPackageManifestLoader(validateScheme),
+		)
+		extraOpts = append(extraOpts, packagestructure.WithByteValidators(ttv))
 	}
 
-	structureLoaderOpts := []packagestructure.LoaderOption{
-		packagestructure.WithManifestValidators(
-			packagestructure.DefaultValidators,
-		),
-	}
-	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
-
-	if _, err := structureLoader.LoadFromFileMap(ctx, filemap); err != nil {
+	if _, err := structureLoader.LoadFromFileMap(ctx, filemap, extraOpts...); err != nil {
 		return err
 	}
 

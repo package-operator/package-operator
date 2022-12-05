@@ -1,15 +1,7 @@
 package packagebytes
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"strings"
-	"text/template"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"package-operator.run/package-operator/internal/packages"
 )
 
 type Transformer interface {
@@ -31,52 +23,4 @@ func (l TransformerList) Transform(ctx context.Context, fileMap FileMap) error {
 		}
 	}
 	return nil
-}
-
-// Template Context provided when executing file templates.
-type TemplateContext struct {
-	Package PackageTemplateContext
-}
-
-type PackageTemplateContext struct {
-	metav1.ObjectMeta
-}
-
-// Runs a go-template transformer on all .yml or .yaml files.
-type TemplateTransformer struct {
-	TemplateContext TemplateContext
-}
-
-func (t *TemplateTransformer) Transform(ctx context.Context, fileMap FileMap) error {
-	for path, content := range fileMap {
-		var err error
-		content, err = t.transform(ctx, path, content)
-		if err != nil {
-			return err
-		}
-		// save back to file map without the template suffix
-		fileMap[strings.TrimSuffix(path, packages.TemplateFileSuffix)] = content
-	}
-
-	return nil
-}
-
-func (t *TemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
-	if !packages.IsTemplateFile(path) {
-		// Not a template file, skip.
-		return content, nil
-	}
-
-	template, err := template.New("").Parse(string(content))
-	if err != nil {
-		return nil, fmt.Errorf(
-			"parsing template from %s: %w", path, err)
-	}
-
-	var doc bytes.Buffer
-	if err := template.Execute(&doc, t.TemplateContext); err != nil {
-		return nil, fmt.Errorf(
-			"executing template from %s: %w", path, err)
-	}
-	return doc.Bytes(), nil
 }

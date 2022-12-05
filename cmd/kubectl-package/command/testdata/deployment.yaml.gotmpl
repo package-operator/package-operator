@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "test-stub-{{.Package.Name}}"
-{{if eq .Package.Namespace ""}}
+{{- if eq .Package.Namespace ""}}
   namespace: "{{.Package.Name}}"
-{{end}}
+{{- end}}
   labels:
     app: test-stub
     instance: "{{.Package.Name}}"

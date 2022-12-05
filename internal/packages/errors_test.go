@@ -1,9 +1,11 @@
-package packagestructure
+package packages
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 )
 
@@ -19,7 +21,10 @@ func TestNewInvalidAggregate(t *testing.T) {
 		},
 	}
 
-	aggregatedErr := NewInvalidAggregate(err1, err2, nil)
+	err := NewInvalidAggregate(err1, err2, nil)
+
+	var aggregatedErr *InvalidError
+	require.True(t, errors.As(err, &aggregatedErr))
 	assert.Equal(t, []Violation{
 		{Reason: "broken"},
 		{Reason: "on fire"},
@@ -30,13 +35,13 @@ func TestInvalidError(t *testing.T) {
 	err1 := &InvalidError{
 		Violations: []Violation{
 			{Reason: "broken"},
-			{Reason: "on fire"},
+			{Reason: "on fire", Details: "hot stuff!"},
 		},
 	}
 	assert.Equal(t, `Package validation errors:
 - broken
-- on fire
-`, err1.Error())
+- on fire:
+  hot stuff!`, err1.Error())
 }
 
 func TestViolation(t *testing.T) {
@@ -50,7 +55,7 @@ func TestViolation(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			"broken on fire in hot_stuff/on_fire.yaml", v.String())
+			"broken in hot_stuff/on_fire.yaml:\non fire", v.String())
 	})
 
 	t.Run("without location", func(t *testing.T) {
@@ -60,7 +65,7 @@ func TestViolation(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			"broken on fire", v.String())
+			"broken:\non fire", v.String())
 	})
 }
 

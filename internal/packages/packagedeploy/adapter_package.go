@@ -6,12 +6,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packagebytes"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 type genericPackage interface {
 	ClientObject() client.Object
-	TemplateContext() packagebytes.TemplateContext
+	TemplateContext() manifestsv1alpha1.TemplateContext
 	GetConditions() *[]metav1.Condition
 }
 
@@ -56,10 +56,10 @@ func (a *GenericPackage) ClientObject() client.Object {
 	return &a.Package
 }
 
-func (a *GenericPackage) TemplateContext() packagebytes.TemplateContext {
-	return packagebytes.TemplateContext{
-		Package: packagebytes.PackageTemplateContext{
-			ObjectMeta: a.ObjectMeta,
+func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
+	return manifestsv1alpha1.TemplateContext{
+		Package: manifestsv1alpha1.TemplateContextPackage{
+			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
 	}
 }
@@ -76,14 +76,23 @@ func (a *GenericClusterPackage) ClientObject() client.Object {
 	return &a.ClusterPackage
 }
 
-func (a *GenericClusterPackage) TemplateContext() packagebytes.TemplateContext {
-	return packagebytes.TemplateContext{
-		Package: packagebytes.PackageTemplateContext{
-			ObjectMeta: a.ObjectMeta,
+func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
+	return manifestsv1alpha1.TemplateContext{
+		Package: manifestsv1alpha1.TemplateContextPackage{
+			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
 	}
 }
 
 func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
+}
+
+func templateContextObjectMetaFromObjectMeta(om metav1.ObjectMeta) manifestsv1alpha1.TemplateContextObjectMeta {
+	return manifestsv1alpha1.TemplateContextObjectMeta{
+		Name:        om.Name,
+		Namespace:   om.Namespace,
+		Labels:      om.Labels,
+		Annotations: om.Annotations,
+	}
 }

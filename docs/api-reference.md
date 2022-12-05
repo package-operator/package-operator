@@ -944,6 +944,16 @@ spec:
     name: lorem
   scopes:
   - PackageManifestScope
+test:
+  template:
+  - context:
+      package:
+        metadata:
+          annotations: map[string]string
+          labels: map[string]string
+          name: sit
+          namespace: amet
+    name: dolor
 
 ```
 
@@ -952,6 +962,7 @@ spec:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#packagemanifestspec">PackageManifestSpec</a> | PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes. |
+| `test` <br><a href="#packagemanifesttest">PackageManifestTest</a> | PackageManifestTest configures test cases. |
 
 
 
@@ -985,3 +996,72 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 
 Used in:
 * [PackageManifest](#packagemanifest)
+
+
+### PackageManifestTest
+
+PackageManifestTest configures test cases.
+
+| Field | Description |
+| ----- | ----------- |
+| `template` <br><a href="#packagemanifesttestcasetemplate">[]PackageManifestTestCaseTemplate</a> | Template testing configuration. |
+
+
+Used in:
+* [PackageManifest](#packagemanifest)
+
+
+### PackageManifestTestCaseTemplate
+
+PackageManifestTestCaseTemplate template testing configuration.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name describing the test case. |
+| `context` <br><a href="#templatecontext">TemplateContext</a> | Template data to use in the test case. |
+
+
+Used in:
+* [PackageManifestTest](#packagemanifesttest)
+
+
+### TemplateContext
+
+TemplateContext is available within the package templating process.
+
+| Field | Description |
+| ----- | ----------- |
+| `package` <b>required</b><br><a href="#templatecontextpackage">TemplateContextPackage</a> | TemplateContextPackage represents the (Cluster)Package object requesting this package content. |
+
+
+Used in:
+* [PackageManifestTestCaseTemplate](#packagemanifesttestcasetemplate)
+
+
+### TemplateContextObjectMeta
+
+TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string |  |
+| `namespace` <br>string |  |
+| `labels` <br><a href="#map[string]string">map[string]string</a> |  |
+| `annotations` <br><a href="#map[string]string">map[string]string</a> |  |
+
+
+Used in:
+* [TemplateContextPackage](#templatecontextpackage)
+
+
+### TemplateContextPackage
+
+TemplateContextPackage represents the (Cluster)Package object requesting this package content.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <b>required</b><br><a href="#templatecontextobjectmeta">TemplateContextObjectMeta</a> | TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates. |
+
+
+Used in:
+* [TemplateContext](#templatecontext)

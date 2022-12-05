@@ -15,6 +15,7 @@ repos:
   - id: check-symlinks
   - id: detect-private-key
   - id: end-of-file-fixer
+    exclude: ".test-fixtures\/.*"
   - id: pretty-format-json
     args:
     - --autofix

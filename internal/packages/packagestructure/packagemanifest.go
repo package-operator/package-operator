@@ -48,8 +48,8 @@ func (l *PackageManifestLoader) FromFileMap(ctx context.Context, fm packagebytes
 	}
 
 	if manifestBytes == nil {
-		return nil, NewInvalidError(Violation{
-			Reason:  ViolationReasonPackageManifestNotFound,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:  packages.ViolationReasonPackageManifestNotFound,
 			Details: "searched at " + strings.Join(packages.PackageManifestFileNames, ","),
 		})
 	}
@@ -67,18 +67,18 @@ func (l *PackageManifestLoader) manifestFromBytes(
 	// Unmarshal "pre-load" to peek desired GVK.
 	var manifestType metav1.TypeMeta
 	if err := yaml.Unmarshal(manifestBytes, &manifestType); err != nil {
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonInvalidYAML,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonInvalidYAML,
 			Details:  err.Error(),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 	gvk := manifestType.GroupVersionKind()
 	if gvk.GroupKind() != packages.PackageManifestGroupKind {
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonPackageManifestUnknownGVK,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonPackageManifestUnknownGVK,
 			Details:  fmt.Sprintf("GroupKind must be %s, is: %s", packages.PackageManifestGroupKind, gvk.GroupKind()),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 
@@ -92,10 +92,10 @@ func (l *PackageManifestLoader) manifestFromBytes(
 			versions[i] = groupVersions[i].Version
 		}
 
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonPackageManifestUnknownGVK,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonPackageManifestUnknownGVK,
 			Details:  fmt.Sprintf("unknown version %s, supported versions: %s", gvk.Version, strings.Join(versions, ", ")),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 
@@ -105,10 +105,10 @@ func (l *PackageManifestLoader) manifestFromBytes(
 		return nil, err
 	}
 	if err := yaml.Unmarshal(manifestBytes, anyVersionPackageManifest); err != nil {
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonInvalidYAML,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonInvalidYAML,
 			Details:  err.Error(),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 
@@ -119,18 +119,18 @@ func (l *PackageManifestLoader) manifestFromBytes(
 	// we have to convert it to a common/hub version to use throughout the code base:
 	manifest := &manifestsv1alpha1.PackageManifest{}
 	if err := l.scheme.Convert(anyVersionPackageManifest, manifest, nil); err != nil {
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonPackageManifestConversion,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonPackageManifestConversion,
 			Details:  err.Error(),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 
 	if err := manifest.Validate(); err != nil {
-		return nil, NewInvalidError(Violation{
-			Reason:   ViolationReasonPackageManifestInvalid,
+		return nil, packages.NewInvalidError(packages.Violation{
+			Reason:   packages.ViolationReasonPackageManifestInvalid,
 			Details:  err.Error(),
-			Location: &ViolationLocation{Path: fileName},
+			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}
 	return manifest, nil

@@ -21,3 +21,20 @@ spec:
       kind:
         group: apps
         kind: Deployment
+test:
+  template:
+  - name: namespace-scope
+    context:
+      package:
+        metadata:
+          name: test
+          namespace: test-ns
+          annotations:
+            package-operator.run/test-stub-image: test123
+  - name: cluster-scope
+    context:
+      package:
+        metadata:
+          name: test
+          annotations:
+            package-operator.run/test-stub-image: test123

@@ -22,3 +22,11 @@ func MergeKeysFrom(base, additional map[string]string) map[string]string {
 	}
 	return base
 }
+
+func CopyMap[K comparable, V interface{}](toCopy map[K]V) map[K]V {
+	out := map[K]V{}
+	for k, v := range toCopy {
+		out[k] = v
+	}
+	return out
+}

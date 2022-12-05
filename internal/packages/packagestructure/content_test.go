@@ -32,6 +32,7 @@ spec:
   availabilityProbes: null
   phases: null
   scopes: null
+test: {}
 `
 
 	expectedTestYaml := `Object: null
