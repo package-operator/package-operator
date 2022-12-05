@@ -1,4 +1,4 @@
-package command
+package buildcmd
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 
+	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
 	"package-operator.run/package-operator/cmd/kubectl-package/export"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	buildLong      = "builds and optionally pushes an OCI image in the Package Operator package format from the specified build context directory."
 	buildTagUse    = "Tags to assign to the created image. May be specified multiple times. Defaults to none."
 	buildPushUse   = "Push the created image tags. Defaults to false"
-	buildOutputUse = "Filesystem path to dump the tagged to. Containing directories must exist. Defaults to none."
+	buildOutputUse = "Filesystem path to dump the tagged image to. Will be packed as a tar. Containing directories must exist. Defaults to none."
 )
 
 type Build struct {
@@ -34,11 +34,11 @@ type Build struct {
 func (b *Build) Complete(args []string) (err error) {
 	switch {
 	case len(args) != 1:
-		return fmt.Errorf("%w: got %v positional args. Need one argument containing the source path", ErrInvalidArgs, len(args))
+		return fmt.Errorf("%w: got %v positional args. Need one argument containing the source path", cmdutil.ErrInvalidArgs, len(args))
 	case (b.OutputPath != "" || b.Push) && len(b.Tags) == 0:
-		return fmt.Errorf("%w: output or push is requested but no tags are set", ErrInvalidArgs)
+		return fmt.Errorf("%w: output or push is requested but no tags are set", cmdutil.ErrInvalidArgs)
 	case args[0] == "":
-		return fmt.Errorf("%w: source path empty", ErrInvalidArgs)
+		return fmt.Errorf("%w: source path empty", cmdutil.ErrInvalidArgs)
 	}
 
 	for _, stringReference := range b.Tags {
@@ -73,12 +73,7 @@ func (b Build) Run(ctx context.Context) error {
 
 	verboseLog.Info("validating package image")
 
-	structureLoaderOpts := []packagestructure.LoaderOption{
-		packagestructure.WithManifestValidators(
-			packagestructure.DefaultValidators,
-		),
-	}
-	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
+	structureLoader := cmdutil.NewStructureLoader()
 
 	if _, err := structureLoader.LoadFromImage(ctx, image); err != nil {
 		return err

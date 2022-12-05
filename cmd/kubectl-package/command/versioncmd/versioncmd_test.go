@@ -1,7 +1,8 @@
-package command_test
+package versioncmd_test
 
 import (
 	"bytes"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,19 +10,15 @@ import (
 	"package-operator.run/package-operator/cmd/kubectl-package/command"
 )
 
-func TestValidateFolder(t *testing.T) {
-	t.Parallel()
-
+func TestCobraVersion(t *testing.T) {
 	cmd := command.CobraRoot()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"validate", "testdata"})
+	cmd.SetArgs([]string{"version", "--embedded"})
 
-	err := cmd.Execute()
-
-	require.Nil(t, err)
-	require.Len(t, stdout.String(), 0)
+	require.Nil(t, cmd.Execute())
 	require.Len(t, stderr.String(), 0)
+	require.Contains(t, stdout.String(), runtime.Version())
 }

@@ -1,0 +1,8 @@
+{{if eq .Package.Namespace "" -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{{.Package.Name}}"
+  annotations:
+    package-operator.run/phase: namespace
+{{- end}}
