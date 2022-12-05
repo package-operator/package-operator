@@ -95,7 +95,7 @@ func (b Build) Run(ctx context.Context) error {
 	}
 
 	if b.Push {
-		if err := export.Push(ctx, b.Tags, image, nil); err != nil {
+		if err := export.Push(ctx, b.Tags, image); err != nil {
 			return err
 		}
 	}
