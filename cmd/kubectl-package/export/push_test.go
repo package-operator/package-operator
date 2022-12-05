@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/stretchr/testify/assert"
@@ -52,16 +51,15 @@ func TestPush(t *testing.T) {
 
 	ctx := context.Background()
 
-	ref := name.MustParseReference("chickens:oldest")
-
 	reg := registry.New(registry.Logger(log.Default()))
 	tripper := &tripper{reg}
 
 	transportOpt := crane.WithTransport(tripper)
+	ref := "chickens:oldest"
 
-	err := export.Push(ctx, []name.Reference{ref}, empty.Image, transportOpt)
+	err := export.Push(ctx, []string{ref}, empty.Image, transportOpt)
 	assert.Nil(t, err)
 
-	_, err = crane.Pull(ref.String(), transportOpt)
+	_, err = crane.Pull(ref, transportOpt)
 	assert.Nil(t, err)
 }

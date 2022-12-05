@@ -31,5 +31,4 @@ func TestFromToImage(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.True(t, reflect.DeepEqual(reapedFileMap, seedingFileMap))
-
 }
