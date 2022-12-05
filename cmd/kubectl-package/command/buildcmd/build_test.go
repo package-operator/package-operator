@@ -1,4 +1,4 @@
-package command_test
+package buildcmd_test
 
 import (
 	"bytes"

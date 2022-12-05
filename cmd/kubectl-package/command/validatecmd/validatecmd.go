@@ -1,4 +1,4 @@
-package command
+package validatecmd
 
 import (
 	"context"
@@ -7,9 +7,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime"
 
-	pkoapis "package-operator.run/apis"
+	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
 	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
@@ -27,26 +26,16 @@ type Validate struct {
 	Pull            bool
 }
 
-var (
-	validateScheme = runtime.NewScheme()
-)
-
-func init() {
-	if err := pkoapis.AddToScheme(validateScheme); err != nil {
-		panic(err)
-	}
-}
-
 func (v *Validate) Complete(args []string) (err error) {
 	switch {
 	case len(args) != 1:
-		return fmt.Errorf("%w: got %v positional args. Need one argument containing the target", ErrInvalidArgs, len(args))
+		return fmt.Errorf("%w: got %v positional args. Need one argument containing the target", cmdutil.ErrInvalidArgs, len(args))
 	case args[0] == "":
-		return fmt.Errorf("%w: target path empty", ErrInvalidArgs)
+		return fmt.Errorf("%w: target path empty", cmdutil.ErrInvalidArgs)
 	case v.Pull:
 		v.TargetReference, err = name.ParseReference(args[0])
 		if err != nil {
-			return fmt.Errorf("%w: --pull set and target is not an image reference", ErrInvalidArgs)
+			return fmt.Errorf("%w: --pull set and target is not an image reference", cmdutil.ErrInvalidArgs)
 		}
 	}
 
@@ -56,13 +45,7 @@ func (v *Validate) Complete(args []string) (err error) {
 
 func (v Validate) Run(ctx context.Context) (err error) {
 	bytesLoader := packagebytes.NewLoader()
-
-	structureLoaderOpts := []packagestructure.LoaderOption{
-		packagestructure.WithManifestValidators(
-			packagestructure.DefaultValidators,
-		),
-	}
-	structureLoader := packagestructure.NewLoader(validateScheme, structureLoaderOpts...)
+	structureLoader := cmdutil.NewStructureLoader()
 
 	var (
 		filemap   packagebytes.FileMap
@@ -85,7 +68,7 @@ func (v Validate) Run(ctx context.Context) (err error) {
 				_, err := structureLoader.LoadFromFileMap(ctx, fileMap)
 				return err
 			},
-			packagestructure.NewPackageManifestLoader(validateScheme),
+			packagestructure.NewPackageManifestLoader(cmdutil.ValidateScheme),
 		)
 		extraOpts = append(extraOpts, packagestructure.WithByteValidators(ttv))
 	}
@@ -106,7 +89,7 @@ func (v *Validate) CobraCommand() *cobra.Command {
 		if err := v.Complete(args); err != nil {
 			return err
 		}
-		return v.Run(NewCobraContext(cmd))
+		return v.Run(cmdutil.NewCobraContext(cmd))
 	}
 
 	return cmd

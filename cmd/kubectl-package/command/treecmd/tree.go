@@ -1,4 +1,4 @@
-package command
+package treecmd
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
 	"package-operator.run/package-operator/internal/packages/packagestructure"
 )
@@ -43,9 +44,9 @@ type Tree struct {
 func (t *Tree) Complete(args []string) error {
 	switch {
 	case len(args) != 1:
-		return fmt.Errorf("%w: got %v positional args. Need one argument containing the source path", ErrInvalidArgs, len(args))
+		return fmt.Errorf("%w: got %v positional args. Need one argument containing the source path", cmdutil.ErrInvalidArgs, len(args))
 	case args[0] == "":
-		return fmt.Errorf("%w: source path empty", ErrInvalidArgs)
+		return fmt.Errorf("%w: source path empty", cmdutil.ErrInvalidArgs)
 	}
 
 	t.SourcePath = args[0]

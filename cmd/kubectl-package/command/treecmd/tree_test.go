@@ -1,4 +1,4 @@
-package command_test
+package treecmd_test
 
 import (
 	"bytes"
