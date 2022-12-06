@@ -63,17 +63,17 @@ var (
 	// Note that you can't reference the Generate mage target in ExtraDeps
 	// since that would result in a circulat dependency. They must be added via init() for now.
 	packageImages = map[string]*PackageImage{
-		pkoPackageName:      {SourcePath: filepath.Join("config", "packages", "package-operator")},
+		pkoPackageName:      {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
 		"test-stub-package": {SourcePath: filepath.Join("config", "packages", "test-stub")},
 	}
 
 	// commandImages defines what commands under ./cmd shall be packaged into images.
 	commandImages = map[string]*CommandImage{
-		"package-operator-manager": {},
-		"package-operator-webhook": {},
-		"remote-phase-manager":     {},
+		"package-operator-manager": {Push: true},
+		"package-operator-webhook": {Push: true},
+		"remote-phase-manager":     {Push: true},
+		"cli":                      {Push: true, BinaryName: "kubectl-package"},
 		"test-stub":                {},
-		"kubectl-package":          {},
 	}
 )
 
@@ -88,18 +88,22 @@ var (
 
 // Types for target configuration.
 type (
-	CommandImage struct{}
-	archTarget   struct{ OS, Arch string }
-	command      struct{ ReleaseArchitectures []archTarget }
-	Locations    struct {
+	archTarget struct{ OS, Arch string }
+	command    struct{ ReleaseArchitectures []archTarget }
+	Locations  struct {
 		lock             *sync.Mutex
 		devEnvironment   *dev.Environment
 		containerRuntime string
 		cache            string
 		imageOrg         string
 	}
+	CommandImage struct {
+		Push       bool
+		BinaryName string
+	}
 	PackageImage struct {
 		ExtraDeps  []interface{}
+		Push       bool
 		SourcePath string
 	}
 	fileInfosByName []fs.FileInfo
@@ -341,7 +345,7 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 	var packageOperatorManagerImage string
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
 		// To use digests the image needs to be pushed to a registry first.
-		mg.Deps(mg.F(Build.Push, "package-operator-manager"))
+		mg.Deps(mg.F(Build.PushImage, "package-operator-manager"))
 		packageOperatorManagerImage = locations.ImageURL("package-operator-manager", true)
 	} else {
 		packageOperatorManagerImage = locations.ImageURL("package-operator-manager", false)
@@ -593,16 +597,56 @@ func (Build) Images() {
 }
 
 // Builds and pushes only the given container image to the default registry.
-func (Build) PushImage(image string) { mg.Deps(mg.F(Build.Push, image)) }
+func (Build) PushImage(imageName string) {
+	cmdOpts, cmdOptsOK := commandImages[imageName]
+	pkgOpts, pkgOptsOK := packageImages[imageName]
+	switch {
+	case cmdOptsOK && pkgOptsOK:
+		panic("ambigious image name configured")
+	case !cmdOptsOK && !pkgOptsOK:
+		panic(fmt.Sprintf("unknown image: %s", imageName))
+	case (cmdOptsOK && !cmdOpts.Push) || (pkgOptsOK && !pkgOpts.Push):
+		panic(fmt.Sprintf(fmt.Sprintf("image is not configured to be pushed: %s", imageName)))
+	}
+
+	mg.SerialDeps(mg.F(Build.Image, imageName))
+
+	containerRuntime := locations.ContainerRuntime()
+
+	// Login to container registry when running on AppSRE Jenkins.
+	_, isJenkins := os.LookupEnv("JENKINS_HOME")
+	_, isCI := os.LookupEnv("CI")
+	if isJenkins || isCI {
+		log.Println("running in CI, calling container runtime login")
+		args := []string{"login", "-u=" + os.Getenv("QUAY_USER"), "-p=" + os.Getenv("QUAY_TOKEN"), "quay.io"}
+		if err := sh.Run(containerRuntime, args...); err != nil {
+			panic(fmt.Errorf("registry login: %w", err))
+		}
+	}
+
+	args := []string{"push"}
+	if containerRuntime == string(dev.ContainerRuntimePodman) {
+		args = append(args, "--digestfile="+locations.DigestFile(imageName))
+	}
+	args = append(args, locations.ImageURL(imageName, false))
+
+	if err := sh.Run(containerRuntime, args...); err != nil {
+		panic(fmt.Errorf("pushing image: %w", err))
+	}
+}
 
 // Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
 	deps := []interface{}{Generate.SelfBootstrapJob}
-	for k := range commandImages {
-		deps = append(deps, mg.F(Build.Push, k))
+	for k, opts := range commandImages {
+		if opts.Push {
+			deps = append(deps, mg.F(Build.PushImage, k))
+		}
 	}
-	for k := range packageImages {
-		deps = append(deps, mg.F(Build.Push, k))
+	for k, opts := range packageImages {
+		if opts.Push {
+			deps = append(deps, mg.F(Build.PushImage, k))
+		}
 	}
 	mg.Deps(deps...)
 }
@@ -658,15 +702,24 @@ func (Build) CleanImageCacheDir(name string) {
 
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
-func (b Build) buildCmdImage(cmd string) {
-	mg.Deps(mg.F(Build.Cmd, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.CleanImageCacheDir, cmd))
+func (b Build) buildCmdImage(imageName string) {
+	opts, ok := commandImages[imageName]
+	if !ok {
+		panic(fmt.Sprintf("unknown cmd image: %s", imageName))
+	}
+	cmd := imageName
+	if len(opts.BinaryName) != 0 {
+		cmd = opts.BinaryName
+	}
 
-	imageCacheDir := locations.ImageCache(cmd)
-	imageTag := locations.ImageURL(cmd, false)
+	mg.Deps(mg.F(Build.Cmd, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.CleanImageCacheDir, imageName))
+
+	imageCacheDir := locations.ImageCache(imageName)
+	imageTag := locations.ImageURL(imageName, false)
 
 	// prepare build context
 	must(sh.Copy(filepath.Join(imageCacheDir, cmd), locations.binaryDst(cmd, linuxAMD64Arch)))
-	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", cmd+".Containerfile")))
+	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", imageName+".Containerfile")))
 	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
 
 	containerRuntime := locations.ContainerRuntime()
@@ -722,33 +775,6 @@ func (b Build) buildPackageImage(name string) {
 		if err := buildCmd.Run(); err != nil {
 			panic(fmt.Errorf("running %q: %w", strings.Join(command, " "), err))
 		}
-	}
-}
-
-func (Build) Push(imageName string) {
-	mg.SerialDeps(mg.F(Build.Image, imageName))
-
-	containerRuntime := locations.ContainerRuntime()
-
-	// Login to container registry when running on AppSRE Jenkins.
-	_, isJenkins := os.LookupEnv("JENKINS_HOME")
-	_, isCI := os.LookupEnv("CI")
-	if isJenkins || isCI {
-		log.Println("running in CI, calling container runtime login")
-		args := []string{"login", "-u=" + os.Getenv("QUAY_USER"), "-p=" + os.Getenv("QUAY_TOKEN"), "quay.io"}
-		if err := sh.Run(containerRuntime, args...); err != nil {
-			panic(fmt.Errorf("registry login: %w", err))
-		}
-	}
-
-	args := []string{"push"}
-	if containerRuntime == string(dev.ContainerRuntimePodman) {
-		args = append(args, "--digestfile="+locations.DigestFile(imageName))
-	}
-	args = append(args, locations.ImageURL(imageName, false))
-
-	if err := sh.Run(containerRuntime, args...); err != nil {
-		panic(fmt.Errorf("pushing image: %w", err))
 	}
 }
 
@@ -1119,7 +1145,7 @@ func (Generate) SelfBootstrapJob() {
 		packageOperatorPackageImage string
 	)
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
-		mg.Deps(mg.F(Build.Push, "package-operator-manager"), mg.F(Build.Push, pkoPackageName))
+		mg.Deps(mg.F(Build.PushImage, "package-operator-manager"), mg.F(Build.PushImage, pkoPackageName))
 		packageOperatorManagerImage = locations.ImageURL("package-operator-manager", true)
 		packageOperatorPackageImage = locations.ImageURL(pkoPackageName, true)
 	} else {
