@@ -37,11 +37,12 @@ import (
 
 // Constants that define build behaviour.
 const (
-	module          = "package-operator.run/package-operator"
-	defaultImageOrg = "quay.io/package-operator"
-	clusterName     = "package-operator-dev"
-	cliCmdName      = "kubectl-package"
-	pkoPackageName  = "package-operator-package"
+	module                 = "package-operator.run/package-operator"
+	defaultImageOrg        = "quay.io/package-operator"
+	clusterName            = "package-operator-dev"
+	cliCmdName             = "kubectl-package"
+	pkoPackageName         = "package-operator-package"
+	remotePhasePackageName = "remote-phase-package"
 
 	controllerGenVersion = "0.6.2"
 	golangciLintVersion  = "1.50.1"
@@ -63,8 +64,9 @@ var (
 	// Note that you can't reference the Generate mage target in ExtraDeps
 	// since that would result in a circulat dependency. They must be added via init() for now.
 	packageImages = map[string]*PackageImage{
-		pkoPackageName:      {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
-		"test-stub-package": {SourcePath: filepath.Join("config", "packages", "test-stub")},
+		pkoPackageName:         {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
+		remotePhasePackageName: {Push: true, SourcePath: filepath.Join("config", "packages", "remote-phase")},
+		"test-stub-package":    {SourcePath: filepath.Join("config", "packages", "test-stub")},
 	}
 
 	// commandImages defines what commands under ./cmd shall be packaged into images.
@@ -126,6 +128,7 @@ func init() {
 
 	// Extra dependencies must be specified here to avoid a circular dependency.
 	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
+	packageImages[remotePhasePackageName].ExtraDeps = []interface{}{Generate.RemotePhasePackage}
 }
 
 // Must panics if the given error is not nil.
@@ -165,7 +168,7 @@ func newLocations() Locations {
 	return l
 }
 
-func includeInPackageOperatorPackage(file string) {
+func includeInPackageOperatorPackage(file string, outDir string) {
 	fileContent, err := os.ReadFile(file)
 	if err != nil {
 		panic(err)
@@ -217,7 +220,7 @@ func includeInPackageOperatorPackage(file string) {
 		}
 		obj.SetAnnotations(annotations)
 
-		outFilePath := filepath.Join("config", "packages", "package-operator")
+		outFilePath := outDir
 		if len(subfolder) > 0 {
 			outFilePath = filepath.Join(outFilePath, subfolder)
 		}
@@ -830,7 +833,7 @@ func (d Dev) Load() {
 	images := []string{
 		"package-operator-manager", "package-operator-webhook",
 		"remote-phase-manager", "test-stub", "test-stub-package",
-		pkoPackageName,
+		remotePhasePackageName, pkoPackageName,
 	}
 	deps := make([]interface{}, len(images))
 	for i := range images {
@@ -1122,9 +1125,17 @@ func (Generate) PackageOperatorPackage() error {
 			return nil
 		}
 
-		includeInPackageOperatorPackage(path)
+		includeInPackageOperatorPackage(path, filepath.Join("config", "packages", "package-operator"))
 		return nil
 	})
+}
+
+// Includes all static-deployment files in the remote-phase-package.
+func (Generate) RemotePhasePackage() error {
+	includeInPackageOperatorPackage(
+		"config/remote-phase-static-deployment/deployment.yaml.tpl",
+		filepath.Join("config", "packages", "remote-phase"))
+	return nil
 }
 
 // generates a self-bootstrap-job.yaml based on the current VERSION.
