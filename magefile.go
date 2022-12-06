@@ -379,7 +379,7 @@ func (l Locations) ImageCache(imageName string) string {
 	return filepath.Join(l.Cache(), "image", imageName)
 }
 func (l Locations) DigestFile(imgName string) string {
-	return filepath.Join(l.Cache(), imgName+".digest")
+	return filepath.Join(l.ImageCache(imgName), imgName+".digest")
 }
 func (l Locations) APIReference() string    { return filepath.Join("docs", "api-reference.md") }
 func (l Locations) NativeCliBinary() string { return l.binaryDst(cliCmdName, nativeArch) }
