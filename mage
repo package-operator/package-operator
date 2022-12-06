@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export MAGEFILE_CACHE=$PWD/.cache/magefile
+export MAGEFILE_CACHE=$(realpath .cache)/magefile
 export GOFLAGS=""
 
 if [ ! -f "bin/mage" ]; then

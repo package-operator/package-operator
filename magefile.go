@@ -38,14 +38,20 @@ const (
 	module          = "package-operator.run/package-operator"
 	defaultImageOrg = "quay.io/package-operator"
 	clusterName     = "package-operator-dev"
+	cliCmdName      = "kubectl-package"
 
 	controllerGenVersion = "0.6.2"
-	goimportsVersion     = "0.1.5"
 	golangciLintVersion  = "1.50.1"
 	kindVersion          = "0.16.0"
 	k8sDocGenVersion     = "0.5.1"
+)
 
-	cliCmdName = "kubectl-package"
+var (
+	commands = map[string]command{
+		"package-operator-manager": {nil},
+		"remote-phase-manager":     {nil},
+		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
+	}
 )
 
 type archTarget struct {
@@ -56,53 +62,57 @@ type command struct {
 	ReleaseArchitectures []archTarget
 }
 
+type Paths struct {
+	cache string
+}
+
+func (p Paths) Cache() string                    { return p.cache }
+func (p Paths) APISubmodule() string             { return "apis" }
+func (p Paths) ClusterDeploymentCache() string   { return filepath.Join(p.Cache(), "deploy") }
+func (p Paths) unitTestCache() string            { return filepath.Join(p.Cache(), "unit") }
+func (p Paths) UnitTestCoverageReport() string   { return filepath.Join(p.unitTestCache(), "cov.out") }
+func (p Paths) UnitTestExecReport() string       { return filepath.Join(p.unitTestCache(), "exec.json") }
+func (p Paths) IntegrationTestLogs() string      { return filepath.Join(p.Cache(), "dev-env-logs") }
+func (p Paths) ImageCache() string               { return filepath.Join(p.Cache(), "image") }
+func (p Paths) DevCache() string                 { return filepath.Join(p.Cache(), "dev-env") }
+func (p Paths) DigestFile(imgName string) string { return filepath.Join(p.Cache(), imgName+".digest") }
+func (p Paths) APIReference() string             { return filepath.Join("docs", "api-reference.md") }
+func (p Paths) Deps() magedeps.DependencyDirectory {
+	return magedeps.DependencyDirectory(filepath.Join(p.Cache(), "deps"))
+}
+
+func newPathSelector() Paths {
+	// Entrypoint ./mage uses .cache/magefile as cache so .cache should exist.
+	absCache, err := filepath.Abs(".cache")
+	must(err)
+	p := Paths{absCache}
+
+	must(os.MkdirAll(string(p.Deps()), 0o755))
+	must(os.MkdirAll(p.unitTestCache(), 0o755))
+
+	return p
+}
+
 var (
-	commands = map[string]command{
-		"package-operator-manager": {nil},
-		"remote-phase-manager":     {nil},
-		cliCmdName:                 {[]archTarget{linuxAMD64Arch, {"darwin", "amd64"}, {"darwin", "arm64"}}},
-	}
+	nativeArch                 = archTarget{runtime.GOOS, runtime.GOARCH}
+	linuxAMD64Arch             = archTarget{"linux", "amd64"}
+	paths                      = newPathSelector()
+	logger         logr.Logger = stdr.New(nil)
+	Builder                    = &builder{}
 
-	nativeArch     = archTarget{runtime.GOOS, runtime.GOARCH}
-	linuxAMD64Arch = archTarget{"linux", "amd64"}
-)
-
-var (
-	devEnvironment *dev.Environment
-
-	// Working directory of the project.
-	workDir string
-	// Dependency directory.
-	depsDir  magedeps.DependencyDirectory
-	cacheDir string
-
-	logger           logr.Logger
 	containerRuntime string
-
-	// components
-	Builder = &builder{}
+	devEnvironment   *dev.Environment
 )
 
 func init() {
-	var err error
-	// Directories
-	workDir, err = os.Getwd()
-	if err != nil {
-		panic(fmt.Errorf("getting work dir: %w", err))
-	}
-	cacheDir = filepath.Join(workDir, ".cache")
-	depsDir = magedeps.DependencyDirectory(filepath.Join(workDir, ".deps"))
-	os.Setenv("PATH", depsDir.Bin()+":"+os.Getenv("PATH"))
-
 	// Use a local directory to get around permission errors in OpenShift CI.
-	os.Setenv("GOLANGCI_LINT_CACHE", filepath.Join(cacheDir, "golangci-lint"))
-
-	logger = stdr.New(nil)
+	os.Setenv("GOLANGCI_LINT_CACHE", filepath.Join(paths.Cache(), "golangci-lint"))
+	os.Setenv("PATH", paths.Deps().Bin()+":"+os.Getenv("PATH"))
 
 	Builder.init()
 }
 
-func binaryPath(name string, arch archTarget) string {
+func (p Paths) binaryDst(name string, arch archTarget) string {
 	if arch == nativeArch {
 		return filepath.Join("bin", name)
 	}
@@ -113,8 +123,6 @@ func binaryPath(name string, arch archTarget) string {
 
 	return filepath.Join("bin", arch.OS+"_"+arch.Arch, name)
 }
-
-func digestFile(imageName string) string { return filepath.Join(cacheDir, imageName+".digest") }
 
 // dependency for all targets requiring a container runtime
 func determineContainerRuntime() {
@@ -225,7 +233,7 @@ func Deploy(ctx context.Context) {
 		panic("VERSION environment variable not set, please set an explicit version to deploy")
 	}
 
-	cluster, err := dev.NewCluster(filepath.Join(cacheDir, "deploy"), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
+	cluster, err := dev.NewCluster(paths.ClusterDeploymentCache(), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
 	if err != nil {
 		panic(err)
 	}
@@ -344,30 +352,43 @@ type Test mg.Namespace
 
 // Runs linters.
 func (Test) Lint() {
+	mg.SerialDeps(Test.GolangCILint, Test.GoFmt, Test.GoModTidy)
+}
+
+func (Test) GolangCILint() {
 	// Generate.All ensures code generators are re-triggered.
 	mg.Deps(Generate.All, Dependency.GolangciLint)
+	must(sh.RunV("golangci-lint", "run", "./...", "--deadline=15m"))
+}
 
-	cmds := [][]string{
-		{"go", "fmt", "./..."},
-		{"bash", filepath.Join("hack", "validate-directory-clean.sh")},
-		{"golangci-lint", "run", "./...", "--deadline=15m"},
-	}
+func (Test) GoFmt() {
+	// Generate.All ensures code generators are re-triggered.
+	mg.Deps(Generate.All)
+	must(sh.RunV("go", "fmt", "./..."))
+}
 
-	for _, cmd := range cmds {
-		if err := sh.RunV(cmd[0], cmd[1:]...); err != nil {
-			panic(fmt.Errorf("running %q: %w", strings.Join(cmd, " "), err))
-		}
+func (Test) GoModTidy() {
+	// Generate.All ensures code generators are re-triggered.
+	mg.Deps(Generate.All)
+	must(sh.RunV("go", "mod", "tidy"))
+}
+
+func (Test) ValidateGitClean() {
+	// Generate.All ensures code generators are re-triggered.
+	mg.Deps(Generate.All)
+
+	o, err := sh.Output("git", "status", "--porcelain")
+	must(err)
+
+	if len(o) != 0 {
+		panic("Repo is dirty! Probably because gofmt or make generate touched something...")
 	}
 }
 
 // Runs unittests.
 func (Test) Unit() {
-	codeCov := filepath.Join(cacheDir, "unit", "cov.out")
-	execReport := filepath.Join(cacheDir, "unit", "exec.json")
-	must(os.MkdirAll(filepath.Dir(codeCov), os.ModePerm))
-
 	_, isCI := os.LookupEnv("CI")
-	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", codeCov)
+	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", paths.UnitTestCoverageReport())
 	if isCI {
 		// test output in json format
 		testCmd += " -json"
@@ -375,7 +396,7 @@ func (Test) Unit() {
 	testCmd += " ./internal/... ./cmd/..."
 
 	if isCI {
-		testCmd = testCmd + " > " + execReport
+		testCmd = testCmd + " > " + paths.UnitTestExecReport()
 	}
 
 	// cgo needed to enable race detector -race
@@ -403,7 +424,7 @@ func (Test) integration(ctx context.Context, filter string) {
 
 	// always export logs
 	if devEnvironment != nil {
-		args := []string{"export", "logs", filepath.Join(cacheDir, "dev-env-logs"), "--name", clusterName}
+		args := []string{"export", "logs", paths.IntegrationTestLogs(), "--name", clusterName}
 		if err := devEnvironment.RunKindCommand(ctx, os.Stdout, os.Stderr, args...); err != nil {
 			logger.Error(err, "exporting logs")
 		}
@@ -440,7 +461,7 @@ func (Build) ReleaseBinaries() {
 	for name, cmd := range commands {
 		for _, arch := range cmd.ReleaseArchitectures {
 			dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", name, arch.OS, arch.Arch))
-			must(sh.Copy(dst, binaryPath(name, arch)))
+			must(sh.Copy(dst, paths.binaryDst(name, arch)))
 		}
 	}
 }
@@ -481,34 +502,29 @@ type Dependency mg.Namespace
 
 // Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
-	mg.Deps(Dependency.ControllerGen, Dependency.Goimports, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen)
+	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
 func (d Dependency) ControllerGen() error {
 	url := "sigs.k8s.io/controller-tools/cmd/controller-gen"
-	return depsDir.GoInstall("controller-gen", url, controllerGenVersion)
-}
-
-func (d Dependency) Goimports() error {
-	url := "golang.org/x/tools/cmd/goimports"
-	return depsDir.GoInstall("go-imports", url, goimportsVersion)
+	return paths.Deps().GoInstall("controller-gen", url, controllerGenVersion)
 }
 
 func (d Dependency) GolangciLint() error {
 	url := "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	return depsDir.GoInstall("golangci-lint", url, golangciLintVersion)
+	return paths.Deps().GoInstall("golangci-lint", url, golangciLintVersion)
 }
 
 func (d Dependency) Docgen() error {
 	url := "github.com/thetechnick/k8s-docgen"
-	return depsDir.GoInstall("k8s-docgen", url, k8sDocGenVersion)
+	return paths.Deps().GoInstall("k8s-docgen", url, k8sDocGenVersion)
 }
 
 // Ensure Kind dependency - Kubernetes in Docker (or Podman)
 func (d Dependency) Kind() error {
 	url := "sigs.k8s.io/kind"
-	return depsDir.GoInstall("kind", url, kindVersion)
+	return paths.Deps().GoInstall("kind", url, kindVersion)
 }
 
 // Builder
@@ -546,9 +562,9 @@ func (b *builder) Cmd(cmd, goos, goarch string) {
 
 	env := map[string]string{"CGO_ENABLED": "0"}
 
-	bin := binaryPath(cmd, nativeArch)
+	bin := paths.binaryDst(cmd, nativeArch)
 	if len(goos) != 0 || len(goarch) != 0 {
-		bin = binaryPath(cmd, archTarget{goos, goarch})
+		bin = paths.binaryDst(cmd, archTarget{goos, goarch})
 		env["GOOS"] = goos
 		env["GOARCH"] = goarch
 	}
@@ -571,7 +587,7 @@ func (b *builder) Image(name string) {
 
 // clean/prepare cache directory
 func (b *builder) cleanImageCacheDir(name string) string {
-	imageCacheDir := filepath.Join(cacheDir, "image", name)
+	imageCacheDir := filepath.Join(paths.ImageCache(), name)
 	if err := os.RemoveAll(imageCacheDir); err != nil && !os.IsNotExist(err) {
 		panic(fmt.Errorf("deleting image cache: %w", err))
 	}
@@ -594,7 +610,7 @@ func (b *builder) buildCmdImage(cmd string) {
 	// prepare build context
 	imageTag := b.imageURL(cmd)
 
-	must(sh.Copy(filepath.Join(imageCacheDir, cmd), binaryPath(cmd, linuxAMD64Arch)))
+	must(sh.Copy(filepath.Join(imageCacheDir, cmd), paths.binaryDst(cmd, linuxAMD64Arch)))
 	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", cmd+".Containerfile")))
 	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
 
@@ -661,7 +677,7 @@ func (b *builder) Push(imageName string) {
 
 	args := []string{"push"}
 	if containerRuntime == string(dev.ContainerRuntimePodman) {
-		args = append(args, "--digestfile="+digestFile(imageName))
+		args = append(args, "--digestfile="+paths.DigestFile(imageName))
 	}
 	args = append(args, b.imageURL(imageName))
 
@@ -684,7 +700,7 @@ func (b *builder) internalImageURL(name string, useDigest bool) string {
 		return image
 	}
 
-	digest, err := os.ReadFile(digestFile(name))
+	digest, err := os.ReadFile(paths.DigestFile(name))
 	if err != nil {
 		panic(err)
 	}
@@ -927,7 +943,7 @@ func (d Dev) Integration(ctx context.Context) {
 func (d Dev) LoadImage(ctx context.Context, image string) {
 	mg.Deps(mg.F(Build.Image, image))
 
-	imageTar := filepath.Join(cacheDir, "image", image+".tar")
+	imageTar := filepath.Join(paths.ImageCache(), image+".tar")
 	if err := devEnvironment.LoadImageFromTar(ctx, imageTar); err != nil {
 		panic(fmt.Errorf("load image from tar: %w", err))
 	}
@@ -938,7 +954,7 @@ func (d Dev) init() {
 
 	devEnvironment = dev.NewEnvironment(
 		clusterName,
-		filepath.Join(cacheDir, "dev-env"),
+		paths.DevCache(),
 		dev.WithClusterOptions([]dev.ClusterOption{
 			dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
 		}),
@@ -957,11 +973,9 @@ func (Generate) All() { mg.SerialDeps(Generate.code, Generate.docs, Generate.ins
 func (Generate) code() {
 	mg.Deps(Dependency.ControllerGen)
 
-	apisDir := filepath.Join(workDir, "apis")
-
 	args := []string{"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...", "output:crd:artifacts:config=../config/crds"}
 	manifestsCmd := exec.Command("controller-gen", args...)
-	manifestsCmd.Dir = apisDir
+	manifestsCmd.Dir = paths.APISubmodule()
 	manifestsCmd.Stdout = os.Stdout
 	manifestsCmd.Stderr = os.Stderr
 	if err := manifestsCmd.Run(); err != nil {
@@ -970,7 +984,7 @@ func (Generate) code() {
 
 	// code gen
 	codeCmd := exec.Command("controller-gen", "object", "paths=./...")
-	codeCmd.Dir = apisDir
+	codeCmd.Dir = paths.APISubmodule()
 	if err := codeCmd.Run(); err != nil {
 		panic(fmt.Errorf("generating deep copy methods: %w", err))
 	}
@@ -991,7 +1005,27 @@ func (Generate) code() {
 func (Generate) docs() {
 	mg.Deps(Dependency.Docgen)
 
-	must(sh.Run(filepath.Join("hack", "docgen.sh")))
+	_, isCI := os.LookupEnv("CI")
+	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", paths.UnitTestCoverageReport())
+	if isCI {
+		// test output in json format
+		testCmd += " -json"
+	}
+	testCmd += " ./internal/... ./cmd/..."
+
+	if isCI {
+		testCmd = testCmd + " > " + paths.UnitTestExecReport()
+	}
+
+	// cgo needed to enable race detector -race
+	must(sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd))
+
+	refPath := paths.APIReference()
+	// Move the hack script in here.
+	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/core/v1alpha1 > %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/manifests/v1alpha1 >> %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
 }
 
 func (Generate) installYamlFile() {
