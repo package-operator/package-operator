@@ -17,20 +17,21 @@ import (
 )
 
 type HostedClusterController struct {
-	client client.Client
-	log    logr.Logger
-	scheme *runtime.Scheme
-	image  string
+	client                  client.Client
+	log                     logr.Logger
+	scheme                  *runtime.Scheme
+	remotePhasePackageImage string
 }
 
 func NewHostedClusterController(
-	c client.Client, log logr.Logger, scheme *runtime.Scheme, image string,
+	c client.Client, log logr.Logger, scheme *runtime.Scheme,
+	remotePhasePackageImage string,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
-		client: c,
-		log:    log,
-		scheme: scheme,
-		image:  image,
+		client:                  c,
+		log:                     log,
+		scheme:                  scheme,
+		remotePhasePackageImage: remotePhasePackageImage,
 	}
 	return controller
 }
@@ -39,6 +40,7 @@ func (c *HostedClusterController) Reconcile(
 	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := c.log.WithValues("HostedCluster", req.String())
 	defer log.Info("reconciled")
+
 	ctx = logr.NewContext(ctx, log)
 	hostedCluster := &v1alpha1.HostedCluster{}
 	if err := c.client.Get(ctx, req.NamespacedName, hostedCluster); err != nil {
@@ -48,6 +50,7 @@ func (c *HostedClusterController) Reconcile(
 
 	ok := isHostedClusterReady(hostedCluster)
 	if !ok {
+		log.Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil
 	}
 
@@ -68,12 +71,10 @@ func (c *HostedClusterController) Reconcile(
 	}
 
 	if existingPkg.Spec.Image != desiredPkg.Spec.Image {
-		// re-create job
-		if err := c.client.Delete(ctx, existingPkg); err != nil {
+		// update Job
+		existingPkg.Spec.Image = desiredPkg.Spec.Image
+		if err := c.client.Update(ctx, existingPkg); err != nil {
 			return ctrl.Result{}, fmt.Errorf("deleting outdated Package: %w", err)
-		}
-		if err := c.client.Create(ctx, desiredPkg); err != nil {
-			return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
 		}
 	}
 
@@ -102,7 +103,7 @@ func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster
 			Namespace: cluster.Namespace,
 		},
 		Spec: corev1alpha1.PackageSpec{
-			Image: c.image,
+			Image: c.remotePhasePackageImage,
 		},
 	}
 	return pkg

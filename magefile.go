@@ -345,13 +345,18 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 		panic(fmt.Errorf("converting to Deployment: %w", err))
 	}
 
-	var packageOperatorManagerImage string
+	var (
+		packageOperatorManagerImage string
+		remotePhasePackageImage     string
+	)
 	if len(os.Getenv("USE_DIGESTS")) > 0 {
 		// To use digests the image needs to be pushed to a registry first.
-		mg.Deps(mg.F(Build.PushImage, "package-operator-manager"))
+		mg.Deps(mg.F(Build.PushImage, "package-operator-manager", remotePhasePackageName))
 		packageOperatorManagerImage = locations.ImageURL("package-operator-manager", true)
+		remotePhasePackageImage = locations.ImageURL(remotePhasePackageName, true)
 	} else {
 		packageOperatorManagerImage = locations.ImageURL("package-operator-manager", false)
+		remotePhasePackageImage = locations.ImageURL(remotePhasePackageName, false)
 	}
 
 	for i := range packageOperatorDeployment.Spec.Template.Spec.Containers {
@@ -363,8 +368,11 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 
 			for j := range container.Env {
 				env := &container.Env[j]
-				if env.Name == "PKO_IMAGE" {
+				switch env.Name {
+				case "PKO_IMAGE":
 					env.Value = packageOperatorManagerImage
+				case "PKO_REMOTE_PHASE_PACKAGE_IMAGE":
+					env.Value = remotePhasePackageImage
 				}
 			}
 		}

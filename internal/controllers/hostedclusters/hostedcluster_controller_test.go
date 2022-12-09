@@ -6,25 +6,35 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
+var testScheme = runtime.NewScheme()
+
+func init() {
+	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+	if err := hypershiftv1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+}
+
 func TestHostedClusterController_DesiredPackage(t *testing.T) {
-	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	mockClient := testutil.NewClient()
 
 	image := "image321"
-	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), scheme, image)
+	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image)
 	hcName := "testing123"
-	hc := &v1alpha1.HostedCluster{
+	hc := &hypershiftv1alpha1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: hcName},
 	}
 
@@ -33,111 +43,98 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	assert.Equal(t, image, pkg.Spec.Image)
 }
 
-func TestHostedClusterController_Reconcile(t *testing.T) {
-	tests := []struct {
-		name             string
-		hcCondition      metav1.Condition
-		hcGetReturn      error
-		pkgGetReturn     error
-		pkgImage         string
-		existingPkgImage string
-	}{
-		{
-			name:        "hostedcluster deleted",
-			hcGetReturn: errors.NewNotFound(schema.GroupResource{}, ""),
+var readyHostedCluster = &hypershiftv1alpha1.HostedCluster{
+	Status: hypershiftv1alpha1.HostedClusterStatus{
+		Conditions: []metav1.Condition{
+			{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
 		},
-		{
-			name:        "hostedcluster unavailable",
-			hcCondition: metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: "False"},
-		},
-		{
-			name:         "no existing package",
-			hcCondition:  metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
-			pkgGetReturn: errors.NewNotFound(schema.GroupResource{}, ""),
-			pkgImage:     "image",
-		},
-		{
-			name:             "existing package with same image",
-			hcCondition:      metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
-			pkgImage:         "same-image",
-			existingPkgImage: "same-image",
-		},
-		{
-			name:             "existing package with different image",
-			hcCondition:      metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
-			pkgImage:         "image",
-			existingPkgImage: "different-image",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-			err := v1alpha1.AddToScheme(scheme)
-			require.NoError(t, err)
-			clientMock := testutil.NewClient()
-			clientMock.
-				On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-				Run(func(args mock.Arguments) {
-					obj := args.Get(2).(*v1alpha1.HostedCluster)
-					*obj = v1alpha1.HostedCluster{
-						Status: v1alpha1.HostedClusterStatus{
-							Conditions: []metav1.Condition{test.hcCondition},
-						},
-					}
-				}).
-				Return(test.hcGetReturn).Once()
+	},
+}
 
-			clientMock.
-				On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-				Run(func(args mock.Arguments) {
-					obj := args.Get(2).(*corev1alpha1.Package)
-					*obj = corev1alpha1.Package{
-						Spec: corev1alpha1.PackageSpec{
-							Image: test.existingPkgImage,
-						},
-					}
-				}).
-				Return(test.pkgGetReturn).Maybe().Once()
+func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
+	clientMock := testutil.NewClient()
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
-			clientMock.
-				On("Create", mock.Anything, mock.Anything, mock.Anything).
-				Return(nil).Maybe().Once()
-			clientMock.
-				On("Delete", mock.Anything, mock.Anything, mock.Anything).
-				Return(nil).Maybe().Once()
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		Return(nil)
 
-			controller := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), scheme, test.pkgImage)
+	clientMock.
+		On("Create", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
 
-			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
-			assert.NoError(t, err)
-			assert.Empty(t, res)
+	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	assert.NoError(t, err)
+	assert.Empty(t, res)
 
-			if test.hcGetReturn != nil || test.hcCondition.Status == "False" {
-				clientMock.AssertNumberOfCalls(t, "Get", 1)
-				clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
-				clientMock.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
+	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
+}
+
+func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
+	clientMock := testutil.NewClient()
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			obj := args.Get(2).(*hypershiftv1alpha1.HostedCluster)
+			*obj = *readyHostedCluster
+		}).
+		Return(nil)
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+
+	clientMock.
+		On("Create", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+
+	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	assert.NoError(t, err)
+	assert.Empty(t, res)
+
+	clientMock.AssertCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
+}
+
+func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
+	clientMock := testutil.NewClient()
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			obj := args.Get(2).(*hypershiftv1alpha1.HostedCluster)
+			*obj = *readyHostedCluster
+		}).
+		Return(nil)
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			obj := args.Get(2).(*corev1alpha1.Package)
+			*obj = corev1alpha1.Package{
+				Spec: corev1alpha1.PackageSpec{
+					Image: "outdated-image:test",
+				},
 			}
+		}).
+		Return(nil)
 
-			if test.pkgGetReturn != nil {
-				clientMock.AssertNumberOfCalls(t, "Get", 2)
-				clientMock.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
-				clientMock.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-			}
+	clientMock.
+		On("Create", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
 
-			if test.hcCondition.Status == metav1.ConditionTrue && test.pkgGetReturn == nil {
-				clientMock.AssertNumberOfCalls(t, "Get", 2)
-				if test.pkgImage == test.existingPkgImage {
-					clientMock.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-					clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
-				} else {
-					clientMock.AssertCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-					clientMock.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
-				}
+	clientMock.
+		On("Update", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
 
-			}
-		})
-	}
+	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	assert.NoError(t, err)
+	assert.Empty(t, res)
 
+	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
+	clientMock.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
 }
 
 func TestIsHostedClusterReady(t *testing.T) {
@@ -148,12 +145,12 @@ func TestIsHostedClusterReady(t *testing.T) {
 	}{
 		{
 			name:  "Available condition true",
-			cond:  metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
+			cond:  metav1.Condition{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
 			ready: true,
 		},
 		{
 			name:  "Available condition true",
-			cond:  metav1.Condition{Type: v1alpha1.HostedClusterAvailable, Status: metav1.ConditionFalse},
+			cond:  metav1.Condition{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionFalse},
 			ready: false,
 		},
 		{
@@ -165,8 +162,8 @@ func TestIsHostedClusterReady(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			hc := &v1alpha1.HostedCluster{
-				Status: v1alpha1.HostedClusterStatus{Conditions: []metav1.Condition{test.cond}},
+			hc := &hypershiftv1alpha1.HostedCluster{
+				Status: hypershiftv1alpha1.HostedClusterStatus{Conditions: []metav1.Condition{test.cond}},
 			}
 			ready := isHostedClusterReady(hc)
 

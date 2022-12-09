@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,7 +30,7 @@ import (
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/controllers/hostedclusters"
-	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
@@ -50,7 +51,7 @@ type opts struct {
 	printVersion            bool
 	copyTo                  string
 	loadPackage             string
-	remotePhaseManagerImage string
+	remotePhasePackageImage string
 }
 
 func main() {
@@ -73,9 +74,9 @@ func main() {
 	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
 	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "",
 		"(internal) bootstraps Package Operator with Package Operator using the given Package Operator Package Image")
-	flag.StringVar(&opts.remotePhaseManagerImage, "remote-phase-manager-image", os.Getenv("REMOTE_PHASE_MANAGER_IMAGE"),
+	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image", os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
 		"Providing an image will enabling the deployment of an additional controller that creates a remote phase manager package"+
-			"for every hosted cluster object")
+			"for every HostedCluster object")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -88,7 +89,7 @@ func main() {
 	if err := pkoapis.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	if err := hypershiftv1alpha1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
@@ -346,10 +347,16 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
 
-	if opts.remotePhaseManagerImage != "" {
+	// Probe for HyperShift API
+	hostedClusterGVK := hypershiftv1alpha1.GroupVersion.WithKind("HostedCluster")
+	_, err = mgr.GetRESTMapper().RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
+	if !meta.IsNoMatchError(err) {
+		// HyperShift HostedCluster API is present on the cluster
+		// Auto-Enable HyperShift integration controller:
+		log.Info("detected HostedCluster API, enabling HyperShift integration")
 		if err = hostedclusters.NewHostedClusterController(
 			mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("HostedCluster"), mgr.GetScheme(),
-			opts.remotePhaseManagerImage,
+			opts.remotePhasePackageImage,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for HostedCluster: %w", err)
 		}
