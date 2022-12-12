@@ -39,7 +39,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	}
 
 	pkg := controller.desiredPackage(hc)
-	assert.Equal(t, hcName+"_remote_phase_manager", pkg.Name)
+	assert.Equal(t, hcName+"-remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)
 }
 
@@ -135,39 +135,4 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 
 	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
 	clientMock.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
-}
-
-func TestIsHostedClusterReady(t *testing.T) {
-	tests := []struct {
-		name  string
-		cond  metav1.Condition
-		ready bool
-	}{
-		{
-			name:  "Available condition true",
-			cond:  metav1.Condition{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
-			ready: true,
-		},
-		{
-			name:  "Available condition true",
-			cond:  metav1.Condition{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionFalse},
-			ready: false,
-		},
-		{
-			name:  "Empty condition",
-			cond:  metav1.Condition{},
-			ready: false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			hc := &hypershiftv1alpha1.HostedCluster{
-				Status: hypershiftv1alpha1.HostedClusterStatus{Conditions: []metav1.Condition{test.cond}},
-			}
-			ready := isHostedClusterReady(hc)
-
-			assert.Equal(t, test.ready, ready)
-		})
-	}
 }

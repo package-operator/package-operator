@@ -91,6 +91,7 @@ func main() {
 
 func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Namespace:                  opts.namespace,
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,
 		HealthProbeBindAddress:     opts.probeAddr,
@@ -187,12 +188,15 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
 
-	if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
-		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-		mgr.GetScheme(), dc, opts.class, managementClusterClient,
-		targetClient, targetMapper,
-	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
+	if len(opts.namespace) == 0 {
+		// Only start the Cluster-Scoped controller, when we are running cluster scoped.
+		if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
+			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
+			mgr.GetScheme(), dc, opts.class, managementClusterClient,
+			targetClient, targetMapper,
+		).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
+		}
 	}
 
 	log.Info("starting manager")

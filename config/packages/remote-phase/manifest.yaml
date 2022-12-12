@@ -6,6 +6,7 @@ spec:
   scopes:
   - Namespaced
   phases:
+  - name: rbac
   - name: deploy
   availabilityProbes:
   - probes:

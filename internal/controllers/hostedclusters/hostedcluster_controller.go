@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,8 +49,7 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	ok := isHostedClusterReady(hostedCluster)
-	if !ok {
+	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1alpha1.HostedClusterAvailable) {
 		log.Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil
 	}
@@ -81,25 +81,10 @@ func (c *HostedClusterController) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-func isHostedClusterReady(hc *v1alpha1.HostedCluster) bool {
-	ready := false
-
-	conds := hc.Status.Conditions
-	for _, cond := range conds {
-		if cond.Type == v1alpha1.HostedClusterAvailable {
-			if cond.Status == metav1.ConditionTrue {
-				ready = true
-			}
-			break
-		}
-	}
-	return ready
-}
-
 func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster) *corev1alpha1.Package {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.Name + "_remote_phase_manager",
+			Name:      cluster.Name + "-remote-phase",
 			Namespace: cluster.Namespace,
 		},
 		Spec: corev1alpha1.PackageSpec{
