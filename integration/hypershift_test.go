@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 func TestHyperShift(t *testing.T) {
@@ -21,7 +21,7 @@ func TestHyperShift(t *testing.T) {
 	// for every ready HyperShift HostedCluster.
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	hc := &hypershiftv1alpha1.HostedCluster{
+	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-hc",
 			Namespace: "default",
@@ -57,7 +57,7 @@ func TestHyperShift(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, hcSecret))
 
 	meta.SetStatusCondition(&hc.Status.Conditions, metav1.Condition{
-		Type:   hypershiftv1alpha1.HostedClusterAvailable,
+		Type:   hypershiftv1beta1.HostedClusterAvailable,
 		Reason: "Success",
 		Status: metav1.ConditionTrue,
 	})

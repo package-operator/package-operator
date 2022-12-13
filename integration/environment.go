@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	pkoapis "package-operator.run/apis"
-	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 const (
@@ -74,7 +74,7 @@ func initClients(ctx context.Context) error {
 	AddToSchemes := runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,
 		pkoapis.AddToScheme,
-		hypershiftv1alpha1.AddToScheme,
+		hypershiftv1beta1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		return fmt.Errorf("could not load schemes: %w", err)

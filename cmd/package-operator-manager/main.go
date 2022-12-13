@@ -30,7 +30,7 @@ import (
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/controllers/hostedclusters"
-	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
@@ -101,7 +101,7 @@ func main() {
 	if err := pkoapis.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
-	if err := hypershiftv1alpha1.AddToScheme(scheme); err != nil {
+	if err := hypershiftv1beta1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
@@ -360,7 +360,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	// Probe for HyperShift API
-	hostedClusterGVK := hypershiftv1alpha1.GroupVersion.WithKind("HostedCluster")
+	hostedClusterGVK := hypershiftv1beta1.GroupVersion.WithKind("HostedCluster")
 	_, err = mgr.GetRESTMapper().RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
 	if !meta.IsNoMatchError(err) {
 		// HyperShift HostedCluster API is present on the cluster

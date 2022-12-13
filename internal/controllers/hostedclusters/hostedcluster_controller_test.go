@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -23,7 +23,7 @@ func init() {
 	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
-	if err := hypershiftv1alpha1.AddToScheme(testScheme); err != nil {
+	if err := hypershiftv1beta1.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }
@@ -34,7 +34,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	image := "image321"
 	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image)
 	hcName := "testing123"
-	hc := &hypershiftv1alpha1.HostedCluster{
+	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: hcName},
 	}
 
@@ -43,10 +43,10 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	assert.Equal(t, image, pkg.Spec.Image)
 }
 
-var readyHostedCluster = &hypershiftv1alpha1.HostedCluster{
-	Status: hypershiftv1alpha1.HostedClusterStatus{
+var readyHostedCluster = &hypershiftv1beta1.HostedCluster{
+	Status: hypershiftv1beta1.HostedClusterStatus{
 		Conditions: []metav1.Condition{
-			{Type: hypershiftv1alpha1.HostedClusterAvailable, Status: metav1.ConditionTrue},
+			{Type: hypershiftv1beta1.HostedClusterAvailable, Status: metav1.ConditionTrue},
 		},
 	},
 }
@@ -56,7 +56,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
 	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
 		Return(nil)
 
 	clientMock.
@@ -75,9 +75,9 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
 	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
 		Run(func(args mock.Arguments) {
-			obj := args.Get(2).(*hypershiftv1alpha1.HostedCluster)
+			obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
 			*obj = *readyHostedCluster
 		}).
 		Return(nil)
@@ -102,9 +102,9 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
 	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.HostedCluster"), mock.Anything).
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
 		Run(func(args mock.Arguments) {
-			obj := args.Get(2).(*hypershiftv1alpha1.HostedCluster)
+			obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
 			*obj = *readyHostedCluster
 		}).
 		Return(nil)

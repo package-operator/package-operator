@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
@@ -58,13 +58,13 @@ func (c *HostedClusterController) Reconcile(
 	defer log.Info("reconciled")
 
 	ctx = logr.NewContext(ctx, log)
-	hostedCluster := &v1alpha1.HostedCluster{}
+	hostedCluster := &v1beta1.HostedCluster{}
 	if err := c.client.Get(ctx, req.NamespacedName, hostedCluster); err != nil {
 		// Ignore not found errors on delete
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1alpha1.HostedClusterAvailable) {
+	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1beta1.HostedClusterAvailable) {
 		log.Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil
 	}
@@ -96,7 +96,7 @@ func (c *HostedClusterController) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster) *corev1alpha1.Package {
+func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster) *corev1alpha1.Package {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "remote-phase",
@@ -109,17 +109,19 @@ func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster
 	return pkg
 }
 
-func hostedClusterNamespace(cluster *v1alpha1.HostedCluster) string {
+// From
+// https://github.com/openshift/hypershift/blob/9c3e998b0b37bedce07163a197e0bf30339e627e/hypershift-operator/controllers/manifests/manifests.go#L13
+func hostedClusterNamespace(cluster *v1beta1.HostedCluster) string {
 	return fmt.Sprintf("%s-%s", cluster.Namespace, strings.ReplaceAll(cluster.Name, ".", "-"))
 }
 
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.HostedCluster{}).
+		For(&v1beta1.HostedCluster{}).
 		Watches(&source.Kind{
 			Type: &corev1alpha1.Package{},
 		}, c.ownerStrategy.EnqueueRequestForOwner(
-			&v1alpha1.HostedCluster{}, true,
+			&v1beta1.HostedCluster{}, true,
 		)).
 		Complete(c)
 }

@@ -1,10 +1,10 @@
-// The package v1alpha1 contains some API Schema definitions for the v1alpha1 version of some Hypershift API group.
+// The package v1beta1 contains some API Schema definitions for the v1beta1 version of some Hypershift API group.
 // https://github.com/openshift/hypershift does not put its API definitions in a submodule, so we took what we needed
-// from https://github.com/openshift/hypershift/blob/main/api/v1alpha1/hostedcluster_types.go to avoid having to
+// from https://github.com/openshift/hypershift/blob/main/api/v1beta1/hostedcluster_types.go to avoid having to
 // import all of Hypershift.
 // +kubebuilder:object:generate=true
 // +groupName=hypershift.openshift.io
-package v1alpha1
+package v1beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +15,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "hypershift.openshift.io", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "hypershift.openshift.io", Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
