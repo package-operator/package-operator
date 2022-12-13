@@ -12,10 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"package-operator.run/package-operator/internal/metrics"
-
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,47 +29,64 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/hostedclusters"
+	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
 	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagedeploy"
 )
 
 type opts struct {
-	metricsAddr          string
-	pprofAddr            string
-	namespace            string
-	managerImage         string
-	selfBootstrap        string
-	enableLeaderElection bool
-	probeAddr            string
-	printVersion         bool
-	copyTo               string
-	loadPackage          string
+	metricsAddr             string
+	pprofAddr               string
+	namespace               string
+	managerImage            string
+	selfBootstrap           string
+	enableLeaderElection    bool
+	probeAddr               string
+	printVersion            bool
+	copyTo                  string
+	loadPackage             string
+	remotePhasePackageImage string
 }
+
+const (
+	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription    = "The namespace the operator is deployed into."
+	managerImageFlagDescription = "Image package operator is deployed with." +
+		" e.g. quay.io/package-operator/package-operator-manager"
+	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
+		"Enabling this will ensure there is only one active controller manager."
+	probeAddrFlagDescription   = "The address the probe endpoint binds to."
+	versionFlagDescription     = "print version information and exit."
+	copyToFlagDescription      = "(internal) copy this binary to a new location"
+	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
+		" to load a package mounted at /package"
+	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
+		" with Package Operator using the given Package Operator Package Image"
+	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
+		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
+)
 
 func main() {
 	var opts opts
-	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080",
-		"The address the metric endpoint binds to.")
-	flag.StringVar(&opts.pprofAddr, "pprof-addr", "",
-		"The address the pprof web endpoint binds to.")
-	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
-		"The namespace the operator is deployed into.")
-	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"),
-		"Image package operator is deployed with.")
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
-		"The address the probe endpoint binds to.")
-	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
-	flag.StringVar(&opts.copyTo, "copy-to", "", "(internal) copy this binary to a new location")
-	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
-	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "",
-		"(internal) bootstraps Package Operator with Package Operator using the given Package Operator Package Image")
+	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", metricsAddrFlagDescription)
+	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", pprofAddrFlagDescription)
+	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"), namespaceFlagDescription)
+	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"), managerImageFlagDescription)
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false, leaderElectionFlagDescription)
+	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)
+	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
+	flag.StringVar(&opts.copyTo, "copy-to", "", copyToFlagDescription)
+	flag.StringVar(&opts.loadPackage, "load-package", "", loadPackageFlagDescription)
+	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
+	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image",
+		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"), remotePhasePackageImageFlagDescription)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -81,6 +97,9 @@ func main() {
 		panic(err)
 	}
 	if err := pkoapis.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := hypershiftv1beta1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
@@ -272,39 +291,42 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		})
 
 	// ObjectSet
-	if err = (objectsets.NewObjectSetController(
+	if err = objectsets.NewObjectSetController(
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ObjectSet"),
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
 	}
-	if err = (objectsets.NewClusterObjectSetController(
+
+	if err = objectsets.NewClusterObjectSetController(
 		mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
 	}
 
 	// ObjectSetPhase for "default" class
 	const defaultObjectSetPhaseClass = "default"
-	if err = (objectsetphases.NewSameClusterObjectSetPhaseController(
+	if err = objectsetphases.NewSameClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
-	if err = (objectsetphases.NewSameClusterClusterObjectSetPhaseController(
+
+	if err = objectsetphases.NewSameClusterClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}
+
 	// Object deployment controller
 	if err = (objectdeployments.NewObjectDeploymentController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectDeployment"),
@@ -321,18 +343,33 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
 	}
 
-	if err = (packages.NewPackageController(
+	if err = packages.NewPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
-	if err = (packages.NewClusterPackageController(
+	if err = packages.NewClusterPackageController(
 		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
-	).SetupWithManager(mgr)); err != nil {
+	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+	}
+
+	// Probe for HyperShift API
+	hostedClusterGVK := hypershiftv1beta1.GroupVersion.WithKind("HostedCluster")
+	_, err = mgr.GetRESTMapper().RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
+	if !meta.IsNoMatchError(err) {
+		// HyperShift HostedCluster API is present on the cluster
+		// Auto-Enable HyperShift integration controller:
+		log.Info("detected HostedCluster API, enabling HyperShift integration")
+		if err = hostedclusters.NewHostedClusterController(
+			mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("HostedCluster"), mgr.GetScheme(),
+			opts.remotePhasePackageImage,
+		).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller for HostedCluster: %w", err)
+		}
 	}
 
 	log.Info("starting manager")

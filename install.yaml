@@ -2643,6 +2643,43 @@ subjects:
   name: package-operator
   namespace: package-operator-system
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: package-operator-remote-phase-manager
+rules:
+- apiGroups:
+    - package-operator.run
+  resources:
+    - objectsetphases
+    - objectsetphases/status
+    - clusterobjectsetphases
+    - clusterobjectsetphases/status
+  verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -2673,6 +2710,8 @@ spec:
               fieldPath: metadata.namespace
         - name: PKO_IMAGE
           value: "quay.io/package-operator/package-operator-manager:latest"
+        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+          value: "quay.io/package-operator/remote-phase-package:latest"
         livenessProbe:
           httpGet:
             path: /healthz

@@ -16,6 +16,10 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+const (
+	logName = "validating webhooks"
+)
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -68,27 +72,27 @@ func main() {
 	wbh := mgr.GetWebhookServer()
 	wbh.Register("/validate-object-set", &webhook.Admission{
 		Handler: webhooks.NewObjectSetWebhookHandler(
-			log.Log.WithName("validating webhooks").WithName("ObjectSets"),
+			log.Log.WithName(logName).WithName("ObjectSets"),
 			mgr.GetClient(),
 		),
 	},
 	)
 	wbh.Register("/validate-object-set-phase", &webhook.Admission{
 		Handler: webhooks.NewObjectSetPhaseWebhookHandler(
-			log.Log.WithName("validating webhooks").WithName("ObjectSetPhases"),
+			log.Log.WithName(logName).WithName("ObjectSetPhases"),
 			mgr.GetClient(),
 		),
 	},
 	)
 	wbh.Register("/validate-cluster-object-set", &webhook.Admission{
 		Handler: webhooks.NewClusterObjectSetWebhookHandler(
-			log.Log.WithName("validating webhooks").WithName("ClusterObjectSets"),
+			log.Log.WithName(logName).WithName("ClusterObjectSets"),
 			mgr.GetClient(),
 		),
 	})
 	wbh.Register("/validate-cluster-object-set-phase", &webhook.Admission{
 		Handler: webhooks.NewClusterObjectSetPhaseWebhookHandler(
-			log.Log.WithName("validating webhooks").WithName("ClusterObjectSetPhases"),
+			log.Log.WithName(logName).WithName("ClusterObjectSetPhases"),
 			mgr.GetClient(),
 		),
 	})

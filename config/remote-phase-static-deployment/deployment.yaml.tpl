@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: remote-phase-manager
+  name: package-operator-remote-phase-manager
   namespace: package-operator-system
   labels:
-    app.kubernetes.io/name: remote-phase-operator
+    app.kubernetes.io/name: package-operator-remote-phase-manager
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: remote-phase-operator
+      app.kubernetes.io/name: package-operator-remote-phase-manager
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: remote-phase-operator
+        app.kubernetes.io/name: package-operator-remote-phase-manager
     spec:
-      serviceAccountName: remote-phase-operator
+      serviceAccountName: package-operator-remote-phase-manager
       volumes:
       - name: kubeconfig
         secret:

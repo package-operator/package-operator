@@ -20,6 +20,7 @@ app-interface-push-images:
 			-e VERSION=${VERSION} \
 			-e IMAGE_ORG="${IMAGE_ORG}" \
 			-e REMOTE_PHASE_MANAGER_IMAGE="${IMAGE_ORG}/package-operator-hs-connector:${VERSION}" \
+			-e REMOTE_PHASE_PACKAGE_IMAGE="${IMAGE_ORG}/package-operator-hs-package:${VERSION}" \
 			-e PKO_PACKAGE_NAMESPACE_OVERRIDE="openshift-package-operator" \
 			"${IMAGE_ORG}/${IMAGE_NAME}:${VERSION}" \
 			./mage build:pushImage package-operator-manager build:pushImage package-operator-webhook build:pushImage remote-phase-manager; \
