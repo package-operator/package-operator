@@ -86,9 +86,7 @@ func main() {
 	flag.StringVar(&opts.loadPackage, "load-package", "", loadPackageFlagDescription)
 	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
 	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image",
-		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
-		"Providing an image will enabling the deployment of an additional controller that creates a remote phase manager package"+
-			"for every HostedCluster object")
+		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"), remotePhasePackageImageFlagDescription)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
