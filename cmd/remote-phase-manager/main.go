@@ -42,23 +42,30 @@ type opts struct {
 	printVersion                bool
 }
 
+const (
+	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription    = "The namespace the operator is deployed into."
+	managerImageFlagDescription = "Image package operator is deployed with." +
+		" e.g. quay.io/package-operator/package-operator-manager"
+	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
+		"Enabling this will ensure there is only one active controller manager."
+	probeAddrFlagDescription     = "The address the probe endpoint binds to."
+	versionFlagDescription       = "print version information and exit."
+	classFlagDescription         = "class of the ObjectSetPhase to work on."
+	targetClusterFlagDescription = "Filepath for a kubeconfig for the target cluster."
+)
+
 func main() {
 	var opts opts
-	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080",
-		"The address the metric endpoint binds to.")
-	flag.StringVar(&opts.pprofAddr, "pprof-addr", "",
-		"The address the pprof web endpoint binds to.")
-	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
-		"The namespace the operator is deployed into.")
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
-		"The address the probe endpoint binds to.")
-	flag.StringVar(&opts.targetClusterKubeconfigFile, "target-cluster-kubeconfig-file", "",
-		"Filepath for a kubeconfig for the target cluster.")
-	flag.StringVar(&opts.class, "class", "hosted-cluster", "class of the ObjectSetPhase to work on.")
-	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit")
+	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", metricsAddrFlagDescription)
+	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", pprofAddrFlagDescription)
+	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"), namespaceFlagDescription)
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false, leaderElectionFlagDescription)
+	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)
+	flag.StringVar(&opts.targetClusterKubeconfigFile, "target-cluster-kubeconfig-file", "", targetClusterFlagDescription)
+	flag.StringVar(&opts.class, "class", "hosted-cluster", classFlagDescription)
+	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
