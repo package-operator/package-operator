@@ -3,6 +3,7 @@ package hostedclusters
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -11,10 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
+	"package-operator.run/package-operator/internal/ownerhandling"
 )
 
 type HostedClusterController struct {
@@ -22,6 +25,14 @@ type HostedClusterController struct {
 	log                     logr.Logger
 	scheme                  *runtime.Scheme
 	remotePhasePackageImage string
+	ownerStrategy           ownerStrategy
+}
+
+type ownerStrategy interface {
+	SetControllerReference(owner, obj metav1.Object) error
+	EnqueueRequestForOwner(
+		ownerType client.Object, isController bool,
+	) handler.EventHandler
 }
 
 func NewHostedClusterController(
@@ -33,6 +44,10 @@ func NewHostedClusterController(
 		log:                     log,
 		scheme:                  scheme,
 		remotePhasePackageImage: remotePhasePackageImage,
+		// Using Annotation Owner-Handling,
+		// because Package objects will live in the hosted-clusters "execution" namespace.
+		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
+		ownerStrategy: ownerhandling.NewAnnotation(scheme),
 	}
 	return controller
 }
@@ -55,7 +70,7 @@ func (c *HostedClusterController) Reconcile(
 	}
 
 	desiredPkg := c.desiredPackage(hostedCluster)
-	err := controllerutil.SetControllerReference(hostedCluster, desiredPkg, c.scheme)
+	err := c.ownerStrategy.SetControllerReference(hostedCluster, desiredPkg)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("setting controller reference: %w", err)
 	}
@@ -84,8 +99,8 @@ func (c *HostedClusterController) Reconcile(
 func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster) *corev1alpha1.Package {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.Name + "-remote-phase",
-			Namespace: cluster.Namespace,
+			Name:      "remote-phase",
+			Namespace: hostedClusterNamespace(cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image: c.remotePhasePackageImage,
@@ -94,9 +109,17 @@ func (c *HostedClusterController) desiredPackage(cluster *v1alpha1.HostedCluster
 	return pkg
 }
 
+func hostedClusterNamespace(cluster *v1alpha1.HostedCluster) string {
+	return fmt.Sprintf("%s-%s", cluster.Namespace, strings.ReplaceAll(cluster.Name, ".", "-"))
+}
+
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.HostedCluster{}).
-		Owns(&corev1alpha1.Package{}).
+		Watches(&source.Kind{
+			Type: &corev1alpha1.Package{},
+		}, c.ownerStrategy.EnqueueRequestForOwner(
+			&v1alpha1.HostedCluster{}, true,
+		)).
 		Complete(c)
 }

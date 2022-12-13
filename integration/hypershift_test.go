@@ -7,8 +7,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	hypershiftv1alpha1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1alpha1"
@@ -29,6 +31,31 @@ func TestHyperShift(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, hc)
 
+	// Simulate HS cluster namespace setup.
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default-test-hc",
+		},
+	}
+	err = Client.Create(ctx, ns)
+	require.NoError(t, err)
+	defer cleanupOnSuccess(ctx, t, ns)
+
+	// copy admin-kubeconfig from default namespace
+	defaultSecret := &corev1.Secret{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name:      "admin-kubeconfig",
+		Namespace: "default",
+	}, defaultSecret))
+	hcSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "admin-kubeconfig",
+			Namespace: ns.Name,
+		},
+		Data: defaultSecret.Data,
+	}
+	require.NoError(t, Client.Create(ctx, hcSecret))
+
 	meta.SetStatusCondition(&hc.Status.Conditions, metav1.Condition{
 		Type:   hypershiftv1alpha1.HostedClusterAvailable,
 		Reason: "Success",
@@ -40,8 +67,8 @@ func TestHyperShift(t *testing.T) {
 	// Wait for roll out
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-hc-remote-phase",
-			Namespace: "default",
+			Name:      "remote-phase",
+			Namespace: ns.Name,
 		},
 	}
 	require.NoError(t,
@@ -49,9 +76,9 @@ func TestHyperShift(t *testing.T) {
 
 	// Test ObjectSetPhase integration
 	t.Run("ObjectSetSetupPauseTeardown", func(t *testing.T) {
-		runObjectSetSetupPauseTeardownTest(t, "hosted-cluster")
+		runObjectSetSetupPauseTeardownTest(t, ns.Name, "hosted-cluster")
 	})
 	t.Run("ObjectSetHandover", func(t *testing.T) {
-		runObjectSetHandoverTest(t, "hosted-cluster")
+		runObjectSetHandoverTest(t, ns.Name, "hosted-cluster")
 	})
 }

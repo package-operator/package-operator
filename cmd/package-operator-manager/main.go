@@ -54,27 +54,39 @@ type opts struct {
 	remotePhasePackageImage string
 }
 
+const (
+	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription    = "The namespace the operator is deployed into."
+	managerImageFlagDescription = "Image package operator is deployed with." +
+		" e.g. quay.io/package-operator/package-operator-manager"
+	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
+		"Enabling this will ensure there is only one active controller manager."
+	probeAddrFlagDescription   = "The address the probe endpoint binds to."
+	versionFlagDescription     = "print version information and exit."
+	copyToFlagDescription      = "(internal) copy this binary to a new location"
+	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
+		" to load a package mounted at /package"
+	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
+		" with Package Operator using the given Package Operator Package Image"
+	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
+		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
+)
+
 func main() {
 	var opts opts
-	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080",
-		"The address the metric endpoint binds to.")
-	flag.StringVar(&opts.pprofAddr, "pprof-addr", "",
-		"The address the pprof web endpoint binds to.")
-	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"),
-		"The namespace the operator is deployed into.")
-	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"),
-		"Image package operator is deployed with.")
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081",
-		"The address the probe endpoint binds to.")
-	flag.BoolVar(&opts.printVersion, "version", false, "print version information and exit.")
-	flag.StringVar(&opts.copyTo, "copy-to", "", "(internal) copy this binary to a new location")
-	flag.StringVar(&opts.loadPackage, "load-package", "", "(internal) runs the package-loader sub-component to load a package mounted at /package")
-	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "",
-		"(internal) bootstraps Package Operator with Package Operator using the given Package Operator Package Image")
-	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image", os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
+	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", metricsAddrFlagDescription)
+	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", pprofAddrFlagDescription)
+	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"), namespaceFlagDescription)
+	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"), managerImageFlagDescription)
+	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false, leaderElectionFlagDescription)
+	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)
+	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
+	flag.StringVar(&opts.copyTo, "copy-to", "", copyToFlagDescription)
+	flag.StringVar(&opts.loadPackage, "load-package", "", loadPackageFlagDescription)
+	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
+	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image",
+		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
 		"Providing an image will enabling the deployment of an additional controller that creates a remote phase manager package"+
 			"for every HostedCluster object")
 	flag.Parse()

@@ -39,7 +39,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	}
 
 	pkg := controller.desiredPackage(hc)
-	assert.Equal(t, hcName+"-remote-phase", pkg.Name)
+	assert.Equal(t, "remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)
 }
 

@@ -26,7 +26,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, class string) (*corev1alpha1.ObjectSet, error) {
+func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, namespace, class string) (*corev1alpha1.ObjectSet, error) {
 	cm4Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm4)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, class string) (*corev1alpha1.O
 	return &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-setup-teardown",
-			Namespace: "default",
+			Namespace: namespace,
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -87,7 +87,7 @@ func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, class string) (*corev1alpha1.O
 	}, nil
 }
 
-func runObjectSetSetupPauseTeardownTest(t *testing.T, class string) {
+func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	t.Helper()
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,7 +109,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, class string) {
 	}
 	cm5.SetGroupVersionKind(cmGVK)
 
-	objectSet, err := defaultObjectSet(cm4, cm5, class)
+	objectSet, err := defaultObjectSet(cm4, cm5, namespace, class)
 	require.NoError(t, err)
 
 	cm4Key := client.ObjectKey{
@@ -139,7 +139,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, class string) {
 		{
 			Kind:      "ConfigMap",
 			Name:      cm4.Name,
-			Namespace: "default",
+			Namespace: namespace,
 		},
 	}
 	assert.NoError(t, Waiter.WaitForObject(ctx, objectSet,
@@ -192,7 +192,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, class string) {
 		{
 			Kind:      "ConfigMap",
 			Name:      cm5.Name,
-			Namespace: "default",
+			Namespace: namespace,
 		},
 	}, objectSet.Status.ControllerOf)
 
@@ -298,12 +298,12 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runObjectSetSetupPauseTeardownTest(t, test.class)
+			runObjectSetSetupPauseTeardownTest(t, "default", test.class)
 		})
 	}
 }
 
-func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, class string) (*corev1alpha1.ObjectSet, error) {
+func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (*corev1alpha1.ObjectSet, error) {
 	cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
 	if err != nil {
 		return nil, err
@@ -315,7 +315,7 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, class string) (*corev1alph
 	return &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-rev1",
-			Namespace: "default",
+			Namespace: namespace,
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -343,7 +343,7 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, class string) (*corev1alph
 	}, nil
 }
 
-func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet, class string) (*corev1alpha1.ObjectSet, error) {
+func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet, namespace, class string) (*corev1alpha1.ObjectSet, error) {
 	cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
 	if err != nil {
 		return nil, err
@@ -355,7 +355,7 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 	return &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-rev2",
-			Namespace: "default",
+			Namespace: namespace,
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
 			Previous: []corev1alpha1.PreviousRevisionReference{
@@ -407,7 +407,7 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 	}, nil
 }
 
-func runObjectSetHandoverTest(t *testing.T, class string) {
+func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	t.Helper()
 
 	cm1 := &corev1.ConfigMap{
@@ -427,7 +427,7 @@ func runObjectSetHandoverTest(t *testing.T, class string) {
 	}
 	cm2.SetGroupVersionKind(cmGVK)
 
-	objectSetRev1, err := defaultObjectSetRev1(cm1, cm2, class)
+	objectSetRev1, err := defaultObjectSetRev1(cm1, cm2, namespace, class)
 	require.NoError(t, err)
 
 	cm3 := &corev1.ConfigMap{
@@ -437,7 +437,7 @@ func runObjectSetHandoverTest(t *testing.T, class string) {
 	}
 	cm3.SetGroupVersionKind(cmGVK)
 
-	objectSetRev2, err := defaultObjectSetRev2(cm1, cm3, objectSetRev1, class)
+	objectSetRev2, err := defaultObjectSetRev2(cm1, cm3, objectSetRev1, namespace, class)
 	require.NoError(t, err)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -575,7 +575,7 @@ func TestObjectSet_handover(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runObjectSetHandoverTest(t, test.class)
+			runObjectSetHandoverTest(t, "default", test.class)
 		})
 	}
 
