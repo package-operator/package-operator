@@ -21,6 +21,15 @@ spec:
       kind:
         group: apps
         kind: Deployment
+  config:
+    openAPIV3Schema:
+      properties:
+        testStubImage:
+          description: TestStubImage provides the container image to use for the Deployment.
+          type: string
+      required:
+      - testStubImage
+      type: object
 test:
   template:
   - name: namespace-scope

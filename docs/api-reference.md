@@ -998,6 +998,18 @@ Used in:
 * [PackageManifest](#packagemanifest)
 
 
+### PackageManifestSpecConfig
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `openAPIV3Schema` <br>apiextensionsv1.JSONSchemaProps | OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning. |
+
+
+Used in:
+
+
 ### PackageManifestTest
 
 PackageManifestTest configures test cases.

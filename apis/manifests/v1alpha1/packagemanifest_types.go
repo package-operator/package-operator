@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -51,6 +52,13 @@ type PackageManifestSpec struct {
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
+	// Configuration specification.
+	Config PackageManifestSpecConfig `json:"config,omitempty"`
+}
+
+type PackageManifestSpecConfig struct {
+	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
+	OpenAPIV3Schema *apiextensionsv1.JSONSchemaProps `json:"openAPIV3Schema,omitempty"`
 }
 
 type PackageManifestPhase struct {
