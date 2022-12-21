@@ -34,12 +34,29 @@ func TestValidatePackageManifest(t *testing.T) {
 		expectedErrors  []string
 	}{
 		{
-			name:            "xxx",
+			name:            "empty",
 			packageManifest: &manifestsv1alpha1.PackageManifest{},
 			expectedErrors: []string{
 				"metadata.name: Required value",
 				"spec.scopes: Required value",
 				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+			},
+		},
+		{
+			name: "duplicated phase",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Phases: []manifestsv1alpha1.PackageManifestPhase{
+						{Name: "test"},
+						{Name: "test"},
+					},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases[1].name: Invalid value: \"test\": must be unique",
 				"spec.availabilityProbes: Required value",
 			},
 		},

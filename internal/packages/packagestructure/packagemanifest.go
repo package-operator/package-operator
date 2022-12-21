@@ -13,6 +13,7 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
+	"package-operator.run/package-operator/internal/validation"
 )
 
 // PackageManifestLoader implements parsing of PackageManifest object from bytes or files.
@@ -126,10 +127,11 @@ func (l *PackageManifestLoader) manifestFromBytes(
 		})
 	}
 
-	if err := manifest.Validate(); err != nil {
+	ferr := validation.ValidatePackageManifest(ctx, l.scheme, manifest)
+	if len(ferr) > 0 {
 		return nil, packages.NewInvalidError(packages.Violation{
 			Reason:   packages.ViolationReasonPackageManifestInvalid,
-			Details:  err.Error(),
+			Details:  ferr.ToAggregate().Error(),
 			Location: &packages.ViolationLocation{Path: fileName},
 		})
 	}

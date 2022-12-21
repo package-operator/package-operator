@@ -14,21 +14,30 @@ import (
 type CtrlClient struct {
 	mock.Mock
 
-	StatusMock *CtrlStatusClient
+	StatusMock      *CtrlStatusClient
+	SubResourceMock *CtrlSubresourceClient
 }
 
 var _ client.Client = &CtrlClient{}
 
 func NewClient() *CtrlClient {
-	return &CtrlClient{
-		StatusMock: &CtrlStatusClient{},
+	c := &CtrlClient{
+		StatusMock:      &CtrlStatusClient{},
+		SubResourceMock: &CtrlSubresourceClient{},
 	}
+	c.On("SubResource", mock.Anything).Return()
+	return c
 }
 
 // StatusClient interface
 
 func (c *CtrlClient) Status() client.StatusWriter {
 	return c.StatusMock
+}
+
+func (c *CtrlClient) SubResource(subResource string) client.SubResourceClient {
+	c.Called(subResource)
+	return c.SubResourceMock
 }
 
 // Reader interface
@@ -87,13 +96,44 @@ type CtrlStatusClient struct {
 var _ client.StatusWriter = &CtrlStatusClient{}
 
 func (c *CtrlStatusClient) Update(
-	ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
 	args := c.Called(ctx, obj, opts)
 	return args.Error(0)
 }
 
 func (c *CtrlStatusClient) Patch(
-	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+	args := c.Called(ctx, obj, patch, opts)
+	return args.Error(0)
+}
+
+func (c *CtrlStatusClient) Create(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+	args := c.Called(ctx, obj, subResource, opts)
+	return args.Error(0)
+}
+
+type CtrlSubresourceClient struct {
+	mock.Mock
+}
+
+var _ client.SubResourceClient = &CtrlSubresourceClient{}
+
+func (c *CtrlSubresourceClient) Get(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceGetOption) error {
+	args := c.Called(ctx, obj, subResource, opts)
+	return args.Error(0)
+}
+
+func (c *CtrlSubresourceClient) Create(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+	args := c.Called(ctx, obj, subResource, opts)
+	return args.Error(0)
+}
+
+func (c *CtrlSubresourceClient) Update(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+	args := c.Called(ctx, obj, opts)
+	return args.Error(0)
+}
+
+func (c *CtrlSubresourceClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
 	args := c.Called(ctx, obj, patch, opts)
 	return args.Error(0)
 }
