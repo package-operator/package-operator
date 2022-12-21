@@ -60,6 +60,34 @@ func TestValidatePackageManifest(t *testing.T) {
 				"spec.availabilityProbes: Required value",
 			},
 		},
+		{
+			name: "openAPI invalid template context",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Config: manifestsv1alpha1.PackageManifestSpecConfig{
+						OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+							Type:     "object",
+							Required: []string{"banana"},
+						},
+					},
+				},
+				Test: manifestsv1alpha1.PackageManifestTest{
+					Template: []manifestsv1alpha1.PackageManifestTestCaseTemplate{
+						{
+							Name:    "Invalid",
+							Context: manifestsv1alpha1.TemplateContext{},
+						},
+					},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+				"test.template[0].context.config.banana: Required value",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

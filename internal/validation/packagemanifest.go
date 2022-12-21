@@ -77,6 +77,10 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 		}
 	}
 
+	configErrors := ValidatePackageManifestConfig(ctx, scheme, &obj.Spec.Config, spec.Child("config"))
+	allErrs = append(allErrs, configErrors...)
+
+	// Test config
 	testTemplate := field.NewPath("test").Child("template")
 	for i, template := range obj.Test.Template {
 		el := validation.IsConfigMapKey(template.Name)
@@ -84,9 +88,16 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 			allErrs = append(allErrs,
 				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, allErrs.ToAggregate().Error()))
 		}
-	}
 
-	allErrs = append(allErrs, ValidatePackageManifestConfig(ctx, scheme, &obj.Spec.Config, spec.Child("config"))...)
+		if len(configErrors) == 0 {
+			valerrors, err := ValidatePackageConfiguration(
+				ctx, scheme, &obj.Spec.Config, template.Context.Config, testTemplate.Index(i).Child("context").Child("config"))
+			if err != nil {
+				panic(err)
+			}
+			allErrs = append(allErrs, valerrors...)
+		}
+	}
 
 	if len(allErrs) == 0 {
 		return nil

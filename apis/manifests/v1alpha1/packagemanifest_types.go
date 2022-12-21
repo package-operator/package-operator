@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
@@ -85,6 +86,7 @@ type PackageManifestTestCaseTemplate struct {
 // TemplateContext is available within the package templating process.
 type TemplateContext struct {
 	Package TemplateContextPackage `json:"package"`
+	Config  *runtime.RawExtension  `json:"config,omitempty"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.
