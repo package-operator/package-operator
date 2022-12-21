@@ -18,6 +18,7 @@ import (
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
 	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/validation"
 )
 
 type packageContentLoader interface {
@@ -144,6 +145,16 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, folderPa
 		))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
+		return nil
+	}
+
+	// TODO: Needs to come after the manifest is parsed, but before template transformer is applied.
+	errList, err := validation.ValidatePackageConfiguration(ctx, l.scheme, &packageContent.PackageManifest.Spec.Config, pkg.GetConfig(), nil)
+	if err != nil {
+		return err
+	}
+	if len(errList) > 0 {
+		setInvalidConditionBasedOnLoadError(pkg, errList.ToAggregate())
 		return nil
 	}
 

@@ -13,6 +13,7 @@ type genericPackage interface {
 	ClientObject() client.Object
 	TemplateContext() manifestsv1alpha1.TemplateContext
 	GetConditions() *[]metav1.Condition
+	GetConfig() *runtime.RawExtension
 }
 
 type genericPackageFactory func(
@@ -61,11 +62,16 @@ func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
+		Config: a.Spec.Config,
 	}
 }
 
 func (a *GenericPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
+}
+
+func (a *GenericPackage) GetConfig() *runtime.RawExtension {
+	return a.Spec.Config
 }
 
 type GenericClusterPackage struct {
@@ -81,7 +87,12 @@ func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateCont
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
+		Config: a.Spec.Config,
 	}
+}
+
+func (a *GenericClusterPackage) GetConfig() *runtime.RawExtension {
+	return a.Spec.Config
 }
 
 func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
