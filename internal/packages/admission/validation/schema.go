@@ -14,12 +14,9 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	apiservercel "k8s.io/apiserver/pkg/cel"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 var (
@@ -36,111 +33,6 @@ const (
 	// StaticEstimatedCRDCostLimit represents the largest-allowed total cost for the x-kubernetes-validations rules of a CRD.
 	StaticEstimatedCRDCostLimit = 100000000
 )
-
-func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *manifestsv1alpha1.PackageManifest) field.ErrorList {
-	var allErrs field.ErrorList
-
-	if len(obj.Name) == 0 {
-		allErrs = append(allErrs,
-			field.Required(field.NewPath("metadata").Child("name"), ""))
-	}
-
-	spec := field.NewPath("spec")
-	if len(obj.Spec.Scopes) == 0 {
-		allErrs = append(allErrs,
-			field.Required(spec.Child("scopes"), ""))
-	}
-
-	if len(obj.Spec.Phases) == 0 {
-		allErrs = append(allErrs,
-			field.Required(spec.Child("phases"), ""))
-	}
-	phaseNames := map[string]struct{}{}
-	specPhases := spec.Child("phases")
-	for i, phase := range obj.Spec.Phases {
-		if _, alreadyExists := phaseNames[phase.Name]; alreadyExists {
-			allErrs = append(allErrs,
-				field.Invalid(specPhases.Index(i).Child("name"), phase.Name, "must be unique"))
-		}
-		phaseNames[phase.Name] = struct{}{}
-	}
-
-	specProbes := field.NewPath("spec").Child("availabilityProbes")
-	if len(obj.Spec.AvailabilityProbes) == 0 {
-		allErrs = append(allErrs,
-			field.Required(specProbes, ""))
-	}
-	for i, probe := range obj.Spec.AvailabilityProbes {
-		if len(probe.Probes) == 0 {
-			allErrs = append(allErrs,
-				field.Required(specProbes.Index(i).Child("probes"), ""))
-		}
-	}
-
-	configErrors := ValidatePackageManifestConfig(ctx, scheme, &obj.Spec.Config, spec.Child("config"))
-	allErrs = append(allErrs, configErrors...)
-
-	// Test config
-	testTemplate := field.NewPath("test").Child("template")
-	for i, template := range obj.Test.Template {
-		el := validation.IsConfigMapKey(template.Name)
-		if len(el) > 0 {
-			allErrs = append(allErrs,
-				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, allErrs.ToAggregate().Error()))
-		}
-
-		if len(configErrors) == 0 {
-			valerrors, err := ValidatePackageConfiguration(
-				ctx, scheme, &obj.Spec.Config, template.Context.Config, testTemplate.Index(i).Child("context").Child("config"))
-			if err != nil {
-				panic(err)
-			}
-			allErrs = append(allErrs, valerrors...)
-		}
-	}
-
-	if len(allErrs) == 0 {
-		return nil
-	}
-	return allErrs
-}
-
-func ValidatePackageManifestConfig(
-	ctx context.Context, scheme *runtime.Scheme,
-	config *manifestsv1alpha1.PackageManifestSpecConfig, fldPath *field.Path,
-) field.ErrorList {
-	if config.OpenAPIV3Schema == nil {
-		return nil
-	}
-
-	var allErrs field.ErrorList
-	schema := config.OpenAPIV3Schema
-	if schema.Nullable {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("openAPIV3Schema.nullable"), "nullable cannot be true at the root"))
-	}
-
-	nonVersionedSchema := &apiextensions.JSONSchemaProps{}
-	if err := scheme.Convert(config.OpenAPIV3Schema, nonVersionedSchema, nil); err != nil {
-		panic(err)
-	}
-
-	opts := validationOptions{
-		allowDefaults:                            true,
-		requireRecognizedConversionReviewVersion: true,
-		requireImmutableNames:                    false,
-		requireOpenAPISchema:                     true,
-		requireValidPropertyType:                 true,
-		requireStructuralSchema:                  true,
-		requirePrunedDefaults:                    true,
-		requireAtomicSetType:                     true,
-		requireMapListKeysMapSetValidation:       true,
-	}
-	allErrs = append(allErrs, validateCustomResourceDefinitionValidation(
-		ctx, &apiextensions.CustomResourceValidation{
-			OpenAPIV3Schema: nonVersionedSchema,
-		}, false, opts, fldPath)...)
-	return allErrs
-}
 
 // validationOptions groups several validation options, to avoid passing multiple bool parameters to methods
 type validationOptions struct {
@@ -757,50 +649,6 @@ func (v *specStandardValidatorV3) validate(schema *apiextensions.JSONSchemaProps
 	return allErrs
 }
 
-// ValidateCustomResourceDefinitionSubresources statically validates
-func ValidateCustomResourceDefinitionSubresources(subresources *apiextensions.CustomResourceSubresources, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if subresources == nil {
-		return allErrs
-	}
-
-	if subresources.Scale != nil {
-		if len(subresources.Scale.SpecReplicasPath) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("scale.specReplicasPath"), ""))
-		} else {
-			// should be constrained json path under .spec
-			if errs := validateSimpleJSONPath(subresources.Scale.SpecReplicasPath, fldPath.Child("scale.specReplicasPath")); len(errs) > 0 {
-				allErrs = append(allErrs, errs...)
-			} else if !strings.HasPrefix(subresources.Scale.SpecReplicasPath, ".spec.") {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.specReplicasPath"), subresources.Scale.SpecReplicasPath, "should be a json path under .spec"))
-			}
-		}
-
-		if len(subresources.Scale.StatusReplicasPath) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("scale.statusReplicasPath"), ""))
-		} else {
-			// should be constrained json path under .status
-			if errs := validateSimpleJSONPath(subresources.Scale.StatusReplicasPath, fldPath.Child("scale.statusReplicasPath")); len(errs) > 0 {
-				allErrs = append(allErrs, errs...)
-			} else if !strings.HasPrefix(subresources.Scale.StatusReplicasPath, ".status.") {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.statusReplicasPath"), subresources.Scale.StatusReplicasPath, "should be a json path under .status"))
-			}
-		}
-
-		// if labelSelectorPath is present, it should be a constrained json path under .status
-		if subresources.Scale.LabelSelectorPath != nil && len(*subresources.Scale.LabelSelectorPath) > 0 {
-			if errs := validateSimpleJSONPath(*subresources.Scale.LabelSelectorPath, fldPath.Child("scale.labelSelectorPath")); len(errs) > 0 {
-				allErrs = append(allErrs, errs...)
-			} else if !strings.HasPrefix(*subresources.Scale.LabelSelectorPath, ".spec.") && !strings.HasPrefix(*subresources.Scale.LabelSelectorPath, ".status.") {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("scale.labelSelectorPath"), subresources.Scale.LabelSelectorPath, "should be a json path under either .spec or .status"))
-			}
-		}
-	}
-
-	return allErrs
-}
-
 func validateSimpleJSONPath(s string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -826,88 +674,5 @@ func allowedAtRootSchema(field string) bool {
 			return true
 		}
 	}
-	return false
-}
-
-func HasSchemaWith(spec *apiextensions.CustomResourceDefinitionSpec, pred func(s *apiextensions.JSONSchemaProps) bool) bool {
-	if spec.Validation != nil && spec.Validation.OpenAPIV3Schema != nil && pred(spec.Validation.OpenAPIV3Schema) {
-		return true
-	}
-	for _, v := range spec.Versions {
-		if v.Schema != nil && v.Schema.OpenAPIV3Schema != nil && pred(v.Schema.OpenAPIV3Schema) {
-			return true
-		}
-	}
-	return false
-}
-
-func SchemaHas(s *apiextensions.JSONSchemaProps, pred func(s *apiextensions.JSONSchemaProps) bool) bool {
-	if s == nil {
-		return false
-	}
-
-	if pred(s) {
-		return true
-	}
-
-	if s.Items != nil {
-		if s.Items != nil && SchemaHas(s.Items.Schema, pred) {
-			return true
-		}
-		for i := range s.Items.JSONSchemas {
-			if SchemaHas(&s.Items.JSONSchemas[i], pred) {
-				return true
-			}
-		}
-	}
-	for i := range s.AllOf {
-		if SchemaHas(&s.AllOf[i], pred) {
-			return true
-		}
-	}
-	for i := range s.AnyOf {
-		if SchemaHas(&s.AnyOf[i], pred) {
-			return true
-		}
-	}
-	for i := range s.OneOf {
-		if SchemaHas(&s.OneOf[i], pred) {
-			return true
-		}
-	}
-	if SchemaHas(s.Not, pred) {
-		return true
-	}
-	for _, s := range s.Properties {
-		if SchemaHas(&s, pred) {
-			return true
-		}
-	}
-	if s.AdditionalProperties != nil {
-		if SchemaHas(s.AdditionalProperties.Schema, pred) {
-			return true
-		}
-	}
-	for _, s := range s.PatternProperties {
-		if SchemaHas(&s, pred) {
-			return true
-		}
-	}
-	if s.AdditionalItems != nil {
-		if SchemaHas(s.AdditionalItems.Schema, pred) {
-			return true
-		}
-	}
-	for _, s := range s.Definitions {
-		if SchemaHas(&s, pred) {
-			return true
-		}
-	}
-	for _, d := range s.Dependencies {
-		if SchemaHas(d.Schema, pred) {
-			return true
-		}
-	}
-
 	return false
 }

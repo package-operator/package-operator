@@ -22,16 +22,6 @@ func ValidatePackageConfiguration(
 		return nil, nil
 	}
 
-	nonVersionedSchema := &apiextensions.JSONSchemaProps{}
-	if err := scheme.Convert(mc.OpenAPIV3Schema, nonVersionedSchema, nil); err != nil {
-		return nil, err
-	}
-
-	openapiSchema := &spec.Schema{}
-	if err := extapivalidation.ConvertJSONSchemaProps(nonVersionedSchema, openapiSchema); err != nil {
-		return nil, err
-	}
-
 	obj := map[string]interface{}{}
 	if config != nil && len(config.Raw) > 0 {
 		if err := json.Unmarshal(config.Raw, &obj); err != nil {
@@ -39,6 +29,27 @@ func ValidatePackageConfiguration(
 		}
 	}
 
+	nonVersionedSchema := &apiextensions.JSONSchemaProps{}
+	if err := scheme.Convert(mc.OpenAPIV3Schema, nonVersionedSchema, nil); err != nil {
+		return nil, err
+	}
+
+	return ValidatePackageConfigurationBySchema(ctx, scheme, nonVersionedSchema, obj, fldPath)
+}
+
+func ValidatePackageConfigurationBySchema(
+	ctx context.Context, scheme *runtime.Scheme, schema *apiextensions.JSONSchemaProps,
+	config map[string]interface{}, fldPath *field.Path,
+) (field.ErrorList, error) {
+	if schema == nil {
+		return nil, nil
+	}
+
+	openapiSchema := &spec.Schema{}
+	if err := extapivalidation.ConvertJSONSchemaProps(schema, openapiSchema); err != nil {
+		return nil, err
+	}
+
 	v := kopenapivalidation.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
-	return extapivalidation.ValidateCustomResource(fldPath, obj, v), nil
+	return extapivalidation.ValidateCustomResource(fldPath, config, v), nil
 }

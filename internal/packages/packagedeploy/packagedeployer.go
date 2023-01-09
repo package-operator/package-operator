@@ -16,9 +16,9 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/packages/admission/validation"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
 	"package-operator.run/package-operator/internal/packages/packagestructure"
-	"package-operator.run/package-operator/internal/validation"
 )
 
 type packageContentLoader interface {

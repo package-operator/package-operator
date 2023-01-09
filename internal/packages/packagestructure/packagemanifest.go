@@ -12,8 +12,8 @@ import (
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/admission/validation"
 	"package-operator.run/package-operator/internal/packages/packagebytes"
-	"package-operator.run/package-operator/internal/validation"
 )
 
 // PackageManifestLoader implements parsing of PackageManifest object from bytes or files.
