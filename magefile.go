@@ -1071,11 +1071,11 @@ func (d Dev) Integration(ctx context.Context) {
 	mg.SerialDeps(Test.Integration)
 }
 
-func (d Dev) LoadImage(ctx context.Context, image string) {
+func (d Dev) LoadImage(image string) {
 	mg.Deps(mg.F(Build.Image, image))
 
 	imageTar := filepath.Join(locations.ImageCache(image) + ".tar")
-	if err := locations.DevEnv().LoadImageFromTar(ctx, imageTar); err != nil {
+	if err := locations.DevEnv().LoadImageFromTar(imageTar); err != nil {
 		panic(fmt.Errorf("load image from tar: %w", err))
 	}
 }
