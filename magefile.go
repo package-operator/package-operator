@@ -614,9 +614,9 @@ func (Test) integration(ctx context.Context, filter string) {
 
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
-	targets := []interface{}{mg.F(Build.Cmd, "mage", "", "")}
+	targets := []interface{}{mg.F(Build.Binary, "mage", "", "")}
 	for name := range commands {
-		targets = append(targets, mg.F(Build.Cmd, name, nativeArch.OS, nativeArch.Arch))
+		targets = append(targets, mg.F(Build.Binary, name, nativeArch.OS, nativeArch.Arch))
 	}
 
 	mg.Deps(targets...)
@@ -626,7 +626,7 @@ func (Build) ReleaseBinaries() {
 	targets := []interface{}{}
 	for name, cmd := range commands {
 		for _, arch := range cmd.ReleaseArchitectures {
-			targets = append(targets, mg.F(Build.Cmd, name, arch.OS, arch.Arch))
+			targets = append(targets, mg.F(Build.Binary, name, arch.OS, arch.Arch))
 		}
 	}
 	mg.Deps(targets...)
@@ -639,7 +639,23 @@ func (Build) ReleaseBinaries() {
 	}
 }
 
-func (Build) Binary(cmd string) { mg.Deps(mg.F(Build.Cmd, cmd, runtime.GOOS, runtime.GOARCH)) }
+// Builds binaries from /cmd directory.
+func (Build) Binary(cmd string, goos, goarch string) {
+	env := map[string]string{"CGO_ENABLED": "0"}
+	bin := locations.binaryDst(cmd, nativeArch)
+	if len(goos) != 0 || len(goarch) != 0 {
+		bin = locations.binaryDst(cmd, archTarget{goos, goarch})
+		env["GOOS"] = goos
+		env["GOARCH"] = goarch
+	}
+
+	ldflags := "-w -s --extldflags '-zrelro -znow -O1'" + fmt.Sprintf("-X '%s/internal/version.version=%s'", module, applicationVersion)
+	cmdline := []string{"build", "--ldflags", ldflags, "--trimpath", "--mod=readonly", "-v", "-o", bin, "./cmd/" + cmd}
+
+	if err := sh.RunWithV(env, "go", cmdline...); err != nil {
+		panic(fmt.Errorf("compiling cmd/%s: %w", cmd, err))
+	}
+}
 
 // Builds all PKO container images.
 func (Build) Images() {
@@ -708,25 +724,6 @@ func (Build) PushImages() {
 	mg.Deps(deps...)
 }
 
-// Builds binaries from /cmd directory.
-func (Build) Cmd(cmd, goos, goarch string) {
-	env := map[string]string{"CGO_ENABLED": "0"}
-
-	bin := locations.binaryDst(cmd, nativeArch)
-	if len(goos) != 0 || len(goarch) != 0 {
-		bin = locations.binaryDst(cmd, archTarget{goos, goarch})
-		env["GOOS"] = goos
-		env["GOARCH"] = goarch
-	}
-
-	ldflags := "-w -s --extldflags '-zrelro -znow -O1'" + fmt.Sprintf("-X '%s/internal/version.version=%s'", module, applicationVersion)
-	cmdline := []string{"build", "--ldflags", ldflags, "--trimpath", "--mod=readonly", "-v", "-o", bin, "./cmd/" + cmd}
-
-	if err := sh.RunWithV(env, "go", cmdline...); err != nil {
-		panic(fmt.Errorf("compiling cmd/%s: %w", cmd, err))
-	}
-}
-
 // Builds the given container image, building binaries as prerequisite as required.
 func (b Build) Image(name string) {
 	_, isPkg := packageImages[name]
@@ -744,7 +741,7 @@ func (b Build) Image(name string) {
 }
 
 // clean/prepare cache directory
-func (Build) CleanImageCacheDir(name string) {
+func (Build) cleanImageCacheDir(name string) {
 	imageCacheDir := locations.ImageCache(name)
 	if err := os.RemoveAll(imageCacheDir); err != nil && !os.IsNotExist(err) {
 		panic(fmt.Errorf("deleting image cache: %w", err))
@@ -769,7 +766,7 @@ func (b Build) buildCmdImage(imageName string) {
 		cmd = opts.BinaryName
 	}
 
-	mg.Deps(mg.F(Build.Cmd, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.CleanImageCacheDir, imageName))
+	mg.Deps(mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.cleanImageCacheDir, imageName))
 
 	imageCacheDir := locations.ImageCache(imageName)
 	imageTag := locations.ImageURL(imageName, false)
@@ -802,8 +799,8 @@ func (b Build) buildPackageImage(name string) {
 	}
 
 	predeps := []interface{}{
-		mg.F(Build.Cmd, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
-		mg.F(Build.CleanImageCacheDir, name),
+		mg.F(Build.Binary, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
+		mg.F(Build.cleanImageCacheDir, name),
 	}
 	for _, d := range opts.ExtraDeps {
 		predeps = append(predeps, d)
@@ -891,7 +888,7 @@ func (d Dev) Load() {
 	}
 	deps := make([]interface{}, len(images))
 	for i := range images {
-		deps[i] = mg.F(Dev.LoadImage, images[i])
+		deps[i] = mg.F(Dev.loadImage, images[i])
 	}
 	mg.Deps(deps...)
 
@@ -1071,7 +1068,7 @@ func (d Dev) Integration(ctx context.Context) {
 	mg.SerialDeps(Test.Integration)
 }
 
-func (d Dev) LoadImage(image string) {
+func (d Dev) loadImage(image string) {
 	mg.Deps(mg.F(Build.Image, image))
 
 	imageTar := filepath.Join(locations.ImageCache(image) + ".tar")
