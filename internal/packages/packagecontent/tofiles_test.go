@@ -1,4 +1,4 @@
-package packagestructure
+package packagecontent_test
 
 import (
 	"testing"
@@ -10,18 +10,15 @@ import (
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
-func TestPackageContent_ToFileMap(t *testing.T) {
-	packageContent := &PackageContent{
-		PackageManifest: &manifestsv1alpha1.PackageManifest{
-			ObjectMeta: metav1.ObjectMeta{},
-		},
-		Manifests: ManifestMap{
-			"test.yaml": []unstructured.Unstructured{
-				{}, {},
-			},
-		},
+func TestFilesFromPackage(t *testing.T) {
+	t.Parallel()
+
+	pkg := &packagecontent.Package{
+		PackageManifest: &manifestsv1alpha1.PackageManifest{ObjectMeta: metav1.ObjectMeta{}},
+		Objects:         map[string][]unstructured.Unstructured{"test.yaml": {{}, {}}},
 	}
 
 	expectedPackageManifest := `apiVersion: manifests.package-operator.run/v1alpha1
@@ -40,10 +37,10 @@ test: {}
 Object: null
 `
 
-	fm, err := packageContent.ToFileMap()
+	files, err := packagecontent.FilesFromPackage(pkg)
 	require.NoError(t, err)
-	if assert.Len(t, fm, 2) {
-		assert.Equal(t, expectedPackageManifest, string(fm[packages.PackageManifestFile]))
-		assert.Equal(t, expectedTestYaml, string(fm["test.yaml"]))
-	}
+
+	require.Len(t, files, 2)
+	assert.Equal(t, expectedTestYaml, string(files["test.yaml"]))
+	assert.Equal(t, expectedPackageManifest, string(files[packages.PackageManifestFile]))
 }

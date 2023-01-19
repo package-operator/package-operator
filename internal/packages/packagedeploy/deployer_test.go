@@ -20,23 +20,46 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
+var (
+	_          deploymentReconciler = (*deploymentReconcilerMock)(nil)
+	_          packageContentLoader = (*packageContentLoaderMock)(nil)
+	errExample                      = errors.New("example error")
+)
+
+type (
+	deploymentReconcilerMock struct {
+		mock.Mock
+	}
+
+	packageContentLoaderMock struct {
+		mock.Mock
+	}
+)
+
 func TestNewPackageDeployer(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	l := NewPackageDeployer(c, testScheme)
 	assert.NotNil(t, l)
 }
 
 func TestNewClustePackageDeployer(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	l := NewClusterPackageDeployer(c, testScheme)
 	assert.NotNil(t, l)
 }
 
 func TestPackageDeployer_Load(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	pcl := &packageContentLoaderMock{}
 	deploymentReconcilerMock := &deploymentReconcilerMock{}
@@ -62,7 +85,7 @@ func TestPackageDeployer_Load(t *testing.T) {
 	obj1.SetAnnotations(map[string]string{
 		manifestsv1alpha1.PackagePhaseAnnotation: "phase-1",
 	})
-	res := &packagestructure.PackageContent{
+	res := &packagecontent.Package{
 		PackageManifest: &manifestsv1alpha1.PackageManifest{
 			Spec: manifestsv1alpha1.PackageManifestSpec{
 				Scopes: []manifestsv1alpha1.PackageManifestScope{
@@ -78,15 +101,9 @@ func TestPackageDeployer_Load(t *testing.T) {
 				},
 			},
 		},
-		Manifests: packagestructure.ManifestMap{
-			"file1.yaml": []unstructured.Unstructured{obj1},
-		},
+		Objects: map[string][]unstructured.Unstructured{"file1.yaml": {obj1}},
 	}
-	pcl.On("LoadFromPath",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(res, nil)
+	pcl.On("FromFiles", mock.Anything, mock.Anything, mock.Anything).Return(res, nil)
 
 	deploymentReconcilerMock.
 		On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
@@ -113,8 +130,8 @@ func TestPackageDeployer_Load(t *testing.T) {
 	pkgKey := client.ObjectKey{
 		Name: "test", Namespace: "test",
 	}
-	folderPath := "folder-path"
-	err := l.Load(ctx, pkgKey, folderPath)
+	files := packagecontent.Files{}
+	err := l.Load(ctx, pkgKey, files)
 	require.NoError(t, err)
 
 	packageInvalid := meta.FindStatusCondition(updatedPackage.Status.Conditions, corev1alpha1.PackageInvalid)
@@ -125,9 +142,9 @@ func TestPackageDeployer_Load(t *testing.T) {
 	}
 }
 
-var errExample = errors.New("example error")
-
 func TestPackageDeployer_Load_Error(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	pcl := &packageContentLoaderMock{}
 	deploymentReconcilerMock := &deploymentReconcilerMock{}
@@ -153,18 +170,12 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 	obj1.SetAnnotations(map[string]string{
 		manifestsv1alpha1.PackagePhaseAnnotation: "phase-1",
 	})
-	var res *packagestructure.PackageContent
-	pcl.On("LoadFromPath",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(res, errExample)
+	var res *packagecontent.Package
+	pcl.On("FromFiles", mock.Anything, mock.Anything, mock.Anything).Return(res, errExample)
 
-	deploymentReconcilerMock.
-		On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+	deploymentReconcilerMock.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		// retries on conflict
+	// retries on conflict
 	c.StatusMock.On("Update",
 		mock.Anything,
 		mock.AnythingOfType("*v1alpha1.Package"),
@@ -185,8 +196,8 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 	pkgKey := client.ObjectKey{
 		Name: "test", Namespace: "test",
 	}
-	folderPath := "folder-path"
-	err := l.Load(ctx, pkgKey, folderPath)
+	files := packagecontent.Files{}
+	err := l.Load(ctx, pkgKey, files)
 	require.NoError(t, err)
 
 	packageInvalid := meta.FindStatusCondition(updatedPackage.Status.Conditions, corev1alpha1.PackageInvalid)
@@ -197,12 +208,6 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 	}
 }
 
-var _ deploymentReconciler = (*deploymentReconcilerMock)(nil)
-
-type deploymentReconcilerMock struct {
-	mock.Mock
-}
-
 func (m *deploymentReconcilerMock) Reconcile(
 	ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor,
 	chunker objectChunker,
@@ -211,14 +216,8 @@ func (m *deploymentReconcilerMock) Reconcile(
 	return args.Error(0)
 }
 
-var _ packageContentLoader = (*packageContentLoaderMock)(nil)
-
-type packageContentLoaderMock struct {
-	mock.Mock
-}
-
-func (m *packageContentLoaderMock) LoadFromPath(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (
-	*packagestructure.PackageContent, error) {
+func (m *packageContentLoaderMock) FromFiles(
+	ctx context.Context, path packagecontent.Files, opts ...packageloader.Option) (*packagecontent.Package, error) {
 	args := m.Called(ctx, path)
-	return args.Get(0).(*packagestructure.PackageContent), args.Error(1)
+	return args.Get(0).(*packagecontent.Package), args.Error(1)
 }

@@ -15,27 +15,26 @@ const (
 	// .gotmpl is the suffix that is being used by the go language server gopls.
 	// https://go-review.googlesource.com/c/tools/+/363360/7/gopls/doc/features.md#29
 	TemplateFileSuffix = ".gotmpl"
+
+	// ImageFilePrefixPath defines under which subfolder files within a package container should be located.
+	ImageFilePrefixPath = "package"
 )
 
-// PackageManifestFileNames to probe for.
-var PackageManifestFileNames = []string{
-	"manifest.yaml",
-	"manifest.yml",
-}
+var (
+	// PackageManifestFileNames to probe for.
+	PackageManifestFileNames = []string{"manifest.yaml", "manifest.yml"}
+	PackageManifestGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifest"}
+)
 
-var PackageManifestGroupKind = schema.GroupKind{
-	Group: manifestsv1alpha1.GroupVersion.Group,
-	Kind:  "PackageManifest",
-}
+// Is path suffixed by .gotmpl.
+func IsTemplateFile(path string) bool { return strings.HasSuffix(path, TemplateFileSuffix) }
+
+// StripTemplateSuffix removes a .gotmpl suffix from a string if present.
+func StripTemplateSuffix(path string) string { return strings.TrimSuffix(path, TemplateFileSuffix) }
 
 // Is path suffixed by .yml or .yaml.
 func IsYAMLFile(path string) bool {
 	return strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml")
-}
-
-// Is path suffixed by .gotmpl.
-func IsTemplateFile(path string) bool {
-	return strings.HasSuffix(path, TemplateFileSuffix)
 }
 
 // Is the it the manifest file.

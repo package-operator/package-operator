@@ -4,18 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"package-operator.run/package-operator/internal/testutil/controllersmocks"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/stretchr/testify/mock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/testutil/controllersmocks"
 )
 
 type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock

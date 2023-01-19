@@ -8,9 +8,23 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-type InvalidError struct {
-	Violations []Violation
-}
+type (
+	InvalidError struct {
+		Violations []Violation
+	}
+
+	Violation struct {
+		Reason  string
+		Details string
+
+		Location *ViolationLocation
+	}
+
+	ViolationLocation struct {
+		Path          string
+		DocumentIndex *int
+	}
+)
 
 func NewInvalidError(violations ...Violation) *InvalidError {
 	return &InvalidError{
@@ -53,13 +67,6 @@ func (e *InvalidError) Error() string {
 	return msg
 }
 
-type Violation struct {
-	Reason  string
-	Details string
-
-	Location *ViolationLocation
-}
-
 func (v Violation) String() string {
 	msg := v.Reason
 	if v.Location != nil {
@@ -70,11 +77,6 @@ func (v Violation) String() string {
 		msg += ":\n" + v.Details
 	}
 	return msg
-}
-
-type ViolationLocation struct {
-	Path          string
-	DocumentIndex *int
 }
 
 func (l *ViolationLocation) String() string {
@@ -92,6 +94,7 @@ const (
 	ViolationReasonPackageManifestUnknownGVK = "PackageManifest unknown GVK"
 	ViolationReasonPackageManifestConversion = "PackageManifest conversion"
 	ViolationReasonPackageManifestInvalid    = "PackageManifest invalid"
+	ViolationReasonPackageManifestDuplicated = "PackageManifest present multiple times"
 	ViolationReasonInvalidYAML               = "Invalid YAML"
 	ViolationReasonMissingPhaseAnnotation    = "Missing " + manifestsv1alpha1.PackagePhaseAnnotation + " Annotation"
 	ViolationReasonMissingGVK                = "GroupVersionKind not set"

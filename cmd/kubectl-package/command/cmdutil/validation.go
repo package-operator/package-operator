@@ -1,10 +1,10 @@
 package cmdutil
 
 import (
-	pkoapis "package-operator.run/apis"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+
+	pkoapis "package-operator.run/apis"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 var (
@@ -17,12 +17,6 @@ func init() {
 	}
 }
 
-func NewStructureLoader() *packagestructure.Loader {
-	structureLoaderOpts := []packagestructure.LoaderOption{
-		packagestructure.WithManifestValidators(
-			packagestructure.DefaultValidators,
-		),
-	}
-
-	return packagestructure.NewLoader(ValidateScheme, structureLoaderOpts...)
+func NewStructureLoader() *packageloader.Loader {
+	return packageloader.New(ValidateScheme, packageloader.WithDefaults)
 }

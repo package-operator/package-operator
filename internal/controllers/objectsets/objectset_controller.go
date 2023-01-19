@@ -4,10 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/preflight"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -19,8 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/package-operator/internal/preflight"
 )
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.

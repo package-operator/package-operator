@@ -15,6 +15,8 @@ import (
 
 func Test_determineChunkingStrategyForPackage(t *testing.T) {
 	t.Run("EachObject", func(t *testing.T) {
+		t.Parallel()
+
 		pkg := &GenericPackage{
 			Package: corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
@@ -30,6 +32,8 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 	})
 
 	t.Run("Default", func(t *testing.T) {
+		t.Parallel()
+
 		pkg := &GenericPackage{
 			Package: corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{},
@@ -42,6 +46,8 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 }
 
 func TestNoOpChunker(t *testing.T) {
+	t.Parallel()
+
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	c := &NoOpChunker{}
@@ -51,6 +57,8 @@ func TestNoOpChunker(t *testing.T) {
 }
 
 func TestEachObjectChunker(t *testing.T) {
+	t.Parallel()
+
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	c := &EachObjectChunker{}

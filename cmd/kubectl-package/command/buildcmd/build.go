@@ -3,7 +3,6 @@ package buildcmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -11,8 +10,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
-	"package-operator.run/package-operator/cmd/kubectl-package/export"
-	"package-operator.run/package-operator/internal/packages/packagebytes"
+	"package-operator.run/package-operator/internal/packages/packageexport"
+	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 const (
@@ -56,39 +56,29 @@ func (b Build) Run(ctx context.Context) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("loading source from disk", "path", b.SourcePath)
 
-	loader := packagebytes.NewLoader()
-	saver := packagebytes.NewSaver()
-
-	fileMap, err := loader.FromFS(ctx, os.DirFS(b.SourcePath))
+	files, err := packageimport.Folder(ctx, b.SourcePath)
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", b.SourcePath, err)
 	}
 
 	verboseLog.Info("creating image")
 
-	image, err := saver.ToImage(fileMap)
-	if err != nil {
-		return fmt.Errorf("image source: %w", err)
-	}
+	loader := packageloader.New(cmdutil.ValidateScheme, packageloader.WithDefaults)
 
-	verboseLog.Info("validating package image")
-
-	structureLoader := cmdutil.NewStructureLoader()
-
-	if _, err := structureLoader.LoadFromImage(ctx, image); err != nil {
+	if _, err := loader.FromFiles(ctx, files); err != nil {
 		return err
 	}
 
 	if b.OutputPath != "" {
 		verboseLog.Info("writing tagged image to disk", "path", b.OutputPath)
 
-		if err := export.TarToDisk(b.OutputPath, b.Tags, image); err != nil {
+		if err := packageexport.File(b.OutputPath, b.Tags, files); err != nil {
 			return err
 		}
 	}
 
 	if b.Push {
-		if err := export.Push(ctx, b.Tags, image); err != nil {
+		if err := packageexport.PushedImage(ctx, b.Tags, files); err != nil {
 			return err
 		}
 	}

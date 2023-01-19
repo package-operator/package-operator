@@ -7,17 +7,29 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type genericObjectSetList interface {
-	ClientObjectList() client.ObjectList
-	GetItems() []genericObjectSet
-}
+type (
+	GenericClusterObjectSetList struct {
+		corev1alpha1.ClusterObjectSetList
+	}
 
-type genericObjectSetListFactory func(
-	scheme *runtime.Scheme) genericObjectSetList
+	GenericObjectSetList struct{ corev1alpha1.ObjectSetList }
+)
+
+type (
+	genericObjectSetList interface {
+		ClientObjectList() client.ObjectList
+		GetItems() []genericObjectSet
+	}
+
+	genericObjectSetListFactory func(scheme *runtime.Scheme) genericObjectSetList
+)
 
 var (
 	objectSetListGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSetList")
 	clusterObjectSetListGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetList")
+
+	_ genericObjectSetList = (*GenericObjectSetList)(nil)
+	_ genericObjectSetList = (*GenericClusterObjectSetList)(nil)
 )
 
 func newGenericObjectSetList(scheme *runtime.Scheme) genericObjectSetList {
@@ -40,15 +52,6 @@ func newGenericClusterObjectSetList(scheme *runtime.Scheme) genericObjectSetList
 		ClusterObjectSetList: *obj.(*corev1alpha1.ClusterObjectSetList)}
 }
 
-var (
-	_ genericObjectSetList = (*GenericObjectSetList)(nil)
-	_ genericObjectSetList = (*GenericClusterObjectSetList)(nil)
-)
-
-type GenericObjectSetList struct {
-	corev1alpha1.ObjectSetList
-}
-
 func (a *GenericObjectSetList) ClientObjectList() client.ObjectList {
 	return &a.ObjectSetList
 }
@@ -61,10 +64,6 @@ func (a *GenericObjectSetList) GetItems() []genericObjectSet {
 		}
 	}
 	return out
-}
-
-type GenericClusterObjectSetList struct {
-	corev1alpha1.ClusterObjectSetList
 }
 
 func (a *GenericClusterObjectSetList) ClientObjectList() client.ObjectList {

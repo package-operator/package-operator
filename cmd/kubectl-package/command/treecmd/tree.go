@@ -15,8 +15,9 @@ import (
 	pkoapis "package-operator.run/apis"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
-	"package-operator.run/package-operator/internal/packages/packagebytes"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 const (
@@ -73,23 +74,22 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		pkgPrefix = "ClusterPackage"
 	}
 
-	l := packagestructure.NewLoader(treeScheme,
-		packagestructure.WithManifestValidators(
-			packagestructure.PackageScopeValidator(scope),
-			packagestructure.DefaultValidators,
-		),
-		packagestructure.WithByteTransformers(
-			&packagebytes.TemplateTransformer{
-				TemplateContext: templateContext,
-			},
-		),
+	l := packageloader.New(treeScheme, packageloader.WithDefaults,
+		packageloader.WithValidators(packageloader.PackageScopeValidator(scope)),
+		packageloader.WithFilesTransformers(&packageloader.TemplateTransformer{TemplateContext: templateContext}),
 	)
 
-	packageContent, err := l.LoadFromPath(ctx, t.SourcePath)
+	files, err := packageimport.Folder(ctx, t.SourcePath)
 	if err != nil {
 		return fmt.Errorf("loading package contents: %w", err)
 	}
-	spec := packageContent.ToTemplateSpec()
+
+	packageContent, err := l.FromFiles(ctx, files)
+	if err != nil {
+		return fmt.Errorf("parsing package contents: %w", err)
+	}
+
+	spec := packagecontent.TemplateSpecFromPackage(packageContent)
 
 	pkg := gotree.New(
 		fmt.Sprintf("%s\n%s %s",

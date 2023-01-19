@@ -1,0 +1,39 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: cool-package
+catalog:
+  displayName: Cool Package
+  shortDescription: xxx xxx xxx
+  version: 0.2.4
+  iconFile: my-icon.png # relative file location within package
+  keywords:
+  - cool
+  provider:
+    name: Example Corp
+    url: example.com
+  links:
+  - name: Source Code
+    url: https://example.com/example-corp/cool-package
+  maintainers:
+  - email: cool-package-people@example.com
+    name: Cool package maintainers
+spec:
+  scopes:
+  - Namespaced
+  phases:
+  - name: pre-requisites
+  - name: main-stuff
+  - name: empty
+  availabilityProbes:
+  - probes:
+    - condition:
+        type: Available
+        status: "True"
+    - fieldsEqual:
+        fieldA: .status.updatedReplicas
+        fieldB: .status.replicas
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
