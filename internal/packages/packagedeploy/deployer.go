@@ -16,20 +16,9 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/packages/packagebytes"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
-
-type packageContentLoader interface {
-	LoadFromPath(ctx context.Context, path string, opts ...packagestructure.LoaderOption) (*packagestructure.PackageContent, error)
-}
-
-type deploymentReconciler interface {
-	Reconcile(
-		ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor,
-		chunker objectChunker,
-	) error
-}
 
 // PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.
 type PackageDeployer struct {
@@ -43,6 +32,16 @@ type PackageDeployer struct {
 	packageContentLoader packageContentLoader
 }
 
+type (
+	packageContentLoader interface {
+		FromFiles(ctx context.Context, path packagecontent.Files, opts ...packageloader.Option) (*packagecontent.Package, error)
+	}
+
+	deploymentReconciler interface {
+		Reconcile(ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor, chunker objectChunker) error
+	}
+)
+
 // Returns a new namespace-scoped loader for the Package API.
 func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeployer {
 	return &PackageDeployer{
@@ -52,11 +51,10 @@ func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeploye
 		newPackage:          newGenericPackage,
 		newObjectDeployment: adapters.NewObjectDeployment,
 
-		packageContentLoader: packagestructure.NewLoader(
-			scheme, packagestructure.WithManifestValidators(
-				packagestructure.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeNamespaced),
-				packagestructure.DefaultValidators,
-			),
+		packageContentLoader: packageloader.New(
+			scheme,
+			packageloader.WithDefaults,
+			packageloader.WithValidators(packageloader.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeNamespaced)),
 		),
 
 		deploymentReconciler: newDeploymentReconciler(
@@ -76,10 +74,10 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 		newPackage:          newGenericClusterPackage,
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
-		packageContentLoader: packagestructure.NewLoader(
-			scheme, packagestructure.WithManifestValidators(
-				packagestructure.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeCluster),
-				&packagestructure.ObjectPhaseAnnotationValidator{},
+		packageContentLoader: packageloader.New(
+			scheme, packageloader.WithValidators(
+				packageloader.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeCluster),
+				&packageloader.ObjectPhaseAnnotationValidator{},
 			),
 		),
 
@@ -89,7 +87,7 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 	}
 }
 
-func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey, folderPath string) error {
+func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey, files packagecontent.Files) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	pkg := l.newPackage(l.scheme)
@@ -97,7 +95,7 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 		return err
 	}
 
-	if err := l.load(ctx, pkg, folderPath); err != nil {
+	if err := l.load(ctx, pkg, files); err != nil {
 		return err
 	}
 
@@ -129,19 +127,11 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 	})
 }
 
-func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, folderPath string) error {
-	packageContent, err := l.packageContentLoader.LoadFromPath(
-		ctx, folderPath,
-		packagestructure.WithByteTransformers(
-			&packagebytes.TemplateTransformer{
-				TemplateContext: pkg.TemplateContext(),
-			},
-		),
-		packagestructure.WithManifestTransformers(
-			&packagestructure.CommonObjectLabelsTransformer{
-				Package: pkg.ClientObject(),
-			},
-		))
+func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files packagecontent.Files) error {
+	packageContent, err := l.packageContentLoader.FromFiles(
+		ctx, files,
+		packageloader.WithFilesTransformers(&packageloader.TemplateTransformer{TemplateContext: pkg.TemplateContext()}),
+		packageloader.WithTransformers(&packageloader.CommonObjectLabelsTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil
@@ -167,8 +157,7 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, folderPa
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(
-	ctx context.Context, pkg genericPackage, packageContent *packagestructure.PackageContent,
-) (deploy adapters.ObjectDeploymentAccessor, err error) {
+	ctx context.Context, pkg genericPackage, packageContent *packagecontent.Package) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	labels := map[string]string{
 		manifestsv1alpha1.PackageLabel:         packageContent.PackageManifest.Name,
 		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
@@ -179,7 +168,7 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	deploy.ClientObject().SetName(pkg.ClientObject().GetName())
 	deploy.ClientObject().SetNamespace(pkg.ClientObject().GetNamespace())
 
-	deploy.SetTemplateSpec(packageContent.ToTemplateSpec())
+	deploy.SetTemplateSpec(packagecontent.TemplateSpecFromPackage(packageContent))
 	deploy.SetSelector(labels)
 
 	if err := controllerutil.SetControllerReference(

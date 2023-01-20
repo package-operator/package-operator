@@ -6,7 +6,22 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type chunkingStrategy string
+type (
+	// NoOpChunker implements objectChunker, but does not actually chunk.
+	NoOpChunker struct{}
+
+	// NoOpChunker implements objectChunker, by putting every object into it's own ObjectSlice.
+	EachObjectChunker struct{}
+)
+
+type (
+	chunkingStrategy string
+
+	// objectChunker implements how to offload objects within a phase into multiple ObjectSlices to reduce load on etcd and the api server.
+	objectChunker interface {
+		Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error)
+	}
+)
 
 const (
 	// Allows to force a chunking strategy when set on a Package object.
@@ -14,6 +29,11 @@ const (
 
 	// Chunks objects by putting every single object into it's own slice.
 	chunkingStrategyEachObject chunkingStrategy = "EachObject"
+)
+
+var (
+	_ objectChunker = (*NoOpChunker)(nil)
+	_ objectChunker = (*EachObjectChunker)(nil)
 )
 
 // Returns the chunkingStrategy implementation for the given Package.
@@ -27,27 +47,12 @@ func determineChunkingStrategyForPackage(pkg genericPackage) objectChunker {
 	}
 }
 
-var (
-	_ objectChunker = (*NoOpChunker)(nil)
-	_ objectChunker = (*EachObjectChunker)(nil)
-)
-
-// objectChunker implements how to offload objects within a phase into multiple ObjectSlices to reduce load on etcd and the api server.
-type objectChunker interface {
-	Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error)
-}
-
-// NoOpChunker implements objectChunker, but does not actually chunk.
-type NoOpChunker struct{}
-
 func (c *NoOpChunker) Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
 	return nil, nil
 }
 
-// NoOpChunker implements objectChunker, by putting every object into it's own ObjectSlice.
-type EachObjectChunker struct{}
-
-func (c *EachObjectChunker) Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
+func (c *EachObjectChunker) Chunk(
+	ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
 	var out [][]corev1alpha1.ObjectSetObject
 	for _, obj := range phase.Objects {
 		out = append(out, []corev1alpha1.ObjectSetObject{obj})

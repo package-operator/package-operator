@@ -38,6 +38,7 @@ import (
 	"package-operator.run/package-operator/internal/dynamiccache"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagedeploy"
+	"package-operator.run/package-operator/internal/packages/packageimport"
 )
 
 type opts struct {
@@ -200,7 +201,13 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 	}
 
 	ctx := logr.NewContext(context.Background(), ctrl.Log.WithName("package-loader"))
-	if err := packageDeployer.Load(ctx, packageKey, packageFolderPath); err != nil {
+
+	files, err := packageimport.Folder(ctx, packageFolderPath)
+	if err != nil {
+		return err
+	}
+
+	if err := packageDeployer.Load(ctx, packageKey, files); err != nil {
 		return err
 	}
 	return nil

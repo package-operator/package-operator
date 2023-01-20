@@ -1,4 +1,4 @@
-package packagebytes
+package packageloader
 
 import (
 	"bytes"
@@ -8,97 +8,31 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
-	"text/template"
 
 	"github.com/go-logr/logr"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/utils"
 )
-
-// Runs a go-template transformer on all .yml or .yaml files.
-type TemplateTransformer struct {
-	TemplateContext manifestsv1alpha1.TemplateContext
-}
-
-func (t *TemplateTransformer) Transform(ctx context.Context, fileMap FileMap) error {
-	for path, content := range fileMap {
-		var err error
-		content, err = t.transform(ctx, path, content)
-		if err != nil {
-			return err
-		}
-		// save back to file map without the template suffix
-		fileMap[stripTemplateSuffix(path)] = content
-	}
-
-	return nil
-}
-
-func (t *TemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
-	if !packages.IsTemplateFile(path) {
-		// Not a template file, skip.
-		return content, nil
-	}
-
-	template, err := template.New("").Parse(string(content))
-	if err != nil {
-		return nil, fmt.Errorf(
-			"parsing template from %s: %w", path, err)
-	}
-
-	var doc bytes.Buffer
-	if err := template.Execute(&doc, t.TemplateContext); err != nil {
-		return nil, fmt.Errorf(
-			"executing template from %s: %w", path, err)
-	}
-	return doc.Bytes(), nil
-}
-
-func stripTemplateSuffix(path string) string {
-	return strings.TrimSuffix(path, packages.TemplateFileSuffix)
-}
-
-type packageContentLoader func(ctx context.Context, fileMap FileMap) error
-
-type packageManifestLoader interface {
-	FromFileMap(ctx context.Context, fileMap FileMap) (
-		*manifestsv1alpha1.PackageManifest, error,
-	)
-}
 
 type TemplateTestValidator struct {
 	// Path to a folder containing the test fixtures for the package.
 	fixturesFolderPath string
-
-	packageContentLoader  packageContentLoader
-	packageManifestLoader packageManifestLoader
 }
 
-func NewTemplateTestValidator(
-	fixturesFolderPath string,
-	packageContentLoader packageContentLoader,
-	packageManifestLoader packageManifestLoader,
-) *TemplateTestValidator {
-	return &TemplateTestValidator{
-		fixturesFolderPath:    fixturesFolderPath,
-		packageContentLoader:  packageContentLoader,
-		packageManifestLoader: packageManifestLoader,
-	}
+var _ PackageAndFilesValidator = (*TemplateTestValidator)(nil)
+
+func NewTemplateTestValidator(fixturesFolderPath string) *TemplateTestValidator {
+	return &TemplateTestValidator{fixturesFolderPath}
 }
 
-func (v TemplateTestValidator) Validate(ctx context.Context, fileMap FileMap) error {
+func (v TemplateTestValidator) ValidatePackageAndFiles(
+	ctx context.Context, pkg *packagecontent.Package, fileMap packagecontent.Files) error {
 	log := logr.FromContextOrDiscard(ctx).V(1)
 
-	// First get the PackageManifest
-	pm, err := v.packageManifestLoader.FromFileMap(ctx, fileMap)
-	if err != nil {
-		return err
-	}
-
-	for _, templateTestCase := range pm.Test.Template {
+	for _, templateTestCase := range pkg.PackageManifest.Test.Template {
 		log.Info("running template test case", "name", templateTestCase.Name)
 		if err := v.runTestCase(ctx, fileMap, templateTestCase); err != nil {
 			return err
@@ -109,21 +43,14 @@ func (v TemplateTestValidator) Validate(ctx context.Context, fileMap FileMap) er
 }
 
 func (v TemplateTestValidator) runTestCase(
-	ctx context.Context, fileMap FileMap,
-	testCase manifestsv1alpha1.PackageManifestTestCaseTemplate,
-) error {
+	ctx context.Context, fileMap packagecontent.Files, testCase manifestsv1alpha1.PackageManifestTestCaseTemplate) error {
 	log := logr.FromContextOrDiscard(ctx)
 	fileMap = utils.CopyMap(fileMap)
 
 	tt := TemplateTransformer{
 		TemplateContext: testCase.Context,
 	}
-	if err := tt.Transform(ctx, fileMap); err != nil {
-		return err
-	}
-
-	// Load package contents for structural validation.
-	if err := v.packageContentLoader(ctx, fileMap); err != nil {
+	if err := tt.TransformPackageFiles(ctx, fileMap); err != nil {
 		return err
 	}
 
@@ -157,7 +84,7 @@ func (v TemplateTestValidator) runTestCase(
 			// template source files are of no interest for the test fixtures.
 			continue
 		}
-		path := stripTemplateSuffix(relPath)
+		path := packages.StripTemplateSuffix(relPath)
 
 		fixtureFilePath := filepath.Join(testFixturePath, path)
 		actualFilePath := filepath.Join(actualPath, path)
@@ -186,13 +113,13 @@ func (v TemplateTestValidator) runTestCase(
 	return nil
 }
 
-func renderTemplateFiles(folder string, fileMap FileMap) error {
+func renderTemplateFiles(folder string, fileMap packagecontent.Files) error {
 	for relPath := range fileMap {
 		if !packages.IsTemplateFile(relPath) {
 			// template source files are of no interest for the test fixtures.
 			continue
 		}
-		path := stripTemplateSuffix(relPath)
+		path := packages.StripTemplateSuffix(relPath)
 		content := fileMap[path]
 
 		absPath := filepath.Join(folder, path)

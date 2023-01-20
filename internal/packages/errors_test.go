@@ -10,6 +10,8 @@ import (
 )
 
 func TestNewInvalidAggregate(t *testing.T) {
+	t.Parallel()
+
 	err1 := &InvalidError{
 		Violations: []Violation{
 			{Reason: "broken"},
@@ -32,6 +34,8 @@ func TestNewInvalidAggregate(t *testing.T) {
 }
 
 func TestInvalidError(t *testing.T) {
+	t.Parallel()
+
 	err1 := &InvalidError{
 		Violations: []Violation{
 			{Reason: "broken"},
@@ -46,6 +50,8 @@ func TestInvalidError(t *testing.T) {
 
 func TestViolation(t *testing.T) {
 	t.Run("with location", func(t *testing.T) {
+		t.Parallel()
+
 		v := Violation{
 			Reason:  "broken",
 			Details: "on fire",
@@ -54,39 +60,37 @@ func TestViolation(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t,
-			"broken in hot_stuff/on_fire.yaml:\non fire", v.String())
+		assert.Equal(t, "broken in hot_stuff/on_fire.yaml:\non fire", v.String())
 	})
 
 	t.Run("without location", func(t *testing.T) {
-		v := Violation{
-			Reason:  "broken",
-			Details: "on fire",
-		}
+		t.Parallel()
 
-		assert.Equal(t,
-			"broken:\non fire", v.String())
+		v := Violation{Reason: "broken", Details: "on fire"}
+
+		assert.Equal(t, "broken:\non fire", v.String())
 	})
 }
 
 func TestViolationLocation(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
 		var vl *ViolationLocation
 		assert.Equal(t, "", vl.String())
 	})
 
 	t.Run("just path", func(t *testing.T) {
-		vl := &ViolationLocation{
-			Path: "test/234.yaml",
-		}
+		t.Parallel()
+
+		vl := &ViolationLocation{Path: "test/234.yaml"}
 		assert.Equal(t, "test/234.yaml", vl.String())
 	})
 
 	t.Run("with doc index", func(t *testing.T) {
-		vl := &ViolationLocation{
-			Path:          "test/234.yaml",
-			DocumentIndex: pointer.Int(3),
-		}
+		t.Parallel()
+
+		vl := &ViolationLocation{Path: "test/234.yaml", DocumentIndex: pointer.Int(3)}
 		assert.Equal(t, "test/234.yaml#3", vl.String())
 	})
 }

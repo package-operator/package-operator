@@ -21,6 +21,8 @@ import (
 )
 
 func Test_DeploymentReconciler_Reconcile(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	r := newDeploymentReconciler(testScheme, c,
 		adapters.NewObjectDeployment,
@@ -137,6 +139,8 @@ func Test_DeploymentReconciler_Reconcile(t *testing.T) {
 }
 
 func TestDeploymentReconciler_reconcileSlice_hashCollision(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	r := newDeploymentReconciler(testScheme, c,
 		adapters.NewObjectDeployment,
@@ -200,6 +204,8 @@ func TestDeploymentReconciler_reconcileSlice_hashCollision(t *testing.T) {
 }
 
 func TestDeploymentReconciler_sliceGarbageCollection(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	r := newDeploymentReconciler(testScheme, c,
 		adapters.NewObjectDeployment,
@@ -301,6 +307,8 @@ func TestDeploymentReconciler_sliceGarbageCollection(t *testing.T) {
 }
 
 func Test_sliceCollisionError(t *testing.T) {
+	t.Parallel()
+
 	e := &sliceCollisionError{
 		key: client.ObjectKey{
 			Name: "test", Namespace: "test",

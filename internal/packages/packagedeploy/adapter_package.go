@@ -9,18 +9,26 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-type genericPackage interface {
-	ClientObject() client.Object
-	TemplateContext() manifestsv1alpha1.TemplateContext
-	GetConditions() *[]metav1.Condition
-}
+type (
+	GenericClusterPackage struct{ corev1alpha1.ClusterPackage }
+	GenericPackage        struct{ corev1alpha1.Package }
+)
 
-type genericPackageFactory func(
-	scheme *runtime.Scheme) genericPackage
+type (
+	genericPackage interface {
+		ClientObject() client.Object
+		TemplateContext() manifestsv1alpha1.TemplateContext
+		GetConditions() *[]metav1.Condition
+	}
+
+	genericPackageFactory func(scheme *runtime.Scheme) genericPackage
+)
 
 var (
-	packageGVK        = corev1alpha1.GroupVersion.WithKind("Package")
-	clusterPackageGVK = corev1alpha1.GroupVersion.WithKind("ClusterPackage")
+	packageGVK                       = corev1alpha1.GroupVersion.WithKind("Package")
+	clusterPackageGVK                = corev1alpha1.GroupVersion.WithKind("ClusterPackage")
+	_                 genericPackage = (*GenericPackage)(nil)
+	_                 genericPackage = (*GenericClusterPackage)(nil)
 )
 
 func newGenericPackage(scheme *runtime.Scheme) genericPackage {
@@ -39,21 +47,7 @@ func newGenericClusterPackage(scheme *runtime.Scheme) genericPackage {
 		panic(err)
 	}
 
-	return &GenericClusterPackage{
-		ClusterPackage: *obj.(*corev1alpha1.ClusterPackage)}
-}
-
-var (
-	_ genericPackage = (*GenericPackage)(nil)
-	_ genericPackage = (*GenericClusterPackage)(nil)
-)
-
-type GenericPackage struct {
-	corev1alpha1.Package
-}
-
-func (a *GenericPackage) ClientObject() client.Object {
-	return &a.Package
+	return &GenericClusterPackage{ClusterPackage: *obj.(*corev1alpha1.ClusterPackage)}
 }
 
 func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
@@ -64,17 +58,11 @@ func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
 	}
 }
 
-func (a *GenericPackage) GetConditions() *[]metav1.Condition {
-	return &a.Status.Conditions
-}
+func (a *GenericPackage) ClientObject() client.Object        { return &a.Package }
+func (a *GenericPackage) GetConditions() *[]metav1.Condition { return &a.Status.Conditions }
 
-type GenericClusterPackage struct {
-	corev1alpha1.ClusterPackage
-}
-
-func (a *GenericClusterPackage) ClientObject() client.Object {
-	return &a.ClusterPackage
-}
+func (a *GenericClusterPackage) ClientObject() client.Object        { return &a.ClusterPackage }
+func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition { return &a.Status.Conditions }
 
 func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
 	return manifestsv1alpha1.TemplateContext{
@@ -82,10 +70,6 @@ func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateCont
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
 	}
-}
-
-func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
-	return &a.Status.Conditions
 }
 
 func templateContextObjectMetaFromObjectMeta(om metav1.ObjectMeta) manifestsv1alpha1.TemplateContextObjectMeta {

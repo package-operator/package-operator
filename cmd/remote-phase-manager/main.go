@@ -23,12 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"package-operator.run/package-operator/internal/metrics"
-
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	"package-operator.run/package-operator/internal/metrics"
 )
 
 type opts struct {

@@ -1,4 +1,4 @@
-package packagestructure
+package packageloader
 
 import (
 	"context"
@@ -10,46 +10,40 @@ import (
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/utils"
 )
 
-type Validator interface {
-	Validate(ctx context.Context, packageContent *PackageContent) error
-}
+type (
+
+	// Runs a list of Validator over the given content.
+	ValidatorList                  []Validator
+	ValidateEachObjectFn           func(ctx context.Context, path string, index int, obj unstructured.Unstructured) error
+	ObjectPhaseAnnotationValidator struct{}
+	ObjectGVKValidator             struct{}
+	ObjectLabelsValidator          struct{}
+	PackageScopeValidator          manifestsv1alpha1.PackageManifestScope
+)
 
 var (
 	_ Validator = (ValidatorList)(nil)
 	_ Validator = (*ObjectPhaseAnnotationValidator)(nil)
 	_ Validator = (PackageScopeValidator)("")
-
-	// DefaultValidators that don't require any inputs.
-	DefaultValidators = ValidatorList{
-		&ObjectGVKValidator{},
-		&ObjectLabelsValidator{},
-		&ObjectPhaseAnnotationValidator{},
-	}
 )
 
-// Runs a list of Validator over the given content.
-type ValidatorList []Validator
-
-func (l ValidatorList) Validate(ctx context.Context, packageContent *PackageContent) error {
+func (l ValidatorList) ValidatePackage(ctx context.Context, pkg *packagecontent.Package) error {
 	var errors []error
 	for _, t := range l {
-		if err := t.Validate(ctx, packageContent); err != nil {
+		if err := t.ValidatePackage(ctx, pkg); err != nil {
 			errors = append(errors, err)
 		}
 	}
 	return packages.NewInvalidAggregate(errors...)
 }
 
-type ValidateEachObjectFn func(
-	ctx context.Context, path string, index int, obj unstructured.Unstructured,
-) error
-
-func ValidateEachObject(ctx context.Context, mm ManifestMap, validate ValidateEachObjectFn) error {
+func ValidateEachObject(ctx context.Context, pkg *packagecontent.Package, validate ValidateEachObjectFn) error {
 	var errors []error
-	for path, objects := range mm {
+	for path, objects := range pkg.Objects {
 		for i, object := range objects {
 			if err := validate(ctx, path, i, object); err != nil {
 				errors = append(errors, err)
@@ -59,15 +53,11 @@ func ValidateEachObject(ctx context.Context, mm ManifestMap, validate ValidateEa
 	return packages.NewInvalidAggregate(errors...)
 }
 
-type ObjectPhaseAnnotationValidator struct{}
-
-func (v *ObjectPhaseAnnotationValidator) Validate(ctx context.Context, packageContent *PackageContent) error {
-	return ValidateEachObject(ctx, packageContent.Manifests, v.validate)
+func (v *ObjectPhaseAnnotationValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
+	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectPhaseAnnotationValidator) validate(
-	ctx context.Context, path string, index int, obj unstructured.Unstructured,
-) error {
+func (*ObjectPhaseAnnotationValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
 	if obj.GetAnnotations() == nil ||
 		len(obj.GetAnnotations()[manifestsv1alpha1.PackagePhaseAnnotation]) == 0 {
 		return packages.NewInvalidError(packages.Violation{
@@ -81,15 +71,11 @@ func (*ObjectPhaseAnnotationValidator) validate(
 	return nil
 }
 
-type ObjectGVKValidator struct{}
-
-func (v *ObjectGVKValidator) Validate(ctx context.Context, packageContent *PackageContent) error {
-	return ValidateEachObject(ctx, packageContent.Manifests, v.validate)
+func (v *ObjectGVKValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
+	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectGVKValidator) validate(
-	ctx context.Context, path string, index int, obj unstructured.Unstructured,
-) error {
+func (*ObjectGVKValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
 	gvk := obj.GroupVersionKind()
 	// Don't validate Group, because an empty group is valid and indicates the kube core API group.
 	if len(gvk.Version) == 0 || len(gvk.Kind) == 0 {
@@ -104,15 +90,11 @@ func (*ObjectGVKValidator) validate(
 	return nil
 }
 
-type ObjectLabelsValidator struct{}
-
-func (v *ObjectLabelsValidator) Validate(ctx context.Context, packageContent *PackageContent) error {
-	return ValidateEachObject(ctx, packageContent.Manifests, v.validate)
+func (v *ObjectLabelsValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
+	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectLabelsValidator) validate(
-	ctx context.Context, path string, index int, obj unstructured.Unstructured,
-) error {
+func (*ObjectLabelsValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
 	errList := validation.ValidateLabels(
 		obj.GetLabels(), field.NewPath("metadata").Child("labels"))
 	if len(errList) > 0 {
@@ -128,13 +110,8 @@ func (*ObjectLabelsValidator) validate(
 	return nil
 }
 
-type PackageScopeValidator manifestsv1alpha1.PackageManifestScope
-
-func (scope PackageScopeValidator) Validate(ctx context.Context, packageContent *PackageContent) error {
-	if !utils.Contains(
-		packageContent.PackageManifest.Spec.Scopes,
-		manifestsv1alpha1.PackageManifestScope(scope),
-	) {
+func (scope PackageScopeValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
+	if !utils.Contains(packageContent.PackageManifest.Spec.Scopes, manifestsv1alpha1.PackageManifestScope(scope)) {
 		// Package does not support installation in this scope.
 		return packages.NewInvalidError(packages.Violation{
 			Reason: packages.ViolationReasonUnsupportedScope,

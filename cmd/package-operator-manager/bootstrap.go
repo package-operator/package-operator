@@ -18,7 +18,9 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 const (
@@ -27,10 +29,14 @@ const (
 )
 
 func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
-	loader := packagestructure.NewLoader(scheme)
-
+	loader := packageloader.New(scheme, packageloader.WithDefaults)
 	ctx := logr.NewContext(context.Background(), log.WithName("bootstrap"))
-	packgeContent, err := loader.LoadFromPath(ctx, "/package")
+	files, err := packageimport.Folder(ctx, "/package")
+	if err != nil {
+		return err
+	}
+
+	packgeContent, err := loader.FromFiles(ctx, files)
 	if err != nil {
 		return err
 	}
@@ -42,7 +48,7 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	templateSpec := packgeContent.ToTemplateSpec()
+	templateSpec := packagecontent.TemplateSpecFromPackage(packgeContent)
 
 	// Install CRDs or the manager won't start
 	crdGK := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}

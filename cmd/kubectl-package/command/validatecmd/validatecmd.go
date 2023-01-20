@@ -9,8 +9,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
-	"package-operator.run/package-operator/internal/packages/packagebytes"
-	"package-operator.run/package-operator/internal/packages/packagestructure"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 const (
@@ -44,36 +45,26 @@ func (v *Validate) Complete(args []string) (err error) {
 }
 
 func (v Validate) Run(ctx context.Context) (err error) {
-	bytesLoader := packagebytes.NewLoader()
-	structureLoader := cmdutil.NewStructureLoader()
-
 	var (
-		filemap   packagebytes.FileMap
-		extraOpts []packagestructure.LoaderOption
+		filemap   packagecontent.Files
+		extraOpts []packageloader.Option
 	)
 	if v.Pull {
-		filemap, err = bytesLoader.FromPulledImage(ctx, v.TargetReference.String())
+		filemap, err = packageimport.PulledImage(ctx, v.TargetReference.String())
 		if err != nil {
 			return err
 		}
 	} else {
-		filemap, err = bytesLoader.FromFolder(ctx, v.Target)
+		filemap, err = packageimport.Folder(ctx, v.Target)
 		if err != nil {
 			return err
 		}
 
-		ttv := packagebytes.NewTemplateTestValidator(
-			filepath.Join(v.Target, ".test-fixtures"),
-			func(ctx context.Context, fileMap packagebytes.FileMap) error {
-				_, err := structureLoader.LoadFromFileMap(ctx, fileMap)
-				return err
-			},
-			packagestructure.NewPackageManifestLoader(cmdutil.ValidateScheme),
-		)
-		extraOpts = append(extraOpts, packagestructure.WithByteValidators(ttv))
+		ttv := packageloader.NewTemplateTestValidator(filepath.Join(v.Target, ".test-fixtures"))
+		extraOpts = append(extraOpts, packageloader.WithPackageAndFilesValidators(ttv))
 	}
 
-	if _, err := structureLoader.LoadFromFileMap(ctx, filemap, extraOpts...); err != nil {
+	if _, err := packageloader.New(cmdutil.ValidateScheme, extraOpts...).FromFiles(ctx, filemap); err != nil {
 		return err
 	}
 

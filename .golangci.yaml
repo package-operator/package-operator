@@ -60,3 +60,6 @@ issues:
 run:
   skip-files:
     - "zz_generated.deepcopy.go$"
+linters-settings:
+  goimports:
+    local-prefixes: package-operator.run
