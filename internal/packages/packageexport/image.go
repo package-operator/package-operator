@@ -16,6 +16,8 @@ import (
 )
 
 func Image(files packagecontent.Files) (v1.Image, error) {
+	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on our target architecture.
+	// We will drop this after refactoring our in-cluster package loading process to make it architecture agnostic.
 	configFile := &v1.ConfigFile{Architecture: "amd64", OS: "linux", Config: v1.Config{}, RootFS: v1.RootFS{Type: "layers"}}
 	image, err := mutate.ConfigFile(empty.Image, configFile)
 	if err != nil {
