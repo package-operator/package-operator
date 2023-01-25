@@ -7,7 +7,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
-	github.com/google/go-containerregistry v0.12.1
+	github.com/google/go-containerregistry v0.13.0
 	github.com/magefile/mage v1.14.0
 	github.com/mt-sre/devkube v0.5.2
 	github.com/pkg/errors v0.9.1
