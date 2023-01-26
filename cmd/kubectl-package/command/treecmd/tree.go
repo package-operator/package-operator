@@ -9,6 +9,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,6 +35,15 @@ var (
 
 func init() {
 	if err := pkoapis.AddToScheme(treeScheme); err != nil {
+		panic(err)
+	}
+	if err := manifestsv1alpha1.AddToScheme(treeScheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensionsv1.AddToScheme(treeScheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensions.AddToScheme(treeScheme); err != nil {
 		panic(err)
 	}
 }
@@ -74,9 +85,14 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		pkgPrefix = "ClusterPackage"
 	}
 
+	tt, err := packageloader.NewTemplateTransformer(templateContext)
+	if err != nil {
+		return err
+	}
+
 	l := packageloader.New(treeScheme, packageloader.WithDefaults,
 		packageloader.WithValidators(packageloader.PackageScopeValidator(scope)),
-		packageloader.WithFilesTransformers(&packageloader.TemplateTransformer{TemplateContext: templateContext}),
+		packageloader.WithFilesTransformers(tt),
 	)
 
 	files, err := packageimport.Folder(ctx, t.SourcePath)

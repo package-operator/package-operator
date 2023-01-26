@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -101,6 +103,15 @@ func main() {
 		panic(err)
 	}
 	if err := hypershiftv1beta1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := pkoapis.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensions.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 

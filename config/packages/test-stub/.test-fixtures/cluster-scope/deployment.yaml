@@ -22,5 +22,4 @@ spec:
     spec:
       containers:
       - name: test-stub
-        # lazy image injection
-        image: 'test123'
+        image: 'chicken2'

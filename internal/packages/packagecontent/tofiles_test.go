@@ -27,6 +27,7 @@ metadata:
   creationTimestamp: null
 spec:
   availabilityProbes: null
+  config: {}
   phases: null
   scopes: null
 test: {}

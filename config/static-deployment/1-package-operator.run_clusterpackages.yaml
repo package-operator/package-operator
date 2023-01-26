@@ -42,6 +42,10 @@ spec:
           spec:
             description: Package specification.
             properties:
+              config:
+                description: Package configuration parameters.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               image:
                 description: the image containing the contents of the package this
                   image will be unpacked by the package-loader to render the ObjectDeployment

@@ -7,11 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/packages"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
-
-	pkoapis "package-operator.run/apis"
 )
 
 var testScheme = runtime.NewScheme()

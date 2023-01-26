@@ -1,9 +1,9 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/apimachinery/pkg/util/validation/field"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
@@ -51,6 +51,13 @@ type PackageManifestSpec struct {
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
+	// Configuration specification.
+	Config PackageManifestSpecConfig `json:"config,omitempty"`
+}
+
+type PackageManifestSpecConfig struct {
+	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
+	OpenAPIV3Schema *apiextensionsv1.JSONSchemaProps `json:"openAPIV3Schema,omitempty"`
 }
 
 type PackageManifestPhase struct {
@@ -79,6 +86,7 @@ type PackageManifestTestCaseTemplate struct {
 // TemplateContext is available within the package templating process.
 type TemplateContext struct {
 	Package TemplateContextPackage `json:"package"`
+	Config  *runtime.RawExtension  `json:"config,omitempty"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.
@@ -89,65 +97,13 @@ type TemplateContextPackage struct {
 // TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates.
 type TemplateContextObjectMeta struct {
 	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Namespace   string            `json:"namespace"`
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
 }
 
-// Validates the PackageManifest and returns an aggregated list of all errors.
-func (m *PackageManifest) Validate() error {
-	var allErrs field.ErrorList
-
-	if len(m.Name) == 0 {
-		allErrs = append(allErrs,
-			field.Required(field.NewPath("metadata").Child("name"), ""))
-	}
-
-	spec := field.NewPath("spec")
-	if len(m.Spec.Scopes) == 0 {
-		allErrs = append(allErrs,
-			field.Required(spec.Child("scopes"), ""))
-	}
-
-	if len(m.Spec.Phases) == 0 {
-		allErrs = append(allErrs,
-			field.Required(spec.Child("phases"), ""))
-	}
-	phaseNames := map[string]struct{}{}
-	specPhases := spec.Child("phases")
-	for i, phase := range m.Spec.Phases {
-		if _, alreadyExists := phaseNames[phase.Name]; alreadyExists {
-			allErrs = append(allErrs,
-				field.Invalid(specPhases.Index(i).Child("name"), phase.Name, "must be unique"))
-		}
-		phaseNames[phase.Name] = struct{}{}
-	}
-
-	specProbes := field.NewPath("spec").Child("availabilityProbes")
-	if len(m.Spec.AvailabilityProbes) == 0 {
-		allErrs = append(allErrs,
-			field.Required(specProbes, ""))
-	}
-	for i, probe := range m.Spec.AvailabilityProbes {
-		if len(probe.Probes) == 0 {
-			allErrs = append(allErrs,
-				field.Required(specProbes.Index(i).Child("probes"), ""))
-		}
-	}
-
-	testTemplate := field.NewPath("test").Child("template")
-	for i, template := range m.Test.Template {
-		el := validation.IsConfigMapKey(template.Name)
-		if len(el) > 0 {
-			allErrs = append(allErrs,
-				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, allErrs.ToAggregate().Error()))
-		}
-	}
-
-	if len(allErrs) == 0 {
-		return nil
-	}
-	return allErrs.ToAggregate()
+func init() {
+	SchemeBuilder.Register(&PackageManifest{})
 }
 
 func init() {

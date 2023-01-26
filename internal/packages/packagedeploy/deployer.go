@@ -128,9 +128,13 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 }
 
 func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files packagecontent.Files) error {
+	tt, err := packageloader.NewTemplateTransformer(pkg.TemplateContext())
+	if err != nil {
+		return err
+	}
 	packageContent, err := l.packageContentLoader.FromFiles(
 		ctx, files,
-		packageloader.WithFilesTransformers(&packageloader.TemplateTransformer{TemplateContext: pkg.TemplateContext()}),
+		packageloader.WithFilesTransformers(tt),
 		packageloader.WithTransformers(&packageloader.CommonObjectLabelsTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)

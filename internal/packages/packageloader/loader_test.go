@@ -33,13 +33,15 @@ func init() {
 func TestLoader(t *testing.T) {
 	t.Parallel()
 
-	transformer := &packageloader.TemplateTransformer{
-		TemplateContext: manifestsv1alpha1.TemplateContext{
+	transformer, err := packageloader.NewTemplateTransformer(
+		manifestsv1alpha1.TemplateContext{
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
 		},
-	}
+	)
+	require.NoError(t, err)
+
 	l := packageloader.New(testScheme, packageloader.WithDefaults, packageloader.WithFilesTransformers(transformer))
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -157,7 +159,7 @@ func TestTemplateTestValidator(t *testing.T) {
 	ttv := packageloader.NewTemplateTestValidator(fixturesPath)
 
 	originalFileMap := packagecontent.Files{
-		"file2.yaml.gotmpl": []byte("{{.Package.Namespace}}\n"), "file.yaml.gotmpl": []byte("{{.Package.Name}}\n"),
+		"file2.yaml.gotmpl": []byte("{{.package.metadata.namespace}}\n"), "file.yaml.gotmpl": []byte("{{.package.metadata.name}}\n"),
 	}
 	err := ttv.ValidatePackageAndFiles(ctx, pc, originalFileMap)
 	require.NoError(t, err)
@@ -165,7 +167,7 @@ func TestTemplateTestValidator(t *testing.T) {
 	// Assert Fixtures have been setup
 
 	newFileMap := packagecontent.Files{
-		"file2.yaml.gotmpl": []byte("{{.Package.Namespace}}\n"), "file.yaml.gotmpl": []byte("#{{.Package.Name}}#\n"),
+		"file2.yaml.gotmpl": []byte("{{.package.metadata.namespace}}\n"), "file.yaml.gotmpl": []byte("#{{.package.metadata.name}}#\n"),
 	}
 	expectedErr := `Package validation errors:
 - Test "t1": File mismatch against fixture in file.yaml.gotmpl:
@@ -209,15 +211,16 @@ func TestTemplateTransformer(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		tt := &packageloader.TemplateTransformer{
-			TemplateContext: manifestsv1alpha1.TemplateContext{
+		tt, err := packageloader.NewTemplateTransformer(
+			manifestsv1alpha1.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
 			},
-		}
+		)
+		require.NoError(t, err)
 
-		template := []byte("#{{.Package.Name}}#")
+		template := []byte("#{{.package.metadata.name}}#")
 		fm := packagecontent.Files{
 			"something":        template,
 			"something.yaml":   template,
@@ -226,7 +229,7 @@ func TestTemplateTransformer(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		err := tt.TransformPackageFiles(ctx, fm)
+		err = tt.TransformPackageFiles(ctx, fm)
 		require.NoError(t, err)
 
 		templateResult := "#test#"
@@ -238,38 +241,40 @@ func TestTemplateTransformer(t *testing.T) {
 
 	t.Run("invalid template", func(t *testing.T) {
 		t.Parallel()
-		tt := &packageloader.TemplateTransformer{
-			TemplateContext: manifestsv1alpha1.TemplateContext{
+		tt, err := packageloader.NewTemplateTransformer(
+			manifestsv1alpha1.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
 			},
-		}
+		)
+		require.NoError(t, err)
 
-		template := []byte("#{{.Package.Name}#")
+		template := []byte("#{{.package.metadata.name}#")
 		fm := packagecontent.Files{"test.yaml.gotmpl": template}
 
 		ctx := context.Background()
-		err := tt.TransformPackageFiles(ctx, fm)
+		err = tt.TransformPackageFiles(ctx, fm)
 		require.Error(t, err)
 	})
 
 	t.Run("execution template error", func(t *testing.T) {
 		t.Parallel()
 
-		tt := &packageloader.TemplateTransformer{
-			TemplateContext: manifestsv1alpha1.TemplateContext{
+		tt, err := packageloader.NewTemplateTransformer(
+			manifestsv1alpha1.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
 			},
-		}
+		)
+		require.NoError(t, err)
 
 		template := []byte("#{{.Package.Banana}}#")
 		fm := packagecontent.Files{"test.yaml.gotmpl": template}
 
 		ctx := context.Background()
-		err := tt.TransformPackageFiles(ctx, fm)
+		err = tt.TransformPackageFiles(ctx, fm)
 		require.Error(t, err)
 	})
 }

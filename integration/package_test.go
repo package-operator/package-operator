@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -34,6 +35,9 @@ func TestPackage_success(t *testing.T) {
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+					},
 				},
 			},
 			objectDeployment: &corev1alpha1.ObjectDeployment{},
@@ -49,6 +53,9 @@ func TestPackage_success(t *testing.T) {
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+					},
 				},
 			},
 			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
@@ -66,6 +73,9 @@ func TestPackage_success(t *testing.T) {
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+					},
 				},
 			},
 			objectDeployment: &corev1alpha1.ObjectDeployment{},
@@ -91,6 +101,9 @@ func TestPackage_success(t *testing.T) {
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+					},
 				},
 			},
 			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},

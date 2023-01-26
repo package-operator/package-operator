@@ -47,16 +47,18 @@ func (v TemplateTestValidator) runTestCase(
 	log := logr.FromContextOrDiscard(ctx)
 	fileMap = utils.CopyMap(fileMap)
 
-	tt := TemplateTransformer{
-		TemplateContext: testCase.Context,
+	tt, err := NewTemplateTransformer(testCase.Context)
+	if err != nil {
+		return err
 	}
+
 	if err := tt.TransformPackageFiles(ctx, fileMap); err != nil {
 		return err
 	}
 
 	// check if test figures exist
 	testFixturePath := filepath.Join(v.fixturesFolderPath, testCase.Name)
-	_, err := os.Stat(testFixturePath)
+	_, err = os.Stat(testFixturePath)
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
 		// generate fixtures now
