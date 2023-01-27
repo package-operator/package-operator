@@ -12,7 +12,8 @@ type (
 
 	// PackageContent represents the parsed content of an PKO package.
 	Package struct {
-		PackageManifest *manifestsv1alpha1.PackageManifest
-		Objects         map[string][]unstructured.Unstructured
+		PackageManifest     *manifestsv1alpha1.PackageManifest
+		PackageManifestLock *manifestsv1alpha1.PackageManifestLock
+		Objects             map[string][]unstructured.Unstructured
 	}
 )

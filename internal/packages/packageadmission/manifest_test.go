@@ -73,6 +73,70 @@ func TestValidatePackageManifest(t *testing.T) {
 				"test.template[0].context.config.banana: Required value",
 			},
 		},
+		{
+			name: "empty image",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Images: []manifestsv1alpha1.PackageManifestImage{{}},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+				"spec.images[0].name: Invalid value: \"\": must be non empty",
+				"spec.images[0].image: Invalid value: \"\": must be non empty",
+			},
+		},
+		{
+			name: "empty image name",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Images: []manifestsv1alpha1.PackageManifestImage{{Image: "nginx:latest"}},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+				"spec.images[0].name: Invalid value: \"\": must be non empty",
+			},
+		},
+		{
+			name: "empty image identifier",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Images: []manifestsv1alpha1.PackageManifestImage{{Name: "nginx"}},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+				"spec.images[0].image: Invalid value: \"\": must be non empty",
+			},
+		},
+		{
+			name: "duplicated image name",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Images: []manifestsv1alpha1.PackageManifestImage{
+						{Name: "nginx", Image: "nginx:latest"},
+						{Name: "nginx", Image: "nginx:stable"},
+					},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"spec.availabilityProbes: Required value",
+				"spec.images[1].name: Invalid value: \"nginx\": must be unique",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 
 	"package-operator.run/package-operator/cmd/kubectl-package/command/buildcmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/treecmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/command/updatecmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/validatecmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/versioncmd"
 	"package-operator.run/package-operator/internal/version"
@@ -49,6 +50,7 @@ func CobraRoot() *cobra.Command {
 		(&validatecmd.Validate{}).CobraCommand(),
 		(&versioncmd.Version{}).CobraCommand(),
 		(&treecmd.Tree{}).CobraCommand(),
+		(&updatecmd.Update{}).CobraCommand(),
 	)
 
 	return cmd

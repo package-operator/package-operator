@@ -53,6 +53,8 @@ type PackageManifestSpec struct {
 	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
 	// Configuration specification.
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
+	// List of images to be resolved
+	Images []PackageManifestImage `json:"images"`
 }
 
 type PackageManifestSpecConfig struct {
@@ -67,6 +69,14 @@ type PackageManifestPhase struct {
 	// If set to the string "default" the built-in controller reconciling the object.
 	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
 	Class string `json:"class,omitempty"`
+}
+
+// PackageManifestImage specifies an image tag to be resolved
+type PackageManifestImage struct {
+	// Image name to be use to reference it in the templates
+	Name string `json:"name"`
+	// Image identifier (REPOSITORY[:TAG])
+	Image string `json:"image"`
 }
 
 // PackageManifestTest configures test cases.
@@ -100,10 +110,6 @@ type TemplateContextObjectMeta struct {
 	Namespace   string            `json:"namespace"`
 	Labels      map[string]string `json:"labels"`
 	Annotations map[string]string `json:"annotations"`
-}
-
-func init() {
-	SchemeBuilder.Register(&PackageManifest{})
 }
 
 func init() {

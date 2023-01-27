@@ -14,7 +14,7 @@ import (
 )
 
 func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
-	pkg = &Package{nil, map[string][]unstructured.Unstructured{}}
+	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
 		case !packages.IsYAMLFile(path):
@@ -30,6 +30,21 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 				return
 			}
 			pkg.PackageManifest, err = manifestFromFile(ctx, scheme, path, content)
+			if err != nil {
+				return nil, err
+			}
+
+			continue
+		case packages.IsManifestLockFile(path):
+			if pkg.PackageManifestLock != nil {
+				err = packages.NewInvalidError(packages.Violation{
+					Reason:   packages.ViolationReasonPackageManifestLockDuplicated,
+					Location: &packages.ViolationLocation{Path: path},
+				})
+
+				return
+			}
+			pkg.PackageManifestLock, err = manifestLockFromFile(ctx, scheme, path, content)
 			if err != nil {
 				return nil, err
 			}
