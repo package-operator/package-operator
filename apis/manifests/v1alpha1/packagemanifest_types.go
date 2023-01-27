@@ -51,6 +51,8 @@ type PackageManifestSpec struct {
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
+	// Digest Replacements define in which objects to replace image tags with digests.
+	DigestReplacements DigestReplacements `json:"digestReplacements"`
 }
 
 type PackageManifestPhase struct {
@@ -92,6 +94,25 @@ type TemplateContextObjectMeta struct {
 	Namespace   string            `json:"namespace,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type DigestReplacements []DigestReplacementSelector
+
+// DigestReplacementSelector selects a subset of objects to replace image tags with digests.
+type DigestReplacementSelector struct {
+	// Kind and API Group of the object to probe.
+	Kind *DigestReplacementKindSpec `json:"kind"`
+}
+
+// Kind package probe parameters.
+// DigestReplacementKindSpec selects objects based on Kind and API version.
+type DigestReplacementKindSpec struct {
+	// Object Group to apply a probe to.
+	// +example=apps/v1
+	ApiVersion string `json:"apiVersion"`
+	// Object Kind to apply a probe to.
+	// +example=Deployment
+	Kind string `json:"kind"`
 }
 
 // Validates the PackageManifest and returns an aggregated list of all errors.
