@@ -19,7 +19,7 @@ require (
 	k8s.io/client-go v0.26.1
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029
 	package-operator.run/apis v0.0.0-20230122003044-cec566bbbc15
-	sigs.k8s.io/controller-runtime v0.14.1
+	sigs.k8s.io/controller-runtime v0.14.2
 	sigs.k8s.io/yaml v1.3.0
 )
 
