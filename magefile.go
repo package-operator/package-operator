@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	dev2 "package-operator.run/package-operator"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -755,6 +756,32 @@ func (Build) cleanImageCacheDir(name string) {
 	}
 }
 
+func populateCacheCmdBuild(cmd, imageName string) {
+	imageCacheDir := locations.ImageCache(imageName)
+	must(sh.Copy(filepath.Join(imageCacheDir, cmd), locations.binaryDst(cmd, linuxAMD64Arch)))
+	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", imageName+".Containerfile")))
+	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
+}
+
+func newImageBuildInfo(imageName, containerFile, contextDir string) *dev2.ImageBuildInfo {
+	_, ok := commandImages[imageName]
+	if !ok {
+		panic(fmt.Sprintf("unknown cmd image: %s", imageName))
+	}
+
+	imageCacheDir := locations.ImageCache(imageName)
+	imageTag := locations.ImageURL(imageName, false)
+	containerRuntime := locations.ContainerRuntime()
+
+	return &dev2.ImageBuildInfo{
+		ImageTag:      imageTag,
+		CacheDir:      imageCacheDir,
+		ContainerFile: containerFile,
+		ContextDir:    contextDir,
+		Runtime:       containerRuntime,
+	}
+}
+
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
 func (b Build) buildCmdImage(imageName string) {
@@ -767,30 +794,11 @@ func (b Build) buildCmdImage(imageName string) {
 		cmd = opts.BinaryName
 	}
 
-	mg.Deps(mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.cleanImageCacheDir, imageName))
-
-	imageCacheDir := locations.ImageCache(imageName)
-	imageTag := locations.ImageURL(imageName, false)
-
-	// prepare build context
-	must(sh.Copy(filepath.Join(imageCacheDir, cmd), locations.binaryDst(cmd, linuxAMD64Arch)))
-	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", imageName+".Containerfile")))
-	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
-
-	containerRuntime := locations.ContainerRuntime()
-	cmds := [][]string{
-		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
-		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
+	deps := []interface{}{
+		mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
+		mg.F(Build.cleanImageCacheDir, imageName),
 	}
 
-	// Build image!
-	for _, command := range cmds {
-		buildCmd := exec.Command(command[0], command[1:]...)
-		buildCmd.Stderr = os.Stderr
-		buildCmd.Stdout = os.Stdout
-		buildCmd.Dir = imageCacheDir
-		must(buildCmd.Run())
-	}
 }
 
 func (b Build) buildPackageImage(name string) {
