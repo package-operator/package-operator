@@ -95,7 +95,8 @@ func TestValidatePackageManifest(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			ferrs := packageadmission.ValidatePackageManifest(ctx, testScheme, test.packageManifest)
+			ferrs, err := packageadmission.ValidatePackageManifest(ctx, testScheme, test.packageManifest)
+			require.NoError(t, err)
 			require.Len(t, ferrs, len(test.expectedErrors))
 
 			var errorStrings []string
@@ -113,7 +114,7 @@ func TestValidatePackageConfiguration(t *testing.T) {
 	tests := []struct {
 		name                  string
 		packageManifestConfig *manifestsv1alpha1.PackageManifestSpecConfig
-		configJSON            string
+		config                map[string]interface{}
 		expectedErrors        []string
 	}{
 		{
@@ -129,7 +130,7 @@ func TestValidatePackageConfiguration(t *testing.T) {
 					Required: []string{"test", "banana"},
 				},
 			},
-			configJSON: `{"test":42}`,
+			config: map[string]interface{}{"test": float64(42)},
 			expectedErrors: []string{
 				`test: Invalid value: "number": test in body must be of type string: "number"`,
 				"banana: Required value",
@@ -139,12 +140,8 @@ func TestValidatePackageConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config := &runtime.RawExtension{
-				Raw: []byte(test.configJSON),
-			}
-
 			ctx := context.Background()
-			ferrs, err := packageadmission.ValidatePackageConfiguration(ctx, testScheme, test.packageManifestConfig, config, nil)
+			ferrs, err := packageadmission.ValidatePackageConfiguration(ctx, testScheme, test.packageManifestConfig, test.config, nil)
 			require.NoError(t, err)
 
 			var errorStrings []string
@@ -219,10 +216,11 @@ func TestPackageManifest_Validate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := packageadmission.ValidatePackageManifest(ctx, testScheme, thisTest.manifest)
+			ferr, err := packageadmission.ValidatePackageManifest(ctx, testScheme, thisTest.manifest)
+			require.NoError(t, err)
 
 			var errorStrings []string
-			for _, err := range err {
+			for _, err := range ferr {
 				errorStrings = append(errorStrings, err.Error())
 			}
 

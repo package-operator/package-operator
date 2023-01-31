@@ -7,7 +7,12 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
+	pkoapis "package-operator.run/apis"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
@@ -20,6 +25,25 @@ const (
 	validateLong    = "validate a package. Target may be a source directory, a package in a tar[.gz] or a fully qualified tag if --pull is set."
 	validatePullUse = "treat target as image reference and pull it instead of looking on the filesystem"
 )
+
+var (
+	validateScheme = runtime.NewScheme()
+)
+
+func init() {
+	if err := pkoapis.AddToScheme(validateScheme); err != nil {
+		panic(err)
+	}
+	if err := manifestsv1alpha1.AddToScheme(validateScheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensionsv1.AddToScheme(validateScheme); err != nil {
+		panic(err)
+	}
+	if err := apiextensions.AddToScheme(validateScheme); err != nil {
+		panic(err)
+	}
+}
 
 type Validate struct {
 	Target          string
@@ -60,7 +84,7 @@ func (v Validate) Run(ctx context.Context) (err error) {
 			return err
 		}
 
-		ttv := packageloader.NewTemplateTestValidator(filepath.Join(v.Target, ".test-fixtures"))
+		ttv := packageloader.NewTemplateTestValidator(validateScheme, filepath.Join(v.Target, ".test-fixtures"))
 		extraOpts = append(extraOpts, packageloader.WithPackageAndFilesValidators(ttv))
 	}
 

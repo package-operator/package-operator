@@ -3,8 +3,12 @@ package packageadmission
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	extschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -12,7 +16,7 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *manifestsv1alpha1.PackageManifest) field.ErrorList {
+func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *manifestsv1alpha1.PackageManifest) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	if len(obj.Name) == 0 {
@@ -65,8 +69,15 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 		}
 
 		if len(configErrors) == 0 {
+			configuration := map[string]interface{}{}
+			if template.Context.Config != nil {
+				if err := json.Unmarshal(template.Context.Config.Raw, &configuration); err != nil {
+					return nil, fmt.Errorf("unmarshal config at test %s: %w", template.Name, err)
+				}
+			}
+
 			valerrors, err := ValidatePackageConfiguration(
-				ctx, scheme, &obj.Spec.Config, template.Context.Config, testTemplate.Index(i).Child("context").Child("config"))
+				ctx, scheme, &obj.Spec.Config, configuration, testTemplate.Index(i).Child("context").Child("config"))
 			if err != nil {
 				panic(err)
 			}
@@ -74,29 +85,15 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 		}
 	}
 
-	if len(allErrs) == 0 {
-		return nil
-	}
-	return allErrs
+	return allErrs, nil
 }
 
 func ValidatePackageConfiguration(
 	ctx context.Context, scheme *runtime.Scheme, mc *manifestsv1alpha1.PackageManifestSpecConfig,
-	config *runtime.RawExtension, fldPath *field.Path,
+	configuration map[string]interface{}, fldPath *field.Path,
 ) (field.ErrorList, error) {
 	if mc.OpenAPIV3Schema == nil {
 		return nil, nil
-	}
-
-	obj := map[string]interface{}{}
-	switch {
-	case config == nil:
-	case len(config.Raw) > 0 && config.Object != nil:
-		return nil, ErrDuplicateConfig
-	case len(config.Raw) > 0:
-		if err := json.Unmarshal(config.Raw, &obj); err != nil {
-			return nil, err
-		}
 	}
 
 	nonVersionedSchema := &apiextensions.JSONSchemaProps{}
@@ -104,5 +101,43 @@ func ValidatePackageConfiguration(
 		return nil, err
 	}
 
-	return validatePackageConfigurationBySchema(ctx, scheme, nonVersionedSchema, obj, fldPath)
+	return validatePackageConfigurationBySchema(ctx, scheme, nonVersionedSchema, configuration, fldPath)
+}
+
+func AdmitPackageConfiguration(
+	ctx context.Context, scheme *runtime.Scheme, configuration map[string]interface{},
+	manifest *manifestsv1alpha1.PackageManifest, fldPath *field.Path,
+) (field.ErrorList, error) {
+	if manifest.Spec.Config.OpenAPIV3Schema == nil {
+		// Prune all configuration fields
+		for k := range configuration {
+			delete(configuration, k)
+		}
+		return nil, nil
+	}
+	nonVersionedSchema := &apiextensions.JSONSchemaProps{}
+	if err := scheme.Convert(
+		manifest.Spec.Config.OpenAPIV3Schema, nonVersionedSchema, nil,
+	); err != nil {
+		return nil, err
+	}
+
+	s, err := extschema.NewStructural(nonVersionedSchema)
+	if err != nil {
+		return nil, err
+	}
+
+	// remove fields not part of the schema.
+	pruning.Prune(configuration, s, true)
+
+	// inject default values from schema.
+	defaulting.Default(configuration, s)
+
+	// validate configuration via schema.
+	ferrs, err := validatePackageConfigurationBySchema(
+		ctx, scheme, nonVersionedSchema, configuration, fldPath)
+	if err != nil {
+		return nil, err
+	}
+	return ferrs, nil
 }

@@ -34,23 +34,13 @@ func workaroundnovalue(actualCtx map[string]interface{}) {
 	}
 }
 
-func NewTemplateTransformer(tmplCtx manifestsv1alpha1.TemplateContext) (*TemplateTransformer, error) {
-	tctx := struct {
-		Package manifestsv1alpha1.TemplateContextPackage `json:"package"`
-		Config  map[string]string                        `json:"config"`
-	}{tmplCtx.Package, map[string]string{}}
+type TemplateContext struct {
+	Package manifestsv1alpha1.TemplateContextPackage `json:"package"`
+	Config  map[string]interface{}                   `json:"config"`
+}
 
-	switch {
-	case tmplCtx.Config == nil:
-	case len(tmplCtx.Config.Raw) > 0 && tmplCtx.Config.Object != nil:
-		return nil, ErrDuplicateConfig
-	case len(tmplCtx.Config.Raw) > 0:
-		if err := json.Unmarshal(tmplCtx.Config.Raw, &tctx.Config); err != nil {
-			return nil, err
-		}
-	}
-
-	p, err := json.Marshal(tctx)
+func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, error) {
+	p, err := json.Marshal(tmplCtx)
 	if err != nil {
 		return nil, err
 	}

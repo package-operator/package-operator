@@ -69,7 +69,7 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("loading source from disk", "path", t.SourcePath)
 
-	templateContext := manifestsv1alpha1.TemplateContext{
+	templateContext := packageloader.TemplateContext{
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
 				Name:      "name",

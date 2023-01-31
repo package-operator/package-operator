@@ -81,7 +81,10 @@ func manifestFromFile(
 		return nil, packages.NewInvalidError(violation)
 	}
 
-	fErr := packageadmission.ValidatePackageManifest(ctx, scheme, manifest)
+	fErr, err := packageadmission.ValidatePackageManifest(ctx, scheme, manifest)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(fErr) != 0 {
 		violation := packages.Violation{

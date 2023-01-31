@@ -34,7 +34,7 @@ func TestLoader(t *testing.T) {
 	t.Parallel()
 
 	transformer, err := packageloader.NewTemplateTransformer(
-		manifestsv1alpha1.TemplateContext{
+		packageloader.TemplateContext{
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
@@ -156,7 +156,7 @@ func TestTemplateTestValidator(t *testing.T) {
 	pc := &packagecontent.Package{PackageManifest: packageManifest}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	ttv := packageloader.NewTemplateTestValidator(fixturesPath)
+	ttv := packageloader.NewTemplateTestValidator(testScheme, fixturesPath)
 
 	originalFileMap := packagecontent.Files{
 		"file2.yaml.gotmpl": []byte("{{.package.metadata.namespace}}\n"), "file.yaml.gotmpl": []byte("{{.package.metadata.name}}\n"),
@@ -212,7 +212,7 @@ func TestTemplateTransformer(t *testing.T) {
 		t.Parallel()
 
 		tt, err := packageloader.NewTemplateTransformer(
-			manifestsv1alpha1.TemplateContext{
+			packageloader.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
@@ -242,7 +242,7 @@ func TestTemplateTransformer(t *testing.T) {
 	t.Run("invalid template", func(t *testing.T) {
 		t.Parallel()
 		tt, err := packageloader.NewTemplateTransformer(
-			manifestsv1alpha1.TemplateContext{
+			packageloader.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
@@ -262,7 +262,7 @@ func TestTemplateTransformer(t *testing.T) {
 		t.Parallel()
 
 		tt, err := packageloader.NewTemplateTransformer(
-			manifestsv1alpha1.TemplateContext{
+			packageloader.TemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
