@@ -53,6 +53,8 @@ type ObjectSetObject struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +example={apiVersion: apps/v1, kind: Deployment, metadata: {name: example-deployment}}
 	Object unstructured.Unstructured `json:"object"`
+	// Maps conditions from this object into the Package Operator APIs.
+	ConditionMappings []ConditionMapping `json:"conditionMappings"`
 }
 
 // ObjectSet Condition Types.
@@ -96,6 +98,14 @@ type ObjectSetProbe struct {
 	Probes []Probe `json:"probes"`
 	// Selector specifies which objects this probe should target.
 	Selector ProbeSelector `json:"selector"`
+}
+
+type ConditionMapping struct {
+	// Source condition type.
+	SourceType string `json:"sourceType"`
+	// Destination condition type to report into Package Operator APIs.
+	// +kubebuilder:validation:Pattern=`[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]`
+	DestinationType string `json:"destinationType"`
 }
 
 // Selects a subset of objects to apply probes to.

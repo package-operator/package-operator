@@ -52,13 +52,16 @@ spec:
       - class: ipsum
         name: lorem
         objects:
-        - object:
+        - conditionMappings:
+          - destinationType: sit
+            sourceType: dolor
+          object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - dolor
+        - amet
 status:
   phase:Pending: null
 
@@ -109,16 +112,19 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: amet
-    name: sit
+  - class: sadipscing
+    name: consetetur
     objects:
-    - object:
+    - conditionMappings:
+      - destinationType: sed
+        sourceType: elitr
+      object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - consetetur
+    - diam
   previous:
   - name: previous-revision
 status:
@@ -164,7 +170,10 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   objects:
-  - object:
+  - conditionMappings:
+    - destinationType: eirmod
+      sourceType: nonumy
+    object:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
@@ -178,10 +187,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: elitr
-    kind: sadipscing
-    name: sed
-    namespace: diam
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -208,7 +217,10 @@ kind: ClusterObjectSlice
 metadata:
   name: example
 objects:
-- object:
+- conditionMappings:
+  - destinationType: amet
+    sourceType: sit
+  object:
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -237,7 +249,7 @@ metadata:
   name: example
 spec:
   config: runtime.RawExtension
-  image: nonumy
+  image: consetetur
 status:
   phase: Pending
 
@@ -286,16 +298,19 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: tempor
-        name: eirmod
+      - class: elitr
+        name: sadipscing
         objects:
-        - object:
+        - conditionMappings:
+          - destinationType: diam
+            sourceType: sed
+          object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - lorem
+        - nonumy
 status:
   phase:Pending: null
 
@@ -347,16 +362,19 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: dolor
-    name: ipsum
+  - class: tempor
+    name: eirmod
     objects:
-    - object:
+    - conditionMappings:
+      - destinationType: ipsum
+        sourceType: lorem
+      object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - sit
+    - dolor
   previous:
   - name: previous-revision
 status:
@@ -403,7 +421,10 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   objects:
-  - object:
+  - conditionMappings:
+    - destinationType: amet
+      sourceType: sit
+    object:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
@@ -417,10 +438,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
 
 ```
 
@@ -448,7 +469,10 @@ metadata:
   name: example
   namespace: default
 objects:
-- object:
+- conditionMappings:
+  - destinationType: nonumy
+    sourceType: diam
+  object:
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -478,7 +502,7 @@ metadata:
   namespace: default
 spec:
   config: runtime.RawExtension
-  image: sed
+  image: eirmod
 status:
   phase: Pending
 
@@ -591,6 +615,20 @@ Used in:
 * [ClusterObjectSet](#clusterobjectset)
 
 
+### ConditionMapping
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `sourceType` <b>required</b><br>string | Source condition type. |
+| `destinationType` <b>required</b><br>string | Destination condition type to report into Package Operator APIs. |
+
+
+Used in:
+* [ObjectSetObject](#objectsetobject)
+
+
 ### ControlledObjectReference
 
 References an object controlled by this ObjectSet/ObjectSetPhase.
@@ -648,6 +686,7 @@ An object that is part of the phase of an ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `object` <b>required</b><br>unstructured.Unstructured |  |
+| `conditionMappings` <b>required</b><br><a href="#conditionmapping">[]ConditionMapping</a> | Maps conditions from this object into the Package Operator APIs. |
 
 
 Used in:
