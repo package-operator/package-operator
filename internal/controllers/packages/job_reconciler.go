@@ -20,6 +20,10 @@ import (
 const (
 	// Hash used to determine if the job is still up-to-date.
 	packageSpecHashAnnotation = "package-operator.run/package-spec-hash"
+	// Name of the Package object the loader job belongs to.
+	packageNameLabel = "package-operator.run/pkg-name"
+	// Namespace of the Package object the loader job belongs to.
+	packageNamespaceLabel = "package-operator.run/pkg-namespace"
 )
 
 type jobReconciler struct {
@@ -146,6 +150,8 @@ func desiredJob(pkg genericPackage, pkoNamespace, pkoImage string) *batchv1.Job 
 			},
 			Labels: map[string]string{
 				controllers.DynamicCacheLabel: "True",
+				packageNameLabel:              pkg.ClientObject().GetName(),
+				packageNamespaceLabel:         pkg.ClientObject().GetNamespace(),
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -200,10 +206,5 @@ func desiredJob(pkg genericPackage, pkoNamespace, pkoImage string) *batchv1.Job 
 }
 
 func jobName(pkg genericPackage) string {
-	name := pkg.ClientObject().GetName()
-	ns := pkg.ClientObject().GetNamespace()
-	if len(ns) == 0 {
-		return name + "-loader"
-	}
-	return fmt.Sprintf("%s-%s-loader", ns, name)
+	return "loader-" + string(pkg.ClientObject().GetUID())
 }
