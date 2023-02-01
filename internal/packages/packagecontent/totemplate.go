@@ -26,7 +26,10 @@ func TemplateSpecFromPackage(pkg *Package) (templateSpec corev1alpha1.ObjectSetT
 			}
 
 			// Any error should have been detected by the validation stage.
-			conditionMapping, _ := ParseConditionMapAnnotation(&objects[i])
+			conditionMapping, err := ParseConditionMapAnnotation(&objects[i])
+			if err != nil {
+				panic(err)
+			}
 
 			object.SetAnnotations(annotations)
 			objectsByPhase[phaseAnnotation] = append(objectsByPhase[phaseAnnotation], corev1alpha1.ObjectSetObject{

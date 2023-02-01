@@ -26,7 +26,7 @@ func ParseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1
 	}
 
 	var mappings []corev1alpha1.ConditionMapping
-	for i, rawMapping := range strings.Split(conditionMapAnnotation, "\n") {
+	for i, rawMapping := range strings.Split(strings.TrimSpace(conditionMapAnnotation), "\n") {
 		line := i + 1
 		parts := strings.SplitN(rawMapping, "=>", 2)
 		if len(parts) != 2 {

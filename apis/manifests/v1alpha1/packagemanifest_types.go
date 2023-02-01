@@ -13,7 +13,7 @@ const (
 	PackagePhaseAnnotation = "package-operator.run/phase"
 	// Package ConditionMap annotation specifies object conditions to map back into Package Operator APIs.
 	// Example: Available => my-own-prefix/Available.
-	PackageConditionMapAnnotation = "package-operator.run/phase"
+	PackageConditionMapAnnotation = "package-operator.run/condition-map"
 )
 
 const (
