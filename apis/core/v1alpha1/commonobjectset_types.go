@@ -54,7 +54,7 @@ type ObjectSetObject struct {
 	// +example={apiVersion: apps/v1, kind: Deployment, metadata: {name: example-deployment}}
 	Object unstructured.Unstructured `json:"object"`
 	// Maps conditions from this object into the Package Operator APIs.
-	ConditionMappings []ConditionMapping `json:"conditionMappings"`
+	ConditionMappings []ConditionMapping `json:"conditionMappings,omitempty"`
 }
 
 // ObjectSet Condition Types.

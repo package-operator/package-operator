@@ -298,7 +298,6 @@ spec:
                                     x-kubernetes-embedded-resource: true
                                     x-kubernetes-preserve-unknown-fields: true
                                 required:
-                                - conditionMappings
                                 - object
                                 type: object
                               type: array
@@ -611,7 +610,6 @@ spec:
                       x-kubernetes-embedded-resource: true
                       x-kubernetes-preserve-unknown-fields: true
                   required:
-                  - conditionMappings
                   - object
                   type: object
                 type: array
@@ -976,7 +974,6 @@ spec:
                             x-kubernetes-embedded-resource: true
                             x-kubernetes-preserve-unknown-fields: true
                         required:
-                        - conditionMappings
                         - object
                         type: object
                       type: array
@@ -1212,7 +1209,6 @@ spec:
                   x-kubernetes-embedded-resource: true
                   x-kubernetes-preserve-unknown-fields: true
               required:
-              - conditionMappings
               - object
               type: object
             type: array
@@ -1671,7 +1667,6 @@ spec:
                                     x-kubernetes-embedded-resource: true
                                     x-kubernetes-preserve-unknown-fields: true
                                 required:
-                                - conditionMappings
                                 - object
                                 type: object
                               type: array
@@ -1981,7 +1976,6 @@ spec:
                       x-kubernetes-embedded-resource: true
                       x-kubernetes-preserve-unknown-fields: true
                   required:
-                  - conditionMappings
                   - object
                   type: object
                 type: array
@@ -2344,7 +2338,6 @@ spec:
                             x-kubernetes-embedded-resource: true
                             x-kubernetes-preserve-unknown-fields: true
                         required:
-                        - conditionMappings
                         - object
                         type: object
                       type: array
@@ -2580,7 +2573,6 @@ spec:
                   x-kubernetes-embedded-resource: true
                   x-kubernetes-preserve-unknown-fields: true
               required:
-              - conditionMappings
               - object
               type: object
             type: array

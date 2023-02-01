@@ -686,7 +686,7 @@ An object that is part of the phase of an ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `object` <b>required</b><br>unstructured.Unstructured |  |
-| `conditionMappings` <b>required</b><br><a href="#conditionmapping">[]ConditionMapping</a> | Maps conditions from this object into the Package Operator APIs. |
+| `conditionMappings` <br><a href="#conditionmapping">[]ConditionMapping</a> | Maps conditions from this object into the Package Operator APIs. |
 
 
 Used in:
