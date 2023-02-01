@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +47,11 @@ func (m *phaseObjectOwnerMock) GetRevision() int64 {
 func (m *phaseObjectOwnerMock) IsPaused() bool {
 	args := m.Called()
 	return args.Bool(0)
+}
+
+func (m *phaseObjectOwnerMock) GetConditions() *[]metav1.Condition {
+	args := m.Called()
+	return args.Get(0).(*[]metav1.Condition)
 }
 
 type dynamicCacheMock struct {

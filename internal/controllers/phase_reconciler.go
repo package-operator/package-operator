@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -93,6 +94,7 @@ func NewPhaseReconciler(
 type PhaseObjectOwner interface {
 	ClientObject() client.Object
 	GetRevision() int64
+	GetConditions() *[]metav1.Condition
 	IsPaused() bool
 }
 
@@ -261,7 +263,71 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return actualObj, nil
 	}
 
-	return r.reconcileObject(ctx, owner, desiredObj, previous)
+	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous); err != nil {
+		return nil, err
+	}
+
+	if err = mapConditions(ctx, owner, phaseObject.ConditionMappings, actualObj); err != nil {
+		return nil, err
+	}
+
+	return actualObj, nil
+}
+
+func mapConditions(
+	ctx context.Context, owner PhaseObjectOwner,
+	conditionMappings []corev1alpha1.ConditionMapping,
+	actualObject *unstructured.Unstructured,
+) error {
+	if len(conditionMappings) == 0 {
+		return nil
+	}
+
+	rawConditions, exist, err := unstructured.NestedFieldNoCopy(
+		actualObject.Object, "status", "conditions")
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return nil
+	}
+
+	j, err := json.Marshal(rawConditions)
+	if err != nil {
+		return err
+	}
+	var objectConditions []metav1.Condition
+	if err := json.Unmarshal(j, &objectConditions); err != nil {
+		return err
+	}
+
+	// Maps from object condition type to PKO condition type.
+	conditionTypeMap := map[string]string{}
+	for _, m := range conditionMappings {
+		conditionTypeMap[m.SourceType] = m.DestinationType
+	}
+	for _, condition := range objectConditions {
+		if condition.ObservedGeneration != 0 &&
+			condition.ObservedGeneration != actualObject.GetGeneration() {
+			// condition outdated
+			continue
+		}
+
+		destType, ok := conditionTypeMap[condition.Type]
+		if !ok {
+			// condition not mapped
+			continue
+		}
+
+		meta.SetStatusCondition(owner.GetConditions(), metav1.Condition{
+			Type:               destType,
+			Status:             condition.Status,
+			Reason:             condition.Reason,
+			Message:            condition.Message,
+			ObservedGeneration: owner.ClientObject().GetGeneration(),
+		})
+	}
+	return nil
 }
 
 // Builds an object as specified in a phase.

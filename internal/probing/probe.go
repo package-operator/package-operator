@@ -34,6 +34,13 @@ type conditionProbe struct {
 	Type, Status string
 }
 
+func NewConditionProbe(typeName, status string) Prober {
+	return &conditionProbe{
+		Type:   typeName,
+		Status: status,
+	}
+}
+
 var _ Prober = (*conditionProbe)(nil)
 
 func (cp *conditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {

@@ -743,3 +743,97 @@ func Test_mergeKeysFrom(t *testing.T) {
 		})
 	}
 }
+
+func Test_mapConditions(t *testing.T) {
+
+	const (
+		reason  = "ChickenSalad"
+		message = "Salad made with chicken!"
+	)
+
+	tests := []struct {
+		name             string
+		object           *unstructured.Unstructured
+		mappedConditions int
+	}{
+		{
+			name: "no condition observedGeneration",
+			object: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(9),
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"type":    "Available",
+								"status":  "True",
+								"reason":  reason,
+								"message": message,
+							},
+							map[string]interface{}{
+								"type":   "Other Condition",
+								"status": "True",
+							},
+						},
+					},
+				},
+			},
+			mappedConditions: 1,
+		},
+		{
+			name: "observedGeneration outdated",
+			object: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(9),
+					},
+					"status": map[string]interface{}{
+						"conditions": []interface{}{
+							map[string]interface{}{
+								"observedGeneration": 8,
+								"type":               "Available",
+								"status":             "True",
+								"reason":             reason,
+								"message":            message,
+							},
+						},
+					},
+				},
+			},
+			mappedConditions: 0,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			owner := &phaseObjectOwnerMock{}
+			ownerObj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"generation": int64(4),
+					},
+				},
+			}
+			var conditions []metav1.Condition
+			owner.On("ClientObject").Return(ownerObj)
+			owner.On("GetConditions").Return(&conditions)
+
+			err := mapConditions(ctx, owner, []corev1alpha1.ConditionMapping{
+				{
+					SourceType:      "Available",
+					DestinationType: "my-prefix/Available",
+				},
+			}, test.object)
+			require.NoError(t, err)
+
+			if assert.Len(t, conditions, test.mappedConditions) &&
+				test.mappedConditions > 0 {
+				assert.Equal(t, metav1.ConditionTrue, conditions[0].Status)
+				assert.Equal(t, reason, conditions[0].Reason)
+				assert.Equal(t, message, conditions[0].Message)
+			}
+		})
+	}
+
+}
