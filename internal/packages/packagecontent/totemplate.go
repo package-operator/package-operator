@@ -12,19 +12,27 @@ func TemplateSpecFromPackage(pkg *Package) (templateSpec corev1alpha1.ObjectSetT
 
 	objectsByPhase := map[string][]corev1alpha1.ObjectSetObject{}
 	for _, objects := range pkg.Objects {
-		for _, object := range objects {
+		for i, object := range objects {
 			annotations := object.GetAnnotations()
-			phase := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
+			phaseAnnotation := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
 			delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
+			delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
 			if len(annotations) == 0 {
 				// This is important!
 				// When submitted to the API server empty maps will be dropped.
-				// Semantic equality checking is considering a nil map to ne not equal to an empty map.
+				// Semantic equality checking is considering a nil map not equal to an empty map.
 				// And if semantic equality checking fails, hash collision checks will always find a hash collision if the ObjectSlice already exists.
 				annotations = nil
 			}
+
+			// Any error should have been detected by the validation stage.
+			conditionMapping, _ := ParseConditionMapAnnotation(&objects[i])
+
 			object.SetAnnotations(annotations)
-			objectsByPhase[phase] = append(objectsByPhase[phase], corev1alpha1.ObjectSetObject{Object: object})
+			objectsByPhase[phaseAnnotation] = append(objectsByPhase[phaseAnnotation], corev1alpha1.ObjectSetObject{
+				Object:            object,
+				ConditionMappings: conditionMapping,
+			})
 		}
 	}
 

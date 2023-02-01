@@ -11,6 +11,9 @@ import (
 const (
 	// Package Phase annotation to assign objects to a phase.
 	PackagePhaseAnnotation = "package-operator.run/phase"
+	// Package ConditionMap annotation specifies object conditions to map back into Package Operator APIs.
+	// Example: Available => my-own-prefix/Available.
+	PackageConditionMapAnnotation = "package-operator.run/phase"
 )
 
 const (
