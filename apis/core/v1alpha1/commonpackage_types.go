@@ -1,6 +1,9 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+)
 
 // PackageStatus defines the observed state of a Package.
 type PackageStatus struct {
@@ -50,4 +53,7 @@ type PackageSpec struct {
 	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+	// Package configuration parameters.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Config *runtime.RawExtension `json:"config,omitempty"`
 }

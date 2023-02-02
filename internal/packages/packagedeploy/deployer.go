@@ -2,6 +2,7 @@ package packagedeploy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -9,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -16,6 +18,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/packages/packageadmission"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageloader"
 )
@@ -128,9 +131,40 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 }
 
 func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files packagecontent.Files) error {
-	packageContent, err := l.packageContentLoader.FromFiles(
+	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
+	if err != nil {
+		setInvalidConditionBasedOnLoadError(pkg, err)
+		return nil
+	}
+
+	tmplCtx := pkg.TemplateContext()
+	configuration := map[string]interface{}{}
+
+	if tmplCtx.Config != nil {
+		if err := json.Unmarshal(tmplCtx.Config.Raw, &configuration); err != nil {
+			return fmt.Errorf("unmarshal config: %w", err)
+		}
+	}
+	validationErrors, err := packageadmission.AdmitPackageConfiguration(
+		ctx, l.scheme, configuration, packageContent.PackageManifest, field.NewPath("spec", "config"))
+	if err != nil {
+		return fmt.Errorf("validate Package configuration: %w", err)
+	}
+	if len(validationErrors) > 0 {
+		setInvalidConditionBasedOnLoadError(pkg, validationErrors.ToAggregate())
+		return nil
+	}
+
+	tt, err := packageloader.NewTemplateTransformer(packageloader.TemplateContext{
+		Package: tmplCtx.Package,
+		Config:  configuration,
+	})
+	if err != nil {
+		return err
+	}
+	packageContent, err = l.packageContentLoader.FromFiles(
 		ctx, files,
-		packageloader.WithFilesTransformers(&packageloader.TemplateTransformer{TemplateContext: pkg.TemplateContext()}),
+		packageloader.WithFilesTransformers(tt),
 		packageloader.WithTransformers(&packageloader.CommonObjectLabelsTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)

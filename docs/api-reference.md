@@ -236,6 +236,7 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
+  config: runtime.RawExtension
   image: nonumy
 status:
   phase: Pending
@@ -476,6 +477,7 @@ metadata:
   name: example
   namespace: default
 spec:
+  config: runtime.RawExtension
   image: sed
 status:
   phase: Pending
@@ -807,6 +809,7 @@ Package specification.
 | Field | Description |
 | ----- | ----------- |
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `config` <br>runtime.RawExtension | Package configuration parameters. |
 
 
 Used in:
@@ -939,6 +942,8 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
+  config:
+    openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   phases:
   - class: ipsum
     name: lorem
@@ -947,6 +952,7 @@ spec:
 test:
   template:
   - context:
+      config: runtime.RawExtension
       package:
         metadata:
           annotations: map[string]string
@@ -992,10 +998,24 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `scopes` <b>required</b><br><a href="#packagemanifestscope">[]PackageManifestScope</a> | Scopes declare the available installation scopes for the package.<br>Either Cluster, Namespaced, or both. |
 | `phases` <b>required</b><br><a href="#packagemanifestphase">[]PackageManifestPhase</a> | Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment. |
 | `availabilityProbes` <b>required</b><br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
+| `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 
 
 Used in:
 * [PackageManifest](#packagemanifest)
+
+
+### PackageManifestSpecConfig
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `openAPIV3Schema` <br>apiextensionsv1.JSONSchemaProps | OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
 
 
 ### PackageManifestTest
@@ -1032,6 +1052,7 @@ TemplateContext is available within the package templating process.
 | Field | Description |
 | ----- | ----------- |
 | `package` <b>required</b><br><a href="#templatecontextpackage">TemplateContextPackage</a> | TemplateContextPackage represents the (Cluster)Package object requesting this package content. |
+| `config` <br>runtime.RawExtension |  |
 
 
 Used in:
@@ -1045,9 +1066,9 @@ TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta f
 | Field | Description |
 | ----- | ----------- |
 | `name` <b>required</b><br>string |  |
-| `namespace` <br>string |  |
-| `labels` <br><a href="#map[string]string">map[string]string</a> |  |
-| `annotations` <br><a href="#map[string]string">map[string]string</a> |  |
+| `namespace` <b>required</b><br>string |  |
+| `labels` <b>required</b><br><a href="#map[string]string">map[string]string</a> |  |
+| `annotations` <b>required</b><br><a href="#map[string]string">map[string]string</a> |  |
 
 
 Used in:

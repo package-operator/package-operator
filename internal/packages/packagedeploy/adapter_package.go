@@ -55,6 +55,7 @@ func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
+		Config: a.Package.Spec.Config,
 	}
 }
 
@@ -69,6 +70,7 @@ func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateCont
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
+		Config: a.Spec.Config,
 	}
 }
 

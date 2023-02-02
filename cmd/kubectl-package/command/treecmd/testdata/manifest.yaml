@@ -29,6 +29,8 @@ test:
         metadata:
           name: test
           namespace: test-ns
+          annotations:
+            package-operator.run/test-stub-image: ""
   - name: cluster-scope
     context:
       package:

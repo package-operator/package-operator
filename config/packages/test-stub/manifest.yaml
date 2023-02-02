@@ -21,20 +21,29 @@ spec:
       kind:
         group: apps
         kind: Deployment
+  config:
+    openAPIV3Schema:
+      properties:
+        testStubImage:
+          description: TestStubImage provides the container image to use for the Deployment.
+          type: string
+      required:
+      - testStubImage
+      type: object
 test:
   template:
   - name: namespace-scope
     context:
+      config:
+        testStubImage: chicken
       package:
         metadata:
           name: test
           namespace: test-ns
-          annotations:
-            package-operator.run/test-stub-image: test123
   - name: cluster-scope
     context:
+      config:
+        testStubImage: chicken2
       package:
         metadata:
           name: test
-          annotations:
-            package-operator.run/test-stub-image: test123

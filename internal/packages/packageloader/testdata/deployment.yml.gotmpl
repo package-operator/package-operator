@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: "{{.Package.Namespace}}"
+  namespace: "{{.package.metadata.namespace}}"
   annotations:
     package-operator.run/phase: main-stuff
 spec:

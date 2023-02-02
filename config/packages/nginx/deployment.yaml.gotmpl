@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{.Package.Name}}-v1"
+  name: "{{.package.metadata.name}}-v1"
   labels:
     app: nginx
-    instance: "{{.Package.Name}}"
+    instance: "{{.package.metadata.name}}"
   annotations:
     package-operator.run/phase: deploy
 spec:
@@ -12,12 +12,12 @@ spec:
   selector:
     matchLabels:
       app: nginx
-      instance: "{{.Package.Name}}"
+      instance: "{{.package.metadata.name}}"
   template:
     metadata:
       labels:
         app: nginx
-        instance: "{{.Package.Name}}"
+        instance: "{{.package.metadata.name}}"
     spec:
       containers:
       - name: nginx

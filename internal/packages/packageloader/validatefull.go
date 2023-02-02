@@ -3,6 +3,7 @@ package packageloader
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,22 +11,30 @@ import (
 	"path/filepath"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
+	"package-operator.run/package-operator/internal/packages/packageadmission"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/utils"
 )
 
 type TemplateTestValidator struct {
+	scheme *runtime.Scheme
 	// Path to a folder containing the test fixtures for the package.
 	fixturesFolderPath string
 }
 
 var _ PackageAndFilesValidator = (*TemplateTestValidator)(nil)
 
-func NewTemplateTestValidator(fixturesFolderPath string) *TemplateTestValidator {
-	return &TemplateTestValidator{fixturesFolderPath}
+func NewTemplateTestValidator(
+	scheme *runtime.Scheme, fixturesFolderPath string,
+) *TemplateTestValidator {
+	return &TemplateTestValidator{
+		scheme:             scheme,
+		fixturesFolderPath: fixturesFolderPath,
+	}
 }
 
 func (v TemplateTestValidator) ValidatePackageAndFiles(
@@ -34,7 +43,7 @@ func (v TemplateTestValidator) ValidatePackageAndFiles(
 
 	for _, templateTestCase := range pkg.PackageManifest.Test.Template {
 		log.Info("running template test case", "name", templateTestCase.Name)
-		if err := v.runTestCase(ctx, fileMap, templateTestCase); err != nil {
+		if err := v.runTestCase(ctx, fileMap, pkg.PackageManifest, templateTestCase); err != nil {
 			return err
 		}
 	}
@@ -43,20 +52,39 @@ func (v TemplateTestValidator) ValidatePackageAndFiles(
 }
 
 func (v TemplateTestValidator) runTestCase(
-	ctx context.Context, fileMap packagecontent.Files, testCase manifestsv1alpha1.PackageManifestTestCaseTemplate) error {
+	ctx context.Context, fileMap packagecontent.Files,
+	manifest *manifestsv1alpha1.PackageManifest,
+	testCase manifestsv1alpha1.PackageManifestTestCaseTemplate,
+) error {
 	log := logr.FromContextOrDiscard(ctx)
 	fileMap = utils.CopyMap(fileMap)
 
-	tt := TemplateTransformer{
-		TemplateContext: testCase.Context,
+	configuration := map[string]interface{}{}
+	if testCase.Context.Config != nil {
+		if err := json.Unmarshal(testCase.Context.Config.Raw, &configuration); err != nil {
+			return err
+		}
 	}
+
+	if _, err := packageadmission.AdmitPackageConfiguration(ctx, v.scheme, configuration, manifest, nil); err != nil {
+		return err
+	}
+
+	tt, err := NewTemplateTransformer(TemplateContext{
+		Package: testCase.Context.Package,
+		Config:  configuration,
+	})
+	if err != nil {
+		return err
+	}
+
 	if err := tt.TransformPackageFiles(ctx, fileMap); err != nil {
 		return err
 	}
 
 	// check if test figures exist
 	testFixturePath := filepath.Join(v.fixturesFolderPath, testCase.Name)
-	_, err := os.Stat(testFixturePath)
+	_, err = os.Stat(testFixturePath)
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
 		// generate fixtures now
