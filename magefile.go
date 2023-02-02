@@ -1,6 +1,8 @@
 //go:build mage
 // +build mage
 
+// TODO
+
 package main
 
 import (
@@ -9,7 +11,6 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -670,12 +671,17 @@ func (Build) Images() {
 	mg.Deps(deps...)
 }
 
-func newImagePushInfo(imageName, containerFile, contextDir string) *dev.ImagePushInfo {
+func newImagePushInfo(imageName string) *dev.ImagePushInfo {
+	imageCacheDir := locations.ImageCache(imageName)
+	imageTag := locations.ImageURL(imageName, false)
+	containerRuntime := locations.ContainerRuntime()
 	digestFile := locations.DigestFile(imageName)
-	imageBuildInfo := newImageBuildInfo(imageName, containerFile, contextDir)
+
 	return &dev.ImagePushInfo{
+		ImageTag:   imageTag,
+		CacheDir:   imageCacheDir,
+		Runtime:    containerRuntime,
 		DigestFile: digestFile,
-		BuildInfo:  imageBuildInfo,
 	}
 }
 
@@ -692,30 +698,8 @@ func (Build) PushImage(imageName string) {
 		panic(fmt.Sprintf(fmt.Sprintf("image is not configured to be pushed: %s", imageName)))
 	}
 
-	mg.SerialDeps(mg.F(Build.Image, imageName))
-
-	containerRuntime := locations.ContainerRuntime()
-
-	// Login to container registry when running on AppSRE Jenkins.
-	_, isJenkins := os.LookupEnv("JENKINS_HOME")
-	_, isCI := os.LookupEnv("CI")
-	if isJenkins || isCI {
-		log.Println("running in CI, calling container runtime login")
-		args := []string{"login", "-u=" + os.Getenv("QUAY_USER"), "-p=" + os.Getenv("QUAY_TOKEN"), "quay.io"}
-		if err := sh.Run(containerRuntime, args...); err != nil {
-			panic(fmt.Errorf("registry login: %w", err))
-		}
-	}
-
-	args := []string{"push"}
-	if containerRuntime == string(dev.ContainerRuntimePodman) {
-		args = append(args, "--digestfile="+locations.DigestFile(imageName))
-	}
-	args = append(args, locations.ImageURL(imageName, false))
-
-	if err := sh.Run(containerRuntime, args...); err != nil {
-		panic(fmt.Errorf("pushing image: %w", err))
-	}
+	pushInfo := newImagePushInfo(imageName)
+	must(dev.PushImage(pushInfo, mg.F(Build.Image, imageName)))
 }
 
 // Builds and pushes all container images to the default registry.
@@ -772,11 +756,6 @@ func (Build) populateCacheCmd(cmd, imageName string) {
 }
 
 func newImageBuildInfo(imageName, containerFile, contextDir string) *dev.ImageBuildInfo {
-	_, ok := commandImages[imageName]
-	if !ok {
-		panic(fmt.Sprintf("unknown cmd image: %s", imageName))
-	}
-
 	imageCacheDir := locations.ImageCache(imageName)
 	imageTag := locations.ImageURL(imageName, false)
 	containerRuntime := locations.ContainerRuntime()
@@ -808,7 +787,7 @@ func (b Build) buildCmdImage(imageName string) {
 		mg.F(Build.populateCacheCmd, cmd, imageName),
 	}
 	buildInfo := newImageBuildInfo(imageName, "Containerfile", ".")
-	dev.BuildImage(buildInfo, deps)
+	must(dev.BuildImage(buildInfo, deps))
 }
 
 func (Build) populateCachePkg(imageName, sourcePath string) {
@@ -833,7 +812,7 @@ func (b Build) buildPackageImage(name string) {
 	}
 
 	buildInfo := newImageBuildInfo(name, "Containerfile", ".")
-	dev.BuildImage(buildInfo, predeps)
+	must(dev.BuildImage(buildInfo, predeps))
 }
 
 // Installs all project dependencies into the local checkout.
