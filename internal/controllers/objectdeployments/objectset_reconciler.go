@@ -3,6 +3,7 @@ package objectdeployments
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,6 +92,29 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		currentObjectSetSucceeded bool
 	)
 	if currentObjectSet != nil {
+		// map conditions
+		// -> copy mapped status conditions
+		for _, condition := range currentObjectSet.GetConditions() {
+			if condition.ObservedGeneration !=
+				currentObjectSet.ClientObject().GetGeneration() {
+				// mapped condition is outdated
+				continue
+			}
+
+			if !strings.Contains(condition.Type, "/") {
+				// mapped conditions are prefixed
+				continue
+			}
+
+			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
+				Type:               condition.Type,
+				Status:             condition.Status,
+				Reason:             condition.Reason,
+				Message:            condition.Message,
+				ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
+			})
+		}
+
 		if currentObjectSet.IsAvailable() {
 			// Latest revision is available, so we are no longer progressing.
 			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{

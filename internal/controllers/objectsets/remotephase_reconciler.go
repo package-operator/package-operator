@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -129,6 +130,28 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	}
 
 	// ObjectSetPhase already exists
+	// -> copy mapped status conditions
+	for _, condition := range currentObjectSetPhase.GetConditions() {
+		if condition.ObservedGeneration !=
+			currentObjectSetPhase.ClientObject().GetGeneration() {
+			// mapped condition is outdated
+			continue
+		}
+
+		if !strings.Contains(condition.Type, "/") {
+			// mapped conditions are prefixed
+			continue
+		}
+
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:               condition.Type,
+			Status:             condition.Status,
+			Reason:             condition.Reason,
+			Message:            condition.Message,
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+		})
+	}
+
 	// -> check status
 	availableCond := meta.FindStatusCondition(
 		currentObjectSetPhase.GetConditions(),
