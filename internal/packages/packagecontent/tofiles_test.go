@@ -28,6 +28,7 @@ metadata:
 spec:
   availabilityProbes: null
   config: {}
+  images: null
   phases: null
   scopes: null
 test: {}
