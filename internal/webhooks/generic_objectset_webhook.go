@@ -64,7 +64,8 @@ func (wh *GenericObjectSetWebhookHandler[T]) decode(req admission.Request) (*T, 
 }
 
 func (wh *GenericObjectSetWebhookHandler[T]) Handle(
-	ctx context.Context, req admission.Request) admission.Response {
+	ctx context.Context, req admission.Request,
+) admission.Response {
 	obj, err := wh.decode(req)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -89,7 +90,8 @@ func (wh *GenericObjectSetWebhookHandler[T]) InjectDecoder(d *admission.Decoder)
 }
 
 func (wh *GenericObjectSetWebhookHandler[T]) validateUpdate(
-	obj, oldObj *T) admission.Response {
+	obj, oldObj *T,
+) admission.Response {
 	if err := validateGenericObjectSetImmutability(obj, oldObj); err != nil {
 		return admission.Denied(err.Error())
 	}

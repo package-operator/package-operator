@@ -28,7 +28,8 @@ func NewObjectSlice(scheme *runtime.Scheme) ObjectSliceAccessor {
 	}
 
 	return &ObjectSlice{
-		ObjectSlice: *obj.(*corev1alpha1.ObjectSlice)}
+		ObjectSlice: *obj.(*corev1alpha1.ObjectSlice),
+	}
 }
 
 func NewClusterObjectSlice(scheme *runtime.Scheme) ObjectSliceAccessor {
@@ -38,7 +39,8 @@ func NewClusterObjectSlice(scheme *runtime.Scheme) ObjectSliceAccessor {
 	}
 
 	return &ClusterObjectSlice{
-		ClusterObjectSlice: *obj.(*corev1alpha1.ClusterObjectSlice)}
+		ClusterObjectSlice: *obj.(*corev1alpha1.ClusterObjectSlice),
+	}
 }
 
 var (

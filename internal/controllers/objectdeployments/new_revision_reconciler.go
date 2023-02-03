@@ -23,8 +23,8 @@ type newRevisionReconciler struct {
 func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	currentObject genericObjectSet,
 	prevObjectSets []genericObjectSet,
-	objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
-
+	objectDeployment objectDeploymentAccessor,
+) (ctrl.Result, error) {
 	if currentObject != nil {
 		// There is an objectset already for the current revision, we do nothing.
 		return ctrl.Result{}, nil

@@ -36,7 +36,8 @@ func (t CommonObjectLabelsTransformer) TransformPackage(ctx context.Context, pac
 }
 
 func (t *CommonObjectLabelsTransformer) transform(
-	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured) error {
+	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
+) error {
 	obj.SetLabels(
 		utils.MergeKeysFrom(
 			obj.GetLabels(),

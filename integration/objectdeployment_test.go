@@ -150,7 +150,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			Client.Get(ctx,
 				client.ObjectKey{
 					Name:      ExpectedObjectSetName(concernedDeployment),
-					Namespace: concernedDeployment.Namespace},
+					Namespace: concernedDeployment.Namespace,
+				},
 				currentObjectSet,
 			),
 		)
@@ -222,7 +223,6 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					*concernedDeployment.Status.CollisionCount == int32(testCase.expectedHashCollisionCount),
 			)
 		}
-
 	}
 }
 
@@ -468,7 +468,8 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 			Client.Get(ctx,
 				client.ObjectKey{
 					Name:      ExpectedObjectSetName(concernedDeployment),
-					Namespace: concernedDeployment.Namespace},
+					Namespace: concernedDeployment.Namespace,
+				},
 				currentObjectSet,
 			),
 		)
@@ -546,7 +547,8 @@ func ExpectedObjectSetName(deployment *corev1alpha1.ObjectDeployment) string {
 
 func objectDeploymentTemplate(
 	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
-	probes []corev1alpha1.ObjectSetProbe, name string) *corev1alpha1.ObjectDeployment {
+	probes []corev1alpha1.ObjectSetProbe, name string,
+) *corev1alpha1.ObjectDeployment {
 	label := fmt.Sprintf("test.package-operator.run/%s", name)
 	return &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{

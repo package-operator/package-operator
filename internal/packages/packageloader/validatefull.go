@@ -38,7 +38,8 @@ func NewTemplateTestValidator(
 }
 
 func (v TemplateTestValidator) ValidatePackageAndFiles(
-	ctx context.Context, pkg *packagecontent.Package, fileMap packagecontent.Files) error {
+	ctx context.Context, pkg *packagecontent.Package, fileMap packagecontent.Files,
+) error {
 	log := logr.FromContextOrDiscard(ctx).V(1)
 
 	for _, templateTestCase := range pkg.PackageManifest.Test.Template {

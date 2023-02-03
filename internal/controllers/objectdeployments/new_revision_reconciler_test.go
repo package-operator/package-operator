@@ -181,7 +181,8 @@ func assertObject(t *testing.T,
 	obj *corev1alpha1.ObjectSet,
 	expectedHash string,
 	expectedRevision string,
-	prevs []corev1alpha1.ObjectSet) bool {
+	prevs []corev1alpha1.ObjectSet,
+) bool {
 	t.Helper()
 	hash, ok1 := obj.Annotations[ObjectSetHashAnnotation]
 	require.True(t, ok1)

@@ -191,7 +191,8 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(
-	ctx context.Context, pkg genericPackage, packageContent *packagecontent.Package) (deploy adapters.ObjectDeploymentAccessor, err error) {
+	ctx context.Context, pkg genericPackage, packageContent *packagecontent.Package,
+) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	labels := map[string]string{
 		manifestsv1alpha1.PackageLabel:         packageContent.PackageManifest.Name,
 		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),

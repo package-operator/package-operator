@@ -14,8 +14,10 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-const Unavailable bool = false
-const available bool = true
+const (
+	Unavailable bool = false
+	available   bool = true
+)
 
 func Test_ArchivalReconciler(t *testing.T) {
 	t.Run("Doesnt do anything if current revision is not present", func(t *testing.T) {
@@ -266,7 +268,6 @@ func Test_ArchivalReconciler(t *testing.T) {
 		)
 		assertShouldNotBeArchived(t, prevs[6])
 	})
-
 }
 
 // t(-_-t).
@@ -399,7 +400,6 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 			assertNotPausedOrArchived(alreadyPaused, rev)
 		}
 	}
-
 }
 
 func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool) {

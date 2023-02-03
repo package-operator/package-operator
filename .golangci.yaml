@@ -1,65 +1,103 @@
 linters:
   disable-all: true
+  # One can't use disable and disable-all. disable-all is preferred to avoid lint failing when golangci gets updated and linters are added.
+  # at the same time but it is nice to explicitly state which linters we do not want.
+  #disable:
+  #- containedctx     # Context.Context within a struct a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
+  #- contextcheck     # Not that useful/false positives.
+  #- cyclop           # Cyclo complexity already calculated by other linters.
+  #- dogsled          # Could be nice in the future.
+  #- dupl             # Could be nice in the future.
+  #- exhaustive       # Not that useful/false positives.
+  #- exhaustruct      # Not that useful/false positives.
+  #- forcetypeassert  # We want a panic in situations when a type is asserted.
+  #- funlen           # We really like long functions.
+  #- gochecknoglobals # We need globals.
+  #- gochecknoinits   # We have a lot of those.
+  #- gocognit         # Not that useful/false positives.
+  #- godox            # Not that useful/false positives.
+  #- gomnd            # The annoy is strong.
+  #- gomoddirectives  # Not that useful/false positives.
+  #- interfacebloat   # WE do bloaty interfaces.
+  #- ireturn          # Not that useful/false positives.
+  #- lll              # Could be nice in the future.
+  #- musttag          # Dislikes our deps.
+  #- nakedret         # Naked return good return.
+  #- nlreturn         # Could be nice in the future.
+  #- nonamedreturns   # Named return good return.
+  #- paralleltest     # Would be nice but we can't run all the integration tests in parallel and there is not a way to disable the linter for paths.
+  #- rowserrcheck     # No SQL here not it does not work with generics.
+  #- sqlclosecheck    # No SQL here not it does not work with generics.
+  #- testpackage      # Could be nice in the future.
+  #- varnamelen       # Not that useful/false positives.
+  #- wastedassign     # Does not work with generics.
+  #- wrapcheck        # Not that useful/false positives.
+  #- wsl              # Not that useful/false positives.
   enable:
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - decorder
-    - depguard
-    - durationcheck
-    - errcheck
-    - errchkjson
-    - errname
-    - errorlint
-    - execinquery
-    - exportloopref
-    - forbidigo
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - goerr113
-    - gofmt
-    - goheader
-    - goimports
-    - gomodguard
-    - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - grouper
-    - importas
-    - ineffassign
-    - loggercheck
-    - maintidx
-    - makezero
-    - misspell
-    - nestif
-    - nilerr
-    - nilnil
-    - noctx
-    - nolintlint
-    - nosprintfhostport
-    - predeclared
-    - promlinter
-    - reassign
-    - revive
-    - staticcheck
-    - stylecheck
-    - tenv
-    - testableexamples
-    - thelper
-    - typecheck
-    - unconvert
-    - unused
-    - usestdlibvars
+  - asasalint
+  - asciicheck
+  - bidichk
+  - bodyclose
+  - decorder
+  - depguard
+  - dupword
+  - durationcheck
+  - errcheck
+  - errchkjson
+  - errname
+  - errorlint
+  - execinquery
+  - exportloopref
+  - forbidigo
+  - gocheckcompilerdirectives
+  - goconst
+  - gocritic
+  - gocyclo
+  - godot
+  - goerr113
+  - gofmt
+  - gofumpt
+  - goheader
+  - goimports
+  - ginkgolinter
+  - gomodguard
+  - goprintffuncname
+  - gosec
+  - gosimple
+  - govet
+  - grouper
+  - importas
+  - ineffassign
+  - loggercheck
+  - maintidx
+  - makezero
+  - misspell
+  - nestif
+  - nilerr
+  - nilnil
+  - noctx
+  - nolintlint
+  - nosprintfhostport
+  - predeclared
+  - promlinter
+  - reassign
+  - revive
+  - staticcheck
+  - stylecheck
+  - tenv
+  - testableexamples
+  - thelper
+  - tparallel
+  - typecheck
+  - unconvert
+  - unused
+  - usestdlibvars
+  - whitespace
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
 run:
-  skip-files:
-    - "zz_generated.deepcopy.go$"
+  skip-files: [ "zz_generated.deepcopy.go$" ]
 linters-settings:
   goimports:
     local-prefixes: package-operator.run

@@ -107,7 +107,8 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 }
 
 func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(
-	t *testing.T) {
+	t *testing.T,
+) {
 	r := &objectSetRemotePhaseReconciler{
 		scheme:            testScheme,
 		newObjectSetPhase: newGenericObjectSetPhase,

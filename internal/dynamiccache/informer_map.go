@@ -92,7 +92,8 @@ func (im *InformerMap) Get(
 	// Return the informer if it is found
 	var ok bool
 	informer, reader, ok = func() (
-		cache.SharedIndexInformer, client.Reader, bool) {
+		cache.SharedIndexInformer, client.Reader, bool,
+	) {
 		im.informersMux.RLock()
 		defer im.informersMux.RUnlock()
 		entry, ok := im.informers[gvk]

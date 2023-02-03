@@ -35,7 +35,8 @@ func genObjectSet(
 	name string,
 	namespace string,
 	phaseAndObjectMap map[string][]client.Object,
-	controllerOf []corev1alpha1.ControlledObjectReference) GenericObjectSet {
+	controllerOf []corev1alpha1.ControlledObjectReference,
+) GenericObjectSet {
 	objectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -92,7 +93,8 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 				"phase2": {
 					deploymentTemplate("deployment1", t),
 					secretTemplate("secret1", t),
-				}},
+				},
+			},
 				nil,
 			),
 			expectedObjectIDs: []string{"/ConfigMap/namespace1/cm1", "/ConfigMap/namespace2/cm2", "apps/Deployment/default/deployment1", "/Secret/default/secret1"},
@@ -106,7 +108,8 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 				"phase2": {
 					deploymentTemplate("deployment1", t),
 					secretTemplate("secret1", t),
-				}},
+				},
+			},
 				nil,
 			),
 			expectedObjectIDs: []string{"/ConfigMap/default-1/cm1", "/ConfigMap/default-1/cm2", "apps/Deployment/default-1/deployment1", "/Secret/default-1/secret1"},
@@ -142,7 +145,8 @@ func TestGenericObjectSet_GetActivelyReconciledObjects(t *testing.T) {
 					Namespace: "",
 					Kind:      "f",
 					Group:     "g",
-				}}),
+				},
+			}),
 			expectedControllerOfRef: []string{"d/c/b/a", "g/f//d"},
 		},
 	}

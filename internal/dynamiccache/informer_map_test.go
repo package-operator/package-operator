@@ -62,5 +62,4 @@ func Test_indexFuncForExtractor(t *testing.T) {
 			assert.Equal(t, test.expectedIndexKeys, vals)
 		})
 	}
-
 }

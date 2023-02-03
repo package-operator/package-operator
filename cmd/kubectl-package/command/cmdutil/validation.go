@@ -10,9 +10,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
-var (
-	ValidateScheme = runtime.NewScheme()
-)
+var ValidateScheme = runtime.NewScheme()
 
 func init() {
 	if err := pkoapis.AddToScheme(ValidateScheme); err != nil {

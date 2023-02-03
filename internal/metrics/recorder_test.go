@@ -68,7 +68,6 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 			} else {
 				assert.Equal(t, float64(33*60+17), testutil.ToFloat64(recorder.rolloutTime))
 			}
-
 		})
 	}
 }

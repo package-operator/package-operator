@@ -53,7 +53,8 @@ func NewHostedClusterController(
 }
 
 func (c *HostedClusterController) Reconcile(
-	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx context.Context, req ctrl.Request,
+) (ctrl.Result, error) {
 	log := c.log.WithValues("HostedCluster", req.String())
 	defer log.Info("reconciled")
 

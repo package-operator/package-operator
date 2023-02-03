@@ -29,9 +29,7 @@ const (
 	treeClusterScopeUse = "render package in cluster scope"
 )
 
-var (
-	treeScheme = runtime.NewScheme()
-)
+var treeScheme = runtime.NewScheme()
 
 func init() {
 	if err := pkoapis.AddToScheme(treeScheme); err != nil {

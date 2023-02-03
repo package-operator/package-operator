@@ -18,7 +18,8 @@ type archiveReconciler struct {
 func (a *archiveReconciler) Reconcile(ctx context.Context,
 	currentObjectSet genericObjectSet,
 	prevObjectSets []genericObjectSet,
-	objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
+	objectDeployment objectDeploymentAccessor,
+) (ctrl.Result, error) {
 	if currentObjectSet == nil {
 		return ctrl.Result{}, nil
 	}
@@ -35,7 +36,8 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	objectsToArchive []genericObjectSet,
-	objectDeployment objectDeploymentAccessor) error {
+	objectDeployment objectDeploymentAccessor,
+) error {
 	if len(objectsToArchive) == 0 {
 		return nil
 	}
@@ -129,7 +131,8 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 func (a *archiveReconciler) archiveAllLaterRevisions(
 	ctx context.Context,
 	currentLatest genericObjectSet,
-	laterRevisions []genericObjectSet) ([]genericObjectSet, error) {
+	laterRevisions []genericObjectSet,
+) ([]genericObjectSet, error) {
 	res := make([]genericObjectSet, 0)
 	for _, currPrev := range laterRevisions {
 		// revision already archived, we just skip.
@@ -153,7 +156,8 @@ func (a *archiveReconciler) archiveAllLaterRevisions(
 }
 
 func (a *archiveReconciler) intermediateRevisionCanBeArchived(
-	ctx context.Context, previousRevision, currentLatestRevision genericObjectSet) (bool, error) {
+	ctx context.Context, previousRevision, currentLatestRevision genericObjectSet,
+) (bool, error) {
 	latestRevisionObjects, err := currentLatestRevision.GetObjects()
 	if err != nil {
 		return false, err

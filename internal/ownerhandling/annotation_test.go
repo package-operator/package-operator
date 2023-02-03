@@ -303,7 +303,6 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 			} else {
 				assert.Len(t, r, 0)
 			}
-
 		})
 	}
 }

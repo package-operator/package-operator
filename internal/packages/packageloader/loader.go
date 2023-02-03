@@ -67,7 +67,8 @@ func New(scheme *runtime.Scheme, opts ...Option) *Loader {
 // This modifies input file set.
 func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts ...Option) (*packagecontent.Package, error) {
 	if len(opts) != 0 {
-		l = Loader{l.scheme,
+		l = Loader{
+			l.scheme,
 			append([]Validator{}, l.validators...),
 			append([]Transformer{}, l.transformers...),
 			append([]FilesTransformer{}, l.filesTransformers...),

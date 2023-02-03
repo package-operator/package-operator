@@ -27,7 +27,8 @@ func NewObjectSliceList(scheme *runtime.Scheme) ObjectSliceListAccessor {
 	}
 
 	return &ObjectSliceList{
-		ObjectSliceList: *obj.(*corev1alpha1.ObjectSliceList)}
+		ObjectSliceList: *obj.(*corev1alpha1.ObjectSliceList),
+	}
 }
 
 func NewClusterObjectSliceList(scheme *runtime.Scheme) ObjectSliceListAccessor {
@@ -37,7 +38,8 @@ func NewClusterObjectSliceList(scheme *runtime.Scheme) ObjectSliceListAccessor {
 	}
 
 	return &ClusterObjectSliceList{
-		ClusterObjectSliceList: *obj.(*corev1alpha1.ClusterObjectSliceList)}
+		ClusterObjectSliceList: *obj.(*corev1alpha1.ClusterObjectSliceList),
+	}
 }
 
 var (
