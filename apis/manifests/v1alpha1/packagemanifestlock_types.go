@@ -27,35 +27,6 @@ type PackageManifestLockImage struct {
 	Digest string `json:"digest"`
 }
 
-func (spec *PackageManifestLockSpec) Equals(other *PackageManifestLockSpec) bool {
-	if other == nil {
-		return false
-	}
-
-	thisImages := map[string]PackageManifestLockImage{}
-	for _, image := range spec.Images {
-		thisImages[image.Name] = image
-	}
-
-	otherImages := map[string]PackageManifestLockImage{}
-	for _, image := range other.Images {
-		otherImages[image.Name] = image
-	}
-
-	if len(thisImages) != len(otherImages) {
-		return false
-	}
-
-	for name, image := range thisImages {
-		otherImage, exists := otherImages[name]
-		if !exists || otherImage != image {
-			return false
-		}
-	}
-
-	return true
-}
-
 func init() {
 	SchemeBuilder.Register(&PackageManifestLock{})
 }

@@ -77,7 +77,7 @@ func (u Update) Run(ctx context.Context, out io.Writer) (err error) {
 		},
 	}
 
-	if pkg.PackageManifestLock != nil && manifestLock.Spec.Equals(&pkg.PackageManifestLock.Spec) {
+	if pkg.PackageManifestLock != nil && lockSpecsAreEqual(&manifestLock.Spec, &pkg.PackageManifestLock.Spec) {
 		return nil
 	}
 
@@ -109,4 +109,33 @@ func (u *Update) CobraCommand() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func lockSpecsAreEqual(spec *v1alpha1.PackageManifestLockSpec, other *v1alpha1.PackageManifestLockSpec) bool {
+	if spec == nil || other == nil {
+		return spec == other
+	}
+
+	thisImages := map[string]v1alpha1.PackageManifestLockImage{}
+	for _, image := range spec.Images {
+		thisImages[image.Name] = image
+	}
+
+	otherImages := map[string]v1alpha1.PackageManifestLockImage{}
+	for _, image := range other.Images {
+		otherImages[image.Name] = image
+	}
+
+	if len(thisImages) != len(otherImages) {
+		return false
+	}
+
+	for name, image := range thisImages {
+		otherImage, exists := otherImages[name]
+		if !exists || otherImage != image {
+			return false
+		}
+	}
+
+	return true
 }
