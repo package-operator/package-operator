@@ -924,6 +924,7 @@ The package v1alpha1 contains API Schema definitions for the v1alpha1 version of
 containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
+* [PackageManifestLock](#packagemanifestlock)
 
 
 ### PackageManifest
@@ -944,6 +945,9 @@ spec:
   - corev1alpha1.ObjectSetProbe
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
+  images:
+  - image: sit
+    name: dolor
   phases:
   - class: ipsum
     name: lorem
@@ -957,9 +961,9 @@ test:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: sit
-          namespace: amet
-    name: dolor
+          name: consetetur
+          namespace: sadipscing
+    name: amet
 
 ```
 
@@ -971,9 +975,79 @@ test:
 | `test` <br><a href="#packagemanifesttest">PackageManifestTest</a> | PackageManifestTest configures test cases. |
 
 
+### PackageManifestLock
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifestLock
+metadata:
+  name: example
+  namespace: default
+spec:
+  images:
+  - digest: diam
+    image: sed
+    name: elitr
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> |  |
+
+
 
 
 ---
+
+### PackageManifestImage
+
+PackageManifestImage specifies an image tag to be resolved
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Image name to be use to reference it in the templates |
+| `image` <b>required</b><br>string | Image identifier (REPOSITORY[:TAG]) |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestLockImage
+
+PackageManifestLockImage contains information about a resolved image
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Image name to be use to reference it in the templates |
+| `image` <b>required</b><br>string | Image identifier (REPOSITORY[:TAG]) |
+| `digest` <b>required</b><br>string | Image digest |
+
+
+Used in:
+* [PackageManifestLockSpec](#packagemanifestlockspec)
+
+
+### PackageManifestLockSpec
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `images` <b>required</b><br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | List of resolved images |
+
+
+Used in:
+* [PackageManifestLock](#packagemanifestlock)
+
 
 ### PackageManifestPhase
 
@@ -999,6 +1073,7 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `phases` <b>required</b><br><a href="#packagemanifestphase">[]PackageManifestPhase</a> | Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment. |
 | `availabilityProbes` <b>required</b><br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
+| `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 
 
 Used in:
