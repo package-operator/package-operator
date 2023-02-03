@@ -93,7 +93,7 @@ func TestValidatePackageManifest(t *testing.T) {
 			name: "empty image name",
 			packageManifest: &manifestsv1alpha1.PackageManifest{
 				Spec: manifestsv1alpha1.PackageManifestSpec{
-					Images: []manifestsv1alpha1.PackageManifestImage{{Image: "nginx:latest"}},
+					Images: []manifestsv1alpha1.PackageManifestImage{{Image: "nginx:1.23.3"}},
 				},
 			},
 			expectedErrors: []string{
@@ -124,8 +124,8 @@ func TestValidatePackageManifest(t *testing.T) {
 			packageManifest: &manifestsv1alpha1.PackageManifest{
 				Spec: manifestsv1alpha1.PackageManifestSpec{
 					Images: []manifestsv1alpha1.PackageManifestImage{
-						{Name: "nginx", Image: "nginx:latest"},
-						{Name: "nginx", Image: "nginx:stable"},
+						{Name: "nginx", Image: "nginx:1.23.3"},
+						{Name: "nginx", Image: "nginx:1.22.1"},
 					},
 				},
 			},

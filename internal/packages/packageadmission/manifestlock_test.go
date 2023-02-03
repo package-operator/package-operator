@@ -34,7 +34,7 @@ func TestValidatePackageManifestLock(t *testing.T) {
 			name: "empty image name",
 			manifest: &manifestsv1alpha1.PackageManifestLock{
 				Spec: manifestsv1alpha1.PackageManifestLockSpec{
-					Images: []manifestsv1alpha1.PackageManifestLockImage{{Image: "nginx:latest", Digest: "123"}},
+					Images: []manifestsv1alpha1.PackageManifestLockImage{{Image: "nginx:1.23.3", Digest: "123"}},
 				},
 			},
 			expectedErrors: []string{"spec.images[0].name: Invalid value: \"\": must be non empty"},
@@ -52,7 +52,7 @@ func TestValidatePackageManifestLock(t *testing.T) {
 			name: "empty image digest",
 			manifest: &manifestsv1alpha1.PackageManifestLock{
 				Spec: manifestsv1alpha1.PackageManifestLockSpec{
-					Images: []manifestsv1alpha1.PackageManifestLockImage{{Name: "nginx", Image: "nginx:latest"}},
+					Images: []manifestsv1alpha1.PackageManifestLockImage{{Name: "nginx", Image: "nginx:1.23.3"}},
 				},
 			},
 			expectedErrors: []string{"spec.images[0].digest: Invalid value: \"\": must be non empty"},
@@ -62,8 +62,8 @@ func TestValidatePackageManifestLock(t *testing.T) {
 			manifest: &manifestsv1alpha1.PackageManifestLock{
 				Spec: manifestsv1alpha1.PackageManifestLockSpec{
 					Images: []manifestsv1alpha1.PackageManifestLockImage{
-						{Name: "nginx", Image: "nginx:latest", Digest: "123"},
-						{Name: "nginx", Image: "nginx:stable", Digest: "456"},
+						{Name: "nginx", Image: "nginx:1.23.3", Digest: "123"},
+						{Name: "nginx", Image: "nginx:1.22.1", Digest: "456"},
 					},
 				},
 			},

@@ -5,5 +5,5 @@ metadata:
 spec:
   images:
   - digest: sha256:4c5e1e4ab724db750979851cd2f4e2dec13648792280be1cd052bf9c638285da
-    image: nginx:stable
+    image: nginx:1.22.1
     name: nginx
