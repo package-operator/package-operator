@@ -41,6 +41,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
 	}
 
+	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
 	controllers.MapConditions(
 		ctx,
 		objDep.ClientObject().GetGeneration(), *objDep.GetConditions(),

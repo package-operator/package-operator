@@ -158,3 +158,11 @@ func MapConditions(
 		})
 	}
 }
+
+func DeleteMappedConditions(ctx context.Context, conditions *[]metav1.Condition) {
+	for _, cond := range *conditions {
+		if IsMappedCondition(cond) {
+			meta.RemoveStatusCondition(conditions, cond.Type)
+		}
+	}
+}

@@ -198,3 +198,19 @@ func TestMapConditions(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteMappedConditions(t *testing.T) {
+	conditions := []metav1.Condition{
+		{
+			Type: "Available",
+		},
+		{
+			Type: "test/Available",
+		},
+	}
+	DeleteMappedConditions(context.Background(), &conditions)
+
+	assert.Equal(t, []metav1.Condition{
+		{Type: "Available"},
+	}, conditions)
+}

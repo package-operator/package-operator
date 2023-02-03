@@ -77,6 +77,8 @@ type phaseReconciler interface {
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
+	controllers.DeleteMappedConditions(ctx, objectSet.GetConditions())
+
 	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
 	if err != nil {
 		return res, err

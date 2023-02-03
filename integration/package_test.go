@@ -133,6 +133,10 @@ func TestPackage_success(t *testing.T) {
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
 
+			// Condition Mapping from Deployment
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, test.pkg, "my-prefix/Progressing", metav1.ConditionTrue))
+
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: test.pkg.GetName(), Namespace: test.pkg.GetNamespace(),
 			}, test.objectDeployment))

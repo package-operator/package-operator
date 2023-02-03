@@ -94,6 +94,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	if currentObjectSet != nil {
 		// map conditions
 		// -> copy mapped status conditions
+		controllers.DeleteMappedConditions(ctx, objectDeployment.GetConditions())
 		controllers.MapConditions(
 			ctx,
 			currentObjectSet.ClientObject().GetGeneration(), currentObjectSet.GetConditions(),
