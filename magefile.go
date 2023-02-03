@@ -44,9 +44,9 @@ const (
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
 
-	controllerGenVersion = "0.6.2"
-	golangciLintVersion  = "1.50.1"
-	kindVersion          = "0.16.0"
+	controllerGenVersion = "0.11.2"
+	golangciLintVersion  = "1.51.0"
+	kindVersion          = "0.17.0"
 	k8sDocGenVersion     = "0.5.1"
 )
 
