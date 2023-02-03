@@ -1,8 +1,6 @@
 //go:build mage
 // +build mage
 
-// TODO
-
 package main
 
 import (
