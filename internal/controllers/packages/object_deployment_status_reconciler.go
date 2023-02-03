@@ -2,16 +2,15 @@ package packages
 
 import (
 	"context"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 )
 
 type objectDeploymentStatusReconciler struct {
@@ -42,28 +41,11 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
 	}
 
-	// map conditions
-	// -> copy mapped status conditions
-	for _, condition := range *objDep.GetConditions() {
-		if condition.ObservedGeneration !=
-			objDep.ClientObject().GetGeneration() {
-			// mapped condition is outdated
-			continue
-		}
-
-		if !strings.Contains(condition.Type, "/") {
-			// mapped conditions are prefixed
-			continue
-		}
-
-		meta.SetStatusCondition(packageObj.GetConditions(), metav1.Condition{
-			Type:               condition.Type,
-			Status:             condition.Status,
-			Reason:             condition.Reason,
-			Message:            condition.Message,
-			ObservedGeneration: packageObj.ClientObject().GetGeneration(),
-		})
-	}
+	controllers.MapConditions(
+		ctx,
+		objDep.ClientObject().GetGeneration(), *objDep.GetConditions(),
+		packageObj.ClientObject().GetGeneration(), packageObj.GetConditions(),
+	)
 
 	return ctrl.Result{}, nil
 }

@@ -3,7 +3,6 @@ package objectdeployments
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers"
 )
 
 type objectSetReconciler struct {
@@ -94,26 +94,11 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	if currentObjectSet != nil {
 		// map conditions
 		// -> copy mapped status conditions
-		for _, condition := range currentObjectSet.GetConditions() {
-			if condition.ObservedGeneration !=
-				currentObjectSet.ClientObject().GetGeneration() {
-				// mapped condition is outdated
-				continue
-			}
-
-			if !strings.Contains(condition.Type, "/") {
-				// mapped conditions are prefixed
-				continue
-			}
-
-			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
-				Type:               condition.Type,
-				Status:             condition.Status,
-				Reason:             condition.Reason,
-				Message:            condition.Message,
-				ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
-			})
-		}
+		controllers.MapConditions(
+			ctx,
+			currentObjectSet.ClientObject().GetGeneration(), currentObjectSet.GetConditions(),
+			objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetConditions(),
+		)
 
 		if currentObjectSet.IsAvailable() {
 			// Latest revision is available, so we are no longer progressing.

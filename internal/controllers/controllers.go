@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -125,4 +127,34 @@ func GetControllerOf(
 		})
 	}
 	return controllerOf, nil
+}
+
+func IsMappedCondition(cond metav1.Condition) bool {
+	return strings.Contains(cond.Type, "/")
+}
+
+func MapConditions(
+	ctx context.Context,
+	srcGeneration int64, srcConditions []metav1.Condition,
+	destGeneration int64, destConditions *[]metav1.Condition,
+) {
+	for _, condition := range srcConditions {
+		if condition.ObservedGeneration != srcGeneration {
+			// mapped condition is outdated
+			continue
+		}
+
+		if !IsMappedCondition(condition) {
+			// mapped conditions are prefixed
+			continue
+		}
+
+		meta.SetStatusCondition(destConditions, metav1.Condition{
+			Type:               condition.Type,
+			Status:             condition.Status,
+			Reason:             condition.Reason,
+			Message:            condition.Message,
+			ObservedGeneration: destGeneration,
+		})
+	}
 }
