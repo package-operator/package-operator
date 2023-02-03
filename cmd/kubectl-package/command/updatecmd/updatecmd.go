@@ -86,7 +86,7 @@ func (u Update) Run(ctx context.Context, out io.Writer) (err error) {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(u.Target, packages.PackageManifestLockFile), manifestLockYaml, 0644)
+	err = os.WriteFile(filepath.Join(u.Target, packages.PackageManifestLockFile), manifestLockYaml, 0600)
 	if err != nil {
 		return err
 	}
