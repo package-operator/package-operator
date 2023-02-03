@@ -13,7 +13,7 @@ const (
 	PackageManifestFile = "manifest.yaml"
 
 	// Default location for the PackageManifestLock file.
-	PackageManifestLockFile = "manifest-lock.yaml"
+	PackageManifestLockFile = "manifest.lock.yaml"
 
 	// Files suffix for all go template files that need pre-processing.
 	// .gotmpl is the suffix that is being used by the go language server gopls.
@@ -29,7 +29,7 @@ var (
 	PackageManifestFileNames = []string{"manifest.yaml", "manifest.yml"}
 	PackageManifestGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifest"}
 
-	PackageManifestLockFileNames = []string{"manifest-lock.yaml"}
+	PackageManifestLockFileNames = []string{"manifest.lock.yaml"}
 	PackageManifestLockGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifestLock"}
 )
 
