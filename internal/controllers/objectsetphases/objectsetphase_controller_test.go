@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
 	"package-operator.run/package-operator/internal/testutil"
 )
@@ -135,6 +136,9 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 			objectSetPhase := GenericObjectSetPhase{}
+			objectSetPhase.Finalizers = []string{
+				controllers.CachedFinalizer,
+			}
 			objectSetPhase.Labels = map[string]string{
 				corev1alpha1.ObjectSetPhaseClassLabel: test.class,
 			}
@@ -188,15 +192,22 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, _, dc, pr := newControllerAndMocks()
+			controller, client, dc, pr := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
 				Return(test.teardownDone, nil).Maybe()
+			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			dc.On("Free", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
-			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{})
+			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{
+				ObjectSetPhase: corev1alpha1.ObjectSetPhase{
+					ObjectMeta: metav1.ObjectMeta{Finalizers: []string{
+						controllers.CachedFinalizer,
+					}},
+				},
+			})
 			assert.NoError(t, err)
 			if test.teardownDone {
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)

@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -262,9 +263,17 @@ func (c *GenericObjectSetPhaseController) updateStatus(
 func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 ) error {
-	done, err := c.teardownHandler.Teardown(ctx, objectSetPhase)
-	if err != nil {
-		return fmt.Errorf("error tearing down during deletion: %w", err)
+	done := true
+
+	// When removing the finalizer this function may be called one last time.
+	// .Teardown may allocate new watches and leave dangling watches.
+	if controllerutil.ContainsFinalizer(
+		objectSetPhase.ClientObject(), controllers.CachedFinalizer) {
+		var err error
+		done, err = c.teardownHandler.Teardown(ctx, objectSetPhase)
+		if err != nil {
+			return fmt.Errorf("error tearing down during deletion: %w", err)
+		}
 	}
 
 	if !done {

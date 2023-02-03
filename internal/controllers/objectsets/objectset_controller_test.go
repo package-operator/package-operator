@@ -13,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/testutil"
 	"package-operator.run/package-operator/internal/testutil/dynamiccachemocks"
 )
@@ -100,7 +101,15 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-			objectSet := GenericObjectSet{}
+			objectSet := GenericObjectSet{
+				ObjectSet: corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Finalizers: []string{
+							controllers.CachedFinalizer,
+						},
+					},
+				},
+			}
 			objectSet.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
 			objectSet.Status.Conditions = []metav1.Condition{test.condition}
 			objectSet.Spec.LifecycleState = test.lifecycleState
@@ -138,7 +147,6 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			rr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			rr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
-			c.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
@@ -331,13 +339,22 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, _, dc, pr, _ := newControllerAndMocks()
+			controller, client, dc, pr, _ := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
 				Return(test.teardownDone, nil).Maybe()
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-			objectSet := &GenericObjectSet{}
+			objectSet := &GenericObjectSet{
+				ObjectSet: corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Finalizers: []string{
+							controllers.CachedFinalizer,
+						},
+					},
+				},
+			}
 			objectSet.Spec.LifecycleState = test.lifecycleState
 			objectSet.Status.Conditions = []metav1.Condition{
 				{
