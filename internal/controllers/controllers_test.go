@@ -116,3 +116,101 @@ func TestReportOwnActiveObjects(t *testing.T) {
 		},
 	}, activeObjects)
 }
+
+func TestIsMappedCondition(t *testing.T) {
+	assert.False(t, IsMappedCondition(metav1.Condition{
+		Type: "Available",
+	}))
+
+	assert.True(t, IsMappedCondition(metav1.Condition{
+		Type: "my-prefix/Available",
+	}))
+}
+
+func TestMapConditions(t *testing.T) {
+	tests := []struct {
+		name                   string
+		srcGeneration          int64
+		srcConditions          []metav1.Condition
+		destGeneration         int64
+		expectedDestConditions []metav1.Condition
+	}{
+		{
+			name:          "mapping",
+			srcGeneration: 4,
+			srcConditions: []metav1.Condition{
+				{
+					Type:               "Available",
+					Status:             metav1.ConditionTrue,
+					Reason:             "MyReason",
+					Message:            "message",
+					ObservedGeneration: 4,
+				},
+				{
+					Type:               "my-prefix/Available",
+					Status:             metav1.ConditionTrue,
+					Reason:             "MyReason",
+					Message:            "message",
+					ObservedGeneration: 4,
+				},
+				{
+					Type:               "my-prefix/Banana",
+					Status:             metav1.ConditionTrue,
+					Reason:             "MyReason",
+					Message:            "message",
+					ObservedGeneration: 3,
+				},
+			},
+			destGeneration: 42,
+			expectedDestConditions: []metav1.Condition{
+				{
+					Type:               "my-prefix/Available",
+					Status:             metav1.ConditionTrue,
+					Reason:             "MyReason",
+					Message:            "message",
+					ObservedGeneration: 42,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			var destConditions []metav1.Condition
+			MapConditions(
+				ctx, test.srcGeneration, test.srcConditions,
+				test.destGeneration, &destConditions,
+			)
+			if assert.Len(t, destConditions, len(test.expectedDestConditions)) {
+				for i := range test.expectedDestConditions {
+					expected := test.expectedDestConditions[i]
+					got := destConditions[i]
+
+					assert.Equal(t, expected.Type, got.Type)
+					assert.Equal(t, expected.Status, got.Status)
+					assert.Equal(t, expected.Reason, got.Reason)
+					assert.Equal(t, expected.Message, got.Message)
+					assert.Equal(t, expected.ObservedGeneration, got.ObservedGeneration)
+					assert.NotEmpty(t, got.LastTransitionTime)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteMappedConditions(t *testing.T) {
+	conditions := []metav1.Condition{
+		{
+			Type: "Available",
+		},
+		{
+			Type: "test/Available",
+		},
+	}
+	DeleteMappedConditions(context.Background(), &conditions)
+
+	assert.Equal(t, []metav1.Condition{
+		{Type: "Available"},
+	}, conditions)
+}

@@ -57,6 +57,8 @@ type lookupPreviousRevisions func(
 func (r *objectSetPhaseReconciler) Reconcile(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 ) (res ctrl.Result, err error) {
+	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetConditions())
+
 	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
 	if err != nil {
 		return res, fmt.Errorf("lookup previous revisions: %w", err)

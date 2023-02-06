@@ -129,6 +129,13 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	}
 
 	// ObjectSetPhase already exists
+	// -> copy mapped status conditions
+	controllers.MapConditions(
+		ctx,
+		currentObjectSetPhase.ClientObject().GetGeneration(), currentObjectSetPhase.GetConditions(),
+		objectSet.ClientObject().GetGeneration(), objectSet.GetConditions(),
+	)
+
 	// -> check status
 	availableCond := meta.FindStatusCondition(
 		currentObjectSetPhase.GetConditions(),

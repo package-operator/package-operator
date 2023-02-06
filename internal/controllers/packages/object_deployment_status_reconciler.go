@@ -10,6 +10,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 )
 
 type objectDeploymentStatusReconciler struct {
@@ -39,6 +40,13 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
 	}
+
+	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
+	controllers.MapConditions(
+		ctx,
+		objDep.ClientObject().GetGeneration(), *objDep.GetConditions(),
+		packageObj.ClientObject().GetGeneration(), packageObj.GetConditions(),
+	)
 
 	return ctrl.Result{}, nil
 }

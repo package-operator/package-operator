@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/controllers"
 )
 
 type objectSetReconciler struct {
@@ -91,6 +92,15 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		currentObjectSetSucceeded bool
 	)
 	if currentObjectSet != nil {
+		// map conditions
+		// -> copy mapped status conditions
+		controllers.DeleteMappedConditions(ctx, objectDeployment.GetConditions())
+		controllers.MapConditions(
+			ctx,
+			currentObjectSet.ClientObject().GetGeneration(), currentObjectSet.GetConditions(),
+			objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetConditions(),
+		)
+
 		if currentObjectSet.IsAvailable() {
 			// Latest revision is available, so we are no longer progressing.
 			meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{

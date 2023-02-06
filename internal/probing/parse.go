@@ -65,10 +65,10 @@ func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 			}
 
 		case probeSpec.Condition != nil:
-			probe = &conditionProbe{
-				Type:   probeSpec.Condition.Type,
-				Status: probeSpec.Condition.Status,
-			}
+			probe = NewConditionProbe(
+				probeSpec.Condition.Type,
+				probeSpec.Condition.Status,
+			)
 
 		default:
 			// probe has no known config
