@@ -40,7 +40,8 @@ func NewObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
 	}
 
 	return &ObjectDeployment{
-		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
+		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment),
+	}
 }
 
 func NewClusterObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
@@ -50,7 +51,8 @@ func NewClusterObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor
 	}
 
 	return &ClusterObjectDeployment{
-		ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
+		ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment),
+	}
 }
 
 var (

@@ -18,9 +18,7 @@ type eventHandler struct {
 	predicates []predicate.Predicate
 }
 
-var (
-	_ source.Source = (*cacheSource)(nil)
-)
+var _ source.Source = (*cacheSource)(nil)
 
 type cacheSource struct {
 	mu       sync.RWMutex

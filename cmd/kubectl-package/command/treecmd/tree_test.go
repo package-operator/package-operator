@@ -14,6 +14,8 @@ func TestTree(t *testing.T) {
 	t.Parallel()
 
 	t.Run("namespace scoped", func(t *testing.T) {
+		t.Parallel()
+
 		cmd := command.CobraRoot()
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}

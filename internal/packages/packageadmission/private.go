@@ -162,7 +162,6 @@ func statusSubresource(schema *apiextensions.JSONSchemaProps, fldPath *field.Pat
 
 		if !allowedAtRootSchema(fieldName) {
 			return field.Invalid(fldPath.Child("openAPIV3Schema"), *schema, fmt.Sprintf(`only %v fields are allowed at the root of the schema if the status subresource is enabled`, allowedFieldsAtRootSchema))
-
 		}
 	}
 
@@ -194,7 +193,6 @@ func requirestructuralSchema(ctx context.Context, schema *apiextensions.JSONSche
 	// Only initialize CEL rule validation context if the structural schemas are valid.
 	// A nil CELSchemaContext indicates that no CEL validation should be attempted.
 	return apiextensionsvalidation.RootCELContext(schema), nil, nil
-
 }
 
 // validateCustomResourceDefinitionOpenAPISchema statically validates.

@@ -131,7 +131,8 @@ type DynamicClientNamespaceableResourceInterface struct {
 }
 
 func (dc *DynamicClientNamespaceableResourceInterface) Namespace(
-	namespace string) dynamic.ResourceInterface {
+	namespace string,
+) dynamic.ResourceInterface {
 	args := dc.Called(namespace)
 	return args.Get(0).(dynamic.ResourceInterface)
 }

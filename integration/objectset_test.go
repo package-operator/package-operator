@@ -113,9 +113,11 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	require.NoError(t, err)
 
 	cm4Key := client.ObjectKey{
-		Name: cm4.Name, Namespace: objectSet.Namespace}
+		Name: cm4.Name, Namespace: objectSet.Namespace,
+	}
 	cm5Key := client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace}
+		Name: cm5.Name, Namespace: objectSet.Namespace,
+	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -198,7 +200,8 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 
 	// Expect cm-5 to be present now.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace}, currentCM5))
+		Name: cm5.Name, Namespace: objectSet.Namespace,
+	}, currentCM5))
 
 	// -----------
 	// Test pause.
@@ -261,7 +264,8 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 
 	// expect cm-5 to be gone already.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace}, currentCM5), `configmaps "cm-5" not found`)
+		Name: cm5.Name, Namespace: objectSet.Namespace,
+	}, currentCM5), `configmaps "cm-5" not found`)
 
 	// Remove our finalizer.
 	require.NoError(t,
@@ -274,7 +278,8 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 
 	// expect cm-4 to be also gone.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm4.Name, Namespace: objectSet.Namespace}, currentCM4), `configmaps "cm-4" not found`)
+		Name: cm4.Name, Namespace: objectSet.Namespace,
+	}, currentCM4), `configmaps "cm-4" not found`)
 
 	// expect no "ControllerOf" left
 	require.Len(t, objectSet.Status.ControllerOf, 0)
@@ -452,12 +457,14 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	// expect cm-1 to be present.
 	currentCM1 := &corev1.ConfigMap{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace}, currentCM1))
+		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+	}, currentCM1))
 
 	// expect cm-2 to be present.
 	currentCM2 := &corev1.ConfigMap{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev2.Namespace}, currentCM2))
+		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM2))
 
 	// expect cm-1 and cm-2 to be reported under "ControllerOf" in revision 1
 	require.Equal(t, []corev1alpha1.ControlledObjectReference{
@@ -486,18 +493,21 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 
 	// expect cm-1 to still be present and now controlled by Rev2.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace}, currentCM1))
+		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+	}, currentCM1))
 
 	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
 
 	// expect cm-2 to still be present.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev2.Namespace}, currentCM2))
+		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM2))
 
 	// expect cm-3 to also be present now.
 	currentCM3 := &corev1.ConfigMap{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm3.Name, Namespace: objectSetRev2.Namespace}, currentCM3))
+		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM3))
 
 	// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
 	require.NoError(t,
@@ -550,13 +560,16 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 
 	// expect cm-2 to be gone.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev1.Namespace}, currentCM2), `configmaps "cm-2" not found`)
+		Name: cm2.Name, Namespace: objectSetRev1.Namespace,
+	}, currentCM2), `configmaps "cm-2" not found`)
 
 	// expect cm-3 and cm-1 to be still present
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev2.Namespace}, currentCM1))
+		Name: cm1.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM1))
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm3.Name, Namespace: objectSetRev2.Namespace}, currentCM3))
+		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM3))
 }
 
 func TestObjectSet_handover(t *testing.T) {
@@ -578,7 +591,6 @@ func TestObjectSet_handover(t *testing.T) {
 			runObjectSetHandoverTest(t, "default", test.class)
 		})
 	}
-
 }
 
 func cleanupOnSuccess(ctx context.Context, t *testing.T, obj client.Object) {

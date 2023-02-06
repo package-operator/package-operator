@@ -217,7 +217,8 @@ func (m *deploymentReconcilerMock) Reconcile(
 }
 
 func (m *packageContentLoaderMock) FromFiles(
-	ctx context.Context, path packagecontent.Files, opts ...packageloader.Option) (*packagecontent.Package, error) {
+	ctx context.Context, path packagecontent.Files, opts ...packageloader.Option,
+) (*packagecontent.Package, error) {
 	args := m.Called(ctx, path)
 	return args.Get(0).(*packagecontent.Package), args.Error(1)
 }

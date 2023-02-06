@@ -361,9 +361,7 @@ type readerMock struct {
 	mock.Mock
 }
 
-var (
-	_ client.Reader = (*readerMock)(nil)
-)
+var _ client.Reader = (*readerMock)(nil)
 
 func (m *readerMock) Get(
 	ctx context.Context,

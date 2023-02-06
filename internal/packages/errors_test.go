@@ -49,6 +49,8 @@ func TestInvalidError(t *testing.T) {
 }
 
 func TestViolation(t *testing.T) {
+	t.Parallel()
+
 	t.Run("with location", func(t *testing.T) {
 		t.Parallel()
 
@@ -73,6 +75,8 @@ func TestViolation(t *testing.T) {
 }
 
 func TestViolationLocation(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 

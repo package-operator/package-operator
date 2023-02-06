@@ -64,7 +64,8 @@ func newDeploymentReconciler(
 }
 
 func (r *DeploymentReconciler) Reconcile(
-	ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor, chunker objectChunker) error {
+	ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor, chunker objectChunker,
+) error {
 	templateSpec := desiredDeploy.GetTemplateSpec()
 
 	// Get existing ObjectDeployment
@@ -176,7 +177,8 @@ func (r *DeploymentReconciler) sliceGarbageCollection(ctx context.Context, deplo
 }
 
 func (r *DeploymentReconciler) listObjectSetsForDeployment(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor) ([]genericObjectSet, error) {
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
+) ([]genericObjectSet, error) {
 	labelSelector := deploy.GetSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
@@ -199,7 +201,8 @@ func (r *DeploymentReconciler) listObjectSetsForDeployment(
 }
 
 func (r *DeploymentReconciler) chunkPhase(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, phase *corev1alpha1.ObjectSetTemplatePhase, chunker objectChunker) error {
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, phase *corev1alpha1.ObjectSetTemplatePhase, chunker objectChunker,
+) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	objectsForSlices, err := chunker.Chunk(ctx, phase)
@@ -237,7 +240,8 @@ func (r *DeploymentReconciler) chunkPhase(
 
 // reconcile ObjectSlice and retry on hash collision.
 func (r *DeploymentReconciler) reconcileSlice(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor) error {
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor,
+) error {
 	var collisionCount int32
 	for {
 		err := r.reconcileSliceWithCollisionCount(ctx, deploy, slice, collisionCount)
@@ -257,7 +261,8 @@ func (r *DeploymentReconciler) reconcileSlice(
 func (e sliceCollisionError) Error() string { return "ObjectSlice collision with " + e.key.String() }
 
 func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor, collisionCount int32) error {
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor, collisionCount int32,
+) error {
 	hash := utils.ComputeHash(slice.GetObjects(), &collisionCount)
 	name := deploy.ClientObject().GetName() + "-" + hash
 	slice.ClientObject().SetName(name)

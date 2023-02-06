@@ -28,7 +28,8 @@ func newGenericObjectSet(scheme *runtime.Scheme) genericObjectSet {
 	}
 
 	return &GenericObjectSet{
-		ObjectSet: *obj.(*corev1alpha1.ObjectSet)}
+		ObjectSet: *obj.(*corev1alpha1.ObjectSet),
+	}
 }
 
 func newGenericClusterObjectSet(scheme *runtime.Scheme) genericObjectSet {
@@ -38,7 +39,8 @@ func newGenericClusterObjectSet(scheme *runtime.Scheme) genericObjectSet {
 	}
 
 	return &GenericClusterObjectSet{
-		ClusterObjectSet: *obj.(*corev1alpha1.ClusterObjectSet)}
+		ClusterObjectSet: *obj.(*corev1alpha1.ClusterObjectSet),
+	}
 }
 
 var (

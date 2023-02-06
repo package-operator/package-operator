@@ -26,9 +26,7 @@ const (
 	validatePullUse = "treat target as image reference and pull it instead of looking on the filesystem"
 )
 
-var (
-	validateScheme = runtime.NewScheme()
-)
+var validateScheme = runtime.NewScheme()
 
 func init() {
 	if err := pkoapis.AddToScheme(validateScheme); err != nil {

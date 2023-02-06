@@ -15,7 +15,8 @@ import (
 )
 
 func manifestFromFile(
-	ctx context.Context, scheme *runtime.Scheme, fileName string, manifestBytes []byte) (*manifestsv1alpha1.PackageManifest, error) {
+	ctx context.Context, scheme *runtime.Scheme, fileName string, manifestBytes []byte,
+) (*manifestsv1alpha1.PackageManifest, error) {
 	// Unmarshal "pre-load" to peek desired GVK.
 	var manifestType metav1.TypeMeta
 	if err := yaml.Unmarshal(manifestBytes, &manifestType); err != nil {
@@ -98,7 +99,8 @@ func manifestFromFile(
 }
 
 func manifestLockFromFile(
-	ctx context.Context, scheme *runtime.Scheme, fileName string, manifestBytes []byte) (*manifestsv1alpha1.PackageManifestLock, error) {
+	ctx context.Context, scheme *runtime.Scheme, fileName string, manifestBytes []byte,
+) (*manifestsv1alpha1.PackageManifestLock, error) {
 	// Unmarshal "pre-load" to peek desired GVK.
 	var manifestType metav1.TypeMeta
 	if err := yaml.Unmarshal(manifestBytes, &manifestType); err != nil {

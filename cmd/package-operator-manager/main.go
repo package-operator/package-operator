@@ -189,7 +189,7 @@ func runCopyTo(target string) error {
 		return fmt.Errorf("copy: %w", err)
 	}
 
-	return os.Chmod(destFile.Name(), 0755)
+	return os.Chmod(destFile.Name(), 0o755)
 }
 
 const packageFolderPath = "/package"

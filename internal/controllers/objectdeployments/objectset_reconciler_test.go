@@ -170,7 +170,8 @@ func Test_ObjectSetReconciler(t *testing.T) {
 func makeObjectDeploymentMock(name string, namespace string,
 	generation int,
 	templateHash string,
-	initialConditions *[]metav1.Condition) *genericObjectDeploymentMock {
+	initialConditions *[]metav1.Condition,
+) *genericObjectDeploymentMock {
 	res := &genericObjectDeploymentMock{}
 	obj := &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{

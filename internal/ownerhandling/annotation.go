@@ -101,7 +101,8 @@ func (s *OwnerStrategyAnnotation) IsOwner(owner, obj metav1.Object) bool {
 }
 
 func (s *OwnerStrategyAnnotation) IsController(
-	owner, obj metav1.Object) bool {
+	owner, obj metav1.Object,
+) bool {
 	ownerRefComp := s.ownerRefForCompare(owner)
 	for _, ownerRef := range s.getOwnerReferences(obj) {
 		if s.referSameObject(ownerRefComp, ownerRef) &&

@@ -446,7 +446,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{})},
+					&unstructured.Unstructured{}),
+			},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -476,7 +477,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{})},
+					&unstructured.Unstructured{}),
+			},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{},
 			},
@@ -504,7 +506,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
-					&corev1.ConfigMap{})},
+					&corev1.ConfigMap{}),
+			},
 			object: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -745,7 +748,6 @@ func Test_mergeKeysFrom(t *testing.T) {
 }
 
 func Test_mapConditions(t *testing.T) {
-
 	const (
 		reason  = "ChickenSalad"
 		message = "Salad made with chicken!"
@@ -835,5 +837,4 @@ func Test_mapConditions(t *testing.T) {
 			}
 		})
 	}
-
 }

@@ -13,9 +13,7 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-var (
-	testScheme = testutil.NewTestSchemeWithCoreV1()
-)
+var testScheme = testutil.NewTestSchemeWithCoreV1()
 
 func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
 	obj := &corev1.ConfigMap{

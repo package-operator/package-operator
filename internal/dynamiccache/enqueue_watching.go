@@ -76,7 +76,8 @@ func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object, q workqueue.
 			NamespacedName: types.NamespacedName{
 				Name:      ownerRef.Name,
 				Namespace: ownerRef.Namespace,
-			}})
+			},
+		})
 	}
 }
 

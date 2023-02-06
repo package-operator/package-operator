@@ -14,6 +14,8 @@ import (
 )
 
 func Test_determineChunkingStrategyForPackage(t *testing.T) {
+	t.Parallel()
+
 	t.Run("EachObject", func(t *testing.T) {
 		t.Parallel()
 

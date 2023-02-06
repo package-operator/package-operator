@@ -58,10 +58,9 @@ type preflightChecker interface {
 type GenericObjectSetPhaseController struct {
 	newObjectSetPhase genericObjectSetPhaseFactory
 
-	class  string // Phase class this controller is operating for.
-	log    logr.Logger
-	scheme *runtime.Scheme
-	// ownerStrategy ownerStrategy
+	class           string // Phase class this controller is operating for.
+	log             logr.Logger
+	scheme          *runtime.Scheme
 	client          client.Client // client to get and update ObjectSetPhases.
 	dynamicCache    dynamicCache
 	ownerStrategy   ownerStrategy
@@ -253,7 +252,8 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Contex
 }
 
 func (c *GenericObjectSetPhaseController) updateStatus(
-	ctx context.Context, objectSetPhase genericObjectSetPhase) error {
+	ctx context.Context, objectSetPhase genericObjectSetPhase,
+) error {
 	if err := c.client.Status().Update(ctx, objectSetPhase.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSetPhase status: %w", err)
 	}
@@ -289,8 +289,8 @@ func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 }
 
 func (c *GenericObjectSetPhaseController) SetupWithManager(
-	mgr ctrl.Manager) error {
-
+	mgr ctrl.Manager,
+) error {
 	objectSetPhase := c.newObjectSetPhase(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).

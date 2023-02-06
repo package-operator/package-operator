@@ -52,7 +52,8 @@ func (c *NoOpChunker) Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTe
 }
 
 func (c *EachObjectChunker) Chunk(
-	ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
+	ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase,
+) ([][]corev1alpha1.ObjectSetObject, error) {
 	var out [][]corev1alpha1.ObjectSetObject
 	for _, obj := range phase.Objects {
 		out = append(out, []corev1alpha1.ObjectSetObject{obj})

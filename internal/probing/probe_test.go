@@ -8,16 +8,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-var (
-	_ Prober = (*proberMock)(nil)
-)
+var _ Prober = (*proberMock)(nil)
 
 type proberMock struct {
 	mock.Mock
 }
 
 func (m *proberMock) Probe(obj *unstructured.Unstructured) (
-	success bool, message string) {
+	success bool, message string,
+) {
 	args := m.Called(obj)
 	return args.Bool(0), args.String(1)
 }

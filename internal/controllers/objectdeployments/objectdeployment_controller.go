@@ -108,7 +108,8 @@ func NewClusterObjectDeploymentController(
 }
 
 func (od *GenericObjectDeploymentController) Reconcile(
-	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx context.Context, req ctrl.Request,
+) (ctrl.Result, error) {
 	log := od.log.WithValues("ObjectDeployment", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)

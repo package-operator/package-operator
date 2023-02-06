@@ -40,7 +40,8 @@ func newGenericObjectSetPhase(scheme *runtime.Scheme) genericObjectSetPhase {
 	}
 
 	return &GenericObjectSetPhase{
-		ObjectSetPhase: *obj.(*corev1alpha1.ObjectSetPhase)}
+		ObjectSetPhase: *obj.(*corev1alpha1.ObjectSetPhase),
+	}
 }
 
 func newGenericClusterObjectSetPhase(scheme *runtime.Scheme) genericObjectSetPhase {
@@ -50,7 +51,8 @@ func newGenericClusterObjectSetPhase(scheme *runtime.Scheme) genericObjectSetPha
 	}
 
 	return &GenericClusterObjectSetPhase{
-		ClusterObjectSetPhase: *obj.(*corev1alpha1.ClusterObjectSetPhase)}
+		ClusterObjectSetPhase: *obj.(*corev1alpha1.ClusterObjectSetPhase),
+	}
 }
 
 type GenericObjectSetPhase struct {

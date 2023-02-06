@@ -38,7 +38,8 @@ func newGenericPackage(scheme *runtime.Scheme) genericPackage {
 	}
 
 	return &GenericPackage{
-		Package: *obj.(*corev1alpha1.Package)}
+		Package: *obj.(*corev1alpha1.Package),
+	}
 }
 
 func newGenericClusterPackage(scheme *runtime.Scheme) genericPackage {

@@ -94,5 +94,4 @@ func TestParseConditionMap_error(t *testing.T) {
 			require.EqualError(t, err, test.err)
 		})
 	}
-
 }

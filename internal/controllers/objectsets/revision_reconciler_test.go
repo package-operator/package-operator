@@ -15,9 +15,7 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-var (
-	testScheme = runtime.NewScheme()
-)
+var testScheme = runtime.NewScheme()
 
 func init() {
 	if err := corev1alpha1.AddToScheme(testScheme); err != nil {

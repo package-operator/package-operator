@@ -38,7 +38,6 @@ const (
 
 // HostedClusterStatus is the latest observed status of a HostedCluster.
 type HostedClusterStatus struct {
-
 	// KubeConfig is a reference to the secret containing the default kubeconfig
 	// for the cluster.
 	// +optional

@@ -85,8 +85,8 @@ func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlCl
 	}
 
 	return controller, c, dc, pr
-
 }
+
 func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 	tests := []struct {
 		name                   string
