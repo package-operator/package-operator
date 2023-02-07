@@ -475,7 +475,7 @@ func (p *defaultPatcher) Patch(
 			return fmt.Errorf("creating patch: %w", err)
 		}
 		if err := p.writer.Patch(ctx, updatedObj, client.RawPatch(
-			types.MergePatchType, objectPatch)); err != nil {
+			types.StrategicMergePatchType, objectPatch)); err != nil {
 			return fmt.Errorf("patching object: %w", err)
 		}
 	}
