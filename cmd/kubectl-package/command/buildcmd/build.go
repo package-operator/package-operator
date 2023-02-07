@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	buildUse       = "build source_path [--tag tag]... [--output output_path] [--push]"
-	buildShort     = "build an PKO package image using manifests at the given path"
-	buildLong      = "builds and optionally pushes an OCI image in the Package Operator package format from the specified build context directory."
-	buildTagUse    = "Tags to assign to the created image. May be specified multiple times. Defaults to none."
-	buildPushUse   = "Push the created image tags. Defaults to false"
-	buildOutputUse = "Filesystem path to dump the tagged image to. Will be packed as a tar. Containing directories must exist. Defaults to none."
+	buildUse        = "build source_path [--tag tag]... [--output output_path] [--push]"
+	buildShort      = "build an PKO package image using manifests at the given path"
+	buildLong       = "builds and optionally pushes an OCI image in the Package Operator package format from the specified build context directory."
+	buildTagUse     = "Tags to assign to the created image. May be specified multiple times. Defaults to none."
+	buildPushUse    = "Push the created image tags. Defaults to false"
+	buildRuntimeUse = "Push the created image to the container runtime deamon. Defaults to false"
+	buildOutputUse  = "Filesystem path to dump the tagged image to. Will be packed as a tar. Containing directories must exist. Defaults to none."
 )
 
 type Build struct {
@@ -32,6 +33,7 @@ type Build struct {
 	OutputPath string
 	Tags       []string
 	Push       bool
+	ToRuntime  bool
 }
 
 type BuildValidationError struct {
@@ -99,6 +101,14 @@ func (b Build) Run(ctx context.Context) error {
 		}
 	}
 
+	if b.ToRuntime {
+		for _, tag := range b.Tags {
+			if err := packageexport.RuntimeImage(ctx, tag, files); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -111,6 +121,7 @@ func (b *Build) CobraCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringSliceVarP(&b.Tags, "tag", "t", []string{}, buildTagUse)
 	f.BoolVar(&b.Push, "push", false, buildPushUse)
+	f.BoolVar(&b.ToRuntime, "runtime", false, buildRuntimeUse)
 	f.StringVarP(&b.OutputPath, "output", "o", "", buildOutputUse)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {

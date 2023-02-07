@@ -7,7 +7,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
@@ -61,6 +63,24 @@ func PushedImage(ctx context.Context, references []string, files packagecontent.
 		if err != nil {
 			return fmt.Errorf("push: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func RuntimeImage(ctx context.Context, reference string, files packagecontent.Files, opts ...daemon.Option) error {
+	image, err := Image(files)
+	if err != nil {
+		return err
+	}
+
+	ref, err := name.NewTag(reference)
+	if err != nil {
+		return fmt.Errorf("reference invalid: %w", err)
+	}
+
+	if _, err := daemon.Write(ref, image, daemon.WithContext(ctx)); err != nil {
+		return fmt.Errorf("write image to runtime: %w", err)
 	}
 
 	return nil
