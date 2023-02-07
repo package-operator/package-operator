@@ -205,6 +205,7 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 
 		case schema.GroupKind{Group: "", Kind: "ServiceAccount"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}:
 			annotations["package-operator.run/phase"] = "rbac"
