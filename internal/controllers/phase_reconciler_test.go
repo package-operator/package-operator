@@ -294,18 +294,25 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 
 	ownerStrategy.On("ReleaseController", mock.Anything)
 	ownerStrategy.
-		On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		On("SetControllerReference", mock.Anything, mock.Anything).
 		Return(nil)
 	ownerStrategy.
 		On("IsController", mock.Anything, mock.Anything).
 		Return(true)
+
+	testClient.
+		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
 
 	patcher.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	ctx := context.Background()
-	actual, err := r.reconcileObject(ctx, owner, &unstructured.Unstructured{}, nil)
+	obj := &unstructured.Unstructured{}
+	// set owner refs so we don't run into the panic
+	obj.SetOwnerReferences([]metav1.OwnerReference{{}})
+	actual, err := r.reconcileObject(ctx, owner, obj, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
@@ -313,6 +320,14 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
 					revisionAnnotation: "3",
+				},
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion": "",
+						"kind":       "",
+						"name":       "",
+						"uid":        "",
+					},
 				},
 			},
 		},

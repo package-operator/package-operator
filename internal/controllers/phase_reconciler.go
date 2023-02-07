@@ -432,6 +432,26 @@ func (r *PhaseReconciler) reconcileObject(
 		if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), updatedObj); err != nil {
 			return nil, err
 		}
+
+		ownerRefs, ok, err := unstructured.NestedFieldNoCopy(updatedObj.Object, "metadata", "ownerReferences")
+		if !ok || err != nil {
+			// we should not be able to reach this code path - ever :D
+			panic(fmt.Errorf("can't access ownerReferences after setting them: %w", err))
+		}
+
+		ownershipPatch, err := json.Marshal(map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"ownerReferences": ownerRefs,
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("ownership patch: %w", err)
+		}
+		if err := r.writer.Patch(ctx, updatedObj, client.RawPatch(
+			types.MergePatchType, ownershipPatch,
+		)); err != nil {
+			return nil, fmt.Errorf("patching object ownership: %w", err)
+		}
 	}
 
 	// Only issue updates when this instance is already or will be controlled by this instance.
@@ -463,6 +483,8 @@ func (p *defaultPatcher) Patch(
 	// never patch status, even if specified
 	// we would just start a fight with whatever controller is realizing this object.
 	unstructured.RemoveNestedField(patch.Object, "status")
+	// don't strategic merge ownerReferences - we already take care about that with it's own patch.
+	unstructured.RemoveNestedField(patch.Object, "metadata", "ownerReferences")
 
 	base := updatedObj.DeepCopy()
 	unstructured.RemoveNestedField(base.Object, "status")
