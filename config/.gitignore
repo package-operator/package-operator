@@ -1,0 +1,3 @@
+static-deployment/deployment.yaml
+self-bootstrap-job.yaml
+packages/remote-phase/package-operator-remote-phase-manager.Deployment.yaml
