@@ -1,9 +1,0 @@
-apiVersion: manifests.package-operator.run/v1alpha1
-kind: PackageManifestLock
-metadata:
-  creationTimestamp: "2023-02-03T08:58:40Z"
-spec:
-  images:
-  - digest: sha256:4c5e1e4ab724db750979851cd2f4e2dec13648792280be1cd052bf9c638285da
-    image: nginx:1.22.1
-    name: nginx

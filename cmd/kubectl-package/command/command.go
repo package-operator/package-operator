@@ -50,7 +50,7 @@ func CobraRoot() *cobra.Command {
 		(&validatecmd.Validate{}).CobraCommand(),
 		(&versioncmd.Version{}).CobraCommand(),
 		(&treecmd.Tree{}).CobraCommand(),
-		(&updatecmd.Update{}).CobraCommand(),
+		(&updatecmd.Default).CobraCommand(),
 	)
 
 	return cmd
