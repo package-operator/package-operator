@@ -15,7 +15,7 @@ type hashReconciler struct {
 
 func (h *hashReconciler) Reconcile(ctx context.Context, objectSetDeployment objectDeploymentAccessor) (ctrl.Result, error) {
 	objectSetTemplate := objectSetDeployment.GetObjectSetTemplate()
-	templateHash := utils.ComputeHash(objectSetTemplate, objectSetDeployment.GetStatusCollisionCount())
+	templateHash := utils.ComputeFNV32Hash(objectSetTemplate, objectSetDeployment.GetStatusCollisionCount())
 	objectSetDeployment.SetStatusTemplateHash(templateHash)
 	return ctrl.Result{}, nil
 }
