@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientScheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/yaml"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // Constants that define build behaviour.
@@ -503,6 +505,7 @@ func (l *Locations) DevEnv() *dev.Environment {
 			filepath.Join(l.Cache(), "dev-env"),
 			dev.WithClusterOptions([]dev.ClusterOption{
 				dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
+				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
 			dev.WithClusterInitializers{
@@ -910,8 +913,16 @@ func (d Dev) Deploy(ctx context.Context) {
 
 	cluster := locations.DevEnv().Cluster
 
-	d.deployPackageOperatorManager(ctx, cluster)
-	d.deployPackageOperatorWebhook(ctx, cluster)
+	must(cluster.CreateAndWaitFromFiles(
+		ctx, []string{filepath.Join("config", "self-bootstrap-job.yaml")}))
+
+	ctx = logr.NewContext(ctx, logger)
+	must(cluster.Waiter.WaitForCondition(ctx, &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "package-operator",
+		},
+	}, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
+
 	d.deployTargetKubeConfig(ctx, cluster)
 }
 
