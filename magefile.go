@@ -37,7 +37,7 @@ import (
 // Constants that define build behaviour.
 const (
 	module                 = "package-operator.run/package-operator"
-	defaultImageOrg        = "quay.io/package-operator"
+	defaultImageOrg        = "quay.io/pbabic"
 	clusterName            = "package-operator-dev"
 	cliCmdName             = "kubectl-package"
 	pkoPackageName         = "package-operator-package"
@@ -670,16 +670,11 @@ func (Build) Images() {
 }
 
 func newImagePushInfo(imageName string) *dev.ImagePushInfo {
-	imageCacheDir := locations.ImageCache(imageName)
-	imageTag := locations.ImageURL(imageName, false)
-	containerRuntime := locations.ContainerRuntime()
-	digestFile := locations.DigestFile(imageName)
-
 	return &dev.ImagePushInfo{
-		ImageTag:   imageTag,
-		CacheDir:   imageCacheDir,
-		Runtime:    containerRuntime,
-		DigestFile: digestFile,
+		ImageTag:   locations.ImageURL(imageName, false),
+		CacheDir:   locations.ImageCache(imageName),
+		Runtime:    locations.ContainerRuntime(),
+		DigestFile: locations.DigestFile(imageName),
 	}
 }
 
@@ -754,16 +749,12 @@ func (Build) populateCacheCmd(cmd, imageName string) {
 }
 
 func newImageBuildInfo(imageName, containerFile, contextDir string) *dev.ImageBuildInfo {
-	imageCacheDir := locations.ImageCache(imageName)
-	imageTag := locations.ImageURL(imageName, false)
-	containerRuntime := locations.ContainerRuntime()
-
 	return &dev.ImageBuildInfo{
-		ImageTag:      imageTag,
-		CacheDir:      imageCacheDir,
+		ImageTag:      locations.ImageURL(imageName, false),
+		CacheDir:      locations.ImageCache(imageName),
 		ContainerFile: containerFile,
 		ContextDir:    contextDir,
-		Runtime:       containerRuntime,
+		Runtime:       locations.ContainerRuntime(),
 	}
 }
 
@@ -794,6 +785,17 @@ func (Build) populateCachePkg(imageName, sourcePath string) {
 	must(sh.Run("cp", "-a", sourcePath+"/.", imageCacheDir+"/"))
 }
 
+func newPackageBuildInfo(imageName string) *dev.PackageBuildInfo {
+	imageCacheDir := locations.ImageCache(imageName)
+	return &dev.PackageBuildInfo{
+		ImageTag:   locations.ImageURL(imageName, false),
+		CacheDir:   imageCacheDir,
+		SourcePath: imageCacheDir,
+		OutputPath: imageCacheDir + ".tar",
+		Runtime:    locations.ContainerRuntime(),
+	}
+}
+
 func (b Build) buildPackageImage(name string) {
 	opts, ok := packageImages[name]
 	if !ok {
@@ -801,7 +803,6 @@ func (b Build) buildPackageImage(name string) {
 	}
 
 	predeps := []interface{}{
-		mg.F(Build.Binary, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, name),
 		mg.F(Build.populateCachePkg, name, opts.SourcePath),
 	}
@@ -809,8 +810,8 @@ func (b Build) buildPackageImage(name string) {
 		predeps = append(predeps, d)
 	}
 
-	buildInfo := newImageBuildInfo(name, "Containerfile", ".")
-	must(dev.BuildImage(buildInfo, predeps))
+	buildInfo := newPackageBuildInfo(name)
+	must(dev.BuildPackage(buildInfo, predeps))
 }
 
 // Installs all project dependencies into the local checkout.
