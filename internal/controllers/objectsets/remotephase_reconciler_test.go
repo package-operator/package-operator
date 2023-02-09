@@ -8,7 +8,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	corev1 "k8s.io/api/core/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
@@ -151,4 +154,112 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(
 	assert.NotEmpty(t, objectSetPhase.GetOwnerReferences())
 	assert.Equal(t, "my-stuff-phase-1", objectSetPhase.Name)
 	assert.Equal(t, objectSet.Namespace, objectSetPhase.Namespace)
+}
+
+func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *testing.T) {
+	ctx := context.Background()
+	c := testutil.NewClient()
+
+	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1.Namespace"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(2).(*corev1.Namespace)
+			now := metav1.Now()
+			*out = corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					DeletionTimestamp: &now,
+				},
+			}
+		}).
+		Return(nil)
+
+	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+			*out = corev1alpha1.ObjectSetPhase{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{"yes"},
+				},
+			}
+		}).Return(nil)
+	c.On("Update", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(1).(*corev1alpha1.ObjectSetPhase)
+			require.Empty(t, out.ObjectMeta.Finalizers)
+		}).Return(nil)
+
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(errors.NewNotFound(schema.GroupResource{}, ""))
+
+	r := &objectSetRemotePhaseReconciler{
+		client:            c,
+		scheme:            testScheme,
+		newObjectSetPhase: newGenericObjectSetPhase,
+	}
+
+	objectSet := &GenericObjectSet{
+		corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "chickenspace",
+			},
+		},
+	}
+
+	phase := corev1alpha1.ObjectSetTemplatePhase{Name: "phase-1"}
+
+	_, err := r.Teardown(ctx, objectSet, phase)
+	require.NoError(t, err)
+}
+
+func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectSet(t *testing.T) {
+	ctx := context.Background()
+	c := testutil.NewClient()
+
+	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1.Namespace"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(2).(*corev1.Namespace)
+			now := metav1.Now()
+			*out = corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					DeletionTimestamp: &now,
+				},
+			}
+		}).
+		Return(nil)
+
+	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+			*out = corev1alpha1.ObjectSetPhase{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{"yes"},
+				},
+			}
+		}).Return(nil)
+	c.On("Update", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			out := args.Get(1).(*corev1alpha1.ObjectSetPhase)
+			require.Empty(t, out.ObjectMeta.Finalizers)
+		}).Return(nil)
+
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(errors.NewNotFound(schema.GroupResource{}, ""))
+
+	r := &objectSetRemotePhaseReconciler{
+		client:            c,
+		scheme:            testScheme,
+		newObjectSetPhase: newGenericObjectSetPhase,
+	}
+
+	objectSet := &GenericObjectSet{
+		corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "",
+			},
+		},
+	}
+
+	phase := corev1alpha1.ObjectSetTemplatePhase{Name: "phase-1"}
+
+	_, err := r.Teardown(ctx, objectSet, phase)
+	require.NoError(t, err)
+	c.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
+	c.AssertNotCalled(t, "Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1.Namespace"), mock.Anything)
 }
