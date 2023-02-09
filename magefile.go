@@ -37,7 +37,7 @@ import (
 // Constants that define build behaviour.
 const (
 	module                 = "package-operator.run/package-operator"
-	defaultImageOrg        = "quay.io/pbabic"
+	defaultImageOrg        = "quay.io/package-operator"
 	clusterName            = "package-operator-dev"
 	cliCmdName             = "kubectl-package"
 	pkoPackageName         = "package-operator-package"
