@@ -24,6 +24,8 @@ const (
 	packageNameLabel = "package-operator.run/pkg-name"
 	// Namespace of the Package object the loader job belongs to.
 	packageNamespaceLabel = "package-operator.run/pkg-namespace"
+	// Indicator that a pod was created by a PKO job.
+	packageJobLabel = "package-operator.run/job-pod"
 )
 
 type jobReconciler struct {
@@ -72,6 +74,21 @@ func (r *jobReconciler) Reconcile(
 					Message:            "Unpack job succeeded",
 					ObservedGeneration: pkg.ClientObject().GetGeneration(),
 				})
+
+			err := r.client.DeleteAllOf(
+				ctx,
+				&corev1.Pod{},
+				client.InNamespace(job.Namespace),
+				client.MatchingLabels{
+					packageNameLabel:      pkg.ClientObject().GetName(),
+					packageNamespaceLabel: pkg.ClientObject().GetNamespace(),
+					packageJobLabel:       "True",
+				},
+			)
+			if err != nil {
+				return res, fmt.Errorf("deleting job pods: %w", err)
+			}
+
 			continue
 		}
 
@@ -156,6 +173,13 @@ func desiredJob(pkg genericPackage, pkoNamespace, pkoImage string) *batchv1.Job 
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						packageNameLabel:      pkg.ClientObject().GetName(),
+						packageNamespaceLabel: pkg.ClientObject().GetNamespace(),
+						packageJobLabel:       "True",
+					},
+				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:      corev1.RestartPolicyOnFailure,
 					ServiceAccountName: "package-operator",
