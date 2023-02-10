@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -673,6 +672,15 @@ func (Build) Images() {
 	mg.Deps(deps...)
 }
 
+func newImagePushInfo(imageName string) *dev.ImagePushInfo {
+	return &dev.ImagePushInfo{
+		ImageTag:   locations.ImageURL(imageName, false),
+		CacheDir:   locations.ImageCache(imageName),
+		Runtime:    locations.ContainerRuntime(),
+		DigestFile: locations.DigestFile(imageName),
+	}
+}
+
 // Builds and pushes only the given container image to the default registry.
 func (Build) PushImage(imageName string) {
 	cmdOpts, cmdOptsOK := commandImages[imageName]
@@ -686,30 +694,8 @@ func (Build) PushImage(imageName string) {
 		panic(fmt.Sprintf(fmt.Sprintf("image is not configured to be pushed: %s", imageName)))
 	}
 
-	mg.SerialDeps(mg.F(Build.Image, imageName))
-
-	containerRuntime := locations.ContainerRuntime()
-
-	// Login to container registry when running on AppSRE Jenkins.
-	_, isJenkins := os.LookupEnv("JENKINS_HOME")
-	_, isCI := os.LookupEnv("CI")
-	if isJenkins || isCI {
-		log.Println("running in CI, calling container runtime login")
-		args := []string{"login", "-u=" + os.Getenv("QUAY_USER"), "-p=" + os.Getenv("QUAY_TOKEN"), "quay.io"}
-		if err := sh.Run(containerRuntime, args...); err != nil {
-			panic(fmt.Errorf("registry login: %w", err))
-		}
-	}
-
-	args := []string{"push"}
-	if containerRuntime == string(dev.ContainerRuntimePodman) {
-		args = append(args, "--digestfile="+locations.DigestFile(imageName))
-	}
-	args = append(args, locations.ImageURL(imageName, false))
-
-	if err := sh.Run(containerRuntime, args...); err != nil {
-		panic(fmt.Errorf("pushing image: %w", err))
-	}
+	pushInfo := newImagePushInfo(imageName)
+	must(dev.PushImage(pushInfo, mg.F(Build.Image, imageName)))
 }
 
 // Builds and pushes all container images to the default registry.
@@ -758,6 +744,23 @@ func (Build) cleanImageCacheDir(name string) {
 	}
 }
 
+func (Build) populateCacheCmd(cmd, imageName string) {
+	imageCacheDir := locations.ImageCache(imageName)
+	must(sh.Copy(filepath.Join(imageCacheDir, cmd), locations.binaryDst(cmd, linuxAMD64Arch)))
+	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", imageName+".Containerfile")))
+	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
+}
+
+func newImageBuildInfo(imageName, containerFile, contextDir string) *dev.ImageBuildInfo {
+	return &dev.ImageBuildInfo{
+		ImageTag:      locations.ImageURL(imageName, false),
+		CacheDir:      locations.ImageCache(imageName),
+		ContainerFile: containerFile,
+		ContextDir:    contextDir,
+		Runtime:       locations.ContainerRuntime(),
+	}
+}
+
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
 func (b Build) buildCmdImage(imageName string) {
@@ -770,29 +773,29 @@ func (b Build) buildCmdImage(imageName string) {
 		cmd = opts.BinaryName
 	}
 
-	mg.Deps(mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch), mg.F(Build.cleanImageCacheDir, imageName))
-
-	imageCacheDir := locations.ImageCache(imageName)
-	imageTag := locations.ImageURL(imageName, false)
-
-	// prepare build context
-	must(sh.Copy(filepath.Join(imageCacheDir, cmd), locations.binaryDst(cmd, linuxAMD64Arch)))
-	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", imageName+".Containerfile")))
-	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
-
-	containerRuntime := locations.ContainerRuntime()
-	cmds := [][]string{
-		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
-		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
+	deps := []interface{}{
+		mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
+		mg.F(Build.cleanImageCacheDir, imageName),
+		mg.F(Build.populateCacheCmd, cmd, imageName),
 	}
+	buildInfo := newImageBuildInfo(imageName, "Containerfile", ".")
+	must(dev.BuildImage(buildInfo, deps))
+}
 
-	// Build image!
-	for _, command := range cmds {
-		buildCmd := exec.Command(command[0], command[1:]...)
-		buildCmd.Stderr = os.Stderr
-		buildCmd.Stdout = os.Stdout
-		buildCmd.Dir = imageCacheDir
-		must(buildCmd.Run())
+func (Build) populateCachePkg(imageName, sourcePath string) {
+	imageCacheDir := locations.ImageCache(imageName)
+	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", "package.Containerfile")))
+	must(sh.Run("cp", "-a", sourcePath+"/.", imageCacheDir+"/"))
+}
+
+func newPackageBuildInfo(imageName string) *dev.PackageBuildInfo {
+	imageCacheDir := locations.ImageCache(imageName)
+	return &dev.PackageBuildInfo{
+		ImageTag:   locations.ImageURL(imageName, false),
+		CacheDir:   imageCacheDir,
+		SourcePath: imageCacheDir,
+		OutputPath: imageCacheDir + ".tar",
+		Runtime:    locations.ContainerRuntime(),
 	}
 }
 
@@ -803,37 +806,15 @@ func (b Build) buildPackageImage(name string) {
 	}
 
 	predeps := []interface{}{
-		mg.F(Build.Binary, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, name),
+		mg.F(Build.populateCachePkg, name, opts.SourcePath),
 	}
 	for _, d := range opts.ExtraDeps {
 		predeps = append(predeps, d)
 	}
-	mg.Deps(predeps...)
 
-	imageCacheDir := locations.ImageCache(name)
-	imageTag := locations.ImageURL(name, false)
-
-	// Copy files for build environment
-	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", "package.Containerfile")))
-	must(sh.Run("cp", "-a", opts.SourcePath+"/.", imageCacheDir+"/"))
-
-	containerRuntime := locations.ContainerRuntime()
-	cmds := [][]string{
-		{containerRuntime, "build", "-t", imageTag, "-f", "Containerfile", "."},
-		{containerRuntime, "image", "save", "-o", imageCacheDir + ".tar", imageTag},
-	}
-
-	// Build image!
-	for _, command := range cmds {
-		buildCmd := exec.Command(command[0], command[1:]...)
-		buildCmd.Stderr = os.Stderr
-		buildCmd.Stdout = os.Stdout
-		buildCmd.Dir = imageCacheDir
-		if err := buildCmd.Run(); err != nil {
-			panic(fmt.Errorf("running %q: %w", strings.Join(command, " "), err))
-		}
-	}
+	buildInfo := newPackageBuildInfo(name)
+	must(dev.BuildPackage(buildInfo, predeps))
 }
 
 // Installs all project dependencies into the local checkout.
