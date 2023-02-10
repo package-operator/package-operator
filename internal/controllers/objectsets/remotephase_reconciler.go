@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+
 	"package-operator.run/package-operator/internal/controllers"
 )
 
@@ -56,6 +58,25 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	if err != nil && errors.IsNotFound(err) {
 		// object is already gone -> nothing to cleanup
 		return true, nil
+	}
+
+	// If object has a namespace check if it is already in the process of being deleted.
+	// If so, remove finalizer from object to let it go.
+	if len(objectSet.ClientObject().GetNamespace()) != 0 {
+		ns := corev1.Namespace{}
+
+		if err := r.client.Get(ctx, client.ObjectKey{Name: objectSet.ClientObject().GetNamespace()}, &ns); err != nil {
+			return false, err
+		}
+
+		if !ns.DeletionTimestamp.IsZero() {
+			log.Info("removing finalizer from object since containing namespace in deletion")
+
+			objectSetPhase.ClientObject().SetFinalizers(nil)
+			if err := r.client.Update(ctx, objectSetPhase.ClientObject()); err != nil {
+				return false, err
+			}
+		}
 	}
 
 	err = r.client.Delete(ctx, objectSetPhase.ClientObject())

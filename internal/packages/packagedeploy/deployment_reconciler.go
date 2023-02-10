@@ -263,7 +263,7 @@ func (e sliceCollisionError) Error() string { return "ObjectSlice collision with
 func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor, collisionCount int32,
 ) error {
-	hash := utils.ComputeHash(slice.GetObjects(), &collisionCount)
+	hash := utils.ComputeFNV32Hash(slice.GetObjects(), &collisionCount)
 	name := deploy.ClientObject().GetName() + "-" + hash
 	slice.ClientObject().SetName(name)
 

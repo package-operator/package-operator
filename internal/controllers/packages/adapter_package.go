@@ -74,7 +74,7 @@ func (a *GenericPackage) GetImage() string {
 }
 
 func (a *GenericPackage) GetSpecHash() string {
-	return utils.ComputeHash(a.Spec, nil)
+	return utils.ComputeSHA256Hash(a.Spec, nil)
 }
 
 func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
@@ -102,7 +102,7 @@ func (a *GenericClusterPackage) GetImage() string {
 }
 
 func (a *GenericClusterPackage) GetSpecHash() string {
-	return utils.ComputeHash(a.Spec, nil)
+	return utils.ComputeSHA256Hash(a.Spec, nil)
 }
 
 func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
