@@ -38,6 +38,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
+	"package-operator.run/package-operator/internal/controllers/objecttemplate"
 	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
 	"package-operator.run/package-operator/internal/metrics"
@@ -378,6 +379,20 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+	}
+
+	if err = objecttemplate.NewObjectTemplateController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
+		dc, mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
+	}
+
+	if err = objecttemplate.NewClusterObjectTemplateController(
+		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
+		dc, mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
 	}
 
 	// Probe for HyperShift API
