@@ -25,12 +25,14 @@ import (
 	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientScheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -788,14 +790,22 @@ func (Build) populateCachePkg(imageName, sourcePath string) {
 	must(sh.Run("cp", "-a", sourcePath+"/.", imageCacheDir+"/"))
 }
 
+func mustFilepathAbs(p string) string {
+	o, err := filepath.Abs(p)
+	must(err)
+
+	return o
+}
+
 func newPackageBuildInfo(imageName string) *dev.PackageBuildInfo {
 	imageCacheDir := locations.ImageCache(imageName)
 	return &dev.PackageBuildInfo{
-		ImageTag:   locations.ImageURL(imageName, false),
-		CacheDir:   imageCacheDir,
-		SourcePath: imageCacheDir,
-		OutputPath: imageCacheDir + ".tar",
-		Runtime:    locations.ContainerRuntime(),
+		ImageTag:       locations.ImageURL(imageName, false),
+		CacheDir:       imageCacheDir,
+		SourcePath:     imageCacheDir,
+		OutputPath:     imageCacheDir + ".tar",
+		Runtime:        locations.ContainerRuntime(),
+		ExecutablePath: mustFilepathAbs(locations.binaryDst(cliCmdName, nativeArch)),
 	}
 }
 
@@ -806,12 +816,14 @@ func (b Build) buildPackageImage(name string) {
 	}
 
 	predeps := []interface{}{
+		mg.F(Build.Binary, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, name),
-		mg.F(Build.populateCachePkg, name, opts.SourcePath),
 	}
 	for _, d := range opts.ExtraDeps {
 		predeps = append(predeps, d)
 	}
+	// populating the cache dir must come LAST, or we might miss generated files.
+	predeps = append(predeps, mg.F(Build.populateCachePkg, name, opts.SourcePath))
 
 	buildInfo := newPackageBuildInfo(name)
 	must(dev.BuildPackage(buildInfo, predeps))
@@ -892,12 +904,30 @@ func (d Dev) Load() {
 func (d Dev) Deploy(ctx context.Context) {
 	mg.SerialDeps(Dev.Load)
 
+	defer func() {
+		os.Setenv("KUBECONFIG", locations.devEnvironment.Cluster.Kubeconfig())
+
+		args := []string{"export", "logs", locations.IntegrationTestLogs(), "--name", clusterName}
+		if err := locations.DevEnvNoInit().RunKindCommand(ctx, os.Stdout, os.Stderr, args...); err != nil {
+			logger.Error(err, "exporting logs")
+		}
+	}()
+
 	cluster := locations.DevEnv().Cluster
 
 	must(cluster.CreateAndWaitFromFiles(
 		ctx, []string{filepath.Join("config", "self-bootstrap-job.yaml")}))
 
 	ctx = logr.NewContext(ctx, logger)
+	// Bootstrap job is cleaning itself up after completion, so we can't wait for Condition Completed=True.
+	// See self-bootstrap-job .spec.ttlSecondsAfterFinished: 0
+	must(cluster.Waiter.WaitToBeGone(ctx, &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "package-operator-bootstrap",
+			Namespace: "package-operator-system",
+		},
+	}, func(obj client.Object) (done bool, err error) { return }))
+
 	must(cluster.Waiter.WaitForCondition(ctx, &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "package-operator",
