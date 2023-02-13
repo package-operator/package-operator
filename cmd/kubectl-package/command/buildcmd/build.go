@@ -6,10 +6,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 
+	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageexport"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
@@ -29,6 +32,14 @@ type Build struct {
 	OutputPath string
 	Tags       []string
 	Push       bool
+}
+
+type BuildValidationError struct {
+	Msg string
+}
+
+func (u BuildValidationError) Error() string {
+	return u.Msg
 }
 
 func (b *Build) Complete(args []string) (err error) {
@@ -65,7 +76,12 @@ func (b Build) Run(ctx context.Context) error {
 
 	loader := packageloader.New(cmdutil.ValidateScheme, packageloader.WithDefaults)
 
-	if _, err := loader.FromFiles(ctx, files); err != nil {
+	pkg, err := loader.FromFiles(ctx, files)
+	if err != nil {
+		return err
+	}
+
+	if err = preBuildValidation(pkg, crane.Digest); err != nil {
 		return err
 	}
 
@@ -107,4 +123,63 @@ func (b *Build) CobraCommand() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func preBuildValidation(pkg *packagecontent.Package, retrieveDigest func(ref string, opt ...crane.Option) (string, error)) error {
+	if pkg.PackageManifestLock == nil {
+		if len(pkg.PackageManifest.Spec.Images) > 0 {
+			return err("manifest.lock.yaml is missing (try running \"kubectl package update\")")
+		}
+		return nil
+	}
+
+	pkgImages := map[string]v1alpha1.PackageManifestImage{}
+	for _, image := range pkg.PackageManifest.Spec.Images {
+		pkgImages[image.Name] = image
+	}
+	pkgLockImages := map[string]v1alpha1.PackageManifestLockImage{}
+	for _, image := range pkg.PackageManifestLock.Spec.Images {
+		pkgLockImages[image.Name] = image
+	}
+
+	// check that all the images in manifest file exists in lock files too, and their "image" fields are the same
+	for imageName, image := range pkgImages {
+		lockImage, existsInLock := pkgLockImages[imageName]
+		if !existsInLock {
+			return err("image \"%s\" exists in manifest but not in lock file (try running \"kubectl package update\")", imageName)
+		}
+		if image.Image != lockImage.Image {
+			return err(
+				"tags for image \"%s\" differ between manifest and lock file: \"%s\" vs \"%s\" (try running \"kubectl package update\")",
+				imageName, image.Image, lockImage.Image)
+		}
+	}
+
+	// check that all the images in lock file exists in manifest files too (which ensures manifest images == lock images)
+	for imageName := range pkgLockImages {
+		_, existsInManifest := pkgImages[imageName]
+		if !existsInManifest {
+			return err("image \"%s\" exists in lock but not in manifest file (try running \"kubectl package update\")", imageName)
+		}
+	}
+
+	// validate digests
+	for imageName, lockImage := range pkgLockImages {
+		ref, err := name.ParseReference(lockImage.Image)
+		if err != nil {
+			return fmt.Errorf("%w: can't parse image \"%s\" reference \"%s\"", err, imageName, lockImage.Image)
+		}
+		digestRef := ref.Context().Digest(lockImage.Digest)
+		if _, err := retrieveDigest(digestRef.String()); err != nil {
+			return fmt.Errorf("%w: image \"%s\" digest error (\"%s\")", err, imageName, lockImage.Digest)
+		}
+	}
+
+	return nil
+}
+
+func err(format string, a ...any) *BuildValidationError {
+	return &BuildValidationError{
+		Msg: fmt.Sprintf(format, a...),
+	}
 }

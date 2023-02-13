@@ -1,0 +1,6 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifestLock
+metadata:
+  creationTimestamp: "2023-02-06T15:27:04Z"
+spec:
+  images: []
