@@ -2,15 +2,20 @@ package integration
 
 import (
 	"context"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
@@ -21,13 +26,23 @@ func TestHyperShift(t *testing.T) {
 	// for every ready HyperShift HostedCluster.
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
+	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
+	require.NoError(t, err)
+	hostedClusterCRD := &unstructured.Unstructured{}
+	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
+	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
+	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
+
+	require.NoError(t, initClients(ctx))
+
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-hc",
 			Namespace: "default",
 		},
 	}
-	err := Client.Create(ctx, hc)
+
+	err = Client.Create(ctx, hc)
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, hc)
 
@@ -71,8 +86,9 @@ func TestHyperShift(t *testing.T) {
 			Namespace: ns.Name,
 		},
 	}
+	// longer timeout because PKO is restarting to enable HyperShift integration and needs a few seconds for leader election.
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(100*time.Second)))
 
 	// Test ObjectSetPhase integration
 	t.Run("ObjectSetSetupPauseTeardown", func(t *testing.T) {
