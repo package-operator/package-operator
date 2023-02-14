@@ -509,11 +509,6 @@ func (l *Locations) DevEnv() *dev.Environment {
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
-			dev.WithClusterInitializers{
-				dev.ClusterLoadObjectsFromFiles{
-					"hack/local/hostedclusters.crd.yaml",
-				},
-			},
 		)
 	}
 

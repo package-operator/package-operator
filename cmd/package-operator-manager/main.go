@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,6 +76,7 @@ const (
 		" with Package Operator using the given Package Operator Package Image"
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
+	hyperShiftPollInterval = 10 * time.Second
 )
 
 func main() {
@@ -225,6 +228,8 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 }
 
 func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+	controllerLog := ctrl.Log.WithName("controllers")
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.metricsAddr,
@@ -311,7 +316,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	// ObjectSet
 	if err = objectsets.NewObjectSetController(
 		mgr.GetClient(),
-		ctrl.Log.WithName("controllers").WithName("ObjectSet"),
+		controllerLog.WithName("ObjectSet"),
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
@@ -320,7 +325,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	if err = objectsets.NewClusterObjectSetController(
 		mgr.GetClient(),
-		ctrl.Log.WithName("controllers").WithName("ClusterObjectSet"),
+		controllerLog.WithName("ClusterObjectSet"),
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
@@ -330,7 +335,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	// ObjectSetPhase for "default" class
 	const defaultObjectSetPhaseClass = "default"
 	if err = objectsetphases.NewSameClusterObjectSetPhaseController(
-		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
+		controllerLog.WithName("ObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
@@ -338,7 +343,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	if err = objectsetphases.NewSameClusterClusterObjectSetPhaseController(
-		ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
+		controllerLog.WithName("ClusterObjectSetPhase"),
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
@@ -347,7 +352,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	// Object deployment controller
 	if err = (objectdeployments.NewObjectDeploymentController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectDeployment"),
+		mgr.GetClient(), controllerLog.WithName("ObjectDeployment"),
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectDeployment: %w", err)
@@ -355,21 +360,21 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	// Cluster Object deployment controller
 	if err = (objectdeployments.NewClusterObjectDeploymentController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectDeployment"),
+		mgr.GetClient(), controllerLog.WithName("ClusterObjectDeployment"),
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
 	}
 
 	if err = packages.NewPackageController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("Package"), mgr.GetScheme(),
+		mgr.GetClient(), controllerLog.WithName("Package"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
 	if err = packages.NewClusterPackageController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterPackage"), mgr.GetScheme(),
+		mgr.GetClient(), controllerLog.WithName("ClusterPackage"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
@@ -378,21 +383,35 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	// Probe for HyperShift API
 	hostedClusterGVK := hypershiftv1beta1.GroupVersion.WithKind("HostedCluster")
 	_, err = mgr.GetRESTMapper().RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
-	if !meta.IsNoMatchError(err) {
+	switch {
+	case err == nil:
 		// HyperShift HostedCluster API is present on the cluster
 		// Auto-Enable HyperShift integration controller:
-		log.Info("detected HostedCluster API, enabling HyperShift integration")
+		controllerLog.Info("detected HostedCluster API, enabling HyperShift integration")
 		if err = hostedclusters.NewHostedClusterController(
-			mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("HostedCluster"), mgr.GetScheme(),
+			mgr.GetClient(),
+			controllerLog.WithName("HostedCluster"),
+			mgr.GetScheme(),
 			opts.remotePhasePackageImage,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for HostedCluster: %w", err)
 		}
+	case meta.IsNoMatchError(err):
+		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
+		if err := mgr.Add(newHypershift(controllerLog.WithName("HyperShift"), mgr.GetRESTMapper(), ticker)); err != nil {
+			return fmt.Errorf("add hypershift checker: %w", err)
+		}
+	default:
+		return fmt.Errorf("hypershiftv1beta1 probing: %w", err)
 	}
 
 	log.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+
+	err = mgr.Start(ctrl.SetupSignalHandler())
+	switch {
+	case err == nil || errors.Is(err, ErrHypershiftAPIPostSetup):
+		return nil
+	default:
 		return fmt.Errorf("problem running manager: %w", err)
 	}
-	return nil
 }
