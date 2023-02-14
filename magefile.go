@@ -573,7 +573,7 @@ func (Test) Unit() {
 		// test output in json format
 		testCmd += " -json"
 	}
-	testCmd += " ./internal/... ./cmd/..."
+	testCmd += " ./internal/... ./cmd/... ./apis/..."
 
 	if isCI {
 		testCmd = testCmd + " > " + locations.UnitTestExecReport()

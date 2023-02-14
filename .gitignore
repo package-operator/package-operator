@@ -15,8 +15,6 @@
 # vendor/
 bin
 .cache
-config/static-deployment/deployment.yaml
-config/self-bootstrap-job.yaml
 
 # JetBrains IDEs (e.g. GoLand)
 .idea/
