@@ -413,7 +413,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("create pod cleanup client: %w", err)
 	}
 
-	if err := mgr.Add(newCleaner(cleanupClient)); err != nil {
+	if err := mgr.Add(newCleaner(cleanupClient, opts.namespace)); err != nil {
 		return fmt.Errorf("add hypershift checker: %w", err)
 	}
 

@@ -15,7 +15,7 @@ func TestCleanup_needLeaderElection(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	require.True(t, c.NeedLeaderElection())
 }
 
@@ -23,7 +23,7 @@ func TestCleanup_start_nopods(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -35,7 +35,7 @@ func TestCleanup_start_listerr(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Return(errTest)
@@ -47,7 +47,7 @@ func TestCleanup_start_podnoconditions(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Run(
@@ -68,7 +68,7 @@ func TestCleanup_start_podcomplete(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Run(
@@ -94,7 +94,7 @@ func TestCleanup_start_podnotready(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Run(
@@ -120,7 +120,7 @@ func TestCleanup_start_deleteerr(t *testing.T) {
 	t.Parallel()
 
 	client := testutil.NewClient()
-	c := newCleaner(client)
+	c := newCleaner(client, "")
 	ctx := context.Background()
 
 	client.On("List", mock.Anything, mock.Anything, mock.Anything).Run(

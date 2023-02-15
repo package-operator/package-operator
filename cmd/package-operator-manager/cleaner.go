@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type cleaner struct {
-	client client.Client
+	client       client.Client
+	pkoNamespace string
 }
 
 var (
@@ -19,12 +19,20 @@ var (
 	_ manager.LeaderElectionRunnable = (*cleaner)(nil)
 )
 
-func newCleaner(client client.Client) *cleaner { return &cleaner{client} }
-func (h *cleaner) NeedLeaderElection() bool    { return true }
+func newCleaner(client client.Client, pkoNamespace string) *cleaner {
+	return &cleaner{
+		client:       client,
+		pkoNamespace: pkoNamespace,
+	}
+}
+
+func (h *cleaner) NeedLeaderElection() bool { return true }
 
 func (h *cleaner) Start(ctx context.Context) error {
 	podList := corev1.PodList{}
-	if err := h.client.List(ctx, &podList); err != nil {
+	if err := h.client.List(ctx, &podList, client.InNamespace(h.pkoNamespace), client.HasLabels{
+		"job-name",
+	}); err != nil {
 		return fmt.Errorf("list pods for cleanup: %w", err)
 	}
 
