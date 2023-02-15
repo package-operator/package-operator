@@ -10,23 +10,23 @@ import (
 	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
-var ValidateScheme = runtime.NewScheme()
+var Scheme = runtime.NewScheme()
 
 func init() {
-	if err := pkoapis.AddToScheme(ValidateScheme); err != nil {
+	if err := pkoapis.AddToScheme(Scheme); err != nil {
 		panic(err)
 	}
-	if err := manifestsv1alpha1.AddToScheme(ValidateScheme); err != nil {
+	if err := manifestsv1alpha1.AddToScheme(Scheme); err != nil {
 		panic(err)
 	}
-	if err := apiextensionsv1.AddToScheme(ValidateScheme); err != nil {
+	if err := apiextensionsv1.AddToScheme(Scheme); err != nil {
 		panic(err)
 	}
-	if err := apiextensions.AddToScheme(ValidateScheme); err != nil {
+	if err := apiextensions.AddToScheme(Scheme); err != nil {
 		panic(err)
 	}
 }
 
 func NewStructureLoader() *packageloader.Loader {
-	return packageloader.New(ValidateScheme, packageloader.WithDefaults)
+	return packageloader.New(Scheme, packageloader.WithDefaults)
 }

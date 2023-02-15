@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
+	"package-operator.run/package-operator/cmd/cmdutil"
 	"package-operator.run/package-operator/internal/packages"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
@@ -34,7 +34,7 @@ var Default = Update{
 			return nil, err
 		}
 
-		pkg, err := packageloader.New(cmdutil.ValidateScheme).FromFiles(ctx, filemap)
+		pkg, err := packageloader.New(cmdutil.Scheme).FromFiles(ctx, filemap)
 		if err != nil {
 			return nil, err
 		}

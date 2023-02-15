@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/cmdutil"
+	"package-operator.run/package-operator/cmd/cmdutil"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageexport"
 	"package-operator.run/package-operator/internal/packages/packageimport"
@@ -74,7 +74,7 @@ func (b Build) Run(ctx context.Context) error {
 
 	verboseLog.Info("creating image")
 
-	loader := packageloader.New(cmdutil.ValidateScheme, packageloader.WithDefaults)
+	loader := packageloader.New(cmdutil.Scheme, packageloader.WithDefaults)
 
 	pkg, err := loader.FromFiles(ctx, files)
 	if err != nil {
