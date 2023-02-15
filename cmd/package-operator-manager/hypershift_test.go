@@ -68,7 +68,7 @@ func (m *restMapperMock) RESTMapping(schema.GroupKind, ...string) (*meta.RESTMap
 func TestHypershift_needLeaderElection(t *testing.T) {
 	t.Parallel()
 
-	ticker := clocktesting.NewFakeClock(time.Time{}).NewTicker(hyperShiftPollInterval)
+	ticker := clocktesting.NewFakeClock(time.Time{})
 	h := newHypershift(testr.New(t), &restMapperMock{}, ticker)
 	require.True(t, h.NeedLeaderElection())
 }
@@ -81,7 +81,7 @@ func TestHypershift_start_foundImmediately(t *testing.T) {
 	restMock := &restMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, nil).Once()
 
-	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
+	h := newHypershift(testr.New(t), restMock, clk)
 
 	ctx := context.Background()
 
@@ -102,7 +102,7 @@ func TestHypershift_start_foundOnSecondPoll(t *testing.T) {
 		clk.Step(hyperShiftPollInterval)
 	}).Once()
 
-	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
+	h := newHypershift(testr.New(t), restMock, clk)
 
 	ctx := context.Background()
 
@@ -118,7 +118,7 @@ func TestHypershift_start_someerr(t *testing.T) {
 	restMock := &restMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, errTest).Once()
 
-	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
+	h := newHypershift(testr.New(t), restMock, clk)
 
 	ctx := context.Background()
 
@@ -132,9 +132,9 @@ func TestHypershift_start_cancel(t *testing.T) {
 	clk := clocktesting.NewFakeClock(time.Time{})
 
 	restMock := &restMapperMock{}
-	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, errTest).Once()
+	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{}).Once()
 
-	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
+	h := newHypershift(testr.New(t), restMock, clk)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()

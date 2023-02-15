@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -16,8 +17,10 @@ import (
 type hypershift struct {
 	log    logr.Logger
 	mapper meta.RESTMapper
-	ticker clock.Ticker
+	clock  clock.Clock
 }
+
+const hyperShiftPollInterval = 10 * time.Second
 
 var (
 	_ manager.Runnable               = (*hypershift)(nil)
@@ -26,22 +29,17 @@ var (
 	ErrHypershiftAPIPostSetup = errors.New("detected hypershift installation after setup completed")
 )
 
-func newHypershift(log logr.Logger, mapper meta.RESTMapper, ticker clock.Ticker) *hypershift {
+func newHypershift(log logr.Logger, mapper meta.RESTMapper, ticker clock.Clock) *hypershift {
 	return &hypershift{log, mapper, ticker}
 }
 
 func (h *hypershift) NeedLeaderElection() bool { return true }
 
 func (h *hypershift) Start(ctx context.Context) error {
-	defer h.ticker.Stop()
+	ticker := h.clock.NewTimer(hyperShiftPollInterval)
+	defer ticker.Stop()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-h.ticker.C():
-		}
-
 		// Probe for HyperShift API
 		hostedClusterGVK := hypershiftv1beta1.GroupVersion.WithKind("HostedCluster")
 		_, err := h.mapper.RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
@@ -50,7 +48,11 @@ func (h *hypershift) Start(ctx context.Context) error {
 			h.log.Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
 		case meta.IsNoMatchError(err):
-			continue
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C():
+			}
 		default:
 			return fmt.Errorf("hypershiftv1beta1 probing: %w", err)
 		}

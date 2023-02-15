@@ -76,7 +76,6 @@ const (
 		" with Package Operator using the given Package Operator Package Image"
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
-	hyperShiftPollInterval = 10 * time.Second
 )
 
 func main() {
@@ -397,8 +396,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			return fmt.Errorf("unable to create controller for HostedCluster: %w", err)
 		}
 	case meta.IsNoMatchError(err):
-		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
-		if err := mgr.Add(newHypershift(controllerLog.WithName("HyperShift"), mgr.GetRESTMapper(), ticker)); err != nil {
+		if err := mgr.Add(newHypershift(controllerLog.WithName("HyperShift"), mgr.GetRESTMapper(), clock.RealClock{})); err != nil {
 			return fmt.Errorf("add hypershift checker: %w", err)
 		}
 	default:
