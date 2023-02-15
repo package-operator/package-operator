@@ -31,6 +31,28 @@ const (
 func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	loader := packageloader.New(scheme, packageloader.WithDefaults)
 	ctx := logr.NewContext(context.Background(), log.WithName("bootstrap"))
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	packageOperatorPackage := &corev1alpha1.ClusterPackage{}
+	err = c.Get(ctx, client.ObjectKey{
+		Name: "package-operator",
+	}, packageOperatorPackage)
+	if err == nil &&
+		meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageAvailable) {
+		// Package Operator is already installed
+		log.Info("Package Operator already installed, updating via in-cluster Package Operator")
+		packageOperatorPackage.Spec.Image = opts.selfBootstrap
+		return c.Update(ctx, packageOperatorPackage)
+	}
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error looking up Package Operator ClusterPackage: %w", err)
+	}
+
 	files, err := packageimport.Folder(ctx, "/package")
 	if err != nil {
 		return err
@@ -39,13 +61,6 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	packgeContent, err := loader.FromFiles(ctx, files)
 	if err != nil {
 		return err
-	}
-
-	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
 	}
 
 	templateSpec := packagecontent.TemplateSpecFromPackage(packgeContent)
@@ -73,21 +88,6 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 				return err
 			}
 		}
-	}
-
-	packageOperatorPackage := &corev1alpha1.ClusterPackage{}
-	err = c.Get(ctx, client.ObjectKey{
-		Name: "package-operator",
-	}, packageOperatorPackage)
-	if err == nil &&
-		meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageAvailable) {
-		// Package Operator is already installed
-		log.Info("Package Operator already installed, updating via in-cluster Package Operator")
-		packageOperatorPackage.Spec.Image = opts.selfBootstrap
-		return c.Update(ctx, packageOperatorPackage)
-	}
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error looking up Package Operator ClusterPackage: %w", err)
 	}
 
 	log.Info("Package Operator NOT Available, self-bootstrapping")
