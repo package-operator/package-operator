@@ -61,7 +61,7 @@ func (t *TemplateTransformer) transform(ctx context.Context, path string, conten
 		return content, nil
 	}
 
-	template, err := template.New("").Option("missingkey=error").Parse(string(content))
+	template, err := templateFor(string(content))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"parsing template from %s: %w", path, err)
@@ -73,6 +73,10 @@ func (t *TemplateTransformer) transform(ctx context.Context, path string, conten
 			"executing template from %s with context %+v: %w", path, t.tctx, err)
 	}
 	return doc.Bytes(), nil
+}
+
+func templateFor(content string) (*template.Template, error) {
+	return template.New("").Option("missingkey=error").Funcs(sprigFuncs()).Parse(content)
 }
 
 func (t *TemplateTransformer) TransformPackageFiles(ctx context.Context, fileMap packagecontent.Files) error {
