@@ -10,7 +10,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-containerregistry v0.13.0
 	github.com/magefile/mage v1.14.0
-	github.com/mt-sre/devkube v0.6.1
+	github.com/mt-sre/devkube v0.6.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/cobra v1.6.1
