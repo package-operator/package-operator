@@ -1136,21 +1136,6 @@ func (Generate) code() {
 func (Generate) docs() {
 	mg.Deps(Dependency.Docgen)
 
-	_, isCI := os.LookupEnv("CI")
-	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", locations.UnitTestCoverageReport())
-	if isCI {
-		// test output in json format
-		testCmd += " -json"
-	}
-	testCmd += " ./internal/... ./cmd/..."
-
-	if isCI {
-		testCmd = testCmd + " > " + locations.UnitTestExecReport()
-	}
-
-	// cgo needed to enable race detector -race
-	must(sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd))
-
 	refPath := locations.APIReference()
 	// Move the hack script in here.
 	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/core/v1alpha1 > %s", refPath)))
