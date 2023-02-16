@@ -49,9 +49,18 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		packageOperatorPackage.Spec.Image = opts.selfBootstrap
 		return c.Update(ctx, packageOperatorPackage)
 	}
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("error looking up Package Operator ClusterPackage: %w", err)
 	}
+	if errors.IsNotFound(err) {
+		// Cluster Package already present but broken for some reason.
+		// Ensure clean install by re-creating ClusterPackage.
+		if err := forcedCleanup(ctx, c, packageOperatorPackage); err != nil {
+			return fmt.Errorf("forced cleanup: %w", err)
+		}
+	}
+
+	log.Info("Package Operator NOT Available, self-bootstrapping")
 
 	files, err := packageimport.Folder(ctx, "/package")
 	if err != nil {
@@ -87,16 +96,6 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			if err := c.Create(ctx, crd); err != nil && !errors.IsAlreadyExists(err) {
 				return err
 			}
-		}
-	}
-
-	log.Info("Package Operator NOT Available, self-bootstrapping")
-
-	if err == nil {
-		// Cluster Package already present but broken for some reason.
-		// Ensure clean install by re-creating ClusterPackage.
-		if err := forcedCleanup(ctx, c, packageOperatorPackage); err != nil {
-			return fmt.Errorf("forced cleanup: %w", err)
 		}
 	}
 
