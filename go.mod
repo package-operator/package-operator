@@ -1,6 +1,6 @@
 module package-operator.run/package-operator
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
