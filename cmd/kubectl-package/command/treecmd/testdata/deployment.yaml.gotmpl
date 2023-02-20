@@ -25,4 +25,4 @@ spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: '{{index .package.metadata.annotations "package-operator.run/test-stub-image"}}'
+        image: '{{.config.image}}'
