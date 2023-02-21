@@ -1143,7 +1143,7 @@ func (Generate) docs() {
 	// Move the hack script in here.
 	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/core/v1alpha1 > %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
-	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/coordination/v1alpha1 > %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/coordination/v1alpha1 >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/manifests/v1alpha1 >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
