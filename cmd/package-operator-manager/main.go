@@ -33,6 +33,7 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/adoption"
 	"package-operator.run/package-operator/internal/controllers/hostedclusters"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
@@ -106,9 +107,6 @@ func main() {
 		panic(err)
 	}
 	if err := hypershiftv1beta1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := pkoapis.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
@@ -227,6 +225,7 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 	return nil
 }
 
+//nolint:maintidx
 func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	controllerLog := ctrl.Log.WithName("controllers")
 
@@ -378,6 +377,22 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+	}
+
+	// Adoption
+	// DynamicCache that is not constrained by the DynamicCache label.
+	unconstrainedDynamicCache := dynamiccache.NewCache(
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder)
+	if err = adoption.NewAdoptionController(
+		mgr.GetClient(), controllerLog.WithName("Adoption"), unconstrainedDynamicCache, mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for Adoption: %w", err)
+	}
+
+	if err = adoption.NewClusterAdoptionController(
+		mgr.GetClient(), controllerLog.WithName("ClusterAdoption"), unconstrainedDynamicCache, mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterAdoption: %w", err)
 	}
 
 	// Probe for HyperShift API

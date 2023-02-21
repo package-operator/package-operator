@@ -158,7 +158,7 @@ func (c *Cache) Watch(
 
 	if !informerExists {
 		log.Info("adding new watcher",
-			"ownerGV", ownerRef.GroupKind,
+			"ownerGK", ownerRef.GroupKind,
 			"forGVK", gvk.String(),
 			"ownerNamespace", owner.GetNamespace())
 

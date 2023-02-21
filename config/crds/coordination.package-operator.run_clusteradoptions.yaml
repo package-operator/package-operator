@@ -5,15 +5,15 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.2
   creationTimestamp: null
-  name: packages.package-operator.run
+  name: clusteradoptions.coordination.package-operator.run
 spec:
-  group: package-operator.run
+  group: coordination.package-operator.run
   names:
-    kind: Package
-    listKind: PackageList
-    plural: packages
-    singular: package
-  scope: Namespaced
+    kind: ClusterAdoption
+    listKind: ClusterAdoptionList
+    plural: clusteradoptions
+    singular: clusteradoption
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.phase
@@ -25,6 +25,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: ClusterAdoption assigns initial labels to objects using one of
+          multiple strategies. e.g. to route them to a specific operator instance.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -39,24 +41,80 @@ spec:
           metadata:
             type: object
           spec:
-            description: Package specification.
+            description: ClusterAdoptionSpec defines the desired state of an ClusterAdoption.
             properties:
-              config:
-                description: Package configuration parameters.
+              strategy:
+                description: Strategy to use for adoption.
+                properties:
+                  roundRobin:
+                    description: RoundRobin adoption strategy configuration. Only
+                      present when type=RoundRobin.
+                    properties:
+                      always:
+                        additionalProperties:
+                          type: string
+                        description: Labels to set always, no matter the round robin
+                          choice.
+                        type: object
+                      options:
+                        description: Options for the round robin strategy to choose
+                          from. Only a single label set of all the provided options
+                          will be applied.
+                        items:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        type: array
+                    required:
+                    - always
+                    - options
+                    type: object
+                  static:
+                    description: Static adoption strategy configuration. Only present
+                      when type=Static.
+                    properties:
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to set on objects.
+                        type: object
+                    required:
+                    - labels
+                    type: object
+                  type:
+                    default: Static
+                    description: Type of adoption strategy. Can be "Static", "RoundRobin".
+                    enum:
+                    - Static
+                    - RoundRobin
+                    type: string
+                required:
+                - type
                 type: object
-                x-kubernetes-preserve-unknown-fields: true
-              image:
-                description: the image containing the contents of the package this
-                  image will be unpacked by the package-loader to render the ObjectDeployment
-                  for propagating the installation of the package.
-                type: string
+              targetAPI:
+                description: TargetAPI to use for adoption.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    minLength: 1
+                    type: string
+                  version:
+                    minLength: 1
+                    type: string
+                required:
+                - group
+                - kind
+                - version
+                type: object
             required:
-            - image
+            - strategy
+            - targetAPI
             type: object
           status:
             default:
               phase: Pending
-            description: PackageStatus defines the observed state of a Package.
+            description: ClusterAdoptionStatus defines the observed state of an ClusterAdoption.
             properties:
               conditions:
                 description: Conditions is a list of status conditions ths object
@@ -82,6 +140,7 @@ spec:
                     message:
                       description: message is a human readable message indicating
                         details about the transition. This may be an empty string.
+                      maxLength: 32768
                       type: string
                     observedGeneration:
                       description: observedGeneration represents the .metadata.generation
@@ -90,6 +149,7 @@ spec:
                         is 9, the condition is out of date with respect to the current
                         state of the instance.
                       format: int64
+                      minimum: 0
                       type: integer
                     reason:
                       description: reason contains a programmatic identifier indicating
@@ -98,9 +158,16 @@ spec:
                         meanings for this field, and whether the values are considered
                         a guaranteed API. The value should be a CamelCase string.
                         This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
                       description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
                       type: string
                     type:
                       description: type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -108,6 +175,8 @@ spec:
                         like Available, but because arbitrary conditions can be useful
                         (see .node.status.conditions), the ability to deconflict is
                         important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
                   required:
                   - lastTransitionTime
@@ -117,11 +186,25 @@ spec:
                   - type
                   type: object
                 type: array
+              observedGeneration:
+                description: The most recent generation observed by the controller.
+                format: int64
+                type: integer
               phase:
                 description: This field is not part of any API contract it will go
                   away as soon as kubectl can print conditions! When evaluating object
                   state in code, use .Conditions instead.
                 type: string
+              roundRobin:
+                description: Tracks round robin state to restart where the last operation
+                  ended.
+                properties:
+                  lastIndex:
+                    description: Last index chosen by the round robin algorithm.
+                    type: integer
+                required:
+                - lastIndex
+                type: object
             type: object
         type: object
     served: true
