@@ -29,6 +29,7 @@ var (
 	_          deploymentReconciler = (*deploymentReconcilerMock)(nil)
 	_          packageContentLoader = (*packageContentLoaderMock)(nil)
 	errExample                      = errors.New("example error")
+	testDgst                        = "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
 )
 
 type (
@@ -98,6 +99,16 @@ func TestPackageDeployer_Load(t *testing.T) {
 					{
 						Name: "empty-phase",
 					},
+				},
+				Images: []manifestsv1alpha1.PackageManifestImage{
+					{Name: "nginx", Image: "nginx:1.23.3"},
+				},
+			},
+		},
+		PackageManifestLock: &manifestsv1alpha1.PackageManifestLock{
+			Spec: manifestsv1alpha1.PackageManifestLockSpec{
+				Images: []manifestsv1alpha1.PackageManifestLockImage{
+					{Name: "nginx", Image: "nginx:1.23.3", Digest: testDgst},
 				},
 			},
 		},
@@ -205,6 +216,60 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 		assert.Equal(t, metav1.ConditionTrue, packageInvalid.Status)
 		assert.Equal(t, packageInvalid.Reason, "LoadError")
 		assert.Equal(t, packageInvalid.Message, "example error")
+	}
+}
+
+func TestImageWithDigestOk(t *testing.T) {
+	tests := []struct {
+		image  string
+		digest string
+		expOut string
+	}{
+		{"nginx", testDgst, "docker.io/library/nginx@" + testDgst},
+		{"nginx@" + testDgst, testDgst, "docker.io/library/nginx@" + testDgst},
+		{"nginx:1.23.3", testDgst, "docker.io/library/nginx@" + testDgst},
+		{"nginx:1.23.3@" + testDgst, testDgst, "docker.io/library/nginx@" + testDgst},
+		{"jboss/keycloak", testDgst, "docker.io/jboss/keycloak@" + testDgst},
+		{"jboss/keycloak@" + testDgst, testDgst, "docker.io/jboss/keycloak@" + testDgst},
+		{"jboss/keycloak:16.1.1", testDgst, "docker.io/jboss/keycloak@" + testDgst},
+		{"jboss/keycloak:16.1.1@" + testDgst, testDgst, "docker.io/jboss/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak", testDgst, "quay.io/keycloak/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak@" + testDgst, testDgst, "quay.io/keycloak/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak:20.0.3", testDgst, "quay.io/keycloak/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak:20.0.3@" + testDgst, testDgst, "quay.io/keycloak/keycloak@" + testDgst},
+		{"example.com:12345/imggroup/imgname", testDgst, "example.com:12345/imggroup/imgname@" + testDgst},
+		{"example.com:12345/imggroup/imgname@" + testDgst, testDgst, "example.com:12345/imggroup/imgname@" + testDgst},
+		{"example.com:12345/imggroup/imgname:1.0.0", testDgst, "example.com:12345/imggroup/imgname@" + testDgst},
+		{"example.com:12345/imggroup/imgname:1.0.0@" + testDgst, testDgst, "example.com:12345/imggroup/imgname@" + testDgst},
+	}
+
+	for _, test := range tests {
+		t.Run(test.image, func(t *testing.T) {
+			out, err := ImageWithDigest(test.image, test.digest)
+			require.NoError(t, err)
+			require.Equal(t, test.expOut, out)
+		})
+	}
+}
+
+func TestImageWithDigestError(t *testing.T) {
+	tests := []struct {
+		image  string
+		digest string
+		expErr string
+	}{
+		{"", testDgst, "invalid reference format"},
+		{"/imgname:latest", testDgst, "invalid reference format"},
+		{"nginx", "", "invalid digest format"},
+		{"nginx", "-_**", "invalid digest format"},
+		{"nginx", "sha256:12345", "invalid digest format"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.image, func(t *testing.T) {
+			_, err := ImageWithDigest(test.image, test.digest)
+			require.ErrorContains(t, err, test.expErr)
+		})
 	}
 }
 

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/docker/distribution/reference"
 	"github.com/go-logr/logr"
+	"github.com/opencontainers/go-digest"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,6 +92,20 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 	}
 }
 
+func ImageWithDigest(image string, imageDigest string) (string, error) {
+	ref, err := reference.ParseDockerRef(image)
+	if err != nil {
+		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
+	}
+
+	canonical, err := reference.WithDigest(reference.TrimNamed(ref), digest.Digest(imageDigest))
+	if err != nil {
+		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
+	}
+
+	return canonical.String(), nil
+}
+
 func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey, files packagecontent.Files) error {
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -155,9 +171,21 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 		return nil
 	}
 
+	images := map[string]string{}
+	if packageContent.PackageManifestLock != nil {
+		for _, packageImage := range packageContent.PackageManifestLock.Spec.Images {
+			resolvedImage, err := ImageWithDigest(packageImage.Image, packageImage.Digest)
+			if err != nil {
+				return err
+			}
+			images[packageImage.Name] = resolvedImage
+		}
+	}
+
 	tt, err := packageloader.NewTemplateTransformer(packageloader.TemplateContext{
 		Package: tmplCtx.Package,
 		Config:  configuration,
+		Images:  images,
 	})
 	if err != nil {
 		return err

@@ -37,6 +37,7 @@ func workaroundnovalue(actualCtx map[string]interface{}) {
 type TemplateContext struct {
 	Package manifestsv1alpha1.TemplateContextPackage `json:"package"`
 	Config  map[string]interface{}                   `json:"config"`
+	Images  map[string]string                        `json:"images"`
 }
 
 func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, error) {
