@@ -13,6 +13,7 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
 	EnqueueRequestForOwner(ownerType client.Object, isController bool) handler.EventHandler
+	OwnerPatch(owner metav1.Object) ([]byte, error)
 }
 
 // Removes the given index from the slice.
