@@ -127,7 +127,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		case src.Namespace != "":
 			sourceObj.SetNamespace(src.Namespace)
 		default:
-			return errors.NewBadRequest(fmt.Sprintf("neither the template nor source object %s provides a namespace", sourceObj.GetName()))
+			return errors.NewBadRequest(fmt.Sprintf("neither the packageFile nor source object %s provides a namespace", sourceObj.GetName()))
 		}
 
 		if err := c.dynamicCache.Watch(
@@ -169,15 +169,15 @@ func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, p
 	}
 	transformer, err := packageloader.NewTemplateTransformer(templateContext)
 	if err != nil {
-		return fmt.Errorf("creating new template transformer: %w", err)
+		return fmt.Errorf("creating new packageFile transformer: %w", err)
 	}
 	fileMap := map[string][]byte{"package.gotmpl": []byte(pkgTemplate)}
 	if err := transformer.TransformPackageFiles(ctx, fileMap); err != nil {
-		return fmt.Errorf("rendering template: %w", err)
+		return fmt.Errorf("rendering packageFile: %w", err)
 	}
 
 	if err := yaml.Unmarshal(fileMap["package"], pkg); err != nil {
-		return fmt.Errorf("unmarshalling yaml of rendered template: %w", err)
+		return fmt.Errorf("unmarshalling yaml of rendered packageFile: %w", err)
 	}
 	return nil
 }

@@ -2,6 +2,8 @@ package objecttemplate
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,16 +20,7 @@ import (
 	"package-operator.run/package-operator/internal/testutil/dynamiccachemocks"
 )
 
-type dynamicCacheMock = dynamiccachemocks.DynamicCacheMock
-
 func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
-	template := `apiVersion: package-operator.run/v1alpha1
-kind: Package
-metadata:
- name: package
-spec:
- image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"`
-
 	tests := []struct {
 		name              string
 		deletionTimestamp *metav1.Time
@@ -50,6 +43,8 @@ spec:
 				Return(nil).Maybe()
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
+			template, err := os.ReadFile("test_files/package_template_to_json.yaml")
+			require.NoError(t, err)
 			ObjectTemplate := GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -58,7 +53,7 @@ spec:
 						},
 					},
 					Spec: corev1alpha1.ObjectTemplateSpec{
-						Template: template,
+						Template: string(template),
 					},
 				},
 			}
@@ -106,13 +101,13 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 	}
 	secretKey := "password"
 	secretDestination := "password"
-	secretValue := "super-secret-password" // TODO: should this be base64 encoded?
+	secretValue := "super-secret-password"
 	secretSource := corev1alpha1.ObjectTemplateSource{
 		ApiVersion: "v1",
 		Kind:       "Secret",
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
-				Key:         secretKey, // TODO: is it base64 encoded when it is returned?
+				Key:         secretKey,
 				Destination: secretDestination,
 			},
 		},
@@ -246,6 +241,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			dc.AssertNumberOfCalls(t, "Watch", 2)
 			assert.Equal(t, sources.Object[cmDestination], cmValue)
 			assert.Equal(t, sources.Object[secretDestination], secretValue)
 		})
@@ -253,39 +249,17 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 }
 
 func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
-	pkgTemplateByKey := `apiVersion: package-operator.run/v1alpha1
-kind: Package
-metadata:
- name: test-stub
-spec:
- image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"
- config:
-   database: {{ .config.database }}
-   username: {{ .config.username }}
-   password: {{ .config.password }}
-`
-
-	pkgTemplateToJSON := `apiVersion: package-operator.run/v1alpha1
-kind: Package
-metadata:
-  name: test-stub
-spec:
-  image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"
-  config:
-    {{ toJson .config }}
-`
-
 	tests := []struct {
-		name     string
-		template string
+		name        string
+		packageFile string
 	}{
 		{
-			name:     "template by key",
-			template: pkgTemplateByKey,
+			name:        "template by key",
+			packageFile: "package_template_by_key.yaml",
 		},
 		{
-			name:     "template with toJson",
-			template: pkgTemplateToJSON,
+			name:        "template with toJson",
+			packageFile: "package_template_to_json.yaml",
 		},
 	}
 	for _, test := range tests {
@@ -294,12 +268,14 @@ spec:
 			pkg := &unstructured.Unstructured{}
 			sources := &unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"database": "asdf", // TODO: keys have to be alphanumeric https://pkg.go.dev/text/template#hdr-Arguments
-					"username": "user", // TODO: have to be lower case
-					"password": "hunter2",
+					"Database":      "asdf",
+					"username1":     "user",
+					"auth_password": "hunter2",
 				},
 			}
-			err := controller.TemplatePackage(context.TODO(), test.template, sources, pkg)
+			template, err := os.ReadFile(filepath.Join("test_files", test.packageFile))
+			require.NoError(t, err)
+			err = controller.TemplatePackage(context.TODO(), string(template), sources, pkg)
 			require.NoError(t, err)
 
 			for key, value := range sources.Object {
@@ -312,10 +288,10 @@ spec:
 	}
 }
 
-func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamicCacheMock) {
+func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
-	dc := &dynamicCacheMock{}
+	dc := &dynamiccachemocks.DynamicCacheMock{}
 
 	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newGenericObjectTemplate,

@@ -1217,7 +1217,9 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ObjectTemplates
+        description: ClusterObjectTemplate contain a go template of a Kubernetes manifest.
+          The manifest is then templated with the sources provided in the .Spec.Sources.
+          The sources can come from objects from any namespace or cluster scoped objects.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -1234,9 +1236,6 @@ spec:
           spec:
             description: ObjectTemplateSpec specification.
             properties:
-              image:
-                description: Go template of a Kubernetes manifest
-                type: string
               sources:
                 description: Objects in which configuration parameters are fetched
                 items:
@@ -1268,9 +1267,12 @@ spec:
                   - name
                   type: object
                 type: array
+              template:
+                description: Go template of a Kubernetes manifest
+                type: string
             required:
-            - image
             - sources
+            - template
             type: object
         type: object
     served: true
@@ -2624,7 +2626,10 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ObjectTemplates
+        description: ObjectTemplates contain a go template of a Kubernetes manifest.
+          This manifest is then templated with the sources provided in the .Spec.Sources.
+          The sources can only come from objects within the same nampespace as the
+          ObjectTemplate.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -2641,9 +2646,6 @@ spec:
           spec:
             description: ObjectTemplateSpec specification.
             properties:
-              image:
-                description: Go template of a Kubernetes manifest
-                type: string
               sources:
                 description: Objects in which configuration parameters are fetched
                 items:
@@ -2675,9 +2677,12 @@ spec:
                   - name
                   type: object
                 type: array
+              template:
+                description: Go template of a Kubernetes manifest
+                type: string
             required:
-            - image
             - sources
+            - template
             type: object
         type: object
     served: true

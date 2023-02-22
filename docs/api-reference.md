@@ -239,7 +239,9 @@ objects:
 
 ### ClusterObjectTemplate
 
-ObjectTemplates
+ClusterObjectTemplate contain a go template of a Kubernetes manifest. The manifest is then templated with the
+sources provided in the .Spec.Sources. The sources can come from objects from any namespace or cluster scoped
+objects.
 
 
 **Example**
@@ -251,7 +253,6 @@ metadata:
   name: example
   namespace: default
 spec:
-  image: consetetur
   sources:
   - apiVersion: sadipscing
     items:
@@ -260,6 +261,7 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+  template: consetetur
 
 ```
 
@@ -524,7 +526,9 @@ objects:
 
 ### ObjectTemplate
 
-ObjectTemplates
+ObjectTemplates contain a go template of a Kubernetes manifest. This manifest is then templated with the
+sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
+as the ObjectTemplate.
 
 
 **Example**
@@ -536,7 +540,6 @@ metadata:
   name: example
   namespace: default
 spec:
-  image: consetetur
   sources:
   - apiVersion: sadipscing
     items:
@@ -545,6 +548,7 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+  template: consetetur
 
 ```
 
@@ -931,7 +935,7 @@ ObjectTemplateSpec specification.
 
 | Field | Description |
 | ----- | ----------- |
-| `image` <b>required</b><br>string | Go template of a Kubernetes manifest |
+| `template` <b>required</b><br>string | Go template of a Kubernetes manifest |
 | `sources` <b>required</b><br><a href="#objecttemplatesource">[]ObjectTemplateSource</a> | Objects in which configuration parameters are fetched |
 
 
