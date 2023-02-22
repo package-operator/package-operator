@@ -496,7 +496,10 @@ func (p *defaultPatcher) Patch(
 			return fmt.Errorf("creating patch: %w", err)
 		}
 		if err := p.writer.Patch(ctx, updatedObj, client.RawPatch(
-			types.ApplyPatchType, objectPatch), client.FieldOwner("package-operator")); err != nil {
+			types.ApplyPatchType, objectPatch),
+			client.FieldOwner("package-operator"),
+			client.ForceOwnership,
+		); err != nil {
 			return fmt.Errorf("patching object: %w", err)
 		}
 	}
