@@ -228,6 +228,7 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 	return nil
 }
 
+//nolint:maintidx
 func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	controllerLog := ctrl.Log.WithName("controllers")
 

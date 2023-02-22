@@ -2,8 +2,9 @@ package objecttemplate
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 type genericObjectTemplate interface {

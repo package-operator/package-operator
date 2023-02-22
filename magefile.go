@@ -48,7 +48,7 @@ const (
 	remotePhasePackageName = "remote-phase-package"
 
 	controllerGenVersion = "0.11.2"
-	golangciLintVersion  = "1.51.0"
+	golangciLintVersion  = "1.51.1"
 	kindVersion          = "0.17.0"
 	k8sDocGenVersion     = "0.5.1"
 )

@@ -482,7 +482,7 @@ func (p *defaultPatcher) Patch(
 	// never patch status, even if specified
 	// we would just start a fight with whatever controller is realizing this object.
 	unstructured.RemoveNestedField(patch.Object, "status")
-	// don't strategic merge ownerReferences - we already take care about that with it's own patch.
+	// don't strategic merge ownerReferences - we already take care about that with its own patch.
 	unstructured.RemoveNestedField(patch.Object, "metadata", "ownerReferences")
 
 	base := updatedObj.DeepCopy()

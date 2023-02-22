@@ -10,3 +10,7 @@ type ObjectTemplate struct {
 
 	Spec ObjectTemplateSpec `json:"spec,omitempty"`
 }
+
+func init() {
+	SchemeBuilder.Register(&ObjectTemplate{})
+}

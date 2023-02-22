@@ -14,6 +14,15 @@ type DynamicCacheMock struct {
 	testutil.CtrlClient
 }
 
+func (c *DynamicCacheMock) Get(
+	ctx context.Context,
+	key client.ObjectKey, out client.Object,
+	opts ...client.GetOption,
+) error {
+	args := c.Called(ctx, key, out, opts)
+	return args.Error(0)
+}
+
 func (c *DynamicCacheMock) Source() source.Source {
 	args := c.Called()
 	return args.Get(0).(source.Source)

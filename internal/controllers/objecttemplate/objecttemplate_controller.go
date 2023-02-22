@@ -1,21 +1,23 @@
 package objecttemplate
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"package-operator.run/package-operator/internal/controllers"
-	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
-	"text/template"
+	"sigs.k8s.io/yaml"
+
+	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 type dynamicCache interface {
@@ -92,32 +94,24 @@ func (c *GenericObjectTemplateController) Reconcile(
 
 	sources := &unstructured.Unstructured{}
 	if err := c.GetValuesFromSources(ctx, objectTemplate, sources); err != nil {
-		return ctrl.Result{}, err // TODO: expand error
+		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
 	}
 
-	t, err := template.New("objectTemplate").Parse(objectTemplate.GetTemplate())
-	if err != nil {
-		return ctrl.Result{}, err // TODO: expand error
-	}
-	buf := new(bytes.Buffer)
-	if err = t.Execute(buf, sources); err != nil {
-		return ctrl.Result{}, err // TODO: expand error
-	}
 	pkg := &unstructured.Unstructured{}
-	if err := pkg.UnmarshalJSON(buf.Bytes()); err != nil {
-		return ctrl.Result{}, err // TODO: expand error
+	if err := c.TemplatePackage(ctx, objectTemplate.GetTemplate(), sources, pkg); err != nil {
+		return ctrl.Result{}, err
 	}
-
 	existingPkg := &unstructured.Unstructured{}
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg); err != nil {
 		if errors.IsNotFound(err) {
 			if err := c.client.Create(ctx, pkg); err != nil {
 				return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
 			}
-			return ctrl.Result{}, err // TODO: expand error
 		}
+		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
 
+	// TODO: need to remove status, some metadata metadata, revision number, etc, before comparison
 	if !reflect.DeepEqual(pkg, existingPkg) {
 		return ctrl.Result{}, c.client.Update(ctx, pkg)
 	}
@@ -125,40 +119,70 @@ func (c *GenericObjectTemplateController) Reconcile(
 }
 
 func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
-	for _, source := range objectTemplate.GetSources() {
+	for _, src := range objectTemplate.GetSources() {
 		sourceObj := &unstructured.Unstructured{}
-		sourceObj.SetName(source.Name)
-		sourceObj.SetKind(source.Kind)
-		if objectTemplate.ClientObject().GetNamespace() != "" {
+		sourceObj.SetName(src.Name)
+		sourceObj.SetKind(src.Kind)
+
+		switch {
+		case objectTemplate.ClientObject().GetNamespace() != "" && src.Namespace != "" && objectTemplate.ClientObject().GetNamespace() != src.Namespace:
+			return errors.NewBadRequest(fmt.Sprintf("source %s references namespace %s, which is different from objectTemplate's namespace %s", src.Name, src.Namespace, objectTemplate.ClientObject().GetNamespace()))
+		case objectTemplate.ClientObject().GetNamespace() != "":
 			sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
-		} else if source.Namespace != "" {
-			sourceObj.SetNamespace(source.Namespace)
-		} else {
-			return nil // implement error
+		case src.Namespace != "":
+			sourceObj.SetNamespace(src.Namespace)
+		default:
+			return errors.NewBadRequest(fmt.Sprintf("neither the template nor source object %s provides a namespace", sourceObj.GetName()))
 		}
 
-		// Ensure to watch this type of object.
 		if err := c.dynamicCache.Watch(
 			ctx, objectTemplate.ClientObject(), sourceObj); err != nil {
 			return fmt.Errorf("watching new resource: %w", err)
 		}
 
 		if err := c.dynamicCache.Get(ctx, client.ObjectKeyFromObject(sourceObj), sourceObj); err != nil {
-			return err // TODO: expand error
+			return fmt.Errorf("getting source object %s: %w", sourceObj.GetName(), err)
 		}
 
-		for _, item := range source.Items {
+		for _, item := range src.Items {
 			value, found, err := unstructured.NestedFieldCopy(sourceObj.Object, strings.Split(item.Key, ".")...)
 			if err != nil {
-				return err // TODO: expand error
+				return fmt.Errorf("getting value at %s from %s: %w", item.Key, sourceObj.GetName(), err)
 			}
 			if !found {
-				return nil // TODO: return error that the key was not found
+				return errors.NewBadRequest(fmt.Sprintf("source object %s does not have nested value at %s", sourceObj.GetName(), item.Key))
 			}
-			if err := unstructured.SetNestedField(sources.Object, value, strings.Split(item.Key, ".")...); err != nil {
-				return err // TODO: expand error
+
+			_, found, err = unstructured.NestedFieldNoCopy(sources.Object, strings.Split(item.Destination, ".")...)
+			if err != nil {
+				return fmt.Errorf("checking for duplicate destination at %s: %w", item.Destination, err)
+			}
+			if found {
+				return fmt.Errorf("duplicate destination at %s: %w", item.Destination, err)
+			}
+			if err := unstructured.SetNestedField(sources.Object, value, strings.Split(item.Destination, ".")...); err != nil {
+				return fmt.Errorf("setting nested field at %s: %w", item.Destination, err)
 			}
 		}
+	}
+	return nil
+}
+
+func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, pkgTemplate string, sources *unstructured.Unstructured, pkg *unstructured.Unstructured) error {
+	templateContext := packageloader.TemplateContext{
+		Config: sources.Object,
+	}
+	transformer, err := packageloader.NewTemplateTransformer(templateContext)
+	if err != nil {
+		return fmt.Errorf("creating new template transformer: %w", err)
+	}
+	fileMap := map[string][]byte{"package.gotmpl": []byte(pkgTemplate)}
+	if err := transformer.TransformPackageFiles(ctx, fileMap); err != nil {
+		return fmt.Errorf("rendering template: %w", err)
+	}
+
+	if err := yaml.Unmarshal(fileMap["package"], pkg); err != nil {
+		return fmt.Errorf("unmarshalling yaml of rendered template: %w", err)
 	}
 	return nil
 }
