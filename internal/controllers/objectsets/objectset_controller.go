@@ -10,9 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -144,12 +146,18 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 	objectSetPhase := c.newObjectSetPhase(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(objectSet).
+		For(objectSet, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
 		Owns(objectSetPhase).
 		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
 			OwnerType:    objectSet,
 			IsController: false,
-		}).
+		}, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+			c.log.Info(
+				"processing dynamic cache event",
+				"object", client.ObjectKeyFromObject(object),
+				"owners", object.GetOwnerReferences())
+			return true
+		}))).
 		Complete(c)
 }
 

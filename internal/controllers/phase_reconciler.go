@@ -149,7 +149,11 @@ func (r *PhaseReconciler) ReconcilePhase(
 	for _, phaseObject := range phase.Objects {
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
 		if err != nil {
-			return nil, res, err
+			return nil, res, fmt.Errorf(
+				"object %s/%s kind:%s: %w",
+				phaseObject.Object.GetNamespace(),
+				phaseObject.Object.GetName(),
+				phaseObject.Object.GetKind(), err)
 		}
 		actualObjects = append(actualObjects, actualObj)
 
