@@ -105,20 +105,20 @@ func (fe *fieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool,
 			return
 		}
 		// add probed field paths as context to error message.
-		message = fmt.Sprintf("%q == %q: %s", fe.FieldA, fe.FieldB, message)
+		message = fmt.Sprintf(`"%v" == "%v": %s`, fe.FieldA, fe.FieldB, message)
 	}()
 
 	fieldAVal, ok, err := unstructured.NestedFieldCopy(obj.Object, fieldAPath...)
 	if err != nil || !ok {
-		return false, fmt.Sprintf("%q missing", fe.FieldA)
+		return false, fmt.Sprintf(`"%v" missing`, fe.FieldA)
 	}
 	fieldBVal, ok, err := unstructured.NestedFieldCopy(obj.Object, fieldBPath...)
 	if err != nil || !ok {
-		return false, fmt.Sprintf("%q missing", fe.FieldB)
+		return false, fmt.Sprintf(`"%v" missing`, fe.FieldB)
 	}
 
 	if !equality.Semantic.DeepEqual(fieldAVal, fieldBVal) {
-		return false, fmt.Sprintf("%q != %q", fieldAVal, fieldBVal)
+		return false, fmt.Sprintf(`"%v" != "%v"`, fieldAVal, fieldBVal)
 	}
 	return true, ""
 }

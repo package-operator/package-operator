@@ -293,7 +293,24 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": map["fk":"fv"] != map["fk":"something else"]`,
+			message:  `".spec.fieldA" == ".spec.fieldB": "map[fk:fv]" != "map[fk:something else]"`,
+		},
+		{
+			name: "int not equal",
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"fieldA": map[string]interface{}{
+							"fk": 1.0,
+						},
+						"fieldB": map[string]interface{}{
+							"fk": 2.0,
+						},
+					},
+				},
+			},
+			succeeds: false,
+			message:  `".spec.fieldA" == ".spec.fieldB": "map[fk:1]" != "map[fk:2]"`,
 		},
 		{
 			name: "fieldA missing",
