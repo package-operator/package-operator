@@ -89,7 +89,6 @@ func TestHyperShift(t *testing.T) {
 	// longer timeout because PKO is restarting to enable HyperShift integration and needs a few seconds for leader election.
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(100*time.Second)))
-
 	// Test ObjectSetPhase integration
 	t.Run("ObjectSetSetupPauseTeardown", func(t *testing.T) {
 		runObjectSetSetupPauseTeardownTest(t, ns.Name, "hosted-cluster")

@@ -326,7 +326,8 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
-						Name: "phase-1",
+						Name:  "phase-1",
+						Class: class,
 						Objects: []corev1alpha1.ObjectSetObject{
 							{
 								Object: unstructured.Unstructured{Object: cm1Obj},
@@ -334,7 +335,8 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (
 						},
 					},
 					{
-						Name: "phase-2",
+						Name:  "phase-2",
+						Class: class,
 						Objects: []corev1alpha1.ObjectSetObject{
 							{
 								Object: unstructured.Unstructured{Object: cm2Obj},
@@ -371,7 +373,8 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
-						Name: "phase-1",
+						Name:  "phase-1",
+						Class: class,
 						Objects: []corev1alpha1.ObjectSetObject{
 							{
 								Object: unstructured.Unstructured{Object: cm3Obj}, // replaces cm2
@@ -379,7 +382,8 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 						},
 					},
 					{
-						Name: "phase-2",
+						Name:  "phase-2",
+						Class: class,
 						Objects: []corev1alpha1.ObjectSetObject{
 							{
 								Object: unstructured.Unstructured{Object: cm1Obj}, // moved between phases

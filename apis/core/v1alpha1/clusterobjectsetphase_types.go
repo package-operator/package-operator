@@ -42,7 +42,7 @@ type ClusterObjectSetPhaseSpec struct {
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
-	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes"`
+	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes,omitempty"`
 
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects"`

@@ -26,7 +26,7 @@ func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 			Namespace: "test",
 			UID:       types.UID("1234"),
 			Annotations: map[string]string{
-				ownerStrategyAnnotation: `[{"uid":"123456", "kind":"ConfigMap", "name":"cm1"}]`,
+				ownerStrategyAnnotationKey: `[{"uid":"123456", "kind":"ConfigMap", "name":"cm1"}]`,
 			},
 		},
 	}
@@ -41,7 +41,7 @@ func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 	s := NewAnnotation(testScheme)
 	s.RemoveOwner(owner, obj)
 
-	assert.Equal(t, `[]`, obj.Annotations[ownerStrategyAnnotation])
+	assert.Equal(t, `[]`, obj.Annotations[ownerStrategyAnnotationKey])
 }
 
 func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
@@ -383,7 +383,7 @@ func TestIsOwner(t *testing.T) {
 					Namespace: "cmtestns",
 					UID:       types.UID("asdfjkl"),
 					Annotations: map[string]string{
-						ownerStrategyAnnotation: `[{"kind":"ConfigMap", "apiVersion":"v1", "name":"cm","namespace":"cmtestns"}]`,
+						ownerStrategyAnnotationKey: `[{"kind":"ConfigMap", "apiVersion":"v1", "name":"cm","namespace":"cmtestns"}]`,
 					},
 				},
 			},
@@ -441,4 +441,18 @@ func TestIsController(t *testing.T) {
 			assert.Equal(t, tc.expectedController, resultController)
 		})
 	}
+}
+
+func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
+	s := NewAnnotation(testScheme)
+	obj := testutil.NewSecret()
+	owner := testutil.NewConfigMap()
+	owner.Namespace = obj.Namespace
+	err := s.SetControllerReference(owner, obj)
+	require.NoError(t, err)
+
+	patch, err := s.OwnerPatch(obj)
+	require.NoError(t, err)
+
+	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",\"controller\":true}]"}}}`, string(patch))
 }

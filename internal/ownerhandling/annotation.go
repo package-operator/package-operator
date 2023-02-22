@@ -21,7 +21,7 @@ import (
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
 
-const ownerStrategyAnnotation = "package-operator.run/owners"
+const ownerStrategyAnnotationKey = "package-operator.run/owners"
 
 // AnnotationOwner handling strategy uses .metadata.annotations.
 // Allows cross-namespace owner references.
@@ -33,6 +33,24 @@ func NewAnnotation(scheme *runtime.Scheme) *OwnerStrategyAnnotation {
 	return &OwnerStrategyAnnotation{
 		scheme: scheme,
 	}
+}
+
+func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error) {
+	annotations := owner.GetAnnotations()
+	if annotations == nil {
+		return nil, nil
+	}
+	if len(annotations[ownerStrategyAnnotationKey]) == 0 {
+		return nil, nil
+	}
+	patchMetadata := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				ownerStrategyAnnotationKey: annotations[ownerStrategyAnnotationKey],
+			},
+		},
+	}
+	return json.Marshal(patchMetadata)
 }
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
@@ -143,12 +161,12 @@ func (s *OwnerStrategyAnnotation) getOwnerReferences(obj metav1.Object) []annota
 	if annotations == nil {
 		return nil
 	}
-	if len(annotations[ownerStrategyAnnotation]) == 0 {
+	if len(annotations[ownerStrategyAnnotationKey]) == 0 {
 		return nil
 	}
 
 	var ownerReferences []annotationOwnerRef
-	if err := json.Unmarshal([]byte(annotations[ownerStrategyAnnotation]), &ownerReferences); err != nil {
+	if err := json.Unmarshal([]byte(annotations[ownerStrategyAnnotationKey]), &ownerReferences); err != nil {
 		panic(err)
 	}
 
@@ -164,7 +182,7 @@ func (s *OwnerStrategyAnnotation) setOwnerReferences(obj metav1.Object, owners [
 	if err != nil {
 		panic(err)
 	}
-	annotations[ownerStrategyAnnotation] = string(j)
+	annotations[ownerStrategyAnnotationKey] = string(j)
 	obj.SetAnnotations(annotations)
 }
 

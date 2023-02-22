@@ -43,6 +43,7 @@ type ownerStrategy interface {
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
+	OwnerPatch(owner metav1.Object) ([]byte, error)
 }
 
 type adoptionChecker interface {
@@ -433,22 +434,16 @@ func (r *PhaseReconciler) reconcileObject(
 			return nil, err
 		}
 
-		ownerRefs, ok, err := unstructured.NestedFieldNoCopy(updatedObj.Object, "metadata", "ownerReferences")
-		if !ok || err != nil {
-			// we should not be able to reach this code path - ever :D
-			panic(fmt.Errorf("can't access ownerReferences after setting them: %w", err))
+		ownerPatch, err := r.ownerStrategy.OwnerPatch(updatedObj)
+		if err != nil {
+			return nil, fmt.Errorf("ownership patch: %w", err)
 		}
 
-		ownershipPatch, err := json.Marshal(map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"ownerReferences": ownerRefs,
-			},
-		})
 		if err != nil {
 			return nil, fmt.Errorf("ownership patch: %w", err)
 		}
 		if err := r.writer.Patch(ctx, updatedObj, client.RawPatch(
-			types.MergePatchType, ownershipPatch,
+			types.MergePatchType, ownerPatch,
 		)); err != nil {
 			return nil, fmt.Errorf("patching object ownership: %w", err)
 		}

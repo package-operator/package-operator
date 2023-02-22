@@ -1,6 +1,7 @@
 package ownerhandling
 
 import (
+	"encoding/json"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,15 @@ func NewNative(scheme *runtime.Scheme) *OwnerStrategyNative {
 	return &OwnerStrategyNative{
 		scheme: scheme,
 	}
+}
+
+func (s *OwnerStrategyNative) OwnerPatch(owner metav1.Object) ([]byte, error) {
+	patchMetadata := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"ownerReferences": owner.GetOwnerReferences(),
+		},
+	}
+	return json.Marshal(patchMetadata)
 }
 
 func (s *OwnerStrategyNative) IsOwner(owner, obj metav1.Object) bool {

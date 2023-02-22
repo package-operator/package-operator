@@ -299,6 +299,9 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	ownerStrategy.
 		On("IsController", mock.Anything, mock.Anything).
 		Return(true)
+	ownerStrategy.
+		On("OwnerPatch", mock.Anything).
+		Return([]byte(nil), nil)
 
 	testClient.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).

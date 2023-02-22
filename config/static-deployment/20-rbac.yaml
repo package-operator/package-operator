@@ -67,6 +67,10 @@ rules:
     - objectsetphases/status
     - clusterobjectsetphases
     - clusterobjectsetphases/status
+    - objectsets
+    - objectsets/status
+    - clusterobjectsets
+    - clusterobjectsets/status
   verbs:
     - get
     - list

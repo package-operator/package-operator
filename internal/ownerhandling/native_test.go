@@ -148,3 +148,17 @@ func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
 		assert.Nil(t, ownerRefs[0].Controller)
 	}
 }
+
+func TestOwnerStrategyNative_OwnerPatch(t *testing.T) {
+	s := NewNative(testScheme)
+	obj := testutil.NewSecret()
+	owner := testutil.NewConfigMap()
+	owner.Namespace = obj.Namespace
+	err := s.SetControllerReference(owner, obj)
+	require.NoError(t, err)
+
+	patch, err := s.OwnerPatch(obj)
+	require.NoError(t, err)
+
+	assert.Equal(t, `{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"ConfigMap","name":"cm","uid":"asdfjkl","controller":true,"blockOwnerDeletion":true}]}}`, string(patch))
+}

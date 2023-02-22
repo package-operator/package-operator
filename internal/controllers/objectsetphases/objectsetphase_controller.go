@@ -36,6 +36,7 @@ type ownerStrategy interface {
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
+	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
 		ownerType client.Object, isController bool,
 	) handler.EventHandler

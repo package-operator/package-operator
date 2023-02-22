@@ -214,7 +214,6 @@ spec:
                 format: int64
                 type: integer
             required:
-            - availabilityProbes
             - objects
             - revision
             type: object
