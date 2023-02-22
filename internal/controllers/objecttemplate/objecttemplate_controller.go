@@ -3,7 +3,6 @@ package objecttemplate
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -111,11 +110,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
 
-	// TODO: need to remove status, some metadata metadata, revision number, etc, before comparison
-	if !reflect.DeepEqual(pkg, existingPkg) {
-		return ctrl.Result{}, c.client.Update(ctx, pkg)
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, c.client.Update(ctx, pkg)
 }
 
 func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
