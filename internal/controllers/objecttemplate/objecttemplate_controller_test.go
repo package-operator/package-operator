@@ -90,7 +90,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 	cmDestination := "database"
 	cmValue := "big-database"
 	cmSource := corev1alpha1.ObjectTemplateSource{
-		ApiVersion: "v1",
+		APIVersion: "v1",
 		Kind:       "ConfigMap",
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
@@ -103,7 +103,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 	secretDestination := "password"
 	secretValue := "super-secret-password"
 	secretSource := corev1alpha1.ObjectTemplateSource{
-		ApiVersion: "v1",
+		APIVersion: "v1",
 		Kind:       "Secret",
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{

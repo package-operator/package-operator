@@ -315,6 +315,13 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			},
 		})
 
+	// Create a client that does not cache resources cluster-wide.
+	uncachedClient, err := client.New(
+		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		return fmt.Errorf("unable to set up uncached client: %w", err)
+	}
+
 	// ObjectSet
 	if err = objectsets.NewObjectSetController(
 		mgr.GetClient(),
@@ -383,14 +390,14 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	}
 
 	if err = objecttemplate.NewObjectTemplateController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
+		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
 		dc, mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
 	}
 
 	if err = objecttemplate.NewClusterObjectTemplateController(
-		mgr.GetClient(), ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
+		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
 		dc, mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)

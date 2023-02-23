@@ -10,7 +10,7 @@ type ObjectTemplateSpec struct {
 }
 
 type ObjectTemplateSource struct {
-	ApiVersion string                     `json:"apiVersion"`
+	APIVersion string                     `json:"apiVersion"`
 	Kind       string                     `json:"kind"`
 	Namespace  string                     `json:"namespace,omitempty"`
 	Name       string                     `json:"name"`

@@ -29,20 +29,22 @@ type dynamicCache interface {
 type GenericObjectTemplateController struct {
 	newObjectTemplate genericObjectTemplateFactory
 
-	log          logr.Logger
-	scheme       *runtime.Scheme
-	client       client.Client
-	dynamicCache dynamicCache
+	log            logr.Logger
+	scheme         *runtime.Scheme
+	client         client.Client
+	uncachedClient client.Client
+	dynamicCache   dynamicCache
 }
 
 func NewObjectTemplateController(
-	client client.Client,
+	client, uncachedClient client.Client,
 	log logr.Logger,
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
 ) *GenericObjectTemplateController {
 	return &GenericObjectTemplateController{
 		client:            client,
+		uncachedClient:    uncachedClient,
 		newObjectTemplate: newGenericObjectTemplate,
 		log:               log,
 		scheme:            scheme,
@@ -51,7 +53,7 @@ func NewObjectTemplateController(
 }
 
 func NewClusterObjectTemplateController(
-	client client.Client,
+	client, uncachedClient client.Client,
 	log logr.Logger,
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
@@ -61,6 +63,7 @@ func NewClusterObjectTemplateController(
 		log:               log,
 		scheme:            scheme,
 		client:            client,
+		uncachedClient:    uncachedClient,
 		dynamicCache:      dynamicCache,
 	}
 }
@@ -92,6 +95,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	}
 
 	sources := &unstructured.Unstructured{}
+	sources.Object = map[string]interface{}{}
 	if err := c.GetValuesFromSources(ctx, objectTemplate, sources); err != nil {
 		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
 	}
@@ -101,6 +105,8 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, err
 	}
 	existingPkg := &unstructured.Unstructured{}
+	existingPkg.SetGroupVersionKind(pkg.GroupVersionKind())
+
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg); err != nil {
 		if errors.IsNotFound(err) {
 			if err := c.client.Create(ctx, pkg); err != nil {
@@ -110,7 +116,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
 
-	return ctrl.Result{}, c.client.Update(ctx, pkg)
+	return ctrl.Result{}, c.client.Patch(ctx, pkg, client.MergeFrom(existingPkg))
 }
 
 func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
@@ -118,6 +124,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		sourceObj := &unstructured.Unstructured{}
 		sourceObj.SetName(src.Name)
 		sourceObj.SetKind(src.Kind)
+		sourceObj.SetAPIVersion(src.APIVersion)
 
 		switch {
 		case objectTemplate.ClientObject().GetNamespace() != "" && src.Namespace != "" && objectTemplate.ClientObject().GetNamespace() != src.Namespace:
@@ -135,8 +142,31 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 			return fmt.Errorf("watching new resource: %w", err)
 		}
 
-		if err := c.dynamicCache.Get(ctx, client.ObjectKeyFromObject(sourceObj), sourceObj); err != nil {
-			return fmt.Errorf("getting source object %s: %w", sourceObj.GetName(), err)
+		objectKey := client.ObjectKeyFromObject(sourceObj)
+		err := c.dynamicCache.Get(ctx, objectKey, sourceObj)
+		if errors.IsNotFound(err) {
+			// the referenced secret might not be labeled correctly for the cache to pick up,
+			// fallback to an uncached read to discover.
+			if err := c.uncachedClient.Get(ctx, objectKey, sourceObj); err != nil {
+				return fmt.Errorf("source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
+			}
+
+			// Update object to ensure it is part of our cache and we get events to reconcile.
+			updatedSourceObj := sourceObj.DeepCopy()
+
+			labels := updatedSourceObj.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
+
+			labels[controllers.DynamicCacheLabel] = "True"
+			updatedSourceObj.SetLabels(labels)
+
+			if err := c.client.Patch(ctx, updatedSourceObj, client.MergeFrom(sourceObj)); err != nil {
+				return fmt.Errorf("patching source object for cache and ownership: %w", err)
+			}
+		} else if err != nil {
+			return fmt.Errorf("getting source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
 		}
 
 		for _, item := range src.Items {
