@@ -107,6 +107,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	existingPkg := &unstructured.Unstructured{}
 	existingPkg.SetGroupVersionKind(pkg.GroupVersionKind())
 
+	existingPkg.GetResourceVersion()
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg); err != nil {
 		if errors.IsNotFound(err) {
 			if err := c.client.Create(ctx, pkg); err != nil {
@@ -116,7 +117,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
 
-	return ctrl.Result{}, c.client.Patch(ctx, pkg, client.MergeFrom(existingPkg))
+	return ctrl.Result{}, c.client.Patch(ctx, existingPkg, client.MergeFrom(pkg))
 }
 
 func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {

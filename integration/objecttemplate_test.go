@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
@@ -108,6 +110,30 @@ spec:
 	objectTemplateGVK, err := apiutil.GVKForObject(&objectTemplate, Scheme)
 	require.NoError(t, err)
 	objectTemplate.SetGroupVersionKind(objectTemplateGVK)
+
+	clusterTemplate := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: cluster-test-stub
+spec:
+  image: %s
+  config:
+    {{ toJson .config }}`, SuccessTestPackageImage)
+	clusterObjectTemplateName := "cluster-object-template"
+	clusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterObjectTemplateName,
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Template: clusterTemplate,
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				cmSource,
+				secretSource,
+			},
+		},
+	}
+
 	tests := []struct {
 		name string
 	}{
@@ -121,15 +147,28 @@ spec:
 			ctx := logr.NewContext(context.Background(), testr.New(t))
 			err := Client.Create(ctx, &cm)
 			require.NoError(t, err)
+			defer cleanupOnSuccess(ctx, t, &cm)
 			err = Client.Create(ctx, &secret)
 			require.NoError(t, err)
+			defer cleanupOnSuccess(ctx, t, &secret)
 			err = Client.Create(ctx, &objectTemplate)
 			require.NoError(t, err)
 
 			pkg := &corev1alpha1.Package{}
-			require.NoError(t, Client.Get(ctx, client.ObjectKey{
+			assert.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: "test-stub", Namespace: "default",
 			}, pkg))
+			// TODO: Check config values
+			// require.NoError(t, Client.Delete(ctx, &objectTemplate))
+
+			err = Client.Create(ctx, &clusterObjectTemplate)
+			require.NoError(t, err)
+			clusterPkg := &corev1alpha1.ClusterPackage{}
+			assert.NoError(t, Client.Get(ctx, client.ObjectKey{
+				Name: "cluster-test-stub",
+			}, clusterPkg))
+			// TODO: Check config values
+			// require.NoError(t, Client.Delete(ctx, &objectTemplate))
 		})
 	}
 }
