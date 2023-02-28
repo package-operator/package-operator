@@ -26,6 +26,10 @@ type checker interface {
 		ctx context.Context, owner client.Object,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (violations []Violation, err error)
+	CheckObj(
+		ctx context.Context, owner,
+		obj client.Object,
+	) (violations []Violation, err error)
 }
 
 // Runs a list of preflight checks and aggregates the result into a single list of violations.
@@ -37,6 +41,20 @@ func (l List) Check(
 ) (violations []Violation, err error) {
 	for _, checker := range l {
 		v, err := checker.Check(ctx, owner, phase)
+		if err != nil {
+			return violations, err
+		}
+		violations = append(violations, v...)
+	}
+	return
+}
+
+func (l List) CheckObj(
+	ctx context.Context, owner,
+	obj client.Object,
+) (violations []Violation, err error) {
+	for _, checker := range l {
+		v, err := checker.CheckObj(ctx, owner, obj)
 		if err != nil {
 			return violations, err
 		}

@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"package-operator.run/package-operator/internal/preflight"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -29,6 +33,26 @@ type dynamicCache interface {
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 }
 
+type preflightChecker interface {
+	CheckObj(
+		ctx context.Context, owner,
+		obj client.Object,
+	) (violations []preflight.Violation, err error)
+}
+
+// TODO: Move this to a shared space.
+type PreflightError struct {
+	Violations []preflight.Violation
+}
+
+func (e *PreflightError) Error() string {
+	var vs []string
+	for _, v := range e.Violations {
+		vs = append(vs, v.String())
+	}
+	return strings.Join(vs, ", ")
+}
+
 type GenericObjectTemplateController struct {
 	newObjectTemplate genericObjectTemplateFactory
 	newPackage        genericPackageFactory
@@ -37,6 +61,7 @@ type GenericObjectTemplateController struct {
 	client            client.Client
 	uncachedClient    client.Client
 	dynamicCache      dynamicCache
+	preflightChecker  preflightChecker
 }
 
 func NewObjectTemplateController(
@@ -44,6 +69,7 @@ func NewObjectTemplateController(
 	log logr.Logger,
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
+	restMapper meta.RESTMapper,
 ) *GenericObjectTemplateController {
 	return &GenericObjectTemplateController{
 		client:            client,
@@ -53,6 +79,10 @@ func NewObjectTemplateController(
 		log:               log,
 		scheme:            scheme,
 		dynamicCache:      dynamicCache,
+		preflightChecker: preflight.List{
+			preflight.NewAPIExistence(restMapper),
+			preflight.NewNamespaceEscalation(restMapper),
+		},
 	}
 }
 
@@ -61,6 +91,7 @@ func NewClusterObjectTemplateController(
 	log logr.Logger,
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
+	restMapper meta.RESTMapper,
 ) *GenericObjectTemplateController {
 	return &GenericObjectTemplateController{
 		newObjectTemplate: newGenericClusterObjectTemplate,
@@ -70,6 +101,10 @@ func NewClusterObjectTemplateController(
 		client:            client,
 		uncachedClient:    uncachedClient,
 		dynamicCache:      dynamicCache,
+		preflightChecker: preflight.List{
+			preflight.NewAPIExistence(restMapper),
+			preflight.NewNamespaceEscalation(restMapper),
+		},
 	}
 }
 
@@ -105,22 +140,36 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
 	}
 
-	pkg := c.newPackage(c.scheme)
-	if err := c.TemplatePackage(ctx, objectTemplate.GetTemplate(), sources, pkg.ClientObject()); err != nil {
+	obj := &unstructured.Unstructured{
+		Object: map[string]interface{}{},
+	}
+	if err := c.TemplateObject(ctx, objectTemplate, sources, obj); err != nil {
 		return ctrl.Result{}, err
 	}
-	existingPkg := c.newPackage(c.scheme)
+	existingObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{},
+	}
 
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg.ClientObject()), existingPkg.ClientObject()); err != nil {
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); err != nil {
 		if errors.IsNotFound(err) {
-			if err := c.handleCreation(ctx, objectTemplate.ClientObject(), pkg.ClientObject()); err != nil {
+			if err := c.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 				return ctrl.Result{}, fmt.Errorf("handling creation: %w", err)
 			}
 		}
 		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
+	objectConds, found, err := unstructured.NestedSlice(existingObj.Object, "status", "conditions")
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("getting conditions from object: %w", err)
+	}
+	if found {
+		for _, cond := range objectConds {
+			condObj := cond.(metav1.Condition) // TODO: handle not ok?
+			meta.SetStatusCondition(objectTemplate.GetConditions(), condObj)
+		}
+	}
 
-	return ctrl.Result{}, c.client.Patch(ctx, existingPkg.ClientObject(), client.MergeFrom(pkg.ClientObject()))
+	return ctrl.Result{}, c.client.Patch(ctx, existingObj, client.MergeFrom(obj))
 }
 
 func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, owner, packageObject client.Object) error {
@@ -141,6 +190,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		sourceObj.SetKind(src.Kind)
 		sourceObj.SetAPIVersion(src.APIVersion)
 
+		// TODO: Should we move this to the namespace escilation part of the preflight checker?
 		switch {
 		case objectTemplate.ClientObject().GetNamespace() != "" && src.Namespace != "" && objectTemplate.ClientObject().GetNamespace() != src.Namespace:
 			return errors.NewBadRequest(fmt.Sprintf("source %s references namespace %s, which is different from objectTemplate's namespace %s", src.Name, src.Namespace, objectTemplate.ClientObject().GetNamespace()))
@@ -208,7 +258,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 	return nil
 }
 
-func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, pkgTemplate string, sources *unstructured.Unstructured, pkg client.Object) error {
+func (c *GenericObjectTemplateController) TemplateObject(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured, object client.Object) error {
 	templateContext := packageloader.TemplateContext{
 		Config: sources.Object,
 	}
@@ -216,25 +266,24 @@ func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, p
 	if err != nil {
 		return fmt.Errorf("creating new packageFile transformer: %w", err)
 	}
-	fileMap := map[string][]byte{"package.gotmpl": []byte(pkgTemplate)}
+	fileMap := map[string][]byte{"object.gotmpl": []byte(objectTemplate.GetTemplate())}
 	if err := transformer.TransformPackageFiles(ctx, fileMap); err != nil {
 		return fmt.Errorf("rendering packageFile: %w", err)
 	}
 
-	tmpPackage := &unstructured.Unstructured{
-		Object: map[string]interface{}{},
-	}
-
-	if err := yaml.Unmarshal(fileMap["package"], tmpPackage); err != nil {
+	if err := yaml.Unmarshal(fileMap["object"], object); err != nil {
 		return fmt.Errorf("unmarshalling yaml of rendered packageFile: %w", err)
 	}
-	pkgGVK, err := apiutil.GVKForObject(pkg, c.scheme)
-
-	if tmpPackage.Object["kind"] != pkgGVK.Kind {
-		return fmt.Errorf("template has kind %s, should be %s: %w", tmpPackage.Object["kind"], pkgGVK.Kind, err)
+	violations, err := c.preflightChecker.CheckObj(ctx, objectTemplate.ClientObject(), object)
+	if err != nil {
+		return err
 	}
-	if err := yaml.Unmarshal(fileMap["package"], pkg); err != nil {
-		return fmt.Errorf("unmarshalling into package object: %w", err)
+	if len(violations) > 0 {
+		return &PreflightError{Violations: violations}
+	}
+
+	if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
+		object.SetNamespace(objectTemplate.ClientObject().GetNamespace())
 	}
 
 	return nil

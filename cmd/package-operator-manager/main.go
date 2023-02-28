@@ -391,14 +391,14 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	if err = objecttemplate.NewObjectTemplateController(
 		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
-		dc, mgr.GetScheme(),
+		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
 	}
 
 	if err = objecttemplate.NewClusterObjectTemplateController(
 		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
-		dc, mgr.GetScheme(),
+		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
 	}

@@ -261,6 +261,9 @@ spec:
     name: diam
     namespace: sed
   template: consetetur
+status:
+  conditions:
+  - metav1.Condition
 
 ```
 
@@ -269,6 +272,7 @@ spec:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#objecttemplatespec">ObjectTemplateSpec</a> | ObjectTemplateSpec specification. |
+| `status` <br><a href="#objecttemplatestatus">ObjectTemplateStatus</a> | ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object. |
 
 
 ### ClusterPackage
@@ -548,6 +552,9 @@ spec:
     name: diam
     namespace: sed
   template: consetetur
+status:
+  conditions:
+  - metav1.Condition
 
 ```
 
@@ -556,6 +563,7 @@ spec:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#objecttemplatespec">ObjectTemplateSpec</a> | ObjectTemplateSpec specification. |
+| `status` <br><a href="#objecttemplatestatus">ObjectTemplateStatus</a> | ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object. |
 
 
 ### Package
@@ -936,6 +944,20 @@ ObjectTemplateSpec specification.
 | ----- | ----------- |
 | `template` <b>required</b><br>string | Go template of a Kubernetes manifest |
 | `sources` <b>required</b><br><a href="#objecttemplatesource">[]ObjectTemplateSource</a> | Objects in which configuration parameters are fetched |
+
+
+Used in:
+* [ClusterObjectTemplate](#clusterobjecttemplate)
+* [ObjectTemplate](#objecttemplate)
+
+
+### ObjectTemplateStatus
+
+ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
 
 
 Used in:

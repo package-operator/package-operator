@@ -6,11 +6,13 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
 // as the ObjectTemplate.
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 type ObjectTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ObjectTemplateSpec `json:"spec,omitempty"`
+	Spec   ObjectTemplateSpec   `json:"spec,omitempty"`
+	Status ObjectTemplateStatus `json:"status,omitempty"`
 }
 
 // ObjectTemplateList contains a list of ObjectTemplates.

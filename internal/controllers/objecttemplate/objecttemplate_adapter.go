@@ -1,6 +1,7 @@
 package objecttemplate
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -11,6 +12,7 @@ type genericObjectTemplate interface {
 	ClientObject() client.Object
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
+	GetConditions() *[]metav1.Condition
 }
 
 type genericObjectTemplateFactory func(
@@ -59,6 +61,10 @@ func (t *GenericObjectTemplate) GetSources() []corev1alpha1.ObjectTemplateSource
 	return t.Spec.Sources
 }
 
+func (t *GenericObjectTemplate) GetConditions() *[]metav1.Condition {
+	return &t.Status.Conditions
+}
+
 type GenericClusterObjectTemplate struct {
 	corev1alpha1.ClusterObjectTemplate
 }
@@ -69,6 +75,10 @@ func (t *GenericClusterObjectTemplate) GetTemplate() string {
 
 func (t *GenericClusterObjectTemplate) GetSources() []corev1alpha1.ObjectTemplateSource {
 	return t.Spec.Sources
+}
+
+func (t *GenericClusterObjectTemplate) GetConditions() *[]metav1.Condition {
+	return &t.Status.Conditions
 }
 
 func (t *GenericClusterObjectTemplate) ClientObject() client.Object {

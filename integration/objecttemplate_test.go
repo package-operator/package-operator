@@ -22,7 +22,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-func TestObjectTemplate_creationDeletion(t *testing.T) {
+func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm1Key := "database"
 	cm1Destination := "database"
 	cm1Value := "big-database"
@@ -92,7 +92,7 @@ spec:
 	defer cleanupOnSuccess(ctx, t, &cm2)
 	err = Client.Create(ctx, &objectTemplate)
 	require.NoError(t, err)
-	defer cleanupOnSuccess(ctx, t, &objectTemplate)
+	// defer cleanupOnSuccess(ctx, t, &objectTemplate)
 
 	pkg := &corev1alpha1.Package{}
 	pkg.Name = "test-stub"

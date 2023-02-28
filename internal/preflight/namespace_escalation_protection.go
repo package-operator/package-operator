@@ -71,3 +71,43 @@ func (p *NamespaceEscalation) Check(
 	}
 	return
 }
+
+func (p *NamespaceEscalation) CheckObj(
+	ctx context.Context, owner,
+	obj client.Object,
+) (violations []Violation, err error) {
+	if len(owner.GetNamespace()) == 0 {
+		// Owner is cluster-scoped
+		// we allow objects in multiple namespaces :)
+		return
+	}
+
+	// All objects need to be namespace-scoped and either have a namespace equal
+	// to their owner or empty so it can be defaulted.
+	if len(obj.GetNamespace()) > 0 &&
+		obj.GetNamespace() != owner.GetNamespace() {
+		violations = append(violations, Violation{
+			Position: fmt.Sprintf("Object %s", obj.GetName()),
+			Error:    "Must stay within the same namespace.",
+		})
+	}
+
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	mapping, err := p.restMapper.RESTMapping(
+		gvk.GroupKind(), gvk.Version)
+	if meta.IsNoMatchError(err) {
+		// covered by APIsExistence check
+		return
+	}
+	if err != nil {
+		return violations, err
+	}
+
+	if mapping.Scope != meta.RESTScopeNamespace {
+		violations = append(violations, Violation{
+			Position: fmt.Sprintf("Object %s", obj.GetName()),
+			Error:    "Must be namespaced scoped when part of an non-cluster-scoped API.",
+		})
+	}
+	return
+}

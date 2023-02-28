@@ -1,5 +1,7 @@
 package v1alpha1
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // ObjectTemplateSpec specification.
 type ObjectTemplateSpec struct {
 	// Go template of a Kubernetes manifest
@@ -20,4 +22,10 @@ type ObjectTemplateSource struct {
 type ObjectTemplateSourceItem struct {
 	Key         string `json:"key"`
 	Destination string `json:"destination"`
+}
+
+// ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object.
+type ObjectTemplateStatus struct {
+	// Conditions is a list of status conditions the templated object is in.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }

@@ -7,6 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+
+	"package-operator.run/package-operator/internal/preflight"
+	"package-operator.run/package-operator/internal/testutil/restmappermock"
+
 	"sigs.k8s.io/yaml"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +42,7 @@ func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, dc := newControllerAndMocks()
+			controller, c, dc, _ := newControllerAndMocks()
 
 			c.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -200,7 +205,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				genericObjectTemplate = &GenericClusterObjectTemplate{test.clusterObjectTemplate}
 			}
 
-			controller, _, dc := newControllerAndMocks()
+			controller, _, dc, _ := newControllerAndMocks()
 			dc.On("Watch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			// getting the configMap
@@ -264,14 +269,25 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 			name:        "template with toJSON",
 			packageFile: "package_template_to_json.yaml",
 		},
-		{
-			name:        "Mismatch objectTemplate and ClusterPackage",
-			packageFile: "package_template_to_json.yaml",
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, _, _ := newControllerAndMocks()
+			controller, _, _, rm := newControllerAndMocks()
+			rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeNamespace}, nil).Twice()
+			template, err := os.ReadFile(filepath.Join("test_files", test.packageFile))
+			require.NoError(t, err)
+
+			objectTemplate := GenericObjectTemplate{
+				ObjectTemplate: corev1alpha1.ObjectTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+					},
+					Spec: corev1alpha1.ObjectTemplateSpec{
+						Template: string(template),
+					},
+				},
+			}
+
 			pkg := &corev1alpha1.Package{}
 			sources := &unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -280,9 +296,8 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 					"auth_password": "hunter2",
 				},
 			}
-			template, err := os.ReadFile(filepath.Join("test_files", test.packageFile))
-			require.NoError(t, err)
-			err = controller.TemplatePackage(context.TODO(), string(template), sources, pkg)
+
+			err = controller.TemplateObject(context.TODO(), &objectTemplate, sources, pkg)
 
 			require.NoError(t, err)
 
@@ -296,19 +311,31 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 }
 
 func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) {
-	controller, _, _ := newControllerAndMocks()
+	controller, _, _, _ := newControllerAndMocks()
 	clusterPkg := &corev1alpha1.ClusterPackage{}
 	sources := &unstructured.Unstructured{}
+
 	template, err := os.ReadFile(filepath.Join("test_files", "package_template_to_json.yaml"))
 	require.NoError(t, err)
-	err = controller.TemplatePackage(context.TODO(), string(template), sources, clusterPkg)
+	objectTemplate := &GenericObjectTemplate{
+		ObjectTemplate: corev1alpha1.ObjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: corev1alpha1.ObjectTemplateSpec{
+				Template: string(template),
+			},
+		},
+	}
+	err = controller.TemplateObject(context.TODO(), objectTemplate, sources, clusterPkg)
 	assert.ErrorContains(t, err, "template has kind")
 }
 
-func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock) {
+func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock, *restmappermock.RestMapperMock) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	dc := &dynamiccachemocks.DynamicCacheMock{}
+	rm := &restmappermock.RestMapperMock{}
 
 	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newGenericObjectTemplate,
@@ -317,6 +344,10 @@ func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlCl
 		log:               ctrl.Log.WithName("controllers"),
 		scheme:            scheme,
 		dynamicCache:      dc,
+		preflightChecker: preflight.List{
+			preflight.NewAPIExistence(rm),
+			preflight.NewNamespaceEscalation(rm),
+		},
 	}
-	return controller, c, dc
+	return controller, c, dc, rm
 }
