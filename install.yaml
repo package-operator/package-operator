@@ -1212,7 +1212,7 @@ spec:
     listKind: ClusterObjectTemplateList
     plural: clusterobjecttemplates
     singular: clusterobjecttemplate
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:

@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
+
+	"github.com/mt-sre/devkube/dev"
+	"sigs.k8s.io/yaml"
 
 	"github.com/stretchr/testify/assert"
 
@@ -19,10 +23,115 @@ import (
 )
 
 func TestObjectTemplate_creationDeletion(t *testing.T) {
-	cmKey := "database"
-	cmDestination := "database"
-	cmValue := "big-database"
-	cmName := "config-map"
+	cm1Key := "database"
+	cm1Destination := "database"
+	cm1Value := "big-database"
+	cm1Name := "config-map-1"
+	cm1, cm1Source := createCMAndObjectTemplateSource(cm1Key, cm1Destination, cm1Value, cm1Name)
+
+	cm2Key := "testStubImage"
+	cm2Destination := "testStubImage"
+	cm2Value := TestStubImage
+	cm2Name := "config-map-2"
+	cm2, cm2Source := createCMAndObjectTemplateSource(cm2Key, cm2Destination, cm2Value, cm2Name)
+
+	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: test-stub
+  namespace: default
+spec:
+  image: %s
+  config:
+    {{ toJson .config }}`, SuccessTestPackageImage)
+	objectTemplateName := "object-template"
+	objectTemplate := corev1alpha1.ObjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectTemplateName,
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Template: template,
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				cm1Source,
+				cm2Source,
+			},
+		},
+	}
+
+	clusterTemplate := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: cluster-test-stub
+spec:
+  image: %s
+  config:
+    {{ toJson .config }}`, SuccessTestPackageImage)
+
+	clusterObjectTemplateName := "cluster-object-template"
+	clusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterObjectTemplateName,
+		},
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Template: clusterTemplate,
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				cm1Source,
+				cm2Source,
+			},
+		},
+	}
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	err := Client.Create(ctx, &cm1)
+	require.NoError(t, err)
+	defer cleanupOnSuccess(ctx, t, &cm1)
+
+	err = Client.Create(ctx, &cm2)
+	require.NoError(t, err)
+	defer cleanupOnSuccess(ctx, t, &cm2)
+	err = Client.Create(ctx, &objectTemplate)
+	require.NoError(t, err)
+	defer cleanupOnSuccess(ctx, t, &objectTemplate)
+
+	pkg := &corev1alpha1.Package{}
+	pkg.Name = "test-stub"
+	pkg.Namespace = "default"
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(5*time.Second)))
+
+	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: "test-stub", Namespace: "default",
+	}, pkg))
+	packageConfig := map[string]interface{}{}
+
+	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
+	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
+	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
+
+	err = Client.Create(ctx, &clusterObjectTemplate)
+	defer cleanupOnSuccess(ctx, t, &clusterObjectTemplate)
+
+	require.NoError(t, err)
+	clusterPkg := &corev1alpha1.ClusterPackage{}
+	clusterPkg.Name = "cluster-test-stub"
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(5*time.Second)))
+
+	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: "cluster-test-stub",
+	}, clusterPkg))
+	clusterPackageConfig := map[string]interface{}{}
+	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
+	assert.Equal(t, cm1Value, clusterPackageConfig[cm1Destination])
+	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
+}
+
+func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (v1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
 	cm := v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -40,6 +149,7 @@ func TestObjectTemplate_creationDeletion(t *testing.T) {
 		APIVersion: "v1",
 		Kind:       "ConfigMap",
 		Name:       cmName,
+		Namespace:  "default",
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
 				Key:         "data." + cmKey,
@@ -47,9 +157,11 @@ func TestObjectTemplate_creationDeletion(t *testing.T) {
 			},
 		},
 	}
-	cmGVK, err := apiutil.GVKForObject(&cm, Scheme)
-	require.NoError(t, err)
-	cm.SetGroupVersionKind(cmGVK)
+	return cm, cmSource
+}
+
+func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
 	secretName := "secret"
 	secretKey := "password"
 	secretDestination := "password"
@@ -82,18 +194,19 @@ func TestObjectTemplate_creationDeletion(t *testing.T) {
 			},
 		},
 	}
-
+	packageName := "test-stub-secret-test"
 	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
 kind: Package
 metadata:
-  name: test-stub
+  name: %s
   namespace: default
 spec:
   image: %s
   config:
-    {{ toJson .config }}`, SuccessTestPackageImage)
+    testStubImage: %s
+    %s: {{ b64dec .config.password }}`, packageName, SuccessTestPackageImage, TestStubImage, secretDestination)
 
-	objectTemplateName := "object-template"
+	objectTemplateName := "object-template-password"
 	objectTemplate := corev1alpha1.ObjectTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      objectTemplateName,
@@ -102,7 +215,6 @@ spec:
 		Spec: corev1alpha1.ObjectTemplateSpec{
 			Template: template,
 			Sources: []corev1alpha1.ObjectTemplateSource{
-				cmSource,
 				secretSource,
 			},
 		},
@@ -111,64 +223,25 @@ spec:
 	require.NoError(t, err)
 	objectTemplate.SetGroupVersionKind(objectTemplateGVK)
 
-	clusterTemplate := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
-kind: ClusterPackage
-metadata:
-  name: cluster-test-stub
-spec:
-  image: %s
-  config:
-    {{ toJson .config }}`, SuccessTestPackageImage)
-	clusterObjectTemplateName := "cluster-object-template"
-	clusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterObjectTemplateName,
-			Namespace: "default",
-		},
-		Spec: corev1alpha1.ObjectTemplateSpec{
-			Template: clusterTemplate,
-			Sources: []corev1alpha1.ObjectTemplateSource{
-				cmSource,
-				secretSource,
-			},
-		},
-	}
+	require.NoError(t, Client.Create(ctx, &secret))
+	defer cleanupOnSuccess(ctx, t, &secret)
 
-	tests := []struct {
-		name string
-	}{
-		{
-			name: "toJSON",
-		},
-	}
+	require.NoError(t, Client.Create(ctx, &objectTemplate))
+	defer cleanupOnSuccess(ctx, t, &objectTemplate)
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ctx := logr.NewContext(context.Background(), testr.New(t))
-			err := Client.Create(ctx, &cm)
-			require.NoError(t, err)
-			defer cleanupOnSuccess(ctx, t, &cm)
-			err = Client.Create(ctx, &secret)
-			require.NoError(t, err)
-			defer cleanupOnSuccess(ctx, t, &secret)
-			err = Client.Create(ctx, &objectTemplate)
-			require.NoError(t, err)
+	pkg := &corev1alpha1.Package{}
+	pkg.Name = packageName
+	pkg.Namespace = "default"
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(5*time.Second)))
 
-			pkg := &corev1alpha1.Package{}
-			assert.NoError(t, Client.Get(ctx, client.ObjectKey{
-				Name: "test-stub", Namespace: "default",
-			}, pkg))
-			// TODO: Check config values
-			// require.NoError(t, Client.Delete(ctx, &objectTemplate))
+	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: packageName, Namespace: "default",
+	}, pkg))
+	packageConfig := map[string]interface{}{}
 
-			err = Client.Create(ctx, &clusterObjectTemplate)
-			require.NoError(t, err)
-			clusterPkg := &corev1alpha1.ClusterPackage{}
-			assert.NoError(t, Client.Get(ctx, client.ObjectKey{
-				Name: "cluster-test-stub",
-			}, clusterPkg))
-			// TODO: Check config values
-			// require.NoError(t, Client.Delete(ctx, &objectTemplate))
-		})
-	}
+	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
+	assert.Equal(t, secretValue, packageConfig[secretDestination])
 }

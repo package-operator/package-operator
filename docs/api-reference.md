@@ -251,7 +251,6 @@ apiVersion: package-operator.run/v1alpha1
 kind: ClusterObjectTemplate
 metadata:
   name: example
-  namespace: default
 spec:
   sources:
   - apiVersion: sadipscing

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,12 +31,12 @@ type dynamicCache interface {
 
 type GenericObjectTemplateController struct {
 	newObjectTemplate genericObjectTemplateFactory
-
-	log            logr.Logger
-	scheme         *runtime.Scheme
-	client         client.Client
-	uncachedClient client.Client
-	dynamicCache   dynamicCache
+	newPackage        genericPackageFactory
+	log               logr.Logger
+	scheme            *runtime.Scheme
+	client            client.Client
+	uncachedClient    client.Client
+	dynamicCache      dynamicCache
 }
 
 func NewObjectTemplateController(
@@ -46,6 +49,7 @@ func NewObjectTemplateController(
 		client:            client,
 		uncachedClient:    uncachedClient,
 		newObjectTemplate: newGenericObjectTemplate,
+		newPackage:        newGenericPackage,
 		log:               log,
 		scheme:            scheme,
 		dynamicCache:      dynamicCache,
@@ -60,6 +64,7 @@ func NewClusterObjectTemplateController(
 ) *GenericObjectTemplateController {
 	return &GenericObjectTemplateController{
 		newObjectTemplate: newGenericClusterObjectTemplate,
+		newPackage:        newGenericClusterPackage,
 		log:               log,
 		scheme:            scheme,
 		client:            client,
@@ -100,24 +105,33 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
 	}
 
-	pkg := &unstructured.Unstructured{}
-	if err := c.TemplatePackage(ctx, objectTemplate.GetTemplate(), sources, pkg); err != nil {
+	pkg := c.newPackage(c.scheme)
+	if err := c.TemplatePackage(ctx, objectTemplate.GetTemplate(), sources, pkg.ClientObject()); err != nil {
 		return ctrl.Result{}, err
 	}
-	existingPkg := &unstructured.Unstructured{}
-	existingPkg.SetGroupVersionKind(pkg.GroupVersionKind())
+	existingPkg := c.newPackage(c.scheme)
 
-	existingPkg.GetResourceVersion()
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg); err != nil {
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg.ClientObject()), existingPkg.ClientObject()); err != nil {
 		if errors.IsNotFound(err) {
-			if err := c.client.Create(ctx, pkg); err != nil {
-				return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
+			if err := c.handleCreation(ctx, objectTemplate.ClientObject(), pkg.ClientObject()); err != nil {
+				return ctrl.Result{}, fmt.Errorf("handling creation: %w", err)
 			}
 		}
 		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
 	}
 
-	return ctrl.Result{}, c.client.Patch(ctx, existingPkg, client.MergeFrom(pkg))
+	return ctrl.Result{}, c.client.Patch(ctx, existingPkg.ClientObject(), client.MergeFrom(pkg.ClientObject()))
+}
+
+func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, owner, packageObject client.Object) error {
+	if err := controllerutil.SetControllerReference(owner, packageObject, c.scheme); err != nil {
+		return fmt.Errorf("setting owner reference: %w", err)
+	}
+
+	if err := c.client.Create(ctx, packageObject); err != nil {
+		return fmt.Errorf("creating Package: %w", err)
+	}
+	return nil
 }
 
 func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
@@ -146,7 +160,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		objectKey := client.ObjectKeyFromObject(sourceObj)
 		err := c.dynamicCache.Get(ctx, objectKey, sourceObj)
 		if errors.IsNotFound(err) {
-			// the referenced secret might not be labeled correctly for the cache to pick up,
+			// the referenced object might not be labeled correctly for the cache to pick up,
 			// fallback to an uncached read to discover.
 			if err := c.uncachedClient.Get(ctx, objectKey, sourceObj); err != nil {
 				return fmt.Errorf("source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
@@ -194,7 +208,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 	return nil
 }
 
-func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, pkgTemplate string, sources *unstructured.Unstructured, pkg *unstructured.Unstructured) error {
+func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, pkgTemplate string, sources *unstructured.Unstructured, pkg client.Object) error {
 	templateContext := packageloader.TemplateContext{
 		Config: sources.Object,
 	}
@@ -207,9 +221,22 @@ func (c *GenericObjectTemplateController) TemplatePackage(ctx context.Context, p
 		return fmt.Errorf("rendering packageFile: %w", err)
 	}
 
-	if err := yaml.Unmarshal(fileMap["package"], pkg); err != nil {
+	tmpPackage := &unstructured.Unstructured{
+		Object: map[string]interface{}{},
+	}
+
+	if err := yaml.Unmarshal(fileMap["package"], tmpPackage); err != nil {
 		return fmt.Errorf("unmarshalling yaml of rendered packageFile: %w", err)
 	}
+	pkgGVK, err := apiutil.GVKForObject(pkg, c.scheme)
+
+	if tmpPackage.Object["kind"] != pkgGVK.Kind {
+		return fmt.Errorf("template has kind %s, should be %s: %w", tmpPackage.Object["kind"], pkgGVK.Kind, err)
+	}
+	if err := yaml.Unmarshal(fileMap["package"], pkg); err != nil {
+		return fmt.Errorf("unmarshalling into package object: %w", err)
+	}
+
 	return nil
 }
 
@@ -217,9 +244,11 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 	mgr ctrl.Manager,
 ) error {
 	objectTemplate := c.newObjectTemplate(c.scheme).ClientObject()
+	pkg := c.newPackage(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
+		Owns(pkg).
 		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
 			OwnerType:    objectTemplate,
 			IsController: false,

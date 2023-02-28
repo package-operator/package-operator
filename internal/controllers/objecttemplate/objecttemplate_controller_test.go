@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"sigs.k8s.io/yaml"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,7 +28,7 @@ func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
 		deletionTimestamp *metav1.Time
 	}{
 		{
-			name: "Runs through",
+			name: "exists",
 		},
 		{
 			name:              "already deleted",
@@ -67,7 +69,7 @@ func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
 				}).
 				Return(nil).Once()
 
-			// getting unstructured package
+			// getting package
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once().Maybe()
 
@@ -184,6 +186,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// create genericObjectTemplate's and set source namespaces
 			var genericObjectTemplate genericObjectTemplate
 			if len(test.objectTemplate.Spec.Sources) > 0 {
 				for i := 0; i < len(test.objectTemplate.Spec.Sources); i++ {
@@ -258,14 +261,18 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 			packageFile: "package_template_by_key.yaml",
 		},
 		{
-			name:        "template with toJson",
+			name:        "template with toJSON",
+			packageFile: "package_template_to_json.yaml",
+		},
+		{
+			name:        "Mismatch objectTemplate and ClusterPackage",
 			packageFile: "package_template_to_json.yaml",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			controller, _, _ := newControllerAndMocks()
-			pkg := &unstructured.Unstructured{}
+			pkg := &corev1alpha1.Package{}
 			sources := &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"Database":      "asdf",
@@ -276,16 +283,26 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 			template, err := os.ReadFile(filepath.Join("test_files", test.packageFile))
 			require.NoError(t, err)
 			err = controller.TemplatePackage(context.TODO(), string(template), sources, pkg)
+
 			require.NoError(t, err)
 
 			for key, value := range sources.Object {
-				renderedValue, found, err := unstructured.NestedFieldCopy(pkg.Object, "spec", "config", key)
-				require.True(t, found)
-				require.NoError(t, err)
-				assert.Equal(t, renderedValue, value)
+				config := map[string]interface{}{}
+				require.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &config))
+				assert.Equal(t, value, config[key])
 			}
 		})
 	}
+}
+
+func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) {
+	controller, _, _ := newControllerAndMocks()
+	clusterPkg := &corev1alpha1.ClusterPackage{}
+	sources := &unstructured.Unstructured{}
+	template, err := os.ReadFile(filepath.Join("test_files", "package_template_to_json.yaml"))
+	require.NoError(t, err)
+	err = controller.TemplatePackage(context.TODO(), string(template), sources, clusterPkg)
+	assert.ErrorContains(t, err, "template has kind")
 }
 
 func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock) {
@@ -295,6 +312,7 @@ func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlCl
 
 	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newGenericObjectTemplate,
+		newPackage:        newGenericPackage,
 		client:            c,
 		log:               ctrl.Log.WithName("controllers"),
 		scheme:            scheme,
