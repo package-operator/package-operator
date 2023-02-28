@@ -26,7 +26,7 @@ func ValidatePackageConfiguration(
 		return nil, err
 	}
 
-	return validatePackageConfigurationBySchema(ctx, scheme, nonVersionedSchema, configuration, fldPath)
+	return validatePackageConfigurationBySchema(ctx, nonVersionedSchema, configuration, fldPath)
 }
 
 func AdmitPackageConfiguration(
@@ -60,7 +60,7 @@ func AdmitPackageConfiguration(
 
 	// validate configuration via schema.
 	ferrs, err := validatePackageConfigurationBySchema(
-		ctx, scheme, nonVersionedSchema, configuration, fldPath)
+		ctx, nonVersionedSchema, configuration, fldPath)
 	if err != nil {
 		return nil, err
 	}

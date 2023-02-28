@@ -74,7 +74,7 @@ func TestValidatePackageManifestLock(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			ferrs, err := packageadmission.ValidatePackageManifestLock(ctx, testScheme, test.manifest)
+			ferrs, err := packageadmission.ValidatePackageManifestLock(ctx, test.manifest)
 			require.NoError(t, err)
 			require.Len(t, ferrs, len(test.expectedErrors))
 

@@ -91,10 +91,7 @@ func (v TemplateTestValidator) runTestCase(
 		// no fixtures generated
 		// generate fixtures now
 		log.Info("no fixture found for test case, generating...", "name", testCase.Name)
-		if err := renderTemplateFiles(testFixturePath, fileMap); err != nil {
-			return err
-		}
-		return nil
+		return renderTemplateFiles(testFixturePath, fileMap)
 	}
 
 	actualPath, err := os.MkdirTemp(

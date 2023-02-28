@@ -57,7 +57,7 @@ func (v *ObjectPhaseAnnotationValidator) ValidatePackage(ctx context.Context, pa
 	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectPhaseAnnotationValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
 	if obj.GetAnnotations() == nil ||
 		len(obj.GetAnnotations()[manifestsv1alpha1.PackagePhaseAnnotation]) == 0 {
 		return packages.NewInvalidError(packages.Violation{
@@ -75,7 +75,7 @@ func (v *ObjectGVKValidator) ValidatePackage(ctx context.Context, packageContent
 	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectGVKValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectGVKValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
 	gvk := obj.GroupVersionKind()
 	// Don't validate Group, because an empty group is valid and indicates the kube core API group.
 	if len(gvk.Version) == 0 || len(gvk.Kind) == 0 {
@@ -94,7 +94,7 @@ func (v *ObjectLabelsValidator) ValidatePackage(ctx context.Context, packageCont
 	return ValidateEachObject(ctx, packageContent, v.validate)
 }
 
-func (*ObjectLabelsValidator) validate(ctx context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
 	errList := validation.ValidateLabels(
 		obj.GetLabels(), field.NewPath("metadata").Child("labels"))
 	if len(errList) > 0 {
@@ -110,7 +110,7 @@ func (*ObjectLabelsValidator) validate(ctx context.Context, path string, index i
 	return nil
 }
 
-func (scope PackageScopeValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
+func (scope PackageScopeValidator) ValidatePackage(_ context.Context, packageContent *packagecontent.Package) error {
 	if !utils.Contains(packageContent.PackageManifest.Spec.Scopes, manifestsv1alpha1.PackageManifestScope(scope)) {
 		// Package does not support installation in this scope.
 		return packages.NewInvalidError(packages.Violation{

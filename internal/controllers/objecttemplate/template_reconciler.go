@@ -206,7 +206,7 @@ func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha
 }
 
 func copySourceItems(
-	ctx context.Context, src []corev1alpha1.ObjectTemplateSourceItem,
+	_ context.Context, src []corev1alpha1.ObjectTemplateSourceItem,
 	sourceObj *unstructured.Unstructured, sourcesConfig map[string]interface{},
 ) error {
 	for _, item := range src {
@@ -269,7 +269,7 @@ func (r *templateReconciler) templateObject(
 	return nil
 }
 
-func updateStatusConditionsFromOwnedObject(ctx context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {
+func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {
 	statusObservedGeneration, ok, err := unstructured.NestedInt64(existingObj.Object, "status", "observedGeneration")
 	if err != nil {
 		return fmt.Errorf("getting status observedGeneration: %w", err)

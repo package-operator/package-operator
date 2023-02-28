@@ -3,14 +3,13 @@ package packageadmission
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/strings/slices"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-func ValidatePackageManifestLock(ctx context.Context, scheme *runtime.Scheme, obj *manifestsv1alpha1.PackageManifestLock) (field.ErrorList, error) {
+func ValidatePackageManifestLock(_ context.Context, obj *manifestsv1alpha1.PackageManifestLock) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	specImages := field.NewPath("spec").Child("images")

@@ -532,7 +532,7 @@ func validatePackageManifestConfig(ctx context.Context, scheme *runtime.Scheme, 
 	return allErrs
 }
 
-func validatePackageConfigurationBySchema(ctx context.Context, scheme *runtime.Scheme, schema *apiextensions.JSONSchemaProps, config map[string]interface{}, fldPath *field.Path) (field.ErrorList, error) {
+func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensions.JSONSchemaProps, config map[string]interface{}, fldPath *field.Path) (field.ErrorList, error) {
 	if schema == nil {
 		return nil, nil
 	}

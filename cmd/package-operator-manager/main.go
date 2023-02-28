@@ -154,7 +154,7 @@ func main() {
 			func(ctx context.Context) error {
 				// lazy create manager after boot strapper is finished,
 				// or the RESTMapper will not pick up the CRDs in the cluster.
-				mgr, err := setupManager(setupLog, scheme, opts)
+				mgr, err := setupManager(scheme, opts)
 				if err != nil {
 					return err
 				}
@@ -172,7 +172,7 @@ func main() {
 		return
 	}
 
-	mgr, err := setupManager(setupLog, scheme, opts)
+	mgr, err := setupManager(scheme, opts)
 	if err != nil {
 		setupLog.Error(err, "unable to setup manager")
 		os.Exit(1)
@@ -235,10 +235,7 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 		return err
 	}
 
-	if err := packageDeployer.Load(ctx, packageKey, files); err != nil {
-		return err
-	}
-	return nil
+	return packageDeployer.Load(ctx, packageKey, files)
 }
 
 func runManager(ctx context.Context, mgr ctrl.Manager, log logr.Logger) error {
@@ -253,7 +250,7 @@ func runManager(ctx context.Context, mgr ctrl.Manager, log logr.Logger) error {
 }
 
 //nolint:maintidx
-func setupManager(log logr.Logger, scheme *runtime.Scheme, opts opts) (ctrl.Manager, error) {
+func setupManager(scheme *runtime.Scheme, opts opts) (ctrl.Manager, error) {
 	controllerLog := ctrl.Log.WithName("controllers")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -301,8 +298,9 @@ func setupManager(log logr.Logger, scheme *runtime.Scheme, opts opts) (ctrl.Mana
 		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 			errCh := make(chan error)
 			defer func() {
+				//nolint:revive // drain errCh for GC
 				for range errCh {
-				} // drain errCh for GC
+				}
 			}()
 			go func() {
 				defer close(errCh)

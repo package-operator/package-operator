@@ -12,6 +12,7 @@ linters:
   #- exhaustruct      # Not that useful/false positives.
   #- forcetypeassert  # We want a panic in situations when a type is asserted.
   #- funlen           # We really like long functions.
+  #- gci              # Conflicts with other linters.
   #- gochecknoglobals # We need globals.
   #- gochecknoinits   # We have a lot of those.
   #- gocognit         # Not that useful/false positives.
@@ -26,9 +27,12 @@ linters:
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
   #- paralleltest     # Would be nice but we can't run all the integration tests in parallel and there is not a way to disable the linter for paths.
+  #- prealloc         # Could be nice in the future.
   #- rowserrcheck     # No SQL here not it does not work with generics.
   #- sqlclosecheck    # No SQL here not it does not work with generics.
+  #- tagliatelle      # Not that useful/false positives.
   #- testpackage      # Could be nice in the future.
+  #- unparam          # Could be nice in the future.
   #- varnamelen       # Not that useful/false positives.
   #- wastedassign     # Does not work with generics.
   #- wrapcheck        # Not that useful/false positives.

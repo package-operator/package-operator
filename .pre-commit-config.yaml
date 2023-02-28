@@ -30,7 +30,7 @@ repos:
   hooks:
   - id: lint
     name: lint
-    entry: ./mage test:lint
+    entry: ./mage test:fixlint
     language: system
     exclude: ".*"
     always_run: true

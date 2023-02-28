@@ -25,7 +25,7 @@ func NewClient() *CtrlClient {
 	}
 }
 
-func (c *CtrlClient) SubResource(subResource string) client.SubResourceClient { panic("nip") }
+func (c *CtrlClient) SubResource(string) client.SubResourceClient { panic("nip") }
 
 // StatusClient interface
 

@@ -63,9 +63,7 @@ func (wh *GenericObjectSetWebhookHandler[T]) decode(req admission.Request) (*T, 
 	return obj, nil
 }
 
-func (wh *GenericObjectSetWebhookHandler[T]) Handle(
-	ctx context.Context, req admission.Request,
-) admission.Response {
+func (wh *GenericObjectSetWebhookHandler[T]) Handle(_ context.Context, req admission.Request) admission.Response {
 	obj, err := wh.decode(req)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)

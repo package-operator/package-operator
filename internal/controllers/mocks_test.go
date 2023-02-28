@@ -72,7 +72,7 @@ type adoptionCheckerMock struct {
 func (m *adoptionCheckerMock) Check(
 	ctx context.Context, owner PhaseObjectOwner, obj client.Object, previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
-	args := m.Called(ctx, owner, obj)
+	args := m.Called(ctx, owner, obj, previous)
 	return args.Bool(0), args.Error(1)
 }
 
