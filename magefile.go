@@ -1104,7 +1104,11 @@ func (Generate) All() { mg.SerialDeps(Generate.code, Generate.docs, Generate.ins
 func (Generate) code() {
 	mg.Deps(Dependency.ControllerGen)
 
-	args := []string{"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...", "output:crd:artifacts:config=../config/crds"}
+	args := []string{
+		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true",
+		"paths={./core/...,./coordination/...}",
+		"output:crd:artifacts:config=../config/crds",
+	}
 	manifestsCmd := exec.Command("controller-gen", args...)
 	manifestsCmd.Dir = locations.APISubmodule()
 	manifestsCmd.Stdout = os.Stdout
@@ -1139,6 +1143,8 @@ func (Generate) docs() {
 	refPath := locations.APIReference()
 	// Move the hack script in here.
 	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/core/v1alpha1 > %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
+	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/coordination/v1alpha1 >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("k8s-docgen apis/manifests/v1alpha1 >> %s", refPath)))
 	must(sh.RunV("bash", "-c", fmt.Sprintf("echo >> %s", refPath)))

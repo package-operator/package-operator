@@ -957,6 +957,16 @@ References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to whi
 Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetStatus](#objectsetstatus)
+## coordination.package-operator.run/v1alpha1
+
+The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the coordination Package Operator API group,
+containing helper APIs to coordinate rollout into the cluster.
+
+
+
+
+
+---
 ## manifests.package-operator.run/v1alpha1
 
 The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
