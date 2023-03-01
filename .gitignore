@@ -18,3 +18,7 @@ bin
 
 # JetBrains IDEs (e.g. GoLand)
 .idea/
+
+# go.work.sum is a aggregated version of all go.sum files in the repo
+# ... and sometimes contains even more than the sum.
+go.work.sum
