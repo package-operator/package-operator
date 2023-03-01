@@ -1,5 +1,5 @@
 ## phase 1: CA certificates source
-FROM redhat/ubi9-minimal AS cert-source
+FROM registry.access.redhat.com/ubi9-minimal:latest AS cert-source
 # this eliminates symlinks for later COPY
 RUN cp -rL /etc/ssl/ /tmp
 
