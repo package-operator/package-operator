@@ -1,11 +1,8 @@
 apiVersion: package-operator.run/v1alpha1
-kind: Package
+kind: ClusterPackage
 metadata:
   name: test-stub
-  namespace: default
 spec:
   image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"
   config:
-    Database: {{ .config.Database }}
-    username1: {{ .config.username1 }}
-    auth_password: {{ .config.auth_password }}
+    {{ toJson .config }}

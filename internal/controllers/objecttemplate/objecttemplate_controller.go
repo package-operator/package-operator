@@ -55,7 +55,6 @@ func (e *PreflightError) Error() string {
 
 type GenericObjectTemplateController struct {
 	newObjectTemplate genericObjectTemplateFactory
-	newPackage        genericPackageFactory
 	log               logr.Logger
 	scheme            *runtime.Scheme
 	client            client.Client
@@ -75,7 +74,6 @@ func NewObjectTemplateController(
 		client:            client,
 		uncachedClient:    uncachedClient,
 		newObjectTemplate: newGenericObjectTemplate,
-		newPackage:        newGenericPackage,
 		log:               log,
 		scheme:            scheme,
 		dynamicCache:      dynamicCache,
@@ -95,7 +93,6 @@ func NewClusterObjectTemplateController(
 ) *GenericObjectTemplateController {
 	return &GenericObjectTemplateController{
 		newObjectTemplate: newGenericClusterObjectTemplate,
-		newPackage:        newGenericClusterPackage,
 		log:               log,
 		scheme:            scheme,
 		client:            client,
@@ -146,9 +143,8 @@ func (c *GenericObjectTemplateController) Reconcile(
 	if err := c.TemplateObject(ctx, objectTemplate, sources, obj); err != nil {
 		return ctrl.Result{}, err
 	}
-	existingObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{},
-	}
+	existingObj := &unstructured.Unstructured{}
+	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); err != nil {
 		if errors.IsNotFound(err) {
@@ -156,30 +152,24 @@ func (c *GenericObjectTemplateController) Reconcile(
 				return ctrl.Result{}, fmt.Errorf("handling creation: %w", err)
 			}
 		}
-		return ctrl.Result{}, fmt.Errorf("getting existing package: %w", err)
+		return ctrl.Result{}, fmt.Errorf("getting existing object: %w", err)
 	}
-	objectConds, found, err := unstructured.NestedSlice(existingObj.Object, "status", "conditions")
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("getting conditions from object: %w", err)
-	}
-	if found {
-		for _, cond := range objectConds {
-			condObj := cond.(metav1.Condition) // TODO: handle not ok?
-			meta.SetStatusCondition(objectTemplate.GetConditions(), condObj)
-		}
+	if err := c.updateStatusConditionsFromOwnedObject(ctx, objectTemplate, existingObj); err != nil {
+		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
 	return ctrl.Result{}, c.client.Patch(ctx, existingObj, client.MergeFrom(obj))
 }
 
-func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, owner, packageObject client.Object) error {
-	if err := controllerutil.SetControllerReference(owner, packageObject, c.scheme); err != nil {
+func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, owner, object client.Object) error {
+	if err := controllerutil.SetControllerReference(owner, object, c.scheme); err != nil {
 		return fmt.Errorf("setting owner reference: %w", err)
 	}
 
-	if err := c.client.Create(ctx, packageObject); err != nil {
-		return fmt.Errorf("creating Package: %w", err)
+	if err := c.client.Create(ctx, object); err != nil {
+		return fmt.Errorf("creating object: %w", err)
 	}
+
 	return nil
 }
 
@@ -189,17 +179,18 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		sourceObj.SetName(src.Name)
 		sourceObj.SetKind(src.Kind)
 		sourceObj.SetAPIVersion(src.APIVersion)
+		sourceObj.SetNamespace(src.Namespace)
 
-		// TODO: Should we move this to the namespace escilation part of the preflight checker?
-		switch {
-		case objectTemplate.ClientObject().GetNamespace() != "" && src.Namespace != "" && objectTemplate.ClientObject().GetNamespace() != src.Namespace:
-			return errors.NewBadRequest(fmt.Sprintf("source %s references namespace %s, which is different from objectTemplate's namespace %s", src.Name, src.Namespace, objectTemplate.ClientObject().GetNamespace()))
-		case objectTemplate.ClientObject().GetNamespace() != "":
+		violations, err := c.preflightChecker.CheckObj(ctx, objectTemplate.ClientObject(), sourceObj)
+		if err != nil {
+			return err
+		}
+		if len(violations) > 0 {
+			return &PreflightError{Violations: violations}
+		}
+
+		if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
 			sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
-		case src.Namespace != "":
-			sourceObj.SetNamespace(src.Namespace)
-		default:
-			return errors.NewBadRequest(fmt.Sprintf("neither the packageFile nor source object %s provides a namespace", sourceObj.GetName()))
 		}
 
 		if err := c.dynamicCache.Watch(
@@ -208,12 +199,12 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 		}
 
 		objectKey := client.ObjectKeyFromObject(sourceObj)
-		err := c.dynamicCache.Get(ctx, objectKey, sourceObj)
+		err = c.dynamicCache.Get(ctx, objectKey, sourceObj)
 		if errors.IsNotFound(err) {
 			// the referenced object might not be labeled correctly for the cache to pick up,
 			// fallback to an uncached read to discover.
 			if err := c.uncachedClient.Get(ctx, objectKey, sourceObj); err != nil {
-				return fmt.Errorf("source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
+				return fmt.Errorf("getting source object %s in namespace %s from uncachedClient: %w", objectKey.Name, objectKey.Namespace, err)
 			}
 
 			// Update object to ensure it is part of our cache and we get events to reconcile.
@@ -289,15 +280,52 @@ func (c *GenericObjectTemplateController) TemplateObject(ctx context.Context, ob
 	return nil
 }
 
+func (c *GenericObjectTemplateController) updateStatusConditionsFromOwnedObject(ctx context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {
+	objectConds, found, err := unstructured.NestedSlice(existingObj.Object, "status", "conditions")
+	if err != nil {
+		return fmt.Errorf("getting conditions from object: %w", err)
+	}
+
+	// TODO: Handle observed condition!
+	if found {
+		for _, cond := range objectConds {
+			condMap, _ := cond.(map[string]interface{}) // TODO: handle not ok?
+			if err != nil {
+				return fmt.Errorf("parsing lastTransitionTime: %w", err)
+			}
+
+			condObservedGeneration := condMap["observedGeneration"].(int64)
+			if existingObj.GetGeneration() != condObservedGeneration {
+				// condition is out of date, don't copy it over
+				continue
+			}
+
+			message := fmt.Sprintf("Owned %s: %s", existingObj.GroupVersionKind().Kind, condMap["message"].(string))
+
+			newCond := metav1.Condition{
+				Type:               condMap["type"].(string),
+				Status:             metav1.ConditionStatus(condMap["status"].(string)),
+				ObservedGeneration: objectTemplate.ClientObject().GetGeneration(),
+				Reason:             condMap["reason"].(string),
+				Message:            message,
+			}
+			meta.SetStatusCondition(objectTemplate.GetConditions(), newCond)
+		}
+
+		if err := c.client.Status().Update(ctx, objectTemplate.ClientObject()); err != nil {
+			return fmt.Errorf("updating objectTemplate status: %w", err)
+		}
+	}
+	return nil
+}
+
 func (c *GenericObjectTemplateController) SetupWithManager(
 	mgr ctrl.Manager,
 ) error {
 	objectTemplate := c.newObjectTemplate(c.scheme).ClientObject()
-	pkg := c.newPackage(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
-		Owns(pkg).
 		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
 			OwnerType:    objectTemplate,
 			IsController: false,

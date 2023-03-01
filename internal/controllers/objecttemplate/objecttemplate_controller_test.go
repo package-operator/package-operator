@@ -42,13 +42,14 @@ func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, dc, _ := newControllerAndMocks()
+			controller, c, dc, rm := newControllerAndMocks()
 
 			c.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+			rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeNamespace}, nil).Twice()
 
 			template, err := os.ReadFile("test_files/package_template_to_json.yaml")
 			require.NoError(t, err)
@@ -180,7 +181,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 			sourceNamespace: "wrong-namespace",
 		},
 		{
-			name:                  "ClusterObjectTemplate no namespace",
+			name:                  "cluster scoped owner, sources no namespace", // TODO: should this be an error? Doesn't break namespace escilation but no namespace provided
 			clusterObjectTemplate: rawClusterObjectTemplate,
 		},
 		{
@@ -205,7 +206,9 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				genericObjectTemplate = &GenericClusterObjectTemplate{test.clusterObjectTemplate}
 			}
 
-			controller, _, dc, _ := newControllerAndMocks()
+			controller, _, dc, rm := newControllerAndMocks()
+			rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeNamespace}, nil)
+
 			dc.On("Watch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			// getting the configMap
@@ -241,10 +244,6 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				return
 			}
 			if test.sourceNamespace == "wrong-namespace" {
-				assert.Error(t, err)
-				return
-			}
-			if len(test.clusterObjectTemplate.Spec.Sources) > 0 && test.sourceNamespace == "" {
 				assert.Error(t, err)
 				return
 			}
@@ -311,11 +310,11 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 }
 
 func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) {
-	controller, _, _, _ := newControllerAndMocks()
-	clusterPkg := &corev1alpha1.ClusterPackage{}
-	sources := &unstructured.Unstructured{}
+	controller, _, _, rm := newControllerAndMocks()
+	// clusterpackage is meta.RESTScopeRoot scoped
+	rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeRoot}, nil).Twice()
 
-	template, err := os.ReadFile(filepath.Join("test_files", "package_template_to_json.yaml"))
+	template, err := os.ReadFile(filepath.Join("test_files", "clusterpackage_template_to_json.yaml"))
 	require.NoError(t, err)
 	objectTemplate := &GenericObjectTemplate{
 		ObjectTemplate: corev1alpha1.ObjectTemplate{
@@ -327,8 +326,8 @@ func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) 
 			},
 		},
 	}
-	err = controller.TemplateObject(context.TODO(), objectTemplate, sources, clusterPkg)
-	assert.ErrorContains(t, err, "template has kind")
+	err = controller.TemplateObject(context.TODO(), objectTemplate, &unstructured.Unstructured{}, &unstructured.Unstructured{})
+	assert.ErrorContains(t, err, "Must be namespaced scoped when part of an non-cluster-scoped API")
 }
 
 func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock, *restmappermock.RestMapperMock) {
@@ -339,7 +338,6 @@ func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlCl
 
 	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newGenericObjectTemplate,
-		newPackage:        newGenericPackage,
 		client:            c,
 		log:               ctrl.Log.WithName("controllers"),
 		scheme:            scheme,
