@@ -1,14 +1,14 @@
 ## phase 1: CA certificates source
-FROM quay.io/fedora/fedora:latest AS cert-source
+FROM registry.access.redhat.com/ubi9-minimal:latest AS cert-source
 # this eliminates symlinks for later COPY
-RUN cp -rL /etc/ssl/ /tmp
+RUN cp -rL /etc/pki/ca-trust/extracted/pem/ /tmp
 
 ## phase 2: actual image from scratch
 FROM scratch
 
 WORKDIR /
 
-COPY --from=cert-source /tmp/ssl/ /etc/ssl/
+COPY --from=cert-source /tmp/pem/ /etc/pki/ca-trust/extracted/pem/
 COPY passwd /etc/passwd
 COPY remote-phase-manager /
 
