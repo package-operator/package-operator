@@ -962,11 +962,200 @@ Used in:
 The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the coordination Package Operator API group,
 containing helper APIs to coordinate rollout into the cluster.
 
+* [ClusterHandover](#clusterhandover)
+
+
+### ClusterHandover
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: coordination.package-operator.run/v1alpha1
+kind: ClusterHandover
+metadata:
+  name: example
+spec:
+  availabilityProbes:
+  - corev1alpha1.Probe
+  strategy:
+    relabel:
+      initialValue: ipsum
+      labelKey: lorem
+      maxUnavailable: 1
+      observedLabelValuePath: sit
+      toValue: dolor
+    type: Relabel
+  targetAPI:
+    group: amet
+    kind: sadipscing
+    version: consetetur
+status:
+  phase: Pending
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#clusterhandoverspec">ClusterHandoverSpec</a> |  |
+| `status` <br><a href="#clusterhandoverstatus">ClusterHandoverStatus</a> | ClusterHandoverStatus defines the observed state of a Package. |
 
 
 
 
 ---
+
+### ClusterHandoverSpec
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `strategy` <b>required</b><br><a href="#handoverstrategy">HandoverStrategy</a> | Strategy to use when handing over objects between operators. |
+| `targetAPI` <b>required</b><br><a href="#targetapi">TargetAPI</a> | TargetAPI to use for handover. |
+| `availabilityProbes` <b>required</b><br>[]corev1alpha1.Probe | Probes to check selected objects for availability. |
+
+
+Used in:
+* [ClusterHandover](#clusterhandover)
+
+
+### ClusterHandoverStatus
+
+ClusterHandoverStatus defines the observed state of a Package.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#handoverstatusphase">HandoverStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `total` <br><a href="#handovercountsstatus">HandoverCountsStatus</a> | Total count of objects found. |
+| `partitions` <br><a href="#handoverpartitionstatus">[]HandoverPartitionStatus</a> | Count of objects found by partition. |
+| `processing` <br><a href="#handoverrefstatus">[]HandoverRefStatus</a> | Processing set of objects during handover. |
+
+
+Used in:
+* [ClusterHandover](#clusterhandover)
+
+
+### HandoverCountsStatus
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `found` <b>required</b><br><a href="#int32">int32</a> |  |
+| `available` <b>required</b><br><a href="#int32">int32</a> |  |
+| `updated` <b>required</b><br><a href="#int32">int32</a> |  |
+
+
+Used in:
+* [ClusterHandoverStatus](#clusterhandoverstatus)
+
+
+### HandoverPartitionStatus
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name of the partition this status belongs to. |
+| `found` <b>required</b><br><a href="#int32">int32</a> |  |
+| `available` <b>required</b><br><a href="#int32">int32</a> |  |
+| `updated` <b>required</b><br><a href="#int32">int32</a> |  |
+
+
+Used in:
+* [ClusterHandoverStatus](#clusterhandoverstatus)
+
+
+### HandoverRefStatus
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `uid` <b>required</b><br>types.UID |  |
+| `name` <b>required</b><br>string |  |
+| `namespace` <br>string |  |
+
+
+Used in:
+* [ClusterHandoverStatus](#clusterhandoverstatus)
+
+
+### HandoverStrategy
+
+HandoverStrategy defines the strategy to handover objects.
+
+| Field | Description |
+| ----- | ----------- |
+| `type` <b>required</b><br><a href="#handoverstrategytype">HandoverStrategyType</a> | Type of handover strategy. Can be "Relabel". |
+| `relabel` <br><a href="#handoverstrategyrelabelspec">HandoverStrategyRelabelSpec</a> | Relabel handover strategy configuration.<br>Only present when type=Relabel. |
+
+
+Used in:
+* [ClusterHandoverSpec](#clusterhandoverspec)
+
+
+### HandoverStrategyRelabelSpec
+
+Relabel handover strategy definition.
+
+| Field | Description |
+| ----- | ----------- |
+| `labelKey` <b>required</b><br>string | LabelKey defines the labelKey to change the value of. |
+| `initialValue` <b>required</b><br>string | InitialValue defines the initial value of the label to search for. |
+| `toValue` <b>required</b><br>string | ToValue defines the desired value of the label after handover. |
+| `observedLabelValuePath` <b>required</b><br>string | Status path to validate that the new operator has taken over the object.<br>Must point to a field in the object that mirrors the value of .labelKey as seen by the operator. |
+| `maxUnavailable` <b>required</b><br>int | MaxUnavailable defines how many objects may become unavailable due to the handover at the same time.<br>Cannot be below 1, because we cannot surge while relabling to create more instances. |
+
+
+Used in:
+* [HandoverStrategy](#handoverstrategy)
+
+
+### PartitionOrderingSpec
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `type` <b>required</b><br><a href="#handoverstrategytype">HandoverStrategyType</a> | Type of handover strategy. Can be Numeric,AlphaNumeric,Static. |
+| `static` <br>[]string | Static list of partitions in order.<br>Every label value not listed explicitly,<br>will be appended to the end of the list in AlphaNumeric order. |
+
+
+Used in:
+
+
+### PartitionSpec
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `labelKey` <b>required</b><br>string | LabelKey defines a labelKey to group objects on. |
+
+
+Used in:
+
+
+### TargetAPI
+
+TargetAPI specifis an API to use for operations.
+
+| Field | Description |
+| ----- | ----------- |
+| `group` <b>required</b><br>string |  |
+| `version` <b>required</b><br>string |  |
+| `kind` <b>required</b><br>string |  |
+
+
+Used in:
+* [ClusterHandoverSpec](#clusterhandoverspec)
 ## manifests.package-operator.run/v1alpha1
 
 The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,

@@ -1,0 +1,286 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.2
+  creationTimestamp: null
+  name: clusterhandovers.coordination.package-operator.run
+spec:
+  group: coordination.package-operator.run
+  names:
+    kind: ClusterHandover
+    listKind: ClusterHandoverList
+    plural: clusterhandovers
+    singular: clusterhandover
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              availabilityProbes:
+                description: Probes to check selected objects for availability.
+                items:
+                  description: Defines probe parameters. Only one can be filled.
+                  properties:
+                    condition:
+                      description: Checks whether or not the object reports a condition
+                        with given type and status.
+                      properties:
+                        status:
+                          default: "True"
+                          description: Condition status to probe for.
+                          type: string
+                        type:
+                          description: Condition type to probe for.
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    fieldsEqual:
+                      description: Compares two fields specified by JSON Paths.
+                      properties:
+                        fieldA:
+                          description: First field for comparison.
+                          type: string
+                        fieldB:
+                          description: Second field for comparison.
+                          type: string
+                      required:
+                      - fieldA
+                      - fieldB
+                      type: object
+                  type: object
+                type: array
+              strategy:
+                description: Strategy to use when handing over objects between operators.
+                properties:
+                  relabel:
+                    description: Relabel handover strategy configuration. Only present
+                      when type=Relabel.
+                    properties:
+                      initialValue:
+                        description: InitialValue defines the initial value of the
+                          label to search for.
+                        minLength: 1
+                        type: string
+                      labelKey:
+                        description: LabelKey defines the labelKey to change the value
+                          of.
+                        minLength: 1
+                        type: string
+                      maxUnavailable:
+                        default: 1
+                        description: MaxUnavailable defines how many objects may become
+                          unavailable due to the handover at the same time. Cannot
+                          be below 1, because we cannot surge while relabling to create
+                          more instances.
+                        minimum: 1
+                        type: integer
+                      observedLabelValuePath:
+                        description: Status path to validate that the new operator
+                          has taken over the object. Must point to a field in the
+                          object that mirrors the value of .labelKey as seen by the
+                          operator.
+                        type: string
+                      toValue:
+                        description: ToValue defines the desired value of the label
+                          after handover.
+                        minLength: 1
+                        type: string
+                    required:
+                    - initialValue
+                    - labelKey
+                    - maxUnavailable
+                    - observedLabelValuePath
+                    - toValue
+                    type: object
+                  type:
+                    default: Relabel
+                    description: Type of handover strategy. Can be "Relabel".
+                    enum:
+                    - Relabel
+                    type: string
+                required:
+                - type
+                type: object
+              targetAPI:
+                description: TargetAPI to use for handover.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - group
+                - kind
+                - version
+                type: object
+            required:
+            - availabilityProbes
+            - strategy
+            - targetAPI
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: ClusterHandoverStatus defines the observed state of a Package.
+            properties:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              partitions:
+                description: Count of objects found by partition.
+                items:
+                  properties:
+                    available:
+                      format: int32
+                      type: integer
+                    found:
+                      format: int32
+                      type: integer
+                    name:
+                      description: Name of the partition this status belongs to.
+                      type: string
+                    updated:
+                      format: int32
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
+              processing:
+                description: Processing set of objects during handover.
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    uid:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - name
+                  - uid
+                  type: object
+                type: array
+              total:
+                description: Total count of objects found.
+                properties:
+                  available:
+                    format: int32
+                    type: integer
+                  found:
+                    format: int32
+                    type: integer
+                  updated:
+                    format: int32
+                    type: integer
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
