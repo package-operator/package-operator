@@ -8,9 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/package-operator/internal/controllers"
@@ -76,7 +74,7 @@ func (c *GenericHandoverController) SetupWithManager(mgr ctrl.Manager) error {
 	handover := c.newHandover(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(handover, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
+		For(handover).
 		Watches(
 			c.dynamicCache.Source(),
 			&dynamiccache.EnqueueWatchingObjects{

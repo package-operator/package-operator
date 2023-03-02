@@ -117,10 +117,13 @@ func (r *relabelReconciler) Reconcile(
 			newObjs := groups[0]
 			oldObjs := groups[1]
 
-			partitionStats = append(partitionStats, coordinationv1alpha1.HandoverPartitionStatus{
-				Name:                 partitionLabelValues[i],
-				HandoverCountsStatus: countObjectStatus(pg, probe, newObjs),
-			})
+			pgStats := countObjectStatus(pg, probe, newObjs)
+			if pgStats.Found != 0 {
+				partitionStats = append(partitionStats, coordinationv1alpha1.HandoverPartitionStatus{
+					Name:                 partitionLabelValues[i],
+					HandoverCountsStatus: pgStats,
+				})
+			}
 
 			// fill processing queue with items from this partition.
 			fillProcessingQueue(handover, oldObjs, relabelSpec.MaxUnavailable, unavailable)
@@ -132,7 +135,7 @@ func (r *relabelReconciler) Reconcile(
 
 	// report stats
 	handover.SetStats(totalStats, partitionStats)
-	if totalStats.Found == totalStats.Updated {
+	if len(handover.GetProcessing()) == 0 {
 		meta.SetStatusCondition(handover.GetConditions(), metav1.Condition{
 			Type:               coordinationv1alpha1.HandoverCompleted,
 			Status:             metav1.ConditionTrue,
@@ -292,7 +295,7 @@ func fillProcessingQueue(
 			coordinationv1alpha1.HandoverRefStatus{
 				UID:       obj.GetUID(),
 				Name:      obj.GetName(),
-				Namespace: handover.ClientObject().GetNamespace(),
+				Namespace: obj.GetNamespace(),
 			})
 	}
 	handover.SetProcessing(processing)
