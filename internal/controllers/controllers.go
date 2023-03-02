@@ -8,12 +8,15 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	coordinationv1alpha1 "package-operator.run/apis/coordination/v1alpha1"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
@@ -165,4 +168,29 @@ func DeleteMappedConditions(ctx context.Context, conditions *[]metav1.Condition)
 			meta.RemoveStatusCondition(conditions, cond.Type)
 		}
 	}
+}
+
+// builds unstructured objects from a TargetAPI object.
+func UnstructuredFromTargetAPI(targetAPI coordinationv1alpha1.TargetAPI) (
+	gvk schema.GroupVersionKind,
+	objType *unstructured.Unstructured,
+	objListType *unstructured.UnstructuredList,
+) {
+	gvk = schema.GroupVersionKind{
+		Group:   targetAPI.Group,
+		Version: targetAPI.Version,
+		Kind:    targetAPI.Kind,
+	}
+
+	objType = &unstructured.Unstructured{}
+	objType.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   targetAPI.Group,
+		Version: targetAPI.Version,
+		Kind:    targetAPI.Kind,
+	})
+
+	objListType = &unstructured.UnstructuredList{}
+	objListType.SetGroupVersionKind(gvk)
+	objListType.SetKind(gvk.Kind + "List")
+	return
 }

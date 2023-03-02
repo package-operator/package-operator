@@ -27,6 +27,8 @@ type ClusterHandoverSpec struct {
 	TargetAPI TargetAPI `json:"targetAPI"`
 	// Probes to check selected objects for availability.
 	AvailabilityProbes []corev1alpha1.Probe `json:"availabilityProbes"`
+	// Partition to group objects into.
+	Partition *PartitionSpec `json:"partition,omitempty"`
 }
 
 // HandoverStrategy defines the strategy to handover objects.
@@ -83,19 +85,28 @@ type TargetAPI struct {
 type PartitionSpec struct {
 	// LabelKey defines a labelKey to group objects on.
 	// +kubebuilder:validation:MinLength=1
-	LabelKey string `json:"labelKey"`
+	LabelKey string             `json:"labelKey"`
+	Order    PartitionOrderSpec `json:"order"`
 }
 
-type PartitionOrderingSpec struct {
+type PartitionOrderSpec struct {
 	// Type of handover strategy. Can be Numeric,AlphaNumeric,Static.
 	// +kubebuilder:default=Static
 	// +kubebuilder:validation:Enum={"Static"}
-	Type HandoverStrategyType `json:"type"`
+	Type HandoverPartitionOrderType `json:"type"`
 	// Static list of partitions in order.
 	// Every label value not listed explicitly,
 	// will be appended to the end of the list in AlphaNumeric order.
 	Static []string `json:"static,omitempty"`
 }
+
+type HandoverPartitionOrderType string
+
+const (
+	HandoverPartitionOrderStatic       HandoverPartitionOrderType = "Static"
+	HandoverPartitionOrderAlphaNumeric HandoverPartitionOrderType = "AlphaNumeric"
+	HandoverPartitionOrderNumeric      HandoverPartitionOrderType = "Numeric"
+)
 
 // ClusterHandoverStatus defines the observed state of a Package.
 type ClusterHandoverStatus struct {
@@ -122,12 +133,12 @@ const (
 
 type HandoverStatusPhase string
 
-// Well-known Package Phases for printing a Status in kubectl,
-// see deprecation notice in PackageStatus for details.
+// Well-known Handover Phases for printing a Status in kubectl,
+// see deprecation notice in HandoverStatus for details.
 const (
-	PackagePhasePending     HandoverStatusPhase = "Pending"
-	PackagePhaseProgressing HandoverStatusPhase = "Progressing"
-	PackagePhaseUnpacking   HandoverStatusPhase = "Completed"
+	HandoverPhasePending     HandoverStatusPhase = "Pending"
+	HandoverPhaseProgressing HandoverStatusPhase = "Progressing"
+	HandoverPhaseCompleted   HandoverStatusPhase = "Completed"
 )
 
 type HandoverPartitionStatus struct {

@@ -33,6 +33,7 @@ import (
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/controllers/handovers"
 	"package-operator.run/package-operator/internal/controllers/hostedclusters"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
@@ -378,6 +379,16 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+	}
+
+	// ClusterHandover
+	// DynamicCache that is not constrained by the DynamicCache label.
+	unconstrainedDynamicCache := dynamiccache.NewCache(
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder)
+	if err = handovers.NewClusterHandoverController(
+		mgr.GetClient(), controllerLog.WithName("ClusterHandover"), unconstrainedDynamicCache, mgr.GetScheme(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterHandover: %w", err)
 	}
 
 	// Probe for HyperShift API

@@ -980,6 +980,12 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.Probe
+  partition:
+    labelKey: elitr
+    order:
+      static:
+      - sed
+      type: Static
   strategy:
     relabel:
       initialValue: ipsum
@@ -1018,6 +1024,7 @@ status:
 | `strategy` <b>required</b><br><a href="#handoverstrategy">HandoverStrategy</a> | Strategy to use when handing over objects between operators. |
 | `targetAPI` <b>required</b><br><a href="#targetapi">TargetAPI</a> | TargetAPI to use for handover. |
 | `availabilityProbes` <b>required</b><br>[]corev1alpha1.Probe | Probes to check selected objects for availability. |
+| `partition` <br><a href="#partitionspec">PartitionSpec</a> | Partition to group objects into. |
 
 
 Used in:
@@ -1118,17 +1125,18 @@ Used in:
 * [HandoverStrategy](#handoverstrategy)
 
 
-### PartitionOrderingSpec
+### PartitionOrderSpec
 
 
 
 | Field | Description |
 | ----- | ----------- |
-| `type` <b>required</b><br><a href="#handoverstrategytype">HandoverStrategyType</a> | Type of handover strategy. Can be Numeric,AlphaNumeric,Static. |
+| `type` <b>required</b><br><a href="#handoverpartitionordertype">HandoverPartitionOrderType</a> | Type of handover strategy. Can be Numeric,AlphaNumeric,Static. |
 | `static` <br>[]string | Static list of partitions in order.<br>Every label value not listed explicitly,<br>will be appended to the end of the list in AlphaNumeric order. |
 
 
 Used in:
+* [PartitionSpec](#partitionspec)
 
 
 ### PartitionSpec
@@ -1138,9 +1146,11 @@ Used in:
 | Field | Description |
 | ----- | ----------- |
 | `labelKey` <b>required</b><br>string | LabelKey defines a labelKey to group objects on. |
+| `order` <b>required</b><br><a href="#partitionorderspec">PartitionOrderSpec</a> |  |
 
 
 Used in:
+* [ClusterHandoverSpec](#clusterhandoverspec)
 
 
 ### TargetAPI

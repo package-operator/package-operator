@@ -79,6 +79,35 @@ spec:
                       type: object
                   type: object
                 type: array
+              partition:
+                description: Partition to group objects into.
+                properties:
+                  labelKey:
+                    description: LabelKey defines a labelKey to group objects on.
+                    minLength: 1
+                    type: string
+                  order:
+                    properties:
+                      static:
+                        description: Static list of partitions in order. Every label
+                          value not listed explicitly, will be appended to the end
+                          of the list in AlphaNumeric order.
+                        items:
+                          type: string
+                        type: array
+                      type:
+                        default: Static
+                        description: Type of handover strategy. Can be Numeric,AlphaNumeric,Static.
+                        enum:
+                        - Static
+                        type: string
+                    required:
+                    - type
+                    type: object
+                required:
+                - labelKey
+                - order
+                type: object
               strategy:
                 description: Strategy to use when handing over objects between operators.
                 properties:
