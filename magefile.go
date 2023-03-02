@@ -1021,7 +1021,7 @@ func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
 	// Create a new secret for the kubeconfig
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "admin-kubeconfig",
+			Name:      "service-network-admin-kubeconfig",
 			Namespace: "default",
 		},
 		Data: map[string][]byte{

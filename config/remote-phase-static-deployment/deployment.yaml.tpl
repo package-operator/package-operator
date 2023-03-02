@@ -19,7 +19,7 @@ spec:
       volumes:
       - name: kubeconfig
         secret:
-          secretName: admin-kubeconfig
+          secretName: service-network-admin-kubeconfig
           optional: false
       containers:
       - name: manager

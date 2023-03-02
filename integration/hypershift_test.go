@@ -56,15 +56,15 @@ func TestHyperShift(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, ns)
 
-	// copy admin-kubeconfig from default namespace
+	// copy service-network-admin-kubeconfig from default namespace
 	defaultSecret := &corev1.Secret{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name:      "admin-kubeconfig",
+		Name:      "service-network-admin-kubeconfig",
 		Namespace: "default",
 	}, defaultSecret))
 	hcSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "admin-kubeconfig",
+			Name:      "service-network-admin-kubeconfig",
 			Namespace: ns.Name,
 		},
 		Data: defaultSecret.Data,
