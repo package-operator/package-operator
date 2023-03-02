@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -42,7 +43,7 @@ func TestGenericObjectTemplateController_Reconcile(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, c, dc, rm := newControllerAndMocks()
+			controller, c, dc, rm := newControllerAndMocks(t)
 
 			c.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -121,92 +122,60 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 		},
 	}
 
-	rawObjectTemplate := corev1alpha1.ObjectTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "right-namespace",
-		},
-		Spec: corev1alpha1.ObjectTemplateSpec{
-			Sources: []corev1alpha1.ObjectTemplateSource{
-				cmSource,
-				secretSource,
-			},
-		},
-	}
-
-	duplicateDestinationRawObjectTemplate := corev1alpha1.ObjectTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "right-namespace",
-		},
-		Spec: corev1alpha1.ObjectTemplateSpec{
-			Sources: []corev1alpha1.ObjectTemplateSource{
-				cmSource,
-				cmSource,
-			},
-		},
-	}
-
-	rawClusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
-		Spec: corev1alpha1.ObjectTemplateSpec{
-			Sources: []corev1alpha1.ObjectTemplateSource{
-				cmSource,
-				secretSource,
-			},
-		},
-	}
-
 	tests := []struct {
-		name                  string
-		objectTemplate        corev1alpha1.ObjectTemplate
-		clusterObjectTemplate corev1alpha1.ClusterObjectTemplate
-		sourceNamespace       string
-		duplicateDestination  bool
+		name                    string
+		source1                 corev1alpha1.ObjectTemplateSource
+		source2                 corev1alpha1.ObjectTemplateSource
+		sourceNamespace         string
+		objectTemplateNamespace string
+		isObjectTemplate        bool
+		isClusterObjectTemplate bool
 	}{
 		{
-			name:           "ObjectTemplate no namespace",
-			objectTemplate: rawObjectTemplate,
+			name:             "ObjectTemplate no namespace",
+			isObjectTemplate: true,
 		},
 		{
-			name:                 "ObjectTemplate duplicate destination",
-			objectTemplate:       duplicateDestinationRawObjectTemplate,
-			duplicateDestination: true,
+			name:    "ObjectTemplate duplicate destination source",
+			source1: cmSource,
+			source2: cmSource,
 		},
 		{
-			name:            "ObjectTemplate matching namespace",
-			objectTemplate:  rawObjectTemplate,
-			sourceNamespace: "right-namespace",
+			name:                    "ObjectTemplate matching namespace",
+			isObjectTemplate:        true,
+			source1:                 cmSource,
+			source2:                 secretSource,
+			objectTemplateNamespace: "right-namespace",
+			sourceNamespace:         "right-namespace",
 		},
 		{
-			name:            "ObjectTemplate not matching namespace",
-			objectTemplate:  rawObjectTemplate,
-			sourceNamespace: "wrong-namespace",
+			name:                    "ObjectTemplate not matching namespace",
+			isObjectTemplate:        true,
+			source1:                 cmSource,
+			source2:                 secretSource,
+			objectTemplateNamespace: "right-namespace",
+			sourceNamespace:         "wrong-namespace",
 		},
 		{
-			name:                  "cluster scoped owner, sources no namespace", // TODO: should this be an error? Doesn't break namespace escilation but no namespace provided
-			clusterObjectTemplate: rawClusterObjectTemplate,
+			name:                    "cluster scoped owner, sources no namespace",
+			isClusterObjectTemplate: true,
+			source1:                 cmSource,
+			source2:                 secretSource,
 		},
 		{
-			name:                  "ClusterObjectTemplate namespace",
-			clusterObjectTemplate: rawClusterObjectTemplate,
-			sourceNamespace:       "random-namespace",
+			name:                    "ClusterObjectTemplate namespace",
+			isClusterObjectTemplate: true,
+			sourceNamespace:         "random-namespace",
+			source1:                 cmSource,
+			source2:                 secretSource,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// create genericObjectTemplate's and set source namespaces
-			var genericObjectTemplate genericObjectTemplate
-			if len(test.objectTemplate.Spec.Sources) > 0 {
-				for i := 0; i < len(test.objectTemplate.Spec.Sources); i++ {
-					test.objectTemplate.Spec.Sources[i].Namespace = test.sourceNamespace
-				}
-				genericObjectTemplate = &GenericObjectTemplate{test.objectTemplate}
-			} else if len(test.clusterObjectTemplate.Spec.Sources) > 0 {
-				for i := 0; i < len(test.clusterObjectTemplate.Spec.Sources); i++ {
-					test.clusterObjectTemplate.Spec.Sources[i].Namespace = test.sourceNamespace
-				}
-				genericObjectTemplate = &GenericClusterObjectTemplate{test.clusterObjectTemplate}
-			}
+			genericObjectTemplate := createGenericObjectTemplate(t, test.isObjectTemplate, test.source1, test.source2, test.objectTemplateNamespace, test.sourceNamespace)
 
-			controller, _, dc, rm := newControllerAndMocks()
+			controller, _, dc, rm := newControllerAndMocks(t)
 			rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeNamespace}, nil)
 
 			dc.On("Watch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -239,7 +208,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				Object: map[string]interface{}{},
 			}
 			err := controller.GetValuesFromSources(context.TODO(), genericObjectTemplate, sources)
-			if test.duplicateDestination {
+			if reflect.DeepEqual(test.source1, test.source2) {
 				assert.Error(t, err)
 				return
 			}
@@ -247,12 +216,48 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
+			if test.isClusterObjectTemplate && len(test.sourceNamespace) == 0 {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, "Object doesn't have a namepsace and no default is provided.")
+				return
+			}
+
 			require.NoError(t, err)
 			dc.AssertNumberOfCalls(t, "Watch", 2)
 			assert.Equal(t, sources.Object[cmDestination], cmValue)
 			assert.Equal(t, sources.Object[secretDestination], secretValue)
 		})
 	}
+}
+
+func createGenericObjectTemplate(t *testing.T, isObjectTemplate bool, source1, source2 corev1alpha1.ObjectTemplateSource, objectTemplateNamespace, sourceNamespace string) genericObjectTemplate {
+	t.Helper()
+	source1.Namespace = sourceNamespace
+	source2.Namespace = sourceNamespace
+	if isObjectTemplate {
+		objectTemplate := corev1alpha1.ObjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: objectTemplateNamespace,
+			},
+			Spec: corev1alpha1.ObjectTemplateSpec{
+				Sources: []corev1alpha1.ObjectTemplateSource{
+					source1,
+					source2,
+				},
+			},
+		}
+		return &GenericObjectTemplate{objectTemplate}
+	}
+
+	clusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				source1,
+				source2,
+			},
+		},
+	}
+	return &GenericClusterObjectTemplate{clusterObjectTemplate}
 }
 
 func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
@@ -271,7 +276,7 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			controller, _, _, rm := newControllerAndMocks()
+			controller, _, _, rm := newControllerAndMocks(t)
 			rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeNamespace}, nil).Twice()
 			template, err := os.ReadFile(filepath.Join("test_files", test.packageFile))
 			require.NoError(t, err)
@@ -310,7 +315,7 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 }
 
 func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) {
-	controller, _, _, rm := newControllerAndMocks()
+	controller, _, _, rm := newControllerAndMocks(t)
 	// clusterpackage is meta.RESTScopeRoot scoped
 	rm.On("RESTMapping").Return(&meta.RESTMapping{Scope: meta.RESTScopeRoot}, nil).Twice()
 
@@ -330,7 +335,8 @@ func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) 
 	assert.ErrorContains(t, err, "Must be namespaced scoped when part of an non-cluster-scoped API")
 }
 
-func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock, *restmappermock.RestMapperMock) {
+func newControllerAndMocks(t *testing.T) (*GenericObjectTemplateController, *testutil.CtrlClient, *dynamiccachemocks.DynamicCacheMock, *restmappermock.RestMapperMock) {
+	t.Helper()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	dc := &dynamiccachemocks.DynamicCacheMock{}
@@ -344,6 +350,7 @@ func newControllerAndMocks() (*GenericObjectTemplateController, *testutil.CtrlCl
 		dynamicCache:      dc,
 		preflightChecker: preflight.List{
 			preflight.NewAPIExistence(rm),
+			preflight.NewEmptyNamespaceNoDefault(rm),
 			preflight.NewNamespaceEscalation(rm),
 		},
 	}

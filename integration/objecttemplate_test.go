@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+
 	"github.com/mt-sre/devkube/dev"
 	"sigs.k8s.io/yaml"
 
@@ -21,6 +23,8 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
+
+var defaultNamespace = "default"
 
 func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm1Key := "database"
@@ -48,7 +52,7 @@ spec:
 	objectTemplate := corev1alpha1.ObjectTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      objectTemplateName,
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 		Spec: corev1alpha1.ObjectTemplateSpec{
 			Template: template,
@@ -82,6 +86,45 @@ spec:
 		},
 	}
 
+	deploymentTemplate := fmt.Sprintf(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: default
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        env:
+          - name: %s
+            value: {{ .config.%s }}
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80`, cm1Destination, cm1Destination)
+	deploymentObjectTemplateName := "deployment-object-template"
+	deploymentObjectTemplate := corev1alpha1.ObjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentObjectTemplateName,
+			Namespace: defaultNamespace,
+		},
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Template: deploymentTemplate,
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				cm1Source,
+			},
+		},
+	}
+
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	err := Client.Create(ctx, &cm1)
 	require.NoError(t, err)
@@ -92,43 +135,58 @@ spec:
 	defer cleanupOnSuccess(ctx, t, &cm2)
 	err = Client.Create(ctx, &objectTemplate)
 	require.NoError(t, err)
-	// defer cleanupOnSuccess(ctx, t, &objectTemplate)
+	defer cleanupOnSuccess(ctx, t, &objectTemplate)
 
+	// Test ClusterPackage
 	pkg := &corev1alpha1.Package{}
 	pkg.Name = "test-stub"
-	pkg.Namespace = "default"
+	pkg.Namespace = defaultNamespace
+	// TODO: change these to read the status of the objectTemplate
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
 		}, dev.WithTimeout(5*time.Second)))
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: "test-stub", Namespace: "default",
-	}, pkg))
+	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]interface{}{}
 
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
 
+	// Test ClusterPackage
 	err = Client.Create(ctx, &clusterObjectTemplate)
 	defer cleanupOnSuccess(ctx, t, &clusterObjectTemplate)
-
 	require.NoError(t, err)
 	clusterPkg := &corev1alpha1.ClusterPackage{}
 	clusterPkg.Name = "cluster-test-stub"
+	// TODO: change these to read the status of the objectTemplate
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
 		}, dev.WithTimeout(5*time.Second)))
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: "cluster-test-stub",
-	}, clusterPkg))
+	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
 	clusterPackageConfig := map[string]interface{}{}
 	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
 	assert.Equal(t, cm1Value, clusterPackageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
+
+	// Test Deployment
+	err = Client.Create(ctx, &deploymentObjectTemplate)
+	defer cleanupOnSuccess(ctx, t, &deploymentObjectTemplate)
+	require.NoError(t, err)
+	deployment := &appsv1.Deployment{}
+	deployment.Name = "nginx-deployment"
+	deployment.Namespace = defaultNamespace
+	// TODO: change these to read the status of the objectTemplate
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(5*time.Second)))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment))
+	envVar := deployment.Spec.Template.Spec.Containers[0].Env[0]
+	assert.Equal(t, cm1Value, envVar.Value)
 }
 
 func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (v1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
@@ -139,7 +197,7 @@ func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName strin
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cmName,
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 		Data: map[string]string{
 			cmKey: cmValue,
@@ -149,7 +207,7 @@ func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName strin
 		APIVersion: "v1",
 		Kind:       "ConfigMap",
 		Name:       cmName,
-		Namespace:  "default",
+		Namespace:  defaultNamespace,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
 				Key:         "data." + cmKey,
@@ -173,7 +231,7 @@ func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 		Type: v1.SecretTypeOpaque,
 		StringData: map[string]string{
@@ -204,13 +262,13 @@ spec:
   image: %s
   config:
     testStubImage: %s
-    %s: {{ b64dec .config.password }}`, packageName, SuccessTestPackageImage, TestStubImage, secretDestination)
+    %s: {{ b64dec .config.%s }}`, packageName, SuccessTestPackageImage, TestStubImage, secretDestination, secretDestination)
 
 	objectTemplateName := "object-template-password"
 	objectTemplate := corev1alpha1.ObjectTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      objectTemplateName,
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 		Spec: corev1alpha1.ObjectTemplateSpec{
 			Template: template,
@@ -231,14 +289,14 @@ spec:
 
 	pkg := &corev1alpha1.Package{}
 	pkg.Name = packageName
-	pkg.Namespace = "default"
+	pkg.Namespace = defaultNamespace
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
 		}, dev.WithTimeout(5*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: packageName, Namespace: "default",
+		Name: packageName, Namespace: defaultNamespace,
 	}, pkg))
 	packageConfig := map[string]interface{}{}
 
