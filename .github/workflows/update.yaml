@@ -3,6 +3,7 @@ on:
   workflow_dispatch: ~
 permissions:
   pull-requests: write
+  contents: write
 jobs:
   go:
     if: github.repository_owner == 'package-operator'
