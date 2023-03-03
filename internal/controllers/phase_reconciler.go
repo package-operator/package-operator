@@ -442,10 +442,6 @@ func (r *PhaseReconciler) reconcileObject(
 		if err != nil {
 			return nil, fmt.Errorf("ownership patch: %w", err)
 		}
-
-		if err != nil {
-			return nil, fmt.Errorf("ownership patch: %w", err)
-		}
 		if err := r.writer.Patch(ctx, updatedObj, client.RawPatch(
 			types.MergePatchType, ownerPatch,
 		)); err != nil {

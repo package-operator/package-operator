@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -23,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/dynamiccache"
 	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
@@ -31,6 +36,7 @@ type dynamicCache interface {
 	Source() source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
+	OwnersForGKV(gvk schema.GroupVersionKind) []dynamiccache.OwnerReference
 }
 
 type preflightChecker interface {
@@ -79,6 +85,7 @@ func NewObjectTemplateController(
 		dynamicCache:      dynamicCache,
 		preflightChecker: preflight.List{
 			preflight.NewAPIExistence(restMapper),
+			preflight.NewEmptyNamespaceNoDefault(restMapper),
 			preflight.NewNamespaceEscalation(restMapper),
 		},
 	}
@@ -100,6 +107,7 @@ func NewClusterObjectTemplateController(
 		dynamicCache:      dynamicCache,
 		preflightChecker: preflight.List{
 			preflight.NewAPIExistence(restMapper),
+			preflight.NewEmptyNamespaceNoDefault(restMapper),
 			preflight.NewNamespaceEscalation(restMapper),
 		},
 	}
@@ -157,7 +165,9 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
-	return ctrl.Result{}, c.client.Patch(ctx, existingObj, client.MergeFrom(obj))
+	// TODO: Patch instead? Merge labels?
+	obj.SetResourceVersion(existingObj.GetResourceVersion())
+	return ctrl.Result{}, c.client.Update(ctx, obj)
 }
 
 func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, owner, object client.Object) error {
@@ -331,10 +341,21 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 ) error {
 	objectTemplate := c.newObjectTemplate(c.scheme).ClientObject()
 
+	mapperFunc := func(obj client.Object) []reconcile.Request {
+		owners := c.dynamicCache.OwnersForGKV(obj.GetObjectKind().GroupVersionKind())
+		requests := make([]reconcile.Request, len(owners))
+		for i, owner := range owners {
+			requests[i] = reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      owner.Name,
+					Namespace: owner.Namespace,
+				},
+			}
+		}
+		return requests
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
-		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
-			OwnerType:    objectTemplate,
-			IsController: false,
-		}).Complete(c)
+		Watches(c.dynamicCache.Source(), handler.EnqueueRequestsFromMapFunc(mapperFunc)).Complete(c)
 }

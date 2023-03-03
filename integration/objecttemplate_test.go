@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/mt-sre/devkube/dev"
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -30,6 +32,7 @@ func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm1Key := "database"
 	cm1Destination := "database"
 	cm1Value := "big-database"
+	cm1PatchedValue := "another-big-database"
 	cm1Name := "config-map-1"
 	cm1, cm1Source := createCMAndObjectTemplateSource(cm1Key, cm1Destination, cm1Value, cm1Name)
 
@@ -154,6 +157,25 @@ spec:
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
 
+	// Patch config map
+
+	patch := fmt.Sprintf(`{"data":{"%s":"%s"}}`, cm1Key, cm1PatchedValue)
+	err = Client.Patch(ctx, &cm1, client.RawPatch(types.MergePatchType, []byte(patch)))
+	require.NoError(t, err)
+
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, pkg, "to get to second generation", func(obj client.Object) (done bool, err error) {
+			waitPkg := obj.(*corev1alpha1.Package)
+			return waitPkg.GetGeneration() == 2, nil
+		}))
+
+	// check that config value was updated
+	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
+	packageConfig2 := map[string]interface{}{}
+
+	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig2))
+	assert.Equal(t, cm1PatchedValue, packageConfig2[cm1Destination])
+
 	// Test ClusterPackage
 	err = Client.Create(ctx, &clusterObjectTemplate)
 	defer cleanupOnSuccess(ctx, t, &clusterObjectTemplate)
@@ -169,7 +191,7 @@ spec:
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
 	clusterPackageConfig := map[string]interface{}{}
 	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
-	assert.Equal(t, cm1Value, clusterPackageConfig[cm1Destination])
+	assert.Equal(t, cm1PatchedValue, clusterPackageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
 
 	// Test Deployment
@@ -191,7 +213,7 @@ spec:
 		}, dev.WithTimeout(10*time.Second)))
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment))
 	envVar := deployment.Spec.Template.Spec.Containers[0].Env[0]
-	assert.Equal(t, cm1Value, envVar.Value)
+	assert.Equal(t, cm1PatchedValue, envVar.Value)
 }
 
 func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (v1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
