@@ -28,7 +28,6 @@ import (
 
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
 type dynamicCache interface {
@@ -259,20 +258,20 @@ func (c *GenericObjectTemplateController) getValuesFromSources(ctx context.Conte
 }
 
 func (c *GenericObjectTemplateController) templateObject(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured, object client.Object) error {
-	templateContext := packageloader.TemplateContext{
+	templateContext := TemplateContext{
 		Config: sources.Object,
 	}
-	transformer, err := packageloader.NewTemplateTransformer(templateContext)
+	transformer, err := NewTemplateTransformer(templateContext)
 	if err != nil {
-		return fmt.Errorf("creating new packageFile transformer: %w", err)
+		return fmt.Errorf("creating transformer: %w", err)
 	}
-	fileMap := map[string][]byte{"object.gotmpl": []byte(objectTemplate.GetTemplate())}
-	if err := transformer.TransformPackageFiles(ctx, fileMap); err != nil {
-		return fmt.Errorf("rendering packageFile: %w", err)
+	renderedTemplate, err := transformer.transform(ctx, []byte(objectTemplate.GetTemplate()))
+	if err != nil {
+		return fmt.Errorf("rendering template: %w", err)
 	}
 
-	if err := yaml.Unmarshal(fileMap["object"], object); err != nil {
-		return fmt.Errorf("unmarshalling yaml of rendered packageFile: %w", err)
+	if err := yaml.Unmarshal(renderedTemplate, object); err != nil {
+		return fmt.Errorf("unmarshalling yaml of rendered template: %w", err)
 	}
 	violations, err := c.preflightChecker.CheckObj(ctx, objectTemplate.ClientObject(), object)
 	if err != nil {

@@ -1,4 +1,4 @@
-package packageloader
+package transform
 
 import (
 	"fmt"
@@ -63,7 +63,7 @@ var forbiddenFuncs = []string{
 }
 
 func TestSprigAllowedFuncs(t *testing.T) {
-	actual := sprigFuncs()
+	actual := SprigFuncs()
 
 	require.Equal(t, len(allowedFuncNames), len(actual))
 
@@ -77,7 +77,7 @@ func TestSprigForbiddenFuncs(t *testing.T) {
 		t.Run(funcName, func(t *testing.T) {
 			input := fmt.Sprintf("{{ %s }}", funcName)
 			expectedErrMsg := fmt.Sprintf("template: :1: function \"%s\" not defined", funcName)
-			_, err := templateFor(input)
+			_, err := TemplateWithSprigFuncs(input)
 			require.ErrorContains(t, err, expectedErrMsg)
 		})
 	}

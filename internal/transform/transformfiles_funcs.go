@@ -1,4 +1,4 @@
-package packageloader
+package transform
 
 import (
 	"text/template"
@@ -205,7 +205,11 @@ var allowedFuncNames = map[string]struct{}{
 	"urlJoin":  {},
 }
 
-func sprigFuncs() template.FuncMap {
+func TemplateWithSprigFuncs(content string) (*template.Template, error) {
+	return template.New("").Option("missingkey=error").Funcs(SprigFuncs()).Parse(content)
+}
+
+func SprigFuncs() template.FuncMap {
 	allowedFuncs := map[string]any{}
 	for key, value := range sprig.FuncMap() {
 		if _, exists := allowedFuncNames[key]; exists {

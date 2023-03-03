@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"text/template"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/transform"
 )
 
 var _ FilesTransformer = (*TemplateTransformer)(nil)
@@ -62,7 +62,7 @@ func (t *TemplateTransformer) transform(ctx context.Context, path string, conten
 		return content, nil
 	}
 
-	template, err := templateFor(string(content))
+	template, err := transform.TemplateWithSprigFuncs(string(content))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"parsing template from %s: %w", path, err)
@@ -74,10 +74,6 @@ func (t *TemplateTransformer) transform(ctx context.Context, path string, conten
 			"executing template from %s with context %+v: %w", path, t.tctx, err)
 	}
 	return doc.Bytes(), nil
-}
-
-func templateFor(content string) (*template.Template, error) {
-	return template.New("").Option("missingkey=error").Funcs(sprigFuncs()).Parse(content)
 }
 
 func (t *TemplateTransformer) TransformPackageFiles(ctx context.Context, fileMap packagecontent.Files) error {
