@@ -207,7 +207,7 @@ func TestGenericObjectTemplateController_GetValuesFromSources(t *testing.T) {
 			sources := &unstructured.Unstructured{
 				Object: map[string]interface{}{},
 			}
-			err := controller.GetValuesFromSources(context.TODO(), genericObjectTemplate, sources)
+			err := controller.getValuesFromSources(context.TODO(), genericObjectTemplate, sources)
 			if reflect.DeepEqual(test.source1, test.source2) {
 				assert.Error(t, err)
 				return
@@ -301,7 +301,7 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 				},
 			}
 
-			err = controller.TemplateObject(context.TODO(), &objectTemplate, sources, pkg)
+			err = controller.templateObject(context.TODO(), &objectTemplate, sources, pkg)
 
 			require.NoError(t, err)
 
@@ -331,7 +331,7 @@ func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) 
 			},
 		},
 	}
-	err = controller.TemplateObject(context.TODO(), objectTemplate, &unstructured.Unstructured{}, &unstructured.Unstructured{})
+	err = controller.templateObject(context.TODO(), objectTemplate, &unstructured.Unstructured{}, &unstructured.Unstructured{})
 	assert.ErrorContains(t, err, "Must be namespaced scoped when part of an non-cluster-scoped API")
 }
 

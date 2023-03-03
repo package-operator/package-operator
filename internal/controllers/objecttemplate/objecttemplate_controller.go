@@ -131,16 +131,15 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	sources := &unstructured.Unstructured{}
-	sources.Object = map[string]interface{}{}
-	if err := c.GetValuesFromSources(ctx, objectTemplate, sources); err != nil {
+	sources := &unstructured.Unstructured{Object: map[string]interface{}{}}
+	if err := c.getValuesFromSources(ctx, objectTemplate, sources); err != nil {
 		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
 	}
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
-	if err := c.TemplateObject(ctx, objectTemplate, sources, obj); err != nil {
+	if err := c.templateObject(ctx, objectTemplate, sources, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	existingObj := &unstructured.Unstructured{}
@@ -173,7 +172,7 @@ func (c *GenericObjectTemplateController) handleCreation(ctx context.Context, ow
 	return nil
 }
 
-func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
+func (c *GenericObjectTemplateController) getValuesFromSources(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured) error {
 	for _, src := range objectTemplate.GetSources() {
 		sourceObj := &unstructured.Unstructured{}
 		sourceObj.SetName(src.Name)
@@ -249,7 +248,7 @@ func (c *GenericObjectTemplateController) GetValuesFromSources(ctx context.Conte
 	return nil
 }
 
-func (c *GenericObjectTemplateController) TemplateObject(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured, object client.Object) error {
+func (c *GenericObjectTemplateController) templateObject(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured, object client.Object) error {
 	templateContext := packageloader.TemplateContext{
 		Config: sources.Object,
 	}
@@ -281,21 +280,29 @@ func (c *GenericObjectTemplateController) TemplateObject(ctx context.Context, ob
 }
 
 func (c *GenericObjectTemplateController) updateStatusConditionsFromOwnedObject(ctx context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {
+	statusObservedGeneration, _, err := unstructured.NestedInt64(existingObj.Object, "status", "observedGeneration")
+	if err != nil {
+		return fmt.Errorf("getting status observedGeneration: %w", err)
+	}
+
 	objectConds, found, err := unstructured.NestedSlice(existingObj.Object, "status", "conditions")
 	if err != nil {
 		return fmt.Errorf("getting conditions from object: %w", err)
 	}
 
-	// TODO: Handle observed condition!
 	if found {
 		for _, cond := range objectConds {
-			condMap, _ := cond.(map[string]interface{}) // TODO: handle not ok?
-			if err != nil {
-				return fmt.Errorf("parsing lastTransitionTime: %w", err)
+			condMap, ok := cond.(map[string]interface{})
+			if !ok {
+				return errors.NewBadRequest("malformed condition") // TODO: should this be a new bad request?
 			}
 
-			condObservedGeneration := condMap["observedGeneration"].(int64)
-			if existingObj.GetGeneration() != condObservedGeneration {
+			condObservedGeneration, _, err := unstructured.NestedInt64(condMap, "observedGeneration")
+			if err != nil {
+				return fmt.Errorf("getting status observedGeneration: %w", err)
+			}
+
+			if existingObj.GetGeneration() != condObservedGeneration && existingObj.GetGeneration() != statusObservedGeneration {
 				// condition is out of date, don't copy it over
 				continue
 			}
