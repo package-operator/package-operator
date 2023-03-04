@@ -24,7 +24,7 @@ require (
 	k8s.io/client-go v0.26.2
 	k8s.io/kube-openapi v0.0.0-20230303024457-afdc3dddf62d
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5
-	package-operator.run/apis v0.0.0-20230303150756-e3705d91733e
+	package-operator.run/apis v0.0.0-20230303233631-19bb31719444
 	sigs.k8s.io/controller-runtime v0.14.5
 	sigs.k8s.io/yaml v1.3.0
 )
