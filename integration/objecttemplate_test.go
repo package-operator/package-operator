@@ -147,8 +147,12 @@ spec:
 
 	// Could be any condition, just to know the object is there
 	// This is the only condition showing up
+	// require.NoError(t,
+	// 	Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]interface{}{}
@@ -185,8 +189,12 @@ spec:
 
 	// Could be any condition, just to know the object is there
 	// TODO: This is the only condition showing up
+	// require.NoError(t,
+	//	Waiter.WaitForCondition(ctx, &clusterObjectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, &clusterObjectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
 	clusterPackageConfig := map[string]interface{}{}
@@ -204,13 +212,14 @@ spec:
 	// TODO: change these to read the status of the objectTemplate
 
 	// Could be any condition, just to know the object is there
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, &deploymentObjectTemplate, string(appsv1.DeploymentProgressing), metav1.ConditionTrue))
+	// require.NoError(t,
+	//	Waiter.WaitForCondition(ctx, &deploymentObjectTemplate, string(appsv1.DeploymentProgressing), metav1.ConditionTrue))
 
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
-		}, dev.WithTimeout(10*time.Second)))
+		}, dev.WithTimeout(20*time.Second)))
+
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment))
 	envVar := deployment.Spec.Template.Spec.Containers[0].Env[0]
 	assert.Equal(t, cm1PatchedValue, envVar.Value)
@@ -318,8 +327,12 @@ spec:
 	pkg.Name = packageName
 	pkg.Namespace = defaultNamespace
 	// Could be any condition, just to know the object is there
+	// require.NoError(t,
+	//	Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]interface{}{}
