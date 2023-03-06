@@ -24,7 +24,7 @@ func NewNamespaceEscalation(restMapper meta.RESTMapper) *NamespaceEscalation {
 	}
 }
 
-func (p *NamespaceEscalation) Check(
+func (p *NamespaceEscalation) CheckPhase(
 	ctx context.Context, owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {

@@ -23,7 +23,7 @@ func NewAPIExistence(restMapper meta.RESTMapper) *APIExistence {
 	}
 }
 
-func (p *APIExistence) Check(
+func (p *APIExistence) CheckPhase(
 	ctx context.Context, owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {

@@ -4,11 +4,24 @@ package preflight
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
+
+type Error struct {
+	Violations []Violation
+}
+
+func (e *Error) Error() string {
+	var vs []string
+	for _, v := range e.Violations {
+		vs = append(vs, v.String())
+	}
+	return strings.Join(vs, ", ")
+}
 
 type Violation struct {
 	// Position the violation was found.
@@ -22,7 +35,7 @@ func (v *Violation) String() string {
 }
 
 type checker interface {
-	Check(
+	CheckPhase(
 		ctx context.Context, owner client.Object,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (violations []Violation, err error)
@@ -35,12 +48,12 @@ type checker interface {
 // Runs a list of preflight checks and aggregates the result into a single list of violations.
 type List []checker
 
-func (l List) Check(
+func (l List) CheckPhase(
 	ctx context.Context, owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {
 	for _, checker := range l {
-		v, err := checker.Check(ctx, owner, phase)
+		v, err := checker.CheckPhase(ctx, owner, phase)
 		if err != nil {
 			return violations, err
 		}

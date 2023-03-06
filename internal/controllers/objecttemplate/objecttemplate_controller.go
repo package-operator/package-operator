@@ -45,19 +45,6 @@ type preflightChecker interface {
 	) (violations []preflight.Violation, err error)
 }
 
-// TODO: Move this to a shared space.
-type PreflightError struct {
-	Violations []preflight.Violation
-}
-
-func (e *PreflightError) Error() string {
-	var vs []string
-	for _, v := range e.Violations {
-		vs = append(vs, v.String())
-	}
-	return strings.Join(vs, ", ")
-}
-
 type GenericObjectTemplateController struct {
 	newObjectTemplate genericObjectTemplateFactory
 	log               logr.Logger
@@ -164,7 +151,6 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
-	// TODO: Patch instead? Merge labels?
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	return ctrl.Result{}, c.client.Update(ctx, obj)
 }
@@ -194,7 +180,7 @@ func (c *GenericObjectTemplateController) getValuesFromSources(ctx context.Conte
 			return err
 		}
 		if len(violations) > 0 {
-			return &PreflightError{Violations: violations}
+			return &preflight.Error{Violations: violations}
 		}
 
 		if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
@@ -278,7 +264,7 @@ func (c *GenericObjectTemplateController) templateObject(ctx context.Context, ob
 		return err
 	}
 	if len(violations) > 0 {
-		return &PreflightError{Violations: violations}
+		return &preflight.Error{Violations: violations}
 	}
 
 	if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
@@ -303,7 +289,7 @@ func (c *GenericObjectTemplateController) updateStatusConditionsFromOwnedObject(
 		for _, cond := range objectConds {
 			condMap, ok := cond.(map[string]interface{})
 			if !ok {
-				return errors.NewBadRequest("malformed condition") // TODO: should this be a new bad request?
+				return errors.NewBadRequest("malformed condition")
 			}
 
 			condObservedGeneration, _, err := unstructured.NestedInt64(condMap, "observedGeneration")
