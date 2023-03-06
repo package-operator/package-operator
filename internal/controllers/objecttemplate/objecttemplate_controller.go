@@ -146,6 +146,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 			if err := c.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 				return ctrl.Result{}, fmt.Errorf("handling creation: %w", err)
 			}
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("getting existing object: %w", err)
 	}
@@ -153,6 +154,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
+	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
 	obj.SetLabels(utils.MergeKeysFrom(existingObj.GetLabels(), obj.GetLabels()))
 	obj.SetAnnotations(utils.MergeKeysFrom(existingObj.GetAnnotations(), obj.GetAnnotations()))
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
