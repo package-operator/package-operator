@@ -145,10 +145,6 @@ spec:
 	pkg.Name = "test-stub"
 	pkg.Namespace = defaultNamespace
 
-	// Could be any condition, just to know the object is there
-	// This is the only condition showing up
-	// require.NoError(t,
-	// 	Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
@@ -187,10 +183,6 @@ spec:
 	clusterPkg := &corev1alpha1.ClusterPackage{}
 	clusterPkg.Name = "cluster-test-stub"
 
-	// Could be any condition, just to know the object is there
-	// TODO: This is the only condition showing up
-	// require.NoError(t,
-	//	Waiter.WaitForCondition(ctx, &clusterObjectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
@@ -209,11 +201,6 @@ spec:
 	deployment := &appsv1.Deployment{}
 	deployment.Name = "nginx-deployment"
 	deployment.Namespace = defaultNamespace
-	// TODO: change these to read the status of the objectTemplate
-
-	// Could be any condition, just to know the object is there
-	// require.NoError(t,
-	//	Waiter.WaitForCondition(ctx, &deploymentObjectTemplate, string(appsv1.DeploymentProgressing), metav1.ConditionTrue))
 
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
@@ -326,9 +313,7 @@ spec:
 	pkg := &corev1alpha1.Package{}
 	pkg.Name = packageName
 	pkg.Namespace = defaultNamespace
-	// Could be any condition, just to know the object is there
-	// require.NoError(t,
-	//	Waiter.WaitForCondition(ctx, &objectTemplate, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
