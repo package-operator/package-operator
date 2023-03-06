@@ -301,7 +301,7 @@ func TestGenericObjectTemplateController_TemplatePackage(t *testing.T) {
 				},
 			}
 
-			err = controller.templateObject(context.TODO(), &objectTemplate, sources, pkg)
+			err = controller.templateObject(context.TODO(), sources, &objectTemplate, pkg)
 
 			require.NoError(t, err)
 
@@ -331,7 +331,7 @@ func TestGenericObjectTemplateController_TemplatePackage_Mismatch(t *testing.T) 
 			},
 		},
 	}
-	err = controller.templateObject(context.TODO(), objectTemplate, &unstructured.Unstructured{}, &unstructured.Unstructured{})
+	err = controller.templateObject(context.TODO(), &unstructured.Unstructured{}, objectTemplate, &unstructured.Unstructured{})
 	assert.ErrorContains(t, err, "Must be namespaced scoped when part of an non-cluster-scoped API")
 }
 

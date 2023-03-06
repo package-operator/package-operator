@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"package-operator.run/package-operator/internal/utils"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -133,7 +135,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
-	if err := c.templateObject(ctx, objectTemplate, sources, obj); err != nil {
+	if err := c.templateObject(ctx, sources, objectTemplate, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	existingObj := &unstructured.Unstructured{}
@@ -151,6 +153,8 @@ func (c *GenericObjectTemplateController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
+	obj.SetLabels(utils.MergeKeysFrom(existingObj.GetLabels(), obj.GetLabels()))
+	obj.SetAnnotations(utils.MergeKeysFrom(existingObj.GetAnnotations(), obj.GetAnnotations()))
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	return ctrl.Result{}, c.client.Update(ctx, obj)
 }
@@ -243,7 +247,7 @@ func (c *GenericObjectTemplateController) getValuesFromSources(ctx context.Conte
 	return nil
 }
 
-func (c *GenericObjectTemplateController) templateObject(ctx context.Context, objectTemplate genericObjectTemplate, sources *unstructured.Unstructured, object client.Object) error {
+func (c *GenericObjectTemplateController) templateObject(ctx context.Context, sources *unstructured.Unstructured, objectTemplate genericObjectTemplate, object client.Object) error {
 	templateContext := TemplateContext{
 		Config: sources.Object,
 	}
