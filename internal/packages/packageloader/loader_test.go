@@ -34,7 +34,7 @@ func TestLoader(t *testing.T) {
 	t.Parallel()
 
 	transformer, err := packageloader.NewTemplateTransformer(
-		packageloader.TemplateContext{
+		packageloader.PackageFileTemplateContext{
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
@@ -183,7 +183,7 @@ func TestTemplateTestValidator(t *testing.T) {
 func TestCommonObjectLabelsTransformer(t *testing.T) {
 	t.Parallel()
 
-	colt := &packageloader.CommonObjectLabelsTransformer{
+	colt := &packageloader.PackageTransformer{
 		Package: &metav1.ObjectMeta{Name: "sepp"},
 	}
 
@@ -212,7 +212,7 @@ func TestTemplateTransformer(t *testing.T) {
 		t.Parallel()
 
 		tt, err := packageloader.NewTemplateTransformer(
-			packageloader.TemplateContext{
+			packageloader.PackageFileTemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
@@ -242,7 +242,7 @@ func TestTemplateTransformer(t *testing.T) {
 	t.Run("invalid template", func(t *testing.T) {
 		t.Parallel()
 		tt, err := packageloader.NewTemplateTransformer(
-			packageloader.TemplateContext{
+			packageloader.PackageFileTemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},
@@ -262,7 +262,7 @@ func TestTemplateTransformer(t *testing.T) {
 		t.Parallel()
 
 		tt, err := packageloader.NewTemplateTransformer(
-			packageloader.TemplateContext{
+			packageloader.PackageFileTemplateContext{
 				Package: manifestsv1alpha1.TemplateContextPackage{
 					TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Name: "test"},
 				},

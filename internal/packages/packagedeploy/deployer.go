@@ -182,7 +182,7 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 		}
 	}
 
-	tt, err := packageloader.NewTemplateTransformer(packageloader.TemplateContext{
+	tt, err := packageloader.NewTemplateTransformer(packageloader.PackageFileTemplateContext{
 		Package: tmplCtx.Package,
 		Config:  configuration,
 		Images:  images,
@@ -193,7 +193,7 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 	packageContent, err = l.packageContentLoader.FromFiles(
 		ctx, files,
 		packageloader.WithFilesTransformers(tt),
-		packageloader.WithTransformers(&packageloader.CommonObjectLabelsTransformer{Package: pkg.ClientObject()}))
+		packageloader.WithTransformers(&packageloader.PackageTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil

@@ -12,10 +12,10 @@ import (
 	"package-operator.run/package-operator/internal/transform"
 )
 
-var _ FilesTransformer = (*TemplateTransformer)(nil)
+var _ FilesTransformer = (*PackageFileTemplateTransformer)(nil)
 
 // Runs a go-template transformer on all .yml or .yaml files.
-type TemplateTransformer struct {
+type PackageFileTemplateTransformer struct {
 	tctx map[string]interface{}
 }
 
@@ -34,13 +34,13 @@ func workaroundnovalue(actualCtx map[string]interface{}) {
 	}
 }
 
-type TemplateContext struct {
+type PackageFileTemplateContext struct {
 	Package manifestsv1alpha1.TemplateContextPackage `json:"package"`
 	Config  map[string]interface{}                   `json:"config"`
 	Images  map[string]string                        `json:"images"`
 }
 
-func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, error) {
+func NewTemplateTransformer(tmplCtx PackageFileTemplateContext) (*PackageFileTemplateTransformer, error) {
 	p, err := json.Marshal(tmplCtx)
 	if err != nil {
 		return nil, err
@@ -53,10 +53,10 @@ func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, erro
 
 	workaroundnovalue(actualCtx)
 
-	return &TemplateTransformer{actualCtx}, nil
+	return &PackageFileTemplateTransformer{actualCtx}, nil
 }
 
-func (t *TemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
+func (t *PackageFileTemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
 	if !packages.IsTemplateFile(path) {
 		// Not a template file, skip.
 		return content, nil
@@ -76,7 +76,7 @@ func (t *TemplateTransformer) transform(ctx context.Context, path string, conten
 	return doc.Bytes(), nil
 }
 
-func (t *TemplateTransformer) TransformPackageFiles(ctx context.Context, fileMap packagecontent.Files) error {
+func (t *PackageFileTemplateTransformer) TransformPackageFiles(ctx context.Context, fileMap packagecontent.Files) error {
 	for path, content := range fileMap {
 		var err error
 		content, err = t.transform(ctx, path, content)

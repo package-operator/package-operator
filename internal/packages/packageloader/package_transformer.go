@@ -11,7 +11,27 @@ import (
 	"package-operator.run/package-operator/internal/utils"
 )
 
-var _ Transformer = (*CommonObjectLabelsTransformer)(nil)
+var _ Transformer = (*PackageTransformer)(nil)
+
+type PackageTransformer struct{ Package metav1.Object }
+
+func (t *PackageTransformer) TransformPackage(ctx context.Context, packageContent *packagecontent.Package) error {
+	return TransformEachObject(ctx, packageContent, t.transform)
+}
+
+func (t *PackageTransformer) transform(
+	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
+) error {
+	obj.SetLabels(
+		utils.MergeKeysFrom(
+			obj.GetLabels(),
+			commonLabels(packageManifest, t.Package.GetName())))
+	return nil
+}
+
+func commonLabels(manifest *manifestsv1alpha1.PackageManifest, packageName string) map[string]string {
+	return map[string]string{manifestsv1alpha1.PackageLabel: manifest.Name, manifestsv1alpha1.PackageInstanceLabel: packageName}
+}
 
 type TransformEachObjectFn func(
 	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured) error
@@ -27,24 +47,4 @@ func TransformEachObject(ctx context.Context, packageContent *packagecontent.Pac
 		}
 	}
 	return nil
-}
-
-type CommonObjectLabelsTransformer struct{ Package metav1.Object }
-
-func (t CommonObjectLabelsTransformer) TransformPackage(ctx context.Context, packageContent *packagecontent.Package) error {
-	return TransformEachObject(ctx, packageContent, t.transform)
-}
-
-func (t *CommonObjectLabelsTransformer) transform(
-	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
-) error {
-	obj.SetLabels(
-		utils.MergeKeysFrom(
-			obj.GetLabels(),
-			commonLabels(packageManifest, t.Package.GetName())))
-	return nil
-}
-
-func commonLabels(manifest *manifestsv1alpha1.PackageManifest, packageName string) map[string]string {
-	return map[string]string{manifestsv1alpha1.PackageLabel: manifest.Name, manifestsv1alpha1.PackageInstanceLabel: packageName}
 }
