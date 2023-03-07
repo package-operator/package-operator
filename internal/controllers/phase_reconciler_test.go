@@ -376,6 +376,47 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 	}, desiredObj)
 }
 
+func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
+	os := &ownerStrategyMock{}
+	r := &PhaseReconciler{
+		ownerStrategy: os,
+	}
+
+	os.On("SetControllerReference",
+		mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+
+	ctx := context.Background()
+	owner := &phaseObjectOwnerMock{}
+	ownerObj := &unstructured.Unstructured{}
+	ownerObj.SetNamespace("my-owner-ns")
+	owner.On("ClientObject").Return(ownerObj)
+	owner.On("GetRevision").Return(int64(5))
+
+	phaseObject := corev1alpha1.ObjectSetObject{
+		Object: unstructured.Unstructured{
+			Object: map[string]interface{}{"kind": "test"},
+		},
+	}
+	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
+	require.NoError(t, err)
+
+	assert.Equal(t, &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind": "test",
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					revisionAnnotation: "5",
+				},
+				"labels": map[string]interface{}{
+					DynamicCacheLabel: "True",
+				},
+				"namespace": "my-owner-ns",
+			},
+		},
+	}, desiredObj)
+}
+
 func Test_defaultAdoptionChecker_Check(t *testing.T) {
 	tests := []struct {
 		name          string

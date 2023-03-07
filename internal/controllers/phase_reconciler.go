@@ -344,7 +344,7 @@ func (r *PhaseReconciler) desiredObject(
 	desiredObj = &phaseObject.Object
 
 	// Default namespace to the owners namespace
-	if len(owner.ClientObject().GetNamespace()) > 0 {
+	if len(desiredObj.GetNamespace()) == 0 {
 		desiredObj.SetNamespace(
 			owner.ClientObject().GetNamespace())
 	}
