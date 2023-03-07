@@ -189,7 +189,7 @@ func (c *GenericObjectTemplateController) getValuesFromSources(ctx context.Conte
 			return &preflight.Error{Violations: violations}
 		}
 
-		if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
+		if len(sourceObj.GetNamespace()) == 0 {
 			sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
 		}
 
