@@ -285,7 +285,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	owner.On("GetRevision").Return(int64(3))
 
 	acMock.
-		On("CheckPhase", mock.Anything, mock.Anything, mock.Anything).
+		On("Check", mock.Anything, mock.Anything, mock.Anything).
 		Return(true, nil)
 
 	dynamicCacheMock.
