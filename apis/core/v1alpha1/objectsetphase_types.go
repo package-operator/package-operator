@@ -56,6 +56,4 @@ type ObjectSetPhaseStatus struct {
 	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ObjectSetPhase{}, &ObjectSetPhaseList{})
-}
+func init() { register(&ObjectSetPhase{}, &ObjectSetPhaseList{}) }

@@ -22,6 +22,4 @@ type ObjectSliceList struct {
 	Items           []ObjectSlice `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ObjectSlice{}, &ObjectSliceList{})
-}
+func init() { register(&ObjectSlice{}, &ObjectSliceList{}) }

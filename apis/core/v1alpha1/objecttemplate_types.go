@@ -23,6 +23,4 @@ type ObjectTemplateList struct {
 	Items           []ObjectTemplate `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ObjectTemplate{}, &ObjectTemplateList{})
-}
+func init() { register(&ObjectTemplate{}, &ObjectTemplateList{}) }

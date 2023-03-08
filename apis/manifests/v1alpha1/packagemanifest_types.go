@@ -115,6 +115,4 @@ type TemplateContextObjectMeta struct {
 	Annotations map[string]string `json:"annotations"`
 }
 
-func init() {
-	SchemeBuilder.Register(&PackageManifest{})
-}
+func init() { register(&PackageManifest{}) }

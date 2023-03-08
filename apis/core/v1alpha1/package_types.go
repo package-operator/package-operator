@@ -25,6 +25,4 @@ type PackageList struct {
 	Items           []Package `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Package{}, &PackageList{})
-}
+func init() { register(&Package{}, &PackageList{}) }

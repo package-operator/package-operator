@@ -26,6 +26,4 @@ type ClusterPackageList struct {
 	Items           []ClusterPackage `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterPackage{}, &ClusterPackageList{})
-}
+func init() { register(&ClusterPackage{}, &ClusterPackageList{}) }

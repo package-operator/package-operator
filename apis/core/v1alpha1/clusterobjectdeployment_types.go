@@ -52,6 +52,4 @@ type ClusterObjectDeploymentList struct {
 	Items           []ClusterObjectDeployment `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterObjectDeployment{}, &ClusterObjectDeploymentList{})
-}
+func init() { register(&ClusterObjectDeployment{}, &ClusterObjectDeploymentList{}) }

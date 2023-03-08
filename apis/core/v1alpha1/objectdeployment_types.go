@@ -76,6 +76,4 @@ type ObjectDeploymentList struct {
 	Items           []ObjectDeployment `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ObjectDeployment{}, &ObjectDeploymentList{})
-}
+func init() { register(&ObjectDeployment{}, &ObjectDeploymentList{}) }
