@@ -265,6 +265,7 @@ spec:
 status:
   conditions:
   - metav1.Condition
+  phase: ObjectTemplateStatusPhase
 
 ```
 
@@ -557,6 +558,7 @@ spec:
 status:
   conditions:
   - metav1.Condition
+  phase: ObjectTemplateStatusPhase
 
 ```
 
@@ -961,6 +963,7 @@ ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the statu
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
+| `phase` <br><a href="#objecttemplatestatusphase">ObjectTemplateStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 
 
 Used in:

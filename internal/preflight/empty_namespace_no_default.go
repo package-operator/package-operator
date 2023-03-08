@@ -55,10 +55,12 @@ func (p *EmptyNamespaceNoDefault) CheckPhase(
 	return
 }
 
-func (p *EmptyNamespaceNoDefault) CheckObj(
+func (p *EmptyNamespaceNoDefault) Check(
 	ctx context.Context, owner,
 	obj client.Object,
 ) (violations []Violation, err error) {
+	defer addPositionToViolations(ctx, obj, violations)
+
 	if len(owner.GetNamespace()) > 0 {
 		// Owner has namespace which is the default
 		return
@@ -77,8 +79,7 @@ func (p *EmptyNamespaceNoDefault) CheckObj(
 
 	if mapping.Scope == meta.RESTScopeNamespace && len(obj.GetNamespace()) == 0 {
 		violations = append(violations, Violation{
-			Position: fmt.Sprintf("Object %s", obj.GetName()),
-			Error:    "Object doesn't have a namepsace and no default is provided.",
+			Error: "Object doesn't have a namepsace and no default is provided.",
 		})
 	}
 
