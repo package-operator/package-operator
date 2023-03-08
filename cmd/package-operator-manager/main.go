@@ -38,6 +38,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers/objectdeployments"
 	"package-operator.run/package-operator/internal/controllers/objectsetphases"
 	"package-operator.run/package-operator/internal/controllers/objectsets"
+	"package-operator.run/package-operator/internal/controllers/objecttemplate"
 	"package-operator.run/package-operator/internal/controllers/packages"
 	"package-operator.run/package-operator/internal/dynamiccache"
 	"package-operator.run/package-operator/internal/metrics"
@@ -227,6 +228,7 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 	return nil
 }
 
+//nolint:maintidx
 func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	controllerLog := ctrl.Log.WithName("controllers")
 
@@ -313,6 +315,13 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			},
 		})
 
+	// Create a client that does not cache resources cluster-wide.
+	uncachedClient, err := client.New(
+		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		return fmt.Errorf("unable to set up uncached client: %w", err)
+	}
+
 	// ObjectSet
 	if err = objectsets.NewObjectSetController(
 		mgr.GetClient(),
@@ -378,6 +387,20 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+	}
+
+	if err = objecttemplate.NewObjectTemplateController(
+		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
+		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
+	}
+
+	if err = objecttemplate.NewClusterObjectTemplateController(
+		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
+		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+	).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
 	}
 
 	// Probe for HyperShift API

@@ -10,66 +10,18 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	clocktesting "k8s.io/utils/clock/testing"
+
+	"package-operator.run/package-operator/internal/testutil/restmappermock"
 )
 
-type restMapperMock struct {
-	mock.Mock
-}
-
-var (
-	_       meta.RESTMapper = (*restMapperMock)(nil)
-	errTest                 = errors.New("cheese happened")
-)
-
-func (m *restMapperMock) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
-	args := m.Called()
-
-	return args.Get(0).(schema.GroupVersionKind), args.Error(1)
-}
-
-func (m *restMapperMock) KindsFor(schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
-	args := m.Called()
-
-	return args.Get(0).([]schema.GroupVersionKind), args.Error(1)
-}
-
-func (m *restMapperMock) ResourceFor(schema.GroupVersionResource) (schema.GroupVersionResource, error) {
-	args := m.Called()
-
-	return args.Get(0).(schema.GroupVersionResource), args.Error(1)
-}
-
-func (m *restMapperMock) ResourcesFor(schema.GroupVersionResource) ([]schema.GroupVersionResource, error) {
-	args := m.Called()
-
-	return args.Get(0).([]schema.GroupVersionResource), args.Error(1)
-}
-
-func (m *restMapperMock) ResourceSingularizer(string) (string, error) {
-	args := m.Called()
-
-	return args.String(0), args.Error(1)
-}
-
-func (m *restMapperMock) RESTMappings(schema.GroupKind, ...string) ([]*meta.RESTMapping, error) {
-	args := m.Called()
-
-	return args.Get(0).([]*meta.RESTMapping), args.Error(1)
-}
-
-func (m *restMapperMock) RESTMapping(schema.GroupKind, ...string) (*meta.RESTMapping, error) {
-	args := m.Called()
-
-	return args.Get(0).(*meta.RESTMapping), args.Error(1)
-}
+var errTest = errors.New("cheese happened")
 
 func TestHypershift_needLeaderElection(t *testing.T) {
 	t.Parallel()
 
 	ticker := clocktesting.NewFakeClock(time.Time{}).NewTicker(hyperShiftPollInterval)
-	h := newHypershift(testr.New(t), &restMapperMock{}, ticker)
+	h := newHypershift(testr.New(t), &restmappermock.RestMapperMock{}, ticker)
 	require.True(t, h.NeedLeaderElection())
 }
 
@@ -78,7 +30,7 @@ func TestHypershift_start_foundImmediately(t *testing.T) {
 
 	clk := clocktesting.NewFakeClock(time.Time{})
 
-	restMock := &restMapperMock{}
+	restMock := &restmappermock.RestMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, nil).Once()
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
@@ -94,7 +46,7 @@ func TestHypershift_start_foundOnSecondPoll(t *testing.T) {
 
 	clk := clocktesting.NewFakeClock(time.Time{})
 
-	restMock := &restMapperMock{}
+	restMock := &restmappermock.RestMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{}).Run(func(args mock.Arguments) {
 		clk.Step(hyperShiftPollInterval)
 	}).Once()
@@ -115,7 +67,7 @@ func TestHypershift_start_someerr(t *testing.T) {
 
 	clk := clocktesting.NewFakeClock(time.Time{})
 
-	restMock := &restMapperMock{}
+	restMock := &restmappermock.RestMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, errTest).Once()
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
@@ -131,7 +83,7 @@ func TestHypershift_start_cancel(t *testing.T) {
 
 	clk := clocktesting.NewFakeClock(time.Time{})
 
-	restMock := &restMapperMock{}
+	restMock := &restmappermock.RestMapperMock{}
 	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, errTest).Once()
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))

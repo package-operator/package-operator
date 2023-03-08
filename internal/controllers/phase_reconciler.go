@@ -68,7 +68,7 @@ type dynamicCache interface {
 }
 
 type preflightChecker interface {
-	Check(
+	CheckPhase(
 		ctx context.Context, owner client.Object,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (violations []preflight.Violation, err error)
@@ -120,29 +120,17 @@ func (e *ProbingResult) String() string {
 		e.PhaseName, e.StringWithoutPhase())
 }
 
-type PreflightError struct {
-	Violations []preflight.Violation
-}
-
-func (e *PreflightError) Error() string {
-	var vs []string
-	for _, v := range e.Violations {
-		vs = append(vs, v.String())
-	}
-	return strings.Join(vs, ", ")
-}
-
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
-	violations, err := r.preflightChecker.Check(ctx, owner.ClientObject(), phase)
+	violations, err := r.preflightChecker.CheckPhase(ctx, owner.ClientObject(), phase)
 	if err != nil {
 		return nil, ProbingResult{}, err
 	}
 	if len(violations) > 0 {
-		return nil, ProbingResult{}, &PreflightError{Violations: violations}
+		return nil, ProbingResult{}, &preflight.Error{Violations: violations}
 	}
 
 	var failedProbes []string
@@ -442,10 +430,6 @@ func (r *PhaseReconciler) reconcileObject(
 		if err != nil {
 			return nil, fmt.Errorf("ownership patch: %w", err)
 		}
-
-		if err != nil {
-			return nil, fmt.Errorf("ownership patch: %w", err)
-		}
 		if err := r.writer.Patch(ctx, updatedObj, client.RawPatch(
 			types.MergePatchType, ownerPatch,
 		)); err != nil {
@@ -482,7 +466,7 @@ func (p *defaultPatcher) Patch(
 	// never patch status, even if specified
 	// we would just start a fight with whatever controller is realizing this object.
 	unstructured.RemoveNestedField(patch.Object, "status")
-	// don't strategic merge ownerReferences - we already take care about that with it's own patch.
+	// don't strategic merge ownerReferences - we already take care about that with its own patch.
 	unstructured.RemoveNestedField(patch.Object, "metadata", "ownerReferences")
 
 	base := updatedObj.DeepCopy()

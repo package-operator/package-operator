@@ -7,11 +7,13 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ClusterObjectSet](#clusterobjectset)
 * [ClusterObjectSetPhase](#clusterobjectsetphase)
 * [ClusterObjectSlice](#clusterobjectslice)
+* [ClusterObjectTemplate](#clusterobjecttemplate)
 * [ClusterPackage](#clusterpackage)
 * [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
 * [ObjectSlice](#objectslice)
+* [ObjectTemplate](#objecttemplate)
 * [Package](#package)
 
 
@@ -235,6 +237,44 @@ objects:
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
+### ClusterObjectTemplate
+
+ClusterObjectTemplate contain a go template of a Kubernetes manifest. The manifest is then templated with the
+sources provided in the .Spec.Sources. The sources can come from objects from any namespace or cluster scoped
+objects.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterObjectTemplate
+metadata:
+  name: example
+spec:
+  sources:
+  - apiVersion: sadipscing
+    items:
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
+  template: consetetur
+status:
+  conditions:
+  - metav1.Condition
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#objecttemplatespec">ObjectTemplateSpec</a> | ObjectTemplateSpec specification. |
+| `status` <br><a href="#objecttemplatestatus">ObjectTemplateStatus</a> | ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object. |
+
+
 ### ClusterPackage
 
 
@@ -249,7 +289,7 @@ metadata:
   name: example
 spec:
   config: runtime.RawExtension
-  image: consetetur
+  image: tempor
 status:
   phase: Pending
 
@@ -298,19 +338,19 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: elitr
-        name: sadipscing
+      - class: ipsum
+        name: lorem
         objects:
         - conditionMappings:
-          - destinationType: diam
-            sourceType: sed
+          - destinationType: sit
+            sourceType: dolor
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - nonumy
+        - amet
 status:
   phase:Pending: null
 
@@ -362,19 +402,19 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: tempor
-    name: eirmod
+  - class: sadipscing
+    name: consetetur
     objects:
     - conditionMappings:
-      - destinationType: ipsum
-        sourceType: lorem
+      - destinationType: sed
+        sourceType: elitr
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - dolor
+    - diam
   previous:
   - name: previous-revision
 status:
@@ -422,8 +462,8 @@ spec:
           app.kubernetes.io/name: example-operator
   objects:
   - conditionMappings:
-    - destinationType: amet
-      sourceType: sit
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -438,10 +478,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: sadipscing
-    kind: consetetur
-    name: elitr
-    namespace: sed
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -470,8 +510,8 @@ metadata:
   namespace: default
 objects:
 - conditionMappings:
-  - destinationType: nonumy
-    sourceType: diam
+  - destinationType: amet
+    sourceType: sit
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -485,6 +525,45 @@ objects:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
+
+
+### ObjectTemplate
+
+ObjectTemplates contain a go template of a Kubernetes manifest. This manifest is then templated with the
+sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
+as the ObjectTemplate.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectTemplate
+metadata:
+  name: example
+  namespace: default
+spec:
+  sources:
+  - apiVersion: sadipscing
+    items:
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
+  template: consetetur
+status:
+  conditions:
+  - metav1.Condition
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#objecttemplatespec">ObjectTemplateSpec</a> | ObjectTemplateSpec specification. |
+| `status` <br><a href="#objecttemplatestatus">ObjectTemplateStatus</a> | ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object. |
 
 
 ### Package
@@ -502,7 +581,7 @@ metadata:
   namespace: default
 spec:
   config: runtime.RawExtension
-  image: eirmod
+  image: tempor
 status:
   phase: Pending
 
@@ -824,6 +903,66 @@ ObjectSet specification.
 
 Used in:
 * [ObjectSetTemplate](#objectsettemplate)
+
+
+### ObjectTemplateSource
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `apiVersion` <b>required</b><br>string |  |
+| `kind` <b>required</b><br>string |  |
+| `namespace` <br>string |  |
+| `name` <b>required</b><br>string |  |
+| `items` <b>required</b><br><a href="#objecttemplatesourceitem">[]ObjectTemplateSourceItem</a> |  |
+
+
+Used in:
+* [ObjectTemplateSpec](#objecttemplatespec)
+
+
+### ObjectTemplateSourceItem
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `key` <b>required</b><br>string |  |
+| `destination` <b>required</b><br>string |  |
+
+
+Used in:
+* [ObjectTemplateSource](#objecttemplatesource)
+
+
+### ObjectTemplateSpec
+
+ObjectTemplateSpec specification.
+
+| Field | Description |
+| ----- | ----------- |
+| `template` <b>required</b><br>string | Go template of a Kubernetes manifest |
+| `sources` <b>required</b><br><a href="#objecttemplatesource">[]ObjectTemplateSource</a> | Objects in which configuration parameters are fetched |
+
+
+Used in:
+* [ClusterObjectTemplate](#clusterobjecttemplate)
+* [ObjectTemplate](#objecttemplate)
+
+
+### ObjectTemplateStatus
+
+ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
+
+
+Used in:
+* [ClusterObjectTemplate](#clusterobjecttemplate)
+* [ObjectTemplate](#objecttemplate)
 
 
 ### PackageProbeKindSpec

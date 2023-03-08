@@ -71,7 +71,7 @@ func (v TemplateTestValidator) runTestCase(
 		return err
 	}
 
-	tt, err := NewTemplateTransformer(TemplateContext{
+	tt, err := NewTemplateTransformer(PackageFileTemplateContext{
 		Package: testCase.Context.Package,
 		Config:  configuration,
 	})

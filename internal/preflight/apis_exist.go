@@ -23,7 +23,7 @@ func NewAPIExistence(restMapper meta.RESTMapper) *APIExistence {
 	}
 }
 
-func (p *APIExistence) Check(
+func (p *APIExistence) CheckPhase(
 	ctx context.Context, owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {
@@ -42,5 +42,23 @@ func (p *APIExistence) Check(
 		}
 	}
 
+	return
+}
+
+func (p *APIExistence) CheckObj(
+	ctx context.Context, owner,
+	obj client.Object,
+) (violations []Violation, err error) {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	_, err = p.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if meta.IsNoMatchError(err) {
+		violations = append(violations, Violation{
+			Position: fmt.Sprintf("object %s", obj.GetName()),
+			Error:    fmt.Sprintf("%s not registered on the api server.", gvk),
+		})
+	}
+	if err != nil {
+		return
+	}
 	return
 }

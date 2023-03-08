@@ -93,7 +93,7 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 	default:
 	}
 
-	templateContext := packageloader.TemplateContext{
+	templateContext := packageloader.PackageFileTemplateContext{
 		Package: manifestsv1alpha1.TemplateContextPackage{
 			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
 				Name:      "name",

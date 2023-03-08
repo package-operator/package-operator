@@ -1,0 +1,8 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: test-stub
+spec:
+  image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"
+  config:
+    {{ toJson .config }}
