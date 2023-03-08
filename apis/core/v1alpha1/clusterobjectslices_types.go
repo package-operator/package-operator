@@ -23,6 +23,4 @@ type ClusterObjectSliceList struct {
 	Items           []ClusterObjectSlice `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterObjectSlice{}, &ClusterObjectSliceList{})
-}
+func init() { register(&ClusterObjectSlice{}, &ClusterObjectSliceList{}) }

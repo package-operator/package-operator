@@ -63,6 +63,4 @@ type ClusterObjectSetStatus struct {
 	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterObjectSet{}, &ClusterObjectSetList{})
-}
+func init() { register(&ClusterObjectSet{}, &ClusterObjectSetList{}) }

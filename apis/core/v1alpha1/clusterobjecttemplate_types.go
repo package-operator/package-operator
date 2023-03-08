@@ -24,6 +24,4 @@ type ClusterObjectTemplateList struct {
 	Items           []ObjectTemplate `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterObjectTemplate{}, &ClusterObjectTemplateList{})
-}
+func init() { register(&ClusterObjectTemplate{}, &ClusterObjectTemplateList{}) }

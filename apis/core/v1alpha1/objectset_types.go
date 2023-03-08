@@ -64,6 +64,4 @@ type ObjectSetStatus struct {
 	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ObjectSet{}, &ObjectSetList{})
-}
+func init() { register(&ObjectSet{}, &ObjectSetList{}) }

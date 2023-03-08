@@ -27,6 +27,4 @@ type PackageManifestLockImage struct {
 	Digest string `json:"digest"`
 }
 
-func init() {
-	SchemeBuilder.Register(&PackageManifestLock{})
-}
+func init() { register(&PackageManifestLock{}) }
