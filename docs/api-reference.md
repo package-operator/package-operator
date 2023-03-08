@@ -260,6 +260,7 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+    optional: "true"
   template: consetetur
 status:
   conditions:
@@ -551,6 +552,7 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+    optional: "true"
   template: consetetur
 status:
   conditions:
@@ -916,6 +918,7 @@ Used in:
 | `namespace` <br>string |  |
 | `name` <b>required</b><br>string |  |
 | `items` <b>required</b><br><a href="#objecttemplatesourceitem">[]ObjectTemplateSourceItem</a> |  |
+| `optional` <br><a href="#bool">bool</a> | Marks this source as optional.<br>The templated object will still be applied if optional sources are not found.<br>If the source object is created later on, it will be eventually picked up. |
 
 
 Used in:

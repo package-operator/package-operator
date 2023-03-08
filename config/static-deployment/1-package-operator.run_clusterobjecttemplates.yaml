@@ -61,6 +61,12 @@ spec:
                       type: string
                     namespace:
                       type: string
+                    optional:
+                      description: Marks this source as optional. The templated object
+                        will still be applied if optional sources are not found. If
+                        the source object is created later on, it will be eventually
+                        picked up.
+                      type: boolean
                   required:
                   - apiVersion
                   - items

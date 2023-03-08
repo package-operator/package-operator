@@ -17,6 +17,10 @@ type ObjectTemplateSource struct {
 	Namespace  string                     `json:"namespace,omitempty"`
 	Name       string                     `json:"name"`
 	Items      []ObjectTemplateSourceItem `json:"items"`
+	// Marks this source as optional.
+	// The templated object will still be applied if optional sources are not found.
+	// If the source object is created later on, it will be eventually picked up.
+	Optional bool `json:"optional,omitempty"`
 }
 
 type ObjectTemplateSourceItem struct {
