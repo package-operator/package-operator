@@ -1180,6 +1180,8 @@ containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
 * [PackageManifestLock](#packagemanifestlock)
+* [RepositoryManifest](#repositorymanifest)
+* [RepositoryPackageManifest](#repositorypackagemanifest)
 
 
 ### PackageManifest
@@ -1195,17 +1197,27 @@ kind: PackageManifest
 metadata:
   name: example
   namespace: default
+repository:
+  displayName: ipsum
+  links:
+  - name: consetetur
+    url: sadipscing
+  maintainers:
+  - email: amet
+    name: sit
+  shortDescription: dolor
+  version: lorem
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
-  - image: sit
-    name: dolor
+  - image: nonumy
+    name: diam
   phases:
-  - class: ipsum
-    name: lorem
+  - class: sed
+    name: elitr
   scopes:
   - PackageManifestScope
 test:
@@ -1216,9 +1228,9 @@ test:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: consetetur
-          namespace: sadipscing
-    name: amet
+          name: tempor
+          namespace: lorem
+    name: eirmod
 
 ```
 
@@ -1226,6 +1238,7 @@ test:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
+| `repository` <br><a href="#packagemanifestrepository">PackageManifestRepository</a> | Package Repository related information. |
 | `spec` <br><a href="#packagemanifestspec">PackageManifestSpec</a> | PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes. |
 | `test` <br><a href="#packagemanifesttest">PackageManifestTest</a> | PackageManifestTest configures test cases. |
 
@@ -1245,9 +1258,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: diam
-    image: sed
-    name: elitr
+  - digest: sit
+    image: dolor
+    name: ipsum
 
 ```
 
@@ -1258,9 +1271,103 @@ spec:
 | `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> |  |
 
 
+### RepositoryManifest
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: RepositoryManifest
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+
+
+### RepositoryPackageManifest
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: RepositoryPackageManifest
+metadata:
+  name: example
+  namespace: default
+repository:
+  displayName: consetetur
+  links:
+  - name: diam
+    url: nonumy
+  maintainers:
+  - email: sed
+    name: elitr
+  shortDescription: sadipscing
+  version: amet
+spec:
+  channels:
+  - eirmod
+  packageImage: tempor
+  resolvedImages:
+  - digest: dolor
+    image: ipsum
+    name: lorem
+  scopes:
+  - PackageManifestScope
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `repository` <br><a href="#packagemanifestrepository">PackageManifestRepository</a> | Package Repository related information. |
+| `spec` <br><a href="#repositorypackagemanifestspec">RepositoryPackageManifestSpec</a> |  |
+
+
 
 
 ---
+
+### PackageLink
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string |  |
+| `url` <b>required</b><br>string |  |
+
+
+Used in:
+* [PackageManifestRepository](#packagemanifestrepository)
+
+
+### PackageMaintainer
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string |  |
+| `email` <br>string |  |
+
+
+Used in:
+* [PackageManifestRepository](#packagemanifestrepository)
+
 
 ### PackageManifestImage
 
@@ -1289,6 +1396,7 @@ PackageManifestLockImage contains information about a resolved image
 
 Used in:
 * [PackageManifestLockSpec](#packagemanifestlockspec)
+* [RepositoryPackageManifestSpec](#repositorypackagemanifestspec)
 
 
 ### PackageManifestLockSpec
@@ -1316,6 +1424,24 @@ Used in:
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestRepository
+
+Package Repository related information.
+
+| Field | Description |
+| ----- | ----------- |
+| `version` <b>required</b><br>string | Version of this package to advertise in an repository. |
+| `displayName` <b>required</b><br>string | Human readable name to display in an repository. |
+| `shortDescription` <br>string | Short description of the package. |
+| `maintainers` <br><a href="#packagemaintainer">[]PackageMaintainer</a> | Package maintainers. |
+| `links` <br><a href="#packagelink">[]PackageLink</a> | Links to documentation, project website, github, etc. |
+
+
+Used in:
+* [PackageManifest](#packagemanifest)
+* [RepositoryPackageManifest](#repositorypackagemanifest)
 
 
 ### PackageManifestSpec
@@ -1373,6 +1499,22 @@ PackageManifestTestCaseTemplate template testing configuration.
 
 Used in:
 * [PackageManifestTest](#packagemanifesttest)
+
+
+### RepositoryPackageManifestSpec
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `scopes` <b>required</b><br><a href="#packagemanifestscope">[]PackageManifestScope</a> | Scopes declare the available installation scopes for the package.<br>Either Cluster, Namespaced, or both. |
+| `channels` <br>[]string | Release channels this Package is available in. |
+| `packageImage` <b>required</b><br>string | PackageImage URL. |
+| `resolvedImages` <br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | Resolved Images that are deployed as part of this package. |
+
+
+Used in:
+* [RepositoryPackageManifest](#repositorypackagemanifest)
 
 
 ### TemplateContext

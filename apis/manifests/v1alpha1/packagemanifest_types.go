@@ -32,8 +32,34 @@ type PackageManifest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec PackageManifestSpec `json:"spec,omitempty"`
-	Test PackageManifestTest `json:"test,omitempty"`
+	Repository *PackageManifestRepository `json:"repository,omitempty"`
+	Spec       PackageManifestSpec        `json:"spec,omitempty"`
+	Test       PackageManifestTest        `json:"test,omitempty"`
+}
+
+// Package Repository related information.
+type PackageManifestRepository struct {
+	// Version of this package to advertise in an repository.
+	Version string `json:"version"`
+	// Human readable name to display in an repository.
+	DisplayName string `json:"displayName"`
+	// Short description of the package.
+	// TODO: standardize maxLength. What is reasonable?
+	ShortDescription string `json:"shortDescription,omitempty"`
+	// Package maintainers.
+	Maintainers []PackageMaintainer `json:"maintainers,omitempty"`
+	// Links to documentation, project website, github, etc.
+	Links []PackageLink `json:"links,omitempty"`
+}
+
+type PackageMaintainer struct {
+	Name  string `json:"name"`
+	Email string `json:"email,omitempty"`
+}
+
+type PackageLink struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 // PackageManifestScope declares the available scopes to install this package in.
