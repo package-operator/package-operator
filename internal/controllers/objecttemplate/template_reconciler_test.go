@@ -362,7 +362,7 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 		expectedErr        error
 	}{
 		{
-			name: "sets invalid condition",
+			name: "sets invalid condition for SourceError",
 			objectTemplate: &GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{},
 			},
@@ -375,6 +375,22 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 					Status:  metav1.ConditionTrue,
 					Message: "for source  /: %!s(<nil>)",
 					Reason:  "SourceError",
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "sets invalid condition for TemplateError",
+			objectTemplate: &GenericObjectTemplate{
+				ObjectTemplate: corev1alpha1.ObjectTemplate{},
+			},
+			err: &TemplateError{Err: errTest},
+			expectedConditions: []metav1.Condition{
+				{
+					Type:    corev1alpha1.ObjectTemplateInvalid,
+					Status:  metav1.ConditionTrue,
+					Message: "something",
+					Reason:  "TemplateError",
 				},
 			},
 			expectedErr: nil,

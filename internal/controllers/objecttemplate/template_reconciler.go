@@ -5,7 +5,9 @@ import (
 	goerrors "errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +23,9 @@ import (
 	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/utils"
 )
+
+// Requeue every 30s to check if input sources exist now.
+var defaultMissingResourceRetryInterval = 30 * time.Second
 
 type templateReconciler struct {
 	scheme           *runtime.Scheme
@@ -54,34 +59,38 @@ func (r *templateReconciler) Reconcile(
 	}()
 
 	sourcesConfig := map[string]interface{}{}
-	if err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig); err != nil {
-		return ctrl.Result{}, fmt.Errorf("retrieving values from sources: %w", err)
+	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig)
+	if err != nil {
+		return res, fmt.Errorf("retrieving values from sources: %w", err)
+	}
+	if retryLater {
+		res.RequeueAfter = defaultMissingResourceRetryInterval
 	}
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
 	if err := r.templateObject(ctx, sourcesConfig, objectTemplate, obj); err != nil {
-		return ctrl.Result{}, err
+		return res, err
 	}
 
 	if err := r.dynamicCache.Watch(
 		ctx, objectTemplate.ClientObject(), obj); err != nil {
-		return ctrl.Result{}, fmt.Errorf("watching new child: %w", err)
+		return res, fmt.Errorf("watching new child: %w", err)
 	}
 
 	existingObj := &unstructured.Unstructured{}
 	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
 	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); errors.IsNotFound(err) {
 		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
-			return ctrl.Result{}, fmt.Errorf("handling creation: %w", err)
+			return res, fmt.Errorf("handling creation: %w", err)
 		}
-		return ctrl.Result{}, nil
+		return res, nil
 	} else if err != nil {
-		return ctrl.Result{}, fmt.Errorf("getting existing object: %w", err)
+		return res, fmt.Errorf("getting existing object: %w", err)
 	}
 	if err := updateStatusConditionsFromOwnedObject(ctx, objectTemplate, existingObj); err != nil {
-		return ctrl.Result{}, fmt.Errorf("updating status conditions from owned object: %w", err)
+		return res, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
 	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
@@ -89,10 +98,10 @@ func (r *templateReconciler) Reconcile(
 	obj.SetAnnotations(utils.MergeKeysFrom(existingObj.GetAnnotations(), obj.GetAnnotations()))
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.client.Update(ctx, obj); err != nil {
-		return ctrl.Result{}, fmt.Errorf("updating templated object: %w", err)
+		return res, fmt.Errorf("updating templated object: %w", err)
 	}
 
-	return
+	return res, nil
 }
 
 func (r *templateReconciler) handleCreation(ctx context.Context, owner, object client.Object) error {
@@ -110,20 +119,24 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 func (r *templateReconciler) getValuesFromSources(
 	ctx context.Context, objectTemplate genericObjectTemplate,
 	sourcesConfig map[string]interface{},
-) error {
+) (retryLater bool, err error) {
+	log := logr.FromContextOrDiscard(ctx)
 	for _, src := range objectTemplate.GetSources() {
 		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if !found {
+			log.Info(fmt.Sprintf("optional source not found, retry in %s", defaultMissingResourceRetryInterval),
+				"source", fmt.Sprintf("%s %s/%s", src.Kind, src.Namespace, src.Name))
+			retryLater = true
 			continue
 		}
 		if err := copySourceItems(ctx, src.Items, sourceObj, sourcesConfig); err != nil {
-			return &SourceError{Source: sourceObj, Err: err}
+			return false, &SourceError{Source: sourceObj, Err: err}
 		}
 	}
-	return nil
+	return retryLater, nil
 }
 
 func (r *templateReconciler) getSourceObject(
@@ -329,6 +342,17 @@ func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate
 		})
 		return nil // don't retry error
 	}
+	var templateError *TemplateError
+	if goerrors.As(err, &templateError) {
+		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
+			Type:    corev1alpha1.ObjectTemplateInvalid,
+			Status:  metav1.ConditionTrue,
+			Reason:  "TemplateError",
+			Message: templateError.Error(),
+		})
+		return nil // don't retry error
+	}
+
 	if err == nil {
 		meta.RemoveStatusCondition(objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid)
 	}

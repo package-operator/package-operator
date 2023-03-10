@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"package-operator.run/package-operator/internal/transform"
 )
@@ -34,14 +33,12 @@ func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, erro
 func (t *TemplateTransformer) transform(ctx context.Context, content []byte) ([]byte, error) {
 	template, err := transform.TemplateWithSprigFuncs(string(content))
 	if err != nil {
-		return nil, fmt.Errorf(
-			"parsing template: %w", err)
+		return nil, &TemplateError{Err: err}
 	}
 
 	var doc bytes.Buffer
 	if err := template.Execute(&doc, t.tctx); err != nil {
-		return nil, fmt.Errorf(
-			"executing template: %w", err)
+		return nil, &TemplateError{Err: err}
 	}
 	return doc.Bytes(), nil
 }
