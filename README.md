@@ -24,6 +24,7 @@ Package Operator is an open source operator for [Kubernetes](https://kubernetes.
 - [Project Status](#project-status)
 - [Features](#features)
 - [Documentation](#documentation)
+- [Getting in touch](#getting-in-touch)
 - [Contributing](#contributing)
 - [Development](#development)
 
@@ -31,8 +32,10 @@ Package Operator is an open source operator for [Kubernetes](https://kubernetes.
 
 ## Project Status
 
-Package Operator had it's first stable release and is in limited production use.
-The APIs have not been finalized and may be subject to breaking changes with future releases.
+Package Operator is used in production and the concepts proven.
+
+The Core APIs are generally stable and breaking changes should only happen in exceptional circumstances.\
+Be careful to check the change notes for alpha and beta APIs.
 
 ## Features
 
@@ -52,23 +55,31 @@ Package Operator documentation is available on [package-operator.run](https://pa
 
 The source of this website is our [website repository](https://github.com/package-operator/package-operator.github.io) which is hosted via Github Pages, [Hugo](https://gohugo.io/) and using the [Doks template](https://getdoks.org/).
 
+## Getting in touch
+
+Our mailing lists:
+- [pko-devel](https://groups.google.com/g/pko-devel) for development discussions.
+- [pko-users](https://groups.google.com/g/pko-users) for discussions among users and potential users.
+
 ## Contributing
 
 Thank you for taking time to help to improve Package Operator!
 
-Feel free to open issues or propose pull requests, but please keep in mind that Package Operator is still very fresh and response times for reviewing contributions may vary.
+Package Operator is [Apache 2.0 licensed](./LICENSE) and we accept contributions via GitHub pull requests.
 
-We also are not yet ready to open project management and meetings to the general public, but will try to be accommodating.
+### DCO
 
-## Development
+By contributing to this project you agree to the [Developer Certificate of Origin (DCO)](./DCO). This document was created by the Linux Kernel community and is a simple statement that you, as a contributor, have the legal right to make the contribution. See the DCO file for details.
+
+### Development
 
 The Package Operator project keeps almost all dependencies confined to the project checkout directory and manages dependencies within the project itself.
 
-To get started hacking, you just need Go 1.18+ and podman or docker installed.
+To get started hacking, you just need Go 1.19+ and podman or docker installed.
 
-### Commands and local development
+#### Commands and local development
 
-> **Dev Note**
+> **Dev Note**\
 > Before running _mage_ targets run `export CONTAINER_RUNTIME=docker`, `export CONTAINER_RUNTIME=podman` if using `podman`, or you will get cryptic errors from mage that may lead you to think there is a problem with the kind cluster.
 
 Package Operator uses [Mage](https://magefile.org/) (Think make, but all targets are written in Go instead of Shell) as task manager and developer command interface.
