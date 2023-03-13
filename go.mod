@@ -23,8 +23,8 @@ require (
 	k8s.io/apiserver v0.26.2
 	k8s.io/client-go v0.26.2
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a
-	k8s.io/utils v0.0.0-20230308161112-d77c459e9343
-	package-operator.run/apis v0.0.0-20230310215814-105d4e5bf36c
+	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
+	package-operator.run/apis v0.0.0-20230313162416-4083a56324f6
 	sigs.k8s.io/controller-runtime v0.14.5
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -68,7 +68,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
