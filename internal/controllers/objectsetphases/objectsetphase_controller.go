@@ -49,9 +49,8 @@ type teardownHandler interface {
 }
 
 type preflightChecker interface {
-	CheckPhase(
-		ctx context.Context, owner client.Object,
-		phase corev1alpha1.ObjectSetTemplatePhase,
+	Check(
+		ctx context.Context, owner, obj client.Object,
 	) (violations []preflight.Violation, err error)
 }
 

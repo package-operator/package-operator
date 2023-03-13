@@ -17,6 +17,10 @@ type ObjectTemplateSource struct {
 	Namespace  string                     `json:"namespace,omitempty"`
 	Name       string                     `json:"name"`
 	Items      []ObjectTemplateSourceItem `json:"items"`
+	// Marks this source as optional.
+	// The templated object will still be applied if optional sources are not found.
+	// If the source object is created later on, it will be eventually picked up.
+	Optional bool `json:"optional,omitempty"`
 }
 
 type ObjectTemplateSourceItem struct {
@@ -28,4 +32,24 @@ type ObjectTemplateSourceItem struct {
 type ObjectTemplateStatus struct {
 	// Conditions is a list of status conditions the templated object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// This field is not part of any API contract
+	// it will go away as soon as kubectl can print conditions!
+	// When evaluating object state in code, use .Conditions instead.
+	Phase ObjectTemplateStatusPhase `json:"phase,omitempty"`
 }
+
+// ObjectTemplate condition types.
+const (
+	// Invalid indicates an issue with the ObjectTemplates own configuration.
+	ObjectTemplateInvalid = "package-operator.run/Invalid"
+)
+
+type ObjectTemplateStatusPhase string
+
+// Well-known ObjectTemplates Phases for printing a Status in kubectl,
+// see deprecation notice in ObjectTemplatesStatus for details.
+const (
+	ObjectTemplatePhasePending ObjectTemplateStatusPhase = "Pending"
+	ObjectTemplatePhaseActive  ObjectTemplateStatusPhase = "Active"
+	ObjectTemplatePhaseError   ObjectTemplateStatusPhase = "Error"
+)

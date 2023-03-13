@@ -18,7 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -212,8 +212,8 @@ spec:
 	assert.Equal(t, cm1PatchedValue, envVar.Value)
 }
 
-func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (v1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
-	cm := v1.ConfigMap{
+func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (corev1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
+	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -241,13 +241,15 @@ func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName strin
 	return cm, cmSource
 }
 
+const pw = "password"
+
 func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	secretName := "secret"
-	secretKey := "password"
-	secretDestination := "password"
+	secretName := "object-template-secret"
+	secretKey := pw
+	secretDestination := pw
 	secretValue := "super-secret-password"
-	secret := v1.Secret{
+	secret := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
@@ -256,7 +258,7 @@ func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
 			Name:      secretName,
 			Namespace: defaultNamespace,
 		},
-		Type: v1.SecretTypeOpaque,
+		Type: corev1.SecretTypeOpaque,
 		StringData: map[string]string{
 			secretKey: secretValue,
 		},
@@ -324,4 +326,90 @@ spec:
 
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, secretValue, packageConfig[secretDestination])
+}
+
+func TestObjectTemplate_waitsForSource(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	secretName := "secret"
+	secretKey := pw
+	secretDestination := pw
+	secretValue := "super-secret-password"
+	secret := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: defaultNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		StringData: map[string]string{
+			secretKey: secretValue,
+		},
+	}
+	secretGVK, err := apiutil.GVKForObject(&secret, Scheme)
+	require.NoError(t, err)
+	secret.SetGroupVersionKind(secretGVK)
+	secretSource := corev1alpha1.ObjectTemplateSource{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Name:       secretName,
+		Optional:   true,
+		Items: []corev1alpha1.ObjectTemplateSourceItem{
+			{
+				Key:         "data." + secretKey,
+				Destination: secretDestination,
+			},
+		},
+	}
+	cmName := "object-template-cm-1"
+	template := fmt.Sprintf(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+data:
+  test: {{ index .config "%s" | default "" | b64dec }}
+`, cmName, secretDestination)
+
+	objectTemplateName := "object-template-wait"
+	objectTemplate := corev1alpha1.ObjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectTemplateName,
+			Namespace: defaultNamespace,
+		},
+		Spec: corev1alpha1.ObjectTemplateSpec{
+			Template: template,
+			Sources: []corev1alpha1.ObjectTemplateSource{
+				secretSource,
+			},
+		},
+	}
+	objectTemplateGVK, err := apiutil.GVKForObject(&objectTemplate, Scheme)
+	require.NoError(t, err)
+	objectTemplate.SetGroupVersionKind(objectTemplateGVK)
+
+	require.NoError(t, Client.Create(ctx, &objectTemplate))
+	defer cleanupOnSuccess(ctx, t, &objectTemplate)
+
+	cm := &corev1.ConfigMap{}
+	cm.Name = cmName
+	cm.Namespace = defaultNamespace
+
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, cm, "to be created", func(obj client.Object) (done bool, err error) {
+			return true, nil
+		}, dev.WithTimeout(20*time.Second)))
+
+	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(cm), cm))
+	assert.Equal(t, "", cm.Data["test"])
+
+	require.NoError(t, Client.Create(ctx, &secret))
+	defer cleanupOnSuccess(ctx, t, &secret)
+
+	require.NoError(t,
+		Waiter.WaitForObject(ctx, cm, "to be updated", func(obj client.Object) (done bool, err error) {
+			upatedCM := obj.(*corev1.ConfigMap)
+			return upatedCM.Data["test"] == secretValue, nil
+		}, dev.WithTimeout(60*time.Second)))
 }

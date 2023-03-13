@@ -68,9 +68,8 @@ type dynamicCache interface {
 }
 
 type preflightChecker interface {
-	CheckPhase(
-		ctx context.Context, owner client.Object,
-		phase corev1alpha1.ObjectSetTemplatePhase,
+	Check(
+		ctx context.Context, owner, obj client.Object,
 	) (violations []preflight.Violation, err error)
 }
 
@@ -125,7 +124,8 @@ func (r *PhaseReconciler) ReconcilePhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
-	violations, err := r.preflightChecker.CheckPhase(ctx, owner.ClientObject(), phase)
+	violations, err := preflight.CheckAllInPhase(
+		ctx, r.preflightChecker, owner.ClientObject(), phase)
 	if err != nil {
 		return nil, ProbingResult{}, err
 	}

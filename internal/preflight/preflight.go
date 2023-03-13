@@ -34,26 +34,67 @@ func (v *Violation) String() string {
 	return fmt.Sprintf("%s: %s", v.Position, v.Error)
 }
 
+type contextKey string
+
+const phaseContextKey contextKey = "_phase"
+
+func NewContextWithPhase(ctx context.Context, phase corev1alpha1.ObjectSetTemplatePhase) context.Context {
+	return context.WithValue(ctx, phaseContextKey, phase)
+}
+
+func phaseFromContext(ctx context.Context) (
+	phase corev1alpha1.ObjectSetTemplatePhase, found bool,
+) {
+	phaseI := ctx.Value(phaseContextKey)
+	if phaseI == nil {
+		return
+	}
+	return phaseI.(corev1alpha1.ObjectSetTemplatePhase), true
+}
+
+func addPositionToViolations(
+	ctx context.Context, obj client.Object, vs []Violation,
+) {
+	objPosition := fmt.Sprintf("%s %s",
+		obj.GetObjectKind().GroupVersionKind().Kind,
+		client.ObjectKeyFromObject(obj))
+
+	phase, ok := phaseFromContext(ctx)
+	if ok {
+		objPosition = fmt.Sprintf("Phase %q, %s", phase.Name, objPosition)
+	}
+
+	for i := range vs {
+		vs[i].Position = objPosition
+	}
+}
+
 type checker interface {
-	CheckPhase(
-		ctx context.Context, owner client.Object,
-		phase corev1alpha1.ObjectSetTemplatePhase,
+	Check(
+		ctx context.Context, owner, obj client.Object,
 	) (violations []Violation, err error)
-	CheckObj(
-		ctx context.Context, owner,
-		obj client.Object,
-	) (violations []Violation, err error)
+}
+
+type CheckerFn func(
+	ctx context.Context, owner, obj client.Object,
+) (violations []Violation, err error)
+
+func (fn CheckerFn) Check(
+	ctx context.Context, owner,
+	obj client.Object,
+) (violations []Violation, err error) {
+	return fn(ctx, owner, obj)
 }
 
 // Runs a list of preflight checks and aggregates the result into a single list of violations.
 type List []checker
 
-func (l List) CheckPhase(
-	ctx context.Context, owner client.Object,
-	phase corev1alpha1.ObjectSetTemplatePhase,
+func (l List) Check(
+	ctx context.Context, owner,
+	obj client.Object,
 ) (violations []Violation, err error) {
 	for _, checker := range l {
-		v, err := checker.CheckPhase(ctx, owner, phase)
+		v, err := checker.Check(ctx, owner, obj)
 		if err != nil {
 			return violations, err
 		}
@@ -62,16 +103,32 @@ func (l List) CheckPhase(
 	return
 }
 
-func (l List) CheckObj(
-	ctx context.Context, owner,
-	obj client.Object,
+func CheckAll(
+	ctx context.Context, checker checker,
+	owner client.Object, objs []client.Object,
 ) (violations []Violation, err error) {
-	for _, checker := range l {
-		v, err := checker.CheckObj(ctx, owner, obj)
+	for _, obj := range objs {
+		vs, err := checker.Check(ctx, owner, obj)
 		if err != nil {
-			return violations, err
+			return nil, err
 		}
-		violations = append(violations, v...)
+		violations = append(violations, vs...)
+	}
+	return
+}
+
+func CheckAllInPhase(
+	ctx context.Context, checker checker,
+	owner client.Object,
+	phase corev1alpha1.ObjectSetTemplatePhase,
+) (violations []Violation, err error) {
+	ctx = NewContextWithPhase(ctx, phase)
+	for i := range phase.Objects {
+		vs, err := checker.Check(ctx, owner, &phase.Objects[i].Object)
+		if err != nil {
+			return nil, err
+		}
+		violations = append(violations, vs...)
 	}
 	return
 }

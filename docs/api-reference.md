@@ -260,10 +260,12 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+    optional: "true"
   template: consetetur
 status:
   conditions:
   - metav1.Condition
+  phase: ObjectTemplateStatusPhase
 
 ```
 
@@ -551,10 +553,12 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
+    optional: "true"
   template: consetetur
 status:
   conditions:
   - metav1.Condition
+  phase: ObjectTemplateStatusPhase
 
 ```
 
@@ -916,6 +920,7 @@ Used in:
 | `namespace` <br>string |  |
 | `name` <b>required</b><br>string |  |
 | `items` <b>required</b><br><a href="#objecttemplatesourceitem">[]ObjectTemplateSourceItem</a> |  |
+| `optional` <br><a href="#bool">bool</a> | Marks this source as optional.<br>The templated object will still be applied if optional sources are not found.<br>If the source object is created later on, it will be eventually picked up. |
 
 
 Used in:
@@ -958,6 +963,7 @@ ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the statu
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
+| `phase` <br><a href="#objecttemplatestatusphase">ObjectTemplateStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 
 
 Used in:

@@ -1260,6 +1260,12 @@ spec:
                       type: string
                     namespace:
                       type: string
+                    optional:
+                      description: Marks this source as optional. The templated object
+                        will still be applied if optional sources are not found. If
+                        the source object is created later on, it will be eventually
+                        picked up.
+                      type: boolean
                   required:
                   - apiVersion
                   - items
@@ -1348,6 +1354,11 @@ spec:
                   - type
                   type: object
                 type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
             type: object
         type: object
     served: true
@@ -2747,6 +2758,12 @@ spec:
                       type: string
                     namespace:
                       type: string
+                    optional:
+                      description: Marks this source as optional. The templated object
+                        will still be applied if optional sources are not found. If
+                        the source object is created later on, it will be eventually
+                        picked up.
+                      type: boolean
                   required:
                   - apiVersion
                   - items
@@ -2835,6 +2852,11 @@ spec:
                   - type
                   type: object
                 type: array
+              phase:
+                description: This field is not part of any API contract it will go
+                  away as soon as kubectl can print conditions! When evaluating object
+                  state in code, use .Conditions instead.
+                type: string
             type: object
         type: object
     served: true
