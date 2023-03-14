@@ -38,6 +38,12 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
+	pkoConfig := os.Getenv("PKO_CONFIG")
+	var packageConfig *runtime.RawExtension
+	if len(pkoConfig) > 0 {
+		packageConfig = &runtime.RawExtension{Raw: []byte(pkoConfig)}
+	}
+
 	packageOperatorPackage := &corev1alpha1.ClusterPackage{}
 	err = c.Get(ctx, client.ObjectKey{
 		Name: "package-operator",
@@ -47,7 +53,8 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		// Package Operator is already installed
 		log.Info("Package Operator already installed, updating via in-cluster Package Operator")
 		packageOperatorPackage.Spec.Image = opts.selfBootstrap
-		return c.Update(ctx, packageOperatorPackage)
+		packageOperatorPackage.Spec.Config = packageConfig
+		return c.Patch(ctx, packageOperatorPackage, client.Apply, client.FieldOwner("package-operator"), client.ForceOwnership)
 	}
 	if err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("error looking up Package Operator ClusterPackage: %w", err)
@@ -106,7 +113,8 @@ func runBootstrap(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			Name: packageOperatorClusterPackageName,
 		},
 		Spec: corev1alpha1.PackageSpec{
-			Image: opts.selfBootstrap,
+			Image:  opts.selfBootstrap,
+			Config: packageConfig,
 		},
 	}
 	if err := c.Create(ctx, packageOperatorPackage); err != nil && !errors.IsAlreadyExists(err) {
