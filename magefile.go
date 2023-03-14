@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientScheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -476,6 +477,10 @@ func (l Locations) ImageURL(name string, useDigest bool) string {
 	return l.imageOrg + "/" + name + "@" + string(digest)
 }
 
+func (l Locations) LocalImageURL(name string) string {
+	return "localhost:5001/package-operator/" + name + ":" + applicationVersion
+}
+
 func (l *Locations) ContainerRuntime() string {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -509,6 +514,32 @@ func (l *Locations) DevEnv() *dev.Environment {
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
+			dev.WithClusterInitializers{
+				dev.ClusterLoadObjectsFromFiles{
+					"config/local-registry.yaml",
+				},
+			},
+			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
+				ContainerdConfigPatches: []string{
+					// Replace quay.io with our local dev-registry.
+					`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
+	endpoint = ["http://localhost:31320"]`,
+				},
+				Nodes: []kindv1alpha4.Node{
+					{
+						Role: kindv1alpha4.ControlPlaneRole,
+						ExtraPortMappings: []kindv1alpha4.PortMapping{
+							// Open port to enable connectivity with local registry.
+							{
+								ContainerPort: 5001,
+								HostPort:      5001,
+								ListenAddress: "127.0.0.1",
+								Protocol:      "TCP",
+							},
+						},
+					},
+				},
+			}),
 		)
 	}
 
@@ -1086,13 +1117,14 @@ func (d Dev) Integration(ctx context.Context) {
 	mg.SerialDeps(Test.Integration)
 }
 
-func (d Dev) loadImage(image string) {
+func (d Dev) loadImage(image string) error {
 	mg.Deps(mg.F(Build.Image, image))
 
-	imageTar := filepath.Join(locations.ImageCache(image) + ".tar")
-	if err := locations.DevEnv().LoadImageFromTar(imageTar); err != nil {
-		panic(fmt.Errorf("load image from tar: %w", err))
-	}
+	return sh.Run(
+		locations.containerRuntime, "push",
+		locations.ImageURL(image, false), locations.LocalImageURL(image),
+		"--tls-verify=false",
+	)
 }
 
 func (d Dev) init() { mg.SerialDeps(Dependency.Kind) }
