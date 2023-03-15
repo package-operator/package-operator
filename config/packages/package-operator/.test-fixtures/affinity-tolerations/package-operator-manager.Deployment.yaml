@@ -20,12 +20,8 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator
     spec:
-{{- if hasKey .config "affinity" }}
-      affinity: {{ toJson .config.affinity }}
-{{- end}}
-{{- if hasKey .config "tolerations" }}
-      tolerations: {{ toJson .config.tolerations }}
-{{- end}}
+      affinity: {"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/infra","operator":"Exists"}]}]}}}
+      tolerations: [{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"}]
       containers:
       - args:
         - --enable-leader-election
@@ -35,10 +31,10 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: PKO_IMAGE
-          value: {{ index .images "package-operator-manager" }}
+          value: registry.package-operator.run/static-image-for-testing
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
-          value: {{ index .images "remote-phase-package" }}
-        image: {{ index .images "package-operator-manager" }}
+          value: registry.package-operator.run/static-image-for-testing
+        image: registry.package-operator.run/static-image-for-testing
         livenessProbe:
           httpGet:
             path: /healthz

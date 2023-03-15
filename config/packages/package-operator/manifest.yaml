@@ -914,4 +914,23 @@ test:
           labels: null
           name: test
           namespace: ""
-    name: cluster-scope
+    name: no-config
+  - context:
+      package:
+        metadata:
+          annotations: null
+          labels: null
+          name: test
+          namespace: ""
+      config:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: node-role.kubernetes.io/infra
+                  operator: Exists
+        tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/infra
+    name: affinity-tolerations
