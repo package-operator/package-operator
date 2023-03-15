@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"os"
+	"strings"
+)
+
 // Slice contains check.
 func Contains[T comparable](elems []T, v T) bool {
 	for _, s := range elems {
@@ -29,4 +34,12 @@ func CopyMap[K comparable, V interface{}](toCopy map[K]V) map[K]V {
 		out[k] = v
 	}
 	return out
+}
+
+func ImageURLWithOverride(img string) string {
+	if repoHostOverride := os.Getenv("PKO_REPOSITORY_HOST"); len(repoHostOverride) > 0 {
+		parts := strings.SplitN(img, "/", 2)
+		return repoHostOverride + "/" + parts[1]
+	}
+	return img
 }

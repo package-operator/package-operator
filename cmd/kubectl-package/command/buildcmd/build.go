@@ -16,6 +16,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packageexport"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/package-operator/internal/utils"
 )
 
 const (
@@ -165,7 +166,7 @@ func preBuildValidation(pkg *packagecontent.Package, retrieveDigest func(ref str
 
 	// validate digests
 	for imageName, lockImage := range pkgLockImages {
-		ref, err := name.ParseReference(lockImage.Image)
+		ref, err := name.ParseReference(utils.ImageURLWithOverride(lockImage.Image))
 		if err != nil {
 			return fmt.Errorf("%w: can't parse image \"%s\" reference \"%s\"", err, imageName, lockImage.Image)
 		}
