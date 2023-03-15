@@ -50,6 +50,7 @@ const (
 
 	controllerGenVersion = "0.11.2"
 	golangciLintVersion  = "1.51.1"
+	craneVersion         = "0.13.0"
 	kindVersion          = "0.17.0"
 	k8sDocGenVersion     = "0.5.1"
 )
@@ -871,6 +872,11 @@ func (d Dependency) GolangciLint() error {
 	return locations.Deps().GoInstall("golangci-lint", url, golangciLintVersion)
 }
 
+func (d Dependency) Crane() error {
+	url := "github.com/google/go-containerregistry/cmd/crane"
+	return locations.Deps().GoInstall("crane", url, craneVersion)
+}
+
 func (d Dependency) Docgen() error {
 	url := "github.com/thetechnick/k8s-docgen"
 	return locations.Deps().GoInstall("k8s-docgen", url, k8sDocGenVersion)
@@ -1121,9 +1127,9 @@ func (d Dev) loadImage(image string) error {
 	mg.Deps(mg.F(Build.Image, image))
 
 	return sh.Run(
-		locations.containerRuntime, "push",
-		locations.ImageURL(image, false), locations.LocalImageURL(image),
-		"--tls-verify=false",
+		"crane", "push",
+		locations.ImageCache(image)+".tar",
+		locations.LocalImageURL(image),
 	)
 }
 
