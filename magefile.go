@@ -858,7 +858,7 @@ func (b Build) buildPackageImage(name string) {
 
 // Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
-	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen)
+	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen, Dependency.Crane)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
@@ -1133,7 +1133,7 @@ func (d Dev) loadImage(image string) error {
 	)
 }
 
-func (d Dev) init() { mg.SerialDeps(Dependency.Kind) }
+func (d Dev) init() { mg.Deps(Dependency.Kind, Dependency.Crane) }
 
 // Run all code generators.
 // installYamlFile has to come after code generation
