@@ -157,14 +157,33 @@ func main() {
 	}
 
 	if len(opts.selfBootstrap) > 0 {
-		if err := runBootstrap(setupLog, scheme, opts); err != nil {
+		b, err := newBootstrapper(setupLog, scheme, opts.selfBootstrap, func(ctx context.Context) error {
+			// lazy create manager after boot strapper is finished,
+			// or the RESTMapper will not pick up the CRDs in the cluster.
+			mgr, err := setupManager(setupLog, scheme, opts)
+			if err != nil {
+				return err
+			}
+			return runManager(ctx, mgr, setupLog)
+		})
+		if err != nil {
+			setupLog.Error(err, "unable to setup self-bootstrap")
+			os.Exit(1)
+		}
+
+		if err := b.Bootstrap(ctrl.SetupSignalHandler()); err != nil {
 			setupLog.Error(err, "unable to run self-bootstrap")
 			os.Exit(1)
 		}
 		return
 	}
 
-	if err := runManager(setupLog, scheme, opts); err != nil {
+	mgr, err := setupManager(setupLog, scheme, opts)
+	if err != nil {
+		setupLog.Error(err, "unable to setup manager")
+		os.Exit(1)
+	}
+	if err := runManager(ctrl.SetupSignalHandler(), mgr, setupLog); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
@@ -228,8 +247,19 @@ func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
 	return nil
 }
 
+func runManager(ctx context.Context, mgr ctrl.Manager, log logr.Logger) error {
+	log.Info("starting manager")
+	err := mgr.Start(ctx)
+	switch {
+	case err == nil || errors.Is(err, ErrHypershiftAPIPostSetup):
+		return nil
+	default:
+		return fmt.Errorf("problem running manager: %w", err)
+	}
+}
+
 //nolint:maintidx
-func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+func setupManager(log logr.Logger, scheme *runtime.Scheme, opts opts) (ctrl.Manager, error) {
 	controllerLog := ctrl.Log.WithName("controllers")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -253,15 +283,15 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}),
 	})
 	if err != nil {
-		return fmt.Errorf("creating manager: %w", err)
+		return nil, fmt.Errorf("creating manager: %w", err)
 	}
 
 	// Health and Ready checks
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to set up health check: %w", err)
+		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to set up ready check: %w", err)
+		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	// PPROF
@@ -294,7 +324,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			}
 		}))
 		if err != nil {
-			return fmt.Errorf("unable to create pprof server: %w", err)
+			return nil, fmt.Errorf("unable to create pprof server: %w", err)
 		}
 	}
 
@@ -319,7 +349,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	uncachedClient, err := client.New(
 		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 	if err != nil {
-		return fmt.Errorf("unable to set up uncached client: %w", err)
+		return nil, fmt.Errorf("unable to set up uncached client: %w", err)
 	}
 
 	// ObjectSet
@@ -329,7 +359,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ObjectSet: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ObjectSet: %w", err)
 	}
 
 	if err = objectsets.NewClusterObjectSetController(
@@ -338,7 +368,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(), dc, recorder,
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
 	}
 
 	// ObjectSetPhase for "default" class
@@ -348,7 +378,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
 
 	if err = objectsetphases.NewSameClusterClusterObjectSetPhaseController(
@@ -356,7 +386,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetScheme(), dc, defaultObjectSetPhaseClass, mgr.GetClient(),
 		mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 	}
 
 	// Object deployment controller
@@ -364,7 +394,7 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetClient(), controllerLog.WithName("ObjectDeployment"),
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ObjectDeployment: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ObjectDeployment: %w", err)
 	}
 
 	// Cluster Object deployment controller
@@ -372,35 +402,35 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		mgr.GetClient(), controllerLog.WithName("ClusterObjectDeployment"),
 		mgr.GetScheme(),
 	)).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
 	}
 
 	if err = packages.NewPackageController(
 		mgr.GetClient(), controllerLog.WithName("Package"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for Package: %w", err)
+		return nil, fmt.Errorf("unable to create controller for Package: %w", err)
 	}
 
 	if err = packages.NewClusterPackageController(
 		mgr.GetClient(), controllerLog.WithName("ClusterPackage"), mgr.GetScheme(),
 		opts.namespace, opts.managerImage,
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
 	}
 
 	if err = objecttemplate.NewObjectTemplateController(
 		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
 		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
 	}
 
 	if err = objecttemplate.NewClusterObjectTemplateController(
 		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
 		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
 	).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
+		return nil, fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
 	}
 
 	// Probe for HyperShift API
@@ -417,15 +447,15 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			mgr.GetScheme(),
 			opts.remotePhasePackageImage,
 		).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller for HostedCluster: %w", err)
+			return nil, fmt.Errorf("unable to create controller for HostedCluster: %w", err)
 		}
 	case meta.IsNoMatchError(err):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
 		if err := mgr.Add(newHypershift(controllerLog.WithName("HyperShift"), mgr.GetRESTMapper(), ticker)); err != nil {
-			return fmt.Errorf("add hypershift checker: %w", err)
+			return nil, fmt.Errorf("add hypershift checker: %w", err)
 		}
 	default:
-		return fmt.Errorf("hypershiftv1beta1 probing: %w", err)
+		return nil, fmt.Errorf("hypershiftv1beta1 probing: %w", err)
 	}
 
 	cleanupClient, err := client.New(mgr.GetConfig(), client.Options{
@@ -433,20 +463,12 @@ func runManager(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		Mapper: mgr.GetRESTMapper(),
 	})
 	if err != nil {
-		return fmt.Errorf("create pod cleanup client: %w", err)
+		return nil, fmt.Errorf("create pod cleanup client: %w", err)
 	}
 
 	if err := mgr.Add(newCleaner(cleanupClient, opts.namespace)); err != nil {
-		return fmt.Errorf("add hypershift checker: %w", err)
+		return nil, fmt.Errorf("add hypershift checker: %w", err)
 	}
 
-	log.Info("starting manager")
-
-	err = mgr.Start(ctrl.SetupSignalHandler())
-	switch {
-	case err == nil || errors.Is(err, ErrHypershiftAPIPostSetup):
-		return nil
-	default:
-		return fmt.Errorf("problem running manager: %w", err)
-	}
+	return mgr, nil
 }
