@@ -897,3 +897,212 @@ func Test_mapConditions(t *testing.T) {
 		})
 	}
 }
+
+func TestPhaseReconciler_observeExternalObject(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		OwnerObject    unstructured.Unstructured
+		ExternalObject corev1alpha1.ObjectSetObject
+		ObservedObject *corev1alpha1.ObjectSetObject
+	}{
+		"external object does not exist": {
+			ExternalObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name": "external",
+						},
+					},
+				},
+			},
+		},
+		"cached external object exists/owner namespace": {
+			OwnerObject: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "owner",
+						"namespace": "owner-ns",
+					},
+				},
+			},
+			ExternalObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name": "external",
+						},
+					},
+				},
+			},
+			ObservedObject: &corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "external",
+							"namespace": "owner-ns",
+							"labels": map[string]interface{}{
+								DynamicCacheLabel: "True",
+							},
+						},
+					},
+				},
+			},
+		},
+		"uncached external object exists/owner namespace": {
+			OwnerObject: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "owner",
+						"namespace": "owner-ns",
+					},
+				},
+			},
+			ExternalObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name": "external",
+						},
+					},
+				},
+			},
+			ObservedObject: &corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "external",
+							"namespace": "owner-ns",
+						},
+					},
+				},
+			},
+		},
+		"uncached external object exists/external namespace": {
+			OwnerObject: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name":      "owner",
+						"namespace": "owner-ns",
+					},
+				},
+			},
+			ExternalObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "external",
+							"namespace": "external-ns",
+						},
+					},
+				},
+			},
+			ObservedObject: &corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "external",
+							"namespace": "external-ns",
+						},
+					},
+				},
+			},
+		},
+	} {
+		tc := tc
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ownerObj := &unstructured.Unstructured{}
+
+			owner := &phaseObjectOwnerMock{}
+			owner.On("ClientObject").Return(ownerObj)
+
+			testClient := testutil.NewClient()
+
+			clientCall := testClient.
+				On("Get",
+					mock.Anything,
+					client.ObjectKeyFromObject(&tc.ExternalObject.Object),
+					&tc.ExternalObject.Object,
+					mock.Anything)
+
+			switch {
+			case tc.ObservedObject == nil:
+				clientCall.Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			case !hasDynamicCacheLabel(*tc.ObservedObject):
+				clientCall.Run(func(args mock.Arguments) {
+					obj := args.Get(2).(*unstructured.Unstructured)
+
+					tc.ObservedObject.Object.DeepCopyInto(obj)
+				}).Return(nil)
+
+				testClient.On("Patch",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					labels := tc.ObservedObject.Object.GetLabels()
+
+					if labels == nil {
+						labels = make(map[string]string)
+					}
+
+					labels[DynamicCacheLabel] = "True"
+
+					obj := args.Get(1).(*unstructured.Unstructured)
+
+					tc.ObservedObject.Object.DeepCopyInto(obj)
+				}).Return(nil)
+			default:
+				clientCall.Maybe()
+			}
+
+			cacheMock := &dynamicCacheMock{}
+			cacheMock.
+				On("Watch", mock.Anything, ownerObj, mock.Anything).
+				Return(nil)
+
+			cacheCall := cacheMock.
+				On("Get",
+					mock.Anything,
+					client.ObjectKeyFromObject(&tc.ExternalObject.Object),
+					&tc.ExternalObject.Object,
+					mock.Anything)
+
+			if tc.ObservedObject == nil || !hasDynamicCacheLabel(*tc.ObservedObject) {
+				cacheCall.Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			} else {
+				cacheCall.Run(func(args mock.Arguments) {
+					obj := args.Get(2).(*unstructured.Unstructured)
+
+					tc.ObservedObject.Object.DeepCopyInto(obj)
+				}).Return(nil)
+			}
+
+			r := &PhaseReconciler{
+				writer:         testClient,
+				uncachedClient: testClient,
+				dynamicCache:   cacheMock,
+			}
+
+			ctx := context.Background()
+			observed, err := r.observeExternalObject(ctx, owner, tc.ExternalObject)
+			require.NoError(t, err)
+
+			if tc.ObservedObject == nil {
+				assert.Equal(t, tc.ExternalObject.Object, *observed)
+			} else {
+				assert.Equal(t, tc.ObservedObject.Object, *observed)
+			}
+		})
+	}
+}
+
+func hasDynamicCacheLabel(obj corev1alpha1.ObjectSetObject) bool {
+	labels := obj.Object.GetLabels()
+
+	return labels != nil && labels[DynamicCacheLabel] == "True"
+}

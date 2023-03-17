@@ -32,6 +32,7 @@ type PhaseReconciler struct {
 	// the dynamic cache that is managed to hold the objects we are reconciling.
 	writer           client.Writer
 	dynamicCache     dynamicCache
+	uncachedClient   client.Reader
 	ownerStrategy    ownerStrategy
 	adoptionChecker  adoptionChecker
 	patcher          patcher
@@ -77,6 +78,7 @@ func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	ownerStrategy ownerStrategy,
 	preflightChecker preflightChecker,
 ) *PhaseReconciler {
@@ -84,6 +86,7 @@ func NewPhaseReconciler(
 		scheme:           scheme,
 		writer:           writer,
 		dynamicCache:     dynamicCache,
+		uncachedClient:   uncachedClient,
 		ownerStrategy:    ownerStrategy,
 		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
 		patcher:          &defaultPatcher{writer: writer},
@@ -96,6 +99,42 @@ type PhaseObjectOwner interface {
 	GetRevision() int64
 	GetConditions() *[]metav1.Condition
 	IsPaused() bool
+}
+
+func newRecordingProbe(name string, probe probing.Prober) recordingProbe {
+	return recordingProbe{
+		name:  name,
+		probe: probe,
+	}
+}
+
+type recordingProbe struct {
+	name     string
+	probe    probing.Prober
+	failures []string
+}
+
+func (p *recordingProbe) Probe(obj *unstructured.Unstructured) {
+	ok, msg := p.probe.Probe(obj)
+	if ok {
+		return
+	}
+
+	gvk := obj.GroupVersionKind()
+	msg = fmt.Sprintf("%s %s %s/%s: %s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName(), msg)
+
+	p.failures = append(p.failures, msg)
+}
+
+func (p *recordingProbe) Result() ProbingResult {
+	if len(p.failures) == 0 {
+		return ProbingResult{}
+	}
+
+	return ProbingResult{
+		PhaseName:    p.name,
+		FailedProbes: p.failures,
+	}
 }
 
 type ProbingResult struct {
@@ -127,39 +166,82 @@ func (r *PhaseReconciler) ReconcilePhase(
 	violations, err := preflight.CheckAllInPhase(
 		ctx, r.preflightChecker, owner.ClientObject(), phase)
 	if err != nil {
-		return nil, ProbingResult{}, err
+		return nil, res, err
 	}
 	if len(violations) > 0 {
-		return nil, ProbingResult{}, &preflight.Error{Violations: violations}
+		return nil, res, &preflight.Error{Violations: violations}
 	}
 
-	var failedProbes []string
+	rec := newRecordingProbe(phase.Name, probe)
+
 	for _, phaseObject := range phase.Objects {
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
 		if err != nil {
-			return nil, res, fmt.Errorf(
-				"object %s/%s kind:%s: %w",
-				phaseObject.Object.GetNamespace(),
-				phaseObject.Object.GetName(),
-				phaseObject.Object.GetKind(), err)
+			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
 		}
 		actualObjects = append(actualObjects, actualObj)
 
-		if success, message := probe.Probe(actualObj); !success {
-			gvk := actualObj.GroupVersionKind()
-			failedProbes = append(failedProbes,
-				fmt.Sprintf("%s %s %s/%s: %s",
-					gvk.Group, gvk.Kind, actualObj.GetNamespace(), actualObj.GetName(), message))
-		}
+		rec.Probe(actualObj)
 	}
 
-	if len(failedProbes) > 0 {
-		return actualObjects, ProbingResult{
-			FailedProbes: failedProbes,
-			PhaseName:    phase.Name,
-		}, nil
+	for _, obj := range phase.ExternalObjects {
+		observedObj, err := r.observeExternalObject(ctx, owner, obj)
+		if err != nil {
+			return nil, res, fmt.Errorf("%s: %w", obj, err)
+		}
+
+		rec.Probe(observedObj)
 	}
-	return actualObjects, res, nil
+
+	return actualObjects, rec.Result(), nil
+}
+
+func (r *PhaseReconciler) observeExternalObject(
+	ctx context.Context,
+	owner PhaseObjectOwner,
+	extObj corev1alpha1.ObjectSetObject,
+) (*unstructured.Unstructured, error) {
+	var (
+		obj      = &extObj.Object
+		ownerObj = owner.ClientObject()
+	)
+
+	if len(obj.GetNamespace()) == 0 {
+		obj.SetNamespace(ownerObj.GetNamespace())
+	}
+
+	// Watch this external object while the owner of the phase is active
+	if err := r.dynamicCache.Watch(ctx, ownerObj, obj); err != nil {
+		return nil, fmt.Errorf("watching external object: %w", err)
+	}
+
+	var (
+		key      = client.ObjectKeyFromObject(obj)
+		observed = obj.DeepCopy()
+	)
+
+	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
+		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+			// Prefer to return with no error here as an observed object with no
+			// status conditions will fail probe attempt naturally
+			return observed, nil
+		} else if err != nil {
+			return nil, fmt.Errorf("retrieving external object: %w", err)
+		}
+
+		// Update object to ensure it is part of our cache and we get events to reconcile.
+		if observed, err = AddDynamicCacheLabel(ctx, r.writer, observed); err != nil {
+			return nil, fmt.Errorf("adding cache label: %w", err)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("retrieving external object: %w", err)
+	}
+
+	if err := mapConditions(ctx, owner, extObj.ConditionMappings, observed); err != nil {
+		return nil, err
+	}
+
+	return observed, nil
 }
 
 func (r *PhaseReconciler) TeardownPhase(

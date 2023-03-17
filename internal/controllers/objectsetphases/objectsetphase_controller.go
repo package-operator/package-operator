@@ -72,6 +72,7 @@ type GenericObjectSetPhaseController struct {
 func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
@@ -81,7 +82,7 @@ func NewMultiClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme, dynamicCache,
+		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
@@ -92,6 +93,7 @@ func NewMultiClusterObjectSetPhaseController(
 func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
@@ -101,7 +103,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme),
-		log, scheme, dynamicCache,
+		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
@@ -112,6 +114,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 func NewSameClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
@@ -120,7 +123,7 @@ func NewSameClusterObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, dynamicCache,
+		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
@@ -132,6 +135,7 @@ func NewSameClusterObjectSetPhaseController(
 func NewSameClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
@@ -140,7 +144,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, dynamicCache,
+		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
@@ -154,6 +158,7 @@ func NewGenericObjectSetPhaseController(
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
@@ -174,7 +179,7 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
-			scheme, targetWriter, dynamicCache, ownerStrategy, preflightChecker),
+			scheme, targetWriter, dynamicCache, uncachedClient, ownerStrategy, preflightChecker),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
