@@ -5,51 +5,132 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TemplateSpecFromPackage(pkg *Package) (templateSpec corev1alpha1.ObjectSetTemplateSpec) {
-	templateSpec.AvailabilityProbes = pkg.PackageManifest.Spec.AvailabilityProbes
+	collector := newPhaseCollector(pkg.PackageManifest.Spec.Phases...)
 
-	objectsByPhase := map[string][]corev1alpha1.ObjectSetObject{}
 	for _, objects := range pkg.Objects {
-		for i, object := range objects {
-			annotations := object.GetAnnotations()
-			phaseAnnotation := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
-			delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
-			delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
-			if len(annotations) == 0 {
-				// This is important!
-				// When submitted to the API server empty maps will be dropped.
-				// Semantic equality checking is considering a nil map not equal to an empty map.
-				// And if semantic equality checking fails, hash collision checks will always find a hash collision if the ObjectSlice already exists.
-				annotations = nil
-			}
+		collector.AddObjects(objects...)
+	}
 
-			// Any error should have been detected by the validation stage.
-			conditionMapping, err := ParseConditionMapAnnotation(&objects[i])
-			if err != nil {
-				panic(err)
-			}
+	templateSpec.AvailabilityProbes = pkg.PackageManifest.Spec.AvailabilityProbes
+	templateSpec.Phases = append(templateSpec.Phases, collector.Collect()...)
 
-			object.SetAnnotations(annotations)
-			objectsByPhase[phaseAnnotation] = append(objectsByPhase[phaseAnnotation], corev1alpha1.ObjectSetObject{
-				Object:            object,
-				ConditionMappings: conditionMapping,
-			})
+	return
+}
+
+func newPhaseCollector(phases ...manifestsv1alpha1.PackageManifestPhase) phaseCollector {
+	collector := make(phaseCollector)
+
+	for idx, phase := range phases {
+		collector[phase.Name] = phaseCollectorEntry{
+			Index: idx,
+			Phase: corev1alpha1.ObjectSetTemplatePhase{
+				Name:  phase.Name,
+				Class: phase.Class,
+			},
 		}
 	}
 
-	for _, phase := range pkg.PackageManifest.Spec.Phases {
-		phase := corev1alpha1.ObjectSetTemplatePhase{Name: phase.Name, Class: phase.Class, Objects: objectsByPhase[phase.Name]}
+	return collector
+}
 
-		if len(phase.Objects) == 0 {
+type phaseCollector map[string]phaseCollectorEntry
+
+type phaseCollectorEntry struct {
+	Index int
+	Phase corev1alpha1.ObjectSetTemplatePhase
+}
+
+func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
+	for i, object := range objs {
+		annotations := object.GetAnnotations()
+		phaseAnnotation := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
+		isExternalObject := annotations[manifestsv1alpha1.PackageExternalObjectAnnotation] == "True"
+		delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
+		delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
+		delete(annotations, manifestsv1alpha1.PackageExternalObjectAnnotation)
+		if len(annotations) == 0 {
+			// This is important!
+			// When submitted to the API server empty maps will be dropped.
+			// Semantic equality checking is considering a nil map not equal to an empty map.
+			// And if semantic equality checking fails, hash collision checks will always find a hash collision if the ObjectSlice already exists.
+			annotations = nil
+		}
+
+		// Any error should have been detected by the validation stage.
+		conditionMapping, err := ParseConditionMapAnnotation(&objs[i])
+		if err != nil {
+			panic(err)
+		}
+
+		object.SetAnnotations(annotations)
+
+		objSetObj := corev1alpha1.ObjectSetObject{
+			Object:            object,
+			ConditionMappings: conditionMapping,
+		}
+
+		if isExternalObject {
+			c.addExternalObjects(phaseAnnotation, objSetObj)
+		} else {
+			c.addObjects(phaseAnnotation, objSetObj)
+		}
+	}
+}
+
+func (c phaseCollector) addObjects(phaseName string, objs ...corev1alpha1.ObjectSetObject) {
+	entry, ok := c[phaseName]
+	if !ok {
+		return
+	}
+
+	entry.Phase.Objects = append(entry.Phase.Objects, objs...)
+
+	c[phaseName] = entry
+}
+
+func (c phaseCollector) addExternalObjects(phaseName string, objs ...corev1alpha1.ObjectSetObject) {
+	entry, ok := c[phaseName]
+	if !ok {
+		return
+	}
+
+	entry.Phase.ExternalObjects = append(entry.Phase.ExternalObjects, objs...)
+
+	c[phaseName] = entry
+}
+
+func (c phaseCollector) Collect() []corev1alpha1.ObjectSetTemplatePhase {
+	var entries []phaseCollectorEntry
+
+	for _, entry := range c {
+		if len(entry.Phase.Objects) == 0 && len(entry.Phase.ExternalObjects) == 0 {
 			// empty phases may happen due to templating for scope or topology restrictions.
 			continue
 		}
 
 		// sort objects by name to ensure we are getting deterministic output.
-		sort.Slice(phase.Objects, func(i, j int) bool { return phase.Objects[i].Object.GetName() < phase.Objects[j].Object.GetName() })
-		templateSpec.Phases = append(templateSpec.Phases, phase)
+		sort.Slice(entry.Phase.Objects, func(i, j int) bool {
+			return entry.Phase.Objects[i].Object.GetName() < entry.Phase.Objects[j].Object.GetName()
+		})
+
+		entries = append(entries, entry)
 	}
-	return
+
+	// Ensure ordering remains consistent with manifest
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Index < entries[j].Index
+	})
+
+	var phases []corev1alpha1.ObjectSetTemplatePhase
+
+	for _, e := range entries {
+		phases = append(phases, e.Phase)
+	}
+
+	return phases
 }

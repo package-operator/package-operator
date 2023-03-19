@@ -14,6 +14,10 @@ const (
 	// Package ConditionMap annotation specifies object conditions to map back into Package Operator APIs.
 	// Example: Available => my-own-prefix/Available.
 	PackageConditionMapAnnotation = "package-operator.run/condition-map"
+	// Package ExternalObject annotation, when set to "True", indicates
+	// that the referenced object should only be observed during a phase
+	// rather than reconciled.
+	PackageExternalObjectAnnotation = "package-operator.run/external"
 )
 
 const (
