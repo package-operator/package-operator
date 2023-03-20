@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,7 +51,7 @@ func TestImageURLWithOverride(t *testing.T) {
 	})
 
 	t.Run("env set", func(t *testing.T) {
-		os.Setenv("PKO_REPOSITORY_HOST", "localhost:123")
+		t.Setenv("PKO_REPOSITORY_HOST", "localhost:123")
 
 		img := "quay.io/something/else:tag"
 		r := ImageURLWithOverride(img)
