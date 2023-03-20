@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -223,6 +225,92 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					*concernedDeployment.Status.CollisionCount == int32(testCase.expectedHashCollisionCount),
 			)
 		}
+	}
+}
+
+func TestObjectDeployment_external_objects(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	phases := []corev1alpha1.ObjectSetTemplatePhase{
+		{
+			Name: "phase-1",
+			ExternalObjects: []corev1alpha1.ObjectSetObject{
+				{
+					Object: cmTemplate("external-1", nil, t),
+				},
+			},
+		},
+	}
+
+	probe := hashCollisionTestProbe(".metadata.name", ".data.name")
+
+	concernedDeployment := objectDeploymentTemplate(phases, probe, "test-objectdeployment-external-objects")
+	currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
+	err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
+	if errors.IsNotFound(err) {
+		// Create the deployment
+		require.NoError(t, Client.Create(ctx, concernedDeployment))
+	} else {
+		// Update the existing deployment
+		concernedDeployment.ResourceVersion = currentInClusterDeployment.ResourceVersion
+		require.NoError(t, Client.Update(ctx, concernedDeployment))
+	}
+	cleanupOnSuccess(ctx, t, concernedDeployment)
+
+	for _, tc := range []struct {
+		ActualObjects      []client.Object
+		AvailabilityStatus metav1.ConditionStatus
+	}{
+		{
+			AvailabilityStatus: metav1.ConditionFalse,
+		},
+		{
+			ActualObjects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "external-1",
+						Namespace: concernedDeployment.Namespace,
+					},
+					Data: map[string]string{
+						"name": "non-matching",
+					},
+				},
+			},
+			AvailabilityStatus: metav1.ConditionFalse,
+		},
+		{
+			ActualObjects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "external-1",
+						Namespace: concernedDeployment.Namespace,
+					},
+					Data: map[string]string{
+						"name": "external-1",
+					},
+				},
+			},
+			AvailabilityStatus: metav1.ConditionTrue,
+		},
+	} {
+		for _, obj := range tc.ActualObjects {
+			err := Client.Create(ctx, obj)
+			if errors.IsAlreadyExists(err) {
+				err = Client.Update(ctx, obj)
+			}
+
+			require.NoError(t, err)
+			require.NoError(t, Waiter.WaitForObject(ctx, obj, "creating", func(_ client.Object) (bool, error) { return true, nil }))
+		}
+
+		require.NoError(t,
+			Waiter.WaitForCondition(ctx,
+				concernedDeployment,
+				corev1alpha1.ObjectDeploymentAvailable,
+				tc.AvailabilityStatus,
+				dev.WithTimeout(2*time.Minute),
+			),
+		)
 	}
 }
 

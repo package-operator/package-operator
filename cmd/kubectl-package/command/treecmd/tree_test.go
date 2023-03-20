@@ -32,6 +32,7 @@ func TestTree_Success(t *testing.T) {
 Package namespace/name
 └── Phase deploy
     └── apps/v1, Kind=Deployment /test-stub-name
+    └── apps/v1, Kind=Deployment external-name/test-external-name (EXTERNAL)
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
@@ -55,6 +56,7 @@ ClusterPackage /name
 │   ├── /v1, Kind=Namespace /name
 └── Phase deploy
     └── apps/v1, Kind=Deployment name/test-stub-name
+    └── apps/v1, Kind=Deployment external-name/test-external-name (EXTERNAL)
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
@@ -213,6 +215,7 @@ func TestTree_FileConfig(t *testing.T) {
 Package namespace/name
 └── Phase deploy
     └── apps/v1, Kind=Deployment /test-stub-name
+    └── apps/v1, Kind=Deployment external-name/test-external-name (EXTERNAL)
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
@@ -236,6 +239,7 @@ ClusterPackage /name
 │   ├── /v1, Kind=Namespace /name
 └── Phase deploy
     └── apps/v1, Kind=Deployment name/test-stub-name
+    └── apps/v1, Kind=Deployment external-name/test-external-name (EXTERNAL)
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})

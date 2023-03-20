@@ -221,11 +221,7 @@ func (r *PhaseReconciler) observeExternalObject(
 	)
 
 	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
-			// Prefer to return with no error here as an observed object with no
-			// status conditions will fail probe attempt naturally
-			return observed, nil
-		} else if err != nil {
+		if err := r.uncachedClient.Get(ctx, key, obj); err != nil {
 			return nil, fmt.Errorf("retrieving external object: %w", err)
 		}
 

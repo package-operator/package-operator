@@ -905,6 +905,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		OwnerObject    unstructured.Unstructured
 		ExternalObject corev1alpha1.ObjectSetObject
 		ObservedObject *corev1alpha1.ObjectSetObject
+		ShouldFail     bool
 	}{
 		"external object does not exist": {
 			ExternalObject: corev1alpha1.ObjectSetObject{
@@ -916,6 +917,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 					},
 				},
 			},
+			ShouldFail: true,
 		},
 		"cached external object exists/owner namespace": {
 			OwnerObject: unstructured.Unstructured{
@@ -1090,6 +1092,12 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 
 			ctx := context.Background()
 			observed, err := r.observeExternalObject(ctx, owner, tc.ExternalObject)
+			if tc.ShouldFail {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			if tc.ObservedObject == nil {

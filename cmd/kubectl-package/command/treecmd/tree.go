@@ -143,6 +143,13 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 					obj.Object.GroupVersionKind(),
 					client.ObjectKeyFromObject(&obj.Object)))
 		}
+
+		for _, obj := range phase.ExternalObjects {
+			treePhase.Add(
+				fmt.Sprintf("%s %s (EXTERNAL)",
+					obj.Object.GroupVersionKind(),
+					client.ObjectKeyFromObject(&obj.Object)))
+		}
 	}
 	fmt.Fprint(out, pkgTree.Print())
 
