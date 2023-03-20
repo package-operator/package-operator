@@ -918,6 +918,13 @@ test:
           name: test
           namespace: ""
       config:
+        resources:
+          limits:
+            cpu: 10m
+            memory: 13Mi
+          requests:
+            cpu: 10m
+            memory: 12Mi
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -928,4 +935,4 @@ test:
         tolerations:
         - effect: NoSchedule
           key: node-role.kubernetes.io/infra
-    name: affinity-tolerations
+    name: affinity-tolerations-resources

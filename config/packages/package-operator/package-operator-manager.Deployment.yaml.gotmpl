@@ -52,6 +52,10 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+{{- if hasKey .config "resources" }}
+        resources: {{ toJson .config.resources }}
+{{- else}}
+        # default resources
         resources:
           limits:
             cpu: 100m
@@ -59,5 +63,6 @@ spec:
           requests:
             cpu: 100m
             memory: 300Mi
+{{- end}}
       serviceAccountName: package-operator
 status: {}

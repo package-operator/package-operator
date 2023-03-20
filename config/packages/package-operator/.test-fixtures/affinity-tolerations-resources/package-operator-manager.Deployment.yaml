@@ -48,12 +48,6 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources:
-          limits:
-            cpu: 100m
-            memory: 400Mi
-          requests:
-            cpu: 100m
-            memory: 300Mi
+        resources: {"limits":{"cpu":"10m","memory":"13Mi"},"requests":{"cpu":"10m","memory":"12Mi"}}
       serviceAccountName: package-operator
 status: {}

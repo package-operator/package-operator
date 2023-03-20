@@ -46,6 +46,7 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+        # default resources
         resources:
           limits:
             cpu: 100m
