@@ -17,9 +17,6 @@ spec:
         group: apps
         kind: Deployment
   config: {}
-  images:
-  - image: quay.io/package-operator/remote-phase-manager:v1.4.0-5-gb19ac12
-    name: remote-phase-manager
   phases:
   - name: rbac
   - name: deploy

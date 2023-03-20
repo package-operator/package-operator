@@ -1220,7 +1220,7 @@ func (Generate) PackageOperatorPackage() error {
 
 	pkgFolder := filepath.Join("config", "packages", "package-operator")
 	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
-	manifestFileContents, err := os.ReadFile(manifestFile)
+	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
 	if err != nil {
 		return err
 	}
@@ -1259,7 +1259,7 @@ func (Generate) RemotePhasePackage() error {
 
 	pkgFolder := filepath.Join("config", "packages", "remote-phase")
 	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
-	manifestFileContents, err := os.ReadFile(manifestFile)
+	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
 	if err != nil {
 		return err
 	}

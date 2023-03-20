@@ -893,11 +893,6 @@ spec:
             type: object
           type: array
       type: object
-  images:
-  - image: quay.io/package-operator/package-operator-manager:v1.4.0-5-gb19ac12
-    name: package-operator-manager
-  - image: quay.io/package-operator/remote-phase-package:v1.4.0-5-gb19ac12
-    name: remote-phase-package
   phases:
   - name: crds
   - name: namespace
