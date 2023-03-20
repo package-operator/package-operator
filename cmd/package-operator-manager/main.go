@@ -100,22 +100,14 @@ func main() {
 
 	scheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		panic(err)
+	schemeBuilder := runtime.SchemeBuilder{
+		clientgoscheme.AddToScheme,
+		pkoapis.AddToScheme,
+		hypershiftv1beta1.AddToScheme,
+		apiextensionsv1.AddToScheme,
+		apiextensions.AddToScheme,
 	}
-	if err := pkoapis.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := hypershiftv1beta1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := pkoapis.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := apiextensions.AddToScheme(scheme); err != nil {
+	if err := schemeBuilder.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
