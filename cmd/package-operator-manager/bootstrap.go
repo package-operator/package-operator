@@ -36,12 +36,16 @@ type packageLoader interface {
 }
 type bootstrapperRunManagerFn func(ctx context.Context) error
 
+type bootstrapperLoadFilesFn func(
+	ctx context.Context, path string) (packagecontent.Files, error)
+
 type bootstrapper struct {
 	log                logr.Logger
 	scheme             *runtime.Scheme
 	loader             packageLoader
 	selfBootstrapImage string
-	runManagerFn       bootstrapperRunManagerFn
+	runManager         bootstrapperRunManagerFn
+	loadFiles          bootstrapperLoadFilesFn
 
 	client client.Client
 }
@@ -59,7 +63,8 @@ func newBootstrapper(log logr.Logger, scheme *runtime.Scheme, selfBootstrapImage
 		scheme:             scheme,
 		loader:             packageloader.New(scheme, packageloader.WithDefaults),
 		selfBootstrapImage: selfBootstrapImage,
-		runManagerFn:       runManagerFn,
+		runManager:         runManagerFn,
+		loadFiles:          packageimport.Folder,
 
 		client: c,
 	}, nil
@@ -108,7 +113,7 @@ func getPKOConfigFromEnvironment() *runtime.RawExtension {
 }
 
 func (b *bootstrapper) selfBootstrap(ctx context.Context) error {
-	files, err := packageimport.Folder(ctx, "/package")
+	files, err := b.loadFiles(ctx, "/package")
 	if err != nil {
 		return err
 	}
@@ -125,14 +130,13 @@ func (b *bootstrapper) selfBootstrap(ctx context.Context) error {
 		return err
 	}
 
-	pkoPackage, err := b.createPKOPackage(ctx)
-	if err != nil {
+	if _, err = b.createPKOPackage(ctx); err != nil {
 		return err
 	}
 
 	// Stop when Package Operator is installed.
 	ctx, cancel := context.WithCancel(ctx)
-	go b.cancelWhenPackageAvailable(ctx, cancel, pkoPackage.DeepCopy())
+	go b.cancelWhenPackageAvailable(ctx, cancel)
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
 	// CRDs, Namespace, ServiceAccount and ClusterRoleBinding.
@@ -140,33 +144,44 @@ func (b *bootstrapper) selfBootstrap(ctx context.Context) error {
 		return err
 	}
 
-	return b.runManagerFn(ctx)
+	return b.runManager(ctx)
 }
 
 func (b *bootstrapper) cancelWhenPackageAvailable(
 	ctx context.Context, cancel context.CancelFunc,
-	packageOperatorPackage *corev1alpha1.ClusterPackage,
 ) {
+	log := logr.FromContextOrDiscard(ctx)
 	err := wait.PollImmediateUntilWithContext(
 		ctx, packageOperatorPackageCheckInterval,
 		func(ctx context.Context) (done bool, err error) {
-			packageOperatorPackage := &corev1alpha1.ClusterPackage{}
-			err = b.client.Get(ctx, client.ObjectKey{Name: packageOperatorClusterPackageName}, packageOperatorPackage)
-			if err != nil {
-				return done, err
-			}
-
-			if meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageAvailable) {
-				return true, nil
-			}
-			return false, nil
+			return b.isPackageAvailable(ctx)
 		})
 	if err != nil {
 		panic(err)
 	}
 
-	b.log.Info("Package Operator bootstrapped successfully!")
+	log.Info("Package Operator bootstrapped successfully!")
 	cancel()
+}
+
+func (b *bootstrapper) isPackageAvailable(ctx context.Context) (
+	available bool, err error,
+) {
+	packageOperatorPackage := &corev1alpha1.ClusterPackage{}
+	err = b.client.Get(ctx, client.ObjectKey{
+		Name: packageOperatorClusterPackageName,
+	}, packageOperatorPackage)
+	if err != nil {
+		return false, err
+	}
+
+	if meta.IsStatusConditionTrue(
+		packageOperatorPackage.Status.Conditions,
+		corev1alpha1.PackageAvailable,
+	) {
+		return true, nil
+	}
+	return false, nil
 }
 
 // create PackageOperator ClusterPackage.

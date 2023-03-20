@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,5 +32,30 @@ func TestMergeKeysFrom(t *testing.T) {
 	t.Run("nil output", func(t *testing.T) {
 		r := MergeKeysFrom(nil, map[string]string{})
 		assert.Nil(t, r)
+	})
+}
+
+func TestCopyMap(t *testing.T) {
+	m := map[string]string{
+		"test": "test",
+	}
+	r := CopyMap(m)
+	assert.Equal(t, m, r)
+	assert.NotSame(t, m, r)
+}
+
+func TestImageURLWithOverride(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		img := "quay.io/something/else:tag"
+		r := ImageURLWithOverride(img)
+		assert.Equal(t, img, r)
+	})
+
+	t.Run("env set", func(t *testing.T) {
+		os.Setenv("PKO_REPOSITORY_HOST", "localhost:123")
+
+		img := "quay.io/something/else:tag"
+		r := ImageURLWithOverride(img)
+		assert.Equal(t, "localhost:123/something/else:tag", r)
 	})
 }
