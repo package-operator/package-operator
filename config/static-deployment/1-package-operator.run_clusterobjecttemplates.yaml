@@ -47,11 +47,11 @@ spec:
                       items:
                         properties:
                           destination:
-                            description: Key in which to copy the source value to.
-                              Given as a JSONPath
+                            description: JSONPath to destination in which to store
+                              copy of the source value.
                             type: string
                           key:
-                            description: Key of value in source object as a JSONPath
+                            description: JSONPath to value in source object.
                             type: string
                         required:
                         - destination

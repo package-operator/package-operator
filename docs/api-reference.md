@@ -933,8 +933,8 @@ Used in:
 
 | Field | Description |
 | ----- | ----------- |
-| `key` <b>required</b><br>string | Key of value in source object as a JSONPath |
-| `destination` <b>required</b><br>string | Key in which to copy the source value to. Given as a JSONPath |
+| `key` <b>required</b><br>string | JSONPath to value in source object. |
+| `destination` <b>required</b><br>string | JSONPath to destination in which to store copy of the source value. |
 
 
 Used in:
