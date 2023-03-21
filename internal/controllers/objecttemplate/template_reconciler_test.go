@@ -141,7 +141,7 @@ func Test_copySourceItems_nonJSONPath_key(t *testing.T) {
 	}
 	err := copySourceItems(
 		ctx, items, sourceObj, sourcesConfig)
-	require.EqualError(t, err, "key data.something must be a JSONPath with a leading dot")
+	require.EqualError(t, err, "path data.something must be a JSONPath with a leading dot")
 }
 
 func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
@@ -159,7 +159,7 @@ func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
 	}
 	err := copySourceItems(
 		ctx, items, sourceObj, sourcesConfig)
-	require.EqualError(t, err, "destination banana must be a JSONPath with a leading dot")
+	require.EqualError(t, err, "path banana must be a JSONPath with a leading dot")
 }
 
 func Test_templateReconciler_templateObject(t *testing.T) {

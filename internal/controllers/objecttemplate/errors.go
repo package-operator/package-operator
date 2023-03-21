@@ -12,7 +12,7 @@ type JSONPathFormatError struct {
 }
 
 func (e *JSONPathFormatError) Error() string {
-	return fmt.Sprintf("%s must be given as a JSONPath with leading dot", e.Path)
+	return fmt.Sprintf("path %s must be a JSONPath with a leading dot", e.Path)
 }
 
 type SourceError struct {

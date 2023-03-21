@@ -234,7 +234,7 @@ func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName strin
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
 				Key:         ".data." + cmKey,
-				Destination: cmDestination,
+				Destination: "." + cmDestination,
 			},
 		},
 	}
