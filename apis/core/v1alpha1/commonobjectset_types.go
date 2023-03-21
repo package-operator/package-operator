@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,6 +45,9 @@ type ObjectSetTemplatePhase struct {
 	Class string `json:"class,omitempty"`
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects,omitempty"`
+
+	// ExternalObjects observed, but not reconciled by this phase.
+	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 	// References to ObjectSlices containing objects for this phase.
 	Slices []string `json:"slices,omitempty"`
 }
@@ -55,6 +60,12 @@ type ObjectSetObject struct {
 	Object unstructured.Unstructured `json:"object"`
 	// Maps conditions from this object into the Package Operator APIs.
 	ConditionMappings []ConditionMapping `json:"conditionMappings,omitempty"`
+}
+
+func (o ObjectSetObject) String() string {
+	obj := o.Object
+
+	return fmt.Sprintf("object %s/%s kind:%s", obj.GetNamespace(), obj.GetName(), obj.GetKind())
 }
 
 // ObjectSet Condition Types.

@@ -184,11 +184,19 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			},
 		})
 
+	// Create a client that does not cache resources cluster-wide.
+	uncachedClient, err := client.New(
+		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		return fmt.Errorf("unable to set up uncached client: %w", err)
+	}
+
 	managementClusterClient := mgr.GetClient()
 
 	if err = objectsetphases.NewMultiClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
-		mgr.GetScheme(), dc, opts.class, managementClusterClient,
+		mgr.GetScheme(), dc, uncachedClient,
+		opts.class, managementClusterClient,
 		targetClient, targetMapper,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
@@ -198,7 +206,8 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		// Only start the Cluster-Scoped controller, when we are running cluster scoped.
 		if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
 			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-			mgr.GetScheme(), dc, opts.class, managementClusterClient,
+			mgr.GetScheme(), dc, uncachedClient,
+			opts.class, managementClusterClient,
 			targetClient, targetMapper,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)

@@ -52,6 +52,15 @@ spec:
               app.kubernetes.io/name: example-operator
       phases:
       - class: ipsum
+        externalObjects:
+        - conditionMappings:
+          - destinationType: consetetur
+            sourceType: amet
+          object:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: example-deployment
         name: lorem
         objects:
         - conditionMappings:
@@ -63,7 +72,7 @@ spec:
             metadata:
               name: example-deployment
         slices:
-        - amet
+        - sadipscing
 status:
   phase:Pending: null
 
@@ -114,19 +123,28 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sadipscing
-    name: consetetur
+  - class: sed
+    externalObjects:
+    - conditionMappings:
+      - destinationType: tempor
+        sourceType: eirmod
+      object:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: example-deployment
+    name: elitr
     objects:
     - conditionMappings:
-      - destinationType: sed
-        sourceType: elitr
+      - destinationType: nonumy
+        sourceType: diam
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - diam
+    - lorem
   previous:
   - name: previous-revision
 status:
@@ -171,10 +189,19 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
+  externalObjects:
+  - conditionMappings:
+    - destinationType: amet
+      sourceType: sit
+    object:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: example-deployment
   objects:
   - conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: dolor
+      sourceType: ipsum
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -189,10 +216,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
 
 ```
 
@@ -220,8 +247,8 @@ metadata:
   name: example
 objects:
 - conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: nonumy
+    sourceType: diam
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -253,15 +280,15 @@ metadata:
   name: example
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: tempor
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: amet
+      key: sit
+    kind: lorem
+    name: dolor
+    namespace: ipsum
     optional: "true"
-  template: consetetur
+  template: eirmod
 status:
   conditions:
   - metav1.Condition
@@ -291,7 +318,7 @@ metadata:
   name: example
 spec:
   config: runtime.RawExtension
-  image: tempor
+  image: consetetur
 status:
   phase: Pending
 
@@ -340,19 +367,28 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: ipsum
-        name: lorem
+      - class: elitr
+        externalObjects:
+        - conditionMappings:
+          - destinationType: eirmod
+            sourceType: nonumy
+          object:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: example-deployment
+        name: sadipscing
         objects:
         - conditionMappings:
-          - destinationType: sit
-            sourceType: dolor
+          - destinationType: diam
+            sourceType: sed
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - amet
+        - tempor
 status:
   phase:Pending: null
 
@@ -404,19 +440,28 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sadipscing
-    name: consetetur
+  - class: ipsum
+    externalObjects:
+    - conditionMappings:
+      - destinationType: consetetur
+        sourceType: amet
+      object:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: example-deployment
+    name: lorem
     objects:
     - conditionMappings:
-      - destinationType: sed
-        sourceType: elitr
+      - destinationType: sit
+        sourceType: dolor
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - diam
+    - sadipscing
   previous:
   - name: previous-revision
 status:
@@ -462,10 +507,19 @@ spec:
       selector:
         matchLabels:
           app.kubernetes.io/name: example-operator
+  externalObjects:
+  - conditionMappings:
+    - destinationType: nonumy
+      sourceType: diam
+    object:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: example-deployment
   objects:
   - conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: sed
+      sourceType: elitr
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -480,10 +534,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: tempor
+    kind: eirmod
+    name: lorem
+    namespace: ipsum
 
 ```
 
@@ -512,8 +566,8 @@ metadata:
   namespace: default
 objects:
 - conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: sit
+    sourceType: dolor
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -546,15 +600,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: consetetur
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: nonumy
+      key: diam
+    kind: sadipscing
+    name: sed
+    namespace: elitr
     optional: "true"
-  template: consetetur
+  template: amet
 status:
   conditions:
   - metav1.Condition
@@ -585,7 +639,7 @@ metadata:
   namespace: default
 spec:
   config: runtime.RawExtension
-  image: tempor
+  image: eirmod
 status:
   phase: Pending
 
@@ -645,6 +699,7 @@ ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `externalObjects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | ExternalObjects observed, but not reconciled by this phase. |
 
 
 Used in:
@@ -774,7 +829,10 @@ An object that is part of the phase of an ObjectSet.
 
 Used in:
 * [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
+* [ClusterObjectSetPhaseSpec](#clusterobjectsetphasespec)
 * [ObjectSetPhaseSpec](#objectsetphasespec)
+* [ObjectSetPhaseSpec](#objectsetphasespec)
+* [ObjectSetTemplatePhase](#objectsettemplatephase)
 * [ObjectSetTemplatePhase](#objectsettemplatephase)
 * [ClusterObjectSlice](#clusterobjectslice)
 * [ObjectSlice](#objectslice)
@@ -791,6 +849,7 @@ ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `externalObjects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | ExternalObjects observed, but not reconciled by this phase. |
 
 
 Used in:
@@ -886,6 +945,7 @@ ObjectSet reconcile phase.
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
 | `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
 | `objects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
+| `externalObjects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | ExternalObjects observed, but not reconciled by this phase. |
 | `slices` <br>[]string | References to ObjectSlices containing objects for this phase. |
 
 

@@ -181,7 +181,7 @@ func (r *templateReconciler) getSourceObject(
 		}
 
 		// Update object to ensure it is part of our cache and we get events to reconcile.
-		updatedSourceObj, err := addDynamicCacheLabel(ctx, sourceObj, r.client)
+		updatedSourceObj, err := controllers.AddDynamicCacheLabel(ctx, r.client, sourceObj)
 		if err != nil {
 			return nil, false, fmt.Errorf("patching source object for cache: %w", err)
 		}
@@ -203,28 +203,6 @@ func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha
 		return false, fmt.Errorf("getting source object %s in namespace %s from uncachedClient: %w", key.Name, key.Namespace, err)
 	}
 	return true, nil
-}
-
-func addDynamicCacheLabel(
-	ctx context.Context,
-	sourceObj *unstructured.Unstructured,
-	c client.Writer,
-) (updatedObj *unstructured.Unstructured, err error) {
-	// Update object to ensure it is part of our cache and we get events to reconcile.
-	updatedSourceObj := sourceObj.DeepCopy()
-
-	labels := updatedSourceObj.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-
-	labels[controllers.DynamicCacheLabel] = "True"
-	updatedSourceObj.SetLabels(labels)
-
-	if err := c.Patch(ctx, updatedSourceObj, client.MergeFrom(sourceObj)); err != nil {
-		return nil, fmt.Errorf("patching source object for cache: %w", err)
-	}
-	return updatedSourceObj, nil
 }
 
 func copySourceItems(

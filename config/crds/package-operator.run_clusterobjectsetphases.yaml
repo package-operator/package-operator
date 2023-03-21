@@ -159,6 +159,38 @@ spec:
                   - selector
                   type: object
                 type: array
+              externalObjects:
+                description: ExternalObjects observed, but not reconciled by this
+                  phase.
+                items:
+                  description: An object that is part of the phase of an ObjectSet.
+                  properties:
+                    conditionMappings:
+                      description: Maps conditions from this object into the Package
+                        Operator APIs.
+                      items:
+                        properties:
+                          destinationType:
+                            description: Destination condition type to report into
+                              Package Operator APIs.
+                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]'
+                            type: string
+                          sourceType:
+                            description: Source condition type.
+                            type: string
+                        required:
+                        - destinationType
+                        - sourceType
+                        type: object
+                      type: array
+                    object:
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - object
+                  type: object
+                type: array
               objects:
                 description: Objects belonging to this phase.
                 items:

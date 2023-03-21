@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -165,4 +166,24 @@ func DeleteMappedConditions(ctx context.Context, conditions *[]metav1.Condition)
 			meta.RemoveStatusCondition(conditions, cond.Type)
 		}
 	}
+}
+
+// AddDynamicCacheLabel ensures that the given object is labeled
+// for recognition by the dynamic cache.
+func AddDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	updated := obj.DeepCopy()
+
+	labels := updated.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+
+	labels[DynamicCacheLabel] = "True" //nolint:goconst
+	updated.SetLabels(labels)
+
+	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {
+		return nil, fmt.Errorf("patching dynamic cache label: %w", err)
+	}
+
+	return updated, nil
 }

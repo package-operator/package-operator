@@ -46,6 +46,9 @@ type ClusterObjectSetPhaseSpec struct {
 
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects"`
+
+	// ExternalObjects observed, but not reconciled by this phase.
+	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 }
 
 // ClusterObjectSetPhaseStatus defines the observed state of a ClusterObjectSetPhase.

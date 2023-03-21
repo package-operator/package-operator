@@ -63,28 +63,30 @@ type metricsRecorder interface {
 
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme, dw dynamicCache,
+	scheme *runtime.Scheme,
+	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
-		c, log, scheme, dw, r,
+		c, log, scheme, dw, uc, r,
 		restMapper,
 	)
 }
 
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme, dw dynamicCache,
+	scheme *runtime.Scheme,
+	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
-		c, log, scheme, dw, r,
+		c, log, scheme, dw, uc, r,
 		restMapper,
 	)
 }
@@ -94,7 +96,8 @@ func newGenericObjectSetController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
-	scheme *runtime.Scheme, dynamicCache dynamicCache,
+	scheme *runtime.Scheme,
+	dynamicCache dynamicCache, uncachedClient client.Reader,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
@@ -112,7 +115,9 @@ func newGenericObjectSetController(
 		scheme,
 		controllers.NewPhaseReconciler(
 			scheme, client,
-			dynamicCache, ownerhandling.NewNative(scheme),
+			dynamicCache,
+			uncachedClient,
+			ownerhandling.NewNative(scheme),
 			preflight.List{
 				preflight.NewAPIExistence(restMapper),
 				preflight.NewNamespaceEscalation(restMapper),

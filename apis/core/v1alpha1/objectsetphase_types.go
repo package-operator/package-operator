@@ -45,6 +45,9 @@ type ObjectSetPhaseSpec struct {
 
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects"`
+
+	// ExternalObjects observed, but not reconciled by this phase.
+	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 }
 
 // ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
