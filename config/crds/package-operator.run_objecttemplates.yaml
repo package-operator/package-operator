@@ -48,8 +48,11 @@ spec:
                       items:
                         properties:
                           destination:
+                            description: Key in which to copy the source value to.
+                              Given as a JSONPath
                             type: string
                           key:
+                            description: Key of value in source object as a JSONPath
                             type: string
                         required:
                         - destination

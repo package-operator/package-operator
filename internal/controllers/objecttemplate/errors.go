@@ -7,6 +7,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type JSONPathFormatError struct {
+	Path string
+}
+
+func (e *JSONPathFormatError) Error() string {
+	return fmt.Sprintf("%s must be given as a JSONPath with leading dot", e.Path)
+}
+
 type SourceError struct {
 	Source client.Object
 	Err    error
