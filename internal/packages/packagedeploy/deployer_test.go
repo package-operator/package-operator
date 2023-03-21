@@ -80,6 +80,13 @@ func TestPackageDeployer_Load(t *testing.T) {
 		mock.Anything,
 		mock.AnythingOfType("*v1alpha1.Package"),
 		mock.Anything).
+		Run(func(args mock.Arguments) {
+			pkg := args.Get(2).(*corev1alpha1.Package)
+			pkg.Status.Conditions = []metav1.Condition{
+				// This condition is supposed to be removed:
+				{Type: corev1alpha1.PackageInvalid, Status: metav1.ConditionTrue},
+			}
+		}).
 		Return(nil)
 
 	obj1 := unstructured.Unstructured{Object: map[string]interface{}{}}
@@ -146,11 +153,7 @@ func TestPackageDeployer_Load(t *testing.T) {
 	require.NoError(t, err)
 
 	packageInvalid := meta.FindStatusCondition(updatedPackage.Status.Conditions, corev1alpha1.PackageInvalid)
-	if assert.NotNil(t, packageInvalid) {
-		assert.Equal(t, metav1.ConditionFalse, packageInvalid.Status)
-		assert.Equal(t, packageInvalid.Reason, "LoadSuccess")
-		assert.Equal(t, packageInvalid.Message, "")
-	}
+	assert.Nil(t, packageInvalid, "Invalid condition should not be reported")
 }
 
 func TestPackageDeployer_Load_Error(t *testing.T) {

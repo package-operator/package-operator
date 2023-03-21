@@ -2,7 +2,6 @@ package objectdeployments
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -20,6 +19,7 @@ import (
 
 func Test_ObjectSetReconciler(t *testing.T) {
 	testCases := []struct {
+		name                    string
 		client                  *testutil.CtrlClient
 		revisions               []corev1alpha1.ObjectSet
 		deploymentGeneration    int
@@ -29,6 +29,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 		expectedConditions      map[string]metav1.ConditionStatus
 	}{
 		{
+			name:   "latest revision available",
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
 				makeObjectSet("rev3", "test", 3, "abcd", false),
@@ -45,8 +46,8 @@ func Test_ObjectSetReconciler(t *testing.T) {
 				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
 			},
 		},
-		// No current revision
 		{
+			name:   "no current revision",
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
 				makeObjectSet("rev3", "test", 3, "abcd", false),
@@ -64,10 +65,26 @@ func Test_ObjectSetReconciler(t *testing.T) {
 				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
 			},
 		},
+		{
+			name:   "latest revision unavailable",
+			client: testutil.NewClient(),
+			revisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev4", "test", 4, "abc", false),
+			},
+			deploymentGeneration:    4,
+			deploymentHash:          "abc",
+			expectedCurrentRevision: "rev4",
+			expectedPrevRevisions:   []string{},
+			expectedConditions: map[string]metav1.ConditionStatus{
+				// rev4 still available
+				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionFalse,
+				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+			},
+		},
 	}
 
-	for i, testCase := range testCases {
-		t.Run(fmt.Sprintf("%d:Currently calls the subsreconcilers and sets the correct condition", i), func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			client := testCase.client
 
 			// Setup reconciler
@@ -160,8 +177,8 @@ func Test_ObjectSetReconciler(t *testing.T) {
 
 			for expectedCondition, expectedStatus := range testCase.expectedConditions {
 				cond := meta.FindStatusCondition(existingConditions, expectedCondition)
-				require.NotNil(t, cond)
-				require.True(t, cond.Status == expectedStatus)
+				require.NotNil(t, cond, "condition: "+expectedCondition+" should be reported")
+				require.Equal(t, expectedStatus, cond.Status)
 			}
 		})
 	}
