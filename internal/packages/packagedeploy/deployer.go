@@ -119,13 +119,14 @@ func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey,
 	}
 
 	invalidCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageInvalid)
-	if invalidCondition == nil {
-		return nil
-	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		log.Info("trying to report Package status...")
 
-		meta.SetStatusCondition(pkg.GetConditions(), *invalidCondition) // reapply condition after update
+		if invalidCondition == nil {
+			meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
+		} else {
+			meta.SetStatusCondition(pkg.GetConditions(), *invalidCondition) // reapply condition after update
+		}
 		err := l.client.Status().Update(ctx, pkg.ClientObject())
 		if err == nil {
 			return nil
@@ -209,12 +210,8 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 		return fmt.Errorf("reconciling ObjectDeployment: %w", err)
 	}
 
-	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
-		Type:               corev1alpha1.PackageInvalid,
-		Status:             metav1.ConditionFalse,
-		Reason:             "LoadSuccess",
-		ObservedGeneration: pkg.ClientObject().GetGeneration(),
-	})
+	// Load success
+	meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
 	return nil
 }
 

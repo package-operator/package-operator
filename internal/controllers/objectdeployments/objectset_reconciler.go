@@ -88,8 +88,9 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	objectDeployment objectDeploymentAccessor,
 ) {
 	var (
-		oldRevisionAvailable      bool
 		currentObjectSetSucceeded bool
+		progressingReason         = "Progressing"
+		progressingMessage        = "Progressing to a new ObjectSet."
 	)
 	if currentObjectSet != nil {
 		// map conditions
@@ -121,11 +122,30 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			return
 		}
 
+		if availableCond := meta.FindStatusCondition(
+			currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable,
+		); availableCond != nil && availableCond.Status == metav1.ConditionFalse {
+			progressingReason = "LatestRevisionUnavailable"
+			progressingMessage = availableCond.Message
+		}
+
 		succeededCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded)
-		currentObjectSetSucceeded = succeededCond != nil
+		currentObjectSetSucceeded = succeededCond != nil && succeededCond.Status == metav1.ConditionTrue
+	}
+
+	if !currentObjectSetSucceeded {
+		// Latest revision did not yet succeed -> we are still progressing.
+		meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectDeploymentProgressing,
+			Status:             metav1.ConditionTrue,
+			Reason:             progressingReason,
+			Message:            progressingMessage,
+			ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
+		})
 	}
 
 	// latest object revision is not present or available
+	var oldRevisionAvailable bool
 	for _, objectSet := range prevObjectSets {
 		availableCond := meta.FindStatusCondition(
 			objectSet.GetConditions(),
@@ -138,17 +158,6 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			oldRevisionAvailable = true
 			break
 		}
-	}
-
-	if !currentObjectSetSucceeded {
-		// Latest revision did not yet succeed -> we are still progressing.
-		meta.SetStatusCondition(objectDeployment.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectDeploymentProgressing,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Progressing",
-			Message:            "Progressing to a new ObjectSet.",
-			ObservedGeneration: objectDeployment.ClientObject().GetGeneration(),
-		})
 	}
 
 	// Atleast one objectset old revision is still ava
