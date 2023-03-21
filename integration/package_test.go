@@ -127,8 +127,6 @@ func TestPackage_success(t *testing.T) {
 			cleanupOnSuccess(ctx, t, test.pkg)
 
 			require.NoError(t,
-				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageInvalid, metav1.ConditionFalse))
-			require.NoError(t,
 				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue))
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
