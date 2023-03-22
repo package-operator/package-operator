@@ -7,6 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/package-operator/internal/controllers/packages"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 )
 
@@ -43,13 +44,14 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 func ProvidePackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	registry *packageimport.Registry,
+	recorder *metrics.Recorder,
 ) PackageController {
 	return PackageController{
 		packages.NewPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
-			registry,
+			registry, recorder,
 		),
 	}
 }
@@ -57,13 +59,14 @@ func ProvidePackageController(
 func ProvideClusterPackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	registry *packageimport.Registry,
+	recorder *metrics.Recorder,
 ) ClusterPackageController {
 	return ClusterPackageController{
 		packages.NewClusterPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
-			registry,
+			registry, recorder,
 		),
 	}
 }

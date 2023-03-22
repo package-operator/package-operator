@@ -133,6 +133,10 @@ spec:
                   away as soon as kubectl can print conditions! When evaluating object
                   state in code, use .Conditions instead.
                 type: string
+              revision:
+                description: Package revision as reported by the ObjectDeployment.
+                format: int64
+                type: integer
               unpackedHash:
                 description: Hash of image + config that was successfully unpacked.
                 type: string

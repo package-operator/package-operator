@@ -210,6 +210,7 @@ func makeObjectDeploymentMock(name string, namespace string,
 			"match": "all",
 		},
 	}
+	res.On("SetStatusRevision", mock.Anything).Return()
 	res.On("GetSelector").Return(labelSelector)
 	res.On("GetGeneration").Return(generation)
 	res.On("GetStatusTemplateHash").Return(templateHash)

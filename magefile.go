@@ -53,6 +53,7 @@ const (
 	craneVersion         = "0.14.0"
 	kindVersion          = "0.18.0"
 	k8sDocGenVersion     = "0.5.1"
+	helmVersion          = "3.11.1"
 )
 
 // Variables that define build behaviour.
@@ -497,6 +498,23 @@ func (l *Locations) DevEnv() *dev.Environment {
 		l.devEnvironment = dev.NewEnvironment(
 			clusterName,
 			filepath.Join(l.Cache(), "dev-env"),
+			dev.WithClusterInitializers{
+				dev.ClusterHelmInstall{
+					RepoName:    "prometheus-community",
+					RepoURL:     "https://prometheus-community.github.io/helm-charts",
+					PackageName: "kube-prometheus-stack",
+					ReleaseName: "prometheus",
+					Namespace:   "monitoring",
+					SetVars: []string{
+						"grafana.enabled=true",
+						"kubeStateMetrics.enabled=false",
+						"nodeExporter.enabled=false",
+					},
+				},
+				dev.ClusterLoadObjectsFromFiles{
+					"config/service-monitor.yaml",
+				},
+			},
 			dev.WithClusterOptions([]dev.ClusterOption{
 				dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
@@ -853,7 +871,14 @@ func (b Build) buildPackageImage(name string) {
 
 // Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
-	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen, Dependency.Crane)
+	mg.Deps(
+		Dependency.ControllerGen,
+		Dependency.GolangciLint,
+		Dependency.Kind,
+		Dependency.Docgen,
+		Dependency.Crane,
+		Dependency.Helm,
+	)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
@@ -881,6 +906,11 @@ func (d Dependency) Docgen() error {
 func (d Dependency) Kind() error {
 	url := "sigs.k8s.io/kind"
 	return locations.Deps().GoInstall("kind", url, kindVersion)
+}
+
+func (d Dependency) Helm() error {
+	url := "helm.sh/helm/v3/cmd/helm"
+	return locations.Deps().GoInstall("helm", url, helmVersion)
 }
 
 // Creates an empty development environment via kind.
@@ -1132,7 +1162,7 @@ func (d Dev) loadImage(image string) error {
 }
 
 func (d Dev) init() {
-	mg.Deps(Dependency.Kind, Dependency.Crane)
+	mg.Deps(Dependency.Kind, Dependency.Crane, Dependency.Helm)
 }
 
 // Run all code generators.

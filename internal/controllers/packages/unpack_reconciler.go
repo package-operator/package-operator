@@ -13,6 +13,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
@@ -25,19 +26,27 @@ const (
 
 // Loads/unpack and templates packages into an ObjectDeployment.
 type unpackReconciler struct {
-	imagePuller     imagePuller
-	packageDeployer packageDeployer
+	imagePuller         imagePuller
+	packageDeployer     packageDeployer
+	packageLoadRecorder packageLoadRecorder
 
 	backoff *flowcontrol.Backoff
+}
+
+type packageLoadRecorder interface {
+	RecordPackageLoadMetric(
+		pkg metrics.GenericPackage, d time.Duration)
 }
 
 func newUnpackReconciler(
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
+	packageLoadRecorder packageLoadRecorder,
 ) *unpackReconciler {
 	return &unpackReconciler{
-		imagePuller:     imagePuller,
-		packageDeployer: packageDeployer,
+		imagePuller:         imagePuller,
+		packageDeployer:     packageDeployer,
+		packageLoadRecorder: packageLoadRecorder,
 
 		backoff: flowcontrol.NewBackOff(
 			pullBackOffPeriod, pullBackOffMax),
@@ -68,6 +77,7 @@ func (r *unpackReconciler) Reconcile(
 		return res, nil
 	}
 
+	pullStart := time.Now()
 	log := logr.FromContextOrDiscard(ctx)
 	files, err := r.imagePuller.Pull(ctx, pkg.GetImage())
 	if err != nil {
@@ -91,6 +101,11 @@ func (r *unpackReconciler) Reconcile(
 
 	if err := r.packageDeployer.Load(ctx, pkg, files); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
+	}
+
+	if r.packageLoadRecorder != nil {
+		r.packageLoadRecorder.RecordPackageLoadMetric(
+			pkg, time.Since(pullStart))
 	}
 	pkg.SetUnpackedHash(specHash)
 	meta.SetStatusCondition(

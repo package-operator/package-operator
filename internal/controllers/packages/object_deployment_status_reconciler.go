@@ -48,5 +48,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packag
 		packageObj.ClientObject().GetGeneration(), packageObj.GetConditions(),
 	)
 
+	packageObj.SetStatusRevision(objDep.GetStatusRevision())
+
 	return ctrl.Result{}, nil
 }

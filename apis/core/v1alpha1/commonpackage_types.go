@@ -15,6 +15,8 @@ type PackageStatus struct {
 	Phase PackageStatusPhase `json:"phase,omitempty"`
 	// Hash of image + config that was successfully unpacked.
 	UnpackedHash string `json:"unpackedHash,omitempty"`
+	// Package revision as reported by the ObjectDeployment.
+	Revision int64 `json:"revision,omitempty"`
 }
 
 // Package condition types.

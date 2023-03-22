@@ -27,6 +27,8 @@ type ClusterObjectDeploymentStatus struct {
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 	// Computed TemplateHash.
 	TemplateHash string `json:"templateHash,omitempty"`
+	// Deployment revision.
+	Revision int64 `json:"revision,omitempty"`
 }
 
 // ClusterObjectDeployment is the Schema for the ClusterObjectDeployments API

@@ -58,7 +58,7 @@ type teardownHandler interface {
 }
 
 type metricsRecorder interface {
-	RecordRolloutTime(objectSet metrics.GenericObjectSet)
+	RecordObjectSetMetrics(objectSet metrics.GenericObjectSet)
 }
 
 func NewObjectSetController(
@@ -168,7 +168,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 
 func (c *GenericObjectSetController) Reconcile(
 	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
+) (res ctrl.Result, err error) {
 	log := c.log.WithValues("ObjectSet", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
@@ -176,37 +176,41 @@ func (c *GenericObjectSetController) Reconcile(
 	objectSet := c.newObjectSet(c.scheme)
 	if err := c.client.Get(
 		ctx, req.NamespacedName, objectSet.ClientObject()); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return res, client.IgnoreNotFound(err)
 	}
+	defer func() {
+		if err != nil {
+			return
+		}
+		if c.recorder != nil {
+			c.recorder.RecordObjectSetMetrics(objectSet)
+		}
+	}()
 
 	if meta.IsStatusConditionTrue(*objectSet.GetConditions(), corev1alpha1.ObjectSetArchived) {
 		// We don't want to touch this object anymore.
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	if !objectSet.ClientObject().GetDeletionTimestamp().IsZero() ||
 		objectSet.IsArchived() {
 		if err := c.handleDeletionAndArchival(ctx, objectSet); err != nil {
-			return ctrl.Result{}, err
+			return res, err
 		}
 
 		if !objectSet.IsArchived() {
 			// Object was deleted an not just archived.
 			// no way to update status now :)
-			return ctrl.Result{}, nil
+			return res, nil
 		}
 
-		return ctrl.Result{}, c.updateStatus(ctx, objectSet)
+		return res, c.updateStatus(ctx, objectSet)
 	}
 
 	if err := controllers.EnsureCachedFinalizer(ctx, c.client, objectSet.ClientObject()); err != nil {
-		return ctrl.Result{}, err
+		return res, err
 	}
 
-	var (
-		res ctrl.Result
-		err error
-	)
 	for _, r := range c.reconciler {
 		res, err = r.Reconcile(ctx, objectSet)
 		if err != nil || !res.IsZero() {
@@ -219,10 +223,6 @@ func (c *GenericObjectSetController) Reconcile(
 
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
 		return res, fmt.Errorf("getting paused status: %w", err)
-	}
-
-	if c.recorder != nil {
-		c.recorder.RecordRolloutTime(objectSet)
 	}
 
 	return res, c.updateStatus(ctx, objectSet)

@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 type genericObjectSetMock struct {
@@ -28,7 +29,141 @@ func (m *genericObjectSetMock) GetConditions() *[]metav1.Condition {
 	return args.Get(0).(*[]metav1.Condition)
 }
 
-func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
+func (m *genericObjectSetMock) GetRevision() int64 {
+	args := m.Called()
+	return args.Get(0).(int64)
+}
+
+func TestRecorder_RecordPackageMetrics(t *testing.T) {
+	creationTimestamp := time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)
+
+	tests := []struct {
+		name                 string
+		pkg                  *adapters.GenericPackage
+		expectedAvailability float64
+	}{
+		{
+			name: "unknown",
+			pkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "test",
+						Namespace:         "test-ns",
+						CreationTimestamp: metav1.Time{Time: creationTimestamp},
+					},
+					Status: corev1alpha1.PackageStatus{
+						Revision: 32,
+					},
+				},
+			},
+			expectedAvailability: 2,
+		},
+		{
+			name: "available",
+			pkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "test",
+						Namespace:         "test-ns",
+						CreationTimestamp: metav1.Time{Time: creationTimestamp},
+					},
+					Status: corev1alpha1.PackageStatus{
+						Revision: 32,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.PackageAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				},
+			},
+			expectedAvailability: 1,
+		},
+		{
+			name: "unavailable",
+			pkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "test",
+						Namespace:         "test-ns",
+						CreationTimestamp: metav1.Time{Time: creationTimestamp},
+					},
+					Status: corev1alpha1.PackageStatus{
+						Revision: 32,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.PackageAvailable,
+								Status: metav1.ConditionFalse,
+							},
+						},
+					},
+				},
+			},
+			expectedAvailability: 0,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := NewRecorder()
+			recorder.RecordPackageMetrics(test.pkg)
+
+			assert.Equal(t,
+				test.expectedAvailability,
+				testutil.ToFloat64(recorder.packageAvailability.WithLabelValues(
+					test.pkg.GetName(), test.pkg.GetNamespace(),
+				)))
+			assert.Equal(t,
+				float64(creationTimestamp.Unix()),
+				testutil.ToFloat64(recorder.packageCreated.WithLabelValues(
+					test.pkg.GetName(), test.pkg.GetNamespace(),
+				)))
+			assert.Equal(t,
+				float64(32),
+				testutil.ToFloat64(recorder.packageRevision.WithLabelValues(
+					test.pkg.GetName(), test.pkg.GetNamespace(),
+				)))
+		})
+	}
+}
+
+func TestRecorder_RecordPackageMetrics_delete(_ *testing.T) {
+	d := metav1.Now()
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &d,
+			},
+		},
+	}
+
+	recorder := NewRecorder()
+	recorder.RecordPackageMetrics(pkg)
+}
+
+func TestRecorder_RecordPackageLoadMetric(t *testing.T) {
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "test-ns",
+			},
+		},
+	}
+
+	recorder := NewRecorder()
+	recorder.RecordPackageLoadMetric(pkg, 10*time.Second)
+	assert.Equal(t,
+		float64(10),
+		testutil.ToFloat64(recorder.packageLoadDuration.WithLabelValues(
+			pkg.GetName(), pkg.GetNamespace(),
+		)))
+}
+
+func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
+	successTimestamp := time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)
 	tests := []struct {
 		name       string
 		conditions []metav1.Condition
@@ -41,9 +176,8 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 			name: "with success condition",
 			conditions: []metav1.Condition{
 				{
-					Type: corev1alpha1.ObjectSetSucceeded,
-					LastTransitionTime: metav1.NewTime(
-						time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)),
+					Type:               corev1alpha1.ObjectSetSucceeded,
+					LastTransitionTime: metav1.NewTime(successTimestamp),
 					// Difference of 33 minutes and 17 seconds from `creationTimestamp`
 				},
 			},
@@ -59,14 +193,22 @@ func TestRecorder_RecordRolloutTimeObjectSet(t *testing.T) {
 
 			osMock := &genericObjectSetMock{}
 			osMock.On("ClientObject").Return(obj)
-			osMock.On("GetConditions").Return(&test.conditions).Once()
+			osMock.On("GetConditions").Return(&test.conditions)
 
 			recorder := NewRecorder()
-			recorder.RecordRolloutTime(osMock)
+			recorder.RecordObjectSetMetrics(osMock)
+
+			// is always emitted.
+			assert.Equal(t,
+				float64(creationTimestamp.Unix()),
+				testutil.ToFloat64(recorder.objectSetCreated))
+
 			if len(test.conditions) == 0 {
-				assert.Equal(t, 0, testutil.CollectAndCount(recorder.rolloutTime))
+				assert.Equal(t, 0, testutil.CollectAndCount(recorder.objectSetSucceeded))
 			} else {
-				assert.Equal(t, float64(33*60+17), testutil.ToFloat64(recorder.rolloutTime))
+				assert.Equal(t,
+					float64(successTimestamp.Unix()),
+					testutil.ToFloat64(recorder.objectSetSucceeded))
 			}
 		})
 	}
