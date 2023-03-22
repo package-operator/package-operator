@@ -210,7 +210,11 @@ func copySourceItems(
 	sourceObj *unstructured.Unstructured, sourcesConfig map[string]interface{},
 ) error {
 	for _, item := range src {
-		value, found, err := unstructured.NestedFieldCopy(sourceObj.Object, strings.Split(item.Key, ".")...)
+		if string(item.Key[0]) != "." {
+			return &JSONPathFormatError{Path: item.Key}
+		}
+		trimmedKey := strings.TrimPrefix(item.Key, ".")
+		value, found, err := unstructured.NestedFieldCopy(sourceObj.Object, strings.Split(trimmedKey, ".")...)
 		if err != nil {
 			return fmt.Errorf("getting value at %s: %w", item.Key, err)
 		}
@@ -218,7 +222,11 @@ func copySourceItems(
 			return &SourceKeyNotFoundError{Key: item.Key}
 		}
 
-		if err := unstructured.SetNestedField(sourcesConfig, value, strings.Split(item.Destination, ".")...); err != nil {
+		if string(item.Destination[0]) != "." {
+			return &JSONPathFormatError{Path: item.Destination}
+		}
+		trimmedDestination := strings.TrimPrefix(item.Destination, ".")
+		if err := unstructured.SetNestedField(sourcesConfig, value, strings.Split(trimmedDestination, ".")...); err != nil {
 			return fmt.Errorf("setting nested field at %s: %w", item.Destination, err)
 		}
 	}

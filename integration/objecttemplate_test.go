@@ -233,8 +233,8 @@ func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName strin
 		Namespace:  defaultNamespace,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
-				Key:         "data." + cmKey,
-				Destination: cmDestination,
+				Key:         fmt.Sprintf(".data.%s", cmKey),
+				Destination: fmt.Sprintf(".%s", cmDestination),
 			},
 		},
 	}
@@ -272,8 +272,8 @@ func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
 		Name:       secretName,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
-				Key:         "data." + secretKey,
-				Destination: secretDestination,
+				Key:         fmt.Sprintf(".data.%s", secretKey),
+				Destination: fmt.Sprintf(".%s", secretDestination),
 			},
 		},
 	}
@@ -358,8 +358,8 @@ func TestObjectTemplate_waitsForSource(t *testing.T) {
 		Optional:   true,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
 			{
-				Key:         "data." + secretKey,
-				Destination: secretDestination,
+				Key:         fmt.Sprintf(".data.%s", secretKey),
+				Destination: fmt.Sprintf(".%s", secretDestination),
 			},
 		},
 	}

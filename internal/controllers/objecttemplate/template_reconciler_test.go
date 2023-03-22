@@ -102,7 +102,7 @@ func Test_copySourceItems(t *testing.T) {
 	}
 	sourcesConfig := map[string]interface{}{}
 	items := []corev1alpha1.ObjectTemplateSourceItem{
-		{Key: "data.something", Destination: "banana"},
+		{Key: ".data.something", Destination: ".banana"},
 	}
 	err := copySourceItems(
 		ctx, items, sourceObj, sourcesConfig)
@@ -119,11 +119,47 @@ func Test_copySourceItems_notfound(t *testing.T) {
 	}
 	sourcesConfig := map[string]interface{}{}
 	items := []corev1alpha1.ObjectTemplateSourceItem{
-		{Key: "data.something", Destination: "banana"},
+		{Key: ".data.something", Destination: ".banana"},
 	}
 	err := copySourceItems(
 		ctx, items, sourceObj, sourcesConfig)
-	require.EqualError(t, err, "key data.something not found")
+	require.EqualError(t, err, "key .data.something not found")
+}
+
+func Test_copySourceItems_nonJSONPath_key(t *testing.T) {
+	ctx := context.Background()
+	sourceObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"data": map[string]interface{}{
+				"something": "123",
+			},
+		},
+	}
+	sourcesConfig := map[string]interface{}{}
+	items := []corev1alpha1.ObjectTemplateSourceItem{
+		{Key: "data.something", Destination: ".banana"},
+	}
+	err := copySourceItems(
+		ctx, items, sourceObj, sourcesConfig)
+	require.EqualError(t, err, "path data.something must be a JSONPath with a leading dot")
+}
+
+func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
+	ctx := context.Background()
+	sourceObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"data": map[string]interface{}{
+				"something": "123",
+			},
+		},
+	}
+	sourcesConfig := map[string]interface{}{}
+	items := []corev1alpha1.ObjectTemplateSourceItem{
+		{Key: ".data.something", Destination: "banana"},
+	}
+	err := copySourceItems(
+		ctx, items, sourceObj, sourcesConfig)
+	require.EqualError(t, err, "path banana must be a JSONPath with a leading dot")
 }
 
 func Test_templateReconciler_templateObject(t *testing.T) {

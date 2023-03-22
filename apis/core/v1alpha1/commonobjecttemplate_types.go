@@ -24,7 +24,9 @@ type ObjectTemplateSource struct {
 }
 
 type ObjectTemplateSourceItem struct {
-	Key         string `json:"key"`
+	// JSONPath to value in source object.
+	Key string `json:"key"`
+	// JSONPath to destination in which to store copy of the source value.
 	Destination string `json:"destination"`
 }
 

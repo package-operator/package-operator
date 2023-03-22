@@ -993,8 +993,8 @@ Used in:
 
 | Field | Description |
 | ----- | ----------- |
-| `key` <b>required</b><br>string |  |
-| `destination` <b>required</b><br>string |  |
+| `key` <b>required</b><br>string | JSONPath to value in source object. |
+| `destination` <b>required</b><br>string | JSONPath to destination in which to store copy of the source value. |
 
 
 Used in:
