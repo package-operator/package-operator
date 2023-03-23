@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    package-operator.run/phase: deploy
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: package-operator
+  name: package-operator-manager
+  namespace: package-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: package-operator
+    spec:
+{{- if hasKey .config "affinity" }}
+      affinity: {{ toJson .config.affinity }}
+{{- end}}
+{{- if hasKey .config "tolerations" }}
+      tolerations: {{ toJson .config.tolerations }}
+{{- end}}
+      containers:
+      - args:
+        - --enable-leader-election
+        env:
+        - name: PKO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_IMAGE
+          value: {{ index .images "package-operator-manager" }}
+        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+          value: {{ index .images "remote-phase-package" }}
+        image: {{ index .images "package-operator-manager" }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+{{- if hasKey .config "resources" }}
+        resources: {{ toJson .config.resources }}
+{{- else}}
+        # default resources
+        resources:
+          limits:
+            cpu: 100m
+            memory: 400Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi
+{{- end}}
+      serviceAccountName: package-operator
+status: {}

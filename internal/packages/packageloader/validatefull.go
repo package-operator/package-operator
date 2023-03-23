@@ -74,6 +74,7 @@ func (v TemplateTestValidator) runTestCase(
 	tt, err := NewTemplateTransformer(PackageFileTemplateContext{
 		Package: testCase.Context.Package,
 		Config:  configuration,
+		Images:  generateStaticImages(manifest),
 	})
 	if err != nil {
 		return err
@@ -140,6 +141,16 @@ func (v TemplateTestValidator) runTestCase(
 		return packages.NewInvalidError(violations...)
 	}
 	return nil
+}
+
+// Generate a static set of images to test against the fixtures.
+// We want a static list here, so the test-fixtures don't change every time the digests/images are updated.
+func generateStaticImages(manifest *manifestsv1alpha1.PackageManifest) map[string]string {
+	images := map[string]string{}
+	for _, v := range manifest.Spec.Images {
+		images[v.Name] = "registry.package-operator.run/static-image-for-testing"
+	}
+	return images
 }
 
 func renderTemplateFiles(folder string, fileMap packagecontent.Files) error {

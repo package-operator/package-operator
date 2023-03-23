@@ -31,11 +31,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	clientScheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 // Constants that define build behaviour.
@@ -49,6 +50,7 @@ const (
 
 	controllerGenVersion = "0.11.2"
 	golangciLintVersion  = "1.51.1"
+	craneVersion         = "0.13.0"
 	kindVersion          = "0.17.0"
 	k8sDocGenVersion     = "0.5.1"
 )
@@ -89,6 +91,8 @@ var (
 	locations                      = newLocations()
 	logger             logr.Logger = stdr.New(nil)
 	applicationVersion string
+	// Push to development registry instead of pushing to quay.io.
+	pushToDevRegistry bool
 )
 
 // Types for target configuration.
@@ -100,6 +104,7 @@ type (
 		devEnvironment   *dev.Environment
 		containerRuntime string
 		cache            string
+		bin              string
 		imageOrg         string
 	}
 	CommandImage struct {
@@ -127,7 +132,7 @@ type (
 func init() {
 	// Use a local directory to get around permission errors in OpenShift CI.
 	os.Setenv("GOLANGCI_LINT_CACHE", filepath.Join(locations.Cache(), "golangci-lint"))
-	os.Setenv("PATH", locations.Deps().Bin()+":"+os.Getenv("PATH"))
+	os.Setenv("PATH", locations.Deps().Bin()+":"+locations.bin+":"+os.Getenv("PATH"))
 
 	// Extra dependencies must be specified here to avoid a circular dependency.
 	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
@@ -163,7 +168,10 @@ func newLocations() Locations {
 		imageOrg = defaultImageOrg
 	}
 
-	l := Locations{lock: &sync.Mutex{}, cache: absCache, imageOrg: imageOrg}
+	l := Locations{
+		lock: &sync.Mutex{}, cache: absCache, imageOrg: imageOrg,
+		bin: filepath.Join(filepath.Dir(absCache), "bin"),
+	}
 
 	must(os.MkdirAll(string(l.Deps()), 0o755))
 	must(os.MkdirAll(l.unitTestCache(), 0o755))
@@ -216,18 +224,7 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 			objToMarshal = obj.Object
 
 		case schema.GroupKind{Group: "apps", Kind: "Deployment"}:
-			annotations["package-operator.run/phase"] = "deploy"
-			obj.SetAnnotations(annotations)
-
-			var deploy *appsv1.Deployment
-			if obj.GetName() == "package-operator-remote-phase-manager" {
-				deploy = patchRemotePhaseManager(clientScheme.Scheme, &obj)
-				deploy.SetNamespace("")
-			} else {
-				deploy = patchPackageOperatorManager(clientScheme.Scheme, &obj)
-			}
-			deploy.SetGroupVersionKind(schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"})
-			objToMarshal = deploy
+			continue
 		}
 		obj.SetAnnotations(annotations)
 
@@ -476,6 +473,11 @@ func (l Locations) ImageURL(name string, useDigest bool) string {
 	return l.imageOrg + "/" + name + "@" + string(digest)
 }
 
+func (l Locations) LocalImageURL(name string) string {
+	url := l.ImageURL(name, false)
+	return strings.Replace(url, "quay.io", "localhost:5001", 1)
+}
+
 func (l *Locations) ContainerRuntime() string {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -509,6 +511,32 @@ func (l *Locations) DevEnv() *dev.Environment {
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
+			dev.WithClusterInitializers{
+				dev.ClusterLoadObjectsFromFiles{
+					"config/local-registry.yaml",
+				},
+			},
+			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
+				ContainerdConfigPatches: []string{
+					// Replace quay.io with our local dev-registry.
+					`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
+	endpoint = ["http://localhost:31320"]`,
+				},
+				Nodes: []kindv1alpha4.Node{
+					{
+						Role: kindv1alpha4.ControlPlaneRole,
+						ExtraPortMappings: []kindv1alpha4.PortMapping{
+							// Open port to enable connectivity with local registry.
+							{
+								ContainerPort: 5001,
+								HostPort:      5001,
+								ListenAddress: "127.0.0.1",
+								Protocol:      "TCP",
+							},
+						},
+					},
+				},
+			}),
 		)
 	}
 
@@ -680,6 +708,13 @@ func newImagePushInfo(imageName string) *dev.ImagePushInfo {
 
 // Builds and pushes only the given container image to the default registry.
 func (Build) PushImage(imageName string) {
+	if pushToDevRegistry {
+		mg.Deps(
+			mg.F(Dev.loadImage, imageName),
+		)
+		return
+	}
+
 	cmdOpts, cmdOptsOK := commandImages[imageName]
 	pkgOpts, pkgOptsOK := packageImages[imageName]
 	switch {
@@ -826,7 +861,7 @@ func (b Build) buildPackageImage(name string) {
 
 // Installs all project dependencies into the local checkout.
 func (d Dependency) All() {
-	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen)
+	mg.Deps(Dependency.ControllerGen, Dependency.GolangciLint, Dependency.Kind, Dependency.Docgen, Dependency.Crane)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
@@ -838,6 +873,11 @@ func (d Dependency) ControllerGen() error {
 func (d Dependency) GolangciLint() error {
 	url := "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	return locations.Deps().GoInstall("golangci-lint", url, golangciLintVersion)
+}
+
+func (d Dependency) Crane() error {
+	url := "github.com/google/go-containerregistry/cmd/crane"
+	return locations.Deps().GoInstall("crane", url, craneVersion)
 }
 
 func (d Dependency) Docgen() error {
@@ -871,6 +911,9 @@ func (d Dev) Teardown(ctx context.Context) {
 
 // Load images into the development environment.
 func (d Dev) Load() {
+	pushToDevRegistry = true
+	os.Setenv("PKO_REPOSITORY_HOST", "localhost:5001")
+
 	// setup is a pre-requisite and needs to run before we can load images.
 	mg.SerialDeps(Dev.Setup)
 	images := []string{
@@ -880,7 +923,7 @@ func (d Dev) Load() {
 	}
 	deps := make([]interface{}, len(images))
 	for i := range images {
-		deps[i] = mg.F(Dev.loadImage, images[i])
+		deps[i] = mg.F(Build.PushImage, images[i])
 	}
 	mg.Deps(deps...)
 
@@ -1086,16 +1129,19 @@ func (d Dev) Integration(ctx context.Context) {
 	mg.SerialDeps(Test.Integration)
 }
 
-func (d Dev) loadImage(image string) {
+func (d Dev) loadImage(image string) error {
 	mg.Deps(mg.F(Build.Image, image))
 
-	imageTar := filepath.Join(locations.ImageCache(image) + ".tar")
-	if err := locations.DevEnv().LoadImageFromTar(imageTar); err != nil {
-		panic(fmt.Errorf("load image from tar: %w", err))
-	}
+	return sh.Run(
+		"crane", "push",
+		locations.ImageCache(image)+".tar",
+		locations.LocalImageURL(image),
+	)
 }
 
-func (d Dev) init() { mg.SerialDeps(Dependency.Kind) }
+func (d Dev) init() {
+	mg.Deps(Dependency.Kind, Dependency.Crane)
+}
 
 // Run all code generators.
 // installYamlFile has to come after code generation
@@ -1150,7 +1196,13 @@ func (Generate) installYamlFile() {
 
 // Includes all static-deployment files in the package-operator-package.
 func (Generate) PackageOperatorPackage() error {
-	return filepath.WalkDir("config/static-deployment", func(path string, d fs.DirEntry, err error) error {
+	mg.Deps(
+		mg.F(Build.Binary, cliCmdName, nativeArch.OS, nativeArch.Arch),
+		mg.F(Build.PushImage, "package-operator-manager"),
+		mg.F(Build.PushImage, remotePhasePackageName),
+	)
+
+	err := filepath.WalkDir("config/static-deployment", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -1162,14 +1214,75 @@ func (Generate) PackageOperatorPackage() error {
 		includeInPackageOperatorPackage(path, filepath.Join("config", "packages", "package-operator"))
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	pkgFolder := filepath.Join("config", "packages", "package-operator")
+	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
+	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
+	if err != nil {
+		return err
+	}
+	manifest := &manifestsv1alpha1.PackageManifest{}
+	if err := yaml.Unmarshal(manifestFileContents, manifest); err != nil {
+		return err
+	}
+
+	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
+		{
+			Name:  "package-operator-manager",
+			Image: locations.ImageURL("package-operator-manager", false),
+		},
+		{
+			Name:  remotePhasePackageName,
+			Image: locations.ImageURL(remotePhasePackageName, false),
+		},
+	}
+	manifestYaml, err := yaml.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
+		return err
+	}
+
+	return sh.Run("kubectl", "package", "update", pkgFolder)
 }
 
 // Includes all static-deployment files in the remote-phase-package.
 func (Generate) RemotePhasePackage() error {
-	includeInPackageOperatorPackage(
-		"config/remote-phase-static-deployment/deployment.yaml.tpl",
-		filepath.Join("config", "packages", "remote-phase"))
-	return nil
+	mg.Deps(
+		mg.F(Build.Binary, cliCmdName, nativeArch.OS, nativeArch.Arch),
+		mg.F(Build.PushImage, "remote-phase-manager"),
+	)
+
+	pkgFolder := filepath.Join("config", "packages", "remote-phase")
+	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
+	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
+	if err != nil {
+		return err
+	}
+	manifest := &manifestsv1alpha1.PackageManifest{}
+	if err := yaml.Unmarshal(manifestFileContents, manifest); err != nil {
+		return err
+	}
+
+	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
+		{
+			Name:  "remote-phase-manager",
+			Image: locations.ImageURL("remote-phase-manager", false),
+		},
+	}
+	manifestYaml, err := yaml.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
+		return err
+	}
+
+	return sh.Run("kubectl", "package", "update", pkgFolder)
 }
 
 // generates a self-bootstrap-job.yaml based on the current VERSION.

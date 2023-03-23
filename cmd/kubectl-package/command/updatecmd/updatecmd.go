@@ -17,6 +17,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/package-operator/internal/utils"
 )
 
 const (
@@ -74,7 +75,11 @@ func (u Update) Run(ctx context.Context) (err error) {
 
 	var lockImages []v1alpha1.PackageManifestLockImage
 	for _, img := range pkg.PackageManifest.Spec.Images {
-		digest, err := u.RetrieveDigest(img.Image)
+		overriddenImage, err := utils.ImageURLWithOverride(img.Image)
+		if err != nil {
+			return err
+		}
+		digest, err := u.RetrieveDigest(overriddenImage)
 		if err != nil {
 			return err
 		}
