@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"strings"
+
+	"github.com/docker/distribution/reference"
 )
 
 // Slice contains check.
@@ -36,10 +39,13 @@ func CopyMap[K comparable, V interface{}](toCopy map[K]V) map[K]V {
 	return out
 }
 
-func ImageURLWithOverride(img string) string {
+func ImageURLWithOverride(img string) (string, error) {
 	if repoHostOverride := os.Getenv("PKO_REPOSITORY_HOST"); len(repoHostOverride) > 0 {
-		parts := strings.SplitN(img, "/", 2)
-		return repoHostOverride + "/" + parts[1]
+		ref, err := reference.ParseDockerRef(img)
+		if err != nil {
+			return "", fmt.Errorf("image \"%s\" with host \"%s\": %w", img, repoHostOverride, err)
+		}
+		return strings.Replace(ref.String(), reference.Domain(ref), repoHostOverride, 1), nil
 	}
-	return img
+	return img, nil
 }
