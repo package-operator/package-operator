@@ -32,10 +32,10 @@ func Test_ObjectSetReconciler(t *testing.T) {
 			name:   "latest revision available",
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false),
-				makeObjectSet("rev1", "test", 1, "xyz", false),
-				makeObjectSet("rev2", "test", 2, "pqr", false),
-				makeObjectSet("rev4", "test", 4, "abc", true),
+				makeObjectSet("rev3", "test", 3, "abcd", false, true),
+				makeObjectSet("rev1", "test", 1, "xyz", false, true),
+				makeObjectSet("rev2", "test", 2, "pqr", false, true),
+				makeObjectSet("rev4", "test", 4, "abc", true, true),
 			},
 			deploymentGeneration:    4,
 			deploymentHash:          "abc",
@@ -50,10 +50,10 @@ func Test_ObjectSetReconciler(t *testing.T) {
 			name:   "no current revision",
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false),
-				makeObjectSet("rev1", "test", 1, "xyz", false),
-				makeObjectSet("rev2", "test", 2, "pqr", false),
-				makeObjectSet("rev4", "test", 4, "abc", true),
+				makeObjectSet("rev3", "test", 3, "abcd", false, true),
+				makeObjectSet("rev1", "test", 1, "xyz", false, true),
+				makeObjectSet("rev2", "test", 2, "pqr", false, true),
+				makeObjectSet("rev4", "test", 4, "abc", true, true),
 			},
 			deploymentGeneration:    5,
 			deploymentHash:          "hhh",
@@ -69,7 +69,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 			name:   "latest revision unavailable",
 			client: testutil.NewClient(),
 			revisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev4", "test", 4, "abc", false),
+				makeObjectSet("rev4", "test", 4, "abc", false, false),
 			},
 			deploymentGeneration:    4,
 			deploymentHash:          "abc",
@@ -215,6 +215,15 @@ func makeObjectDeploymentMock(name string, namespace string,
 	res.On("GetStatusTemplateHash").Return(templateHash)
 	res.On("GetConditions").Return(initialConditions)
 	res.On("GetName").Return(name)
+	res.On("SetStatusConditions", mock.Anything).Run(func(args mock.Arguments) {
+		conds := args.Get(0).([]metav1.Condition)
+
+		for _, c := range conds {
+			c.ObservedGeneration = int64(generation)
+
+			meta.SetStatusCondition(initialConditions, c)
+		}
+	}).Return()
 	res.On("SetStatusCollisionCount", mock.Anything).Return()
 	res.On("GetStatusCollisionCount").Return(nil)
 	res.On("GetNamespace").Return(namespace)
@@ -227,7 +236,7 @@ func makeObjectDeploymentMock(name string, namespace string,
 	return res
 }
 
-func makeObjectSet(name, namespace string, deploymentRevision int64, hash string, available bool) corev1alpha1.ObjectSet {
+func makeObjectSet(name, namespace string, deploymentRevision int64, hash string, available bool, successful bool) corev1alpha1.ObjectSet {
 	obj := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -240,20 +249,38 @@ func makeObjectSet(name, namespace string, deploymentRevision int64, hash string
 			Revision: deploymentRevision,
 		},
 	}
+
 	if available {
-		obj.Status.Conditions = []metav1.Condition{
-			{
+		obj.Status.Conditions = append(obj.Status.Conditions,
+			metav1.Condition{
 				Type:   corev1alpha1.ObjectSetAvailable,
 				Status: metav1.ConditionTrue,
 			},
-		}
+		)
 	} else {
-		obj.Status.Conditions = []metav1.Condition{
-			{
+		obj.Status.Conditions = append(obj.Status.Conditions,
+			metav1.Condition{
 				Type:   corev1alpha1.ObjectSetAvailable,
 				Status: metav1.ConditionFalse,
 			},
-		}
+		)
 	}
+
+	if successful {
+		obj.Status.Conditions = append(obj.Status.Conditions,
+			metav1.Condition{
+				Type:   corev1alpha1.ObjectSetSucceeded,
+				Status: metav1.ConditionTrue,
+			},
+		)
+	} else {
+		obj.Status.Conditions = append(obj.Status.Conditions,
+			metav1.Condition{
+				Type:   corev1alpha1.ObjectSetSucceeded,
+				Status: metav1.ConditionFalse,
+			},
+		)
+	}
+
 	return *obj
 }

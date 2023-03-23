@@ -14,6 +14,7 @@ type objectDeploymentAccessor interface {
 	GetSelector() metav1.LabelSelector
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
 	GetRevisionHistoryLimit() *int32
+	SetStatusConditions(...metav1.Condition)
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string

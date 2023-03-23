@@ -19,6 +19,7 @@ type genericObjectSet interface {
 	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
 	SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase)
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
+	GetSuccessDelaySeconds() int32
 	SetRevision(revision int64)
 	GetRevision() int64
 	GetRemotePhases() []corev1alpha1.RemotePhaseReference
@@ -101,6 +102,10 @@ func (a *GenericObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	return a.Spec.AvailabilityProbes
 }
 
+func (a *GenericObjectSet) GetSuccessDelaySeconds() int32 {
+	return a.Spec.SuccessDelaySeconds
+}
+
 func (a *GenericObjectSet) SetRevision(revision int64) {
 	a.Status.Revision = revision
 }
@@ -159,6 +164,10 @@ func (a *GenericClusterObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTempl
 
 func (a *GenericClusterObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
 	return a.Spec.AvailabilityProbes
+}
+
+func (a *GenericClusterObjectSet) GetSuccessDelaySeconds() int32 {
+	return a.Spec.SuccessDelaySeconds
 }
 
 func (a *GenericClusterObjectSet) SetRevision(revision int64) {

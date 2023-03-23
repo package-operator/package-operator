@@ -278,6 +278,14 @@ spec:
                   - name
                   type: object
                 type: array
+              successDelaySeconds:
+                description: Success Delay Seconds applies a wait period from the
+                  time an Object Set is available to the time it is marked as successful.
+                  This can be used to prevent false reporting of success when the
+                  underlying objects may initially satisfy the availability probes,
+                  but are ultimately unstable.
+                format: int32
+                type: integer
             type: object
           status:
             default:
