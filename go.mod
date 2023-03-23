@@ -26,6 +26,7 @@ require (
 	k8s.io/utils v0.0.0-20230308161112-d77c459e9343
 	package-operator.run/apis v0.0.0-20230310215814-105d4e5bf36c
 	sigs.k8s.io/controller-runtime v0.14.5
+	sigs.k8s.io/kind v0.17.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -124,7 +125,6 @@ require (
 	k8s.io/klog/v2 v2.90.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kind v0.17.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 

@@ -166,7 +166,11 @@ func preBuildValidation(pkg *packagecontent.Package, retrieveDigest func(ref str
 
 	// validate digests
 	for imageName, lockImage := range pkgLockImages {
-		ref, err := name.ParseReference(utils.ImageURLWithOverride(lockImage.Image))
+		overriddenImage, err := utils.ImageURLWithOverride(lockImage.Image)
+		if err != nil {
+			return fmt.Errorf("%w: can't parse image \"%s\" reference \"%s\"", err, imageName, lockImage.Image)
+		}
+		ref, err := name.ParseReference(overriddenImage)
 		if err != nil {
 			return fmt.Errorf("%w: can't parse image \"%s\" reference \"%s\"", err, imageName, lockImage.Image)
 		}

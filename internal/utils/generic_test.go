@@ -46,15 +46,58 @@ func TestCopyMap(t *testing.T) {
 func TestImageURLWithOverride(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		img := "quay.io/something/else:tag"
-		r := ImageURLWithOverride(img)
+		r, err := ImageURLWithOverride(img)
+		assert.NoError(t, err)
 		assert.Equal(t, img, r)
 	})
 
-	t.Run("env set", func(t *testing.T) {
-		t.Setenv("PKO_REPOSITORY_HOST", "localhost:123")
+	regHost := "localhost:123"
+	testDgst := "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
 
-		img := "quay.io/something/else:tag"
-		r := ImageURLWithOverride(img)
-		assert.Equal(t, "localhost:123/something/else:tag", r)
-	})
+	testsOk := []struct {
+		image  string
+		expOut string
+	}{
+		{"nginx", regHost + "/library/nginx:latest"},
+		{"nginx:1.23.3", regHost + "/library/nginx:1.23.3"},
+		{"nginx@" + testDgst, regHost + "/library/nginx@" + testDgst},
+		{"nginx:1.23.3@" + testDgst, regHost + "/library/nginx@" + testDgst},
+		{"jboss/keycloak", regHost + "/jboss/keycloak:latest"},
+		{"jboss/keycloak:16.1.1", regHost + "/jboss/keycloak:16.1.1"},
+		{"jboss/keycloak@" + testDgst, regHost + "/jboss/keycloak@" + testDgst},
+		{"jboss/keycloak:16.1.1@" + testDgst, regHost + "/jboss/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak", regHost + "/keycloak/keycloak:latest"},
+		{"quay.io/keycloak/keycloak:20.0.3", regHost + "/keycloak/keycloak:20.0.3"},
+		{"quay.io/keycloak/keycloak@" + testDgst, regHost + "/keycloak/keycloak@" + testDgst},
+		{"quay.io/keycloak/keycloak:20.0.3@" + testDgst, regHost + "/keycloak/keycloak@" + testDgst},
+		{"example.com:12345/imggroup/imgname", regHost + "/imggroup/imgname:latest"},
+		{"example.com:12345/imggroup/imgname:1.0.0", regHost + "/imggroup/imgname:1.0.0"},
+		{"example.com:12345/imggroup/imgname@" + testDgst, regHost + "/imggroup/imgname@" + testDgst},
+		{"example.com:12345/imggroup/imgname:1.0.0@" + testDgst, regHost + "/imggroup/imgname@" + testDgst},
+	}
+
+	for _, test := range testsOk {
+		t.Run("ok/"+test.image, func(t *testing.T) {
+			t.Setenv("PKO_REPOSITORY_HOST", regHost)
+			out, err := ImageURLWithOverride(test.image)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expOut, out)
+		})
+	}
+
+	testsErr := []struct {
+		image  string
+		expErr string
+	}{
+		{"", "invalid reference format"},
+		{"/imgname:latest", "invalid reference format"},
+	}
+
+	for _, test := range testsErr {
+		t.Run("error/"+test.image, func(t *testing.T) {
+			t.Setenv("PKO_REPOSITORY_HOST", regHost)
+			_, err := ImageURLWithOverride(test.image)
+			assert.ErrorContains(t, err, test.expErr)
+		})
+	}
 }
