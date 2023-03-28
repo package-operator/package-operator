@@ -116,6 +116,10 @@ func (o *genericObjectDeploymentMock) GetGeneration() int64 {
 	return args.Get(0).(int64)
 }
 
+func (o *genericObjectDeploymentMock) SetStatusConditions(conds ...metav1.Condition) {
+	o.Called(conds)
+}
+
 func (o *genericObjectDeploymentMock) SetObservedGeneration(a int64) {
 	o.Called(a)
 }

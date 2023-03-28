@@ -33,6 +33,12 @@ type ObjectSetTemplateSpec struct {
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes,omitempty"`
+	// Success Delay Seconds applies a wait period from the time an
+	// Object Set is available to the time it is marked as successful.
+	// This can be used to prevent false reporting of success when
+	// the underlying objects may initially satisfy the availability
+	// probes, but are ultimately unstable.
+	SuccessDelaySeconds int32 `json:"successDelaySeconds,omitempty"`
 }
 
 // ObjectSet reconcile phase.

@@ -18,6 +18,7 @@ type ObjectDeploymentAccessor interface {
 	SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec)
 	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
 	GetRevisionHistoryLimit() *int32
+	SetStatusConditions(...metav1.Condition)
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string
@@ -96,6 +97,14 @@ func (a *ObjectDeployment) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
 	return a.Spec.Template
 }
 
+func (a *ObjectDeployment) SetStatusConditions(conds ...metav1.Condition) {
+	for _, c := range conds {
+		c.ObservedGeneration = a.ClientObject().GetGeneration()
+
+		meta.SetStatusCondition(&a.Status.Conditions, c)
+	}
+}
+
 func (a *ObjectDeployment) SetStatusTemplateHash(templateHash string) {
 	a.Status.TemplateHash = templateHash
 }
@@ -153,6 +162,14 @@ func (a *ClusterObjectDeployment) GetObjectSetTemplate() corev1alpha1.ObjectSetT
 
 func (a *ClusterObjectDeployment) GetStatusCollisionCount() *int32 {
 	return a.Status.CollisionCount
+}
+
+func (a *ClusterObjectDeployment) SetStatusConditions(conds ...metav1.Condition) {
+	for _, c := range conds {
+		c.ObservedGeneration = a.ClientObject().GetGeneration()
+
+		meta.SetStatusCondition(&a.Status.Conditions, c)
+	}
 }
 
 func (a *ClusterObjectDeployment) SetStatusTemplateHash(templateHash string) {

@@ -22,109 +22,107 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-func TestBootstrapper_Bootstrap(t *testing.T) {
-	t.Run("just patches", func(t *testing.T) {
-		c := testutil.NewClient()
-		log := testr.New(t)
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+func TestBootstrapper_BootstrapJustPatches(t *testing.T) {
+	c := testutil.NewClient()
+	log := testr.New(t)
+	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-		b := &bootstrapper{client: c, log: log}
+	b := &bootstrapper{client: c, log: log}
 
-		c.
-			On("Get", mock.Anything, mock.Anything,
-				mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-			Run(func(args mock.Arguments) {
-				pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
-				pkg.Status.Conditions = []metav1.Condition{
-					{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
-				}
-			}).
-			Return(nil)
-		c.
-			On("Patch", mock.Anything,
-				mock.AnythingOfType("*v1alpha1.ClusterPackage"),
-				mock.Anything, mock.Anything).
-			Return(nil)
+	c.
+		On("Get", mock.Anything, mock.Anything,
+			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
+			pkg.Status.Conditions = []metav1.Condition{
+				{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
+			}
+		}).
+		Return(nil)
+	c.
+		On("Patch", mock.Anything,
+			mock.AnythingOfType("*v1alpha1.ClusterPackage"),
+			mock.Anything, mock.Anything).
+		Return(nil)
 
-		err := b.Bootstrap(ctx)
-		require.NoError(t, err)
+	err := b.Bootstrap(ctx)
+	require.NoError(t, err)
 
-		c.AssertExpectations(t)
+	c.AssertExpectations(t)
+}
+
+func TestBootstrapper_BootstrapSelfBootstrap(t *testing.T) {
+	c := testutil.NewClient()
+	log := testr.New(t)
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	l := &loaderMock{}
+
+	var runManagerCalled bool
+	runManager := func(ctx context.Context) error {
+		runManagerCalled = true
+		return nil
+	}
+
+	b := &bootstrapper{
+		client: c, log: log,
+		loadFiles: func(ctx context.Context, path string) (packagecontent.Files, error) {
+			return nil, nil
+		},
+		loader:     l,
+		runManager: runManager,
+	}
+
+	crdObj := unstructured.Unstructured{}
+	crdObj.SetGroupVersionKind(crdGK.WithVersion("v1"))
+	crdObj.SetAnnotations(map[string]string{
+		manifestsv1alpha1.PackagePhaseAnnotation: "test",
 	})
-
-	t.Run("self-bootstrap", func(t *testing.T) {
-		c := testutil.NewClient()
-		log := testr.New(t)
-		ctx := logr.NewContext(context.Background(), testr.New(t))
-		l := &loaderMock{}
-
-		var runManagerCalled bool
-		runManager := func(ctx context.Context) error {
-			runManagerCalled = true
-			return nil
-		}
-
-		b := &bootstrapper{
-			client: c, log: log,
-			loadFiles: func(ctx context.Context, path string) (packagecontent.Files, error) {
-				return nil, nil
-			},
-			loader:     l,
-			runManager: runManager,
-		}
-
-		crdObj := unstructured.Unstructured{}
-		crdObj.SetGroupVersionKind(crdGK.WithVersion("v1"))
-		crdObj.SetAnnotations(map[string]string{
-			manifestsv1alpha1.PackagePhaseAnnotation: "test",
-		})
-		l.On("FromFiles", mock.Anything, mock.Anything, mock.Anything).
-			Return(&packagecontent.Package{
-				PackageManifest: &manifestsv1alpha1.PackageManifest{
-					Spec: manifestsv1alpha1.PackageManifestSpec{
-						Phases: []manifestsv1alpha1.PackageManifestPhase{
-							{Name: "test"},
-						},
+	l.On("FromFiles", mock.Anything, mock.Anything, mock.Anything).
+		Return(&packagecontent.Package{
+			PackageManifest: &manifestsv1alpha1.PackageManifest{
+				Spec: manifestsv1alpha1.PackageManifestSpec{
+					Phases: []manifestsv1alpha1.PackageManifestPhase{
+						{Name: "test"},
 					},
 				},
-				Objects: map[string][]unstructured.Unstructured{
-					"test.yaml": {crdObj},
-				},
-			}, nil)
+			},
+			Objects: map[string][]unstructured.Unstructured{
+				"test.yaml": {crdObj},
+			},
+		}, nil)
 
-		c.
-			On("Get", mock.Anything, mock.Anything,
-				mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-			Once().
-			Return(nil)
-		c.
-			On("Create", mock.Anything,
-				mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-			Once().
-			Return(nil)
-		c.
-			On("Create", mock.Anything,
-				mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
-			Once().
-			Return(nil)
-		c.
-			On("Get", mock.Anything, mock.Anything,
-				mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-			Run(func(args mock.Arguments) {
-				pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
-				pkg.Status.Conditions = []metav1.Condition{
-					{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
-				}
-			}).
-			Return(nil)
+	c.
+		On("Get", mock.Anything, mock.Anything,
+			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Once().
+		Return(nil)
+	c.
+		On("Create", mock.Anything,
+			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Once().
+		Return(nil)
+	c.
+		On("Create", mock.Anything,
+			mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
+		Once().
+		Return(nil)
+	c.
+		On("Get", mock.Anything, mock.Anything,
+			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
+			pkg.Status.Conditions = []metav1.Condition{
+				{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
+			}
+		}).
+		Return(nil)
 
-		err := b.Bootstrap(ctx)
-		require.NoError(t, err)
+	err := b.Bootstrap(ctx)
+	require.NoError(t, err)
 
-		assert.True(t, runManagerCalled)
-		c.AssertExpectations(t)
-		l.AssertExpectations(t)
-	})
+	assert.True(t, runManagerCalled)
+	c.AssertExpectations(t)
+	l.AssertExpectations(t)
 }
 
 func TestBootstrapper_cancelWhenPackageAvailable(t *testing.T) {

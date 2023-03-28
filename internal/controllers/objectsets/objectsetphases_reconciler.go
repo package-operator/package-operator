@@ -3,6 +3,7 @@ package objectsets
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -19,6 +20,7 @@ import (
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
 type objectSetPhasesReconciler struct {
+	cfg                     objectSetPhasesReconcilerConfig
 	scheme                  *runtime.Scheme
 	phaseReconciler         phaseReconciler
 	remotePhase             remotePhaseReconciler
@@ -36,8 +38,15 @@ func newObjectSetPhasesReconciler(
 	phaseReconciler phaseReconciler,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
+	opts ...objectSetPhasesReconcilerOption,
 ) *objectSetPhasesReconciler {
+	var cfg objectSetPhasesReconcilerConfig
+
+	cfg.Option(opts...)
+	cfg.Default()
+
 	return &objectSetPhasesReconciler{
+		cfg:                     cfg,
 		scheme:                  scheme,
 		phaseReconciler:         phaseReconciler,
 		remotePhase:             remotePhase,
@@ -110,7 +119,15 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		return res, nil
 	}
 
-	if !meta.IsStatusConditionTrue(
+	meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		Type:               corev1alpha1.ObjectSetAvailable,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Available",
+		Message:            "Object is available and passes all probes.",
+		ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+	})
+
+	if r.hasSurvivedDelay(objectSet) && !meta.IsStatusConditionTrue(
 		*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) &&
 		// we don't want to record Succeeded during transition,
 		// because the object may become Available due to external
@@ -125,14 +142,6 @@ func (r *objectSetPhasesReconciler) Reconcile(
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 	}
-
-	meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-		Type:               corev1alpha1.ObjectSetAvailable,
-		Status:             metav1.ConditionTrue,
-		Reason:             "Available",
-		Message:            "Object is available and passes all probes.",
-		ObservedGeneration: objectSet.ClientObject().GetGeneration(),
-	})
 
 	return
 }
@@ -278,4 +287,59 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 		}
 	}
 	return false
+}
+
+func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet genericObjectSet) bool {
+	availCond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
+	if availCond == nil {
+		return false
+	}
+
+	var (
+		available   = availCond.Status == metav1.ConditionTrue
+		noDelay     = objectSet.GetSuccessDelaySeconds() == 0
+		delayTarget = availCond.LastTransitionTime.Add(time.Duration(objectSet.GetSuccessDelaySeconds() * int32(time.Second)))
+	)
+
+	// noDelay avoids false negative for edgecase where objectSet
+	// is available on first pass, but no delay is set
+	return available && (noDelay || r.cfg.clock.Now().After(delayTarget))
+}
+
+type objectSetPhasesReconcilerConfig struct {
+	clock clock
+}
+
+func (c *objectSetPhasesReconcilerConfig) Option(opts ...objectSetPhasesReconcilerOption) {
+	for _, opt := range opts {
+		opt.ConfigureObjectSetPhasesReconciler(c)
+	}
+}
+
+func (c *objectSetPhasesReconcilerConfig) Default() {
+	if c.clock == nil {
+		c.clock = defaultClock{}
+	}
+}
+
+type objectSetPhasesReconcilerOption interface {
+	ConfigureObjectSetPhasesReconciler(*objectSetPhasesReconcilerConfig)
+}
+
+type withClock struct {
+	Clock clock
+}
+
+func (w withClock) ConfigureObjectSetPhasesReconciler(c *objectSetPhasesReconcilerConfig) {
+	c.clock = w.Clock
+}
+
+type clock interface {
+	Now() time.Time
+}
+
+type defaultClock struct{}
+
+func (c defaultClock) Now() time.Time {
+	return time.Now()
 }

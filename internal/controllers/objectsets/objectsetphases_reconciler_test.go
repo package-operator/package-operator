@@ -3,10 +3,12 @@ package objectsets
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -137,4 +139,113 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
+	for name, tc := range map[string]struct {
+		ObjectSet                 genericObjectSet
+		TimeSinceAvailable        time.Duration
+		ExpectedConditionStatuses map[string]metav1.ConditionStatus
+	}{
+		"success delay default": {
+			ObjectSet: &GenericObjectSet{
+				ObjectSet: corev1alpha1.ObjectSet{
+					Spec: corev1alpha1.ObjectSetSpec{
+						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+							Phases: []corev1alpha1.ObjectSetTemplatePhase{
+								{
+									Name: "phase-1",
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedConditionStatuses: map[string]metav1.ConditionStatus{
+				corev1alpha1.ObjectSetAvailable: metav1.ConditionTrue,
+				corev1alpha1.ObjectSetSucceeded: metav1.ConditionTrue,
+			},
+		},
+		"success delay 2s/time since available 1s": {
+			ObjectSet: &GenericObjectSet{
+				ObjectSet: corev1alpha1.ObjectSet{
+					Spec: corev1alpha1.ObjectSetSpec{
+						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+							Phases: []corev1alpha1.ObjectSetTemplatePhase{
+								{
+									Name: "phase-1",
+								},
+							},
+							SuccessDelaySeconds: 2,
+						},
+					},
+				},
+			},
+			TimeSinceAvailable: 1 * time.Second,
+			ExpectedConditionStatuses: map[string]metav1.ConditionStatus{
+				corev1alpha1.ObjectSetAvailable: metav1.ConditionTrue,
+			},
+		},
+		"success delay 1s/time since available 2s": {
+			ObjectSet: &GenericObjectSet{
+				ObjectSet: corev1alpha1.ObjectSet{
+					Spec: corev1alpha1.ObjectSetSpec{
+						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+							Phases: []corev1alpha1.ObjectSetTemplatePhase{
+								{
+									Name: "phase-1",
+								},
+							},
+							SuccessDelaySeconds: 1,
+						},
+					},
+				},
+			},
+			TimeSinceAvailable: 2 * time.Second,
+			ExpectedConditionStatuses: map[string]metav1.ConditionStatus{
+				corev1alpha1.ObjectSetAvailable: metav1.ConditionTrue,
+				corev1alpha1.ObjectSetSucceeded: metav1.ConditionTrue,
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			cm := &clockMock{}
+			prm := &phaseReconcilerMock{}
+			rprm := &remotePhaseReconcilerMock{}
+			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+				return []controllers.PreviousObjectSet{}, nil
+			}
+
+			cm.On("Now").Return(time.Now().Add(tc.TimeSinceAvailable))
+			prm.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return([]client.Object{}, controllers.ProbingResult{}, nil)
+			rprm.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+				Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+
+			rec := newObjectSetPhasesReconciler(
+				testScheme, prm, rprm, lookup,
+				withClock{
+					Clock: cm,
+				},
+			)
+			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
+			require.NoError(t, err)
+
+			require.Equal(t, len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetConditions()), tc.ObjectSet.GetConditions())
+
+			for cond, stat := range tc.ExpectedConditionStatuses {
+				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetConditions(), cond, stat))
+			}
+		})
+	}
+}
+
+type clockMock struct {
+	mock.Mock
+}
+
+func (m *clockMock) Now() time.Time {
+	args := m.Called()
+
+	return args.Get(0).(time.Time)
 }
