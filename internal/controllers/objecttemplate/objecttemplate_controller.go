@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 
@@ -16,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/package-operator/internal/controllers"
@@ -154,21 +151,10 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 ) error {
 	objectTemplate := c.newObjectTemplate(c.scheme).ClientObject()
 
-	mapperFunc := func(obj client.Object) []reconcile.Request {
-		owners := c.dynamicCache.OwnersForGKV(obj.GetObjectKind().GroupVersionKind())
-		requests := make([]reconcile.Request, len(owners))
-		for i, owner := range owners {
-			requests[i] = reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      owner.Name,
-					Namespace: owner.Namespace,
-				},
-			}
-		}
-		return requests
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
-		Watches(c.dynamicCache.Source(), handler.EnqueueRequestsFromMapFunc(mapperFunc)).Complete(c)
+		Watches(c.dynamicCache.Source(), &dynamiccache.EnqueueWatchingObjects{
+			WatcherRefGetter: c.dynamicCache,
+			WatcherType:      objectTemplate,
+		}).Complete(c)
 }
