@@ -1247,7 +1247,7 @@ func (Generate) PackageOperatorPackage() error {
 		return err
 	}
 
-	return sh.Run("kubectl", "package", "update", pkgFolder)
+	return sh.Run("kubectl-package", "update", pkgFolder)
 }
 
 // Includes all static-deployment files in the remote-phase-package.
@@ -1282,7 +1282,7 @@ func (Generate) RemotePhasePackage() error {
 		return err
 	}
 
-	return sh.Run("kubectl", "package", "update", pkgFolder)
+	return sh.Run("kubectl-package", "update", pkgFolder)
 }
 
 // generates a self-bootstrap-job.yaml based on the current VERSION.
