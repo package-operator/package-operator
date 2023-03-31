@@ -1,6 +1,2 @@
-/*
-!/.gitignore
-!/manifest.yaml.tpl
-!/package-operator-manager.Deployment.yaml.gotmpl
-!/README.md
+*.yaml
 !/.test-fixtures

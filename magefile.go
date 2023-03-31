@@ -214,16 +214,16 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 			annotations["package-operator.run/phase"] = "namespace"
 			objToMarshal = obj.Object
 
-		case schema.GroupKind{Group: "", Kind: "ServiceAccount"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
+		case schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}:
 			annotations["package-operator.run/phase"] = "rbac"
 			subfolder = "rbac"
 			objToMarshal = obj.Object
 
-		case schema.GroupKind{Group: "apps", Kind: "Deployment"}:
+		case schema.GroupKind{Group: "apps", Kind: "Deployment"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
+			schema.GroupKind{Group: "", Kind: "ServiceAccount"}:
 			continue
 		}
 		obj.SetAnnotations(annotations)
@@ -247,12 +247,6 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 		yamlBytes, err := yaml.Marshal(objToMarshal)
 		if err != nil {
 			panic(err)
-		}
-
-		packageNamespaceOverride := os.Getenv("PKO_PACKAGE_NAMESPACE_OVERRIDE")
-		if len(packageNamespaceOverride) > 0 {
-			logger.Info("replacing default package-operator-system namespace", "new ns", packageNamespaceOverride)
-			yamlBytes = bytes.ReplaceAll(yamlBytes, []byte("package-operator-system"), []byte(packageNamespaceOverride))
 		}
 
 		if _, err := outFile.Write(yamlBytes); err != nil {
@@ -1242,6 +1236,12 @@ func (Generate) PackageOperatorPackage() error {
 	manifestYaml, err := yaml.Marshal(manifest)
 	if err != nil {
 		return err
+	}
+
+	packageNamespaceOverride := os.Getenv("PKO_PACKAGE_NAMESPACE_OVERRIDE")
+	if len(packageNamespaceOverride) > 0 {
+		logger.Info("replacing default package-operator-system namespace", "new ns", packageNamespaceOverride)
+		manifestYaml = bytes.ReplaceAll(manifestYaml, []byte("package-operator-system"), []byte(packageNamespaceOverride))
 	}
 	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
 		return err
