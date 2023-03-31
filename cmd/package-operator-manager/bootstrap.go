@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,13 +46,18 @@ type bootstrapper struct {
 	scheme             *runtime.Scheme
 	loader             packageLoader
 	selfBootstrapImage string
+	pkoNamespace       string
 	runManager         bootstrapperRunManagerFn
 	loadFiles          bootstrapperLoadFilesFn
 
 	client client.Client
 }
 
-func newBootstrapper(log logr.Logger, scheme *runtime.Scheme, selfBootstrapImage string, runManagerFn bootstrapperRunManagerFn) (*bootstrapper, error) {
+func newBootstrapper(
+	log logr.Logger, scheme *runtime.Scheme,
+	selfBootstrapImage, pkoNamespace string,
+	runManagerFn bootstrapperRunManagerFn,
+) (*bootstrapper, error) {
 	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
 		Scheme: scheme,
 	})
@@ -63,6 +70,7 @@ func newBootstrapper(log logr.Logger, scheme *runtime.Scheme, selfBootstrapImage
 		scheme:             scheme,
 		loader:             packageloader.New(scheme, packageloader.WithDefaults),
 		selfBootstrapImage: selfBootstrapImage,
+		pkoNamespace:       pkoNamespace,
 		runManager:         runManagerFn,
 		loadFiles:          packageimport.Folder,
 
@@ -77,10 +85,14 @@ func (b *bootstrapper) Bootstrap(ctx context.Context) error {
 	err := b.client.Get(ctx, client.ObjectKey{
 		Name: packageOperatorClusterPackageName,
 	}, packageOperatorPackage)
-	if err == nil &&
-		meta.IsStatusConditionTrue(packageOperatorPackage.Status.Conditions, corev1alpha1.PackageAvailable) {
+	if err == nil {
 		// Package Operator is already installed.
 		b.log.Info("Package Operator already installed, updating via in-cluster Package Operator")
+
+		if err := b.nukeIfNeeded(ctx); err != nil {
+			return err
+		}
+
 		if err := b.fixMissingRevisionNumbers(ctx); err != nil {
 			return fmt.Errorf("fix missing revision numbers: %w", err)
 		}
@@ -267,6 +279,122 @@ func (b *bootstrapper) ensureCRDs(ctx context.Context, crds []unstructured.Unstr
 			return err
 		}
 	}
+	return nil
+}
+
+func (b *bootstrapper) nukeIfNeeded(ctx context.Context) error {
+	needsNuke, err := b.needsForcedCleanup(ctx)
+	if err != nil {
+		return fmt.Errorf("check for forced cleanup: %w", err)
+	}
+	if needsNuke {
+		if err := b.forcedCleanup(ctx); err != nil {
+			return fmt.Errorf("force cleanup: %w", err)
+		}
+	}
+	return nil
+}
+
+func (b *bootstrapper) needsForcedCleanup(ctx context.Context) (bool, error) {
+	deploy := &appsv1.Deployment{}
+	err := b.client.Get(ctx, client.ObjectKey{
+		Name:      "package-operator-manager",
+		Namespace: b.pkoNamespace,
+	}, deploy)
+	if errors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	for _, cond := range deploy.Status.Conditions {
+		if cond.Type == appsv1.DeploymentAvailable &&
+			cond.Status == corev1.ConditionFalse {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (b *bootstrapper) forcedCleanup(ctx context.Context) error {
+	packageOperatorPackage := &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: packageOperatorClusterPackageName,
+		},
+	}
+
+	log := logr.FromContextOrDiscard(ctx)
+	if err := b.client.Delete(ctx, packageOperatorPackage); err != nil {
+		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
+	}
+	if len(packageOperatorPackage.Finalizers) > 0 {
+		packageOperatorPackage.Finalizers = []string{}
+		if err := b.client.Update(ctx, packageOperatorPackage); err != nil {
+			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
+		}
+	}
+	log.Info("deleted ClusterPackage", "obj", packageOperatorPackage)
+	if err := b.client.Get(
+		ctx, client.ObjectKeyFromObject(packageOperatorPackage), packageOperatorPackage,
+	); !errors.IsNotFound(err) {
+		return fmt.Errorf("ensuring ClusterPackage is gone: %w", err)
+	}
+
+	// Also nuke all the ClusterObjectDeployment belonging to it.
+	clusterObjectDeploymentList := &corev1alpha1.ClusterObjectDeploymentList{}
+	if err := b.client.List(ctx, clusterObjectDeploymentList, client.MatchingLabels{
+		"package-operator.run/instance": packageOperatorClusterPackageName,
+		"package-operator.run/package":  packageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectDeployments: %w", err)
+	}
+	for i := range clusterObjectDeploymentList.Items {
+		clusterObjectDeployment := &clusterObjectDeploymentList.Items[i]
+		if err := b.client.Delete(ctx, clusterObjectDeployment); err != nil {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
+		}
+		if len(clusterObjectDeployment.Finalizers) > 0 {
+			clusterObjectDeployment.Finalizers = []string{}
+			if err := b.client.Update(ctx, clusterObjectDeployment); err != nil {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
+			}
+		}
+		log.Info("deleted ClusterObjectDeployment", "name", clusterObjectDeployment.Name, "obj", clusterObjectDeployment)
+		if err := b.client.Get(
+			ctx, client.ObjectKeyFromObject(clusterObjectDeployment), clusterObjectDeployment,
+		); !errors.IsNotFound(err) {
+			return fmt.Errorf("ensuring ClusterObjectDeployment is gone: %w", err)
+		}
+	}
+
+	// Also nuke all the ClusterObjectSets belonging to it.
+	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
+	if err := b.client.List(ctx, clusterObjectSetList, client.MatchingLabels{
+		"package-operator.run/instance": packageOperatorClusterPackageName,
+		"package-operator.run/package":  packageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
+	}
+	for i := range clusterObjectSetList.Items {
+		clusterObjectSet := &clusterObjectSetList.Items[i]
+		if err := b.client.Delete(ctx, clusterObjectSet); err != nil {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
+		}
+		if len(clusterObjectSet.Finalizers) > 0 {
+			clusterObjectSet.Finalizers = []string{}
+			if err := b.client.Update(ctx, clusterObjectSet); err != nil {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+			}
+		}
+		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
+		if err := b.client.Get(
+			ctx, client.ObjectKeyFromObject(clusterObjectSet), clusterObjectSet,
+		); !errors.IsNotFound(err) {
+			return fmt.Errorf("ensuring ClusterObjectSet is gone: %w", err)
+		}
+	}
+
 	return nil
 }
 

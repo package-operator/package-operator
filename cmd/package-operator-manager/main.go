@@ -149,15 +149,17 @@ func main() {
 	}
 
 	if len(opts.selfBootstrap) > 0 {
-		b, err := newBootstrapper(setupLog, scheme, opts.selfBootstrap, func(ctx context.Context) error {
-			// lazy create manager after boot strapper is finished,
-			// or the RESTMapper will not pick up the CRDs in the cluster.
-			mgr, err := setupManager(setupLog, scheme, opts)
-			if err != nil {
-				return err
-			}
-			return runManager(ctx, mgr, setupLog)
-		})
+		b, err := newBootstrapper(
+			setupLog, scheme, opts.selfBootstrap, opts.namespace,
+			func(ctx context.Context) error {
+				// lazy create manager after boot strapper is finished,
+				// or the RESTMapper will not pick up the CRDs in the cluster.
+				mgr, err := setupManager(setupLog, scheme, opts)
+				if err != nil {
+					return err
+				}
+				return runManager(ctx, mgr, setupLog)
+			})
 		if err != nil {
 			setupLog.Error(err, "unable to setup self-bootstrap")
 			os.Exit(1)
