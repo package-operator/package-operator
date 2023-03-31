@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    package-operator.run/phase: rbac
+  name: package-operator
+  namespace: {{ .config.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: package-operator
+subjects:
+- kind: ServiceAccount
+  name: package-operator

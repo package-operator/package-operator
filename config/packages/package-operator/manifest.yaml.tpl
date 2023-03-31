@@ -27,6 +27,10 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        namespace:
+          description: Namespace to install package operator into.
+          type: string
+          default: package-operator-system
         affinity:
           description: Affinity is a group of affinity scheduling rules.
           properties:
