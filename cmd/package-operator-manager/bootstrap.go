@@ -88,8 +88,7 @@ func (b *bootstrapper) Bootstrap(ctx context.Context) error {
 	if err == nil {
 		// Package Operator is already installed.
 		b.log.Info("Package Operator already installed, updating via in-cluster Package Operator")
-
-		if err := b.nukeIfNeeded(ctx); err != nil {
+		if err := b.nukeIfNeeded(ctx, packageOperatorPackage); err != nil {
 			return err
 		}
 
@@ -282,13 +281,16 @@ func (b *bootstrapper) ensureCRDs(ctx context.Context, crds []unstructured.Unstr
 	return nil
 }
 
-func (b *bootstrapper) nukeIfNeeded(ctx context.Context) error {
+func (b *bootstrapper) nukeIfNeeded(
+	ctx context.Context,
+	packageOperatorPackage *corev1alpha1.ClusterPackage,
+) error {
 	needsNuke, err := b.needsForcedCleanup(ctx)
 	if err != nil {
 		return fmt.Errorf("check for forced cleanup: %w", err)
 	}
 	if needsNuke {
-		if err := b.forcedCleanup(ctx); err != nil {
+		if err := b.forcedCleanup(ctx, packageOperatorPackage); err != nil {
 			return fmt.Errorf("force cleanup: %w", err)
 		}
 	}
@@ -317,13 +319,9 @@ func (b *bootstrapper) needsForcedCleanup(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (b *bootstrapper) forcedCleanup(ctx context.Context) error {
-	packageOperatorPackage := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: packageOperatorClusterPackageName,
-		},
-	}
-
+func (b *bootstrapper) forcedCleanup(
+	ctx context.Context, packageOperatorPackage *corev1alpha1.ClusterPackage,
+) error {
 	log := logr.FromContextOrDiscard(ctx)
 	if err := b.client.Delete(ctx, packageOperatorPackage); err != nil {
 		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
