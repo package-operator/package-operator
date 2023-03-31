@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -31,13 +32,58 @@ func init() {
 	}
 }
 
+func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
+	dynamicCache := &dynamicCacheMock{}
+	ownerStrategy := &ownerStrategyMock{}
+	preflightChecker := &preflightCheckerMock{}
+	r := &PhaseReconciler{
+		dynamicCache:     dynamicCache,
+		ownerStrategy:    ownerStrategy,
+		preflightChecker: preflightChecker,
+	}
+	owner := &phaseObjectOwnerMock{}
+	ownerObj := &unstructured.Unstructured{}
+	owner.On("ClientObject").Return(ownerObj)
+	owner.On("GetRevision").Return(int64(5))
+
+	ownerStrategy.
+		On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+
+	dynamicCache.
+		On("Watch", mock.Anything, ownerObj, mock.Anything).
+		Return(nil)
+
+	dynamicCache.
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+
+	preflightChecker.
+		On("Check", mock.Anything, mock.Anything, mock.Anything).
+		Return([]preflight.Violation{{}}, nil)
+
+	ctx := context.Background()
+	done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+		Objects: []corev1alpha1.ObjectSetObject{
+			{
+				Object: unstructured.Unstructured{},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.True(t, done)
+	dynamicCache.AssertNotCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
+}
+
 func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 	t.Run("already gone", func(t *testing.T) {
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
+		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
+			dynamicCache:     dynamicCache,
+			ownerStrategy:    ownerStrategy,
+			preflightChecker: preflightChecker,
 		}
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
@@ -56,6 +102,10 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
+		preflightChecker.
+			On("Check", mock.Anything, mock.Anything, mock.Anything).
+			Return([]preflight.Violation{}, nil)
+
 		ctx := context.Background()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
@@ -73,15 +123,21 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
+		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
-			writer:        testClient,
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
+			writer:           testClient,
+			dynamicCache:     dynamicCache,
+			ownerStrategy:    ownerStrategy,
+			preflightChecker: preflightChecker,
 		}
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
 		owner.On("GetRevision").Return(int64(5))
+
+		preflightChecker.
+			On("Check", mock.Anything, mock.Anything, mock.Anything).
+			Return([]preflight.Violation{}, nil)
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -131,10 +187,12 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
+		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
-			writer:        testClient,
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
+			writer:           testClient,
+			dynamicCache:     dynamicCache,
+			ownerStrategy:    ownerStrategy,
+			preflightChecker: preflightChecker,
 		}
 
 		owner := &phaseObjectOwnerMock{}
@@ -145,6 +203,10 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+
+		preflightChecker.
+			On("Check", mock.Anything, mock.Anything, mock.Anything).
+			Return([]preflight.Violation{}, nil)
 
 		dynamicCache.
 			On("Watch", mock.Anything, ownerObj, mock.Anything).
@@ -186,16 +248,22 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
+		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
-			writer:        testClient,
+			dynamicCache:     dynamicCache,
+			ownerStrategy:    ownerStrategy,
+			writer:           testClient,
+			preflightChecker: preflightChecker,
 		}
 
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
 		owner.On("GetRevision").Return(int64(5))
+
+		preflightChecker.
+			On("Check", mock.Anything, mock.Anything, mock.Anything).
+			Return([]preflight.Violation{}, nil)
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -1113,4 +1181,15 @@ func hasDynamicCacheLabel(obj corev1alpha1.ObjectSetObject) bool {
 	labels := obj.Object.GetLabels()
 
 	return labels != nil && labels[DynamicCacheLabel] == "True"
+}
+
+type preflightCheckerMock struct {
+	mock.Mock
+}
+
+func (m *preflightCheckerMock) Check(
+	ctx context.Context, owner, obj client.Object,
+) (violations []preflight.Violation, err error) {
+	args := m.Called(ctx, owner, obj)
+	return args.Get(0).([]preflight.Violation), args.Error(1)
 }
