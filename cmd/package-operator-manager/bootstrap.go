@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,14 +86,6 @@ func (b *bootstrapper) Bootstrap(ctx context.Context) error {
 	if err == nil {
 		// Package Operator is already installed.
 		b.log.Info("Package Operator already installed, updating via in-cluster Package Operator")
-		if err := b.nukeIfNeeded(ctx, packageOperatorPackage); err != nil {
-			return err
-		}
-
-		if err := b.fixMissingRevisionNumbers(ctx); err != nil {
-			return fmt.Errorf("fix missing revision numbers: %w", err)
-		}
-
 		return b.updatePKOPackage(ctx, packageOperatorPackage)
 	}
 
@@ -106,50 +96,6 @@ func (b *bootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.log.Info("Package Operator NOT Available, self-bootstrapping")
 	return b.selfBootstrap(ctx)
-}
-
-func (b *bootstrapper) fixMissingRevisionNumbers(ctx context.Context) error {
-	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
-	if err := b.client.List(ctx, clusterObjectSetList, client.MatchingLabels{
-		"package-operator.run/instance": "package-operator",
-	}); err != nil {
-		return fmt.Errorf("list PKO ClusterObjectSet: %w", err)
-	}
-
-	cosByName := map[string]*corev1alpha1.ClusterObjectSet{}
-	for i := range clusterObjectSetList.Items {
-		cos := &clusterObjectSetList.Items[i]
-		cosByName[cos.Name] = cos
-	}
-
-	for i := range clusterObjectSetList.Items {
-		cos := &clusterObjectSetList.Items[i]
-		if cos.Status.Revision == 0 &&
-			len(cos.Spec.Previous) > 0 &&
-			cos.Status.Phase == corev1alpha1.ObjectSetStatusPhasePending {
-			// Assume it's stuck
-			cos.Status.Revision = highestRevisionNumber(
-				cosByName, cos.Spec.Previous...) + 1
-			if err := b.client.Status().Patch(ctx, cos, client.Merge); err != nil {
-				return fmt.Errorf("patch for missing revision number: %w", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func highestRevisionNumber(
-	cosByName map[string]*corev1alpha1.ClusterObjectSet,
-	prevs ...corev1alpha1.PreviousRevisionReference,
-) int64 {
-	var maxRevision int64
-	for _, prev := range prevs {
-		if cosByName[prev.Name].Status.Revision > maxRevision {
-			maxRevision = cosByName[prev.Name].Status.Revision
-		}
-	}
-	return maxRevision
 }
 
 func (b *bootstrapper) updatePKOPackage(
@@ -278,121 +224,6 @@ func (b *bootstrapper) ensureCRDs(ctx context.Context, crds []unstructured.Unstr
 			return err
 		}
 	}
-	return nil
-}
-
-func (b *bootstrapper) nukeIfNeeded(
-	ctx context.Context,
-	packageOperatorPackage *corev1alpha1.ClusterPackage,
-) error {
-	needsNuke, err := b.needsForcedCleanup(ctx)
-	if err != nil {
-		return fmt.Errorf("check for forced cleanup: %w", err)
-	}
-	if needsNuke {
-		if err := b.forcedCleanup(ctx, packageOperatorPackage); err != nil {
-			return fmt.Errorf("force cleanup: %w", err)
-		}
-	}
-	return nil
-}
-
-func (b *bootstrapper) needsForcedCleanup(ctx context.Context) (bool, error) {
-	deploy := &appsv1.Deployment{}
-	err := b.client.Get(ctx, client.ObjectKey{
-		Name:      "package-operator-manager",
-		Namespace: b.pkoNamespace,
-	}, deploy)
-	if errors.IsNotFound(err) {
-		return true, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	for _, cond := range deploy.Status.Conditions {
-		if cond.Type == appsv1.DeploymentAvailable &&
-			cond.Status == corev1.ConditionFalse {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (b *bootstrapper) forcedCleanup(
-	ctx context.Context, packageOperatorPackage *corev1alpha1.ClusterPackage,
-) error {
-	log := logr.FromContextOrDiscard(ctx)
-	if err := b.client.Delete(ctx, packageOperatorPackage); err != nil {
-		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
-	}
-	if len(packageOperatorPackage.Finalizers) > 0 {
-		packageOperatorPackage.Finalizers = []string{}
-		if err := b.client.Update(ctx, packageOperatorPackage); err != nil {
-			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
-		}
-	}
-	log.Info("deleted ClusterPackage", "obj", packageOperatorPackage)
-	if err := b.client.Get(
-		ctx, client.ObjectKeyFromObject(packageOperatorPackage), packageOperatorPackage,
-	); !errors.IsNotFound(err) {
-		return fmt.Errorf("ensuring ClusterPackage is gone: %w", err)
-	}
-
-	// Also nuke all the ClusterObjectDeployment belonging to it.
-	clusterObjectDeploymentList := &corev1alpha1.ClusterObjectDeploymentList{}
-	if err := b.client.List(ctx, clusterObjectDeploymentList, client.MatchingLabels{
-		"package-operator.run/instance": packageOperatorClusterPackageName,
-		"package-operator.run/package":  packageOperatorClusterPackageName,
-	}); err != nil {
-		return fmt.Errorf("listing stuck PackageOperator ClusterObjectDeployments: %w", err)
-	}
-	for i := range clusterObjectDeploymentList.Items {
-		clusterObjectDeployment := &clusterObjectDeploymentList.Items[i]
-		if err := b.client.Delete(ctx, clusterObjectDeployment); err != nil {
-			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
-		}
-		if len(clusterObjectDeployment.Finalizers) > 0 {
-			clusterObjectDeployment.Finalizers = []string{}
-			if err := b.client.Update(ctx, clusterObjectDeployment); err != nil {
-				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
-			}
-		}
-		log.Info("deleted ClusterObjectDeployment", "name", clusterObjectDeployment.Name, "obj", clusterObjectDeployment)
-		if err := b.client.Get(
-			ctx, client.ObjectKeyFromObject(clusterObjectDeployment), clusterObjectDeployment,
-		); !errors.IsNotFound(err) {
-			return fmt.Errorf("ensuring ClusterObjectDeployment is gone: %w", err)
-		}
-	}
-
-	// Also nuke all the ClusterObjectSets belonging to it.
-	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
-	if err := b.client.List(ctx, clusterObjectSetList, client.MatchingLabels{
-		"package-operator.run/instance": packageOperatorClusterPackageName,
-		"package-operator.run/package":  packageOperatorClusterPackageName,
-	}); err != nil {
-		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
-	}
-	for i := range clusterObjectSetList.Items {
-		clusterObjectSet := &clusterObjectSetList.Items[i]
-		if err := b.client.Delete(ctx, clusterObjectSet); err != nil {
-			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
-		}
-		if len(clusterObjectSet.Finalizers) > 0 {
-			clusterObjectSet.Finalizers = []string{}
-			if err := b.client.Update(ctx, clusterObjectSet); err != nil {
-				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
-			}
-		}
-		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
-		if err := b.client.Get(
-			ctx, client.ObjectKeyFromObject(clusterObjectSet), clusterObjectSet,
-		); !errors.IsNotFound(err) {
-			return fmt.Errorf("ensuring ClusterObjectSet is gone: %w", err)
-		}
-	}
-
 	return nil
 }
 
