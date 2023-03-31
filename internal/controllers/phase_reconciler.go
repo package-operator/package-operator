@@ -268,6 +268,14 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		return false, fmt.Errorf("building desired object: %w", err)
 	}
 
+	// Preflight checker during teardown prevents the deletion of resources in different namespaces and
+	// unblocks teardown when APIs have been removed.
+	if v, err := r.preflightChecker.Check(ctx, owner.ClientObject(), desiredObj); err != nil {
+		return false, fmt.Errorf("running preflight validation: %w", err)
+	} else if len(v) > 0 {
+		return true, nil
+	}
+
 	// Ensure to watch this type of object, also during teardown!
 	// If the controller was restarted or crashed during deletion, we might not have a cache in memory anymore.
 	if err := r.dynamicCache.Watch(
@@ -318,6 +326,11 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		ctx, owner, phaseObject)
 	if err != nil {
 		return nil, fmt.Errorf("building desired object: %w", err)
+	}
+
+	// Set owner reference
+	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
+		return nil, err
 	}
 
 	// Ensure to watch this type of object.
@@ -425,10 +438,6 @@ func (r *PhaseReconciler) desiredObject(
 
 	setObjectRevision(desiredObj, owner.GetRevision())
 
-	// Set owner reference
-	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
-		return nil, err
-	}
 	return desiredObj, nil
 }
 

@@ -65,6 +65,11 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if !hostedCluster.DeletionTimestamp.IsZero() {
+		log.Info("HostedCluster is deleting")
+		return ctrl.Result{}, nil
+	}
+
 	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1beta1.HostedClusterAvailable) {
 		log.Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil

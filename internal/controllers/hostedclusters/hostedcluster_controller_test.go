@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
@@ -26,6 +27,36 @@ func init() {
 	if err := hypershiftv1beta1.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
+}
+
+func TestHostedClusterController_noop(t *testing.T) {
+	mockClient := testutil.NewClient()
+
+	image := "image321"
+	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image)
+	hcName := "testing123"
+	now := metav1.Now()
+	hc := &hypershiftv1beta1.HostedCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              hcName,
+			DeletionTimestamp: &now,
+		},
+	}
+
+	mockClient.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
+			*obj = *hc
+		}).
+		Return(nil)
+
+	ctx := context.Background()
+	res, err := controller.Reconcile(ctx, ctrl.Request{
+		NamespacedName: client.ObjectKeyFromObject(hc),
+	})
+	assert.NoError(t, err)
+	assert.True(t, res.IsZero())
 }
 
 func TestHostedClusterController_DesiredPackage(t *testing.T) {
