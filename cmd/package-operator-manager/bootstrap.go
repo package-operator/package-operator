@@ -304,7 +304,7 @@ func (b *bootstrapper) needsForcedCleanup(ctx context.Context) (bool, error) {
 		Namespace: b.pkoNamespace,
 	}, deploy)
 	if errors.IsNotFound(err) {
-		return false, nil
+		return true, nil
 	}
 	if err != nil {
 		return false, err
