@@ -210,19 +210,16 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 			subfolder = "crds"
 			objToMarshal = obj.Object
 
-		case schema.GroupKind{Group: "", Kind: "Namespace"}:
-			annotations["package-operator.run/phase"] = "namespace"
-			objToMarshal = obj.Object
-
-		case schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}:
+		case schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}:
 			annotations["package-operator.run/phase"] = "rbac"
 			subfolder = "rbac"
 			objToMarshal = obj.Object
 
 		case schema.GroupKind{Group: "apps", Kind: "Deployment"},
+			schema.GroupKind{Group: "", Kind: "Namespace"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
 			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
+			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"},
 			schema.GroupKind{Group: "", Kind: "ServiceAccount"}:
 			continue
 		}
