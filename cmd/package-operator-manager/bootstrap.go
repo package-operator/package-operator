@@ -98,9 +98,7 @@ func (b *bootstrapper) updatePKOPackage(
 ) error {
 	packageOperatorPackage.Spec.Image = b.selfBootstrapImage
 	packageOperatorPackage.Spec.Config = getPKOConfigFromEnvironment()
-	return b.client.Patch(
-		ctx, packageOperatorPackage,
-		client.Apply, client.FieldOwner(packageOperatorClusterPackageName), client.ForceOwnership)
+	return b.client.Patch(ctx, packageOperatorPackage, client.Merge)
 }
 
 func getPKOConfigFromEnvironment() *runtime.RawExtension {
