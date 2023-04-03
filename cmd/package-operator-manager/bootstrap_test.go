@@ -95,7 +95,7 @@ func TestBootstrapper_BootstrapSelfBootstrap(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything,
 			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Once().
-		Return(nil)
+		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	c.
 		On("Create", mock.Anything,
 			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
