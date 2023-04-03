@@ -24,7 +24,7 @@ func NewEmptyNamespaceNoDefault(restMapper meta.RESTMapper) *EmptyNamespaceNoDef
 }
 
 func (p *EmptyNamespaceNoDefault) CheckPhase(
-	ctx context.Context, owner client.Object,
+	_ context.Context, owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {
 	if len(owner.GetNamespace()) > 0 {

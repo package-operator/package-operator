@@ -30,7 +30,7 @@ func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, erro
 	return &TemplateTransformer{actualCtx}, nil
 }
 
-func (t *TemplateTransformer) transform(ctx context.Context, content []byte) ([]byte, error) {
+func (t *TemplateTransformer) transform(_ context.Context, content []byte) ([]byte, error) {
 	template, err := transform.TemplateWithSprigFuncs(string(content))
 	if err != nil {
 		return nil, &TemplateError{Err: err}

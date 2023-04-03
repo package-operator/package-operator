@@ -48,10 +48,10 @@ const (
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
 
-	controllerGenVersion = "0.11.2"
-	golangciLintVersion  = "1.51.1"
-	craneVersion         = "0.13.0"
-	kindVersion          = "0.17.0"
+	controllerGenVersion = "0.11.3"
+	golangciLintVersion  = "1.52.2"
+	craneVersion         = "0.14.0"
+	kindVersion          = "0.18.0"
 	k8sDocGenVersion     = "0.5.1"
 )
 
@@ -547,7 +547,8 @@ func (l *Locations) DevEnvNoInit() *dev.Environment {
 // -------------------
 
 // Runs linters.
-func (Test) Lint() { mg.SerialDeps(Test.GolangCILint, Test.GoFmt, Test.GoModTidy) }
+func (Test) FixLint() { mg.SerialDeps(Test.GolangCILintFix, Test.GoModTidy) }
+func (Test) Lint()    { mg.SerialDeps(Test.GolangCILint) }
 
 func (Test) GolangCILint() {
 	// Generate.All ensures code generators are re-triggered.
@@ -555,10 +556,10 @@ func (Test) GolangCILint() {
 	must(sh.RunV("golangci-lint", "run", "./...", "--deadline=15m"))
 }
 
-func (Test) GoFmt() {
+func (Test) GolangCILintFix() {
 	// Generate.All ensures code generators are re-triggered.
-	mg.Deps(Generate.All)
-	must(sh.RunV("go", "fmt", "./..."))
+	mg.Deps(Generate.All, Dependency.GolangciLint)
+	must(sh.RunV("golangci-lint", "run", "./...", "--deadline=15m", "--fix"))
 }
 
 func (Test) GoModTidy() {

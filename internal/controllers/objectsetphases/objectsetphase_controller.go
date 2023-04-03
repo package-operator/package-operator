@@ -286,11 +286,7 @@ func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 		return nil
 	}
 
-	if err := controllers.FreeCacheAndRemoveFinalizer(
-		ctx, c.client, objectSetPhase.ClientObject(), c.dynamicCache); err != nil {
-		return err
-	}
-	return nil
+	return controllers.FreeCacheAndRemoveFinalizer(ctx, c.client, objectSetPhase.ClientObject(), c.dynamicCache)
 }
 
 func (c *GenericObjectSetPhaseController) SetupWithManager(

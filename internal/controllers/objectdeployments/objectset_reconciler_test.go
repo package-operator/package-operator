@@ -22,7 +22,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 		name                    string
 		client                  *testutil.CtrlClient
 		revisions               []corev1alpha1.ObjectSet
-		deploymentGeneration    int
+		deploymentGeneration    int64
 		deploymentHash          string
 		expectedCurrentRevision string
 		expectedPrevRevisions   []string
@@ -185,7 +185,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 }
 
 func makeObjectDeploymentMock(name string, namespace string,
-	generation int,
+	generation int64,
 	templateHash string,
 	initialConditions *[]metav1.Condition,
 ) *genericObjectDeploymentMock {
@@ -194,7 +194,7 @@ func makeObjectDeploymentMock(name string, namespace string,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       name,
 			Namespace:  namespace,
-			Generation: int64(generation),
+			Generation: generation,
 		},
 	}
 	GVK, err := apiutil.GVKForObject(obj, testScheme)
@@ -211,7 +211,7 @@ func makeObjectDeploymentMock(name string, namespace string,
 		},
 	}
 	res.On("GetSelector").Return(labelSelector)
-	res.On("GetGeneration").Return(int64(generation))
+	res.On("GetGeneration").Return(generation)
 	res.On("GetStatusTemplateHash").Return(templateHash)
 	res.On("GetConditions").Return(initialConditions)
 	res.On("GetName").Return(name)
@@ -219,7 +219,7 @@ func makeObjectDeploymentMock(name string, namespace string,
 		conds := args.Get(0).([]metav1.Condition)
 
 		for _, c := range conds {
-			c.ObservedGeneration = int64(generation)
+			c.ObservedGeneration = generation
 
 			meta.SetStatusCondition(initialConditions, c)
 		}

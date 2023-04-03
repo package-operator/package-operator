@@ -20,7 +20,7 @@ func (t *PackageTransformer) TransformPackage(ctx context.Context, packageConten
 }
 
 func (t *PackageTransformer) transform(
-	ctx context.Context, path string, index int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
+	_ context.Context, _ string, _ int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
 ) error {
 	obj.SetLabels(
 		utils.MergeKeysFrom(

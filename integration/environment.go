@@ -69,7 +69,7 @@ func init() {
 	Waiter = dev.NewWaiter(Client, Scheme, dev.WithTimeout(defaultWaitTimeout), dev.WithInterval(defaultWaitInterval))
 }
 
-func initClients(ctx context.Context) error {
+func initClients(_ context.Context) error {
 	// Client/Scheme setup.
 	AddToSchemes := runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,

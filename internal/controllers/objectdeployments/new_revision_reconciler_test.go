@@ -2,7 +2,6 @@ package objectdeployments
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -49,7 +48,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 		name                       string
 		client                     *testutil.CtrlClient
 		prevRevisions              []corev1alpha1.ObjectSet
-		deploymentGeneration       int
+		deploymentGeneration       int64
 		deploymentHash             string
 		conflict                   bool
 		conflictObject             corev1alpha1.ObjectSet
@@ -164,12 +163,9 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				mock.Anything,
 				mock.MatchedBy(func(item interface{}) bool {
 					obj := item.(*corev1alpha1.ObjectSet)
-					return assertObject(t,
-						obj,
-						testCase.deploymentHash,
-						fmt.Sprint(testCase.deploymentGeneration),
-						testCase.prevRevisions,
-					)
+					requireObject(t, obj, testCase.deploymentHash, testCase.prevRevisions)
+
+					return true
 				}),
 				[]ctrlclient.CreateOption(nil),
 			)
@@ -177,12 +173,11 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 	}
 }
 
-func assertObject(t *testing.T,
+func requireObject(t *testing.T,
 	obj *corev1alpha1.ObjectSet,
 	expectedHash string,
-	expectedRevision string,
 	prevs []corev1alpha1.ObjectSet,
-) bool {
+) {
 	t.Helper()
 	hash, ok1 := obj.Annotations[ObjectSetHashAnnotation]
 	require.True(t, ok1)
@@ -196,5 +191,4 @@ func assertObject(t *testing.T,
 	for _, prev := range prevs {
 		require.Contains(t, objprevs, prev.Name)
 	}
-	return true
 }

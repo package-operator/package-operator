@@ -119,7 +119,7 @@ func (im *InformerMap) Get(
 
 // Delete shuts down an informer for the given GVK, if one is registered.
 func (im *InformerMap) Delete(
-	ctx context.Context,
+	_ context.Context,
 	gvk schema.GroupVersionKind,
 ) error {
 	im.informersMux.Lock()
@@ -136,7 +136,7 @@ func (im *InformerMap) Delete(
 }
 
 func (im *InformerMap) addInformerToMap(
-	ctx context.Context, gvk schema.GroupVersionKind, obj runtime.Object,
+	_ context.Context, gvk schema.GroupVersionKind, obj runtime.Object,
 ) (informer cache.SharedIndexInformer, reader client.Reader, err error) {
 	im.informersMux.Lock()
 	defer im.informersMux.Unlock()
@@ -220,10 +220,10 @@ func resyncPeriod(resync time.Duration) func() time.Duration {
 // stolen from controller-runtime
 // sigs.k8s.io/controller-runtime@v0.12.3/pkg/cache/informer_cache.go.
 func indexByField(indexer cache.SharedIndexInformer, field string, extractor client.IndexerFunc) error {
-	return indexer.AddIndexers(cache.Indexers{FieldIndexName(field): indexFuncForExtractor(field, extractor)})
+	return indexer.AddIndexers(cache.Indexers{FieldIndexName(field): indexFuncForExtractor(extractor)})
 }
 
-func indexFuncForExtractor(field string, extractor client.IndexerFunc) func(objRaw interface{}) ([]string, error) {
+func indexFuncForExtractor(extractor client.IndexerFunc) func(objRaw interface{}) ([]string, error) {
 	return func(objRaw interface{}) ([]string, error) {
 		// TODO(directxman12): check if this is the correct type?
 		obj, isObj := objRaw.(client.Object)

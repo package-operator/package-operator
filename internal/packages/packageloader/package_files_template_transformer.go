@@ -56,7 +56,7 @@ func NewTemplateTransformer(tmplCtx PackageFileTemplateContext) (*PackageFileTem
 	return &PackageFileTemplateTransformer{actualCtx}, nil
 }
 
-func (t *PackageFileTemplateTransformer) transform(ctx context.Context, path string, content []byte) ([]byte, error) {
+func (t *PackageFileTemplateTransformer) transform(_ context.Context, path string, content []byte) ([]byte, error) {
 	if !packages.IsTemplateFile(path) {
 		// Not a template file, skip.
 		return content, nil

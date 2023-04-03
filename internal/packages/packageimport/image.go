@@ -16,7 +16,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
-func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err error) {
+func Image(_ context.Context, image v1.Image) (m packagecontent.Files, err error) {
 	files := packagecontent.Files{}
 	reader := mutate.Extract(image)
 	defer func() {

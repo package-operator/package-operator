@@ -13,7 +13,7 @@ import (
 func Test_indexFuncForExtractor(t *testing.T) {
 	const indexedMetadataKey = "my-customer-index"
 	ifn := indexFuncForExtractor(
-		"my-cool-field", func(o client.Object) []string {
+		func(o client.Object) []string {
 			return []string{
 				o.GetAnnotations()[indexedMetadataKey],
 			}

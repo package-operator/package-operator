@@ -166,7 +166,7 @@ func manifestLockFromFile(
 		return nil, packages.NewInvalidError(violation)
 	}
 
-	fErr, err := packageadmission.ValidatePackageManifestLock(ctx, scheme, manifest)
+	fErr, err := packageadmission.ValidatePackageManifestLock(ctx, manifest)
 	if err != nil {
 		return nil, err
 	}

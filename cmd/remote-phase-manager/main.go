@@ -131,8 +131,9 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 			errCh := make(chan error)
 			defer func() {
+				//nolint: revive // drain errCh for GC.
 				for range errCh {
-				} // drain errCh for GC
+				}
 			}()
 			go func() {
 				defer close(errCh)

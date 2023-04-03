@@ -56,7 +56,7 @@ type CacheReader struct {
 }
 
 // Get checks the indexer for the object and writes a copy of it if found.
-func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Object, opts ...client.GetOption) error {
+func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Object, _ ...client.GetOption) error {
 	if c.scopeName == apimeta.RESTScopeNameRoot {
 		key.Namespace = ""
 	}
@@ -83,10 +83,8 @@ func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Ob
 		return fmt.Errorf("cache contained %T, which is not an Object", obj)
 	}
 
-	if c.disableDeepCopy {
-		// skip deep copy which might be unsafe
-		// you must DeepCopy any object before mutating it outside
-	} else {
+	// If set skip deep copy which might be unsafe. You must DeepCopy any object before mutating it outside.
+	if !c.disableDeepCopy {
 		// deep copy to avoid mutating cache
 		obj = obj.(runtime.Object).DeepCopyObject()
 	}

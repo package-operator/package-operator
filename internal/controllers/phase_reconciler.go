@@ -359,7 +359,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 }
 
 func mapConditions(
-	ctx context.Context, owner PhaseObjectOwner,
+	_ context.Context, owner PhaseObjectOwner,
 	conditionMappings []corev1alpha1.ConditionMapping,
 	actualObject *unstructured.Unstructured,
 ) error {
@@ -417,7 +417,7 @@ func mapConditions(
 // Builds an object as specified in a phase.
 // Includes system labels, namespace and owner reference.
 func (r *PhaseReconciler) desiredObject(
-	ctx context.Context, owner PhaseObjectOwner,
+	_ context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
 	desiredObj = &phaseObject.Object
@@ -597,7 +597,7 @@ type defaultAdoptionChecker struct {
 
 // Check detects whether an ownership change is needed.
 func (c *defaultAdoptionChecker) Check(
-	ctx context.Context, owner PhaseObjectOwner, obj client.Object,
+	_ context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
 	if len(os.Getenv("PKO_FORCE_ADOPTION")) > 0 {

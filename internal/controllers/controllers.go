@@ -107,7 +107,7 @@ type isControllerChecker interface {
 
 // Returns a list of ControlledObjectReferences controlled by this instance.
 func GetControllerOf(
-	ctx context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
+	_ context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
 	owner client.Object, actualObjects []client.Object,
 ) ([]corev1alpha1.ControlledObjectReference, error) {
 	var controllerOf []corev1alpha1.ControlledObjectReference
@@ -135,7 +135,7 @@ func IsMappedCondition(cond metav1.Condition) bool {
 }
 
 func MapConditions(
-	ctx context.Context,
+	_ context.Context,
 	srcGeneration int64, srcConditions []metav1.Condition,
 	destGeneration int64, destConditions *[]metav1.Condition,
 ) {
@@ -160,7 +160,7 @@ func MapConditions(
 	}
 }
 
-func DeleteMappedConditions(ctx context.Context, conditions *[]metav1.Condition) {
+func DeleteMappedConditions(_ context.Context, conditions *[]metav1.Condition) {
 	for _, cond := range *conditions {
 		if IsMappedCondition(cond) {
 			meta.RemoveStatusCondition(conditions, cond.Type)
