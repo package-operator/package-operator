@@ -3,244 +3,146 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/pprof"
 	"os"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	pkoapis "package-operator.run/apis"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/controllers/hostedclusters"
+	"package-operator.run/package-operator/cmd/package-operator-manager/bootstrap"
+	"package-operator.run/package-operator/cmd/package-operator-manager/components"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/controllers/objectdeployments"
-	"package-operator.run/package-operator/internal/controllers/objectsetphases"
-	"package-operator.run/package-operator/internal/controllers/objectsets"
-	"package-operator.run/package-operator/internal/controllers/objecttemplate"
-	"package-operator.run/package-operator/internal/controllers/packages"
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/packages/packagedeploy"
-	"package-operator.run/package-operator/internal/packages/packageimport"
 )
 
-type opts struct {
-	metricsAddr             string
-	pprofAddr               string
-	namespace               string
-	managerImage            string
-	selfBootstrap           string
-	enableLeaderElection    bool
-	probeAddr               string
-	printVersion            bool
-	copyTo                  string
-	loadPackage             string
-	remotePhasePackageImage string
-}
-
 const (
-	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription    = "The namespace the operator is deployed into."
-	managerImageFlagDescription = "Image package operator is deployed with." +
-		" e.g. quay.io/package-operator/package-operator-manager"
-	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
-		"Enabling this will ensure there is only one active controller manager."
-	probeAddrFlagDescription   = "The address the probe endpoint binds to."
-	versionFlagDescription     = "print version information and exit."
-	copyToFlagDescription      = "(internal) copy this binary to a new location"
-	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
-		" to load a package mounted at /package"
-	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
-		" with Package Operator using the given Package Operator Package Image"
-	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
-		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
 	hyperShiftPollInterval = 10 * time.Second
 )
 
-func main() {
-	var opts opts
-	flag.StringVar(&opts.metricsAddr, "metrics-addr", ":8080", metricsAddrFlagDescription)
-	flag.StringVar(&opts.pprofAddr, "pprof-addr", "", pprofAddrFlagDescription)
-	flag.StringVar(&opts.namespace, "namespace", os.Getenv("PKO_NAMESPACE"), namespaceFlagDescription)
-	flag.StringVar(&opts.managerImage, "manager-image", os.Getenv("PKO_IMAGE"), managerImageFlagDescription)
-	flag.BoolVar(&opts.enableLeaderElection, "enable-leader-election", false, leaderElectionFlagDescription)
-	flag.StringVar(&opts.probeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)
-	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
-	flag.StringVar(&opts.copyTo, "copy-to", "", copyToFlagDescription)
-	flag.StringVar(&opts.loadPackage, "load-package", "", loadPackageFlagDescription)
-	flag.StringVar(&opts.selfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
-	flag.StringVar(&opts.remotePhasePackageImage, "remote-phase-package-image",
-		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"), remotePhasePackageImageFlagDescription)
-	flag.Parse()
+var di *dig.Container
 
+func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	scheme := runtime.NewScheme()
-	setupLog := ctrl.Log.WithName("setup")
-	schemeBuilder := runtime.SchemeBuilder{
-		clientgoscheme.AddToScheme,
-		pkoapis.AddToScheme,
-		hypershiftv1beta1.AddToScheme,
-		apiextensionsv1.AddToScheme,
-		apiextensions.AddToScheme,
-	}
-	if err := schemeBuilder.AddToScheme(scheme); err != nil {
+	var err error
+	di, err = components.NewComponents()
+	if err != nil {
 		panic(err)
 	}
 
-	if opts.printVersion {
-		version := "binary compiled without version info"
+	if err := di.Invoke(run); err != nil {
+		panic(err)
+	}
+}
 
-		if info, ok := debug.ReadBuildInfo(); ok {
-			version = info.String()
-		}
-
-		fmt.Fprintln(os.Stderr, version)
-		os.Exit(2)
+func run(opts components.Options) error {
+	if opts.PrintVersion {
+		printVersion()
+		return nil
 	}
 
-	if len(opts.loadPackage) > 0 {
-		namespace, name, found := strings.Cut(opts.loadPackage, string(types.Separator))
-		if !found {
-			fmt.Fprintln(os.Stderr, "invalid argument to --load-package, expected NamespaceName")
-			os.Exit(1)
+	if len(opts.CopyTo) > 0 {
+		if err := runCopyTo(opts.CopyTo); err != nil {
+			return fmt.Errorf("unable to run copy-to: %w", err)
 		}
-
-		packageKey := client.ObjectKey{
-			Name:      name,
-			Namespace: namespace,
-		}
-		if err := runLoader(scheme, packageKey); err != nil {
-			setupLog.Error(err, "unable to run package-loader")
-			os.Exit(1)
-		}
-		return
+		return nil
 	}
 
-	if len(opts.copyTo) > 0 {
-		if err := runCopyTo(opts.copyTo); err != nil {
-			setupLog.Error(err, "unable to run copy-to")
-			os.Exit(1)
+	ctx := ctrl.SetupSignalHandler()
+	if len(opts.LoadPackage) > 0 {
+		if err := di.Provide(newPackageLoader); err != nil {
+			return err
 		}
-		return
+		return di.Invoke(func(pl *packageLoader) error {
+			return pl.Start(ctx)
+		})
 	}
 
-	if len(opts.selfBootstrap) > 0 {
-		b, err := newBootstrapper(
-			setupLog, scheme, opts.selfBootstrap, opts.namespace,
-			func(ctx context.Context) error {
-				// lazy create manager after boot strapper is finished,
-				// or the RESTMapper will not pick up the CRDs in the cluster.
-				mgr, err := setupManager(scheme, opts)
-				if err != nil {
+	if len(opts.SelfBootstrap) > 0 {
+		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {
+			return err
+		}
+
+		var bs *bootstrap.Bootstrapper
+		if err := di.Invoke(func(lbs *bootstrap.Bootstrapper) {
+			bs = lbs
+		}); err != nil {
+			return err
+		}
+
+		if err := bs.Bootstrap(ctx, func(ctx context.Context) error {
+			// Lazy create manager after boot strapper is finished or
+			// the RESTMapper will not pick up the CRDs in the cluster.
+			return di.Invoke(func(
+				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
+			) error {
+				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
 					return err
 				}
-				return runManager(ctx, mgr, setupLog)
+
+				return mgr.Start(ctx)
 			})
-		if err != nil {
-			setupLog.Error(err, "unable to setup self-bootstrap")
-			os.Exit(1)
+		}); err != nil {
+			return err
 		}
-
-		if err := b.Bootstrap(ctrl.SetupSignalHandler()); err != nil {
-			setupLog.Error(err, "unable to run self-bootstrap")
-			os.Exit(1)
-		}
-		return
+		return nil
 	}
 
-	mgr, err := setupManager(scheme, opts)
-	if err != nil {
-		setupLog.Error(err, "unable to setup manager")
-		os.Exit(1)
-	}
-	if err := runManager(ctrl.SetupSignalHandler(), mgr, setupLog); err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-}
-
-func runCopyTo(target string) error {
-	src, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("looking up current executable path: %w", err)
-	}
-
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("opening source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(target)
-	if err != nil {
-		return fmt.Errorf("opening destination file: %w", err)
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	if err != nil {
-		return fmt.Errorf("copy: %w", err)
-	}
-
-	return os.Chmod(destFile.Name(), 0o755)
-}
-
-const packageFolderPath = "/package"
-
-func runLoader(scheme *runtime.Scheme, packageKey client.ObjectKey) error {
-	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
-	}
-
-	var packageDeployer *packagedeploy.PackageDeployer
-	if len(packageKey.Namespace) > 0 {
-		// Package API
-		packageDeployer = packagedeploy.NewPackageDeployer(c, scheme)
-	} else {
-		// ClusterPackage API
-		packageDeployer = packagedeploy.NewClusterPackageDeployer(c, scheme)
-	}
-
-	ctx := logr.NewContext(context.Background(), ctrl.Log.WithName("package-loader"))
-
-	files, err := packageimport.Folder(ctx, packageFolderPath)
-	if err != nil {
+	if err := di.Provide(newPackageOperatorManager); err != nil {
 		return err
 	}
-
-	return packageDeployer.Load(ctx, packageKey, files)
+	return di.Invoke(func(pkoMgr *packageOperatorManager) error {
+		return pkoMgr.Start(ctx)
+	})
 }
 
-func runManager(ctx context.Context, mgr ctrl.Manager, log logr.Logger) error {
+func printVersion() {
+	version := "binary compiled without version info"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		version = info.String()
+	}
+	fmt.Fprintln(os.Stderr, version)
+}
+
+type packageOperatorManager struct {
+	log logr.Logger
+	mgr ctrl.Manager
+
+	hostedClusterController components.HostedClusterController
+}
+
+func newPackageOperatorManager(
+	mgr ctrl.Manager, log logr.Logger,
+	hostedClusterController components.HostedClusterController,
+	allControllers components.AllControllers,
+) (*packageOperatorManager, error) {
+	if err := allControllers.SetupWithManager(mgr); err != nil {
+		return nil, err
+	}
+	pkoMgr := &packageOperatorManager{
+		log: log.WithName("package-operator-manager"),
+		mgr: mgr,
+
+		hostedClusterController: hostedClusterController,
+	}
+	return pkoMgr, nil
+}
+
+func (pkoMgr *packageOperatorManager) Start(ctx context.Context) error {
+	log := pkoMgr.log
+	ctx = logr.NewContext(ctx, log)
 	log.Info("starting manager")
-	err := mgr.Start(ctx)
+
+	if err := pkoMgr.probeHyperShiftIntegration(ctx); err != nil {
+		return fmt.Errorf("setting up HyperShift integration: %w", err)
+	}
+
+	err := pkoMgr.mgr.Start(ctx)
 	switch {
 	case err == nil || errors.Is(err, ErrHypershiftAPIPostSetup):
 		return nil
@@ -249,219 +151,44 @@ func runManager(ctx context.Context, mgr ctrl.Manager, log logr.Logger) error {
 	}
 }
 
-//nolint:maintidx
-func setupManager(scheme *runtime.Scheme, opts opts) (ctrl.Manager, error) {
-	controllerLog := ctrl.Log.WithName("controllers")
+var hostedClusterGVK = hypershiftv1beta1.GroupVersion.
+	WithKind("HostedCluster")
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         opts.metricsAddr,
-		HealthProbeBindAddress:     opts.probeAddr,
-		Port:                       9443,
-		LeaderElectionResourceLock: "leases",
-		LeaderElection:             opts.enableLeaderElection,
-		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: cache.SelectorsByObject{
-				// We create Jobs to unpack package images.
-				// Limit caches to only contain Jobs that we create ourselves.
-				&batchv1.Job{}: {
-					Label: labels.SelectorFromSet(labels.Set{
-						controllers.DynamicCacheLabel: "True",
-					}),
-				},
-			},
-		}),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("creating manager: %w", err)
-	}
-
-	// Health and Ready checks
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		return nil, fmt.Errorf("unable to set up health check: %w", err)
-	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		return nil, fmt.Errorf("unable to set up ready check: %w", err)
-	}
-
-	// PPROF
-	if len(opts.pprofAddr) > 0 {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-		s := &http.Server{Addr: opts.pprofAddr, Handler: mux, ReadHeaderTimeout: 1 * time.Second}
-		err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-			errCh := make(chan error)
-			defer func() {
-				//nolint:revive // drain errCh for GC
-				for range errCh {
-				}
-			}()
-			go func() {
-				defer close(errCh)
-				errCh <- s.ListenAndServe()
-			}()
-
-			select {
-			case err := <-errCh:
-				return err
-			case <-ctx.Done():
-				s.Close()
-				return nil
-			}
-		}))
-		if err != nil {
-			return nil, fmt.Errorf("unable to create pprof server: %w", err)
-		}
-	}
-
-	// Create metrics recorder
-	recorder := metrics.NewRecorder()
-	recorder.Register()
-
-	// DynamicCache
-	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
-		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,=
-			// so we prevent our caches from exploding!
-			schema.GroupVersionKind{}: dynamiccache.Selector{
-				Label: labels.SelectorFromSet(labels.Set{
-					controllers.DynamicCacheLabel: "True",
-				}),
-			},
-		})
-
-	// Create a client that does not cache resources cluster-wide.
-	uncachedClient, err := client.New(
-		mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
-	if err != nil {
-		return nil, fmt.Errorf("unable to set up uncached client: %w", err)
-	}
-
-	// ObjectSet
-	if err = objectsets.NewObjectSetController(
-		mgr.GetClient(),
-		controllerLog.WithName("ObjectSet"),
-		mgr.GetScheme(), dc, uncachedClient, recorder,
-		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ObjectSet: %w", err)
-	}
-
-	if err = objectsets.NewClusterObjectSetController(
-		mgr.GetClient(),
-		controllerLog.WithName("ClusterObjectSet"),
-		mgr.GetScheme(), dc, uncachedClient, recorder,
-		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ClusterObjectSet: %w", err)
-	}
-
-	// ObjectSetPhase for "default" class
-	const defaultObjectSetPhaseClass = "default"
-	if err = objectsetphases.NewSameClusterObjectSetPhaseController(
-		controllerLog.WithName("ObjectSetPhase"),
-		mgr.GetScheme(), dc, uncachedClient,
-		defaultObjectSetPhaseClass, mgr.GetClient(),
-		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
-	}
-
-	if err = objectsetphases.NewSameClusterClusterObjectSetPhaseController(
-		controllerLog.WithName("ClusterObjectSetPhase"),
-		mgr.GetScheme(), dc, uncachedClient, defaultObjectSetPhaseClass, mgr.GetClient(),
-		mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
-	}
-
-	// Object deployment controller
-	if err = (objectdeployments.NewObjectDeploymentController(
-		mgr.GetClient(), controllerLog.WithName("ObjectDeployment"),
-		mgr.GetScheme(),
-	)).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ObjectDeployment: %w", err)
-	}
-
-	// Cluster Object deployment controller
-	if err = (objectdeployments.NewClusterObjectDeploymentController(
-		mgr.GetClient(), controllerLog.WithName("ClusterObjectDeployment"),
-		mgr.GetScheme(),
-	)).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ClusterObjectDeployment: %w", err)
-	}
-
-	if err = packages.NewPackageController(
-		mgr.GetClient(), controllerLog.WithName("Package"), mgr.GetScheme(),
-		opts.namespace, opts.managerImage,
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for Package: %w", err)
-	}
-
-	if err = packages.NewClusterPackageController(
-		mgr.GetClient(), controllerLog.WithName("ClusterPackage"), mgr.GetScheme(),
-		opts.namespace, opts.managerImage,
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ClusterPackage: %w", err)
-	}
-
-	if err = objecttemplate.NewObjectTemplateController(
-		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ObjectTemplate"),
-		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ObjectTemplate: %w", err)
-	}
-
-	if err = objecttemplate.NewClusterObjectTemplateController(
-		mgr.GetClient(), uncachedClient, ctrl.Log.WithName("controllers").WithName("ClusterObjectTemplate"),
-		dc, mgr.GetScheme(), mgr.GetRESTMapper(),
-	).SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("unable to create controller for ClusterObjectTemplate: %w", err)
-	}
+func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
+	ctx context.Context,
+) error {
+	log := logr.FromContextOrDiscard(ctx)
 
 	// Probe for HyperShift API
-	hostedClusterGVK := hypershiftv1beta1.GroupVersion.WithKind("HostedCluster")
-	_, err = mgr.GetRESTMapper().RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
+	_, err := pkoMgr.mgr.GetRESTMapper().
+		RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
+
 	switch {
 	case err == nil:
 		// HyperShift HostedCluster API is present on the cluster
 		// Auto-Enable HyperShift integration controller:
-		controllerLog.Info("detected HostedCluster API, enabling HyperShift integration")
-		if err = hostedclusters.NewHostedClusterController(
-			mgr.GetClient(),
-			controllerLog.WithName("HostedCluster"),
-			mgr.GetScheme(),
-			opts.remotePhasePackageImage,
-		).SetupWithManager(mgr); err != nil {
-			return nil, fmt.Errorf("unable to create controller for HostedCluster: %w", err)
+		log.Info("detected HostedCluster API, enabling HyperShift integration")
+		if err = pkoMgr.hostedClusterController.
+			SetupWithManager(pkoMgr.mgr); err != nil {
+			return fmt.Errorf(
+				"unable to create controller for HostedCluster: %w", err)
 		}
+
 	case meta.IsNoMatchError(err):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
-		if err := mgr.Add(newHypershift(controllerLog.WithName("HyperShift"), mgr.GetRESTMapper(), ticker)); err != nil {
-			return nil, fmt.Errorf("add hypershift checker: %w", err)
+		if err := pkoMgr.mgr.Add(
+			newHypershift(
+				log.WithName("HyperShift"),
+				pkoMgr.mgr.GetRESTMapper(),
+				ticker,
+			),
+		); err != nil {
+			return fmt.Errorf("add hypershift checker: %w", err)
 		}
+
 	default:
-		return nil, fmt.Errorf("hypershiftv1beta1 probing: %w", err)
+		return fmt.Errorf("hypershiftv1beta1 probing: %w", err)
 	}
 
-	cleanupClient, err := client.New(mgr.GetConfig(), client.Options{
-		Scheme: mgr.GetScheme(),
-		Mapper: mgr.GetRESTMapper(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create pod cleanup client: %w", err)
-	}
-
-	if err := mgr.Add(newCleaner(cleanupClient, opts.namespace)); err != nil {
-		return nil, fmt.Errorf("add hypershift checker: %w", err)
-	}
-
-	return mgr, nil
+	return nil
 }

@@ -23,6 +23,8 @@ const (
 	DynamicCacheLabel = "package-operator.run/cache"
 	// Common finalizer to free allocated caches when objects are deleted.
 	CachedFinalizer = "package-operator.run/cached"
+	// Causes PKO to skip ownership checks, used during self-bootstrap.
+	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
 )
 
 // Ensures the given finalizer is set and persisted on the given object.
