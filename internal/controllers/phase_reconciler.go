@@ -600,7 +600,7 @@ func (c *defaultAdoptionChecker) Check(
 	_ context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
-	if len(os.Getenv("PKO_FORCE_ADOPTION")) > 0 {
+	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 {
 		return true, nil
 	}
 
