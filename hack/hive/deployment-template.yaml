@@ -45,14 +45,14 @@ objects:
         - apiVersion: v1
           kind: ServiceAccount
           metadata:
-            name: package-operator-bootstrap
+            name: package-operator
             namespace: openshift-package-operator
             labels:
               package-operator.run/cache: "True"
         - apiVersion: rbac.authorization.k8s.io/v1
           kind: ClusterRoleBinding
           metadata:
-            name: package-operator-bootstrap
+            name: package-operator
             labels:
               package-operator.run/cache: "True"
           roleRef:
@@ -61,12 +61,12 @@ objects:
             name: cluster-admin
           subjects:
             - kind: ServiceAccount
-              name: package-operator-bootstrap
+              name: package-operator
               namespace: openshift-package-operator
         - apiVersion: batch/v1
           kind: Job
           metadata:
-            name: package-operator-bootstrap
+            name: package-operator
             namespace: openshift-package-operator
           spec:
             # delete right after completion
@@ -76,7 +76,7 @@ objects:
             template:
               spec:
                 restartPolicy: OnFailure
-                serviceAccountName: package-operator-bootstrap
+                serviceAccountName: package-operator
                 initContainers:
                   - name: prepare
                     image: ${REGISTRY_IMG}:${IMAGE_TAG}
