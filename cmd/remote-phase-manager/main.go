@@ -157,7 +157,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err != nil {
 		return fmt.Errorf("reading target cluster kubeconfig: %w", err)
 	}
-	targetMapper, err := apiutil.NewDynamicRESTMapper(targetCfg)
+	targetMapper, err := apiutil.NewDynamicRESTMapper(targetCfg, apiutil.WithLazyDiscovery)
 	if err != nil {
 		return fmt.Errorf("creating target cluster rest mapper: %w", err)
 	}
