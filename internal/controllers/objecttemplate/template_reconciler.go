@@ -321,20 +321,22 @@ func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate
 	var sourceError *SourceError
 	if goerrors.As(err, &sourceError) {
 		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
-			Type:    corev1alpha1.ObjectTemplateInvalid,
-			Status:  metav1.ConditionTrue,
-			Reason:  "SourceError",
-			Message: sourceError.Error(),
+			Type:               corev1alpha1.ObjectTemplateInvalid,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: objectTemplate.GetGeneration(),
+			Reason:             "SourceError",
+			Message:            sourceError.Error(),
 		})
 		return nil // don't retry error
 	}
 	var templateError *TemplateError
 	if goerrors.As(err, &templateError) {
 		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
-			Type:    corev1alpha1.ObjectTemplateInvalid,
-			Status:  metav1.ConditionTrue,
-			Reason:  "TemplateError",
-			Message: templateError.Error(),
+			Type:               corev1alpha1.ObjectTemplateInvalid,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: objectTemplate.GetGeneration(),
+			Reason:             "TemplateError",
+			Message:            templateError.Error(),
 		})
 		return nil // don't retry error
 	}

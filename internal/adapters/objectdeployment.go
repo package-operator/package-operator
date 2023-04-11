@@ -21,6 +21,7 @@ type ObjectDeploymentAccessor interface {
 	SetStatusConditions(...metav1.Condition)
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
+	GetGeneration() int64
 	GetStatusTemplateHash() string
 	SetStatusTemplateHash(templateHash string)
 	SetSelector(labels map[string]string)

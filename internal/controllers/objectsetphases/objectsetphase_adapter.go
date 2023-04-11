@@ -16,6 +16,7 @@ type genericObjectSetPhase interface {
 	GetPhase() corev1alpha1.ObjectSetTemplatePhase
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	GetRevision() int64
+	GetGeneration() int64
 	IsPaused() bool
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 }
@@ -93,6 +94,10 @@ func (a *GenericObjectSetPhase) IsPaused() bool {
 	return a.Spec.Paused
 }
 
+func (a *GenericObjectSetPhase) GetGeneration() int64 {
+	return a.Generation
+}
+
 func (a *GenericObjectSetPhase) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
 }
@@ -129,6 +134,10 @@ func (a *GenericClusterObjectSetPhase) GetAvailabilityProbes() []corev1alpha1.Ob
 
 func (a *GenericClusterObjectSetPhase) GetRevision() int64 {
 	return a.Spec.Revision
+}
+
+func (a *GenericClusterObjectSetPhase) GetGeneration() int64 {
+	return a.Generation
 }
 
 func (a *GenericClusterObjectSetPhase) IsPaused() bool {

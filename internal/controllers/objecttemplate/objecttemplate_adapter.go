@@ -14,6 +14,7 @@ type genericObjectTemplate interface {
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
 	GetConditions() *[]metav1.Condition
+	GetGeneration() int64
 	UpdatePhase()
 }
 
@@ -67,6 +68,10 @@ func (t *GenericObjectTemplate) GetConditions() *[]metav1.Condition {
 	return &t.Status.Conditions
 }
 
+func (t *GenericObjectTemplate) GetGeneration() int64 {
+	return t.Generation
+}
+
 func (t *GenericObjectTemplate) UpdatePhase() {
 	t.Status.Phase = getObjectTemplatePhase(t)
 }
@@ -93,6 +98,10 @@ func (t *GenericClusterObjectTemplate) ClientObject() client.Object {
 
 func (t *GenericClusterObjectTemplate) UpdatePhase() {
 	t.Status.Phase = getObjectTemplatePhase(t)
+}
+
+func (t *GenericClusterObjectTemplate) GetGeneration() int64 {
+	return t.Generation
 }
 
 func getObjectTemplatePhase(objectTemplate genericObjectTemplate) corev1alpha1.ObjectTemplateStatusPhase {

@@ -24,6 +24,7 @@ type genericObjectSet interface {
 	SetArchived()
 	IsArchived() bool
 	GetRevision() int64
+	GetGeneration() int64
 	IsStatusPaused() bool
 	SetPaused()
 	IsSpecPaused() bool
@@ -151,6 +152,10 @@ func (a *GenericObjectSet) GetRevision() int64 {
 	return a.Status.Revision
 }
 
+func (a *GenericObjectSet) GetGeneration() int64 {
+	return a.Generation
+}
+
 func (a *GenericObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.ObjectSetTemplateSpec.Phases
 }
@@ -245,6 +250,10 @@ func (a *GenericClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePh
 
 func (a *GenericClusterObjectSet) GetRevision() int64 {
 	return a.Status.Revision
+}
+
+func (a *GenericClusterObjectSet) GetGeneration() int64 {
+	return a.Generation
 }
 
 func (a *GenericClusterObjectSet) IsArchived() bool {

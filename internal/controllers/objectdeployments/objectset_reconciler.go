@@ -106,8 +106,9 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 				metav1.ConditionTrue,
 				progressingReasonProgressing,
 				"Progressing to a new ObjectSet.",
+				objectDeployment.ClientObject().GetGeneration(),
 			),
-			conditionFromPreviousObjectSets(prevObjectSets...),
+			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
 		)
 
 		return
@@ -130,7 +131,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		availableCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
 		if availableCond != nil {
 			if availableCond.Status == metav1.ConditionFalse {
-				conds = append(conds, conditionFromPreviousObjectSets(prevObjectSets...))
+				conds = append(conds, conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
 
 				msg = "Latest Revision is Unavailable: " + availableCond.Message
 			} else {
@@ -142,6 +143,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			metav1.ConditionTrue,
 			progressingReasonLatestRevPendingSuccess,
 			msg,
+			objectDeployment.ClientObject().GetGeneration(),
 		))
 
 		objectDeployment.SetStatusConditions(conds...)
@@ -155,11 +157,12 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			metav1.ConditionFalse,
 			progressingReasonIdle,
 			"Update concluded.",
+			objectDeployment.GetGeneration(),
 		),
 	)
 
 	if !currentObjectSet.IsAvailable() {
-		objectDeployment.SetStatusConditions(conditionFromPreviousObjectSets(prevObjectSets...))
+		objectDeployment.SetStatusConditions(conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
 
 		return
 	}
@@ -170,17 +173,19 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			metav1.ConditionTrue,
 			availableReasonAvailable,
 			"Latest Revision is Available.",
+			objectDeployment.GetGeneration(),
 		),
 	)
 }
 
-func conditionFromPreviousObjectSets(prevObjectSets ...genericObjectSet) metav1.Condition {
+func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...genericObjectSet) metav1.Condition {
 	found, rev := findAvailableRevision(prevObjectSets...)
 	if !found {
 		return newAvailableCondition(
 			metav1.ConditionFalse,
 			availableReasonObjectSetUnready,
 			"No ObjectSet is available.",
+			generation,
 		)
 	}
 
@@ -188,6 +193,7 @@ func conditionFromPreviousObjectSets(prevObjectSets ...genericObjectSet) metav1.
 		metav1.ConditionTrue,
 		availableReasonAvailable,
 		fmt.Sprintf("Previous Revision '%s' is still Available.", rev),
+		generation,
 	)
 }
 
@@ -211,12 +217,13 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 	return false, ""
 }
 
-func newAvailableCondition(status metav1.ConditionStatus, reason availableReason, msg string) metav1.Condition {
+func newAvailableCondition(status metav1.ConditionStatus, reason availableReason, msg string, generation int64) metav1.Condition {
 	return metav1.Condition{
-		Type:    corev1alpha1.ObjectDeploymentAvailable,
-		Status:  status,
-		Reason:  reason.String(),
-		Message: msg,
+		Type:               corev1alpha1.ObjectDeploymentAvailable,
+		Status:             status,
+		Reason:             reason.String(),
+		Message:            msg,
+		ObservedGeneration: generation,
 	}
 }
 
@@ -231,12 +238,13 @@ const (
 	availableReasonObjectSetUnready availableReason = "ObjectSetUnready"
 )
 
-func newProgressingCondition(status metav1.ConditionStatus, reason progressingReason, msg string) metav1.Condition {
+func newProgressingCondition(status metav1.ConditionStatus, reason progressingReason, msg string, generation int64) metav1.Condition {
 	return metav1.Condition{
-		Type:    corev1alpha1.ObjectDeploymentProgressing,
-		Status:  status,
-		Reason:  reason.String(),
-		Message: msg,
+		Type:               corev1alpha1.ObjectDeploymentProgressing,
+		Status:             status,
+		Reason:             reason.String(),
+		Message:            msg,
+		ObservedGeneration: generation,
 	}
 }
 
