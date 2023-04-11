@@ -246,10 +246,11 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Context, objectSetPhase genericObjectSetPhase) {
 	if objectSetPhase.IsPaused() {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
-			Type:    corev1alpha1.ObjectSetPhasePaused,
-			Status:  metav1.ConditionTrue,
-			Reason:  "Paused",
-			Message: "Lifecycle state set to paused.",
+			Type:               corev1alpha1.ObjectSetPhasePaused,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: objectSetPhase.GetGeneration(),
+			Reason:             "Paused",
+			Message:            "Lifecycle state set to paused.",
 		})
 	} else {
 		meta.RemoveStatusCondition(objectSetPhase.GetConditions(), corev1alpha1.ObjectSetPaused)

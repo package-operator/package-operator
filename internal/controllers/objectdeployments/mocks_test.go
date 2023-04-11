@@ -11,15 +11,15 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type genericObjectSetMock struct {
-	mock.Mock
-}
-
 var (
 	_ genericObjectSet         = (*genericObjectSetMock)(nil)
 	_ objectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
 	_ objectSetSubReconciler   = (*objectSetSubReconcilerMock)(nil)
 )
+
+type genericObjectSetMock struct {
+	mock.Mock
+}
 
 func (o *genericObjectSetMock) ClientObject() client.Object {
 	args := o.Called()
@@ -27,6 +27,11 @@ func (o *genericObjectSetMock) ClientObject() client.Object {
 }
 
 func (o *genericObjectSetMock) GetRevision() int64 {
+	args := o.Called()
+	return args.Get(0).(int64)
+}
+
+func (o *genericObjectSetMock) GetGeneration() int64 {
 	args := o.Called()
 	return args.Get(0).(int64)
 }

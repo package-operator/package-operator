@@ -254,19 +254,21 @@ func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, 
 		!objectSet.IsPaused() && phasesArePaused:
 		// Could not get status of all remote ObjectSetPhases or they disagree with their parent.
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-			Type:    corev1alpha1.ObjectSetPaused,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "PartiallyPaused",
-			Message: "Waiting for ObjectSetPhases.",
+			Type:               corev1alpha1.ObjectSetPaused,
+			Status:             metav1.ConditionUnknown,
+			ObservedGeneration: objectSet.GetGeneration(),
+			Reason:             "PartiallyPaused",
+			Message:            "Waiting for ObjectSetPhases.",
 		})
 
 	case objectSet.IsPaused() && phasesArePaused:
 		// Everything is paused!
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-			Type:    corev1alpha1.ObjectSetPaused,
-			Status:  metav1.ConditionTrue,
-			Reason:  "Paused",
-			Message: "Lifecycle state set to paused.",
+			Type:               corev1alpha1.ObjectSetPaused,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: objectSet.GetGeneration(),
+			Reason:             "Paused",
+			Message:            "Lifecycle state set to paused.",
 		})
 
 	case !objectSet.IsPaused() && !phasesArePaused:
@@ -326,7 +328,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 				Status:             metav1.ConditionFalse,
 				Reason:             "ArchivalInProgress",
 				Message:            "Object teardown in progress.",
-				ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+				ObservedGeneration: objectSet.GetGeneration(),
 			})
 		}
 		// don't remove finalizer before deletion is done
@@ -345,7 +347,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 			Type:               corev1alpha1.ObjectSetArchived,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Archived",
-			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
+			ObservedGeneration: objectSet.GetGeneration(),
 		})
 		objectSet.SetStatusControllerOf(nil) // we are no longer controlling anything.
 	}

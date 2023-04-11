@@ -18,5 +18,6 @@ type objectDeploymentAccessor interface {
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string
+	GetGeneration() int64
 	SetStatusTemplateHash(templateHash string)
 }
