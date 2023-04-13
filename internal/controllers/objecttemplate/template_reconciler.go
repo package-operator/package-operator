@@ -1,9 +1,12 @@
 package objecttemplate
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	goerrors "errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/jsonpath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -132,7 +136,7 @@ func (r *templateReconciler) getValuesFromSources(
 			retryLater = true
 			continue
 		}
-		if err := copySourceItems(ctx, src.Items, sourceObj, sourcesConfig); err != nil {
+		if err := copySourceItems(src.Items, sourceObj, sourcesConfig); err != nil {
 			return false, &SourceError{Source: sourceObj, Err: err}
 		}
 	}
@@ -206,30 +210,53 @@ func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha
 }
 
 func copySourceItems(
-	_ context.Context, src []corev1alpha1.ObjectTemplateSourceItem,
+	src []corev1alpha1.ObjectTemplateSourceItem,
 	sourceObj *unstructured.Unstructured, sourcesConfig map[string]interface{},
 ) error {
 	for _, item := range src {
-		if string(item.Key[0]) != "." {
-			return &JSONPathFormatError{Path: item.Key}
-		}
-		trimmedKey := strings.TrimPrefix(item.Key, ".")
-		value, found, err := unstructured.NestedFieldCopy(sourceObj.Object, strings.Split(trimmedKey, ".")...)
-		if err != nil {
-			return fmt.Errorf("getting value at %s: %w", item.Key, err)
-		}
-		if !found {
-			return &SourceKeyNotFoundError{Key: item.Key}
-		}
-
-		if string(item.Destination[0]) != "." {
-			return &JSONPathFormatError{Path: item.Destination}
-		}
-		trimmedDestination := strings.TrimPrefix(item.Destination, ".")
-		if err := unstructured.SetNestedField(sourcesConfig, value, strings.Split(trimmedDestination, ".")...); err != nil {
-			return fmt.Errorf("setting nested field at %s: %w", item.Destination, err)
+		if err := copySourceItem(item, sourceObj, sourcesConfig); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func copySourceItem(
+	item corev1alpha1.ObjectTemplateSourceItem,
+	sourceObj *unstructured.Unstructured,
+	sourcesConfig map[string]interface{},
+) error {
+	jpString, err := RelaxedJSONPathExpression(item.Key)
+	if err != nil {
+		return err
+	}
+
+	jp := jsonpath.New("key")
+	jp.EnableJSONOutput(true)
+	if err := jp.Parse(jpString); err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	if err := jp.Execute(&buf, sourceObj.Object); err != nil {
+		return err
+	}
+	var value interface{}
+	if err := json.Unmarshal(buf.Bytes(), &value); err != nil {
+		return err
+	}
+	if vslice, ok := value.([]interface{}); ok && len(vslice) == 1 {
+		value = vslice[0]
+	}
+
+	if string(item.Destination[0]) != "." {
+		return &JSONPathFormatError{Path: item.Destination}
+	}
+	trimmedDestination := strings.TrimPrefix(item.Destination, ".")
+	if err := unstructured.SetNestedField(sourcesConfig, value, strings.Split(trimmedDestination, ".")...); err != nil {
+		return fmt.Errorf("setting nested field at %s: %w", item.Destination, err)
+	}
+
 	return nil
 }
 
@@ -345,4 +372,37 @@ func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate
 		meta.RemoveStatusCondition(objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid)
 	}
 	return err
+}
+
+var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
+
+// RelaxedJSONPathExpression attempts to be flexible with JSONPath expressions, it accepts:
+//   - metadata.name (no leading '.' or curly braces '{...}'
+//   - {metadata.name} (no leading '.')
+//   - .metadata.name (no curly braces '{...}')
+//   - {.metadata.name} (complete expression)
+//
+// And transforms them all into a valid jsonpath expression:
+//
+//	{.metadata.name}
+//
+//nolint:goerr113
+func RelaxedJSONPathExpression(pathExpression string) (string, error) {
+	if len(pathExpression) == 0 {
+		return pathExpression, nil
+	}
+	submatches := jsonRegexp.FindStringSubmatch(pathExpression)
+	if submatches == nil {
+		return "", fmt.Errorf("unexpected path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
+	}
+	if len(submatches) != 3 {
+		return "", fmt.Errorf("unexpected submatch list: %v", submatches)
+	}
+	var fieldSpec string
+	if len(submatches[1]) != 0 {
+		fieldSpec = submatches[1]
+	} else {
+		fieldSpec = submatches[2]
+	}
+	return fmt.Sprintf("{.%s}", fieldSpec), nil
 }

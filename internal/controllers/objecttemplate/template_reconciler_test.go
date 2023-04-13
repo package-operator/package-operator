@@ -92,28 +92,90 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 }
 
 func Test_copySourceItems(t *testing.T) {
-	ctx := context.Background()
-	sourceObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"data": map[string]interface{}{
-				"something": "123",
+	tests := []struct {
+		name     string
+		object   map[string]interface{}
+		source   string
+		dest     string
+		expected map[string]interface{}
+	}{
+		{
+			name: "string stays string",
+			object: map[string]interface{}{
+				"data": map[string]interface{}{
+					"something": "123",
+				},
+			},
+			source: ".data.something",
+			dest:   ".banana",
+			expected: map[string]interface{}{
+				"banana": "123",
+			},
+		},
+		{
+			name: "number stays number",
+			object: map[string]interface{}{
+				"data": map[string]interface{}{
+					"something": 123,
+				},
+			},
+			source: ".data.something",
+			dest:   ".banana",
+			expected: map[string]interface{}{
+				"banana": float64(123), // json numbers are floats
+			},
+		},
+		{
+			name: "supports dots",
+			object: map[string]interface{}{
+				"data": map[string]interface{}{
+					"some.thing": "123",
+				},
+			},
+			source: `.data['some\.thing']`,
+			dest:   ".banana",
+			expected: map[string]interface{}{
+				"banana": "123",
+			},
+		},
+		{
+			name: "multiple results",
+			object: map[string]interface{}{
+				"data": []interface{}{
+					map[string]interface{}{
+						"name": "123",
+					},
+					map[string]interface{}{
+						"name": "456",
+					},
+				},
+			},
+			source: ".data..name",
+			dest:   ".banana",
+			expected: map[string]interface{}{
+				"banana": []interface{}{"123", "456"},
 			},
 		},
 	}
-	sourcesConfig := map[string]interface{}{}
-	items := []corev1alpha1.ObjectTemplateSourceItem{
-		{Key: ".data.something", Destination: ".banana"},
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sourceObj := &unstructured.Unstructured{
+				Object: test.object,
+			}
+			sourcesConfig := map[string]interface{}{}
+			items := []corev1alpha1.ObjectTemplateSourceItem{
+				{Key: test.source, Destination: test.dest},
+			}
+			err := copySourceItems(
+				items, sourceObj, sourcesConfig)
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, sourcesConfig)
+		})
 	}
-	err := copySourceItems(
-		ctx, items, sourceObj, sourcesConfig)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"banana": "123",
-	}, sourcesConfig)
 }
 
 func Test_copySourceItems_notfound(t *testing.T) {
-	ctx := context.Background()
 	sourceObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
@@ -122,30 +184,11 @@ func Test_copySourceItems_notfound(t *testing.T) {
 		{Key: ".data.something", Destination: ".banana"},
 	}
 	err := copySourceItems(
-		ctx, items, sourceObj, sourcesConfig)
-	require.EqualError(t, err, "key .data.something not found")
-}
-
-func Test_copySourceItems_nonJSONPath_key(t *testing.T) {
-	ctx := context.Background()
-	sourceObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"data": map[string]interface{}{
-				"something": "123",
-			},
-		},
-	}
-	sourcesConfig := map[string]interface{}{}
-	items := []corev1alpha1.ObjectTemplateSourceItem{
-		{Key: "data.something", Destination: ".banana"},
-	}
-	err := copySourceItems(
-		ctx, items, sourceObj, sourcesConfig)
-	require.EqualError(t, err, "path data.something must be a JSONPath with a leading dot")
+		items, sourceObj, sourcesConfig)
+	require.EqualError(t, err, "data is not found")
 }
 
 func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
-	ctx := context.Background()
 	sourceObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"data": map[string]interface{}{
@@ -158,7 +201,7 @@ func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
 		{Key: ".data.something", Destination: "banana"},
 	}
 	err := copySourceItems(
-		ctx, items, sourceObj, sourcesConfig)
+		items, sourceObj, sourcesConfig)
 	require.EqualError(t, err, "path banana must be a JSONPath with a leading dot")
 }
 
