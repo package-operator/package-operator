@@ -19,7 +19,7 @@ type objectDeploymentStatusReconciler struct {
 	newObjectDeployment adapters.ObjectDeploymentFactory
 }
 
-func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj genericPackage) (ctrl.Result, error) {
+func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj adapters.GenericPackageAccessor) (ctrl.Result, error) {
 	objDep := r.newObjectDeployment(r.scheme)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(packageObj.ClientObject()), objDep.ClientObject()); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)

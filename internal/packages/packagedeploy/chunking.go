@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 type (
@@ -37,7 +38,7 @@ var (
 )
 
 // Returns the chunkingStrategy implementation for the given Package.
-func determineChunkingStrategyForPackage(pkg genericPackage) objectChunker {
+func determineChunkingStrategyForPackage(pkg adapters.GenericPackageAccessor) objectChunker {
 	strategy := pkg.ClientObject().GetAnnotations()[chunkingStrategyAnnotation]
 	switch chunkingStrategy(strategy) {
 	case chunkingStrategyEachObject:

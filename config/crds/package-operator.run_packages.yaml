@@ -133,6 +133,9 @@ spec:
                   away as soon as kubectl can print conditions! When evaluating object
                   state in code, use .Conditions instead.
                 type: string
+              unpackedHash:
+                description: Hash of image + config that was successfully unpacked.
+                type: string
             type: object
         type: object
     served: true

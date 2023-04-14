@@ -23,6 +23,7 @@ const (
 		" with Package Operator using the given Package Operator Package Image"
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
+	registryHostOverrides = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
 )
 
 type Options struct {
@@ -33,11 +34,11 @@ type Options struct {
 	EnableLeaderElection    bool
 	ProbeAddr               string
 	RemotePhasePackageImage string
+	RegistryHostOverrides   string
 
 	// sub commands
 	SelfBootstrap       string
 	SelfBootstrapConfig string
-	LoadPackage         string
 	PrintVersion        bool
 	CopyTo              string
 }
@@ -72,9 +73,6 @@ func ProvideOptions() (opts Options) {
 		&opts.CopyTo, "copy-to", "",
 		copyToFlagDescription)
 	flag.StringVar(
-		&opts.LoadPackage, "load-package", "",
-		loadPackageFlagDescription)
-	flag.StringVar(
 		&opts.SelfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
 	flag.StringVar(
 		&opts.SelfBootstrapConfig, "self-bootstrap-config", "", "")
@@ -82,6 +80,10 @@ func ProvideOptions() (opts Options) {
 		&opts.RemotePhasePackageImage, "remote-phase-package-image",
 		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
 		remotePhasePackageImageFlagDescription)
+	flag.StringVar(
+		&opts.RegistryHostOverrides, "registry-host-overrides",
+		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
+		registryHostOverrides)
 	flag.Parse()
 	return opts
 }
