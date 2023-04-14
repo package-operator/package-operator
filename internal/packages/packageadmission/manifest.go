@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -14,7 +15,7 @@ import (
 )
 
 func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *manifestsv1alpha1.PackageManifest) (field.ErrorList, error) {
-	var allErrs field.ErrorList
+	allErrs := field.ErrorList{}
 
 	if len(obj.Name) == 0 {
 		allErrs = append(allErrs,
@@ -83,7 +84,7 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 		el := validation.IsConfigMapKey(template.Name)
 		if len(el) > 0 {
 			allErrs = append(allErrs,
-				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, allErrs.ToAggregate().Error()))
+				field.Invalid(testTemplate.Index(i).Child("name"), template.Name, strings.Join(el, ", ")))
 		}
 
 		if len(configErrors) == 0 {
