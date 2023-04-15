@@ -64,7 +64,7 @@ func TestPackage_success(t *testing.T) {
 			name: "namespaced with slices",
 			pkg: &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "success",
+					Name:      "success-slices",
 					Namespace: "default",
 					Annotations: map[string]string{
 						"package-operator.run/test-stub-image":            TestStubImage,
@@ -93,7 +93,7 @@ func TestPackage_success(t *testing.T) {
 			name: "cluster with slices",
 			pkg: &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "success",
+					Name: "success-slices",
 					Annotations: map[string]string{
 						"package-operator.run/test-stub-image":            TestStubImage,
 						"packages.package-operator.run/chunking-strategy": "EachObject",
