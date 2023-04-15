@@ -13,13 +13,17 @@ import (
 type Registry struct {
 	registryHostOverrides map[string]string
 
+	pullImage    pullImageFn
 	inFlight     map[string]pullRequest
 	inFlightLock sync.Mutex
 }
 
+type pullImageFn func(ctx context.Context, ref string) (packagecontent.Files, error)
+
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
+		pullImage:             PulledImage,
 		inFlight:              map[string]pullRequest{},
 	}
 }
@@ -54,7 +58,7 @@ func (r *Registry) pullOnce(ctx context.Context, image string) (packagecontent.F
 	r.inFlight[image] = request
 	r.inFlightLock.Unlock()
 
-	files, err := PulledImage(ctx, image)
+	files, err := r.pullImage(ctx, image)
 	request.Done(files, err)
 
 	r.inFlightLock.Lock()
