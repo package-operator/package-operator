@@ -46,7 +46,7 @@ func TestCopyMap(t *testing.T) {
 func TestImageURLWithOverride(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		img := "quay.io/something/else:tag"
-		r, err := ImageURLWithOverride(img)
+		r, err := ImageURLWithOverrideFromEnv(img)
 		assert.NoError(t, err)
 		assert.Equal(t, img, r)
 	})
@@ -79,7 +79,7 @@ func TestImageURLWithOverride(t *testing.T) {
 	for _, test := range testsOk {
 		t.Run("ok/"+test.image, func(t *testing.T) {
 			t.Setenv("PKO_REPOSITORY_HOST", regHost)
-			out, err := ImageURLWithOverride(test.image)
+			out, err := ImageURLWithOverrideFromEnv(test.image)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expOut, out)
 		})
@@ -96,7 +96,7 @@ func TestImageURLWithOverride(t *testing.T) {
 	for _, test := range testsErr {
 		t.Run("error/"+test.image, func(t *testing.T) {
 			t.Setenv("PKO_REPOSITORY_HOST", regHost)
-			_, err := ImageURLWithOverride(test.image)
+			_, err := ImageURLWithOverrideFromEnv(test.image)
 			assert.ErrorContains(t, err, test.expErr)
 		})
 	}

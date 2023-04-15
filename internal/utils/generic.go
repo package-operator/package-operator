@@ -39,13 +39,17 @@ func CopyMap[K comparable, V interface{}](toCopy map[K]V) map[K]V {
 	return out
 }
 
-func ImageURLWithOverride(img string) (string, error) {
-	if repoHostOverride := os.Getenv("PKO_REPOSITORY_HOST"); len(repoHostOverride) > 0 {
-		ref, err := reference.ParseDockerRef(img)
-		if err != nil {
-			return "", fmt.Errorf("image \"%s\" with host \"%s\": %w", img, repoHostOverride, err)
-		}
-		return strings.Replace(ref.String(), reference.Domain(ref), repoHostOverride, 1), nil
+func ImageURLWithOverrideFromEnv(img string) (string, error) {
+	return ImageURLWithOverride(img, os.Getenv("PKO_REPOSITORY_HOST"))
+}
+
+func ImageURLWithOverride(img string, override string) (string, error) {
+	if len(override) == 0 {
+		return img, nil
 	}
-	return img, nil
+	ref, err := reference.ParseDockerRef(img)
+	if err != nil {
+		return "", fmt.Errorf("image \"%s\" with host \"%s\": %w", img, override, err)
+	}
+	return strings.Replace(ref.String(), reference.Domain(ref), override, 1), nil
 }

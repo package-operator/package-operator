@@ -6,14 +6,11 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution/reference"
-	"github.com/go-logr/logr"
 	"github.com/opencontainers/go-digest"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -30,7 +27,6 @@ type PackageDeployer struct {
 	client client.Client
 	scheme *runtime.Scheme
 
-	newPackage          genericPackageFactory
 	newObjectDeployment adapters.ObjectDeploymentFactory
 
 	deploymentReconciler deploymentReconciler
@@ -53,7 +49,6 @@ func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeploye
 		client: c,
 		scheme: scheme,
 
-		newPackage:          newGenericPackage,
 		newObjectDeployment: adapters.NewObjectDeployment,
 
 		packageContentLoader: packageloader.New(
@@ -76,7 +71,6 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 		client: c,
 		scheme: scheme,
 
-		newPackage:          newGenericClusterPackage,
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
 
 		packageContentLoader: packageloader.New(
@@ -106,48 +100,7 @@ func ImageWithDigest(image string, imageDigest string) (string, error) {
 	return canonical.String(), nil
 }
 
-func (l *PackageDeployer) Load(ctx context.Context, packageKey client.ObjectKey, files packagecontent.Files) error {
-	log := logr.FromContextOrDiscard(ctx)
-
-	pkg := l.newPackage(l.scheme)
-	if err := l.client.Get(ctx, packageKey, pkg.ClientObject()); err != nil {
-		return err
-	}
-
-	if err := l.load(ctx, pkg, files); err != nil {
-		return err
-	}
-
-	invalidCondition := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageInvalid)
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		log.Info("trying to report Package status...")
-
-		if invalidCondition == nil {
-			meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
-		} else {
-			meta.SetStatusCondition(pkg.GetConditions(), *invalidCondition) // reapply condition after update
-		}
-		err := l.client.Status().Update(ctx, pkg.ClientObject())
-		if err == nil {
-			return nil
-		}
-
-		if apierrors.IsConflict(err) {
-			// Get latest version of the ObjectDeployment to resolve conflict.
-			if err := l.client.Get(
-				ctx,
-				client.ObjectKeyFromObject(pkg.ClientObject()),
-				pkg.ClientObject(),
-			); err != nil {
-				return fmt.Errorf("getting ObjectDeployment to resolve conflict: %w", err)
-			}
-		}
-
-		return err
-	})
-}
-
-func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files packagecontent.Files) error {
+func (l *PackageDeployer) Load(ctx context.Context, pkg adapters.GenericPackageAccessor, files packagecontent.Files) error {
 	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
@@ -216,7 +169,7 @@ func (l *PackageDeployer) load(ctx context.Context, pkg genericPackage, files pa
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(
-	_ context.Context, pkg genericPackage, packageContent *packagecontent.Package,
+	_ context.Context, pkg adapters.GenericPackageAccessor, packageContent *packagecontent.Package,
 ) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	labels := map[string]string{
 		manifestsv1alpha1.PackageLabel:         packageContent.PackageManifest.Name,
@@ -239,7 +192,7 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	return deploy, nil
 }
 
-func setInvalidConditionBasedOnLoadError(pkg genericPackage, err error) {
+func setInvalidConditionBasedOnLoadError(pkg adapters.GenericPackageAccessor, err error) {
 	reason := "LoadError"
 
 	// Can not be determined more precisely

@@ -27,6 +27,8 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        registryHostOverrides:
+          type: string
         namespace:
           description: Namespace to install package operator into.
           type: string

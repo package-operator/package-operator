@@ -54,15 +54,6 @@ func run(opts components.Options) error {
 	}
 
 	ctx := ctrl.SetupSignalHandler()
-	if len(opts.LoadPackage) > 0 {
-		if err := di.Provide(newPackageLoader); err != nil {
-			return err
-		}
-		return di.Invoke(func(pl *packageLoader) error {
-			return pl.Start(ctx)
-		})
-	}
-
 	if len(opts.SelfBootstrap) > 0 {
 		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {
 			return err

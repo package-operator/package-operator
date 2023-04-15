@@ -54,6 +54,9 @@ func NewComponents() (*dig.Container, error) {
 	if err := container.Provide(ProvideLogger); err != nil {
 		return nil, err
 	}
+	if err := container.Provide(ProvideRegistry); err != nil {
+		return nil, err
+	}
 
 	// -----------
 	// Controllers

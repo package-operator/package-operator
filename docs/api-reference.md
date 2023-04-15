@@ -1076,6 +1076,7 @@ PackageStatus defines the observed state of a Package.
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `phase` <br><a href="#packagestatusphase">PackageStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `unpackedHash` <br>string | Hash of image + config that was successfully unpacked. |
 
 
 Used in:

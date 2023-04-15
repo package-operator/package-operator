@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 )
 
 func Test_determineChunkingStrategyForPackage(t *testing.T) {
@@ -19,7 +20,7 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 	t.Run("EachObject", func(t *testing.T) {
 		t.Parallel()
 
-		pkg := &GenericPackage{
+		pkg := &adapters.GenericPackage{
 			Package: corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -36,7 +37,7 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		t.Parallel()
 
-		pkg := &GenericPackage{
+		pkg := &adapters.GenericPackage{
 			Package: corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{},
 			},

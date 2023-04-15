@@ -1309,6 +1309,18 @@ func (Generate) SelfBootstrapJob() {
 		packageOperatorPackageImage = locations.ImageURL(pkoPackageName, false)
 	}
 
+	var (
+		registyOverrides string
+		pkoConfig        string
+	)
+	if pushToDevRegistry {
+		registyOverrides = "quay.io=dev-registry.dev-registry.svc.cluster.local:5001"
+		pkoConfig = fmt.Sprintf(`{"registryHostOverrides":"%s"}`, registyOverrides)
+	}
+
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##registry-overrides##`), []byte(registyOverrides))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-config##`), []byte(pkoConfig))
+
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
 	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
 

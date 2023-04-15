@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -67,27 +66,12 @@ func TestPackageDeployer_Load(t *testing.T) {
 	l := &PackageDeployer{
 		client:              c,
 		scheme:              testScheme,
-		newPackage:          newGenericPackage,
 		newObjectDeployment: adapters.NewObjectDeployment,
 
 		packageContentLoader: pcl,
 		deploymentReconciler: deploymentReconcilerMock,
 	}
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-
-	c.On("Get",
-		mock.Anything,
-		mock.Anything,
-		mock.AnythingOfType("*v1alpha1.Package"),
-		mock.Anything).
-		Run(func(args mock.Arguments) {
-			pkg := args.Get(2).(*corev1alpha1.Package)
-			pkg.Status.Conditions = []metav1.Condition{
-				// This condition is supposed to be removed:
-				{Type: corev1alpha1.PackageInvalid, Status: metav1.ConditionTrue},
-			}
-		}).
-		Return(nil)
 
 	obj1 := unstructured.Unstructured{Object: map[string]interface{}{}}
 	obj1.SetAnnotations(map[string]string{
@@ -135,24 +119,18 @@ func TestPackageDeployer_Load(t *testing.T) {
 		Once().
 		Return(apierrors.NewConflict(schema.GroupResource{}, "", nil))
 
-	var updatedPackage *corev1alpha1.Package
-	c.StatusMock.On("Update",
-		mock.Anything,
-		mock.AnythingOfType("*v1alpha1.Package"),
-		mock.Anything).
-		Run(func(args mock.Arguments) {
-			updatedPackage = args.Get(1).(*corev1alpha1.Package)
-		}).
-		Return(nil)
-
-	pkgKey := client.ObjectKey{
-		Name: "test", Namespace: "test",
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test", Namespace: "test",
+			},
+		},
 	}
 	files := packagecontent.Files{}
-	err := l.Load(ctx, pkgKey, files)
+	err := l.Load(ctx, pkg, files)
 	require.NoError(t, err)
 
-	packageInvalid := meta.FindStatusCondition(updatedPackage.Status.Conditions, corev1alpha1.PackageInvalid)
+	packageInvalid := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageInvalid)
 	assert.Nil(t, packageInvalid, "Invalid condition should not be reported")
 }
 
@@ -165,20 +143,12 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 	l := &PackageDeployer{
 		client:              c,
 		scheme:              testScheme,
-		newPackage:          newGenericPackage,
 		newObjectDeployment: adapters.NewObjectDeployment,
 
 		packageContentLoader: pcl,
 		deploymentReconciler: deploymentReconcilerMock,
 	}
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-
-	c.On("Get",
-		mock.Anything,
-		mock.Anything,
-		mock.AnythingOfType("*v1alpha1.Package"),
-		mock.Anything).
-		Return(nil)
 
 	obj1 := unstructured.Unstructured{Object: map[string]interface{}{}}
 	obj1.SetAnnotations(map[string]string{
@@ -189,32 +159,18 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 
 	deploymentReconcilerMock.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	// retries on conflict
-	c.StatusMock.On("Update",
-		mock.Anything,
-		mock.AnythingOfType("*v1alpha1.Package"),
-		mock.Anything).
-		Once().
-		Return(apierrors.NewConflict(schema.GroupResource{}, "", nil))
-
-	var updatedPackage *corev1alpha1.Package
-	c.StatusMock.On("Update",
-		mock.Anything,
-		mock.AnythingOfType("*v1alpha1.Package"),
-		mock.Anything).
-		Run(func(args mock.Arguments) {
-			updatedPackage = args.Get(1).(*corev1alpha1.Package)
-		}).
-		Return(nil)
-
-	pkgKey := client.ObjectKey{
-		Name: "test", Namespace: "test",
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test", Namespace: "test",
+			},
+		},
 	}
 	files := packagecontent.Files{}
-	err := l.Load(ctx, pkgKey, files)
+	err := l.Load(ctx, pkg, files)
 	require.NoError(t, err)
 
-	packageInvalid := meta.FindStatusCondition(updatedPackage.Status.Conditions, corev1alpha1.PackageInvalid)
+	packageInvalid := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageInvalid)
 	if assert.NotNil(t, packageInvalid) {
 		assert.Equal(t, metav1.ConditionTrue, packageInvalid.Status)
 		assert.Equal(t, packageInvalid.Reason, "LoadError")

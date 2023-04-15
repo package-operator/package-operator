@@ -75,7 +75,7 @@ func (u Update) Run(ctx context.Context) (err error) {
 
 	var lockImages []v1alpha1.PackageManifestLockImage
 	for _, img := range pkg.PackageManifest.Spec.Images {
-		overriddenImage, err := utils.ImageURLWithOverride(img.Image)
+		overriddenImage, err := utils.ImageURLWithOverrideFromEnv(img.Image)
 		if err != nil {
 			return err
 		}

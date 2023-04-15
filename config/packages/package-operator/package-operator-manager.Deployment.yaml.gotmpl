@@ -30,6 +30,10 @@ spec:
       - args:
         - --enable-leader-election
         env:
+{{- if hasKey .config "registryHostOverrides" }}
+        - name: PKO_REGISTRY_HOST_OVERRIDES
+          value: {{ .config.registryHostOverrides }}
+{{- end}}
         - name: PKO_NAMESPACE
           valueFrom:
             fieldRef:
@@ -58,10 +62,10 @@ spec:
         # default resources
         resources:
           limits:
-            cpu: 100m
+            cpu: 200m
             memory: 400Mi
           requests:
-            cpu: 100m
+            cpu: 200m
             memory: 300Mi
 {{- end}}
       serviceAccountName: package-operator

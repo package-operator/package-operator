@@ -601,7 +601,9 @@ func cleanupOnSuccess(ctx context.Context, t *testing.T, obj client.Object) {
 	t.Helper()
 	t.Cleanup(func() {
 		if !t.Failed() {
-			_ = Client.Delete(ctx, obj)
+			// Make sure objects are completely gone before closing the test.
+			_ = Client.Delete(ctx, obj, client.PropagationPolicy(metav1.DeletePropagationForeground))
+			_ = Waiter.WaitToBeGone(ctx, obj, func(obj client.Object) (done bool, err error) { return false, nil })
 		}
 	})
 }
