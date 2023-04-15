@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
@@ -86,6 +87,7 @@ func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
 	objDep := c.newObjectDeployment(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		For(pkg).
 		Owns(objDep).
 		Complete(c)
