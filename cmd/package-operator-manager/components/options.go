@@ -75,7 +75,7 @@ func ProvideOptions() (opts Options) {
 	flag.StringVar(
 		&opts.SelfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
 	flag.StringVar(
-		&opts.SelfBootstrapConfig, "self-bootstrap-config", "", "")
+		&opts.SelfBootstrapConfig, "self-bootstrap-config", os.Getenv("PKO_CONFIG"), "")
 	flag.StringVar(
 		&opts.RemotePhasePackageImage, "remote-phase-package-image",
 		os.Getenv("PKO_REMOTE_PHASE_PACKAGE_IMAGE"),
