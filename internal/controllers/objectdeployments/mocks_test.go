@@ -102,6 +102,10 @@ type genericObjectDeploymentMock struct {
 	mock.Mock
 }
 
+func (o *genericObjectDeploymentMock) SetStatusRevision(r int64) {
+	o.Called(r)
+}
+
 func (o *genericObjectDeploymentMock) ClientObject() client.Object {
 	args := o.Called()
 	return args.Get(0).(client.Object)

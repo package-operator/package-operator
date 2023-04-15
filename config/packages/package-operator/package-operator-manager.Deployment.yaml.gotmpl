@@ -29,6 +29,9 @@ spec:
       containers:
       - args:
         - --enable-leader-election
+        ports:
+        - name: metrics
+          containerPort: 8080
         env:
 {{- if hasKey .config "registryHostOverrides" }}
         - name: PKO_REGISTRY_HOST_OVERRIDES

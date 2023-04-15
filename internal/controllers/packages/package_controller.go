@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,6 +13,7 @@ import (
 
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagedeploy"
 )
 
@@ -21,11 +23,17 @@ type reconciler interface {
 	Reconcile(ctx context.Context, pkg adapters.GenericPackageAccessor) (ctrl.Result, error)
 }
 
+type metricsRecorder interface {
+	RecordPackageMetrics(pkg metrics.GenericPackage)
+	RecordPackageLoadMetric(pkg metrics.GenericPackage, d time.Duration)
+}
+
 // Generic reconciler for both Package and ClusterPackage objects.
 type GenericPackageController struct {
 	newPackage          adapters.GenericPackageFactory
 	newObjectDeployment adapters.ObjectDeploymentFactory
 
+	recorder   metricsRecorder
 	client     client.Client
 	log        logr.Logger
 	scheme     *runtime.Scheme
@@ -36,10 +44,12 @@ func NewPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
+	metricsRecorder metricsRecorder,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
 		c, log, scheme, imagePuller, packagedeploy.NewPackageDeployer(c, scheme),
+		metricsRecorder,
 	)
 }
 
@@ -47,10 +57,12 @@ func NewClusterPackageController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
+	metricsRecorder metricsRecorder,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
 		c, log, scheme, imagePuller, packagedeploy.NewClusterPackageDeployer(c, scheme),
+		metricsRecorder,
 	)
 }
 
@@ -61,17 +73,20 @@ func newGenericPackageController(
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
+	metricsRecorder metricsRecorder,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
 		newObjectDeployment: newObjectDeployment,
+		recorder:            metricsRecorder,
 		client:              client,
 		log:                 log,
 		scheme:              scheme,
 	}
 
 	controller.reconciler = []reconciler{
-		newUnpackReconciler(imagePuller, packageDeployer),
+		newUnpackReconciler(
+			imagePuller, packageDeployer, metricsRecorder),
 		&objectDeploymentStatusReconciler{
 			client:              client,
 			scheme:              scheme,
@@ -95,7 +110,7 @@ func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
 
 func (c *GenericPackageController) Reconcile(
 	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
+) (res ctrl.Result, err error) {
 	log := c.log.WithValues("Package", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
@@ -103,21 +118,25 @@ func (c *GenericPackageController) Reconcile(
 	pkg := c.newPackage(c.scheme)
 	if err := c.client.Get(
 		ctx, req.NamespacedName, pkg.ClientObject()); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return res, client.IgnoreNotFound(err)
 	}
+	defer func() {
+		if err != nil {
+			return
+		}
+		if c.recorder != nil {
+			c.recorder.RecordPackageMetrics(pkg)
+		}
+	}()
 
 	pkgClientObject := pkg.ClientObject()
 	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
 		if err := c.handleDeletion(ctx, pkg); err != nil {
-			return ctrl.Result{}, err
+			return res, err
 		}
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
-	var (
-		res ctrl.Result
-		err error
-	)
 	for _, r := range c.reconciler {
 		res, err = r.Reconcile(ctx, pkg)
 		if err != nil || !res.IsZero() {
@@ -127,6 +146,7 @@ func (c *GenericPackageController) Reconcile(
 	if err != nil {
 		return res, err
 	}
+
 	return res, c.updateStatus(ctx, pkg)
 }
 

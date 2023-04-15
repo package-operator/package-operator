@@ -25,6 +25,8 @@ type ObjectDeploymentAccessor interface {
 	GetStatusTemplateHash() string
 	SetStatusTemplateHash(templateHash string)
 	SetSelector(labels map[string]string)
+	SetStatusRevision(r int64)
+	GetStatusRevision() int64
 }
 
 type ObjectDeploymentFactory func(
@@ -129,6 +131,14 @@ func (a *ObjectDeployment) SetSelector(labels map[string]string) {
 	a.Spec.Template.Metadata.Labels = labels
 }
 
+func (a *ObjectDeployment) SetStatusRevision(r int64) {
+	a.Status.Revision = r
+}
+
+func (a *ObjectDeployment) GetStatusRevision() int64 {
+	return a.Status.Revision
+}
+
 type ClusterObjectDeployment struct {
 	corev1alpha1.ClusterObjectDeployment
 }
@@ -194,6 +204,14 @@ func (a *ClusterObjectDeployment) SetSelector(labels map[string]string) {
 		MatchLabels: labels,
 	}
 	a.Spec.Template.Metadata.Labels = labels
+}
+
+func (a *ClusterObjectDeployment) SetStatusRevision(r int64) {
+	a.Status.Revision = r
+}
+
+func (a *ClusterObjectDeployment) GetStatusRevision() int64 {
+	return a.Status.Revision
 }
 
 func objectDeploymentPhase(conditions []metav1.Condition) corev1alpha1.ObjectDeploymentPhase {

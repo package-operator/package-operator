@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/probing"
 )
@@ -434,6 +435,16 @@ func (r *PhaseReconciler) desiredObject(
 		labels = map[string]string{}
 	}
 	labels[DynamicCacheLabel] = "True"
+
+	if ownerLabels := owner.ClientObject().GetLabels(); ownerLabels != nil {
+		if pkgLabel, ok := ownerLabels[manifestsv1alpha1.PackageLabel]; ok {
+			labels[manifestsv1alpha1.PackageLabel] = pkgLabel
+		}
+		if pkgInstanceLabel, ok := ownerLabels[manifestsv1alpha1.PackageInstanceLabel]; ok {
+			labels[manifestsv1alpha1.PackageLabel] = pkgInstanceLabel
+		}
+	}
+
 	desiredObj.SetLabels(labels)
 
 	setObjectRevision(desiredObj, owner.GetRevision())

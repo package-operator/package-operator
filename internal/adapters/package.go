@@ -21,6 +21,8 @@ type GenericPackageAccessor interface {
 	SetUnpackedHash(hash string)
 	setStatusPhase(phase corev1alpha1.PackageStatusPhase)
 	TemplateContext() manifestsv1alpha1.TemplateContext
+	SetStatusRevision(rev int64)
+	GetStatusRevision() int64
 }
 
 type GenericPackageFactory func(scheme *runtime.Scheme) GenericPackageAccessor
@@ -89,6 +91,14 @@ func (a *GenericPackage) GetUnpackedHash() string {
 	return a.Status.UnpackedHash
 }
 
+func (a *GenericPackage) SetStatusRevision(rev int64) {
+	a.Status.Revision = rev
+}
+
+func (a *GenericPackage) GetStatusRevision() int64 {
+	return a.Status.Revision
+}
+
 func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
 	a.Status.Phase = phase
 }
@@ -124,6 +134,14 @@ func (a *GenericClusterPackage) GetImage() string {
 
 func (a *GenericClusterPackage) GetSpecHash() string {
 	return utils.ComputeSHA256Hash(a.Spec, nil)
+}
+
+func (a *GenericClusterPackage) SetStatusRevision(rev int64) {
+	a.Status.Revision = rev
+}
+
+func (a *GenericClusterPackage) GetStatusRevision() int64 {
+	return a.Status.Revision
 }
 
 func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {

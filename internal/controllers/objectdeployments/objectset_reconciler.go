@@ -110,9 +110,13 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			),
 			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
 		)
-
+		if len(prevObjectSets) > 0 {
+			objectDeployment.SetStatusRevision(prevObjectSets[0].GetRevision())
+		}
 		return
 	}
+
+	objectDeployment.SetStatusRevision(currentObjectSet.GetRevision())
 
 	// map conditions
 	// -> copy mapped status conditions

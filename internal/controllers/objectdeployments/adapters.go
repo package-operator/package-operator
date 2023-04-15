@@ -20,4 +20,5 @@ type objectDeploymentAccessor interface {
 	GetStatusTemplateHash() string
 	GetGeneration() int64
 	SetStatusTemplateHash(templateHash string)
+	SetStatusRevision(r int64)
 }

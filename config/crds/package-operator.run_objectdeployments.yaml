@@ -441,6 +441,10 @@ spec:
                   away as soon as kubectl can print conditions! When evaluating object
                   state in code, use .Conditions instead.
                 type: string
+              revision:
+                description: Deployment revision.
+                format: int64
+                type: integer
               templateHash:
                 description: Computed TemplateHash.
                 type: string
