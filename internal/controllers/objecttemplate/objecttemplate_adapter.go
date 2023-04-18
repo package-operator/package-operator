@@ -105,7 +105,7 @@ func (t *GenericClusterObjectTemplate) GetGeneration() int64 {
 }
 
 func getObjectTemplatePhase(objectTemplate genericObjectTemplate) corev1alpha1.ObjectTemplateStatusPhase {
-	if meta.IsStatusConditionTrue(*objectTemplate.GetConditions(), corev1alpha1.PackageInvalid) {
+	if meta.IsStatusConditionTrue(*objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid) {
 		return corev1alpha1.ObjectTemplatePhaseError
 	}
 	return corev1alpha1.ObjectTemplatePhaseActive
