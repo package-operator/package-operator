@@ -68,7 +68,7 @@ var (
 
 	// packageImages defines what packages in this repository shall be build.
 	// Note that you can't reference the Generate mage target in ExtraDeps
-	// since that would result in a circulat dependency. They must be added via init() for now.
+	// since that would result in a circular dependency. They must be added via init() for now.
 	packageImages = map[string]*PackageImage{
 		pkoPackageName:         {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
 		remotePhasePackageName: {Push: true, SourcePath: filepath.Join("config", "packages", "remote-phase")},
