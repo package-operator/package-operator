@@ -9,7 +9,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,11 +65,11 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 		return err
 	}
 
-	needsBootstrap, err := b.needsBootstrap(ctx)
+	available, err := b.isPKOAvailable(ctx)
 	if err != nil {
 		return fmt.Errorf("checking if self-bootstrap is needed: %w", err)
 	}
-	if !needsBootstrap {
+	if available {
 		return nil
 	}
 	return b.bootstrap(ctx, runManager)
@@ -92,7 +91,7 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 	return nil
 }
 
-func (b *Bootstrapper) needsBootstrap(ctx context.Context) (bool, error) {
+func (b *Bootstrapper) isPKOAvailable(ctx context.Context) (bool, error) {
 	deploy := &appsv1.Deployment{}
 	err := b.client.Get(ctx, client.ObjectKey{
 		Name:      packageOperatorDeploymentName,
@@ -100,7 +99,7 @@ func (b *Bootstrapper) needsBootstrap(ctx context.Context) (bool, error) {
 	}, deploy)
 	if errors.IsNotFound(err) {
 		// Deployment does not exist.
-		return true, nil
+		return false, nil
 	}
 	if err != nil {
 		return false, err
@@ -110,10 +109,10 @@ func (b *Bootstrapper) needsBootstrap(ctx context.Context) (bool, error) {
 		if cond.Type == appsv1.DeploymentAvailable &&
 			cond.Status == corev1.ConditionTrue {
 			// Deployment is available -> nothing to do.
-			return false, nil
+			return true, nil
 		}
 	}
-	return true, nil
+	return false, nil
 }
 
 func (b *Bootstrapper) cancelWhenPackageAvailable(
@@ -123,7 +122,7 @@ func (b *Bootstrapper) cancelWhenPackageAvailable(
 	err := wait.PollImmediateUntilWithContext(
 		ctx, packageOperatorPackageCheckInterval,
 		func(ctx context.Context) (done bool, err error) {
-			return b.isPackageAvailable(ctx)
+			return b.isPKOAvailable(ctx)
 		})
 	if err != nil {
 		panic(err)
@@ -131,26 +130,6 @@ func (b *Bootstrapper) cancelWhenPackageAvailable(
 
 	log.Info("Package Operator bootstrapped successfully!")
 	cancel()
-}
-
-func (b *Bootstrapper) isPackageAvailable(ctx context.Context) (
-	available bool, err error,
-) {
-	packageOperatorPackage := &corev1alpha1.ClusterPackage{}
-	err = b.client.Get(ctx, client.ObjectKey{
-		Name: packageOperatorClusterPackageName,
-	}, packageOperatorPackage)
-	if err != nil {
-		return false, err
-	}
-
-	if meta.IsStatusConditionTrue(
-		packageOperatorPackage.Status.Conditions,
-		corev1alpha1.PackageAvailable,
-	) {
-		return true, nil
-	}
-	return false, nil
 }
 
 type packageLoader interface {
