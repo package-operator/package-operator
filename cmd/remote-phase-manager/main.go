@@ -42,11 +42,9 @@ type opts struct {
 }
 
 const (
-	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription    = "The namespace the operator is deployed into."
-	managerImageFlagDescription = "Image package operator is deployed with." +
-		" e.g. quay.io/package-operator/package-operator-manager"
+	metricsAddrFlagDescription    = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription      = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription      = "The namespace the operator is deployed into."
 	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
 	probeAddrFlagDescription     = "The address the probe endpoint binds to."

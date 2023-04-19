@@ -28,7 +28,7 @@ const (
 type initializer struct {
 	client    client.Client
 	loader    packageLoader
-	loadFiles bootstrapperLoadFilesFn
+	pullImage bootstrapperPullImageFn
 
 	// config
 	selfBootstrapImage string
@@ -38,7 +38,7 @@ type initializer struct {
 func newInitializer(
 	client client.Client,
 	loader packageLoader,
-	loadFiles bootstrapperLoadFilesFn,
+	pullImage bootstrapperPullImageFn,
 
 	// config
 	selfBootstrapImage string,
@@ -47,7 +47,7 @@ func newInitializer(
 	return &initializer{
 		client:    client,
 		loader:    loader,
-		loadFiles: loadFiles,
+		pullImage: pullImage,
 
 		selfBootstrapImage: selfBootstrapImage,
 		selfConfig:         selfConfig,
@@ -110,7 +110,7 @@ func (init *initializer) config() *runtime.RawExtension {
 func (init *initializer) crdsFromPackage(ctx context.Context) (
 	crds []unstructured.Unstructured, err error,
 ) {
-	files, err := init.loadFiles(ctx, "/package")
+	files, err := init.pullImage(ctx, init.selfBootstrapImage)
 	if err != nil {
 		return nil, err
 	}

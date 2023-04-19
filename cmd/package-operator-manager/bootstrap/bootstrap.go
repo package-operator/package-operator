@@ -37,12 +37,13 @@ type Bootstrapper struct {
 func NewBootstrapper(
 	scheme *runtime.Scheme, log logr.Logger,
 	uncachedClient components.UncachedClient,
+	registry *packageimport.Registry,
 	opts components.Options,
 ) (*Bootstrapper, error) {
 	c := uncachedClient
 	init := newInitializer(
 		c, packageloader.New(scheme, packageloader.WithDefaults),
-		packageimport.Folder, opts.SelfBootstrap, opts.SelfBootstrapConfig,
+		registry.Pull, opts.SelfBootstrap, opts.SelfBootstrapConfig,
 	)
 
 	return &Bootstrapper{
@@ -159,5 +160,5 @@ type packageLoader interface {
 	) (*packagecontent.Package, error)
 }
 
-type bootstrapperLoadFilesFn func(
-	ctx context.Context, path string) (packagecontent.Files, error)
+type bootstrapperPullImageFn func(
+	ctx context.Context, image string) (packagecontent.Files, error)
