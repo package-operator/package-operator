@@ -284,7 +284,7 @@ func (r *templateReconciler) templateObject(
 		return err
 	}
 	if len(violations) > 0 {
-		return &preflight.Error{Violations: violations}
+		return &SourceError{Source: object, Err: &preflight.Error{Violations: violations}}
 	}
 
 	if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
