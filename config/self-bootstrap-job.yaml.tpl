@@ -42,17 +42,10 @@ spec:
     spec:
       restartPolicy: OnFailure
       serviceAccountName: package-operator
-      initContainers:
-      - name: prepare
-        image: quay.io/package-operator/package-operator-manager:latest
-        args: ["-copy-to=/bootstrap-bin/pko"]
-        volumeMounts:
-        - name: shared-dir
-          mountPath: /bootstrap-bin
       containers:
       - name: package-operator
-        image: quay.io/package-operator/package-operator-package:latest
-        command: ["/.bootstrap-bin/pko",  "-self-bootstrap=quay.io/package-operator/package-operator-package:latest"]
+        image: quay.io/package-operator/package-operator-manager:latest
+        args: ["-self-bootstrap=quay.io/package-operator/package-operator-package:latest"]
         env:
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: "##registry-overrides##"
@@ -62,12 +55,4 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: PKO_IMAGE
-          value: "quay.io/package-operator/package-operator-manager:latest"
-        volumeMounts:
-        - name: shared-dir
-          mountPath: /.bootstrap-bin
-      volumes:
-      - name: "shared-dir"
-        emptyDir: {}
   backoffLimit: 3

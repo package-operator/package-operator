@@ -7,11 +7,9 @@ import (
 
 // Flags.
 const (
-	metricsAddrFlagDescription  = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription    = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription    = "The namespace the operator is deployed into."
-	managerImageFlagDescription = "Image package operator is deployed with." +
-		" e.g. quay.io/package-operator/package-operator-manager"
+	metricsAddrFlagDescription    = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription      = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription      = "The namespace the operator is deployed into."
 	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
 	probeAddrFlagDescription   = "The address the probe endpoint binds to."
@@ -30,7 +28,6 @@ type Options struct {
 	MetricsAddr             string
 	PPROFAddr               string
 	Namespace               string
-	ManagerImage            string
 	EnableLeaderElection    bool
 	ProbeAddr               string
 	RemotePhasePackageImage string
@@ -56,10 +53,6 @@ func ProvideOptions() (opts Options) {
 		&opts.Namespace, "namespace",
 		os.Getenv("PKO_NAMESPACE"),
 		namespaceFlagDescription)
-	flag.StringVar(
-		&opts.ManagerImage, "manager-image",
-		os.Getenv("PKO_IMAGE"),
-		managerImageFlagDescription)
 	flag.BoolVar(
 		&opts.EnableLeaderElection, "enable-leader-election",
 		false,
