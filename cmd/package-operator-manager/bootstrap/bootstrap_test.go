@@ -12,8 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -65,15 +63,16 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	)
 
 	c.On("Get", mock.Anything, mock.Anything,
-		mock.AnythingOfType("*v1alpha1.ClusterPackage"),
+		mock.AnythingOfType("*v1.Deployment"),
 		mock.Anything).
 		Run(func(args mock.Arguments) {
-			pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
-			meta.SetStatusCondition(
-				&pkg.Status.Conditions, metav1.Condition{
-					Type:   corev1alpha1.PackageAvailable,
-					Status: metav1.ConditionTrue,
-				})
+			depl := args.Get(2).(*appsv1.Deployment)
+			depl.Status.Conditions = []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			}
 		}).
 		Return(nil)
 
@@ -91,7 +90,7 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	assert.Equal(t, context.Canceled, runManagerCtx.Err())
 }
 
-func TestBootstrapper_needsBootstrap(t *testing.T) {
+func TestBootstrapper_isPKOAvailable(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := testutil.NewClient()
 
@@ -101,10 +100,10 @@ func TestBootstrapper_needsBootstrap(t *testing.T) {
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
 		b := &Bootstrapper{client: c}
-		needsBootstrap, err := b.needsBootstrap(
+		isPKOAvailable, err := b.isPKOAvailable(
 			context.Background())
 		require.NoError(t, err)
-		assert.True(t, needsBootstrap)
+		assert.False(t, isPKOAvailable)
 	})
 
 	t.Run("not available", func(t *testing.T) {
@@ -116,10 +115,10 @@ func TestBootstrapper_needsBootstrap(t *testing.T) {
 			Return(nil)
 
 		b := &Bootstrapper{client: c}
-		needsBootstrap, err := b.needsBootstrap(
+		isPKOAvailable, err := b.isPKOAvailable(
 			context.Background())
 		require.NoError(t, err)
-		assert.True(t, needsBootstrap)
+		assert.False(t, isPKOAvailable)
 	})
 
 	t.Run("available", func(t *testing.T) {
@@ -140,9 +139,9 @@ func TestBootstrapper_needsBootstrap(t *testing.T) {
 			Return(nil)
 
 		b := &Bootstrapper{client: c}
-		needsBootstrap, err := b.needsBootstrap(
+		isPKOAvailable, err := b.isPKOAvailable(
 			context.Background())
 		require.NoError(t, err)
-		assert.False(t, needsBootstrap)
+		assert.True(t, isPKOAvailable)
 	})
 }
