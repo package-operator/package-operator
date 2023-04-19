@@ -120,6 +120,7 @@ func newGenericObjectSetController(
 			ownerhandling.NewNative(scheme),
 			preflight.List{
 				preflight.NewAPIExistence(restMapper),
+				preflight.NewEmptyNamespaceNoDefault(restMapper),
 				preflight.NewNamespaceEscalation(restMapper),
 			},
 		),
@@ -213,6 +214,9 @@ func (c *GenericObjectSetController) Reconcile(
 
 	for _, r := range c.reconciler {
 		res, err = r.Reconcile(ctx, objectSet)
+		if _, preflightFail := err.(*preflight.Error); preflightFail {
+			err = nil
+		}
 		if err != nil || !res.IsZero() {
 			break
 		}

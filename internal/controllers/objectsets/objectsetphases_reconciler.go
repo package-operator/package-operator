@@ -15,6 +15,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/probing"
 )
 
@@ -90,7 +91,9 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
 	if err != nil {
-		return res, err
+		if _, preflightFail := err.(*preflight.Error); !preflightFail {
+			return res, err
+		}
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
 
@@ -105,6 +108,16 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		})
 	} else {
 		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetInTransition)
+	}
+
+	if violation, preflightFail := err.(*preflight.Error); preflightFail {
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:    corev1alpha1.ObjectSetAvailable,
+			Status:  metav1.ConditionFalse,
+			Reason:  "PreflightCheckFailure",
+			Message: violation.Error(),
+		})
+		return res, err
 	}
 
 	if !probingResult.IsZero() {
