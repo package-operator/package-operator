@@ -22,9 +22,11 @@ import (
 )
 
 const (
-	cmdUse            = "tree source_path"
-	cmdShort          = "outputs a logical tree view of the package contents"
-	cmdLong           = "outputs a logical tree view of the package by printing root->phases->objects"
+	cmdUse   = "tree source_path"
+	cmdShort = "outputs a logical tree view of the package contents"
+	cmdLong  = "outputs a logical tree view of the package by printing root->phases->objects. " +
+		"By default, verifies that the manifest.yaml file includes `Namespaced` in `scopes`. " +
+		"Use the `--cluster` flag to instead validate the `Cluster` is present in `scopes`."
 	clusterScopeUse   = "render package in cluster scope"
 	configTestcaseUse = "name of the testcase which config is for templating"
 	configPathUse     = "file containing config which is used for templating."
