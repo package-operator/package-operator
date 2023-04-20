@@ -35,7 +35,7 @@ func TestCheckAllInPhase(t *testing.T) {
 			Objects: []corev1alpha1.ObjectSetObject{
 				{Object: unstructured.Unstructured{}},
 			},
-		})
+		}, []unstructured.Unstructured{{}})
 	require.NoError(t, err)
 	assert.Len(t, violations, 0)
 }
@@ -50,7 +50,7 @@ func Test_addPositionToViolations(t *testing.T) {
 		{},
 	}
 
-	addPositionToViolations(ctx, obj, violations)
+	addPositionToViolations(ctx, obj, &violations)
 
 	assert.Equal(t, "Something testns/test", violations[0].Position)
 }
@@ -69,7 +69,7 @@ func Test_addPositionToViolations_withPhase(t *testing.T) {
 		{},
 	}
 
-	addPositionToViolations(ctx, obj, violations)
+	addPositionToViolations(ctx, obj, &violations)
 
 	assert.Equal(t, `Phase "123", Something testns/test`,
 		violations[0].Position)

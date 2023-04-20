@@ -2,10 +2,11 @@ package objectsets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -121,6 +122,7 @@ func newGenericObjectSetController(
 			preflight.List{
 				preflight.NewAPIExistence(restMapper),
 				preflight.NewNamespaceEscalation(restMapper),
+				preflight.NewCreationDryRun(client),
 			},
 		),
 		newObjectSetRemotePhaseReconciler(
@@ -218,7 +220,7 @@ func (c *GenericObjectSetController) Reconcile(
 		}
 	}
 	if err != nil {
-		return res, err
+		return res, c.updateStatusError(ctx, objectSet, err)
 	}
 
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
@@ -226,6 +228,23 @@ func (c *GenericObjectSetController) Reconcile(
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
+}
+
+func (c *GenericObjectSetController) updateStatusError(ctx context.Context, objectSet genericObjectSet,
+	reconcileErr error,
+) error {
+	var preflightError *preflight.Error
+	if errors.As(reconcileErr, &preflightError) {
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSet.GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            preflightError.Error(),
+		})
+		return c.updateStatus(ctx, objectSet)
+	}
+	return reconcileErr
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
@@ -286,7 +305,7 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(ctx context.Context, 
 			Name:      phaseRef.Name,
 			Namespace: objectSet.ClientObject().GetNamespace(),
 		}, phase.ClientObject())
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			// Phase object is not yet in cache, or was deleted by someone else.
 			// -> we have to wait, but we don't want to raise an error in logs.
 			return false, true, nil

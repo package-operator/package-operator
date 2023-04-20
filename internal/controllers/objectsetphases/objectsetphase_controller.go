@@ -2,6 +2,7 @@ package objectsetphases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -86,6 +87,7 @@ func NewMultiClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
+			preflight.NewCreationDryRun(targetWriter),
 		},
 	)
 }
@@ -107,6 +109,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
+			preflight.NewCreationDryRun(targetWriter),
 		},
 	)
 }
@@ -128,6 +131,7 @@ func NewSameClusterObjectSetPhaseController(
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
 			preflight.NewNamespaceEscalation(restMapper),
+			preflight.NewCreationDryRun(client),
 		},
 	)
 }
@@ -148,6 +152,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 		class, client, client,
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
+			preflight.NewCreationDryRun(client),
 		},
 	)
 }
@@ -236,7 +241,7 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 		}
 	}
 	if err != nil {
-		return res, err
+		return res, c.updateStatusError(ctx, objectSetPhase, err)
 	}
 
 	c.reportPausedCondition(ctx, objectSetPhase)
@@ -255,6 +260,24 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Contex
 	} else {
 		meta.RemoveStatusCondition(objectSetPhase.GetConditions(), corev1alpha1.ObjectSetPaused)
 	}
+}
+
+func (c *GenericObjectSetPhaseController) updateStatusError(
+	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	reconcileErr error,
+) error {
+	var preflightError *preflight.Error
+	if errors.As(reconcileErr, &preflightError) {
+		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetPhaseAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetPhase.GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            preflightError.Error(),
+		})
+		return c.updateStatus(ctx, objectSetPhase)
+	}
+	return reconcileErr
 }
 
 func (c *GenericObjectSetPhaseController) updateStatus(

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -53,7 +54,7 @@ func phaseFromContext(ctx context.Context) (
 }
 
 func addPositionToViolations(
-	ctx context.Context, obj client.Object, vs []Violation,
+	ctx context.Context, obj client.Object, vs *[]Violation,
 ) {
 	objPosition := fmt.Sprintf("%s %s",
 		obj.GetObjectKind().GroupVersionKind().Kind,
@@ -64,8 +65,8 @@ func addPositionToViolations(
 		objPosition = fmt.Sprintf("Phase %q, %s", phase.Name, objPosition)
 	}
 
-	for i := range vs {
-		vs[i].Position = objPosition
+	for i := range *vs {
+		(*vs)[i].Position = objPosition
 	}
 }
 
@@ -121,10 +122,11 @@ func CheckAllInPhase(
 	ctx context.Context, checker checker,
 	owner client.Object,
 	phase corev1alpha1.ObjectSetTemplatePhase,
+	objs []unstructured.Unstructured,
 ) (violations []Violation, err error) {
 	ctx = NewContextWithPhase(ctx, phase)
 	for i := range phase.Objects {
-		vs, err := checker.Check(ctx, owner, &phase.Objects[i].Object)
+		vs, err := checker.Check(ctx, owner, &objs[i])
 		if err != nil {
 			return nil, err
 		}

@@ -1177,6 +1177,37 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 	}
 }
 
+func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
+	pcm := &preflightCheckerMock{}
+	pr := &PhaseReconciler{
+		scheme:           testScheme,
+		preflightChecker: pcm,
+	}
+
+	ownerObj := &unstructured.Unstructured{}
+	owner := &phaseObjectOwnerMock{}
+	owner.On("ClientObject").Return(ownerObj)
+	owner.On("GetRevision").Return(int64(12))
+
+	pcm.
+		On("Check", mock.Anything, mock.Anything, mock.Anything).
+		Return([]preflight.Violation{{}}, nil)
+
+	phase := corev1alpha1.ObjectSetTemplatePhase{
+		Objects: []corev1alpha1.ObjectSetObject{
+			{
+				Object: unstructured.Unstructured{},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	_, _, err := pr.ReconcilePhase(
+		ctx, owner, phase, nil, nil)
+	var pErr *preflight.Error
+	require.ErrorAs(t, err, &pErr)
+}
+
 func hasDynamicCacheLabel(obj corev1alpha1.ObjectSetObject) bool {
 	labels := obj.Object.GetLabels()
 

@@ -2,11 +2,13 @@ package objectsetphases
 
 import (
 	"context"
+	goerrors "errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,6 +20,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -258,4 +261,41 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+var errTest = goerrors.New("explosion")
+
+func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
+	t.Run("just returns error", func(t *testing.T) {
+		objectSetPhase := &GenericObjectSetPhase{
+			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
+		}
+
+		c := &GenericObjectSetPhaseController{}
+		ctx := context.Background()
+		err := c.updateStatusError(ctx, objectSetPhase, errTest)
+		assert.EqualError(t, err, "explosion")
+	})
+
+	t.Run("reports preflight error", func(t *testing.T) {
+		objectSetPhase := &GenericObjectSetPhase{
+			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
+		}
+
+		client := testutil.NewClient()
+		c := &GenericObjectSetPhaseController{
+			client: client,
+		}
+
+		client.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		err := c.updateStatusError(
+			ctx, objectSetPhase, &preflight.Error{})
+		require.NoError(t, err)
+
+		client.StatusMock.AssertExpectations(t)
+	})
 }
