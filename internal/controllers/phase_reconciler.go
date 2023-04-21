@@ -164,19 +164,31 @@ func (r *PhaseReconciler) ReconcilePhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
+	var desiredObjects []unstructured.Unstructured
+	for _, phaseObject := range phase.Objects {
+		desired, err := r.desiredObject(ctx, owner, phaseObject)
+		if err != nil {
+			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
+		}
+		desiredObjects = append(desiredObjects, *desired)
+	}
+
 	violations, err := preflight.CheckAllInPhase(
-		ctx, r.preflightChecker, owner.ClientObject(), phase)
+		ctx, r.preflightChecker, owner.ClientObject(), phase, desiredObjects)
 	if err != nil {
 		return nil, res, err
 	}
 	if len(violations) > 0 {
-		return nil, res, &preflight.Error{Violations: violations}
+		return nil, res, &preflight.Error{
+			Violations: violations,
+		}
 	}
 
 	rec := newRecordingProbe(phase.Name, probe)
 
-	for _, phaseObject := range phase.Objects {
-		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, previous)
+	for i, phaseObject := range phase.Objects {
+		desiredObj := &desiredObjects[i]
+		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, desiredObj, previous)
 		if err != nil {
 			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
 		}
@@ -321,14 +333,9 @@ func (r *PhaseReconciler) teardownPhaseObject(
 func (r *PhaseReconciler) reconcilePhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
+	desiredObj *unstructured.Unstructured,
 	previous []PreviousObjectSet,
 ) (actualObj *unstructured.Unstructured, err error) {
-	desiredObj, err := r.desiredObject(
-		ctx, owner, phaseObject)
-	if err != nil {
-		return nil, fmt.Errorf("building desired object: %w", err)
-	}
-
 	// Set owner reference
 	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
 		return nil, err

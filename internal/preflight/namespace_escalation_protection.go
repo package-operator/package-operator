@@ -26,7 +26,7 @@ func (p *NamespaceEscalation) Check(
 	ctx context.Context, owner,
 	obj client.Object,
 ) (violations []Violation, err error) {
-	defer addPositionToViolations(ctx, obj, violations)
+	defer addPositionToViolations(ctx, obj, &violations)
 
 	if len(owner.GetNamespace()) == 0 {
 		// Owner is cluster-scoped
@@ -41,12 +41,14 @@ func (p *NamespaceEscalation) Check(
 
 	// All objects need to be namespace-scoped and either have a namespace equal
 	// to their owner or empty so it can be defaulted.
-	if len(obj.GetNamespace()) > 0 &&
-		obj.GetNamespace() != owner.GetNamespace() {
-		violations = append(violations, Violation{
-			Position: fmt.Sprintf("Object %s", obj.GetName()),
-			Error:    "Must stay within the same namespace.",
-		})
+	if len(obj.GetNamespace()) > 0 {
+		if obj.GetNamespace() != owner.GetNamespace() {
+			violations = append(violations, Violation{
+				Position: fmt.Sprintf("Object %s", obj.GetName()),
+				Error:    "Must stay within the same namespace.",
+			})
+		}
+		return
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()

@@ -22,7 +22,7 @@ func NewAPIExistence(restMapper meta.RESTMapper) *APIExistence {
 }
 
 func (p *APIExistence) Check(ctx context.Context, _, obj client.Object) (violations []Violation, err error) {
-	defer addPositionToViolations(ctx, obj, violations)
+	defer addPositionToViolations(ctx, obj, &violations)
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	_, err = p.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)

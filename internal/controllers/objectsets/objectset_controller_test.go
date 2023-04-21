@@ -2,11 +2,13 @@ package objectsets
 
 import (
 	"context"
+	goerrors "errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,6 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/testutil"
 	"package-operator.run/package-operator/internal/testutil/dynamiccachemocks"
 )
@@ -384,7 +387,47 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 	}
 }
 
-func newControllerAndMocks() (*GenericObjectSetController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhasesReconcilerMock, *revisionReconcilerMock) {
+var errTest = goerrors.New("explosion")
+
+func TestGenericObjectSetController_updateStatusError(t *testing.T) {
+	t.Run("just returns error", func(t *testing.T) {
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, _, _, _, _ := newControllerAndMocks()
+		ctx := context.Background()
+		err := c.updateStatusError(ctx, objectSet, errTest)
+		assert.EqualError(t, err, "explosion")
+	})
+
+	t.Run("reports preflight error", func(t *testing.T) {
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, client, _, _, _ := newControllerAndMocks()
+
+		client.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		err := c.updateStatusError(
+			ctx, objectSet, &preflight.Error{})
+		require.NoError(t, err)
+
+		client.StatusMock.AssertExpectations(t)
+	})
+}
+
+func newControllerAndMocks() (
+	*GenericObjectSetController,
+	*testutil.CtrlClient,
+	*dynamicCacheMock,
+	*objectSetPhasesReconcilerMock,
+	*revisionReconcilerMock,
+) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	dc := &dynamicCacheMock{}
