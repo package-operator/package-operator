@@ -1,4 +1,4 @@
-package historycmd
+package rolloutcmd
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/package-operator/cmd/cmdutil"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/rolloutcmd/rolloututils"
 )
 
 const (
@@ -63,29 +62,29 @@ func (h *History) Run(ctx context.Context, out io.Writer) error {
 
 	switch h.Object {
 	case "clusterpackage", "cpkg":
-		clusObjSets, err := rolloututils.GetClusterPackageHistory(ctx, c, h.Name)
+		clusObjSets, err := GetClusterPackageHistory(ctx, c, h.Name)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		rolloututils.HistoryClusterResults("clusterpackages.package-operator.run", h.Name, clusObjSets)
+		HistoryClusterResults("clusterpackages.package-operator.run", h.Name, clusObjSets)
 	case "clusterobjectdeployment", "cobjdeploy":
-		clusObjSets, err := rolloututils.GetClusterObjectDeploymentHistory(ctx, c, h.Name)
+		clusObjSets, err := GetClusterObjectDeploymentHistory(ctx, c, h.Name)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		rolloututils.HistoryClusterResults("clusterobjectdeployments.package-operator.run", h.Name, clusObjSets)
+		HistoryClusterResults("clusterobjectdeployments.package-operator.run", h.Name, clusObjSets)
 	case "package", "pkg":
-		objSets, err := rolloututils.GetPackageHistory(ctx, c, h.Name, h.Namespace)
+		objSets, err := GetPackageHistory(ctx, c, h.Name, h.Namespace)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		rolloututils.HistoryResults("packages.package-operator.run", h.Name, objSets)
+		HistoryResults("packages.package-operator.run", h.Name, objSets)
 	case "objectdeployment", "objdeploy":
-		objSets, err := rolloututils.GetObjectDeploymentHistory(ctx, c, h.Name, h.Namespace)
+		objSets, err := GetObjectDeploymentHistory(ctx, c, h.Name, h.Namespace)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		rolloututils.HistoryResults("objectdeployments.package-operator.run", h.Name, objSets)
+		HistoryResults("objectdeployments.package-operator.run", h.Name, objSets)
 	default:
 		return fmt.Errorf("%w: invalid object. Needs to be one of clusterpackage,clusterobjectdeployment,package,objectdeployment", cmdutil.ErrInvalidArgs)
 	}

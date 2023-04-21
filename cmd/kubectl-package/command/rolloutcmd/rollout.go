@@ -2,8 +2,6 @@ package rolloutcmd
 
 import (
 	"github.com/spf13/cobra"
-
-	"package-operator.run/package-operator/cmd/kubectl-package/command/rolloutcmd/historycmd"
 )
 
 const (
@@ -19,7 +17,7 @@ func CobraCommand() *cobra.Command {
 		Long:  rolloutLong,
 	}
 	cmd.AddCommand(
-		(&historycmd.History{}).CobraCommand(),
+		(&History{}).CobraCommand(),
 	)
 
 	return cmd
