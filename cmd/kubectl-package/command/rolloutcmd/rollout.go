@@ -19,7 +19,7 @@ func CobraCommand() *cobra.Command {
 		Long:  rolloutLong,
 	}
 	cmd.AddCommand(
-		historycmd.CobraCommand(),
+		(&historycmd.History{}).CobraCommand(),
 	)
 
 	return cmd
