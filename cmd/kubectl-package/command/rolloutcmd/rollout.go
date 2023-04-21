@@ -9,7 +9,7 @@ import (
 const (
 	rolloutUse   = "rollout SUBCOMMAND"
 	rolloutShort = "rollout manages a package"
-	rolloutLong  = "rollout manages a package using subcommands like 'kubectl rollout history foo/package'"
+	rolloutLong  = "rollout manages a package using subcommands like 'kubectl package rollout history foo/package'"
 )
 
 func CobraCommand() *cobra.Command {

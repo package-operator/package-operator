@@ -2,19 +2,19 @@ package historycmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	pkoapis "package-operator.run/apis"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/cmd/cmdutil"
 )
 
@@ -24,23 +24,6 @@ const (
 	historyLong            = "view previous package rollout revisions and configurations"
 	historyClusterScopeUse = "render in cluster scope"
 )
-
-var historyScheme = runtime.NewScheme()
-
-func init() {
-	if err := pkoapis.AddToScheme(historyScheme); err != nil {
-		panic(err)
-	}
-	if err := manifestsv1alpha1.AddToScheme(historyScheme); err != nil {
-		panic(err)
-	}
-	if err := apiextensionsv1.AddToScheme(historyScheme); err != nil {
-		panic(err)
-	}
-	if err := apiextensions.AddToScheme(historyScheme); err != nil {
-		panic(err)
-	}
-}
 
 type History struct {
 	PackageName  string
@@ -62,9 +45,30 @@ func (h *History) Complete(args []string) error {
 func (h *History) Run(ctx context.Context, out io.Writer) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("loading source from disk", "path", h.PackageName)
-	fmt.Printf("History: %+v\n", h)
+
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
+		Scheme: cmdutil.Scheme,
+	})
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+	var packageList corev1alpha1.ObjectSetList
+	err = c.List(ctx, &packageList, client.InNamespace("default"))
+	if err != nil {
+		return fmt.Errorf("getting packages: %w", err)
+	}
+	Marshall(packageList)
 
 	return nil
+}
+
+func Marshall(obj corev1alpha1.ObjectSetList) {
+	//Marshal
+	empJSON, err := json.Marshal(obj)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	fmt.Printf("%s\n", string(empJSON))
 }
 
 func (h *History) CobraCommand() *cobra.Command {
