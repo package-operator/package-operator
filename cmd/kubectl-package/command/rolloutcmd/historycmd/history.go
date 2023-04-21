@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -23,13 +26,15 @@ const (
 	historyShort = "view object rollout history"
 	historyLong  = "view previous object rollout revisions and configurations"
 	namespaceUse = "If present, the namespace scope for this CLI request."
+	revisionUse  = "View a specific revision"
 )
 
 type History struct {
-	client    client.Client
-	Object    string
-	Name      string
-	Namespace string
+	client         client.Client
+	Object         string
+	ObjectFullName string
+	Name           string
+	Namespace      string
 }
 
 func (h *History) Complete(args []string) error {
@@ -68,32 +73,30 @@ func (h *History) Run(ctx context.Context, out io.Writer) error {
 			return fmt.Errorf("retrieving packages: %w", err)
 		}
 		if pkg == nil {
-			return fmt.Errorf("packages.package-operator.run \"%s\" not found", h.Name)
+			return fmt.Errorf("clusterpackages.package-operator.run \"%s\" not found", h.Name)
 		}
 		objdeploy, err := h.GetClusterObjectDeploymentByOwner(ctx, pkg.UID)
 		if err != nil {
 			return fmt.Errorf("retrieving objectdeployments: %w", err)
 		}
-		if objdeploy == nil {
-			return fmt.Errorf("objectdeployment not found with: OwnerReferences.UID=%s", pkg.UID)
-		}
-		objset, err := h.GetClusterObjectSetByOwner(ctx, objdeploy.UID)
+		objsets, err := h.GetClusterObjectSetByOwner(ctx, objdeploy.UID)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		if objset == nil {
-			return fmt.Errorf("objectsets not found with: OwnerReferences.UID=%s", objdeploy.UID)
-		}
-		fmt.Println(objset)
+		h.GenerateClusterResults(objsets)
 	case "clusterobjectdeployment", "cobjdeploy":
 		objdeploy, err := h.GetClusterObjectDeploymentByName(ctx, h.Name)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
-		fmt.Println(objdeploy)
-		fmt.Println("")
-		objset, err := h.GetClusterObjectSetByOwner(ctx, objdeploy.UID)
-		fmt.Println(objset)
+		if objdeploy == nil {
+			return fmt.Errorf("clusterobjectdeployments.package-operator.run \"%s\" not found", h.Name)
+		}
+		objsets, err := h.GetClusterObjectSetByOwner(ctx, objdeploy.UID)
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		h.GenerateClusterResults(objsets)
 	case "package", "pkg":
 		pkg, err := h.GetPackageByName(ctx, h.Name)
 		if err != nil {
@@ -106,26 +109,24 @@ func (h *History) Run(ctx context.Context, out io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("retrieving objectdeployments: %w", err)
 		}
-		if objdeploy == nil {
-			return fmt.Errorf("objectdeployment not found with: OwnerReferences.UID=%s", pkg.UID)
-		}
-		objset, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
+		objsets, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
-		if objset == nil {
-			return fmt.Errorf("objectsets not found with: OwnerReferences.UID=%s", objdeploy.UID)
-		}
-		fmt.Println(objset)
+		h.GenerateResults(objsets)
 	case "objectdeployment", "objdeploy":
 		objdeploy, err := h.GetObjectDeploymentByName(ctx, h.Name)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
-		fmt.Println(objdeploy)
-		fmt.Println("")
-		objset, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
-		fmt.Println(objset)
+		if objdeploy == nil {
+			return fmt.Errorf("objectdeployments.package-operator.run \"%s\" not found", h.Name)
+		}
+		objsets, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		h.GenerateResults(objsets)
 	default:
 		return fmt.Errorf("%w: invalid object. Needs to be one of clusterpackage,clusterobjectdeployment,package,objectdeployment", cmdutil.ErrInvalidArgs)
 	}
@@ -260,7 +261,63 @@ func (h *History) GetObjectSetByOwner(ctx context.Context, ownerUid types.UID) (
 			}
 		}
 	}
+	sort.Slice(objectSets, func(i, j int) bool {
+		return objectSets[i].Status.Revision < objectSets[j].Status.Revision
+	})
+
 	return &objectSets, nil
+}
+
+func (h *History) GenerateResults(objectSets *[]corev1alpha1.ObjectSet) error {
+	fmt.Printf("%s/%s\n", h.Object, h.Name)
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+	fmt.Fprintln(w, "REVISION\tSTATUS\tROLLOUT-SUCCESS\tCHANGE-CAUSE\t")
+	for _, os := range *objectSets {
+		var changeCause, rolloutSuccess string
+		if os.ObjectMeta.Annotations["kubernetes.io/change-cause"] == "" {
+			changeCause = "<none>"
+		} else {
+			changeCause = os.ObjectMeta.Annotations["kubernetes.io/change-cause"]
+		}
+		for _, condifion := range os.Status.Conditions {
+			if condifion.Reason == "RolloutSuccess" {
+				rolloutSuccess = string(condifion.Status)
+			}
+		}
+		if rolloutSuccess == "" {
+			rolloutSuccess = "False"
+		}
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t\n", os.Status.Revision, os.Status.Phase, rolloutSuccess, changeCause)
+	}
+	w.Flush()
+
+	return nil
+}
+
+func (h *History) GenerateClusterResults(objectSets *[]corev1alpha1.ClusterObjectSet) error {
+	fmt.Printf("%s/%s\n", h.Object, h.Name)
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+	fmt.Fprintln(w, "REVISION\tSTATUS\tROLLOUT-SUCCESS\tCHANGE-CAUSE\t")
+	for _, os := range *objectSets {
+		var changeCause, rolloutSuccess string
+		if os.ObjectMeta.Annotations["kubernetes.io/change-cause"] == "" {
+			changeCause = "<none>"
+		} else {
+			changeCause = os.ObjectMeta.Annotations["kubernetes.io/change-cause"]
+		}
+		for _, condifion := range os.Status.Conditions {
+			if condifion.Reason == "RolloutSuccess" {
+				rolloutSuccess = string(condifion.Status)
+			}
+		}
+		if rolloutSuccess == "" {
+			rolloutSuccess = "False"
+		}
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t\n", os.Status.Revision, os.Status.Phase, rolloutSuccess, changeCause)
+	}
+	w.Flush()
+
+	return nil
 }
 
 func (h *History) CobraCommand() *cobra.Command {
