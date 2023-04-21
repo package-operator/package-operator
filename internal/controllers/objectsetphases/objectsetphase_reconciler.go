@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,6 +22,7 @@ type objectSetPhaseReconciler struct {
 	phaseReconciler         phaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
 	ownerStrategy           ownerStrategy
+	backoff                 *flowcontrol.Backoff
 }
 
 func newObjectSetPhaseReconciler(
@@ -28,12 +30,19 @@ func newObjectSetPhaseReconciler(
 	phaseReconciler phaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
 	ownerStrategy ownerStrategy,
+	opts ...objectSetPhaseReconcilerOption,
 ) *objectSetPhaseReconciler {
+	var cfg objectSetPhaseReconcilerConfig
+
+	cfg.Option(opts...)
+	cfg.Default()
+
 	return &objectSetPhaseReconciler{
 		scheme:                  scheme,
 		phaseReconciler:         phaseReconciler,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerStrategy,
+		backoff:                 cfg.GetBackoff(),
 	}
 }
 
@@ -57,6 +66,8 @@ type lookupPreviousRevisions func(
 func (r *objectSetPhaseReconciler) Reconcile(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 ) (res ctrl.Result, err error) {
+	defer r.backoff.GC()
+
 	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetConditions())
 
 	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
@@ -72,9 +83,18 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
 		ctx, objectSetPhase, objectSetPhase.GetPhase(), probe, previous)
-	if err != nil {
+	if controllers.IsExternalResourceNotFound(err) {
+		id := string(objectSetPhase.ClientObject().GetUID())
+
+		r.backoff.Next(id, r.backoff.Clock.Now())
+
+		return ctrl.Result{
+			RequeueAfter: r.backoff.Get(id),
+		}, nil
+	} else if err != nil {
 		return res, err
 	}
+
 	if err := r.reportOwnActiveObjects(ctx, objectSetPhase, actualObjects); err != nil {
 		return res, fmt.Errorf("reporting active objects: %w", err)
 	}
@@ -122,4 +142,22 @@ func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
 	}
 	objectSetPhase.SetStatusControllerOf(activeObjects)
 	return nil
+}
+
+type objectSetPhaseReconcilerConfig struct {
+	controllers.BackoffConfig
+}
+
+func (c *objectSetPhaseReconcilerConfig) Option(opts ...objectSetPhaseReconcilerOption) {
+	for _, opt := range opts {
+		opt.ConfigureObjectSetPhaseReconciler(c)
+	}
+}
+
+func (c *objectSetPhaseReconcilerConfig) Default() {
+	c.BackoffConfig.Default()
+}
+
+type objectSetPhaseReconcilerOption interface {
+	ConfigureObjectSetPhaseReconciler(*objectSetPhaseReconcilerConfig)
 }

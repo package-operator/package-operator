@@ -13,15 +13,9 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
-)
-
-const (
-	// Base for exponential back off if image pull attempts fail.
-	pullBackOffPeriod = 10 * time.Second
-	// Max period to wait between pull attempts.
-	pullBackOffMax = 300 * time.Second
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
@@ -42,14 +36,18 @@ func newUnpackReconciler(
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	packageLoadRecorder packageLoadRecorder,
+	opts ...unpackReconcilerOption,
 ) *unpackReconciler {
+	var cfg unpackReconcilerConfig
+
+	cfg.Option(opts...)
+	cfg.Default()
+
 	return &unpackReconciler{
 		imagePuller:         imagePuller,
 		packageDeployer:     packageDeployer,
 		packageLoadRecorder: packageLoadRecorder,
-
-		backoff: flowcontrol.NewBackOff(
-			pullBackOffPeriod, pullBackOffMax),
+		backoff:             cfg.GetBackoff(),
 	}
 }
 
@@ -118,4 +116,22 @@ func (r *unpackReconciler) Reconcile(
 		})
 
 	return
+}
+
+type unpackReconcilerConfig struct {
+	controllers.BackoffConfig
+}
+
+func (c *unpackReconcilerConfig) Option(opts ...unpackReconcilerOption) {
+	for _, opt := range opts {
+		opt.ConfigureUnpackReconciler(c)
+	}
+}
+
+func (c *unpackReconcilerConfig) Default() {
+	c.BackoffConfig.Default()
+}
+
+type unpackReconcilerOption interface {
+	ConfigureUnpackReconciler(c *unpackReconcilerConfig)
 }
