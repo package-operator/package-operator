@@ -2,14 +2,14 @@ package historycmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,56 +19,155 @@ import (
 )
 
 const (
-	historyUse             = "history package_name"
-	historyShort           = "view package rollout history"
-	historyLong            = "view previous package rollout revisions and configurations"
+	historyUse             = "history object/name"
+	historyShort           = "view object rollout history"
+	historyLong            = "view previous object rollout revisions and configurations"
 	historyClusterScopeUse = "render in cluster scope"
 )
 
 type History struct {
-	PackageName  string
-	ClusterScope bool
+	client client.Client
+	Object string
+	Name   string
 }
 
 func (h *History) Complete(args []string) error {
 	switch {
 	case len(args) != 1:
-		return fmt.Errorf("%w: got %v positional args. Need one argument containing the package name", cmdutil.ErrInvalidArgs, len(args))
+		return fmt.Errorf("%w: got %v positional args. Need one argument containing 'object/name'", cmdutil.ErrInvalidArgs, len(args))
 	case args[0] == "":
 		return fmt.Errorf("%w: package name empty", cmdutil.ErrInvalidArgs)
 	}
+	split_arg := strings.Split(args[0], "/")
+	if len(split_arg) != 2 {
+		return fmt.Errorf("%w: cannot parse. Need one argument containing 'object/name'", cmdutil.ErrInvalidArgs)
+	}
 
-	h.PackageName = args[0]
+	h.Object = split_arg[0]
+	h.Name = split_arg[1]
 	return nil
 }
 
 func (h *History) Run(ctx context.Context, out io.Writer) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
-	verboseLog.Info("loading source from disk", "path", h.PackageName)
+	verboseLog.Info("looking up rollout history for", h.Object, "/", h.Name)
 
-	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{
+	var err error
+	h.client, err = client.New(ctrl.GetConfigOrDie(), client.Options{
 		Scheme: cmdutil.Scheme,
 	})
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
-	var packageList corev1alpha1.ObjectSetList
-	err = c.List(ctx, &packageList, client.InNamespace("default"))
-	if err != nil {
-		return fmt.Errorf("getting packages: %w", err)
+
+	switch h.Object {
+	case "clusterpackage", "cpkg":
+		fmt.Println("clusterpackage")
+	case "clusterobjectdeployment", "cobjdeploy":
+		fmt.Println("clusterobjectdeployment")
+	case "package", "pkg":
+		pkg, err := h.GetPackageByName(ctx, h.Name)
+		if err != nil {
+			return fmt.Errorf("retrieving packages: %w", err)
+		}
+		if pkg == nil {
+			return fmt.Errorf("packages.package-operator.run \"%s\" not found", h.Name)
+		}
+		objdeploy, err := h.GetObjectDeploymentByOwner(ctx, pkg.UID)
+		if err != nil {
+			return fmt.Errorf("retrieving objectdeployments: %w", err)
+		}
+		if objdeploy == nil {
+			return fmt.Errorf("objectdeployment not found with: OwnerReferences.UID=%s", pkg.UID)
+		}
+		objset, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
+		if err != nil {
+			return fmt.Errorf("retrieving objectsets: %w", err)
+		}
+		if objset == nil {
+			return fmt.Errorf("objectsets not found with: OwnerReferences.UID=%s", objdeploy.UID)
+		}
+		fmt.Println(objset)
+
+	case "objectdeployment", "objdeploy":
+		objdeploy, err := h.GetObjectDeploymentByName(ctx, h.Name)
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		fmt.Println(objdeploy)
+		fmt.Println("")
+		objset, err := h.GetObjectSetByOwner(ctx, objdeploy.UID)
+		fmt.Println(objset)
+	default:
+		return fmt.Errorf("%w: invalid object. Needs to be one of clusterpackage,clusterobjectdeployment,package,objectdeployment", cmdutil.ErrInvalidArgs)
 	}
-	Marshall(packageList)
 
 	return nil
 }
 
-func Marshall(obj corev1alpha1.ObjectSetList) {
-	//Marshal
-	empJSON, err := json.Marshal(obj)
+func (h *History) GetPackageByName(ctx context.Context, name string) (*corev1alpha1.Package, error) {
+	var packageList corev1alpha1.PackageList
+
+	err := h.client.List(ctx, &packageList, client.InNamespace("default"))
 	if err != nil {
-		log.Fatalf(err.Error())
+		return nil, fmt.Errorf("getting packages: %w", err)
 	}
-	fmt.Printf("%s\n", string(empJSON))
+	for _, n := range packageList.Items {
+		if name == n.Name {
+			return &n, nil
+		}
+	}
+	return nil, nil
+}
+
+func (h *History) GetObjectDeploymentByName(ctx context.Context, name string) (*corev1alpha1.ObjectDeployment, error) {
+	var objectDeploymentList corev1alpha1.ObjectDeploymentList
+
+	err := h.client.List(ctx, &objectDeploymentList, client.InNamespace("default"))
+	if err != nil {
+		return nil, fmt.Errorf("getting objectdeployments: %w", err)
+	}
+	for _, n := range objectDeploymentList.Items {
+		if name == n.Name {
+			return &n, nil
+		}
+	}
+	return nil, nil
+}
+
+func (h *History) GetObjectDeploymentByOwner(ctx context.Context, ownerUid types.UID) (*corev1alpha1.ObjectDeployment, error) {
+	var objectDeploymentList corev1alpha1.ObjectDeploymentList
+
+	err := h.client.List(ctx, &objectDeploymentList, client.InNamespace("default"))
+	if err != nil {
+		return nil, fmt.Errorf("getting objectdeployments: %w", err)
+	}
+	for _, n := range objectDeploymentList.Items {
+		for _, owner := range n.OwnerReferences {
+			if ownerUid == owner.UID {
+				return &n, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (h *History) GetObjectSetByOwner(ctx context.Context, ownerUid types.UID) (*[]corev1alpha1.ObjectSet, error) {
+	var objectSetList corev1alpha1.ObjectSetList
+
+	err := h.client.List(ctx, &objectSetList, client.InNamespace("default"))
+	if err != nil {
+		return nil, fmt.Errorf("getting objectsets: %w", err)
+	}
+	var objectSets []corev1alpha1.ObjectSet
+	for _, n := range objectSetList.Items {
+		for _, owner := range n.OwnerReferences {
+			if ownerUid == owner.UID {
+				objectSets = append(objectSets, n)
+			}
+		}
+	}
+	return &objectSets, nil
 }
 
 func (h *History) CobraCommand() *cobra.Command {
@@ -77,8 +176,6 @@ func (h *History) CobraCommand() *cobra.Command {
 		Short: historyShort,
 		Long:  historyLong,
 	}
-	f := cmd.Flags()
-	f.BoolVar(&h.ClusterScope, "cluster", false, historyClusterScopeUse)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if err := h.Complete(args); err != nil {
