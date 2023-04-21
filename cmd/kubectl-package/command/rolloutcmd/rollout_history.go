@@ -27,12 +27,12 @@ const (
 )
 
 type History struct {
-	Object         string
-	ObjectFullName string
 	Name           string
 	Namespace      string
-	Revision       int64
+	Object         string
+	ObjectFullName string
 	Output         string
+	Revision       int64
 }
 
 func (h *History) Complete(args []string) error {
@@ -56,41 +56,42 @@ func (h *History) Run(ctx context.Context, out io.Writer) error {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	verboseLog.Info("looking up rollout history for", h.Object, "/", h.Name)
 
-	var c client.Client
+	var clusterRevisions *[]v1alpha1.ClusterObjectSet
+	var namespacedRevisions *[]v1alpha1.ObjectSet
 	var err error
 
-	c, err = client.New(ctrl.GetConfigOrDie(), client.Options{
+	var kubeClient client.Client
+
+	kubeClient, err = client.New(ctrl.GetConfigOrDie(), client.Options{
 		Scheme: cmdutil.Scheme,
 	})
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	var clusterRevisions *[]v1alpha1.ClusterObjectSet
-	var namespacedRevisions *[]v1alpha1.ObjectSet
 	var object string
 
 	switch h.Object {
 	case "clusterpackage", "cpkg":
-		clusterRevisions, err = GetClusterPackageHistory(ctx, c, h.Name)
+		clusterRevisions, err = GetClusterHistory(ctx, kubeClient, h.Name, v1alpha1.ClusterPackage{})
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
 		object = "clusterpackages.package-operator.run"
 	case "clusterobjectdeployment", "cobjdeploy":
-		clusterRevisions, err = GetClusterObjectDeploymentHistory(ctx, c, h.Name)
+		clusterRevisions, err = GetClusterHistory(ctx, kubeClient, h.Name, v1alpha1.ClusterObjectSet{})
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
 		object = "clusterobjectdeployments.package-operator.run"
 	case "package", "pkg":
-		namespacedRevisions, err = GetPackageHistory(ctx, c, h.Name, h.Namespace)
+		namespacedRevisions, err = GetNamespacedHistory(ctx, kubeClient, h.Name, h.Namespace, v1alpha1.Package{})
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}
 		object = "packages.package-operator.run"
 	case "objectdeployment", "objdeploy":
-		namespacedRevisions, err = GetObjectDeploymentHistory(ctx, c, h.Name, h.Namespace)
+		namespacedRevisions, err = GetNamespacedHistory(ctx, kubeClient, h.Name, h.Namespace, v1alpha1.ObjectDeployment{})
 		if err != nil {
 			return fmt.Errorf("retrieving objectsets: %w", err)
 		}

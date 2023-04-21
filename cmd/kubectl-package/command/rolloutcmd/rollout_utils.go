@@ -17,206 +17,264 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetClusterPackageHistory(ctx context.Context, c client.Client, name string) (*[]v1alpha1.ClusterObjectSet, error) {
-	pkg, err := GetClusterPackageByName(ctx, c, name)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving packages: %w", err)
-	}
-	if pkg == nil {
-		return nil, fmt.Errorf("clusterpackages.package-operator.run \"%s\" not found", name)
-	}
-	objDeploy, err := GetClusterObjectDeploymentByOwner(ctx, c, pkg.UID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
-	}
-	objSets, err := GetClusterObjectSetByOwner(ctx, c, objDeploy.UID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectsets: %w", err)
-	}
-	return objSets, nil
-}
+func GetClusterHistory(ctx context.Context, c client.Client, name string, t interface{}) (*[]v1alpha1.ClusterObjectSet, error) {
+	var objDeployInterface interface{}
+	var err error
 
-func GetClusterObjectDeploymentHistory(ctx context.Context, c client.Client, name string) (*[]v1alpha1.ClusterObjectSet, error) {
-	objDeploy, err := GetClusterObjectDeploymentByName(ctx, c, name)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
-	}
-	if objDeploy == nil {
-		return nil, fmt.Errorf("clusterobjectdeployments.package-operator.run \"%s\" not found", name)
-	}
-	objSets, err := GetClusterObjectSetByOwner(ctx, c, objDeploy.UID)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectsets: %w", err)
-	}
-	return objSets, nil
-}
-
-func GetPackageHistory(ctx context.Context, c client.Client, name string, namespace string) (*[]v1alpha1.ObjectSet, error) {
-	pkg, err := GetPackageByName(ctx, c, name, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving packages: %w", err)
-	}
-	if pkg == nil {
-		return nil, fmt.Errorf("packages.package-operator.run \"%s\" not found", name)
-	}
-	objDeploy, err := GetObjectDeploymentByOwner(ctx, c, pkg.UID, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
-	}
-	objSets, err := GetObjectSetByOwner(ctx, c, objDeploy.UID, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectsets: %w", err)
-	}
-	return objSets, nil
-}
-
-func GetObjectDeploymentHistory(ctx context.Context, c client.Client, name string, namespace string) (*[]v1alpha1.ObjectSet, error) {
-	objDeploy, err := GetObjectDeploymentByName(ctx, c, name, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
-	}
-	if objDeploy == nil {
-		return nil, fmt.Errorf("objectdeployments.package-operator.run \"%s\" not found", name)
-	}
-	objSets, err := GetObjectSetByOwner(ctx, c, objDeploy.UID, namespace)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving objectsets: %w", err)
-	}
-	return objSets, nil
-}
-
-func GetClusterPackageByName(ctx context.Context, c client.Client, name string) (*v1alpha1.ClusterPackage, error) {
-	var clusterPackageList v1alpha1.ClusterPackageList
-
-	err := c.List(ctx, &clusterPackageList)
-	if err != nil {
-		return nil, fmt.Errorf("getting packages: %w", err)
-	}
-	for _, n := range clusterPackageList.Items {
-		if name == n.Name {
-			return &n, nil
+	switch t.(type) {
+	case v1alpha1.ClusterPackage:
+		pkg, err := GetClusterObjectByName(ctx, c, name, v1alpha1.ClusterPackage{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving packages: %w", err)
+		} else if pkg == nil {
+			return nil, fmt.Errorf("clusterpackages.package-operator.run \"%s\" not found", name)
 		}
-	}
-	return nil, nil
-}
 
-func GetClusterObjectDeploymentByName(ctx context.Context, c client.Client, name string) (*v1alpha1.ClusterObjectDeployment, error) {
-	var clusterObjectDeploymentList v1alpha1.ClusterObjectDeploymentList
-
-	err := c.List(ctx, &clusterObjectDeploymentList)
-	if err != nil {
-		return nil, fmt.Errorf("getting objectdeployments: %w", err)
-	}
-	for _, n := range clusterObjectDeploymentList.Items {
-		if name == n.Name {
-			return &n, nil
+		objDeployInterface, err = GetClusterObjectByOwner(ctx, c, pkg.(*v1alpha1.ClusterPackage).UID, v1alpha1.ClusterObjectDeployment{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
 		}
+	case v1alpha1.ClusterObjectDeployment:
+		objDeployInterface, err := GetClusterObjectByName(ctx, c, name, v1alpha1.ClusterObjectDeployment{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
+		} else if objDeployInterface == nil {
+			return nil, fmt.Errorf("clusterobjectdeployments.package-operator.run \"%s\" not found", name)
+		}
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
 	}
-	return nil, nil
+
+	objDeploy := objDeployInterface.(*v1alpha1.ClusterObjectDeployment)
+
+	objSets, err := GetClusterObjectByOwner(ctx, c, objDeploy.UID, v1alpha1.ClusterObjectSet{})
+	if err != nil {
+		return nil, fmt.Errorf("retrieving objectsets: %w", err)
+	}
+	return objSets.(*[]v1alpha1.ClusterObjectSet), nil
 }
 
-func GetClusterObjectDeploymentByOwner(ctx context.Context, c client.Client, ownerUid types.UID) (*v1alpha1.ClusterObjectDeployment, error) {
-	var clusterObjectDeploymentList v1alpha1.ClusterObjectDeploymentList
+func GetNamespacedHistory(ctx context.Context, c client.Client, name string, namespace string, t interface{}) (*[]v1alpha1.ObjectSet, error) {
+	var objDeployInterface interface{}
+	var err error
 
-	err := c.List(ctx, &clusterObjectDeploymentList)
-	if err != nil {
-		return nil, fmt.Errorf("getting objectdeployments: %w", err)
+	switch t.(type) {
+	case v1alpha1.Package:
+		pkg, err := GetNamespacedObjectByName(ctx, c, name, namespace, v1alpha1.Package{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving packages: %w", err)
+		} else if pkg == nil {
+			return nil, fmt.Errorf("packages.package-operator.run \"%s\" not found", name)
+		}
+
+		objDeployInterface, err = GetNamespacedObjectByOwner(ctx, c, pkg.(*v1alpha1.Package).UID, namespace, v1alpha1.ObjectDeployment{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
+		}
+	case v1alpha1.ObjectDeployment:
+		objDeployInterface, err := GetNamespacedObjectByName(ctx, c, name, namespace, v1alpha1.ObjectDeployment{})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving objectdeployments: %w", err)
+		} else if objDeployInterface == nil {
+			return nil, fmt.Errorf("objectdeployments.package-operator.run \"%s\" not found", name)
+		}
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
 	}
-	for _, n := range clusterObjectDeploymentList.Items {
-		for _, owner := range n.OwnerReferences {
-			if ownerUid == owner.UID {
+
+	objDeploy := objDeployInterface.(*v1alpha1.ObjectDeployment)
+
+	objSets, err := GetNamespacedObjectByOwner(ctx, c, objDeploy.UID, namespace, v1alpha1.ObjectSet{})
+	if err != nil {
+		return nil, fmt.Errorf("retrieving objectsets: %w", err)
+	}
+	return objSets.(*[]v1alpha1.ObjectSet), nil
+}
+
+func GetClusterObjectByName(ctx context.Context, c client.Client, name string, t interface{}) (interface{}, error) {
+	switch t.(type) {
+	case v1alpha1.ClusterPackage:
+		var list v1alpha1.ClusterPackageList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster packages: %w", err)
+		}
+		for _, n := range list.Items {
+			if name == n.Name {
 				return &n, nil
 			}
 		}
-	}
-	return nil, nil
-}
-
-func GetClusterObjectSetByOwner(ctx context.Context, c client.Client, ownerUid types.UID) (*[]v1alpha1.ClusterObjectSet, error) {
-	var clusterObjectSetList v1alpha1.ClusterObjectSetList
-
-	err := c.List(ctx, &clusterObjectSetList)
-	if err != nil {
-		return nil, fmt.Errorf("getting objectsets: %w", err)
-	}
-	var objectSets []v1alpha1.ClusterObjectSet
-	for _, n := range clusterObjectSetList.Items {
-		for _, owner := range n.OwnerReferences {
-			if ownerUid == owner.UID {
-				objectSets = append(objectSets, n)
-			}
+	case v1alpha1.ClusterObjectDeployment:
+		var list v1alpha1.ClusterObjectDeploymentList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster object deployments: %w", err)
 		}
-	}
-	return &objectSets, nil
-}
-
-func GetPackageByName(ctx context.Context, c client.Client, name string, namespace string) (*v1alpha1.Package, error) {
-	var packageList v1alpha1.PackageList
-
-	err := c.List(ctx, &packageList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("getting packages: %w", err)
-	}
-	for _, n := range packageList.Items {
-		if name == n.Name {
-			return &n, nil
-		}
-	}
-	return nil, nil
-}
-
-func GetObjectDeploymentByName(ctx context.Context, c client.Client, name string, namespace string) (*v1alpha1.ObjectDeployment, error) {
-	var objectDeploymentList v1alpha1.ObjectDeploymentList
-
-	err := c.List(ctx, &objectDeploymentList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("getting objectdeployments: %w", err)
-	}
-	for _, n := range objectDeploymentList.Items {
-		if name == n.Name {
-			return &n, nil
-		}
-	}
-	return nil, nil
-}
-
-func GetObjectDeploymentByOwner(ctx context.Context, c client.Client, ownerUid types.UID, namespace string) (*v1alpha1.ObjectDeployment, error) {
-	var objectDeploymentList v1alpha1.ObjectDeploymentList
-
-	err := c.List(ctx, &objectDeploymentList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("getting objectdeployments: %w", err)
-	}
-	for _, n := range objectDeploymentList.Items {
-		for _, owner := range n.OwnerReferences {
-			if ownerUid == owner.UID {
+		for _, n := range list.Items {
+			if name == n.Name {
 				return &n, nil
 			}
 		}
+	case v1alpha1.ClusterObjectSet:
+		var list v1alpha1.ClusterObjectSetList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster object sets: %w", err)
+		}
+		for _, n := range list.Items {
+			if name == n.Name {
+				return &n, nil
+			}
+		}
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
 	}
 	return nil, nil
 }
 
-func GetObjectSetByOwner(ctx context.Context, c client.Client, ownerUid types.UID, namespace string) (*[]v1alpha1.ObjectSet, error) {
-	var objectSetList v1alpha1.ObjectSetList
-
-	err := c.List(ctx, &objectSetList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("getting objectsets: %w", err)
-	}
-	var objectSets []v1alpha1.ObjectSet
-	for _, n := range objectSetList.Items {
-		for _, owner := range n.OwnerReferences {
-			if ownerUid == owner.UID {
-				objectSets = append(objectSets, n)
+func GetNamespacedObjectByName(ctx context.Context, c client.Client, name string, namespace string, t interface{}) (interface{}, error) {
+	switch t.(type) {
+	case v1alpha1.Package:
+		var list v1alpha1.PackageList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting packages: %w", err)
+		}
+		for _, n := range list.Items {
+			if name == n.Name {
+				return &n, nil
 			}
 		}
+	case v1alpha1.ObjectDeployment:
+		var list v1alpha1.ObjectDeploymentList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting object deployments: %w", err)
+		}
+		for _, n := range list.Items {
+			if name == n.Name {
+				return &n, nil
+			}
+		}
+	case v1alpha1.ObjectSet:
+		var list v1alpha1.ObjectSetList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting object sets: %w", err)
+		}
+		for _, n := range list.Items {
+			if name == n.Name {
+				return &n, nil
+			}
+		}
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
 	}
-	sort.Slice(objectSets, func(i, j int) bool {
-		return objectSets[i].Status.Revision < objectSets[j].Status.Revision
-	})
+	return nil, nil
+}
 
-	return &objectSets, nil
+func GetClusterObjectByOwner(ctx context.Context, c client.Client, ownerUid types.UID, t interface{}) (interface{}, error) {
+	switch t.(type) {
+	case v1alpha1.ClusterPackage:
+		var list v1alpha1.ClusterPackageList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster packages: %w", err)
+		}
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					return &n, nil
+				}
+			}
+		}
+	case v1alpha1.ClusterObjectDeployment:
+		var list v1alpha1.ClusterObjectDeploymentList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster object deployments: %w", err)
+		}
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					return &n, nil
+				}
+			}
+		}
+	case v1alpha1.ClusterObjectSet:
+		var list v1alpha1.ClusterObjectSetList
+		err := c.List(ctx, &list)
+		if err != nil {
+			return nil, fmt.Errorf("getting cluster object sets: %w", err)
+		}
+		var objectSets []v1alpha1.ClusterObjectSet
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					objectSets = append(objectSets, n)
+				}
+			}
+		}
+		sort.Slice(objectSets, func(i, j int) bool {
+			return objectSets[i].Status.Revision < objectSets[j].Status.Revision
+		})
+		return &objectSets, nil
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
+	}
+	return nil, nil
+}
+
+func GetNamespacedObjectByOwner(ctx context.Context, c client.Client, ownerUid types.UID, namespace string, t interface{}) (interface{}, error) {
+	switch t.(type) {
+	case v1alpha1.Package:
+		var list v1alpha1.PackageList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting packages: %w", err)
+		}
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					return &n, nil
+				}
+			}
+		}
+	case v1alpha1.ObjectDeployment:
+		var list v1alpha1.ObjectDeploymentList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting object deployments: %w", err)
+		}
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					return &n, nil
+				}
+			}
+		}
+	case v1alpha1.ObjectSet:
+		var list v1alpha1.ObjectSetList
+		err := c.List(ctx, &list, client.InNamespace(namespace))
+		if err != nil {
+			return nil, fmt.Errorf("getting object sets: %w", err)
+		}
+		var objectSets []v1alpha1.ObjectSet
+		for _, n := range list.Items {
+			for _, owner := range n.OwnerReferences {
+				if ownerUid == owner.UID {
+					objectSets = append(objectSets, n)
+				}
+			}
+		}
+		sort.Slice(objectSets, func(i, j int) bool {
+			return objectSets[i].Status.Revision < objectSets[j].Status.Revision
+		})
+		return &objectSets, nil
+	default:
+		return nil, fmt.Errorf("getting objects: unknown object type")
+	}
+	return nil, nil
 }
 
 func GetNamespacedRevision(objectSets *[]v1alpha1.ObjectSet, revision int64) (*v1alpha1.ObjectSet, error) {
@@ -368,7 +426,5 @@ func PrintClusterRevision(object string, name string, revision *v1alpha1.Cluster
 	default:
 		return fmt.Errorf("unable match output format, allowed formats are: json,yaml,name")
 	}
-
 	return nil
-
 }
