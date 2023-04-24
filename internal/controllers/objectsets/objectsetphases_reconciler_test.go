@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
@@ -87,6 +88,34 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	}
 	assert.Equal(t, metav1.ConditionTrue, succeededCond.Status)
 	assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+}
+
+func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
+	pr := &phaseReconcilerMock{}
+	remotePr := &remotePhaseReconcilerMock{}
+	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+		return []controllers.PreviousObjectSet{}, nil
+	}
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+
+	os := &GenericObjectSet{}
+	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+		{
+			Name: "phase1",
+		},
+	}
+
+	pr.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil))
+	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+
+	res, err := r.Reconcile(context.Background(), os)
+	require.NoError(t, err)
+
+	assert.Equal(t, reconcile.Result{
+		RequeueAfter: controllers.DefaultInitialBackoff,
+	}, res)
 }
 
 func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {

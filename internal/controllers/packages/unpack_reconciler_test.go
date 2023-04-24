@@ -12,6 +12,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
@@ -94,7 +95,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	ctx := context.Background()
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
-	assert.Equal(t, pullBackOffPeriod, res.RequeueAfter)
+	assert.Equal(t, controllers.DefaultInitialBackoff, res.RequeueAfter)
 
 	assert.True(t,
 		meta.IsStatusConditionFalse(*pkg.GetConditions(),

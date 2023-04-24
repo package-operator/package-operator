@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,6 +27,7 @@ type objectSetPhasesReconciler struct {
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
 	ownerStrategy           ownerStrategy
+	backoff                 *flowcontrol.Backoff
 }
 
 type ownerStrategy interface {
@@ -52,6 +54,7 @@ func newObjectSetPhasesReconciler(
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerhandling.NewNative(scheme),
+		backoff:                 cfg.GetBackoff(),
 	}
 }
 
@@ -86,10 +89,20 @@ type phaseReconciler interface {
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
+	defer r.backoff.GC()
+
 	controllers.DeleteMappedConditions(ctx, objectSet.GetConditions())
 
 	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
-	if err != nil {
+	if controllers.IsExternalResourceNotFound(err) {
+		id := string(objectSet.ClientObject().GetUID())
+
+		r.backoff.Next(id, r.backoff.Clock.Now())
+
+		return ctrl.Result{
+			RequeueAfter: r.backoff.Get(id),
+		}, nil
+	} else if err != nil {
 		return res, err
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
@@ -303,11 +316,12 @@ func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet genericObjectSet)
 
 	// noDelay avoids false negative for edgecase where objectSet
 	// is available on first pass, but no delay is set
-	return available && (noDelay || r.cfg.clock.Now().After(delayTarget))
+	return available && (noDelay || r.cfg.Clock.Now().After(delayTarget))
 }
 
 type objectSetPhasesReconcilerConfig struct {
-	clock clock
+	Clock clock
+	controllers.BackoffConfig
 }
 
 func (c *objectSetPhasesReconcilerConfig) Option(opts ...objectSetPhasesReconcilerOption) {
@@ -317,9 +331,11 @@ func (c *objectSetPhasesReconcilerConfig) Option(opts ...objectSetPhasesReconcil
 }
 
 func (c *objectSetPhasesReconcilerConfig) Default() {
-	if c.clock == nil {
-		c.clock = defaultClock{}
+	if c.Clock == nil {
+		c.Clock = defaultClock{}
 	}
+
+	c.BackoffConfig.Default()
 }
 
 type objectSetPhasesReconcilerOption interface {
@@ -331,7 +347,7 @@ type withClock struct {
 }
 
 func (w withClock) ConfigureObjectSetPhasesReconciler(c *objectSetPhasesReconcilerConfig) {
-	c.clock = w.Clock
+	c.Clock = w.Clock
 }
 
 type clock interface {

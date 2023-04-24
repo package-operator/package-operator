@@ -234,7 +234,9 @@ func (r *PhaseReconciler) observeExternalObject(
 	)
 
 	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); err != nil {
+		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+			return nil, NewExternalResourceNotFoundError(obj)
+		} else if err != nil {
 			return nil, fmt.Errorf("retrieving external object: %w", err)
 		}
 
