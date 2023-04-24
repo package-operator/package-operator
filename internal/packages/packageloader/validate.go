@@ -3,6 +3,7 @@ package packageloader
 import (
 	"context"
 
+	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -11,7 +12,6 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/utils"
 )
 
 type (
@@ -111,7 +111,7 @@ func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int
 }
 
 func (scope PackageScopeValidator) ValidatePackage(_ context.Context, packageContent *packagecontent.Package) error {
-	if !utils.Contains(packageContent.PackageManifest.Spec.Scopes, manifestsv1alpha1.PackageManifestScope(scope)) {
+	if !slices.Contains(packageContent.PackageManifest.Spec.Scopes, manifestsv1alpha1.PackageManifestScope(scope)) {
 		// Package does not support installation in this scope.
 		return packages.NewInvalidError(packages.Violation{
 			Reason: packages.ViolationReasonUnsupportedScope,
@@ -120,5 +120,6 @@ func (scope PackageScopeValidator) ValidatePackage(_ context.Context, packageCon
 			},
 		})
 	}
+
 	return nil
 }

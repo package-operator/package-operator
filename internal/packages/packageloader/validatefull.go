@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -58,7 +59,7 @@ func (v TemplateTestValidator) runTestCase(
 	testCase manifestsv1alpha1.PackageManifestTestCaseTemplate,
 ) error {
 	log := logr.FromContextOrDiscard(ctx)
-	fileMap = utils.CopyMap(fileMap)
+	fileMap = maps.Clone(fileMap)
 
 	configuration := map[string]interface{}{}
 	if testCase.Context.Config != nil {

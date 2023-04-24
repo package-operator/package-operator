@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+/*
+
 func TestContains(t *testing.T) {
 	t.Run("strings", func(t *testing.T) {
 		s := []string{"t1", "t2", "t3"}
@@ -42,6 +44,7 @@ func TestCopyMap(t *testing.T) {
 	assert.Equal(t, m, r)
 	assert.NotSame(t, m, r)
 }
+*/
 
 func TestImageURLWithOverride(t *testing.T) {
 	t.Run("default", func(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/utils"
 )
 
 var _ Transformer = (*PackageTransformer)(nil)
@@ -22,10 +22,8 @@ func (t *PackageTransformer) TransformPackage(ctx context.Context, packageConten
 func (t *PackageTransformer) transform(
 	_ context.Context, _ string, _ int, packageManifest *manifestsv1alpha1.PackageManifest, obj *unstructured.Unstructured,
 ) error {
-	obj.SetLabels(
-		utils.MergeKeysFrom(
-			obj.GetLabels(),
-			commonLabels(packageManifest, t.Package.GetName())))
+	obj.SetLabels(labels.Merge(obj.GetLabels(), commonLabels(packageManifest, t.Package.GetName())))
+
 	return nil
 }
 
