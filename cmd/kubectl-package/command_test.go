@@ -1,4 +1,4 @@
-package command_test
+package main_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/command"
+	kpkg "package-operator.run/package-operator/cmd/kubectl-package"
 )
 
 func TestRunSuccess(t *testing.T) {
@@ -15,9 +15,9 @@ func TestRunSuccess(t *testing.T) {
 
 	ctx := context.Background()
 	stdin, stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
-	ret := command.Run(ctx, stdin, stdout, stderr, []string{"version"})
+	ret := kpkg.Run(ctx, stdin, stdout, stderr, []string{"version"})
 
-	require.Equal(t, command.ReturnCodeSuccess, ret)
+	require.Equal(t, kpkg.ReturnCodeSuccess, ret)
 }
 
 func TestRunFailure(t *testing.T) {
@@ -25,7 +25,7 @@ func TestRunFailure(t *testing.T) {
 
 	ctx := context.Background()
 	stdin, stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
-	ret := command.Run(ctx, stdin, stdout, stderr, []string{"chicken"})
+	ret := kpkg.Run(ctx, stdin, stdout, stderr, []string{"chicken"})
 
-	require.Equal(t, command.ReturnCodeError, ret)
+	require.Equal(t, kpkg.ReturnCodeError, ret)
 }

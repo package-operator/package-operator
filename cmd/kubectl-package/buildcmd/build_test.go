@@ -1,4 +1,4 @@
-package buildcmd_test
+package buildcmd
 
 import (
 	"bytes"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/require"
-
-	"package-operator.run/package-operator/cmd/kubectl-package/command"
 )
 
 func TestBuildOutput(t *testing.T) {
@@ -25,12 +23,12 @@ func TestBuildOutput(t *testing.T) {
 	require.Nil(t, err)
 	packagePath := filepath.Join(wd, "testdata")
 
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build", packagePath, "--tag", "chicken:oldest", "--output", f.Name()})
+	cmd.SetArgs([]string{packagePath, "--tag", "chicken:oldest", "--output", f.Name()})
 
 	require.Nil(t, cmd.Execute())
 	require.Len(t, stdout.String(), 0)
@@ -44,60 +42,59 @@ func TestBuildOutput(t *testing.T) {
 
 func TestBuildEmptySource(t *testing.T) {
 	t.Parallel()
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build", ""})
+	cmd.SetArgs([]string{""})
 
 	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildNoSource(t *testing.T) {
 	t.Parallel()
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build"})
 
 	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildPushWOTags(t *testing.T) {
 	t.Parallel()
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build", ".", "--push"})
+	cmd.SetArgs([]string{".", "--push"})
 
 	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildOutputWOTags(t *testing.T) {
 	t.Parallel()
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build", ".", "--output /tmp/yes"})
+	cmd.SetArgs([]string{".", "--output /tmp/yes"})
 
 	require.NotNil(t, cmd.Execute())
 }
 
 func TestBuildInvalidTag(t *testing.T) {
 	t.Parallel()
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"build", ".", "--tag", "bread:a:b"})
+	cmd.SetArgs([]string{".", "--tag", "bread:a:b"})
 
 	require.NotNil(t, cmd.Execute())
 }

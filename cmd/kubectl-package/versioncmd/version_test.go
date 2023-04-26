@@ -1,4 +1,4 @@
-package versioncmd_test
+package versioncmd
 
 import (
 	"bytes"
@@ -6,17 +6,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"package-operator.run/package-operator/cmd/kubectl-package/command"
 )
 
 func TestCobraVersion(t *testing.T) {
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"version", "--embedded"})
+	cmd.SetArgs([]string{"--embedded"})
 
 	require.Nil(t, cmd.Execute())
 	require.Len(t, stderr.String(), 0)

@@ -1,23 +1,21 @@
-package validatecmd_test
+package validatecmd
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"package-operator.run/package-operator/cmd/kubectl-package/command"
 )
 
 func TestValidateFolder(t *testing.T) {
 	t.Parallel()
 
-	cmd := command.CobraRoot()
+	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"validate", "testdata"})
+	cmd.SetArgs([]string{"testdata"})
 
 	err := cmd.Execute()
 
