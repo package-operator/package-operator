@@ -3,6 +3,7 @@ package objecttemplate
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	goerrors "errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/jsonpath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -226,6 +228,10 @@ func copySourceItem(
 	sourceObj *unstructured.Unstructured,
 	sourcesConfig map[string]interface{},
 ) error {
+	if err := secretInjectStringData(sourceObj); err != nil {
+		return err
+	}
+
 	jpString, err := RelaxedJSONPathExpression(item.Key)
 	if err != nil {
 		return err
@@ -258,6 +264,35 @@ func copySourceItem(
 	}
 
 	return nil
+}
+
+// Kubernetes core API group Secret.
+var secretGK = schema.GroupKind{Kind: "Secret"}
+
+func secretInjectStringData(sourceObj *unstructured.Unstructured) error {
+	if sourceObj.GroupVersionKind().GroupKind() != secretGK {
+		// Secret keys need to be base64 decoded.
+		return nil
+	}
+
+	data, ok, err := unstructured.NestedStringMap(sourceObj.Object, "data")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
+	stringData := map[string]string{}
+	for k, v := range data {
+		decodedV, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return fmt.Errorf("decode secret value at key %s: %w", k, err)
+		}
+		stringData[k] = string(decodedV)
+	}
+	return unstructured.SetNestedStringMap(
+		sourceObj.Object, stringData, "stringData")
 }
 
 func (r *templateReconciler) templateObject(

@@ -528,3 +528,25 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 		})
 	}
 }
+
+func Test_secretInjectStringData(t *testing.T) {
+	obj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"data": map[string]interface{}{
+				"test": "YWJjZGVm",
+			},
+		},
+	}
+	obj.SetGroupVersionKind(secretGK.WithVersion("v1"))
+
+	err := secretInjectStringData(obj)
+	require.NoError(t, err)
+
+	stringData, ok, err := unstructured.NestedStringMap(
+		obj.Object, "stringData")
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, map[string]string{
+		"test": "abcdef",
+	}, stringData)
+}
