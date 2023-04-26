@@ -1,6 +1,8 @@
 package transform
 
 import (
+	"encoding/base64"
+	"fmt"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -216,5 +218,27 @@ func SprigFuncs() template.FuncMap {
 			allowedFuncs[key] = value
 		}
 	}
+	allowedFuncs["b64decMap"] = base64decodeMap
 	return allowedFuncs
+}
+
+func base64decodeMap(data map[string]interface{}) (
+	map[string]interface{}, error,
+) {
+	decodedData := map[string]interface{}{}
+	for k, vi := range data {
+		v, ok := vi.(string)
+		if !ok {
+			continue
+		}
+
+		decodedV, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"decode base64 value at key %s: %w", k, err)
+		}
+		decodedData[k] = string(decodedV)
+	}
+
+	return decodedData, nil
 }
