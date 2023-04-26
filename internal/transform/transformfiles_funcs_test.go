@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,7 +66,7 @@ var forbiddenFuncs = []string{
 func TestSprigAllowedFuncs(t *testing.T) {
 	actual := SprigFuncs()
 
-	require.Equal(t, len(allowedFuncNames), len(actual))
+	require.Equal(t, len(allowedFuncNames)+1, len(actual))
 
 	for key := range allowedFuncNames {
 		require.Contains(t, actual, key)
@@ -81,4 +82,16 @@ func TestSprigForbiddenFuncs(t *testing.T) {
 			require.ErrorContains(t, err, expectedErrMsg)
 		})
 	}
+}
+
+func Test_base64decodeMap(t *testing.T) {
+	d := map[string]interface{}{
+		"test": "YWJjZGVm",
+	}
+	out, err := base64decodeMap(d)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]interface{}{
+		"test": "abcdef",
+	}, out)
 }
