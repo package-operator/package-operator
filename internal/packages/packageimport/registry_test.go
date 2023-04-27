@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -19,7 +20,9 @@ func TestRegistry(t *testing.T) {
 	ipm := &imagePullerMock{}
 	r.pullImage = ipm.Pull
 
-	f := packagecontent.Files{}
+	f := packagecontent.Files{
+		"test.yaml": []byte("test"),
+	}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
@@ -33,8 +36,9 @@ func TestRegistry(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := r.Pull(ctx, "quay.io/test123")
+			ff, err := r.Pull(ctx, "quay.io/test123")
 			require.NoError(t, err)
+			assert.Equal(t, f, ff)
 		}()
 	}
 	wg.Wait()
