@@ -14,7 +14,7 @@ type Registry struct {
 	registryHostOverrides map[string]string
 
 	pullImage    pullImageFn
-	inFlight     map[string]pullRequest
+	inFlight     map[string]*pullRequest
 	inFlightLock sync.Mutex
 }
 
@@ -24,7 +24,7 @@ func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
 		pullImage:             PulledImage,
-		inFlight:              map[string]pullRequest{},
+		inFlight:              map[string]*pullRequest{},
 	}
 }
 
@@ -74,8 +74,8 @@ type pullRequest struct {
 	doneCh chan struct{}
 }
 
-func newPullRequest() pullRequest {
-	return pullRequest{
+func newPullRequest() *pullRequest {
+	return &pullRequest{
 		doneCh: make(chan struct{}),
 	}
 }
