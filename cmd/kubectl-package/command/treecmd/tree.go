@@ -7,21 +7,19 @@ import (
 	"io"
 	"os"
 
-	"github.com/disiqueira/gotree"
-	"github.com/go-logr/logr"
-	"github.com/go-logr/logr/funcr"
-	"github.com/spf13/cobra"
-
-	"k8s.io/apimachinery/pkg/util/yaml"
-
-	"package-operator.run/package-operator/internal/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/cmd/cmdutil"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/package-operator/internal/utils"
+
+	"github.com/disiqueira/gotree"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
+	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
