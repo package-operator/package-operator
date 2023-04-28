@@ -30,6 +30,9 @@ spec:
       required:
       - image
       type: object
+  images:
+    - name: test
+      image: something:v1.0
 test:
   template:
   - name: namespace-scope

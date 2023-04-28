@@ -21,8 +21,9 @@ spec:
       labels:
         app: test-stub
         instance: "{{.package.metadata.name}}"
+        image: '{{.config.image}}'
     spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: '{{.config.image}}'
+        image: '{{index .images "test"}}'

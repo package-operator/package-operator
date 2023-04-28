@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"package-operator.run/apis/manifests/v1alpha1"
+
 	"github.com/docker/distribution/reference"
 )
 
@@ -52,4 +54,13 @@ func ImageURLWithOverride(img string, override string) (string, error) {
 		return "", fmt.Errorf("image \"%s\" with host \"%s\": %w", img, override, err)
 	}
 	return strings.Replace(ref.String(), reference.Domain(ref), override, 1), nil
+}
+
+// GenerateStaticImages generates a static set of images to be used for tests and other purposes
+func GenerateStaticImages(manifest *v1alpha1.PackageManifest) map[string]string {
+	images := map[string]string{}
+	for _, v := range manifest.Spec.Images {
+		images[v.Name] = "registry.package-operator.run/static-image"
+	}
+	return images
 }
