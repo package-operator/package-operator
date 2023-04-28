@@ -176,7 +176,7 @@ func TestTree_NoConfig(t *testing.T) {
 
 		err := cmd.Execute()
 
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("cluster scoped", func(t *testing.T) {
@@ -189,7 +189,7 @@ func TestTree_NoConfig(t *testing.T) {
 
 		err := cmd.Execute()
 
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 }
 

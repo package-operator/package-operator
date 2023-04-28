@@ -67,9 +67,9 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		return fmt.Errorf("parsing package contents: %w", err)
 	}
 
-	var config map[string]interface{}
+	var config map[string]any
 	switch {
-	case len(t.ConfigPath) != 0:
+	case t.ConfigPath != "":
 		data, err := os.ReadFile(t.ConfigPath)
 		if err != nil {
 			return fmt.Errorf("read config from file: %w", err)
@@ -77,7 +77,7 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return fmt.Errorf("unmarshal config from file %s: %w", t.ConfigPath, err)
 		}
-	case len(t.ConfigTestcase) != 0:
+	case t.ConfigTestcase != "":
 		for _, test := range pkg.PackageManifest.Test.Template {
 			if test.Name != t.ConfigTestcase {
 				continue
@@ -91,6 +91,11 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 			return fmt.Errorf("%w: test template with name %s not found", cmdutil.ErrInvalidArgs, t.ConfigTestcase)
 		}
 	default:
+		rawConfig := pkg.PackageManifest.Test.Template[0].Context.Config.Raw
+
+		if err := json.Unmarshal(rawConfig, &config); err != nil {
+			return fmt.Errorf("unmarshal config from first test template: %w", err)
+		}
 	}
 
 	templateContext := packageloader.PackageFileTemplateContext{
