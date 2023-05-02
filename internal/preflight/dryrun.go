@@ -22,7 +22,7 @@ func (p *CreationDryRun) Check(
 ) (violations []Violation, err error) {
 	defer addPositionToViolations(ctx, obj, &violations)
 
-	drerr := p.client.Create(ctx, obj, client.DryRunAll)
+	drerr := p.client.Create(ctx, obj.DeepCopyObject().(client.Object), client.DryRunAll)
 	if errors.IsAlreadyExists(drerr) {
 		return
 	}
