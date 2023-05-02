@@ -5,6 +5,8 @@ metadata:
 {{- if eq .package.metadata.namespace ""}}
   namespace: "{{.package.metadata.name}}"
 {{- end}}
+  annotations:
+    defaulted: {{.config.defaultedConfig}}
   labels:
     app: test-stub
     instance: "{{.package.metadata.name}}"
