@@ -7,19 +7,21 @@ import (
 	"io"
 	"os"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/cmd/cmdutil"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageimport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
-	"package-operator.run/package-operator/internal/utils"
-
 	"github.com/disiqueira/gotree"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/cmd/cmdutil"
+	"package-operator.run/package-operator/internal/packages/packageadmission"
+	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/package-operator/internal/utils"
 )
 
 const (
@@ -68,6 +70,15 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		return fmt.Errorf("parsing package contents: %w", err)
 	}
 
+	templateContext := packageloader.PackageFileTemplateContext{
+		Package: manifestsv1alpha1.TemplateContextPackage{
+			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
+				Name:      "name",
+				Namespace: "namespace",
+			},
+		},
+	}
+
 	var config map[string]any
 	switch {
 	case t.ConfigPath != "":
@@ -78,10 +89,15 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return fmt.Errorf("unmarshal config from file %s: %w", t.ConfigPath, err)
 		}
+
 	case t.ConfigTestcase != "":
 		for _, test := range pkg.PackageManifest.Test.Template {
 			if test.Name != t.ConfigTestcase {
 				continue
+			}
+
+			templateContext = packageloader.PackageFileTemplateContext{
+				Package: test.Context.Package,
 			}
 			if err := json.Unmarshal(test.Context.Config.Raw, &config); err != nil {
 				return fmt.Errorf("unmarshal config from test template %s: %w", t.ConfigTestcase, err)
@@ -91,27 +107,33 @@ func (t *Tree) Run(ctx context.Context, out io.Writer) error {
 		if config == nil {
 			return fmt.Errorf("%w: test template with name %s not found", cmdutil.ErrInvalidArgs, t.ConfigTestcase)
 		}
-	default:
-		rawConfig := pkg.PackageManifest.Test.Template[0].Context.Config.Raw
 
+	case len(pkg.PackageManifest.Test.Template) > 0:
+		test := pkg.PackageManifest.Test.Template[0]
+		templateContext = packageloader.PackageFileTemplateContext{
+			Package: test.Context.Package,
+		}
+		rawConfig := test.Context.Config.Raw
 		if err := json.Unmarshal(rawConfig, &config); err != nil {
 			return fmt.Errorf("unmarshal config from first test template: %w", err)
 		}
 	}
 
-	templateContext := packageloader.PackageFileTemplateContext{
-		Package: manifestsv1alpha1.TemplateContextPackage{
-			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
-				Name:      "name",
-				Namespace: "namespace",
-			},
-		},
-		Config: config,
-		Images: utils.GenerateStaticImages(pkg.PackageManifest),
+	validationErrors, err := packageadmission.AdmitPackageConfiguration(
+		ctx, cmdutil.Scheme, config, pkg.PackageManifest, field.NewPath("spec", "config"))
+	if err != nil {
+		return fmt.Errorf("validate Package configuration: %w", err)
 	}
+	if len(validationErrors) > 0 {
+		return validationErrors.ToAggregate()
+	}
+
+	templateContext.Config = config
+	templateContext.Images = utils.GenerateStaticImages(pkg.PackageManifest)
+
 	pkgPrefix := "Package"
 	scope := manifestsv1alpha1.PackageManifestScopeNamespaced
-	if t.ClusterScope {
+	if t.ClusterScope || len(templateContext.Package.Namespace) == 0 {
 		scope = manifestsv1alpha1.PackageManifestScopeCluster
 		templateContext.Package.Namespace = ""
 		pkgPrefix = "ClusterPackage"

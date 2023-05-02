@@ -24,6 +24,9 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        defaultedConfig:
+          type: string
+          default: "test123"
         image:
           description: image is the reference to the image containing something not really needed for this test.
           type: string
@@ -41,8 +44,8 @@ test:
         image: "chicken"
       package:
         metadata:
-          name: test
-          namespace: test-ns
+          name: name
+          namespace: namespace
   - name: cluster-scope
     context:
       config:
