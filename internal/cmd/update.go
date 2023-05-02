@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/apis/manifests/v1alpha1"
@@ -54,7 +55,7 @@ func (c *UpdateConfig) Default() {
 	}
 
 	if c.Loader == nil {
-		c.Loader = &defaultPackageLoader{}
+		c.Loader = NewDefaultPackageLoader(runtime.NewScheme())
 	}
 
 	if c.Resolver == nil {
@@ -154,9 +155,17 @@ type PackageLoader interface {
 	LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error)
 }
 
-type defaultPackageLoader struct{}
+func NewDefaultPackageLoader(scheme *runtime.Scheme) *DefaultPackageLoader {
+	return &DefaultPackageLoader{
+		scheme: scheme,
+	}
+}
 
-func (l *defaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error) {
+type DefaultPackageLoader struct {
+	scheme *runtime.Scheme
+}
+
+func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error) {
 	var fileMap packagecontent.Files
 
 	fileMap, err := packageimport.Folder(ctx, path)
@@ -164,12 +173,7 @@ func (l *defaultPackageLoader) LoadPackage(ctx context.Context, path string) (*p
 		return nil, err
 	}
 
-	scheme, err := NewScheme()
-	if err != nil {
-		return nil, err
-	}
-
-	pkg, err := packageloader.New(scheme).FromFiles(ctx, fileMap)
+	pkg, err := packageloader.New(l.scheme).FromFiles(ctx, fileMap)
 	if err != nil {
 		return nil, err
 	}

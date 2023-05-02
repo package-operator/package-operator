@@ -49,7 +49,10 @@ func TestTree_RenderPackage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tree := NewTree()
+			scheme, err := NewScheme()
+			require.NoError(t, err)
+
+			tree := NewTree(scheme)
 
 			output, err := tree.RenderPackage(context.Background(), tc.SourcePath, tc.Options...)
 			tc.Assertion(t, err)

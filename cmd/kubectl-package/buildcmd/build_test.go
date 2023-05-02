@@ -7,7 +7,10 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	internalcmd "package-operator.run/package-operator/internal/cmd"
 )
 
 func TestBuildOutput(t *testing.T) {
@@ -23,7 +26,13 @@ func TestBuildOutput(t *testing.T) {
 	require.Nil(t, err)
 	packagePath := filepath.Join(wd, "testdata")
 
-	cmd := NewCmd()
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -42,7 +51,14 @@ func TestBuildOutput(t *testing.T) {
 
 func TestBuildEmptySource(t *testing.T) {
 	t.Parallel()
-	cmd := NewCmd()
+
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -54,7 +70,14 @@ func TestBuildEmptySource(t *testing.T) {
 
 func TestBuildNoSource(t *testing.T) {
 	t.Parallel()
-	cmd := NewCmd()
+
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -65,7 +88,14 @@ func TestBuildNoSource(t *testing.T) {
 
 func TestBuildPushWOTags(t *testing.T) {
 	t.Parallel()
-	cmd := NewCmd()
+
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -77,7 +107,14 @@ func TestBuildPushWOTags(t *testing.T) {
 
 func TestBuildOutputWOTags(t *testing.T) {
 	t.Parallel()
-	cmd := NewCmd()
+
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -89,7 +126,14 @@ func TestBuildOutputWOTags(t *testing.T) {
 
 func TestBuildInvalidTag(t *testing.T) {
 	t.Parallel()
-	cmd := NewCmd()
+
+	scheme, err := internalcmd.NewScheme()
+	require.NoError(t, err)
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+
+	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -97,4 +141,14 @@ func TestBuildInvalidTag(t *testing.T) {
 	cmd.SetArgs([]string{".", "--tag", "bread:a:b"})
 
 	require.NotNil(t, cmd.Execute())
+}
+
+type builderFactoryMock struct {
+	mock.Mock
+}
+
+func (m *builderFactoryMock) Builder() Builder {
+	args := m.Called()
+
+	return args.Get(0).(Builder)
 }

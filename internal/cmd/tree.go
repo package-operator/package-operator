@@ -8,6 +8,7 @@ import (
 
 	"github.com/disiqueira/gotree"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,19 +23,21 @@ import (
 	"package-operator.run/package-operator/internal/utils"
 )
 
-func NewTree(opts ...TreeOption) *Tree {
+func NewTree(scheme *runtime.Scheme, opts ...TreeOption) *Tree {
 	var cfg TreeConfig
 
 	cfg.Option(opts...)
 	cfg.Default()
 
 	return &Tree{
-		cfg: cfg,
+		cfg:    cfg,
+		scheme: scheme,
 	}
 }
 
 type Tree struct {
-	cfg TreeConfig
+	cfg    TreeConfig
+	scheme *runtime.Scheme
 }
 
 type TreeConfig struct {
@@ -69,12 +72,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("loading package contents from folder: %w", err)
 	}
 
-	scheme, err := NewScheme()
-	if err != nil {
-		return "", fmt.Errorf("initializing scheme: %w", err)
-	}
-
-	pkg, err := packagecontent.PackageFromFiles(ctx, scheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, t.scheme, files)
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
@@ -86,7 +84,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 	}
 
 	validationErrors, err := packageadmission.AdmitPackageConfiguration(
-		ctx, scheme, tmplCfg, pkg.PackageManifest, field.NewPath("spec", "config"))
+		ctx, t.scheme, tmplCfg, pkg.PackageManifest, field.NewPath("spec", "config"))
 	if err != nil {
 		return "", fmt.Errorf("validate Package configuration: %w", err)
 	}
@@ -110,7 +108,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", err
 	}
 
-	l := packageloader.New(scheme, packageloader.WithDefaults,
+	l := packageloader.New(t.scheme, packageloader.WithDefaults,
 		packageloader.WithValidators(packageloader.PackageScopeValidator(scope)),
 		packageloader.WithFilesTransformers(tt),
 	)

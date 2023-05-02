@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	internalcmd "package-operator.run/package-operator/internal/cmd"
 )
 
 func TestTree_Success(t *testing.T) {
@@ -14,16 +17,20 @@ func TestTree_Success(t *testing.T) {
 	t.Run("namespace scoped", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-testcase", "namespace-scope", "testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
@@ -36,16 +43,22 @@ Package namespace/name
 	})
 
 	t.Run("cluster scoped", func(t *testing.T) {
-		cmd := NewCmd()
+		t.Parallel()
+
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-testcase", "namespace-scope", "--cluster", "testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
@@ -66,59 +79,76 @@ func TestTree_InvalidArgs(t *testing.T) {
 	t.Run("no args", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 
-		err := cmd.Execute()
-
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 
 	t.Run("empty source path", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{""})
 
-		err := cmd.Execute()
-
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 
 	t.Run("multi template config", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-path", "testdata/.config.yaml", "--config-testcase", "namespace-scope", "testdata"})
 
-		err := cmd.Execute()
-
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 
 	t.Run("missing source", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"invisible_chicken"})
-		err := cmd.Execute()
 
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 }
 
@@ -128,15 +158,20 @@ func TestTree_ConfigPath(t *testing.T) {
 	t.Run("missing config path", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-path", "nonexistent", "testdata"})
-		err := cmd.Execute()
 
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 }
 
@@ -146,15 +181,20 @@ func TestTree_ConfigTemplate(t *testing.T) {
 	t.Run("missing config path", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-testcase", "nonexistent", "testdata"})
-		err := cmd.Execute()
 
-		require.Error(t, err)
+		require.Error(t, cmd.Execute())
 	})
 }
 
@@ -164,29 +204,39 @@ func TestTree_NoConfig(t *testing.T) {
 	t.Run("namespace scoped", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 	})
 
 	t.Run("cluster scoped", func(t *testing.T) {
-		cmd := NewCmd()
+		t.Parallel()
+
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--cluster", "testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 	})
 }
 
@@ -196,16 +246,20 @@ func TestTree_FileConfig(t *testing.T) {
 	t.Run("namespace scoped", func(t *testing.T) {
 		t.Parallel()
 
-		cmd := NewCmd()
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-path", "testdata/.config.yaml", "testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
@@ -218,16 +272,22 @@ Package namespace/name
 	})
 
 	t.Run("cluster scoped", func(t *testing.T) {
-		cmd := NewCmd()
+		t.Parallel()
+
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		cmd.SetOut(stdout)
 		cmd.SetErr(stderr)
 		cmd.SetArgs([]string{"--config-path", "testdata/.config.yaml", "--cluster", "testdata"})
 
-		err := cmd.Execute()
-
-		require.NoError(t, err)
+		require.NoError(t, cmd.Execute())
 		require.Len(t, stderr.String(), 0)
 
 		const expectedOutput = `test-stub
@@ -240,4 +300,14 @@ ClusterPackage /name
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
+}
+
+type rendererFactoryMock struct {
+	mock.Mock
+}
+
+func (m *rendererFactoryMock) Renderer() Renderer {
+	args := m.Called()
+
+	return args.Get(0).(Renderer)
 }

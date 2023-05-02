@@ -1,6 +1,7 @@
 package updatecmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,11 @@ import (
 	"package-operator.run/package-operator/internal/packages"
 )
 
-func NewCmd() *cobra.Command {
+type Updater interface {
+	GenerateLockData(ctx context.Context, srcPath string) ([]byte, error)
+}
+
+func NewCmd(updater Updater) *cobra.Command {
 	const (
 		updateUse   = "update source_path"
 		updateShort = "updates image digests of the specified package"
@@ -31,9 +36,8 @@ func NewCmd() *cobra.Command {
 		}
 
 		srcPath := args[0]
-		update := internalcmd.NewUpdate()
 
-		data, err := update.GenerateLockData(cmd.Context(), srcPath)
+		data, err := updater.GenerateLockData(cmd.Context(), srcPath)
 		if err != nil {
 			return err
 		}
