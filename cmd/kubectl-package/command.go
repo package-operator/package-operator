@@ -1,4 +1,4 @@
-package command
+package main
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/command/buildcmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/treecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/updatecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/validatecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/command/versioncmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/buildcmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/treecmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/updatecmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/validatecmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/versioncmd"
 	"package-operator.run/package-operator/internal/version"
 )
 
@@ -46,11 +46,11 @@ func CobraRoot() *cobra.Command {
 	// can be fetched by calling the Context method of the command reference that
 	// is passed to all RunX methods.
 	cmd.AddCommand(
-		(&buildcmd.Build{}).CobraCommand(),
-		(&validatecmd.Validate{}).CobraCommand(),
-		(&versioncmd.Version{}).CobraCommand(),
-		(&treecmd.Tree{}).CobraCommand(),
-		(&updatecmd.Default).CobraCommand(),
+		buildcmd.NewCmd(),
+		validatecmd.NewCmd(),
+		versioncmd.NewCmd(),
+		treecmd.NewCmd(),
+		updatecmd.NewCmd(),
 	)
 
 	return cmd
