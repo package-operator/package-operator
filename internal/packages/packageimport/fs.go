@@ -56,4 +56,10 @@ func Folder(ctx context.Context, path string) (packagecontent.Files, error) {
 	return FS(ctx, os.DirFS(path))
 }
 
-func isFileToBeExcluded(entry fs.DirEntry) bool { return strings.HasPrefix(entry.Name(), ".") }
+func isFileToBeExcluded(entry fs.DirEntry) bool {
+	return isFilenameToBeExcluded(entry.Name())
+}
+
+func isFilenameToBeExcluded(fileName string) bool {
+	return strings.HasPrefix(fileName, ".")
+}
