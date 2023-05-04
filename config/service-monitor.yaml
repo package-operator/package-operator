@@ -20,3 +20,4 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: package-operator
+      app.kubernetes.io/component: metrics
