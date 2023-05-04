@@ -5,23 +5,6 @@ metadata:
   labels:
     package-operator.run/cache: "True"
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: package-operator-metrics
-  namespace: package-operator-system
-  labels:
-    app.kubernetes.io/name: package-operator
-spec:
-  type: ClusterIP
-  sessionAffinity: None
-  ports:
-    - name: metrics
-      port: 8080
-      targetPort: metrics
-  selector:
-    app.kubernetes.io/name: package-operator
----
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -37,3 +20,4 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: package-operator
+      app.kubernetes.io/component: metrics
