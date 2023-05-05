@@ -89,6 +89,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		}
 	}
 
+	extraOpts = append(extraOpts, packageloader.WithDefaults)
 	if _, err := packageloader.New(v.scheme, extraOpts...).FromFiles(ctx, filemap); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
