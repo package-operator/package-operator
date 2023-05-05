@@ -616,14 +616,53 @@ func (Test) Unit() {
 	must(sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd))
 }
 
-// Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-func (t Test) Integration(ctx context.Context) { t.integration(ctx, "") }
+// Runs the given integration suite(s) as given by the first
+// positional argument. The options are 'all', 'all-local',
+// 'kubectl-package', 'package-operator', and
+// 'package-operator-local'.
+func (t Test) Integration(ctx context.Context, suite string) {
+	var testFns []any
+
+	switch strings.ToLower(strings.TrimSpace(suite)) {
+	case "all":
+		testFns = append(testFns,
+			mg.F(t.packageOperatorIntegration, ""),
+			t.kubectlPackageIntegration,
+		)
+	case "all-local":
+		testFns = append(testFns,
+			Dev.Integration,
+			t.kubectlPackageIntegration,
+		)
+	case "kubectl-package":
+		testFns = append(testFns,
+			t.kubectlPackageIntegration,
+		)
+	case "package-operator":
+		testFns = append(testFns,
+			mg.F(t.packageOperatorIntegration, ""),
+		)
+	case "package-operator-local":
+		testFns = append(testFns,
+			Dev.Integration,
+		)
+	default:
+		panic(fmt.Sprintf("unknown test suite: %s", suite))
+	}
+
+	mg.CtxDeps(
+		ctx,
+		testFns...,
+	)
+}
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
 // Also allows specifying only sub tests to run e.g. ./mage test:integrationrun TestPackage_success
-func (t Test) IntegrationRun(ctx context.Context, filter string) { t.integration(ctx, filter) }
+func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) {
+	t.packageOperatorIntegration(ctx, filter)
+}
 
-func (Test) integration(ctx context.Context, filter string) {
+func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", locations.ImageURL("test-stub-package", false))
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
 
@@ -632,7 +671,7 @@ func (Test) integration(ctx context.Context, filter string) {
 	if len(filter) > 0 {
 		args = append(args, "-run", filter)
 	}
-	args = append(args, "./integration/...")
+	args = append(args, "./integration/package-operator/...")
 	testErr := sh.Run("go", args...)
 
 	devEnv := locations.DevEnvNoInit()
@@ -647,6 +686,18 @@ func (Test) integration(ctx context.Context, filter string) {
 
 	if testErr != nil {
 		panic(testErr)
+	}
+}
+
+func (Test) kubectlPackageIntegration() {
+	args := []string{
+		"test", "-v", "-failfast",
+		"-count=1", "-timeout=5m",
+		"./integration/kubectl-package/...",
+	}
+
+	if err := sh.Run("go", args...); err != nil {
+		panic(err)
 	}
 }
 
@@ -1148,7 +1199,7 @@ func (d Dev) Integration(ctx context.Context) {
 
 	os.Setenv("KUBECONFIG", locations.DevEnv().Cluster.Kubeconfig())
 
-	mg.SerialDeps(Test.Integration)
+	mg.SerialCtxDeps(ctx, mg.F(Test.Integration, "package-operator"))
 }
 
 func (d Dev) loadImage(image string) error {
