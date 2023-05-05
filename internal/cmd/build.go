@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/name"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
@@ -23,19 +24,21 @@ func (u BuildValidationError) Error() string {
 	return u.Msg
 }
 
-func NewBuild(opts ...BuildOption) *Build {
+func NewBuild(scheme *runtime.Scheme, opts ...BuildOption) *Build {
 	var cfg BuildConfig
 
 	cfg.Option(opts...)
 	cfg.Default()
 
 	return &Build{
-		cfg: cfg,
+		cfg:    cfg,
+		scheme: scheme,
 	}
 }
 
 type Build struct {
-	cfg BuildConfig
+	cfg    BuildConfig
+	scheme *runtime.Scheme
 }
 
 type BuildConfig struct {
@@ -77,12 +80,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	b.cfg.Log.Info("creating image")
 
-	scheme, err := NewScheme()
-	if err != nil {
-		return fmt.Errorf("initializing scheme: %w", err)
-	}
-
-	loader := packageloader.New(scheme, packageloader.WithDefaults)
+	loader := packageloader.New(b.scheme, packageloader.WithDefaults)
 
 	pkg, err := loader.FromFiles(ctx, files)
 	if err != nil {

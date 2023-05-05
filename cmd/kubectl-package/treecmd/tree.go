@@ -1,6 +1,7 @@
 package treecmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -9,7 +10,15 @@ import (
 	internalcmd "package-operator.run/package-operator/internal/cmd"
 )
 
-func NewCmd() *cobra.Command {
+type RendererFactory interface {
+	Renderer() Renderer
+}
+
+type Renderer interface {
+	RenderPackage(ctx context.Context, srcPath string, opts ...internalcmd.RenderPackageOption) (string, error)
+}
+
+func NewCmd(rendererFactory RendererFactory) *cobra.Command {
 	const (
 		cmdUse   = "tree source_path"
 		cmdShort = "outputs a logical tree view of the package contents"
@@ -28,13 +37,7 @@ func NewCmd() *cobra.Command {
 
 	cmd.MarkFlagsMutuallyExclusive("config-path", "config-testcase")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		tree := internalcmd.NewTree(
-			internalcmd.WithLog{
-				Log: internalcmd.LogFromCmd(cmd).V(1),
-			},
-		)
-
-		out, err := tree.RenderPackage(
+		out, err := rendererFactory.Renderer().RenderPackage(
 			cmd.Context(), args[0],
 			internalcmd.WithClusterScope(opts.ClusterScope),
 			internalcmd.WithConfigPath(opts.ConfigPath),

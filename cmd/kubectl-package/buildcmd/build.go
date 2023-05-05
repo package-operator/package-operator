@@ -1,6 +1,7 @@
 package buildcmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,7 +12,15 @@ import (
 	internalcmd "package-operator.run/package-operator/internal/cmd"
 )
 
-func NewCmd() *cobra.Command {
+type BuilderFactory interface {
+	Builder() Builder
+}
+
+type Builder interface {
+	BuildFromSource(ctx context.Context, srcPath string, opts ...internalcmd.BuildFromSourceOption) error
+}
+
+func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 	const (
 		buildUse   = "build source_path [--tag tag]... [--output output_path] [--push]"
 		buildShort = "build an PKO package image using manifests at the given path"
@@ -43,13 +52,7 @@ func NewCmd() *cobra.Command {
 			}
 		}
 
-		build := internalcmd.NewBuild(
-			internalcmd.WithLog{
-				Log: internalcmd.LogFromCmd(cmd).V(1),
-			},
-		)
-
-		if err := build.BuildFromSource(
+		if err := builderFactory.Builder().BuildFromSource(
 			cmd.Context(), src,
 			internalcmd.WithOutputPath(opts.OutputPath),
 			internalcmd.WithPush(opts.Push),

@@ -146,6 +146,9 @@ func TestValidate_ValidatePackage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			scheme, err := NewScheme()
+			require.NoError(t, err)
+
 			mPuller := &packagePullerMock{}
 
 			if len(tc.PulledFiles) > 0 {
@@ -155,6 +158,7 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			}
 
 			validate := NewValidate(
+				scheme,
 				WithPackagePuller{Puller: mPuller},
 			)
 

@@ -1,6 +1,7 @@
 package validatecmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -9,7 +10,11 @@ import (
 	internalcmd "package-operator.run/package-operator/internal/cmd"
 )
 
-func NewCmd() *cobra.Command {
+type Validator interface {
+	ValidatePackage(ctx context.Context, opts ...internalcmd.ValidatePackageOption) error
+}
+
+func NewCmd(validator Validator) *cobra.Command {
 	const (
 		validateUse   = "validate [--pull] target"
 		validateShort = "validate a package."
@@ -41,9 +46,7 @@ func NewCmd() *cobra.Command {
 			validateOptions = append(validateOptions, internalcmd.WithPath(src))
 		}
 
-		validate := internalcmd.NewValidate()
-
-		if err := validate.ValidatePackage(cmd.Context(), validateOptions...); err != nil {
+		if err := validator.ValidatePackage(cmd.Context(), validateOptions...); err != nil {
 			return fmt.Errorf("validating package: %w", err)
 		}
 

@@ -15,19 +15,21 @@ import (
 	"package-operator.run/package-operator/internal/packages/packageloader"
 )
 
-func NewValidate(opts ...ValidateOption) *Validate {
+func NewValidate(scheme *runtime.Scheme, opts ...ValidateOption) *Validate {
 	var cfg ValidateConfig
 
 	cfg.Option(opts...)
 	cfg.Default()
 
 	return &Validate{
-		cfg: cfg,
+		cfg:    cfg,
+		scheme: scheme,
 	}
 }
 
 type Validate struct {
-	cfg ValidateConfig
+	cfg    ValidateConfig
+	scheme *runtime.Scheme
 }
 
 type ValidateConfig struct {
@@ -71,15 +73,10 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		extraOpts []packageloader.Option
 	)
 
-	scheme, err := NewScheme()
-	if err != nil {
-		return fmt.Errorf("intializing scheme: %w", err)
-	}
-
 	if cfg.Path != "" {
 		var err error
 
-		filemap, extraOpts, err = getPackageFromPath(ctx, scheme, cfg.Path)
+		filemap, extraOpts, err = getPackageFromPath(ctx, v.scheme, cfg.Path)
 		if err != nil {
 			return fmt.Errorf("getting package from path: %w", err)
 		}
@@ -92,7 +89,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		}
 	}
 
-	if _, err := packageloader.New(scheme, extraOpts...).FromFiles(ctx, filemap); err != nil {
+	if _, err := packageloader.New(v.scheme, extraOpts...).FromFiles(ctx, filemap); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
