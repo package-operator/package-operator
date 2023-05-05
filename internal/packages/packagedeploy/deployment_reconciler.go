@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,10 +95,12 @@ func (r *DeploymentReconciler) Reconcile(
 
 	// Update Deployment
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		annotations := utils.MergeKeysFrom(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
-		labels := utils.MergeKeysFrom(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
+		annotations := labels.Merge(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
 		actualDeploy.ClientObject().SetAnnotations(annotations)
+
+		labels := labels.Merge(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
 		actualDeploy.ClientObject().SetLabels(labels)
+
 		actualDeploy.SetTemplateSpec(templateSpec)
 
 		err := r.client.Update(ctx, actualDeploy.ClientObject())

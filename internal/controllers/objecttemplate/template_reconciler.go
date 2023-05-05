@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/jsonpath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,7 +26,6 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/preflight"
-	"package-operator.run/package-operator/internal/utils"
 )
 
 // Requeue every 30s to check if input sources exist now.
@@ -98,8 +98,9 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
-	obj.SetLabels(utils.MergeKeysFrom(existingObj.GetLabels(), obj.GetLabels()))
-	obj.SetAnnotations(utils.MergeKeysFrom(existingObj.GetAnnotations(), obj.GetAnnotations()))
+	obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
+	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
+
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.client.Update(ctx, obj); err != nil {
 		return res, fmt.Errorf("updating templated object: %w", err)
@@ -290,9 +291,9 @@ func (r *templateReconciler) templateObject(
 	if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
 		object.SetNamespace(objectTemplate.ClientObject().GetNamespace())
 	}
-	object.SetLabels(utils.MergeKeysFrom(object.GetLabels(), map[string]string{
-		controllers.DynamicCacheLabel: "True",
-	}))
+
+	object.SetLabels(labels.Merge(object.GetLabels(), map[string]string{controllers.DynamicCacheLabel: "True"}))
+
 	return nil
 }
 
