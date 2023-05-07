@@ -13,7 +13,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
-func TestRegistry(t *testing.T) {
+func TestRegistry_DelayedPull(t *testing.T) {
 	r := NewRegistry(map[string]string{
 		"quay.io": "localhost:123",
 	})
@@ -45,6 +45,38 @@ func TestRegistry(t *testing.T) {
 
 	ipm.AssertNumberOfCalls(t, "Pull", 1)
 	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest")
+}
+
+func TestRegistry_DelayedRequests(t *testing.T) {
+	const (
+		numRequests  = 3
+		requestDelay = 5 * time.Millisecond
+	)
+
+	ipm := &imagePullerMock{}
+	ipm.
+		On("Pull", mock.Anything, mock.Anything).
+		Return(packagecontent.Files{}, nil)
+
+	r := NewRegistry(map[string]string{
+		"quay.io": "localhost:123",
+	})
+	r.pullImage = ipm.Pull
+
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	for i := 0; i < numRequests; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = r.Pull(ctx, "quay.io/test123")
+		}()
+
+		time.Sleep(requestDelay)
+	}
+	wg.Wait()
+
+	ipm.AssertNumberOfCalls(t, "Pull", numRequests)
 }
 
 type imagePullerMock struct {
