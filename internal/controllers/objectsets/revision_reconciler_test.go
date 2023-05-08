@@ -26,6 +26,8 @@ func init() {
 func Test_revisionReconciler(t *testing.T) {
 	t.Run("defaults to revision 1", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 		r := &revisionReconciler{
 			scheme:       testScheme,
 			newObjectSet: newGenericObjectSet,
@@ -46,6 +48,8 @@ func Test_revisionReconciler(t *testing.T) {
 
 	t.Run("sets revision based on previous", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 		r := &revisionReconciler{
 			scheme:       testScheme,
 			newObjectSet: newGenericObjectSet,
@@ -112,6 +116,8 @@ func Test_revisionReconciler(t *testing.T) {
 
 	t.Run("waits on previous", func(t *testing.T) {
 		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 		r := &revisionReconciler{
 			scheme:       testScheme,
 			newObjectSet: newGenericObjectSet,

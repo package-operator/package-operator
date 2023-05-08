@@ -63,5 +63,9 @@ func (r *revisionReconciler) Reconcile(
 	}
 
 	objectSet.SetRevision(latestPreviousRevision + 1)
+	if err := r.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
+		return res, fmt.Errorf("update revision in status: %w", err)
+	}
+
 	return
 }
