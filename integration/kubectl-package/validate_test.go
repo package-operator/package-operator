@@ -1,0 +1,69 @@
+/* #nosec */
+
+package kubectlpackage
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+)
+
+var _ = DescribeTable("validate subcommand",
+	testSubCommand("validate"),
+	Entry("given no path",
+		subCommandTestCase{
+			ExpectedExitCode: 1,
+		},
+	),
+	Entry("given an invalid path",
+		subCommandTestCase{
+			Args:             []string{"dne"},
+			ExpectedExitCode: 1,
+		},
+	),
+	Entry("given the path of a package with an invalid manifest",
+		subCommandTestCase{
+			Args:                []string{sourcePathFixture("invalid_bad_manifest")},
+			ExpectedExitCode:    1,
+			ExpectedErrorOutput: []string{"spec.availabilityProbes: Required value"},
+		},
+	),
+	Entry("given the path of a valid package",
+		subCommandTestCase{
+			Args:             []string{sourcePathFixture("valid_without_config")},
+			ExpectedExitCode: 0,
+		},
+	),
+	Entry("given the path of an invalid package with resource missing phase annotation",
+		subCommandTestCase{
+			Args:                []string{sourcePathFixture("invalid_missing_phase_annotation")},
+			ExpectedExitCode:    1,
+			ExpectedErrorOutput: []string{"Missing package-operator.run/phase Annotation"},
+		},
+	),
+	Entry("given the path of an invalid package with resource missing gvk",
+		subCommandTestCase{
+			Args:                []string{sourcePathFixture("invalid_missing_resource_gvk")},
+			ExpectedExitCode:    1,
+			ExpectedErrorOutput: []string{"Object 'Kind' is missing"},
+		},
+	),
+	Entry("given the path of an invalid package with resource having invalid labels",
+		subCommandTestCase{
+			Args:                []string{sourcePathFixture("invalid_invalid_resource_label")},
+			ExpectedExitCode:    1,
+			ExpectedErrorOutput: []string{"Labels invalid"},
+		},
+	),
+	Entry("using the '--pull' option with an invalid image reference",
+		subCommandTestCase{
+			Args:             []string{"--pull", "quay.io/dne/dne"},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{
+				"Error: validating package: getting package from remote reference",
+			},
+		},
+	),
+	// TODO: Add test registry
+	// When using --pull and given an valid image reference to an invalid package should fail
+	// TODO: Add test registry
+	// When using --pull and given an valid image reference to an valid package should succeed
+)

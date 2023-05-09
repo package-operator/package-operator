@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "test-stub-test"
+  labels:
+    app: test-stub
+    instance: "test"
+  annotations:
+    package-operator.run/phase: deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-stub
+      instance: "test"
+  template:
+    metadata:
+      labels:
+        app: test-stub
+        instance: "test"
+    spec:
+      containers:
+      - name: test-stub
+        # lazy image injection
+        image: ''

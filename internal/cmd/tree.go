@@ -181,6 +181,10 @@ func (t *Tree) getConfig(pkg *packagecontent.Package, cfg RenderPackageConfig) (
 			if test.Name != cfg.ConfigTestcase {
 				continue
 			}
+
+			if test.Context.Config == nil {
+				return config, nil
+			}
 			if err := json.Unmarshal(test.Context.Config.Raw, &config); err != nil {
 				return nil, fmt.Errorf("unmarshal config from test template %s: %w", cfg.ConfigTestcase, err)
 			}

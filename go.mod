@@ -12,6 +12,8 @@ require (
 	github.com/google/go-containerregistry v0.14.0
 	github.com/magefile/mage v1.14.0
 	github.com/mt-sre/devkube v0.6.3
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
