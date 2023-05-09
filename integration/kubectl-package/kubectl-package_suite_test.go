@@ -7,12 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/registry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -23,7 +26,11 @@ func TestKubectlPackage(t *testing.T) {
 	RunSpecs(t, "kubectl-package Suite")
 }
 
-var _pluginPath string
+var (
+	_pluginPath     string
+	_registryDomain string
+	_registryClient *http.Client
+)
 
 const outputPath = "output"
 
@@ -43,6 +50,29 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() error {
 		return os.RemoveAll(outputPath)
 	})
+
+	srv, err := registry.TLS("example.com")
+	Expect(err).ToNot(HaveOccurred())
+
+	DeferCleanup(srv.Close)
+
+	_registryDomain = strings.TrimPrefix(srv.URL, "https://")
+	_registryClient = srv.Client()
+
+	imagesDir := filepath.Join("testdata", "images")
+
+	ents, err := fs.ReadDir(os.DirFS(imagesDir), ".")
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, e := range ents {
+		if filepath.Ext(e.Name()) != ".tar" {
+			continue
+		}
+
+		pushImageFromDisk(
+			filepath.Join(imagesDir, e.Name()),
+			fmt.Sprintf("%s/%s-fixture", _registryDomain, strings.TrimSuffix(e.Name(), ".tar")))
+	}
 })
 
 var errSetup = errors.New("test setup failed")
