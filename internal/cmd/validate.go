@@ -34,7 +34,7 @@ type Validate struct {
 
 type ValidateConfig struct {
 	Log    logr.Logger
-	Puller PackagePuller
+	Puller Puller
 }
 
 func (c *ValidateConfig) Option(opts ...ValidateOption) {
@@ -48,7 +48,7 @@ func (c *ValidateConfig) Default() {
 		c.Log = logr.Discard()
 	}
 	if c.Puller == nil {
-		c.Puller = &defaultPackagePuller{}
+		c.Puller = packageimport.NewPuller()
 	}
 }
 
@@ -56,8 +56,8 @@ type ValidateOption interface {
 	ConfigureValidate(*ValidateConfig)
 }
 
-type PackagePuller interface {
-	PullPackage(ctx context.Context, ref string) (packagecontent.Files, error)
+type Puller interface {
+	Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error)
 }
 
 func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageOption) error {
@@ -83,7 +83,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 	} else {
 		var err error
 
-		filemap, err = v.getPackageFromRemoteRef(ctx, cfg.RemoteReference)
+		filemap, err = v.getPackageFromRemoteRef(ctx, cfg)
 		if err != nil {
 			return fmt.Errorf("getting package from remote reference: %w", err)
 		}
@@ -108,13 +108,17 @@ func getPackageFromPath(ctx context.Context, scheme *runtime.Scheme, path string
 	return filemap, []packageloader.Option{packageloader.WithPackageAndFilesValidators(ttv)}, nil
 }
 
-func (v *Validate) getPackageFromRemoteRef(ctx context.Context, remoteRef string) (packagecontent.Files, error) {
-	ref, err := name.ParseReference(remoteRef)
+func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (packagecontent.Files, error) {
+	ref, err := name.ParseReference(cfg.RemoteReference)
 	if err != nil {
 		return nil, fmt.Errorf("parsing remote reference: %w", err)
 	}
 
-	filemap, err := v.cfg.Puller.PullPackage(ctx, ref.String())
+	pullOpts := []packageimport.PullOption{
+		packageimport.WithInsecure(cfg.Insecure),
+	}
+
+	filemap, err := v.cfg.Puller.Pull(ctx, ref.String(), pullOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("importing package from image: %w", err)
 	}
@@ -123,6 +127,7 @@ func (v *Validate) getPackageFromRemoteRef(ctx context.Context, remoteRef string
 }
 
 type ValidatePackageConfig struct {
+	Insecure        bool
 	Path            string
 	RemoteReference string
 }
@@ -148,10 +153,4 @@ func (c *ValidatePackageConfig) Validate() error {
 
 type ValidatePackageOption interface {
 	ConfigureValidatePackage(*ValidatePackageConfig)
-}
-
-type defaultPackagePuller struct{}
-
-func (p *defaultPackagePuller) PullPackage(ctx context.Context, ref string) (packagecontent.Files, error) {
-	return packageimport.PulledImage(ctx, ref)
 }

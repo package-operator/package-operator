@@ -59,12 +59,9 @@ func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err err
 }
 
 func PulledImage(ctx context.Context, ref string) (packagecontent.Files, error) {
-	img, err := crane.Pull(ref)
-	if err != nil {
-		return nil, err
-	}
+	puller := NewPuller()
 
-	return Image(ctx, img)
+	return puller.Pull(ctx, ref)
 }
 
 func isFilePathToBeExcluded(path string) bool {
@@ -75,4 +72,42 @@ func isFilePathToBeExcluded(path string) bool {
 		}
 	}
 	return false
+}
+
+func NewPuller() *Puller {
+	return &Puller{}
+}
+
+type Puller struct{}
+
+func (p *Puller) Pull(ctx context.Context, ref string, opts ...PullOption) (packagecontent.Files, error) {
+	var cfg PullConfig
+
+	cfg.Option(opts...)
+
+	var craneOpts []crane.Option
+	if cfg.Insecure {
+		craneOpts = append(craneOpts, crane.Insecure)
+	}
+
+	img, err := crane.Pull(ref, craneOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return Image(ctx, img)
+}
+
+type PullConfig struct {
+	Insecure bool
+}
+
+func (c *PullConfig) Option(opts ...PullOption) {
+	for _, opt := range opts {
+		opt.ConfigurePull(c)
+	}
+}
+
+type PullOption interface {
+	ConfigurePull(*PullConfig)
 }

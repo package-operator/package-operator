@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	cmdtesting "package-operator.run/package-operator/internal/cmd/internal/testing"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
@@ -70,7 +69,7 @@ func TestPreBuildValidation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			mResolver := &cmdtesting.DigestResolverMock{}
+			mResolver := &digestResolverMock{}
 
 			for ref, digest := range tc.ImageToDigest {
 				mResolver.

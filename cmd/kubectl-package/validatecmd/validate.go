@@ -38,7 +38,9 @@ func NewCmd(validator Validator) *cobra.Command {
 			return fmt.Errorf("%w: 'target' must not be empty", internalcmd.ErrInvalidArgs)
 		}
 
-		var validateOptions []internalcmd.ValidatePackageOption
+		validateOptions := []internalcmd.ValidatePackageOption{
+			internalcmd.WithInsecure(opts.Insecure),
+		}
 
 		if opts.Pull {
 			validateOptions = append(validateOptions, internalcmd.WithRemoteReference(src))
@@ -57,10 +59,17 @@ func NewCmd(validator Validator) *cobra.Command {
 }
 
 type options struct {
-	Pull bool
+	Insecure bool
+	Pull     bool
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
+	flags.BoolVar(
+		&o.Insecure,
+		"insecure",
+		o.Insecure,
+		"Allows pulling images without TLS or using TLS with unverified certificates.",
+	)
 	flags.BoolVar(
 		&o.Pull,
 		"pull",
