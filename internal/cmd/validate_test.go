@@ -173,12 +173,12 @@ type pullerMock struct {
 }
 
 func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error) {
-	acutalArgs := []interface{}{ctx, ref}
+	actualArgs := []any{ctx, ref}
 	for _, opt := range opts {
-		acutalArgs = append(acutalArgs, opt)
+		actualArgs = append(actualArgs, opt)
 	}
 
-	args := m.Called(acutalArgs...)
+	args := m.Called(actualArgs...)
 
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }

@@ -3,7 +3,9 @@
 package kubectlpackage
 
 import (
+	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -25,6 +27,8 @@ func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 	return func(tc subCommandTestCase) {
 		args := append([]string{subcommand}, substitutePlaceholders(tc.Args...)...)
 		cmd := exec.Command(_pluginPath, args...)
+
+		cmd.Env = append(cmd.Environ(), fmt.Sprintf("GOCOVERDIR=%s", filepath.Join(_root, ".cache", "integration")))
 
 		session, err := Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())

@@ -27,6 +27,7 @@ func TestKubectlPackage(t *testing.T) {
 }
 
 var (
+	_root           string
 	_pluginPath     string
 	_registryDomain string
 	_registryClient *http.Client
@@ -37,13 +38,19 @@ const outputPath = "output"
 var _ = BeforeSuite(func() {
 	var err error
 
-	DeferCleanup(gexec.CleanupBuildArtifacts)
+	_root, err = projectRoot()
+	Expect(err).ToNot(
+		HaveOccurred(),
+		"Looking up project root.",
+	)
 
 	_pluginPath, err = buildPluginBinary()
 	Expect(err).ToNot(
 		HaveOccurred(),
 		"Unable to build plug-in binary.",
 	)
+
+	DeferCleanup(gexec.CleanupBuildArtifacts)
 
 	Expect(os.Mkdir(outputPath, 0o755)).Error().ToNot(HaveOccurred())
 
@@ -78,21 +85,17 @@ var _ = BeforeSuite(func() {
 var errSetup = errors.New("test setup failed")
 
 func buildPluginBinary() (string, error) {
-	root, err := projectRoot()
-	if err != nil {
-		return "", fmt.Errorf("determining project root: %w", err)
-	}
-
 	ldflags := strings.Join([]string{
 		"-w", "-s",
 		"--extldflags", "'-zrelro -znow -O1'",
 		"-X", fmt.Sprintf("'%s/internal/version.version=%s'", module, version),
 	}, " ")
 	args := []string{
+		"-cover",
 		"--ldflags", ldflags,
 	}
 
-	return gexec.Build(filepath.Join(root, "cmd", "kubectl-package"), args...)
+	return gexec.Build(filepath.Join(_root, "cmd", "kubectl-package"), args...)
 }
 
 const (
