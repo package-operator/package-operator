@@ -13,7 +13,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	cmdtesting "package-operator.run/package-operator/internal/cmd/internal/testing"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
@@ -111,11 +110,11 @@ func TestUpdate(t *testing.T) {
 				On("LoadPackage", mock.Anything, "src").
 				Return(tc.Package, nil)
 
-			mResolver := &cmdtesting.DigestResolverMock{}
+			mResolver := &digestResolverMock{}
 
 			for ref, digest := range tc.ImageToDigest {
 				mResolver.
-					On("ResolveDigest", ref).
+					On("ResolveDigest", ref, mock.Anything).
 					Return(digest, nil)
 			}
 
@@ -136,6 +135,22 @@ func TestUpdate(t *testing.T) {
 			assert.Equal(t, tc.Expected, string(data))
 		})
 	}
+}
+
+type digestResolverMock struct {
+	mock.Mock
+}
+
+func (m *digestResolverMock) ResolveDigest(ref string, opts ...ResolveDigestOption) (string, error) {
+	actualArgs := []interface{}{ref}
+
+	for _, opt := range opts {
+		actualArgs = append(actualArgs, opt)
+	}
+
+	args := m.Called(actualArgs...)
+
+	return args.String(0), args.Error(1)
 }
 
 type packageLoaderMock struct {

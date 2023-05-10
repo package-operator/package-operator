@@ -3,6 +3,7 @@
 package kubectlpackage
 
 import (
+	"path"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -120,16 +121,18 @@ var _ = DescribeTable("build subcommand",
 			},
 		},
 	),
-	// TODO: Add test registry and validation of image manifest
-	// Must check image manifest exists and is valid
-	// Entry("given '--push' with valid tag",
-	// 	TestCase{
-	// 		Args: []string{
-	// 			"--push",
-	// 			"--tag", "some_local_registry_tag",
-	// 			filepath.Join("testdata", "valid_package"),
-	// 		},
-	// 		ExpectedExitCode: 0,
-	// 	},
-	// ),
+	Entry("given '--push' with valid tag",
+		subCommandTestCase{
+			Args: []string{
+				"--push",
+				"--insecure",
+				"--tag", path.Join(registryPlaceholder, "valid-package"),
+				sourcePathFixture("valid_without_config"),
+			},
+			ExpectedExitCode: 0,
+			AdditionalValidations: func() {
+				ExpectImageExists(path.Join(_registryDomain, "valid-package"))
+			},
+		},
+	),
 )

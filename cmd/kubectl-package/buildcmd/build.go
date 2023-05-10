@@ -54,6 +54,7 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 
 		if err := builderFactory.Builder().BuildFromSource(
 			cmd.Context(), src,
+			internalcmd.WithInsecure(opts.Insecure),
 			internalcmd.WithOutputPath(opts.OutputPath),
 			internalcmd.WithPush(opts.Push),
 			internalcmd.WithTags(opts.Tags),
@@ -68,12 +69,19 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 }
 
 type options struct {
+	Insecure   bool
 	OutputPath string
 	Push       bool
 	Tags       []string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
+	flags.BoolVar(
+		&o.Insecure,
+		"insecure",
+		o.Insecure,
+		"Allows pushing images without TLS or using TLS with unverified certificates.",
+	)
 	flags.StringSliceVarP(
 		&o.Tags,
 		"tag",

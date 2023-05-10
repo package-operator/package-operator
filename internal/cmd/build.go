@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -100,7 +101,13 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	}
 
 	if cfg.Push {
-		if err := packageexport.PushedImage(ctx, cfg.Tags, files); err != nil {
+		var craneOpts []crane.Option
+
+		if cfg.Insecure {
+			craneOpts = append(craneOpts, crane.Insecure)
+		}
+
+		if err := packageexport.PushedImage(ctx, cfg.Tags, files, craneOpts...); err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
 		}
 	}
@@ -172,6 +179,7 @@ func err(format string, a ...any) *BuildValidationError {
 }
 
 type BuildFromSourceConfig struct {
+	Insecure   bool
 	OutputPath string
 	Tags       []string
 	Push       bool

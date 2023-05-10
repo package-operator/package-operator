@@ -176,6 +176,7 @@ func newLocations() Locations {
 
 	must(os.MkdirAll(string(l.Deps()), 0o755))
 	must(os.MkdirAll(l.unitTestCache(), 0o755))
+	must(os.MkdirAll(l.IntegrationTestCache(), 0o755))
 
 	return l
 }
@@ -422,7 +423,20 @@ func (l Locations) unitTestCache() string          { return filepath.Join(l.Cach
 func (l Locations) UnitTestCoverageReport() string {
 	return filepath.Join(l.unitTestCache(), "cov.out")
 }
-func (l Locations) UnitTestExecReport() string  { return filepath.Join(l.unitTestCache(), "exec.json") }
+func (l Locations) UnitTestExecReport() string   { return filepath.Join(l.unitTestCache(), "exec.json") }
+func (l Locations) IntegrationTestCache() string { return filepath.Join(l.Cache(), "integration") }
+func (l Locations) PKOIntegrationTestCoverageReport() string {
+	return filepath.Join(l.IntegrationTestCache(), "pko-cov.out")
+}
+func (l Locations) PKOIntegrationTestExecReport() string {
+	return filepath.Join(l.IntegrationTestCache(), "pko-exec.json")
+}
+func (l Locations) PluginIntegrationTestCoverageReport() string {
+	return filepath.Join(l.IntegrationTestCache(), "kubectl-package-cov.out")
+}
+func (l Locations) PluginIntegrationTestExecReport() string {
+	return filepath.Join(l.IntegrationTestCache(), "plugin-exec.json")
+}
 func (l Locations) IntegrationTestLogs() string { return filepath.Join(l.Cache(), "dev-env-logs") }
 func (l Locations) ImageCache(imageName string) string {
 	return filepath.Join(l.Cache(), "image", imageName)
@@ -667,11 +681,22 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
 
 	// count=1 will force a new run, instead of using the cache
-	args := []string{"test", "-v", "-failfast", "-count=1", "-timeout=20m"}
+	args := []string{
+		"test", "-v",
+		"-failfast", "-count=1", "-timeout=20m",
+		"-coverpkg=./apis/...,./cmd/...,./internal/...",
+		fmt.Sprintf("-coverprofile=%s", locations.PKOIntegrationTestCoverageReport()),
+	}
 	if len(filter) > 0 {
 		args = append(args, "-run", filter)
 	}
 	args = append(args, "./integration/package-operator/...")
+
+	_, isCI := os.LookupEnv("CI")
+	if isCI {
+		// test output in json format
+		args = append(args, "-json", " > "+locations.PKOIntegrationTestExecReport())
+	}
 	testErr := sh.Run("go", args...)
 
 	devEnv := locations.DevEnvNoInit()
@@ -695,8 +720,22 @@ func (Test) kubectlPackageIntegration() {
 		"-count=1", "-timeout=5m",
 		"./integration/kubectl-package/...",
 	}
+	_, isCI := os.LookupEnv("CI")
+	if isCI {
+		// test output in json format
+		args = append(args, "-json", " > "+locations.PluginIntegrationTestExecReport())
+	}
 
 	if err := sh.Run("go", args...); err != nil {
+		panic(err)
+	}
+
+	covArgs := []string{
+		"tool", "covdata", "textfmt",
+		"-i", locations.IntegrationTestCache(),
+		"-o", locations.PluginIntegrationTestCoverageReport(),
+	}
+	if err := sh.Run("go", covArgs...); err != nil {
 		panic(err)
 	}
 }

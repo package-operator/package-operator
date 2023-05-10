@@ -67,7 +67,11 @@ type UpdateOption interface {
 	ConfigureUpdate(*UpdateConfig)
 }
 
-func (u *Update) GenerateLockData(ctx context.Context, srcPath string) ([]byte, error) {
+func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) ([]byte, error) {
+	var cfg GenerateLockDataConfig
+
+	cfg.Option(opts...)
+
 	pkg, err := u.cfg.Loader.LoadPackage(ctx, srcPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading package: %w", err)
@@ -75,7 +79,7 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string) ([]byte, 
 
 	var lockImages []v1alpha1.PackageManifestLockImage
 	for _, img := range pkg.PackageManifest.Spec.Images {
-		lockImg, err := u.lockImageFromManifestImage(img)
+		lockImg, err := u.lockImageFromManifestImage(cfg, img)
 		if err != nil {
 			return nil, fmt.Errorf("resolving lock image for %q: %w", img.Image, err)
 		}
@@ -108,13 +112,13 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string) ([]byte, 
 	return manifestLockYaml, nil
 }
 
-func (u *Update) lockImageFromManifestImage(img v1alpha1.PackageManifestImage) (v1alpha1.PackageManifestLockImage, error) {
+func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img v1alpha1.PackageManifestImage) (v1alpha1.PackageManifestLockImage, error) {
 	overriddenImage, err := utils.ImageURLWithOverrideFromEnv(img.Image)
 	if err != nil {
 		return v1alpha1.PackageManifestLockImage{}, fmt.Errorf("resolving image URL: %w", err)
 	}
 
-	digest, err := u.cfg.Resolver.ResolveDigest(overriddenImage)
+	digest, err := u.cfg.Resolver.ResolveDigest(overriddenImage, WithInsecure(cfg.Insecure))
 	if err != nil {
 		return v1alpha1.PackageManifestLockImage{}, fmt.Errorf("resolving image digest: %w", err)
 	}
@@ -149,6 +153,20 @@ func lockSpecsAreEqual(spec v1alpha1.PackageManifestLockSpec, other v1alpha1.Pac
 	}
 
 	return true
+}
+
+type GenerateLockDataConfig struct {
+	Insecure bool
+}
+
+func (c *GenerateLockDataConfig) Option(opts ...GenerateLockDataOption) {
+	for _, opt := range opts {
+		opt.ConfigureGenerateLockData(c)
+	}
+}
+
+type GenerateLockDataOption interface {
+	ConfigureGenerateLockData(*GenerateLockDataConfig)
 }
 
 type PackageLoader interface {

@@ -3,6 +3,8 @@
 package kubectlpackage
 
 import (
+	"path"
+
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -62,8 +64,25 @@ var _ = DescribeTable("validate subcommand",
 			},
 		},
 	),
-	// TODO: Add test registry
-	// When using --pull and given an valid image reference to an invalid package should fail
-	// TODO: Add test registry
-	// When using --pull and given an valid image reference to an valid package should succeed
+	Entry("using the '--pull' option with a valid image reference",
+		subCommandTestCase{
+			Args: []string{
+				"--insecure",
+				"--pull", path.Join(registryPlaceholder, "invalid-package-fixture"),
+			},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{
+				"- PackageManifest not found:",
+			},
+		},
+	),
+	Entry("using the '--pull' option with a valid image reference",
+		subCommandTestCase{
+			Args: []string{
+				"--insecure",
+				"--pull", path.Join(registryPlaceholder, "valid-package-fixture"),
+			},
+			ExpectedExitCode: 0,
+		},
+	),
 )

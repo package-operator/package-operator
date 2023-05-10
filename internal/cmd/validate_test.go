@@ -12,6 +12,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/package-operator/internal/packages/packageimport"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -26,7 +27,7 @@ func TestValidateConfig(t *testing.T) {
 		"defaults": {
 			Expected: ValidateConfig{
 				Log:    logr.Discard(),
-				Puller: &defaultPackagePuller{},
+				Puller: packageimport.NewPuller(),
 			},
 		},
 		"with logger": {
@@ -35,7 +36,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 			Expected: ValidateConfig{
 				Log:    testLogger,
-				Puller: &defaultPackagePuller{},
+				Puller: packageimport.NewPuller(),
 			},
 		},
 	} {
@@ -149,17 +150,17 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			scheme, err := NewScheme()
 			require.NoError(t, err)
 
-			mPuller := &packagePullerMock{}
+			mPuller := &pullerMock{}
 
 			if len(tc.PulledFiles) > 0 {
 				mPuller.
-					On("PullPackage", mock.Anything, "test").
+					On("Pull", mock.Anything, "test", mock.Anything).
 					Return(tc.PulledFiles, nil)
 			}
 
 			validate := NewValidate(
 				scheme,
-				WithPackagePuller{Puller: mPuller},
+				WithPuller{Puller: mPuller},
 			)
 
 			tc.Assertion(t, validate.ValidatePackage(context.Background(), tc.Options...))
@@ -167,12 +168,17 @@ func TestValidate_ValidatePackage(t *testing.T) {
 	}
 }
 
-type packagePullerMock struct {
+type pullerMock struct {
 	mock.Mock
 }
 
-func (m *packagePullerMock) PullPackage(ctx context.Context, ref string) (packagecontent.Files, error) {
-	args := m.Called(ctx, ref)
+func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error) {
+	actualArgs := []any{ctx, ref}
+	for _, opt := range opts {
+		actualArgs = append(actualArgs, opt)
+	}
+
+	args := m.Called(actualArgs...)
 
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }

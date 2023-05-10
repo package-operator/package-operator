@@ -56,6 +56,24 @@ func (w WithLog) ConfigureValidate(c *ValidateConfig) {
 	c.Log = w.Log
 }
 
+type WithInsecure bool
+
+func (w WithInsecure) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
+	c.Insecure = bool(w)
+}
+
+func (w WithInsecure) ConfigureGenerateLockData(c *GenerateLockDataConfig) {
+	c.Insecure = bool(w)
+}
+
+func (w WithInsecure) ConfigureResolveDigest(c *ResolveDigestConfig) {
+	c.Insecure = bool(w)
+}
+
+func (w WithInsecure) ConfigureValidatePackage(c *ValidatePackageConfig) {
+	c.Insecure = bool(w)
+}
+
 type WithOutputPath string
 
 func (w WithOutputPath) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
@@ -68,9 +86,9 @@ func (w WithPackageLoader) ConfigureUpdate(c *UpdateConfig) {
 	c.Loader = w.Loader
 }
 
-type WithPackagePuller struct{ Puller PackagePuller }
+type WithPuller struct{ Puller Puller }
 
-func (w WithPackagePuller) ConfigureValidate(c *ValidateConfig) {
+func (w WithPuller) ConfigureValidate(c *ValidateConfig) {
 	c.Puller = w.Puller
 }
 
