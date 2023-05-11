@@ -57,7 +57,8 @@ type PackageManifestSpec struct {
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
-	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes"`
+	// +optional
+	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes,omitempty"`
 	// Configuration specification.
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
 	// List of images to be resolved
