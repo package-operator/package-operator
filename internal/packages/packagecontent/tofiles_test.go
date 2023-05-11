@@ -26,7 +26,6 @@ kind: PackageManifest
 metadata:
   creationTimestamp: null
 spec:
-  availabilityProbes: null
   config: {}
   images: null
   phases: null
