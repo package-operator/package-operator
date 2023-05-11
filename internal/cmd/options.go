@@ -74,6 +74,16 @@ func (w WithInsecure) ConfigureValidatePackage(c *ValidatePackageConfig) {
 	c.Insecure = bool(w)
 }
 
+type WithNamespace string
+
+func (w WithNamespace) ConfigureGetPackage(c *GetPackageConfig) {
+	c.Namespace = string(w)
+}
+
+func (w WithNamespace) ConfigureGetObjectDeployment(c *GetObjectDeploymentConfig) {
+	c.Namespace = string(w)
+}
+
 type WithOutputPath string
 
 func (w WithOutputPath) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
