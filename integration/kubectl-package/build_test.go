@@ -131,7 +131,7 @@ var _ = DescribeTable("build subcommand",
 			},
 			ExpectedExitCode: 0,
 			AdditionalValidations: func() {
-				ExpectImageExists(path.Join(_registryDomain, "valid-package"))
+				Expect(path.Join(_registryDomain, "valid-package")).To(ExistOnRegistry())
 			},
 		},
 	),

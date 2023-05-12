@@ -1,6 +1,8 @@
 package kubectlpackage
 
-import "path/filepath"
+import (
+	"path/filepath"
+)
 
 func sourcePathFixture(name string) string {
 	var (
