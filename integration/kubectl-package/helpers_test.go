@@ -32,7 +32,7 @@ func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 
 		session, err := Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session).Should(Exit(tc.ExpectedExitCode))
+		Eventually(session, "3s").Should(Exit(tc.ExpectedExitCode))
 
 		for _, line := range tc.ExpectedOutput {
 			Expect(session.Out).To(Say(line))
