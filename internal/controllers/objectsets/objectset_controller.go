@@ -122,7 +122,7 @@ func newGenericObjectSetController(
 			preflight.List{
 				preflight.NewAPIExistence(restMapper),
 				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewCreationDryRun(client),
+				preflight.NewDryRun(client),
 			},
 		),
 		newObjectSetRemotePhaseReconciler(

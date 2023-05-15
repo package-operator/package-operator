@@ -275,7 +275,8 @@ func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
 
 		c := &GenericObjectSetPhaseController{}
 		ctx := context.Background()
-		err := c.updateStatusError(ctx, objectSetPhase, errTest)
+		res, err := c.updateStatusError(ctx, objectSetPhase, errTest)
+		assert.False(t, res.IsZero())
 		assert.EqualError(t, err, "explosion")
 	})
 
@@ -294,8 +295,9 @@ func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
 			Return(nil)
 
 		ctx := context.Background()
-		err := c.updateStatusError(
+		res, err := c.updateStatusError(
 			ctx, objectSetPhase, &preflight.Error{})
+		require.True(t, res.IsZero())
 		require.NoError(t, err)
 
 		client.StatusMock.AssertExpectations(t)

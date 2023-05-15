@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -87,7 +88,7 @@ func NewMultiClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
-			preflight.NewCreationDryRun(targetWriter),
+			preflight.NewDryRun(targetWriter),
 		},
 	)
 }
@@ -109,7 +110,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.List{
 			preflight.NewAPIExistence(targetRESTMapper),
-			preflight.NewCreationDryRun(targetWriter),
+			preflight.NewDryRun(targetWriter),
 		},
 	)
 }
@@ -131,7 +132,7 @@ func NewSameClusterObjectSetPhaseController(
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
 			preflight.NewNamespaceEscalation(restMapper),
-			preflight.NewCreationDryRun(client),
+			preflight.NewDryRun(client),
 		},
 	)
 }
@@ -152,7 +153,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 		class, client, client,
 		preflight.List{
 			preflight.NewAPIExistence(restMapper),
-			preflight.NewCreationDryRun(client),
+			preflight.NewDryRun(client),
 		},
 	)
 }
@@ -240,8 +241,9 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 			break
 		}
 	}
+
 	if err != nil {
-		return res, c.updateStatusError(ctx, objectSetPhase, err)
+		return c.updateStatusError(ctx, objectSetPhase, err)
 	}
 
 	c.reportPausedCondition(ctx, objectSetPhase)
@@ -265,7 +267,7 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Contex
 func (c *GenericObjectSetPhaseController) updateStatusError(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 	reconcileErr error,
-) error {
+) (ctrl.Result, error) {
 	var preflightError *preflight.Error
 	if errors.As(reconcileErr, &preflightError) {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
@@ -275,9 +277,10 @@ func (c *GenericObjectSetPhaseController) updateStatusError(
 			Reason:             "PreflightError",
 			Message:            preflightError.Error(),
 		})
-		return c.updateStatus(ctx, objectSetPhase)
+		return ctrl.Result{}, c.updateStatus(ctx, objectSetPhase)
 	}
-	return reconcileErr
+
+	return ctrl.Result{RequeueAfter: 30 * time.Second}, reconcileErr
 }
 
 func (c *GenericObjectSetPhaseController) updateStatus(
