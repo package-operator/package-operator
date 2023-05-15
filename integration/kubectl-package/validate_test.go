@@ -57,14 +57,14 @@ var _ = DescribeTable("validate subcommand",
 	),
 	Entry("using the '--pull' option with an invalid image reference",
 		subCommandTestCase{
-			Args:             []string{"--pull", "quay.io/dne/dne"},
+			Args:             []string{"--pull", path.Join(registryPlaceholder, "dne")},
 			ExpectedExitCode: 1,
 			ExpectedErrorOutput: []string{
 				"Error: validating package: getting package from remote reference",
 			},
 		},
 	),
-	Entry("using the '--pull' option with a valid image reference",
+	Entry("using the '--pull' option with a valid reference to an invalid package",
 		subCommandTestCase{
 			Args: []string{
 				"--insecure",
@@ -72,11 +72,11 @@ var _ = DescribeTable("validate subcommand",
 			},
 			ExpectedExitCode: 1,
 			ExpectedErrorOutput: []string{
-				"- PackageManifest not found:",
+				"spec.availabilityProbes: Required value",
 			},
 		},
 	),
-	Entry("using the '--pull' option with a valid image reference",
+	Entry("using the '--pull' option with a valid image reference to a valid package",
 		subCommandTestCase{
 			Args: []string{
 				"--insecure",
