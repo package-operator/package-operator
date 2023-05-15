@@ -435,7 +435,7 @@ func (l Locations) PluginIntegrationTestCoverageReport() string {
 	return filepath.Join(l.IntegrationTestCache(), "kubectl-package-cov.out")
 }
 func (l Locations) PluginIntegrationTestExecReport() string {
-	return filepath.Join(l.IntegrationTestCache(), "plugin-exec.json")
+	return filepath.Join(l.IntegrationTestCache(), "kubectl-package-exec.json")
 }
 func (l Locations) IntegrationTestLogs() string { return filepath.Join(l.Cache(), "dev-env-logs") }
 func (l Locations) ImageCache(imageName string) string {
@@ -715,6 +715,17 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 }
 
 func (Test) kubectlPackageIntegration() {
+	tmp, err := os.MkdirTemp("", "kubectl-package-integration-cov-*")
+	if err != nil {
+		panic(err)
+	}
+
+	defer os.RemoveAll(tmp)
+
+	env := map[string]string{
+		"GOCOVERDIR": tmp,
+	}
+
 	args := []string{
 		"test", "-v", "-failfast",
 		"-count=1", "-timeout=5m",
@@ -726,13 +737,13 @@ func (Test) kubectlPackageIntegration() {
 		args = append(args, "-json", " > "+locations.PluginIntegrationTestExecReport())
 	}
 
-	if err := sh.Run("go", args...); err != nil {
+	if err := sh.RunWith(env, "go", args...); err != nil {
 		panic(err)
 	}
 
 	covArgs := []string{
 		"tool", "covdata", "textfmt",
-		"-i", locations.IntegrationTestCache(),
+		"-i", tmp,
 		"-o", locations.PluginIntegrationTestCoverageReport(),
 	}
 	if err := sh.Run("go", covArgs...); err != nil {

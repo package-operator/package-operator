@@ -3,9 +3,7 @@
 package kubectlpackage
 
 import (
-	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -30,8 +28,6 @@ func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 	return func(tc subCommandTestCase) {
 		args := append([]string{subcommand}, substitutePlaceholders(tc.Args...)...)
 		cmd := exec.Command(_pluginPath, args...)
-
-		cmd.Env = append(cmd.Environ(), fmt.Sprintf("GOCOVERDIR=%s", filepath.Join(_root, ".cache", "integration")))
 
 		if tc.Timeout == 0 {
 			tc.Timeout = 1 * time.Second
