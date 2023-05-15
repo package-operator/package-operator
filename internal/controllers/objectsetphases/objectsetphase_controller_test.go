@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -297,5 +299,64 @@ func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
 		require.NoError(t, err)
 
 		client.StatusMock.AssertExpectations(t)
+	})
+}
+
+func TestInitializers(t *testing.T) {
+	t.Parallel()
+
+	log := testr.New(t)
+	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
+	dc := &dynamicCacheMock{}
+	client := testutil.NewClient()
+	class := "default"
+	mapper := meta.NewDefaultRESTMapper(scheme.PreferredVersionAllGroups())
+
+	t.Run("NewMultiClusterObjectSetPhaseController", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := NewMultiClusterObjectSetPhaseController(
+			log, scheme,
+			dc, client, class, client, client,
+			mapper,
+		)
+
+		require.NotNil(t, ctrl)
+	})
+
+	t.Run("NewMultiClusterClusterObjectSetPhaseController", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := NewMultiClusterClusterObjectSetPhaseController(
+			log, scheme,
+			dc, client, class, client, client,
+			mapper,
+		)
+
+		require.NotNil(t, ctrl)
+	})
+
+	t.Run("NewSameClusterObjectSetPhaseController", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := NewSameClusterObjectSetPhaseController(
+			log, scheme,
+			dc, client, class, client,
+			mapper,
+		)
+
+		require.NotNil(t, ctrl)
+	})
+
+	t.Run("NewSameClusterClusterObjectSetPhaseController", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := NewSameClusterClusterObjectSetPhaseController(
+			log, scheme,
+			dc, client, class, client,
+			mapper,
+		)
+
+		require.NotNil(t, ctrl)
 	})
 }
