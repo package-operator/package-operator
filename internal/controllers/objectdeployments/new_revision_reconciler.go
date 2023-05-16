@@ -99,10 +99,16 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	)
 	newObjectSet.SetPreviousRevisions(prevObjectSets)
 
+	if newObjectSetClientObj.GetLabels() == nil {
+		newObjectSetClientObj.SetLabels(map[string]string{})
+	}
+	newObjectSetClientObj.GetLabels()[ObjectSetObjectDeploymentLabel] = objectDeployment.ClientObject().GetName()
+
 	if newObjectSetClientObj.GetAnnotations() == nil {
 		newObjectSetClientObj.SetAnnotations(map[string]string{})
 	}
 	newObjectSetClientObj.GetAnnotations()[ObjectSetHashAnnotation] = objectDeployment.GetStatusTemplateHash()
+
 	if err := controllerutil.SetControllerReference(
 		deploymentClientObj, newObjectSetClientObj, r.scheme); err != nil {
 		return nil, err

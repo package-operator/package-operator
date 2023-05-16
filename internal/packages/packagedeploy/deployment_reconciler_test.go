@@ -16,7 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -316,4 +318,98 @@ func Test_sliceCollisionError(t *testing.T) {
 	}
 
 	assert.Equal(t, "ObjectSlice collision with test/test", e.Error())
+}
+
+func Test_getChangeCause(t *testing.T) {
+	const deploy1Cause = "Aaaaaaaaah!"
+	deploy1 := &adapters.ObjectDeployment{
+		ObjectDeployment: corev1alpha1.ObjectDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test1",
+				Annotations: map[string]string{
+					manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx/some:thing",
+					manifestsv1alpha1.PackageConfigAnnotation:      "{}",
+					controllers.ChangeCauseAnnotation:              deploy1Cause,
+				},
+			},
+		},
+	}
+
+	// Different Image
+	deploy2 := &adapters.ObjectDeployment{
+		ObjectDeployment: corev1alpha1.ObjectDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test2",
+				Annotations: map[string]string{
+					manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx/some2:thing",
+					manifestsv1alpha1.PackageConfigAnnotation:      "{}",
+				},
+			},
+		},
+	}
+
+	// Different Config
+	deploy3 := &adapters.ObjectDeployment{
+		ObjectDeployment: corev1alpha1.ObjectDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test3",
+				Annotations: map[string]string{
+					manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx/some:thing",
+					manifestsv1alpha1.PackageConfigAnnotation:      "{xxx}",
+				},
+			},
+		},
+	}
+
+	// Both Different
+	deploy4 := &adapters.ObjectDeployment{
+		ObjectDeployment: corev1alpha1.ObjectDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test4",
+				Annotations: map[string]string{
+					manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx/some3:thing",
+					manifestsv1alpha1.PackageConfigAnnotation:      "{xxx}",
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name              string
+		actualDeployment  adapters.ObjectDeploymentAccessor
+		desiredDeployment adapters.ObjectDeploymentAccessor
+		expected          string
+	}{
+		{
+			name:              "no change",
+			actualDeployment:  deploy1,
+			desiredDeployment: deploy1,
+			expected:          deploy1Cause,
+		},
+		{
+			name:              "image change",
+			actualDeployment:  deploy1,
+			desiredDeployment: deploy2,
+			expected:          "Package source image changed.",
+		},
+		{
+			name:              "config change",
+			actualDeployment:  deploy1,
+			desiredDeployment: deploy3,
+			expected:          "Package config changed.",
+		},
+		{
+			name:              "both change",
+			actualDeployment:  deploy1,
+			desiredDeployment: deploy4,
+			expected:          "Package source image and config changed.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cause := getChangeCause(
+				test.actualDeployment, test.desiredDeployment)
+			assert.Equal(t, test.expected, cause)
+		})
+	}
 }

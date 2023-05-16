@@ -23,6 +23,10 @@ const (
 const (
 	// PackageLabel contains the name of the Package from the PackageManifest.
 	PackageLabel = "package-operator.run/package"
+	// PackageSourceImageAnnotation references the package container image originating this object.
+	PackageSourceImageAnnotation = "package-operator.run/package-source-image"
+	// PackageConfigAnnotation contains the configuration for this object.
+	PackageConfigAnnotation = "package-operator.run/package-config"
 	// PackageInstanceLabel contains the name of the Package instance.
 	PackageInstanceLabel = "package-operator.run/instance"
 )
