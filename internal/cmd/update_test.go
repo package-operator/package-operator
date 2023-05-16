@@ -129,10 +129,15 @@ func TestUpdate(t *testing.T) {
 				WithDigestResolver{Resolver: mResolver},
 			)
 
-			data, err := update.GenerateLockData(context.Background(), "src")
+			data, unchanged, err := update.GenerateLockData(context.Background(), "src")
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.Expected, string(data))
+			if len(tc.Expected) == 0 {
+				assert.True(t, unchanged)
+			} else {
+				assert.False(t, unchanged)
+			}
 		})
 	}
 }

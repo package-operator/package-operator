@@ -67,21 +67,23 @@ type UpdateOption interface {
 	ConfigureUpdate(*UpdateConfig)
 }
 
-func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) ([]byte, error) {
+func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) (
+	data []byte, unchanged bool, err error,
+) {
 	var cfg GenerateLockDataConfig
 
 	cfg.Option(opts...)
 
 	pkg, err := u.cfg.Loader.LoadPackage(ctx, srcPath)
 	if err != nil {
-		return nil, fmt.Errorf("loading package: %w", err)
+		return nil, false, fmt.Errorf("loading package: %w", err)
 	}
 
 	var lockImages []v1alpha1.PackageManifestLockImage
 	for _, img := range pkg.PackageManifest.Spec.Images {
 		lockImg, err := u.lockImageFromManifestImage(cfg, img)
 		if err != nil {
-			return nil, fmt.Errorf("resolving lock image for %q: %w", img.Image, err)
+			return nil, false, fmt.Errorf("resolving lock image for %q: %w", img.Image, err)
 		}
 
 		lockImages = append(lockImages, lockImg)
@@ -101,15 +103,15 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 	}
 
 	if pkg.PackageManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.PackageManifestLock.Spec) {
-		return nil, nil
+		return nil, true, nil
 	}
 
 	manifestLockYaml, err := yaml.Marshal(manifestLock)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling manifest lock file: %w", err)
+		return nil, false, fmt.Errorf("unmarshalling manifest lock file: %w", err)
 	}
 
-	return manifestLockYaml, nil
+	return manifestLockYaml, false, nil
 }
 
 func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img v1alpha1.PackageManifestImage) (v1alpha1.PackageManifestLockImage, error) {

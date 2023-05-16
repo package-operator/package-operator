@@ -14,7 +14,9 @@ import (
 )
 
 type Updater interface {
-	GenerateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) ([]byte, error)
+	GenerateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) (
+		data []byte, unchanged bool, err error,
+	)
 }
 
 func NewCmd(updater Updater) *cobra.Command {
@@ -42,9 +44,14 @@ func NewCmd(updater Updater) *cobra.Command {
 
 		srcPath := args[0]
 
-		data, err := updater.GenerateLockData(cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
+		data, unchanged, err := updater.GenerateLockData(
+			cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
 		if err != nil {
 			return err
+		}
+		if unchanged {
+			// Nothing to do.
+			return nil
 		}
 
 		lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFile)
