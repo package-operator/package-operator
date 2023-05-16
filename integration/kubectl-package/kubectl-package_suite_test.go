@@ -21,7 +21,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages/packageexport"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 )
@@ -36,12 +38,15 @@ var (
 	_pluginPath     string
 	_registryDomain string
 	_registryClient *http.Client
+	_tempDir        string
 )
 
 const outputPath = "output"
 
 var _ = BeforeSuite(func() {
 	var err error
+
+	_tempDir = GinkgoT().TempDir()
 
 	_root, err = projectRoot()
 	Expect(err).ToNot(
@@ -82,6 +87,8 @@ var _ = BeforeSuite(func() {
 			Ref:  path.Join(_registryDomain, "invalid-package-fixture"),
 		},
 	)).To(Succeed())
+
+	generateAllPackages(_tempDir, _registryDomain)
 })
 
 var errSetup = errors.New("test setup failed")
@@ -139,4 +146,79 @@ func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) erro
 type packageImageBuildInfo struct {
 	Path string
 	Ref  string
+}
+
+func generateAllPackages(rootDir, registry string) {
+	generatePackage(
+		filepath.Join(rootDir, "valid_package"),
+		withImages([]manv1alpha1.PackageManifestImage{
+			{
+				Name:  path.Join(registry, "valid-package-fixture"),
+				Image: path.Join(registry, "valid-package-fixture"),
+			},
+		}),
+		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "manifests.package-operator.run/v1alpha1",
+				Kind:       "PackageManifestLock",
+			},
+			Spec: manv1alpha1.PackageManifestLockSpec{
+				Images: []manv1alpha1.PackageManifestLockImage{
+					{
+						Name:   path.Join(registry, "valid-package-fixture"),
+						Image:  path.Join(registry, "valid-package-fixture"),
+						Digest: "1234",
+					},
+				},
+			},
+		}},
+	)
+	generatePackage(
+		filepath.Join(rootDir, "valid_package_invalid_lockfile_unresolvable_images"),
+		withImages([]manv1alpha1.PackageManifestImage{
+			{
+				Name:  path.Join(registry, "dne"),
+				Image: path.Join(registry, "dne"),
+			},
+		}),
+		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "manifests.package-operator.run/v1alpha1",
+				Kind:       "PackageManifestLock",
+			},
+			Spec: manv1alpha1.PackageManifestLockSpec{
+				Images: []manv1alpha1.PackageManifestLockImage{
+					{
+						Name:   path.Join(registry, "dne"),
+						Image:  path.Join(registry, "dne"),
+						Digest: "1234",
+					},
+				},
+			},
+		}},
+	)
+	generatePackage(
+		filepath.Join(rootDir, "valid_package_valid_lockfile"),
+		withImages([]manv1alpha1.PackageManifestImage{
+			{
+				Name:  path.Join(registry, "valid-package-fixture"),
+				Image: path.Join(registry, "valid-package-fixture"),
+			},
+		}),
+		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "manifests.package-operator.run/v1alpha1",
+				Kind:       "PackageManifestLock",
+			},
+			Spec: manv1alpha1.PackageManifestLockSpec{
+				Images: []manv1alpha1.PackageManifestLockImage{
+					{
+						Name:   path.Join(registry, "valid-package-fixture"),
+						Image:  path.Join(registry, "valid-package-fixture"),
+						Digest: "sha256:bbb83bd537f5b3179b5d56b9a9086fb9abaa79e18d4d70b7f6572b77500286e4",
+					},
+				},
+			},
+		}},
+	)
 }

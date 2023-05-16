@@ -50,7 +50,10 @@ func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 	}
 }
 
-const registryPlaceholder = "TEST_REGISTRY"
+const (
+	registryPlaceholder = "TEST_REGISTRY"
+	TempDirPlaceholder  = "TEMP_DIR"
+)
 
 func substitutePlaceholders(args ...string) []string {
 	res := make([]string, 0, len(args))
@@ -60,6 +63,10 @@ func substitutePlaceholders(args ...string) []string {
 			sfx := strings.TrimPrefix(arg, registryPlaceholder)
 
 			arg = _registryDomain + sfx
+		} else if strings.HasPrefix(arg, TempDirPlaceholder) {
+			sfx := strings.TrimPrefix(arg, TempDirPlaceholder)
+
+			arg = _tempDir + sfx
 		}
 
 		res = append(res, arg)

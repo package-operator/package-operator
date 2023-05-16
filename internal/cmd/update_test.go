@@ -19,12 +19,17 @@ import (
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 
+	type expected struct {
+		LockData string
+		Error    error
+	}
+
 	now := v1.Now()
 
 	for name, tc := range map[string]struct {
 		Package       *packagecontent.Package
 		ImageToDigest map[string]string
-		Expected      string
+		Expected      expected
 	}{
 		"no existing lock file": {
 			Package: &testPkgNoLockFile,
@@ -32,21 +37,23 @@ func TestUpdate(t *testing.T) {
 				"nginx:1.22.1": "01234",
 				"nginx:1.23.3": "56789",
 			},
-			Expected: strings.Join([]string{
-				"apiVersion: manifests.package-operator.run/v1alpha1",
-				"kind: PackageManifestLock",
-				"metadata:",
-				fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
-				"spec:",
-				"  images:",
-				`  - digest: "01234"`,
-				"    image: nginx:1.22.1",
-				"    name: nginx1",
-				`  - digest: "56789"`,
-				"    image: nginx:1.23.3",
-				"    name: nginx2",
-				"",
-			}, "\n"),
+			Expected: expected{
+				LockData: strings.Join([]string{
+					"apiVersion: manifests.package-operator.run/v1alpha1",
+					"kind: PackageManifestLock",
+					"metadata:",
+					fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
+					"spec:",
+					"  images:",
+					`  - digest: "01234"`,
+					"    image: nginx:1.22.1",
+					"    name: nginx1",
+					`  - digest: "56789"`,
+					"    image: nginx:1.23.3",
+					"    name: nginx2",
+					"",
+				}, "\n"),
+			},
 		},
 		"lock file exists/conflicting digests": {
 			Package: &testPkgDifferentLockFile1,
@@ -54,21 +61,23 @@ func TestUpdate(t *testing.T) {
 				"nginx:1.22.1": "01234",
 				"nginx:1.23.3": "56789",
 			},
-			Expected: strings.Join([]string{
-				"apiVersion: manifests.package-operator.run/v1alpha1",
-				"kind: PackageManifestLock",
-				"metadata:",
-				fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
-				"spec:",
-				"  images:",
-				`  - digest: "01234"`,
-				"    image: nginx:1.22.1",
-				"    name: nginx1",
-				`  - digest: "56789"`,
-				"    image: nginx:1.23.3",
-				"    name: nginx2",
-				"",
-			}, "\n"),
+			Expected: expected{
+				LockData: strings.Join([]string{
+					"apiVersion: manifests.package-operator.run/v1alpha1",
+					"kind: PackageManifestLock",
+					"metadata:",
+					fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
+					"spec:",
+					"  images:",
+					`  - digest: "01234"`,
+					"    image: nginx:1.22.1",
+					"    name: nginx1",
+					`  - digest: "56789"`,
+					"    image: nginx:1.23.3",
+					"    name: nginx2",
+					"",
+				}, "\n"),
+			},
 		},
 		"lock file exists/conflicting image references": {
 			Package: &testPkgDifferentLockFile2,
@@ -76,27 +85,32 @@ func TestUpdate(t *testing.T) {
 				"nginx:1.22.1": "01234",
 				"nginx:1.23.3": "56789",
 			},
-			Expected: strings.Join([]string{
-				"apiVersion: manifests.package-operator.run/v1alpha1",
-				"kind: PackageManifestLock",
-				"metadata:",
-				fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
-				"spec:",
-				"  images:",
-				`  - digest: "01234"`,
-				"    image: nginx:1.22.1",
-				"    name: nginx1",
-				`  - digest: "56789"`,
-				"    image: nginx:1.23.3",
-				"    name: nginx2",
-				"",
-			}, "\n"),
+			Expected: expected{
+				LockData: strings.Join([]string{
+					"apiVersion: manifests.package-operator.run/v1alpha1",
+					"kind: PackageManifestLock",
+					"metadata:",
+					fmt.Sprintf("  creationTimestamp: %q", now.UTC().Format(time.RFC3339)),
+					"spec:",
+					"  images:",
+					`  - digest: "01234"`,
+					"    image: nginx:1.22.1",
+					"    name: nginx1",
+					`  - digest: "56789"`,
+					"    image: nginx:1.23.3",
+					"    name: nginx2",
+					"",
+				}, "\n"),
+			},
 		},
 		"lock file exists/no changes": {
 			Package: &testPkgSameLockFile,
 			ImageToDigest: map[string]string{
 				"nginx:1.22.1": "01234",
 				"nginx:1.23.3": "01234",
+			},
+			Expected: expected{
+				Error: ErrLockDataUnchanged,
 			},
 		},
 	} {
@@ -129,15 +143,10 @@ func TestUpdate(t *testing.T) {
 				WithDigestResolver{Resolver: mResolver},
 			)
 
-			data, unchanged, err := update.GenerateLockData(context.Background(), "src")
-			require.NoError(t, err)
+			data, err := update.GenerateLockData(context.Background(), "src")
+			require.ErrorIs(t, err, tc.Expected.Error)
 
-			assert.Equal(t, tc.Expected, string(data))
-			if len(tc.Expected) == 0 {
-				assert.True(t, unchanged)
-			} else {
-				assert.False(t, unchanged)
-			}
+			assert.Equal(t, tc.Expected.LockData, string(data))
 		})
 	}
 }
