@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -15,7 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
 	"package-operator.run/package-operator/internal/utils"
 )
@@ -95,10 +98,17 @@ func (r *DeploymentReconciler) Reconcile(
 
 	// Update Deployment
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		annotations := labels.Merge(actualDeploy.ClientObject().GetAnnotations(), desiredDeploy.ClientObject().GetAnnotations())
+		annotations := labels.Merge(
+			actualDeploy.ClientObject().GetAnnotations(),
+			desiredDeploy.ClientObject().GetAnnotations(),
+		)
+		annotations[controllers.ChangeCauseAnnotation] = getChangeCause(actualDeploy, desiredDeploy)
 		actualDeploy.ClientObject().SetAnnotations(annotations)
 
-		labels := labels.Merge(actualDeploy.ClientObject().GetLabels(), desiredDeploy.ClientObject().GetLabels())
+		labels := labels.Merge(
+			actualDeploy.ClientObject().GetLabels(),
+			desiredDeploy.ClientObject().GetLabels(),
+		)
 		actualDeploy.ClientObject().SetLabels(labels)
 
 		actualDeploy.SetTemplateSpec(templateSpec)
@@ -314,4 +324,32 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	return &sliceCollisionError{
 		key: sliceKey,
 	}
+}
+
+func getChangeCause(
+	actualObjectDeployment, desiredObjectDeployment adapters.ObjectDeploymentAccessor,
+) string {
+	actualAnnotations := actualObjectDeployment.ClientObject().GetAnnotations()
+	desiredAnnotations := desiredObjectDeployment.ClientObject().GetAnnotations()
+
+	actualSourceImage := actualAnnotations[manifestsv1alpha1.PackageSourceImageAnnotation]
+	desiredSourceImage := desiredAnnotations[manifestsv1alpha1.PackageSourceImageAnnotation]
+
+	actualConfig := actualAnnotations[manifestsv1alpha1.PackageConfigAnnotation]
+	desiredConfig := desiredAnnotations[manifestsv1alpha1.PackageConfigAnnotation]
+
+	var changes []string
+	if actualSourceImage != desiredSourceImage {
+		changes = append(changes, "source image")
+	}
+	if actualConfig != desiredConfig {
+		changes = append(changes, "config")
+	}
+
+	if len(changes) == 0 {
+		// retain old message.
+		return actualAnnotations[controllers.ChangeCauseAnnotation]
+	}
+
+	return fmt.Sprintf("Package %s changed.", strings.Join(changes, " and "))
 }

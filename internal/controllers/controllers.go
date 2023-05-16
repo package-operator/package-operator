@@ -23,6 +23,8 @@ const (
 	DynamicCacheLabel = "package-operator.run/cache"
 	// Common finalizer to free allocated caches when objects are deleted.
 	CachedFinalizer = "package-operator.run/cached"
+	// Records cause of change for history keeping.
+	ChangeCauseAnnotation = "kubernetes.io/change-cause"
 	// Causes PKO to skip ownership checks, used during self-bootstrap.
 	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
 )

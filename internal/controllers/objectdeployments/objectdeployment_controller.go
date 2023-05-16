@@ -18,6 +18,8 @@ import (
 
 const (
 	ObjectSetHashAnnotation = "package-operator.run/hash"
+	// Used to filter ObjectSets by their owning ObjectDeployment.
+	ObjectSetObjectDeploymentLabel = "package-operator.run/object-deployment"
 )
 
 type reconciler interface {

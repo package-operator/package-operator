@@ -17,6 +17,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/packages/packageadmission"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageloader"
@@ -176,8 +177,21 @@ func (l *PackageDeployer) desiredObjectDeployment(
 		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
 	}
 
+	configJSON, err := json.Marshal(pkg.TemplateContext().Config)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling config for package-config annotation: %w", err)
+	}
+	annotations := map[string]string{
+		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetImage(),
+		manifestsv1alpha1.PackageConfigAnnotation:      string(configJSON),
+		controllers.ChangeCauseAnnotation: fmt.Sprintf(
+			"Installing %s package.", packageContent.PackageManifest.Name),
+	}
+
 	deploy = l.newObjectDeployment(l.scheme)
 	deploy.ClientObject().SetLabels(labels)
+	deploy.ClientObject().SetAnnotations(annotations)
+
 	deploy.ClientObject().SetName(pkg.ClientObject().GetName())
 	deploy.ClientObject().SetNamespace(pkg.ClientObject().GetNamespace())
 
