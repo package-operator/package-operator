@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -160,7 +161,10 @@ func newLocations() Locations {
 		if err != nil {
 			panic(fmt.Errorf("git describe: %w", err))
 		}
-		applicationVersion = strings.TrimSpace(string(byteVersion))
+
+		// Depending on what process was used the last tag my either be a version for
+		// the main module (eg `v1.6.6`) or a version for a submodule (eg `apis/v1.6.6`).
+		applicationVersion = path.Base(strings.TrimSpace(string(byteVersion)))
 	}
 
 	// image org
