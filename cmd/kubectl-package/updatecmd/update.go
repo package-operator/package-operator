@@ -2,6 +2,7 @@ package updatecmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,9 +15,7 @@ import (
 )
 
 type Updater interface {
-	GenerateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) (
-		data []byte, unchanged bool, err error,
-	)
+	GenerateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) (data []byte, err error)
 }
 
 func NewCmd(updater Updater) *cobra.Command {
@@ -44,14 +43,13 @@ func NewCmd(updater Updater) *cobra.Command {
 
 		srcPath := args[0]
 
-		data, unchanged, err := updater.GenerateLockData(
-			cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
-		if err != nil {
-			return err
-		}
-		if unchanged {
-			// Nothing to do.
+		data, err := updater.GenerateLockData(cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
+		if errors.Is(err, internalcmd.ErrLockDataUnchanged) {
+			fmt.Fprintln(cmd.OutOrStdout(), "Package is already up-to-date")
+
 			return nil
+		} else if err != nil {
+			return fmt.Errorf("generating lock data: %w", err)
 		}
 
 		lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFile)

@@ -3,6 +3,8 @@
 package kubectlpackage
 
 import (
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -19,10 +21,37 @@ var _ = DescribeTable("update subcommand",
 			ExpectedExitCode: 1,
 		},
 	),
-	// TODO: Add test registry
-	// When given a valid source path which requires update, but cannot be written to should fail
-	// TODO: Add test registry
-	// When given a valid source path and lock file with unresolvable lock images should fail
-	// TODO: Add test registry
-	// When given a valid source path and no updates to lock file are required should succeed with no action
+	Entry("given a valid package",
+		subCommandTestCase{
+			Args: []string{
+				"--insecure",
+				filepath.Join(TempDirPlaceholder, "valid_package"),
+			},
+			ExpectedExitCode: 0,
+		},
+	),
+	Entry("given a valid package with a valid lock file",
+		subCommandTestCase{
+			Args: []string{
+				"--insecure",
+				filepath.Join(TempDirPlaceholder, "valid_package_valid_lockfile"),
+			},
+			ExpectedExitCode: 0,
+			ExpectedOutput: []string{
+				"Package is already up-to-date",
+			},
+		},
+	),
+	Entry("given a valid package with lock file containing unresolvable images",
+		subCommandTestCase{
+			Args: []string{
+				"--insecure",
+				filepath.Join(TempDirPlaceholder, "valid_package_invalid_lockfile_unresolvable_images"),
+			},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{
+				"resolving image digest",
+			},
+		},
+	),
 )
