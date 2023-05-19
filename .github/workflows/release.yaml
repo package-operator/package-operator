@@ -60,3 +60,8 @@ jobs:
           bin/kubectl-package_darwin_amd64
           bin/kubectl-package_darwin_arm64
           bin/kubectl-package_linux_amd64
+
+    - name: Create git tag for apis/ submodule
+      run: |
+        git tag -a apis/$GITHUB_REF_NAME -m apis/$GITHUB_REF_NAME $GITHUB_REF_NAME
+        git push origin apis/$GITHUB_REF_NAME
