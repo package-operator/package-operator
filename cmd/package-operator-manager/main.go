@@ -20,6 +20,7 @@ import (
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap"
 	"package-operator.run/cmd/package-operator-manager/components"
+	"package-operator.run/cmd/package-operator-manager/teardown"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/environment"
 )
@@ -58,6 +59,20 @@ func run(opts components.Options) error {
 	}
 
 	ctx := logr.NewContext(ctrl.SetupSignalHandler(), ctrl.Log)
+
+	if opts.SelfTeardown {
+		var td *teardown.Teardown
+		if err := di.Invoke(func(client components.UncachedClient) { td = teardown.NewTeardown(client) }); err != nil {
+			return err
+		}
+
+		if err := td.Teardown(ctx); err != nil {
+			return fmt.Errorf("teardown PKO: %w", err)
+		}
+
+		return nil
+	}
+
 	if len(opts.SelfBootstrap) > 0 {
 		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {
 			return err
