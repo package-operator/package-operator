@@ -28,15 +28,15 @@ linters:
   #- nonamedreturns   # Named return good return.
   #- paralleltest     # Would be nice but we can't run all the integration tests in parallel and there is not a way to disable the linter for paths.
   #- prealloc         # Could be nice in the future.
-  #- rowserrcheck     # No SQL here not it does not work with generics.
-  #- sqlclosecheck    # No SQL here not it does not work with generics.
   #- tagliatelle      # Not that useful/false positives.
   #- testpackage      # Could be nice in the future.
-  #- unparam          # Could be nice in the future.
+  #- unparam          # Not that useful/false positives.
   #- varnamelen       # Not that useful/false positives.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
   enable:
+
+
   - asasalint
   - asciicheck
   - bidichk
@@ -85,8 +85,10 @@ linters:
   - promlinter
   - reassign
   - revive
+  - rowserrcheck
   - staticcheck
   - stylecheck
+  - sqlclosecheck
   - tenv
   - testableexamples
   - thelper
