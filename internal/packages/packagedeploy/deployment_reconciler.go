@@ -228,8 +228,8 @@ func (r *DeploymentReconciler) chunkPhase(
 	}
 
 	phase.Objects = nil // Objects now live within the ObjectSlice instances.
-	var sliceNames []string
-	for _, objectsForSlice := range objectsForSlices {
+	sliceNames := make([]string, len(objectsForSlices))
+	for i, objectsForSlice := range objectsForSlices {
 		slice := r.newObjectSlice(r.scheme)
 		slice.ClientObject().SetNamespace(deploy.ClientObject().GetNamespace())
 		slice.ClientObject().SetLabels(map[string]string{
@@ -240,7 +240,7 @@ func (r *DeploymentReconciler) chunkPhase(
 		if err := r.reconcileSlice(ctx, deploy, slice); err != nil {
 			return fmt.Errorf("reconcile ObjectSlice: %w", err)
 		}
-		sliceNames = append(sliceNames, slice.ClientObject().GetName())
+		sliceNames[i] = slice.ClientObject().GetName()
 
 		log.Info("reconciled Slice for phase",
 			"phase", phase.Name,

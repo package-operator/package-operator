@@ -25,8 +25,9 @@ func ParseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1
 		return nil, nil
 	}
 
-	var mappings []corev1alpha1.ConditionMapping
-	for i, rawMapping := range strings.Split(strings.TrimSpace(conditionMapAnnotation), "\n") {
+	inputMappings := strings.Split(strings.TrimSpace(conditionMapAnnotation), "\n")
+	outputMappings := make([]corev1alpha1.ConditionMapping, len(inputMappings))
+	for i, rawMapping := range inputMappings {
 		line := i + 1
 		parts := strings.SplitN(rawMapping, "=>", 2)
 		if len(parts) != 2 {
@@ -48,13 +49,11 @@ func ParseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1
 			}
 		}
 
-		m := corev1alpha1.ConditionMapping{
+		outputMappings[i] = corev1alpha1.ConditionMapping{
 			SourceType:      strings.TrimSpace(parts[0]),
 			DestinationType: strings.TrimSpace(parts[1]),
 		}
-
-		mappings = append(mappings, m)
 	}
 
-	return mappings, nil
+	return outputMappings, nil
 }

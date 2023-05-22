@@ -114,7 +114,7 @@ func GetControllerOf(
 	_ context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
 	owner client.Object, actualObjects []client.Object,
 ) ([]corev1alpha1.ControlledObjectReference, error) {
-	var controllerOf []corev1alpha1.ControlledObjectReference
+	controllerOf := make([]corev1alpha1.ControlledObjectReference, 0, len(actualObjects))
 	for _, actualObj := range actualObjects {
 		if !ownerStrategy.IsController(owner, actualObj) {
 			continue

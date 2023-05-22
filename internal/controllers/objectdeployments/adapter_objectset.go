@@ -181,8 +181,8 @@ func (a *GenericObjectSet) SetPreviousRevisions(prevObjectSets []genericObjectSe
 }
 
 func (a *GenericObjectSet) GetObjects() ([]objectIdentifier, error) {
-	var result []objectIdentifier
 	objects := utils.GetObjectsFromPhases(a.Spec.Phases)
+	result := make([]objectIdentifier, len(objects))
 	for i := range objects {
 		unstructuredObj := objects[i].Object
 		var objNamespace string
@@ -191,12 +191,12 @@ func (a *GenericObjectSet) GetObjects() ([]objectIdentifier, error) {
 		} else {
 			objNamespace = unstructuredObj.GetNamespace()
 		}
-		result = append(result, objectSetObjectIdentifier{
+		result[i] = objectSetObjectIdentifier{
 			name:      unstructuredObj.GetName(),
 			namespace: objNamespace,
 			group:     unstructuredObj.GroupVersionKind().Group,
 			kind:      unstructuredObj.GroupVersionKind().Kind,
-		})
+		}
 	}
 	return result, nil
 }
@@ -276,11 +276,10 @@ func (a *GenericClusterObjectSet) IsSpecPaused() bool {
 }
 
 func (a *GenericClusterObjectSet) GetActivelyReconciledObjects() []objectIdentifier {
-	var res []objectIdentifier
 	if a.IsArchived() {
 		// If an objectset is archived, it doesnt actively
 		// reconcile anything, we just return an empty list
-		return res
+		return nil
 	}
 
 	if a.Status.ControllerOf == nil {
@@ -288,21 +287,22 @@ func (a *GenericClusterObjectSet) GetActivelyReconciledObjects() []objectIdentif
 		return nil
 	}
 
-	for _, reconciledObj := range a.Status.ControllerOf {
+	res := make([]objectIdentifier, len(a.Status.ControllerOf))
+	for i, reconciledObj := range a.Status.ControllerOf {
 		currentObj := objectSetObjectIdentifier{
 			kind:      reconciledObj.Kind,
 			group:     reconciledObj.Group,
 			name:      reconciledObj.Name,
 			namespace: reconciledObj.Namespace,
 		}
-		res = append(res, currentObj)
+		res[i] = currentObj
 	}
 	return res
 }
 
 func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
-	var result []objectIdentifier
 	objects := utils.GetObjectsFromPhases(a.Spec.Phases)
+	result := make([]objectIdentifier, len(objects))
 	for i := range objects {
 		unstructuredObj := objects[i].Object
 		var objNamespace string
@@ -312,12 +312,12 @@ func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
 			objNamespace = unstructuredObj.GetNamespace()
 		}
 
-		result = append(result, objectSetObjectIdentifier{
+		result[i] = objectSetObjectIdentifier{
 			name:      unstructuredObj.GetName(),
 			namespace: objNamespace,
 			group:     unstructuredObj.GroupVersionKind().Group,
 			kind:      unstructuredObj.GroupVersionKind().Kind,
-		})
+		}
 	}
 	return result, nil
 }

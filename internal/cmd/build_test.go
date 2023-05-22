@@ -102,7 +102,7 @@ type LockImageTestData struct {
 }
 
 func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestData) *packagecontent.Package {
-	var imgManifest []v1alpha1.PackageManifestImage
+	imgManifest := make([]v1alpha1.PackageManifestImage, 0, len(manifestImages))
 	for key, value := range manifestImages {
 		imgManifest = append(imgManifest, v1alpha1.PackageManifestImage{Name: key, Image: value})
 	}
