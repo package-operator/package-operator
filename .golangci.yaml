@@ -34,7 +34,6 @@ linters:
   #- testpackage      # Could be nice in the future.
   #- unparam          # Could be nice in the future.
   #- varnamelen       # Not that useful/false positives.
-  #- wastedassign     # Does not work with generics.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
   enable:
@@ -96,6 +95,7 @@ linters:
   - unconvert
   - unused
   - usestdlibvars
+  - wastedassign
   - whitespace
 issues:
   max-same-issues: 0
