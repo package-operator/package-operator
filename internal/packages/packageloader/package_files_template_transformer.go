@@ -35,9 +35,10 @@ func workaroundnovalue(actualCtx map[string]interface{}) {
 }
 
 type PackageFileTemplateContext struct {
-	Package manifestsv1alpha1.TemplateContextPackage `json:"package"`
-	Config  map[string]interface{}                   `json:"config"`
-	Images  map[string]string                        `json:"images"`
+	Package     manifestsv1alpha1.TemplateContextPackage `json:"package"`
+	Config      map[string]interface{}                   `json:"config"`
+	Images      map[string]string                        `json:"images"`
+	Environment manifestsv1alpha1.PackageEnvironment     `json:"environment"`
 }
 
 func NewTemplateTransformer(tmplCtx PackageFileTemplateContext) (*PackageFileTemplateTransformer, error) {

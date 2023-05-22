@@ -47,6 +47,16 @@ type AllControllers struct {
 	ClusterObjectTemplate ClusterObjectTemplateController
 }
 
+func (ac AllControllers) List() []interface{} {
+	return []interface{}{
+		ac.ObjectSet, ac.ClusterObjectSet,
+		ac.ObjectSetPhase, ac.ClusterObjectSetPhase,
+		ac.ObjectDeployment, ac.ClusterObjectDeployment,
+		ac.Package, ac.ClusterPackage,
+		ac.ObjectTemplate, ac.ClusterObjectTemplate,
+	}
+}
+
 func (ac AllControllers) SetupWithManager(mgr ctrl.Manager) error {
 	return setupAll(mgr, []controllerSetup{
 		{

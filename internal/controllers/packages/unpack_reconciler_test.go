@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
@@ -28,7 +29,7 @@ func TestUnpackReconciler(t *testing.T) {
 		On("Pull", mock.Anything, mock.Anything).
 		Return(f, nil)
 	pd.
-		On("Load", mock.Anything, mock.Anything, mock.Anything).
+		On("Load", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	pkg := &adapters.GenericPackage{
@@ -119,8 +120,8 @@ type packageDeployerMock struct {
 
 func (m *packageDeployerMock) Load(
 	ctx context.Context, pkg adapters.GenericPackageAccessor,
-	files packagecontent.Files,
+	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
 ) error {
-	args := m.Called(ctx, pkg, files)
+	args := m.Called(ctx, pkg, files, env)
 	return args.Error(0)
 }

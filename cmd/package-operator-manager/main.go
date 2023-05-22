@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -18,6 +19,7 @@ import (
 	"package-operator.run/package-operator/cmd/package-operator-manager/bootstrap"
 	"package-operator.run/package-operator/cmd/package-operator-manager/components"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/package-operator/internal/environment"
 )
 
 const (
@@ -105,22 +107,40 @@ type packageOperatorManager struct {
 	mgr ctrl.Manager
 
 	hostedClusterController components.HostedClusterController
+	environmentManager      *environment.Manager
 }
 
 func newPackageOperatorManager(
 	mgr ctrl.Manager, log logr.Logger,
 	hostedClusterController components.HostedClusterController,
+	discoveryClient discovery.DiscoveryInterface,
 	allControllers components.AllControllers,
 ) (*packageOperatorManager, error) {
 	if err := allControllers.SetupWithManager(mgr); err != nil {
 		return nil, err
 	}
+
+	var envSinks []environment.Sink
+	for _, c := range allControllers.List() {
+		envSink, ok := c.(environment.Sink)
+		if !ok {
+			envSinks = append(envSinks, envSink)
+		}
+	}
+
+	envMgr := environment.NewManager(mgr.GetClient(), discoveryClient, envSinks)
+	if err := mgr.Add(envMgr); err != nil {
+		return nil, err
+	}
+
 	pkoMgr := &packageOperatorManager{
 		log: log.WithName("package-operator-manager"),
 		mgr: mgr,
 
 		hostedClusterController: hostedClusterController,
+		environmentManager:      envMgr,
 	}
+
 	return pkoMgr, nil
 }
 
@@ -131,6 +151,10 @@ func (pkoMgr *packageOperatorManager) Start(ctx context.Context) error {
 
 	if err := pkoMgr.probeHyperShiftIntegration(ctx); err != nil {
 		return fmt.Errorf("setting up HyperShift integration: %w", err)
+	}
+
+	if err := pkoMgr.environmentManager.Init(ctx); err != nil {
+		return fmt.Errorf("environment init: %w", err)
 	}
 
 	err := pkoMgr.mgr.Start(ctx)

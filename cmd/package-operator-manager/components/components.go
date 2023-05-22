@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -230,4 +231,10 @@ func ProvideUncachedClient(
 			fmt.Errorf("unable to set up uncached client: %w", err)
 	}
 	return UncachedClient{uncachedClient}, nil
+}
+
+func DiscoveryClient(restConfig *rest.Config) (
+	discovery.DiscoveryInterface, error,
+) {
+	return discovery.NewDiscoveryClientForConfig(restConfig)
 }

@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -12,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/metrics"
@@ -25,6 +27,9 @@ type unpackReconciler struct {
 	packageLoadRecorder packageLoadRecorder
 
 	backoff *flowcontrol.Backoff
+
+	env     manifestsv1alpha1.PackageEnvironment
+	envLock sync.RWMutex
 }
 
 type packageLoadRecorder interface {
@@ -59,13 +64,22 @@ type imagePuller interface {
 type packageDeployer interface {
 	Load(
 		ctx context.Context, pkg adapters.GenericPackageAccessor,
-		files packagecontent.Files,
+		files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
 	) error
+}
+
+func (r *unpackReconciler) InjectEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+	r.envLock.Lock()
+	defer r.envLock.Unlock()
+	r.env = *env.DeepCopy()
 }
 
 func (r *unpackReconciler) Reconcile(
 	ctx context.Context, pkg adapters.GenericPackageAccessor,
 ) (res ctrl.Result, err error) {
+	r.envLock.RLock()
+	defer r.envLock.RUnlock()
+
 	// run back off garbage collection to prevent stale data building up.
 	defer r.backoff.GC()
 
@@ -97,7 +111,7 @@ func (r *unpackReconciler) Reconcile(
 		}, nil
 	}
 
-	if err := r.packageDeployer.Load(ctx, pkg, files); err != nil {
+	if err := r.packageDeployer.Load(ctx, pkg, files, r.env); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
 

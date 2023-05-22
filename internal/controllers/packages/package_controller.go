@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/metrics"
@@ -33,11 +34,12 @@ type GenericPackageController struct {
 	newPackage          adapters.GenericPackageFactory
 	newObjectDeployment adapters.ObjectDeploymentFactory
 
-	recorder   metricsRecorder
-	client     client.Client
-	log        logr.Logger
-	scheme     *runtime.Scheme
-	reconciler []reconciler
+	recorder         metricsRecorder
+	client           client.Client
+	log              logr.Logger
+	scheme           *runtime.Scheme
+	reconciler       []reconciler
+	unpackReconciler *unpackReconciler
 }
 
 func NewPackageController(
@@ -82,11 +84,12 @@ func newGenericPackageController(
 		client:              client,
 		log:                 log,
 		scheme:              scheme,
+		unpackReconciler: newUnpackReconciler(
+			imagePuller, packageDeployer, metricsRecorder),
 	}
 
 	controller.reconciler = []reconciler{
-		newUnpackReconciler(
-			imagePuller, packageDeployer, metricsRecorder),
+		controller.unpackReconciler,
 		&objectDeploymentStatusReconciler{
 			client:              client,
 			scheme:              scheme,
@@ -95,6 +98,10 @@ func newGenericPackageController(
 	}
 
 	return controller
+}
+
+func (c *GenericPackageController) InjectEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+	c.unpackReconciler.InjectEnvironment(env)
 }
 
 func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
