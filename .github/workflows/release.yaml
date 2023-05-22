@@ -62,6 +62,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
+        draft: true
         files: |
           config/self-bootstrap-job.yaml
           bin/kubectl-package_darwin_amd64
