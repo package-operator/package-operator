@@ -22,7 +22,7 @@ jobs:
         git config user.email "$(git show --format=%ae -s $GITHUB_REF_NAME | tail -1)"
         git config user.name "$(git show --format=%an -s $GITHUB_REF_NAME | tail -1)"
         git tag -f -a apis/$GITHUB_REF_NAME -m apis/$GITHUB_REF_NAME ${GITHUB_REF_NAME}^{}
-        git push origin apis/$GITHUB_REF_NAME
+        git push -f origin apis/$GITHUB_REF_NAME
 
     - name: Setup Go
       uses: actions/setup-go@v3
