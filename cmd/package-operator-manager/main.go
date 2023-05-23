@@ -67,22 +67,16 @@ func run(opts components.Options) error {
 		)
 		if err := di.Invoke(func(
 			lbs *bootstrap.Bootstrapper,
-			mgr ctrl.Manager,
-			bootstrapControllers components.BootstrapControllers,
+			uncachedClient components.UncachedClient,
 			discoveryClient discovery.DiscoveryInterface,
-		) error {
+		) {
 			bs = lbs
-			envMgr = environment.NewManager(
-				mgr.GetClient(), discoveryClient,
-				append(environment.ImplementsSinker(
-					bootstrapControllers.List(),
-				), lbs))
-			return mgr.Add(envMgr)
+			envMgr = environment.NewManager(uncachedClient, discoveryClient)
 		}); err != nil {
 			return err
 		}
 
-		if err := envMgr.Init(ctx); err != nil {
+		if err := envMgr.Init(ctx, []environment.Sinker{bs}); err != nil {
 			return err
 		}
 
@@ -94,6 +88,12 @@ func run(opts components.Options) error {
 				discoveryClient discovery.DiscoveryInterface,
 			) error {
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
+					return err
+				}
+				if err := envMgr.Init(ctx, environment.ImplementsSinker(bootstrapControllers.List())); err != nil {
+					return err
+				}
+				if err := mgr.Add(envMgr); err != nil {
 					return err
 				}
 
@@ -127,6 +127,7 @@ type packageOperatorManager struct {
 
 	hostedClusterController components.HostedClusterController
 	environmentManager      *environment.Manager
+	allControllers          components.AllControllers
 }
 
 func newPackageOperatorManager(
@@ -140,8 +141,7 @@ func newPackageOperatorManager(
 	}
 
 	envMgr := environment.NewManager(
-		mgr.GetClient(), discoveryClient,
-		environment.ImplementsSinker(allControllers.List()))
+		mgr.GetClient(), discoveryClient)
 	if err := mgr.Add(envMgr); err != nil {
 		return nil, err
 	}
@@ -152,6 +152,7 @@ func newPackageOperatorManager(
 
 		hostedClusterController: hostedClusterController,
 		environmentManager:      envMgr,
+		allControllers:          allControllers,
 	}
 
 	return pkoMgr, nil
@@ -166,7 +167,9 @@ func (pkoMgr *packageOperatorManager) Start(ctx context.Context) error {
 		return fmt.Errorf("setting up HyperShift integration: %w", err)
 	}
 
-	if err := pkoMgr.environmentManager.Init(ctx); err != nil {
+	if err := pkoMgr.environmentManager.Init(
+		ctx, environment.ImplementsSinker(pkoMgr.allControllers.List()),
+	); err != nil {
 		return fmt.Errorf("environment init: %w", err)
 	}
 

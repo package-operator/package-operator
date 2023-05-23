@@ -30,7 +30,7 @@ func (s *testSink) SetEnvironment(
 	s.env = env
 }
 
-func TestManager_do_Kubernetes(t *testing.T) {
+func TestManager_Init_Kubernetes(t *testing.T) {
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -48,10 +48,10 @@ func TestManager_do_Kubernetes(t *testing.T) {
 		).
 		Return(&meta.NoKindMatchError{})
 
-	mgr := NewManager(c, dc, []Sinker{sink})
+	mgr := NewManager(c, dc)
 
 	ctx := context.Background()
-	err := mgr.do(ctx)
+	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 
 	env := sink.env
@@ -62,7 +62,7 @@ func TestManager_do_Kubernetes(t *testing.T) {
 	}, env)
 }
 
-func TestManager_do_OpenShift(t *testing.T) {
+func TestManager_Init_OpenShift(t *testing.T) {
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -109,10 +109,10 @@ func TestManager_do_OpenShift(t *testing.T) {
 		}).
 		Return(nil)
 
-	mgr := NewManager(c, dc, []Sinker{sink})
+	mgr := NewManager(c, dc)
 
 	ctx := context.Background()
-	err := mgr.do(ctx)
+	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 
 	env := sink.env
@@ -142,7 +142,7 @@ func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
 		Return(&meta.NoKindMatchError{})
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil)
 	openShiftEnv, isOpenShift, err := mgr.openShiftEnvironment(ctx)
 	require.NoError(t, err)
 	assert.False(t, isOpenShift)
@@ -160,7 +160,7 @@ func TestManager_openShiftEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil)
 	_, _, err := mgr.openShiftEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
 }
@@ -192,7 +192,7 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 				Return(test.err)
 
 			ctx := context.Background()
-			mgr := NewManager(c, nil, nil)
+			mgr := NewManager(c, nil)
 			proxyEnv, hasProxy, err := mgr.openShiftProxyEnvironment(ctx)
 			require.NoError(t, err)
 			assert.False(t, hasProxy)
@@ -212,7 +212,7 @@ func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil)
 	_, _, err := mgr.openShiftProxyEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
 }

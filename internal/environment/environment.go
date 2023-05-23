@@ -48,22 +48,22 @@ func ImplementsSinker(i []interface{}) []Sinker {
 type Manager struct {
 	client          client.Client
 	discoveryClient serverVersionDiscoverer
-	sinks           []Sinker
+
+	sinks []Sinker
 }
 
 func NewManager(
 	client client.Client,
 	discoveryClient serverVersionDiscoverer,
-	sinks []Sinker,
 ) *Manager {
 	return &Manager{
 		client:          client,
 		discoveryClient: discoveryClient,
-		sinks:           sinks,
 	}
 }
 
-func (m *Manager) Init(ctx context.Context) error {
+func (m *Manager) Init(ctx context.Context, sinks []Sinker) error {
+	m.sinks = sinks
 	return m.do(ctx)
 }
 
