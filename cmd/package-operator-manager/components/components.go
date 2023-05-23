@@ -37,7 +37,7 @@ func NewComponents() (*dig.Container, error) {
 		ProvideScheme, ProvideRestConfig, ProvideManager,
 		ProvideMetricsRecorder, ProvideDynamicCache,
 		ProvideUncachedClient, ProvideOptions, ProvideLogger,
-		ProvideRegistry, ProvideDiscoveryClient,
+		ProvideRegistry, ProvideDiscoveryClient, ProvideEnvironmentManager,
 
 		// -----------
 		// Controllers
