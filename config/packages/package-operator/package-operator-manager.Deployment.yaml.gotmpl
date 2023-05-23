@@ -45,6 +45,14 @@ spec:
           value: {{ index .images "package-operator-manager" }}
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
           value: {{ index .images "remote-phase-package" }}
+{{- if hasKey .environment "proxy" }}
+        - name: HTTP_PROXY
+          value: {{ .environment.proxy.httpProxy | quote }}
+        - name: HTTPS_PROXY
+          value: {{ .environment.proxy.httpsProxy | quote }}
+        - name: NO_PROXY
+          value: {{ .environment.proxy.noProxy | quote }}
+{{- end}}
         image: {{ index .images "package-operator-manager" }}
         livenessProbe:
           httpGet:
@@ -59,6 +67,12 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+{{- if hasKey .environment "openShift" }}
+        volumeMounts:
+        - mountPath: /etc/pki/ca-trust/extracted/pem
+          name: trusted-ca-bundle
+          readOnly: true
+{{- end }}
 {{- if hasKey .config "resources" }}
         resources: {{ toJson .config.resources }}
 {{- else}}
@@ -70,6 +84,17 @@ spec:
           requests:
             cpu: 200m
             memory: 300Mi
+{{- end}}
+{{- if hasKey .environment "openShift" }}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+          name: trusted-ca-bundle
+          optional: true
+        name: trusted-ca-bundle
 {{- end}}
       serviceAccountName: package-operator
 status: {}
