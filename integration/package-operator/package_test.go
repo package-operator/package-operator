@@ -29,9 +29,6 @@ func TestPackage_success(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "success",
 					Namespace: "default",
-					Annotations: map[string]string{
-						"package-operator.run/test-stub-image": TestStubImage,
-					},
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
@@ -47,9 +44,6 @@ func TestPackage_success(t *testing.T) {
 			pkg: &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "success",
-					Annotations: map[string]string{
-						"package-operator.run/test-stub-image": TestStubImage,
-					},
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
@@ -67,7 +61,6 @@ func TestPackage_success(t *testing.T) {
 					Name:      "success-slices",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"package-operator.run/test-stub-image":            TestStubImage,
 						"packages.package-operator.run/chunking-strategy": "EachObject",
 					},
 				},
