@@ -8,12 +8,15 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 func TestPackage_success(t *testing.T) {
@@ -38,6 +41,21 @@ func TestPackage_success(t *testing.T) {
 				},
 			},
 			objectDeployment: &corev1alpha1.ObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+				deploy := &appsv1.Deployment{}
+				err := Client.Get(ctx, client.ObjectKey{
+					Name:      "test-stub-success",
+					Namespace: "default",
+				}, deploy)
+				require.NoError(t, err)
+
+				var env manifestsv1alpha1.PackageEnvironment
+				te := deploy.Annotations["test-environment"]
+				err = json.Unmarshal([]byte(te), &env)
+				require.NoError(t, err)
+				assert.NotEmpty(t, env.Kubernetes.Version)
+			},
 		},
 		{
 			name: "cluster",
