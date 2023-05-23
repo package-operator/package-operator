@@ -43,6 +43,8 @@ func TestPackage_success(t *testing.T) {
 			objectDeployment: &corev1alpha1.ObjectDeployment{},
 			postCheck: func(ctx context.Context, t *testing.T) {
 				t.Helper()
+
+				// Test if environment information is injected successfully.
 				deploy := &appsv1.Deployment{}
 				err := Client.Get(ctx, client.ObjectKey{
 					Name:      "test-stub-success",

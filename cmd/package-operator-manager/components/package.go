@@ -7,6 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/package-operator/internal/controllers/packages"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 )
@@ -14,9 +15,18 @@ import (
 // Type alias for dependency injector to differentiate
 // Cluster and non-cluster scoped *Generic<>Controllers.
 type (
-	PackageController        struct{ controller }
-	ClusterPackageController struct{ controller }
+	PackageController struct {
+		controllerAndEnvSinker
+	}
+	ClusterPackageController struct {
+		controllerAndEnvSinker
+	}
 )
+
+type controllerAndEnvSinker interface {
+	controller
+	environment.Sinker
+}
 
 func ProvideRegistry(log logr.Logger, opts Options) *packageimport.Registry {
 	return packageimport.NewRegistry(

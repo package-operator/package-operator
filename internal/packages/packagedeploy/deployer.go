@@ -142,9 +142,10 @@ func (l *PackageDeployer) Load(
 	}
 
 	tt, err := packageloader.NewTemplateTransformer(packageloader.PackageFileTemplateContext{
-		Package: tmplCtx.Package,
-		Config:  configuration,
-		Images:  images,
+		Package:     tmplCtx.Package,
+		Config:      configuration,
+		Images:      images,
+		Environment: tmplCtx.Environment,
 	})
 	if err != nil {
 		return err

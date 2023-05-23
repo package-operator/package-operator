@@ -21,11 +21,11 @@ import (
 var errExample = errors.New("boom")
 
 type testSink struct {
-	env manifestsv1alpha1.PackageEnvironment
+	env *manifestsv1alpha1.PackageEnvironment
 }
 
 func (s *testSink) SetEnvironment(
-	env manifestsv1alpha1.PackageEnvironment,
+	env *manifestsv1alpha1.PackageEnvironment,
 ) {
 	s.env = env
 }
@@ -55,7 +55,7 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 	require.NoError(t, err)
 
 	env := sink.env
-	assert.Equal(t, manifestsv1alpha1.PackageEnvironment{
+	assert.Equal(t, &manifestsv1alpha1.PackageEnvironment{
 		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
 			Version: "v1.2.3",
 		},
@@ -116,7 +116,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 	require.NoError(t, err)
 
 	env := sink.env
-	assert.Equal(t, manifestsv1alpha1.PackageEnvironment{
+	assert.Equal(t, &manifestsv1alpha1.PackageEnvironment{
 		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
 			Version: "v1.2.3",
 		},
@@ -228,7 +228,11 @@ func (c *discoveryClientMock) ServerVersion() (*version.Info, error) {
 
 func TestSink(t *testing.T) {
 	s := &Sink{}
-	env := manifestsv1alpha1.PackageEnvironment{}
+	env := &manifestsv1alpha1.PackageEnvironment{
+		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+			Version: "v12345",
+		},
+	}
 	s.SetEnvironment(env)
 	gotEnv := s.GetEnvironment()
 	assert.Equal(t, env, gotEnv)

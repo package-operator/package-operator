@@ -40,6 +40,11 @@ func TestUnpackReconciler(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
+	ur.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
+		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+			Version: "v11111",
+		},
+	})
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())

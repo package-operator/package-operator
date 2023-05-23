@@ -33,7 +33,7 @@ func TestBootstrapperBootstrap(t *testing.T) {
 			return &corev1alpha1.ClusterPackage{}, nil
 		},
 	}
-	b.SetEnvironment(manifestsv1alpha1.PackageEnvironment{
+	b.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
 		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
 			HTTPProxy:  "httpxxx",
 			HTTPSProxy: "httpsxxx",

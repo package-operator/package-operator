@@ -101,7 +101,7 @@ func (r *unpackReconciler) Reconcile(
 		}, nil
 	}
 
-	if err := r.packageDeployer.Load(ctx, pkg, files, r.GetEnvironment()); err != nil {
+	if err := r.packageDeployer.Load(ctx, pkg, files, *r.GetEnvironment()); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
 

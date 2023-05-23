@@ -103,7 +103,7 @@ func newGenericPackageController(
 	return controller
 }
 
-func (c *GenericPackageController) SetEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+func (c *GenericPackageController) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
 	c.unpackReconciler.SetEnvironment(env)
 }
 

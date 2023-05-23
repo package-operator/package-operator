@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -27,7 +28,7 @@ const (
 )
 
 type Sinker interface {
-	SetEnvironment(env manifestsv1alpha1.PackageEnvironment)
+	SetEnvironment(env *manifestsv1alpha1.PackageEnvironment)
 }
 
 type serverVersionDiscoverer interface {
@@ -80,10 +81,14 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) do(ctx context.Context) error {
+	log := logr.FromContextOrDiscard(ctx)
+
 	env, err := m.probe(ctx)
 	if err != nil {
 		return err
 	}
+	log.Info("detected environment", "environment", env)
+
 	for _, s := range m.sinks {
 		s.SetEnvironment(env)
 	}
@@ -91,8 +96,10 @@ func (m *Manager) do(ctx context.Context) error {
 }
 
 func (m *Manager) probe(ctx context.Context) (
-	env manifestsv1alpha1.PackageEnvironment, err error,
+	env *manifestsv1alpha1.PackageEnvironment, err error,
 ) {
+	env = &manifestsv1alpha1.PackageEnvironment{}
+
 	kubeEnv, err := m.kubernetesEnvironment(ctx)
 	if err != nil {
 		return env, fmt.Errorf("getting k8s env: %w", err)
@@ -178,19 +185,21 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	}, true, nil
 }
 
+var _ Sinker = (*Sink)(nil)
+
 type Sink struct {
-	env  manifestsv1alpha1.PackageEnvironment
+	env  *manifestsv1alpha1.PackageEnvironment
 	lock sync.RWMutex
 }
 
-func (s *Sink) SetEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+func (s *Sink) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.env = *env.DeepCopy()
+	s.env = env.DeepCopy()
 }
 
-func (s *Sink) GetEnvironment() manifestsv1alpha1.PackageEnvironment {
+func (s *Sink) GetEnvironment() *manifestsv1alpha1.PackageEnvironment {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return *s.env.DeepCopy()
+	return s.env.DeepCopy()
 }
