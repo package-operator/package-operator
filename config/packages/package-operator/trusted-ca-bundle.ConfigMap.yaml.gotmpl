@@ -1,0 +1,10 @@
+{{- if hasKey .environment "openShift" }}
+# Used in OpenShift to trust the CA of the egress proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca-bundle
+  namespace: {{ .config.namespace }}
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+{{- end}}

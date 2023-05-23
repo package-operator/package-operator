@@ -942,3 +942,18 @@ test:
         - effect: NoSchedule
           key: node-role.kubernetes.io/infra
     name: affinity-tolerations-resources
+  - context:
+      package:
+        metadata:
+          annotations: null
+          labels: null
+          name: test
+          namespace: ""
+      environment:
+        openShift:
+          version: "xxx"
+        proxy:
+          httpProxy: http
+          httpsProxy: https
+          noProxy: no...
+    name: openshift-with-proxy
