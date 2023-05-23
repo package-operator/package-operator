@@ -61,10 +61,28 @@ func run(opts components.Options) error {
 			return err
 		}
 
-		var bs *bootstrap.Bootstrapper
-		if err := di.Invoke(func(lbs *bootstrap.Bootstrapper) {
+		var (
+			bs     *bootstrap.Bootstrapper
+			envMgr *environment.Manager
+		)
+		if err := di.Invoke(func(
+			lbs *bootstrap.Bootstrapper,
+			mgr ctrl.Manager,
+			bootstrapControllers components.BootstrapControllers,
+			discoveryClient discovery.DiscoveryInterface,
+		) error {
 			bs = lbs
+			envMgr = environment.NewManager(
+				mgr.GetClient(), discoveryClient,
+				append(environment.ImplementsSinker(
+					bootstrapControllers.List(),
+				), lbs))
+			return mgr.Add(envMgr)
 		}); err != nil {
+			return err
+		}
+
+		if err := envMgr.Init(ctx); err != nil {
 			return err
 		}
 
@@ -73,6 +91,7 @@ func run(opts components.Options) error {
 			// the RESTMapper will not pick up the CRDs in the cluster.
 			return di.Invoke(func(
 				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
+				discoveryClient discovery.DiscoveryInterface,
 			) error {
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
 					return err
@@ -120,15 +139,9 @@ func newPackageOperatorManager(
 		return nil, err
 	}
 
-	var envSinks []environment.Sink
-	for _, c := range allControllers.List() {
-		envSink, ok := c.(environment.Sink)
-		if !ok {
-			envSinks = append(envSinks, envSink)
-		}
-	}
-
-	envMgr := environment.NewManager(mgr.GetClient(), discoveryClient, envSinks)
+	envMgr := environment.NewManager(
+		mgr.GetClient(), discoveryClient,
+		environment.ImplementsSinker(allControllers.List()))
 	if err := mgr.Add(envMgr); err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/cmd/package-operator-manager/components"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
@@ -24,6 +25,8 @@ import (
 const packageOperatorDeploymentName = "package-operator-manager"
 
 type Bootstrapper struct {
+	environment.Sink
+
 	client client.Client
 	log    logr.Logger
 	init   func(ctx context.Context) (
@@ -60,6 +63,13 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 	log := b.log
 	log.Info("running self-bootstrap")
 	defer log.Info("self-bootstrap done")
+
+	if env := b.GetEnvironment(); env.Proxy != nil {
+		// Make sure proxy settings are respected.
+		os.Setenv("HTTP_PROXY", env.Proxy.HTTP)
+		os.Setenv("HTTPS_PROXY", env.Proxy.HTTPS)
+		os.Setenv("NO_PROXY", env.Proxy.No)
+	}
 
 	if _, err := b.init(ctx); err != nil {
 		return err

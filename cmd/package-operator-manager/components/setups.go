@@ -111,6 +111,12 @@ type BootstrapControllers struct {
 	ClusterObjectSet        ClusterObjectSetController
 }
 
+func (bc BootstrapControllers) List() []interface{} {
+	return []interface{}{
+		bc.ClusterObjectSet, bc.ClusterObjectDeployment, bc.ClusterPackage,
+	}
+}
+
 func (bc BootstrapControllers) SetupWithManager(mgr ctrl.Manager) error {
 	return setupAll(mgr, []controllerSetup{
 		{

@@ -14,11 +14,14 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagedeploy"
 )
 
 const loaderJobFinalizer = "package-operator.run/loader-job"
+
+var _ environment.Sinker = (*GenericPackageController)(nil)
 
 type reconciler interface {
 	Reconcile(ctx context.Context, pkg adapters.GenericPackageAccessor) (ctrl.Result, error)
@@ -100,8 +103,8 @@ func newGenericPackageController(
 	return controller
 }
 
-func (c *GenericPackageController) InjectEnvironment(env manifestsv1alpha1.PackageEnvironment) {
-	c.unpackReconciler.InjectEnvironment(env)
+func (c *GenericPackageController) SetEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+	c.unpackReconciler.SetEnvironment(env)
 }
 
 func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {

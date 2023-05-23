@@ -5,11 +5,13 @@ package environment
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/discovery"
+	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -24,20 +26,35 @@ const (
 	openShiftProxyName          = "cluster"
 )
 
-type Sink interface {
-	InjectEnvironment(env manifestsv1alpha1.PackageEnvironment)
+type Sinker interface {
+	SetEnvironment(env manifestsv1alpha1.PackageEnvironment)
+}
+
+type serverVersionDiscoverer interface {
+	ServerVersion() (*version.Info, error)
+}
+
+func ImplementsSinker(i []interface{}) []Sinker {
+	var envSinks []Sinker
+	for _, c := range i {
+		envSink, ok := c.(Sinker)
+		if ok {
+			envSinks = append(envSinks, envSink)
+		}
+	}
+	return envSinks
 }
 
 type Manager struct {
 	client          client.Client
-	discoveryClient discovery.DiscoveryInterface
-	sinks           []Sink
+	discoveryClient serverVersionDiscoverer
+	sinks           []Sinker
 }
 
 func NewManager(
 	client client.Client,
-	discoveryClient discovery.DiscoveryInterface,
-	sinks []Sink,
+	discoveryClient serverVersionDiscoverer,
+	sinks []Sinker,
 ) *Manager {
 	return &Manager{
 		client:          client,
@@ -68,7 +85,7 @@ func (m *Manager) do(ctx context.Context) error {
 		return err
 	}
 	for _, s := range m.sinks {
-		s.InjectEnvironment(env)
+		s.SetEnvironment(env)
 	}
 	return nil
 }
@@ -145,12 +162,13 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	err = m.client.Get(ctx, client.ObjectKey{
 		Name: openShiftProxyName,
 	}, proxy)
-	if meta.IsNoMatchError(err) {
-		// API not registered in cluster
+	if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
+		// API not registered in cluster or no proxy config.
 		return nil, false, nil
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
+		return nil, false, fmt.Errorf(
+			"getting OpenShift ClusterVersion: %w", err)
 	}
 
 	return &manifestsv1alpha1.PackageEnvironmentProxy{
@@ -158,4 +176,21 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 		HTTPS: proxy.Status.HTTPSProxy,
 		No:    proxy.Status.NoProxy,
 	}, true, nil
+}
+
+type Sink struct {
+	env  manifestsv1alpha1.PackageEnvironment
+	lock sync.RWMutex
+}
+
+func (s *Sink) SetEnvironment(env manifestsv1alpha1.PackageEnvironment) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.env = *env.DeepCopy()
+}
+
+func (s *Sink) GetEnvironment() manifestsv1alpha1.PackageEnvironment {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return *s.env.DeepCopy()
 }
