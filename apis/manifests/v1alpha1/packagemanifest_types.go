@@ -140,11 +140,11 @@ type PackageEnvironmentOpenShift struct {
 // https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
 type PackageEnvironmentProxy struct {
 	// HTTP_PROXY
-	HTTP string `json:"http"`
+	HTTPProxy string `json:"httpProxy,omitempty"`
 	// HTTPS_PROXY
-	HTTPS string `json:"https"`
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
 	// NO_PROXY
-	No string `json:"no"`
+	NoProxy string `json:"noProxy,omitempty"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.

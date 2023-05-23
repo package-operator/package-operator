@@ -35,9 +35,9 @@ func TestBootstrapperBootstrap(t *testing.T) {
 	}
 	b.SetEnvironment(manifestsv1alpha1.PackageEnvironment{
 		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
-			HTTP:  "httpxxx",
-			HTTPS: "httpsxxx",
-			No:    "noxxx",
+			HTTPProxy:  "httpxxx",
+			HTTPSProxy: "httpsxxx",
+			NoProxy:    "noxxx",
 		},
 	})
 

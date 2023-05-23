@@ -172,9 +172,9 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	}
 
 	return &manifestsv1alpha1.PackageEnvironmentProxy{
-		HTTP:  proxy.Status.HTTPProxy,
-		HTTPS: proxy.Status.HTTPSProxy,
-		No:    proxy.Status.NoProxy,
+		HTTPProxy:  proxy.Status.HTTPProxy,
+		HTTPSProxy: proxy.Status.HTTPSProxy,
+		NoProxy:    proxy.Status.NoProxy,
 	}, true, nil
 }
 

@@ -1218,9 +1218,9 @@ test:
         openShift:
           version: sed
         proxy:
-          http: diam
-          https: nonumy
-          "no": eirmod
+          httpProxy: diam
+          httpsProxy: nonumy
+          noProxy: eirmod
       package:
         metadata:
           annotations: map[string]string
@@ -1320,9 +1320,9 @@ https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wid
 
 | Field | Description |
 | ----- | ----------- |
-| `http` <b>required</b><br>string | HTTP_PROXY |
-| `https` <b>required</b><br>string | HTTPS_PROXY |
-| `no` <b>required</b><br>string | NO_PROXY |
+| `httpProxy` <br>string | HTTP_PROXY |
+| `httpsProxy` <br>string | HTTPS_PROXY |
+| `noProxy` <br>string | NO_PROXY |
 
 
 Used in:

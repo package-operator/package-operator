@@ -124,9 +124,9 @@ func TestManager_do_OpenShift(t *testing.T) {
 			Version: "v123",
 		},
 		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
-			HTTP:  "httpxxx",
-			HTTPS: "httpsxxx",
-			No:    "noproxyxxx",
+			HTTPProxy:  "httpxxx",
+			HTTPSProxy: "httpsxxx",
+			NoProxy:    "noproxyxxx",
 		},
 	}, env)
 }

@@ -66,9 +66,9 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 
 	if env := b.GetEnvironment(); env.Proxy != nil {
 		// Make sure proxy settings are respected.
-		os.Setenv("HTTP_PROXY", env.Proxy.HTTP)
-		os.Setenv("HTTPS_PROXY", env.Proxy.HTTPS)
-		os.Setenv("NO_PROXY", env.Proxy.No)
+		os.Setenv("HTTP_PROXY", env.Proxy.HTTPProxy)
+		os.Setenv("HTTPS_PROXY", env.Proxy.HTTPSProxy)
+		os.Setenv("NO_PROXY", env.Proxy.NoProxy)
 	}
 
 	if _, err := b.init(ctx); err != nil {
