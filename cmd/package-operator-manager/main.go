@@ -68,10 +68,10 @@ func run(opts components.Options) error {
 		if err := di.Invoke(func(
 			lbs *bootstrap.Bootstrapper,
 			uncachedClient components.UncachedClient,
-			discoveryClient discovery.DiscoveryInterface,
+			lenvMgr *environment.Manager,
 		) {
 			bs = lbs
-			envMgr = environment.NewManager(uncachedClient, discoveryClient)
+			envMgr = lenvMgr
 		}); err != nil {
 			return err
 		}
@@ -133,15 +133,12 @@ type packageOperatorManager struct {
 func newPackageOperatorManager(
 	mgr ctrl.Manager, log logr.Logger,
 	hostedClusterController components.HostedClusterController,
-	discoveryClient discovery.DiscoveryInterface,
+	envMgr *environment.Manager,
 	allControllers components.AllControllers,
 ) (*packageOperatorManager, error) {
 	if err := allControllers.SetupWithManager(mgr); err != nil {
 		return nil, err
 	}
-
-	envMgr := environment.NewManager(
-		mgr.GetClient(), discoveryClient)
 	if err := mgr.Add(envMgr); err != nil {
 		return nil, err
 	}

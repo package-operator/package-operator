@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,7 +41,7 @@ func Test_setupAll(t *testing.T) {
 	})
 }
 
-func TestAllControllersSetupWithManager(t *testing.T) {
+func TestAllControllers(t *testing.T) {
 	var mocks []*controllerMock
 	newMock := func() *controllerMock {
 		m := &controllerMock{}
@@ -83,9 +84,10 @@ func TestAllControllersSetupWithManager(t *testing.T) {
 	for _, m := range mocks {
 		m.AssertExpectations(t)
 	}
+	assert.Len(t, all.List(), 10)
 }
 
-func TestBootstrapControllersSetupWithManager(t *testing.T) {
+func TestBootstrapControllers(t *testing.T) {
 	var mocks []*controllerMock
 	newMock := func() *controllerMock {
 		m := &controllerMock{}
@@ -110,6 +112,7 @@ func TestBootstrapControllersSetupWithManager(t *testing.T) {
 	for _, m := range mocks {
 		m.AssertExpectations(t)
 	}
+	assert.Len(t, all.List(), 3)
 }
 
 type controllerMock struct {

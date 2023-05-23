@@ -26,6 +26,7 @@ import (
 	"package-operator.run/package-operator/internal/controllers"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/metrics"
 )
 
@@ -36,74 +37,31 @@ func NewComponents() (*dig.Container, error) {
 		ProvideScheme, ProvideRestConfig, ProvideManager,
 		ProvideMetricsRecorder, ProvideDynamicCache,
 		ProvideUncachedClient, ProvideOptions, ProvideLogger,
-		ProvideRegistry, DiscoveryClient,
+		ProvideRegistry, ProvideDiscoveryClient,
+
+		// -----------
+		// Controllers
+		// -----------
+
+		// ObjectSet
+		ProvideObjectSetController, ProvideClusterObjectSetController,
+		// ObjectSetPhase
+		ProvideObjectSetPhaseController, ProvideClusterObjectSetPhaseController,
+		// ObjectDeployment
+		ProvideObjectDeploymentController, ProvideClusterObjectDeploymentController,
+		// Package
+		ProvidePackageController, ProvideClusterPackageController,
+		// ObjectTemplate
+		ProvideObjectTemplateController, ProvideClusterObjectTemplateController,
+
+		// HostedCluster
+		ProvideHostedClusterController,
 	}
 	for _, p := range providers {
 		if err := container.Provide(p); err != nil {
 			return nil, err
 		}
 	}
-
-	// -----------
-	// Controllers
-	// -----------
-
-	// ObjectSet
-	if err := container.Provide(
-		ProvideObjectSetController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectSetController); err != nil {
-		return nil, err
-	}
-
-	// ObjectSetPhase
-	if err := container.Provide(
-		ProvideObjectSetPhaseController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectSetPhaseController); err != nil {
-		return nil, err
-	}
-
-	// ObjectDeployment
-	if err := container.Provide(
-		ProvideObjectDeploymentController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectDeploymentController); err != nil {
-		return nil, err
-	}
-
-	// Package
-	if err := container.Provide(
-		ProvidePackageController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterPackageController); err != nil {
-		return nil, err
-	}
-
-	// ObjectTemplate
-	if err := container.Provide(
-		ProvideObjectTemplateController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectTemplateController); err != nil {
-		return nil, err
-	}
-
-	// HostedCluster
-	if err := container.Provide(
-		ProvideHostedClusterController); err != nil {
-		return nil, err
-	}
-
 	return container, nil
 }
 
@@ -219,8 +177,16 @@ func ProvideUncachedClient(
 	return UncachedClient{uncachedClient}, nil
 }
 
-func DiscoveryClient(restConfig *rest.Config) (
+func ProvideDiscoveryClient(restConfig *rest.Config) (
 	discovery.DiscoveryInterface, error,
 ) {
 	return discovery.NewDiscoveryClientForConfig(restConfig)
+}
+
+func ProvideEnvironmentManager(
+	client UncachedClient,
+	discoveryClient discovery.DiscoveryInterface,
+) *environment.Manager {
+	return environment.NewManager(
+		client, discoveryClient)
 }

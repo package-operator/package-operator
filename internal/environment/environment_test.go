@@ -30,6 +30,14 @@ func (s *testSink) SetEnvironment(
 	s.env = env
 }
 
+func TestImplementsSinker(t *testing.T) {
+	type somethingElse struct{}
+
+	s := &testSink{}
+	res := ImplementsSinker([]interface{}{s, &somethingElse{}})
+	assert.Equal(t, []Sinker{s}, res)
+}
+
 func TestManager_Init_Kubernetes(t *testing.T) {
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
