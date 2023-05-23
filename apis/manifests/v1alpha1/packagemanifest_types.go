@@ -107,8 +107,44 @@ type PackageManifestTestCaseTemplate struct {
 
 // TemplateContext is available within the package templating process.
 type TemplateContext struct {
+	// Package object.
 	Package TemplateContextPackage `json:"package"`
-	Config  *runtime.RawExtension  `json:"config,omitempty"`
+	// Configuration as presented via the (Cluster)Package API after admission.
+	Config *runtime.RawExtension `json:"config,omitempty"`
+	// Environment specific information.
+	Environment PackageEnvironment `json:"environment"`
+}
+
+// PackageEnvironment information.
+type PackageEnvironment struct {
+	// Kubernetes environment information.
+	Kubernetes PackageEnvironmentKubernetes `json:"kubernetes"`
+	// OpenShift environment information.
+	OpenShift *PackageEnvironmentOpenShift `json:"openShift,omitempty"`
+	// Proxy configuration.
+	Proxy *PackageEnvironmentProxy `json:"proxy,omitempty"`
+}
+
+type PackageEnvironmentKubernetes struct {
+	// Kubernetes server version.
+	Version string `json:"version"`
+}
+
+type PackageEnvironmentOpenShift struct {
+	// OpenShift server version.
+	Version string `json:"version"`
+}
+
+// Environment proxy settings.
+// On OpenShift, this config is taken from the cluster Proxy object.
+// https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
+type PackageEnvironmentProxy struct {
+	// HTTP_PROXY
+	HTTPProxy string `json:"httpProxy,omitempty"`
+	// HTTPS_PROXY
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
+	// NO_PROXY
+	NoProxy string `json:"noProxy,omitempty"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.

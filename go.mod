@@ -15,6 +15,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.4
 	github.com/onsi/gomega v1.27.6
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/openshift/api v0.0.0-20211122204231-b094ceff1955
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/spf13/cobra v1.7.0

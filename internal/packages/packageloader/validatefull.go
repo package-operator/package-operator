@@ -73,9 +73,10 @@ func (v TemplateTestValidator) runTestCase(
 	}
 
 	tt, err := NewTemplateTransformer(PackageFileTemplateContext{
-		Package: testCase.Context.Package,
-		Config:  configuration,
-		Images:  utils.GenerateStaticImages(manifest),
+		Package:     testCase.Context.Package,
+		Config:      configuration,
+		Images:      utils.GenerateStaticImages(manifest),
+		Environment: testCase.Context.Environment,
 	})
 	if err != nil {
 		return err

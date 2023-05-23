@@ -9,6 +9,7 @@ metadata:
     app: test-stub
     instance: "{{.package.metadata.name}}"
   annotations:
+    test-environment: {{.environment | toJson | quote}}
     package-operator.run/phase: deploy
     package-operator.run/condition-map: |
       Progressing => my-prefix/Progressing

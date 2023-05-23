@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	configv1 "github.com/openshift/api/config/v1"
 	"go.uber.org/dig"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,100 +26,42 @@ import (
 	"package-operator.run/package-operator/internal/controllers"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/package-operator/internal/dynamiccache"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/metrics"
 )
 
 // Returns a new pre-configured DI container.
 func NewComponents() (*dig.Container, error) {
 	container := dig.New()
-	if err := container.Provide(ProvideScheme); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideRestConfig); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideManager); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideMetricsRecorder); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideDynamicCache); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideUncachedClient); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideOptions); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideLogger); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(ProvideRegistry); err != nil {
-		return nil, err
-	}
+	providers := []interface{}{
+		ProvideScheme, ProvideRestConfig, ProvideManager,
+		ProvideMetricsRecorder, ProvideDynamicCache,
+		ProvideUncachedClient, ProvideOptions, ProvideLogger,
+		ProvideRegistry, ProvideDiscoveryClient, ProvideEnvironmentManager,
 
-	// -----------
-	// Controllers
-	// -----------
+		// -----------
+		// Controllers
+		// -----------
 
-	// ObjectSet
-	if err := container.Provide(
-		ProvideObjectSetController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectSetController); err != nil {
-		return nil, err
-	}
+		// ObjectSet
+		ProvideObjectSetController, ProvideClusterObjectSetController,
+		// ObjectSetPhase
+		ProvideObjectSetPhaseController, ProvideClusterObjectSetPhaseController,
+		// ObjectDeployment
+		ProvideObjectDeploymentController, ProvideClusterObjectDeploymentController,
+		// Package
+		ProvidePackageController, ProvideClusterPackageController,
+		// ObjectTemplate
+		ProvideObjectTemplateController, ProvideClusterObjectTemplateController,
 
-	// ObjectSetPhase
-	if err := container.Provide(
-		ProvideObjectSetPhaseController); err != nil {
-		return nil, err
+		// HostedCluster
+		ProvideHostedClusterController,
 	}
-	if err := container.Provide(
-		ProvideClusterObjectSetPhaseController); err != nil {
-		return nil, err
+	for _, p := range providers {
+		if err := container.Provide(p); err != nil {
+			return nil, err
+		}
 	}
-
-	// ObjectDeployment
-	if err := container.Provide(
-		ProvideObjectDeploymentController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectDeploymentController); err != nil {
-		return nil, err
-	}
-
-	// Package
-	if err := container.Provide(
-		ProvidePackageController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterPackageController); err != nil {
-		return nil, err
-	}
-
-	// ObjectTemplate
-	if err := container.Provide(
-		ProvideObjectTemplateController); err != nil {
-		return nil, err
-	}
-	if err := container.Provide(
-		ProvideClusterObjectTemplateController); err != nil {
-		return nil, err
-	}
-
-	// HostedCluster
-	if err := container.Provide(
-		ProvideHostedClusterController); err != nil {
-		return nil, err
-	}
-
 	return container, nil
 }
 
@@ -133,6 +77,7 @@ func ProvideScheme() (*runtime.Scheme, error) {
 		hypershiftv1beta1.AddToScheme,
 		apiextensionsv1.AddToScheme,
 		apiextensions.AddToScheme,
+		configv1.AddToScheme,
 	}
 	if err := schemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -230,4 +175,18 @@ func ProvideUncachedClient(
 			fmt.Errorf("unable to set up uncached client: %w", err)
 	}
 	return UncachedClient{uncachedClient}, nil
+}
+
+func ProvideDiscoveryClient(restConfig *rest.Config) (
+	discovery.DiscoveryInterface, error,
+) {
+	return discovery.NewDiscoveryClientForConfig(restConfig)
+}
+
+func ProvideEnvironmentManager(
+	client UncachedClient,
+	discoveryClient discovery.DiscoveryInterface,
+) *environment.Manager {
+	return environment.NewManager(
+		client, discoveryClient)
 }

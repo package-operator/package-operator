@@ -127,7 +127,7 @@ func TestPackageDeployer_Load(t *testing.T) {
 		},
 	}
 	files := packagecontent.Files{}
-	err := l.Load(ctx, pkg, files)
+	err := l.Load(ctx, pkg, files, manifestsv1alpha1.PackageEnvironment{})
 	require.NoError(t, err)
 
 	packageInvalid := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageInvalid)
@@ -167,7 +167,7 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 		},
 	}
 	files := packagecontent.Files{}
-	err := l.Load(ctx, pkg, files)
+	err := l.Load(ctx, pkg, files, manifestsv1alpha1.PackageEnvironment{})
 	require.NoError(t, err)
 
 	packageInvalid := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageInvalid)

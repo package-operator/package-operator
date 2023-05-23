@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -31,6 +33,13 @@ func TestBootstrapperBootstrap(t *testing.T) {
 			return &corev1alpha1.ClusterPackage{}, nil
 		},
 	}
+	b.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
+		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
+			HTTPProxy:  "httpxxx",
+			HTTPSProxy: "httpsxxx",
+			NoProxy:    "noxxx",
+		},
+	})
 
 	c.On("Get", mock.Anything, mock.Anything,
 		mock.AnythingOfType("*v1.Deployment"),
@@ -51,6 +60,10 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		ctx, func(ctx context.Context) error { return nil })
 	require.NoError(t, err)
 	assert.True(t, initCalled)
+
+	assert.Equal(t, os.Getenv("HTTP_PROXY"), "httpxxx")
+	assert.Equal(t, os.Getenv("HTTPS_PROXY"), "httpsxxx")
+	assert.Equal(t, os.Getenv("NO_PROXY"), "noxxx")
 }
 
 func TestBootstrapper_bootstrap(t *testing.T) {

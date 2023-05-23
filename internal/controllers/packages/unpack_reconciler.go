@@ -12,14 +12,18 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/package-operator/internal/environment"
 	"package-operator.run/package-operator/internal/metrics"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
 type unpackReconciler struct {
+	environment.Sink
+
 	imagePuller         imagePuller
 	packageDeployer     packageDeployer
 	packageLoadRecorder packageLoadRecorder
@@ -59,7 +63,7 @@ type imagePuller interface {
 type packageDeployer interface {
 	Load(
 		ctx context.Context, pkg adapters.GenericPackageAccessor,
-		files packagecontent.Files,
+		files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
 	) error
 }
 
@@ -97,7 +101,7 @@ func (r *unpackReconciler) Reconcile(
 		}, nil
 	}
 
-	if err := r.packageDeployer.Load(ctx, pkg, files); err != nil {
+	if err := r.packageDeployer.Load(ctx, pkg, files, *r.GetEnvironment()); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
 

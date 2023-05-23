@@ -8,12 +8,15 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 func TestPackage_success(t *testing.T) {
@@ -29,9 +32,6 @@ func TestPackage_success(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "success",
 					Namespace: "default",
-					Annotations: map[string]string{
-						"package-operator.run/test-stub-image": TestStubImage,
-					},
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
@@ -41,15 +41,29 @@ func TestPackage_success(t *testing.T) {
 				},
 			},
 			objectDeployment: &corev1alpha1.ObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				// Test if environment information is injected successfully.
+				deploy := &appsv1.Deployment{}
+				err := Client.Get(ctx, client.ObjectKey{
+					Name:      "test-stub-success",
+					Namespace: "default",
+				}, deploy)
+				require.NoError(t, err)
+
+				var env manifestsv1alpha1.PackageEnvironment
+				te := deploy.Annotations["test-environment"]
+				err = json.Unmarshal([]byte(te), &env)
+				require.NoError(t, err)
+				assert.NotEmpty(t, env.Kubernetes.Version)
+			},
 		},
 		{
 			name: "cluster",
 			pkg: &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "success",
-					Annotations: map[string]string{
-						"package-operator.run/test-stub-image": TestStubImage,
-					},
 				},
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
@@ -67,7 +81,6 @@ func TestPackage_success(t *testing.T) {
 					Name:      "success-slices",
 					Namespace: "default",
 					Annotations: map[string]string{
-						"package-operator.run/test-stub-image":            TestStubImage,
 						"packages.package-operator.run/chunking-strategy": "EachObject",
 					},
 				},

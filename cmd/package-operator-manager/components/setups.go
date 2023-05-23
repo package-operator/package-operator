@@ -47,6 +47,16 @@ type AllControllers struct {
 	ClusterObjectTemplate ClusterObjectTemplateController
 }
 
+func (ac AllControllers) List() []interface{} {
+	return []interface{}{
+		ac.ObjectSet, ac.ClusterObjectSet,
+		ac.ObjectSetPhase, ac.ClusterObjectSetPhase,
+		ac.ObjectDeployment, ac.ClusterObjectDeployment,
+		ac.Package, ac.ClusterPackage,
+		ac.ObjectTemplate, ac.ClusterObjectTemplate,
+	}
+}
+
 func (ac AllControllers) SetupWithManager(mgr ctrl.Manager) error {
 	return setupAll(mgr, []controllerSetup{
 		{
@@ -99,6 +109,12 @@ type BootstrapControllers struct {
 	ClusterPackage          ClusterPackageController
 	ClusterObjectDeployment ClusterObjectDeploymentController
 	ClusterObjectSet        ClusterObjectSetController
+}
+
+func (bc BootstrapControllers) List() []interface{} {
+	return []interface{}{
+		bc.ClusterObjectSet, bc.ClusterObjectDeployment, bc.ClusterPackage,
+	}
 }
 
 func (bc BootstrapControllers) SetupWithManager(mgr ctrl.Manager) error {

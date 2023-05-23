@@ -101,7 +101,10 @@ func ImageWithDigest(image string, imageDigest string) (string, error) {
 	return canonical.String(), nil
 }
 
-func (l *PackageDeployer) Load(ctx context.Context, pkg adapters.GenericPackageAccessor, files packagecontent.Files) error {
+func (l *PackageDeployer) Load(
+	ctx context.Context, pkg adapters.GenericPackageAccessor,
+	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
+) error {
 	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
@@ -109,6 +112,7 @@ func (l *PackageDeployer) Load(ctx context.Context, pkg adapters.GenericPackageA
 	}
 
 	tmplCtx := pkg.TemplateContext()
+	tmplCtx.Environment = env
 	configuration := map[string]interface{}{}
 
 	if tmplCtx.Config != nil {
@@ -138,9 +142,10 @@ func (l *PackageDeployer) Load(ctx context.Context, pkg adapters.GenericPackageA
 	}
 
 	tt, err := packageloader.NewTemplateTransformer(packageloader.PackageFileTemplateContext{
-		Package: tmplCtx.Package,
-		Config:  configuration,
-		Images:  images,
+		Package:     tmplCtx.Package,
+		Config:      configuration,
+		Images:      images,
+		Environment: tmplCtx.Environment,
 	})
 	if err != nil {
 		return err

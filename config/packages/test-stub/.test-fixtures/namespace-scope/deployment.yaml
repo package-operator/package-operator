@@ -6,7 +6,10 @@ metadata:
     app: test-stub
     instance: "test"
   annotations:
+    test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"}}"
     package-operator.run/phase: deploy
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
 spec:
   replicas: 2
   selector:

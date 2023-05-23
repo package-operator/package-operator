@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -18,6 +19,7 @@ import (
 	"package-operator.run/package-operator/cmd/package-operator-manager/bootstrap"
 	"package-operator.run/package-operator/cmd/package-operator-manager/components"
 	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/package-operator/internal/environment"
 )
 
 const (
@@ -59,10 +61,22 @@ func run(opts components.Options) error {
 			return err
 		}
 
-		var bs *bootstrap.Bootstrapper
-		if err := di.Invoke(func(lbs *bootstrap.Bootstrapper) {
+		var (
+			bs     *bootstrap.Bootstrapper
+			envMgr *environment.Manager
+		)
+		if err := di.Invoke(func(
+			lbs *bootstrap.Bootstrapper,
+			uncachedClient components.UncachedClient,
+			lenvMgr *environment.Manager,
+		) {
 			bs = lbs
+			envMgr = lenvMgr
 		}); err != nil {
+			return err
+		}
+
+		if err := envMgr.Init(ctx, []environment.Sinker{bs}); err != nil {
 			return err
 		}
 
@@ -71,8 +85,15 @@ func run(opts components.Options) error {
 			// the RESTMapper will not pick up the CRDs in the cluster.
 			return di.Invoke(func(
 				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
+				discoveryClient discovery.DiscoveryInterface,
 			) error {
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
+					return err
+				}
+				if err := envMgr.Init(ctx, environment.ImplementsSinker(bootstrapControllers.List())); err != nil {
+					return err
+				}
+				if err := mgr.Add(envMgr); err != nil {
 					return err
 				}
 
@@ -105,22 +126,32 @@ type packageOperatorManager struct {
 	mgr ctrl.Manager
 
 	hostedClusterController components.HostedClusterController
+	environmentManager      *environment.Manager
+	allControllers          components.AllControllers
 }
 
 func newPackageOperatorManager(
 	mgr ctrl.Manager, log logr.Logger,
 	hostedClusterController components.HostedClusterController,
+	envMgr *environment.Manager,
 	allControllers components.AllControllers,
 ) (*packageOperatorManager, error) {
 	if err := allControllers.SetupWithManager(mgr); err != nil {
 		return nil, err
 	}
+	if err := mgr.Add(envMgr); err != nil {
+		return nil, err
+	}
+
 	pkoMgr := &packageOperatorManager{
 		log: log.WithName("package-operator-manager"),
 		mgr: mgr,
 
 		hostedClusterController: hostedClusterController,
+		environmentManager:      envMgr,
+		allControllers:          allControllers,
 	}
+
 	return pkoMgr, nil
 }
 
@@ -131,6 +162,12 @@ func (pkoMgr *packageOperatorManager) Start(ctx context.Context) error {
 
 	if err := pkoMgr.probeHyperShiftIntegration(ctx); err != nil {
 		return fmt.Errorf("setting up HyperShift integration: %w", err)
+	}
+
+	if err := pkoMgr.environmentManager.Init(
+		ctx, environment.ImplementsSinker(pkoMgr.allControllers.List()),
+	); err != nil {
+		return fmt.Errorf("environment init: %w", err)
 	}
 
 	err := pkoMgr.mgr.Start(ctx)

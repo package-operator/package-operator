@@ -17,7 +17,7 @@ type PackageManifestLockSpec struct {
 	Images []PackageManifestLockImage `json:"images"`
 }
 
-// PackageManifestLockImage contains information about a resolved image
+// PackageManifestLockImage contains information about a resolved image.
 type PackageManifestLockImage struct {
 	// Image name to be use to reference it in the templates
 	Name string `json:"name"`

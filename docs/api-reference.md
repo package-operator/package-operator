@@ -1212,6 +1212,15 @@ test:
   template:
   - context:
       config: runtime.RawExtension
+      environment:
+        kubernetes:
+          version: elitr
+        openShift:
+          version: sed
+        proxy:
+          httpProxy: diam
+          httpsProxy: nonumy
+          noProxy: eirmod
       package:
         metadata:
           annotations: map[string]string
@@ -1245,9 +1254,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: diam
-    image: sed
-    name: elitr
+  - digest: ipsum
+    image: lorem
+    name: tempor
 
 ```
 
@@ -1261,6 +1270,64 @@ spec:
 
 
 ---
+
+### PackageEnvironment
+
+PackageEnvironment information.
+
+| Field | Description |
+| ----- | ----------- |
+| `kubernetes` <b>required</b><br><a href="#packageenvironmentkubernetes">PackageEnvironmentKubernetes</a> | Kubernetes environment information. |
+| `openShift` <br><a href="#packageenvironmentopenshift">PackageEnvironmentOpenShift</a> | OpenShift environment information. |
+| `proxy` <br><a href="#packageenvironmentproxy">PackageEnvironmentProxy</a> | Proxy configuration. |
+
+
+Used in:
+* [TemplateContext](#templatecontext)
+
+
+### PackageEnvironmentKubernetes
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `version` <b>required</b><br>string | Kubernetes server version. |
+
+
+Used in:
+* [PackageEnvironment](#packageenvironment)
+
+
+### PackageEnvironmentOpenShift
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `version` <b>required</b><br>string | OpenShift server version. |
+
+
+Used in:
+* [PackageEnvironment](#packageenvironment)
+
+
+### PackageEnvironmentProxy
+
+Environment proxy settings.
+On OpenShift, this config is taken from the cluster Proxy object.
+https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
+
+| Field | Description |
+| ----- | ----------- |
+| `httpProxy` <br>string | HTTP_PROXY |
+| `httpsProxy` <br>string | HTTPS_PROXY |
+| `noProxy` <br>string | NO_PROXY |
+
+
+Used in:
+* [PackageEnvironment](#packageenvironment)
+
 
 ### PackageManifestImage
 
@@ -1278,7 +1345,7 @@ Used in:
 
 ### PackageManifestLockImage
 
-PackageManifestLockImage contains information about a resolved image
+PackageManifestLockImage contains information about a resolved image.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1381,8 +1448,9 @@ TemplateContext is available within the package templating process.
 
 | Field | Description |
 | ----- | ----------- |
-| `package` <b>required</b><br><a href="#templatecontextpackage">TemplateContextPackage</a> | TemplateContextPackage represents the (Cluster)Package object requesting this package content. |
-| `config` <br>runtime.RawExtension |  |
+| `package` <b>required</b><br><a href="#templatecontextpackage">TemplateContextPackage</a> | Package object. |
+| `config` <br>runtime.RawExtension | Configuration as presented via the (Cluster)Package API after admission. |
+| `environment` <b>required</b><br><a href="#packageenvironment">PackageEnvironment</a> | Environment specific information. |
 
 
 Used in:
