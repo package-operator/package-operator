@@ -80,11 +80,6 @@ func TestPackageManifest_Validate(t *testing.T) {
 			errorString: "spec.scopes: Required value",
 		},
 		{
-			name:        "missing .spec.availabilityProbes",
-			manifest:    &manifestsv1alpha1.PackageManifest{},
-			errorString: "spec.availabilityProbes: Required value",
-		},
-		{
 			name:        "missing .spec.phases",
 			manifest:    &manifestsv1alpha1.PackageManifest{},
 			errorString: "spec.phases: Required value",
@@ -102,7 +97,7 @@ func TestPackageManifest_Validate(t *testing.T) {
 			errorString: "spec.phases[1].name: Invalid value: \"test\": must be unique",
 		},
 		{
-			name: "duplicated phase",
+			name: "missing probes in availabilityProbes",
 			manifest: &manifestsv1alpha1.PackageManifest{
 				Spec: manifestsv1alpha1.PackageManifestSpec{
 					AvailabilityProbes: []corev1alpha1.ObjectSetProbe{
