@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -518,4 +519,154 @@ func TestObjectSet(t *testing.T) {
 			assert.Equal(t, tc.Expected.Succeeded, set.HasSucceeded())
 		})
 	}
+}
+
+func TestObjectSetList_Sort(t *testing.T) {
+	t.Parallel()
+
+	list := ObjectSetList{
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 2,
+			},
+		}),
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 3,
+			},
+		}),
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 1,
+			},
+		}),
+	}
+
+	list.Sort()
+
+	revs := make([]int64, 0, len(list))
+	for _, os := range list {
+		revs = append(revs, os.Revision())
+	}
+
+	assert.Equal(t, []int64{1, 2, 3}, revs)
+}
+
+func TestObjectSetList_FindRevision(t *testing.T) {
+	t.Parallel()
+
+	list := ObjectSetList{
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 2,
+			},
+		}),
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 3,
+			},
+		}),
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 1,
+			},
+		}),
+	}
+
+	rev, found := list.FindRevision(1)
+	require.True(t, found)
+
+	assert.Equal(t, int64(1), rev.Revision())
+}
+
+func TestObjectSetList_RenderYAML(t *testing.T) {
+	t.Parallel()
+
+	expected := strings.Join([]string{
+		"- metadata:",
+		"    creationTimestamp: null",
+		"  spec: {}",
+		"  status:",
+		"    revision: 1",
+		"",
+	}, "\n")
+
+	list := ObjectSetList{
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 1,
+			},
+		}),
+	}
+
+	data, err := list.RenderYAML()
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, string(data))
+}
+
+func TestObjectSetList_RenderJSON(t *testing.T) {
+	t.Parallel()
+
+	expected := strings.Join([]string{
+		"[",
+		"    {",
+		`        "metadata": {`,
+		`            "creationTimestamp": null`,
+		"        },",
+		`        "spec": {},`,
+		`        "status": {`,
+		`            "revision": 1`,
+		"        }",
+		"    }",
+		"]",
+	}, "\n")
+
+	list := ObjectSetList{
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 1,
+			},
+		}),
+	}
+
+	data, err := list.RenderJSON()
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, string(data))
+}
+
+func TestObjectSetList_RenderTable(t *testing.T) {
+	t.Parallel()
+
+	expected := NewDefaultTable(
+		WithHeaders{"Revision", "Successful", "Change-Cause"},
+	)
+
+	expected.AddRow(
+		Field{
+			Name:  "Revision",
+			Value: int64(1),
+		},
+		Field{
+			Name:  "Successful",
+			Value: false,
+		},
+		Field{
+			Name:  "Change-Cause",
+			Value: "",
+		},
+	)
+
+	list := ObjectSetList{
+		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Status: corev1alpha1.ClusterObjectSetStatus{
+				Revision: 1,
+			},
+		}),
+	}
+
+	table := list.RenderTable("Revision", "Successful", "Change-Cause")
+
+	assert.Equal(t, expected, table)
 }
