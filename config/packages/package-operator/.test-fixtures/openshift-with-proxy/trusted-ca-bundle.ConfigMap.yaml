@@ -1,0 +1,11 @@
+
+# Used in OpenShift to trust the CA of the egress proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca-bundle
+  namespace: package-operator-system
+  annotations:
+    package-operator.run/phase: deploy
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
