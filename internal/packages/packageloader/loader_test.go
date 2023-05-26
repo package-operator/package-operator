@@ -126,6 +126,44 @@ func TestLoader(t *testing.T) {
 	}, spec.Phases)
 }
 
+var testPackageManifestContent = `apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: test
+spec:
+  scopes:
+  - Cluster
+  phases:
+  - name: test
+  availabilityProbes:
+  - probes:
+    - {}
+`
+
+var testFile1Content = `apiVersion: v1
+kind: Test
+metadata:
+  annotations:
+    package-operator.run/phase: tesxx
+property: {{.package.metadata.name}}
+`
+
+var testFile1UpdatedContent = `apiVersion: v1
+kind: Test
+metadata:
+  annotations:
+    package-operator.run/phase: tesxx
+property: {{.package.metadata.name}}xxx
+`
+
+var testFile2Content = `apiVersion: v1
+kind: Test
+metadata:
+  annotations:
+    package-operator.run/phase: tesxx
+property: {{.package.metadata.namespace}}
+`
+
 func TestTemplateTestValidator(t *testing.T) {
 	t.Parallel()
 	fixturesPath := t.TempDir()
@@ -159,23 +197,27 @@ func TestTemplateTestValidator(t *testing.T) {
 	ttv := packageloader.NewTemplateTestValidator(testScheme, fixturesPath)
 
 	originalFileMap := packagecontent.Files{
-		"file2.yaml.gotmpl": []byte("{{.package.metadata.namespace}}\n"), "file.yaml.gotmpl": []byte("{{.package.metadata.name}}\n"),
+		"manifest.yaml":     []byte(testPackageManifestContent),
+		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1Content),
 	}
 	err := ttv.ValidatePackageAndFiles(ctx, pc, originalFileMap)
 	require.NoError(t, err)
 
 	// Assert Fixtures have been setup
-
 	newFileMap := packagecontent.Files{
-		"file2.yaml.gotmpl": []byte("{{.package.metadata.namespace}}\n"), "file.yaml.gotmpl": []byte("#{{.package.metadata.name}}#\n"),
+		"manifest.yaml":     []byte(testPackageManifestContent),
+		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1UpdatedContent),
 	}
 	expectedErr := `Package validation errors:
 - Test "t1": File mismatch against fixture in file.yaml.gotmpl:
   --- FIXTURE/file.yaml
   +++ ACTUAL/file.yaml
-  @@ -1 +1 @@
-  -pkg-name
-  +#pkg-name#`
+  @@ -3,4 +3,4 @@
+   metadata:
+     annotations:
+       package-operator.run/phase: tesxx
+  -property: pkg-name
+  +property: pkg-namexxx`
 	err = ttv.ValidatePackageAndFiles(ctx, pc, newFileMap)
 	require.Equal(t, expectedErr, err.Error())
 }

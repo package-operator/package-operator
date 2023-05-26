@@ -86,6 +86,12 @@ func (v TemplateTestValidator) runTestCase(
 		return err
 	}
 
+	// test-load templated files
+	loader := New(v.scheme, WithDefaults)
+	if _, err = loader.FromFiles(ctx, fileMap); err != nil {
+		return fmt.Errorf("loading package from files: %w", err)
+	}
+
 	// check if test figures exist
 	testFixturePath := filepath.Join(v.fixturesFolderPath, testCase.Name)
 	_, err = os.Stat(testFixturePath)
