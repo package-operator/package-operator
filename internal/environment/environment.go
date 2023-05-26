@@ -113,11 +113,14 @@ func (m *Manager) probe(ctx context.Context) (
 	env.OpenShift = openShiftEnv
 
 	if isOpenShift {
-		proxy, _, err := m.openShiftProxyEnvironment(ctx)
+		proxy, hasProxy, err := m.openShiftProxyEnvironment(ctx)
 		if err != nil {
 			return env, fmt.Errorf("getting OpenShift Proxy settings: %w", err)
 		}
-		env.Proxy = proxy
+
+		if hasProxy {
+			env.Proxy = proxy
+		}
 	}
 	return
 }
@@ -178,10 +181,20 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 			"getting OpenShift ClusterVersion: %w", err)
 	}
 
+	var (
+		httpProxy  = proxy.Status.HTTPProxy
+		httpsProxy = proxy.Status.HTTPSProxy
+		noProxy    = proxy.Status.NoProxy
+	)
+
+	if httpProxy == "" && httpsProxy == "" && noProxy == "" {
+		return nil, false, nil
+	}
+
 	return &manifestsv1alpha1.PackageEnvironmentProxy{
-		HTTPProxy:  proxy.Status.HTTPProxy,
-		HTTPSProxy: proxy.Status.HTTPSProxy,
-		NoProxy:    proxy.Status.NoProxy,
+		HTTPProxy:  httpProxy,
+		HTTPSProxy: httpsProxy,
+		NoProxy:    noProxy,
 	}, true, nil
 }
 
