@@ -12,7 +12,6 @@ import (
 	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages/packagecontent"
 	"package-operator.run/package-operator/internal/packages/packageexport"
-	"package-operator.run/package-operator/internal/packages/packageimport"
 	"package-operator.run/package-operator/internal/packages/packageloader"
 	"package-operator.run/package-operator/internal/utils"
 )
@@ -74,14 +73,14 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	cfg.Option(opts...)
 
-	files, err := packageimport.Folder(ctx, srcPath)
+	files, loaderOpts, err := getPackageFromPath(ctx, b.scheme, srcPath)
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", srcPath, err)
 	}
 
 	b.cfg.Log.Info("creating image")
 
-	loader := packageloader.New(b.scheme, packageloader.WithDefaults)
+	loader := packageloader.New(b.scheme, append(loaderOpts, packageloader.WithDefaults)...)
 
 	pkg, err := loader.FromFiles(ctx, files)
 	if err != nil {
