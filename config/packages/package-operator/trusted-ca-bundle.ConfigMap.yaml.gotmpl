@@ -5,6 +5,8 @@ kind: ConfigMap
 metadata:
   name: trusted-ca-bundle
   namespace: {{ .config.namespace }}
+  annotations:
+    package-operator.run/phase: deploy
   labels:
     config.openshift.io/inject-trusted-cabundle: "true"
 {{- end}}
