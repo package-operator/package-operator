@@ -1,2 +1,2 @@
 *.yaml
-!/.test-fixtures
+!/.test-fixtures/***

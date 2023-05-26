@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    package-operator.run/phase: deploy
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: package-operator
+  name: package-operator-manager
+  namespace: package-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: package-operator
+    spec:
+      containers:
+      - args:
+        - --enable-leader-election
+        ports:
+        - name: metrics
+          containerPort: 8080
+        env:
+        - name: PKO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_IMAGE
+          value: registry.package-operator.run/static-image
+        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+          value: registry.package-operator.run/static-image
+        - name: HTTP_PROXY
+          value: "http"
+        - name: HTTPS_PROXY
+          value: "https"
+        - name: NO_PROXY
+          value: "no..."
+        image: registry.package-operator.run/static-image
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/pki/ca-trust/extracted/pem
+          name: trusted-ca-bundle
+          readOnly: true
+        # default resources
+        resources:
+          limits:
+            cpu: 200m
+            memory: 400Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+          name: trusted-ca-bundle
+          optional: true
+        name: trusted-ca-bundle
+      serviceAccountName: package-operator
+status: {}
