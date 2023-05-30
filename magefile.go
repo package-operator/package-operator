@@ -1371,11 +1371,6 @@ func (Generate) PackageOperatorPackage() error {
 		return err
 	}
 
-	packageNamespaceOverride := os.Getenv("PKO_PACKAGE_NAMESPACE_OVERRIDE")
-	if len(packageNamespaceOverride) > 0 {
-		logger.Info("replacing default package-operator-system namespace", "new ns", packageNamespaceOverride)
-		manifestYaml = bytes.ReplaceAll(manifestYaml, []byte("package-operator-system"), []byte(packageNamespaceOverride))
-	}
 	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
 		return err
 	}
