@@ -46,12 +46,18 @@ spec:
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
           value: {{ index .images "remote-phase-package" }}
 {{- if hasKey .environment "proxy" }}
+{{- if hasKey .environment.proxy "httpProxy" }}
         - name: HTTP_PROXY
           value: {{ .environment.proxy.httpProxy | quote }}
+{{- end}}
+{{- if hasKey .environment.proxy "httpsProxy" }}
         - name: HTTPS_PROXY
           value: {{ .environment.proxy.httpsProxy | quote }}
+{{- end}}
+{{- if hasKey .environment.proxy "noProxy" }}
         - name: NO_PROXY
           value: {{ .environment.proxy.noProxy | quote }}
+{{- end}}
 {{- end}}
         image: {{ index .images "package-operator-manager" }}
         livenessProbe:
