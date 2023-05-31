@@ -33,7 +33,7 @@ var _ = DescribeTable("build subcommand",
 		subCommandTestCase{
 			Args:                []string{sourcePathFixture("invalid_bad_manifest")},
 			ExpectedExitCode:    1,
-			ExpectedErrorOutput: []string{"spec.availabilityProbes: Required value"},
+			ExpectedErrorOutput: []string{"spec.scopes: Required value"},
 		},
 	),
 	Entry("given the path of a package with images, but no lock file",

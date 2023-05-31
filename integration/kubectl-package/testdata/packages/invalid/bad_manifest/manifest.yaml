@@ -3,9 +3,6 @@ kind: PackageManifest
 metadata:
   name: test-stub
 spec:
-  scopes:
-  - Cluster
-  - Namespaced
   phases:
   - name: namespace
   - name: deploy
