@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/package-operator/cmd/kubectl-package/buildcmd"
+	"package-operator.run/package-operator/cmd/kubectl-package/rolloutcmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/rootcmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/treecmd"
 	"package-operator.run/package-operator/cmd/kubectl-package/updatecmd"
@@ -124,4 +125,26 @@ func ProvideVersionCmd() RootSubCommandResult {
 	return RootSubCommandResult{
 		SubCommand: versioncmd.NewCmd(),
 	}
+}
+
+func ProvideRolloutCmd(params rolloutcmd.Params) RootSubCommandResult {
+	return RootSubCommandResult{
+		SubCommand: rolloutcmd.NewRolloutCmd(params),
+	}
+}
+
+type RolloutSubCommandResult struct {
+	dig.Out
+
+	SubCommand *cobra.Command `group:"rolloutSubCommands"`
+}
+
+func ProvideRolloutHistoryCmd(clientFactory internalcmd.ClientFactory) RolloutSubCommandResult {
+	return RolloutSubCommandResult{
+		SubCommand: rolloutcmd.NewHistoryCmd(clientFactory),
+	}
+}
+
+func ProvideClientFactory(kcliFactory internalcmd.KubeClientFactory) internalcmd.ClientFactory {
+	return internalcmd.NewDefaultClientFactory(kcliFactory)
 }

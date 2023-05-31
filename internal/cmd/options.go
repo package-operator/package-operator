@@ -56,6 +56,12 @@ func (w WithLog) ConfigureValidate(c *ValidateConfig) {
 	c.Log = w.Log
 }
 
+type WithHeaders []string
+
+func (w WithHeaders) ConfigureTable(c *TableConfig) {
+	c.Headers = []string(w)
+}
+
 type WithInsecure bool
 
 func (w WithInsecure) ConfigureBuildFromSource(c *BuildFromSourceConfig) {

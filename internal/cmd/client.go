@@ -2,12 +2,15 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -92,7 +95,7 @@ func (c *Client) GetObjectDeployment(ctx context.Context, name string, opts ...G
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return nil, fmt.Errorf("getting package object: %w", err)
+		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
 	}
 
 	return &ObjectDeployment{
@@ -136,7 +139,7 @@ func (p *Package) CurrentRevision() int64 {
 	return p.obj.(*corev1alpha1.Package).Status.Revision
 }
 
-func (p *Package) ObjectSets(ctx context.Context) ([]ObjectSet, error) {
+func (p *Package) ObjectSets(ctx context.Context) (ObjectSetList, error) {
 	opts := []findObjectSetsOption{
 		withSelector{
 			Selector: labels.SelectorFromSet(labels.Set{
@@ -173,7 +176,7 @@ func (d *ObjectDeployment) CurrentRevision() int64 {
 	return d.obj.(*corev1alpha1.ObjectDeployment).Status.Revision
 }
 
-func (d *ObjectDeployment) ObjectSets(ctx context.Context) ([]ObjectSet, error) {
+func (d *ObjectDeployment) ObjectSets(ctx context.Context) (ObjectSetList, error) {
 	opts := []findObjectSetsOption{
 		withSelector{
 			Selector: labels.SelectorFromSet(d.obj.GetLabels()),
@@ -187,7 +190,7 @@ func (d *ObjectDeployment) ObjectSets(ctx context.Context) ([]ObjectSet, error) 
 	return findObjectSets(ctx, d.client, opts...)
 }
 
-func findObjectSets(ctx context.Context, c client.Client, opts ...findObjectSetsOption) ([]ObjectSet, error) {
+func findObjectSets(ctx context.Context, c client.Client, opts ...findObjectSetsOption) (ObjectSetList, error) {
 	var cfg findObjectSetsConfig
 
 	cfg.Option(opts...)
@@ -207,9 +210,9 @@ func findObjectSets(ctx context.Context, c client.Client, opts ...findObjectSets
 			return nil, fmt.Errorf("listing ObjectSets: %w", err)
 		}
 
-		revs := make([]ObjectSet, 0, len(sets.Items))
+		revs := make(ObjectSetList, 0, len(sets.Items))
 		for i := range sets.Items {
-			revs = append(revs, ObjectSet{obj: &sets.Items[i]})
+			revs = append(revs, NewObjectSet(&sets.Items[i]))
 		}
 
 		return revs, nil
@@ -221,9 +224,9 @@ func findObjectSets(ctx context.Context, c client.Client, opts ...findObjectSets
 		return nil, fmt.Errorf("listing ClusterObjectSets: %w", err)
 	}
 
-	revs := make([]ObjectSet, 0, len(sets.Items))
+	revs := make(ObjectSetList, 0, len(sets.Items))
 	for i := range sets.Items {
-		revs = append(revs, ObjectSet{obj: &sets.Items[i]})
+		revs = append(revs, NewObjectSet(&sets.Items[i]))
 	}
 
 	return revs, nil
@@ -254,6 +257,12 @@ type withSelector struct{ Selector labels.Selector }
 
 func (w withSelector) ConfigureFindObjectSets(c *findObjectSetsConfig) {
 	c.Selector = w.Selector
+}
+
+func NewObjectSet(obj client.Object) ObjectSet {
+	return ObjectSet{
+		obj: obj,
+	}
 }
 
 type ObjectSet struct {
@@ -292,4 +301,64 @@ func (s *ObjectSet) ChangeCause() string {
 	const changeCauseKey = "kubernetes.io/change-cause"
 
 	return s.obj.GetAnnotations()[changeCauseKey]
+}
+
+func (s *ObjectSet) MarshalYAML() ([]byte, error) {
+	return yaml.Marshal(s.obj)
+}
+
+func (s *ObjectSet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.obj)
+}
+
+type ObjectSetList []ObjectSet
+
+func (l ObjectSetList) Sort() {
+	slices.SortFunc(l, func(a, b ObjectSet) bool {
+		return a.Revision() < b.Revision()
+	})
+}
+
+func (l ObjectSetList) FindRevision(rev int64) (ObjectSet, bool) {
+	idx := slices.IndexFunc(l, func(os ObjectSet) bool {
+		return os.Revision() == rev
+	})
+	if idx < 0 {
+		return ObjectSet{}, false
+	}
+
+	return l[idx], true
+}
+
+func (l ObjectSetList) RenderJSON() ([]byte, error) {
+	return json.MarshalIndent(l, "", "    ")
+}
+
+func (l ObjectSetList) RenderYAML() ([]byte, error) {
+	return yaml.Marshal(l)
+}
+
+func (l ObjectSetList) RenderTable(headers ...string) Table {
+	table := NewDefaultTable(
+		WithHeaders(headers),
+	)
+
+	for _, rev := range l {
+		table.AddRow(
+			Field{
+				Name:  "Revision",
+				Value: rev.Revision(),
+			},
+			Field{
+				Name:  "Successful",
+				Value: rev.HasSucceeded(),
+			},
+			Field{
+				Name:  "Change-Cause",
+				Value: rev.ChangeCause(),
+			},
+		)
+	}
+
+	return table
 }
