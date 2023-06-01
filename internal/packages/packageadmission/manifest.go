@@ -43,10 +43,6 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 	}
 
 	specProbes := field.NewPath("spec").Child("availabilityProbes")
-	if len(obj.Spec.AvailabilityProbes) == 0 {
-		allErrs = append(allErrs,
-			field.Required(specProbes, ""))
-	}
 	for i, probe := range obj.Spec.AvailabilityProbes {
 		if len(probe.Probes) == 0 {
 			allErrs = append(allErrs,

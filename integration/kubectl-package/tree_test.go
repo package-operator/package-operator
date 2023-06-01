@@ -38,7 +38,7 @@ var _ = DescribeTable("tree subcommand",
 			Args:             []string{sourcePathFixture("invalid_bad_manifest")},
 			ExpectedExitCode: 1,
 			ExpectedErrorOutput: []string{
-				"spec.availabilityProbes: Required value",
+				"spec.scopes: Required value",
 			},
 		},
 	),
