@@ -341,6 +341,26 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 	require.EqualError(t, err, "Package validation errors:\n- Missing package-operator.run/phase Annotation in test.yaml#0")
 }
 
+func TestObjectDuplicateValidator(t *testing.T) {
+	t.Parallel()
+
+	odv := &packageloader.ObjectDuplicateValidator{}
+
+	obj := unstructured.Unstructured{}
+	obj.SetAnnotations(map[string]string{
+		manifestsv1alpha1.PackagePhaseAnnotation: "something",
+	})
+	packageContent := &packagecontent.Package{
+		Objects: map[string][]unstructured.Unstructured{
+			"test.yaml": {{}, obj},
+		},
+	}
+
+	ctx := context.Background()
+	err := odv.ValidatePackage(ctx, packageContent)
+	require.EqualError(t, err, "Package validation errors:\n- Duplicate Object in test.yaml#1")
+}
+
 func TestObjectGVKValidator(t *testing.T) {
 	t.Parallel()
 

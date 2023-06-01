@@ -20,6 +20,7 @@ type (
 	ValidatorList                  []Validator
 	ValidateEachObjectFn           func(ctx context.Context, path string, index int, obj unstructured.Unstructured) error
 	ObjectPhaseAnnotationValidator struct{}
+	ObjectDuplicateValidator       struct{}
 	ObjectGVKValidator             struct{}
 	ObjectLabelsValidator          struct{}
 	PackageScopeValidator          manifestsv1alpha1.PackageManifestScope
@@ -28,6 +29,9 @@ type (
 var (
 	_ Validator = (ValidatorList)(nil)
 	_ Validator = (*ObjectPhaseAnnotationValidator)(nil)
+	_ Validator = (*ObjectDuplicateValidator)(nil)
+	_ Validator = (*ObjectGVKValidator)(nil)
+	_ Validator = (*ObjectLabelsValidator)(nil)
 	_ Validator = (PackageScopeValidator)("")
 )
 
@@ -69,6 +73,35 @@ func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, 
 		})
 	}
 	return nil
+}
+
+// Objects with the same name/namespace/kind/group must only exist once over all phases.
+// APIVersion does not matter for the check.
+func (v *ObjectDuplicateValidator) ValidatePackage(_ context.Context, packageContent *packagecontent.Package) error {
+	var errors []error
+	visited := map[string]bool{}
+	for path, objects := range packageContent.Objects {
+		for i, object := range objects {
+			gvk := object.GroupVersionKind()
+			group := gvk.Group
+			kind := gvk.Kind
+			namespace := object.GetNamespace()
+			name := object.GetName()
+			key := group + "." + kind + "/" + namespace + "/" + name
+			if _, ok := visited[key]; ok {
+				errors = append(errors, packages.NewInvalidError(packages.Violation{
+					Reason: packages.ViolationDuplicateObject,
+					Location: &packages.ViolationLocation{
+						Path:          path,
+						DocumentIndex: pointer.Int(i),
+					},
+				}))
+			} else {
+				visited[key] = true
+			}
+		}
+	}
+	return packages.NewInvalidAggregate(errors...)
 }
 
 func (v *ObjectGVKValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {

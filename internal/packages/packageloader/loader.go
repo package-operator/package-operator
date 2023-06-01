@@ -53,7 +53,7 @@ func WithFilesTransformers(transformers ...FilesTransformer) Option {
 }
 
 func WithDefaults(l *Loader) {
-	WithValidators(&ObjectGVKValidator{}, &ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{})(l)
+	WithValidators(&ObjectDuplicateValidator{}, &ObjectGVKValidator{}, &ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{})(l)
 }
 
 func New(scheme *runtime.Scheme, opts ...Option) *Loader {

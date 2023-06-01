@@ -102,6 +102,7 @@ const (
 	ViolationReasonInvalidYAML                   = "Invalid YAML"
 	ViolationReasonMissingPhaseAnnotation        = "Missing " + manifestsv1alpha1.PackagePhaseAnnotation + " Annotation"
 	ViolationReasonMissingGVK                    = "GroupVersionKind not set"
+	ViolationDuplicateObject                     = "Duplicate Object"
 	ViolationReasonLabelsInvalid                 = "Labels invalid"
 	ViolationReasonUnsupportedScope              = "Package unsupported scope"
 	ViolationReasonFixtureMismatch               = "File mismatch against fixture"
