@@ -143,6 +143,7 @@ spec:
 var testFile1Content = `apiVersion: v1
 kind: Test
 metadata:
+  name: testfile1
   annotations:
     package-operator.run/phase: tesxx
 property: {{.package.metadata.name}}
@@ -151,6 +152,7 @@ property: {{.package.metadata.name}}
 var testFile1UpdatedContent = `apiVersion: v1
 kind: Test
 metadata:
+  name: testfile1
   annotations:
     package-operator.run/phase: tesxx
 property: {{.package.metadata.name}}xxx
@@ -159,6 +161,7 @@ property: {{.package.metadata.name}}xxx
 var testFile2Content = `apiVersion: v1
 kind: Test
 metadata:
+  name: testfile2
   annotations:
     package-operator.run/phase: tesxx
 property: {{.package.metadata.namespace}}
@@ -212,8 +215,8 @@ func TestTemplateTestValidator(t *testing.T) {
 - Test "t1": File mismatch against fixture in file.yaml.gotmpl:
   --- FIXTURE/file.yaml
   +++ ACTUAL/file.yaml
-  @@ -3,4 +3,4 @@
-   metadata:
+  @@ -4,4 +4,4 @@
+     name: testfile1
      annotations:
        package-operator.run/phase: tesxx
   -property: pkg-name
