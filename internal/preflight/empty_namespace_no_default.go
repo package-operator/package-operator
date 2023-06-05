@@ -44,7 +44,7 @@ func (p *EmptyNamespaceNoDefault) Check(
 
 	if mapping.Scope == meta.RESTScopeNamespace && len(obj.GetNamespace()) == 0 {
 		violations = append(violations, Violation{
-			Error: "Object doesn't have a namepsace and no default is provided.",
+			Error: "Object doesn't have a namespace and no default is provided.",
 		})
 	}
 
