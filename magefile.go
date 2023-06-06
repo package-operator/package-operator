@@ -49,12 +49,12 @@ const (
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
 
-	controllerGenVersion = "0.11.3"
-	golangciLintVersion  = "1.52.2"
-	craneVersion         = "0.14.0"
-	kindVersion          = "0.18.0"
+	controllerGenVersion = "0.12.0"
+	golangciLintVersion  = "1.53.2"
+	craneVersion         = "0.15.2"
+	kindVersion          = "0.19.0"
 	k8sDocGenVersion     = "0.5.1"
-	helmVersion          = "3.11.1"
+	helmVersion          = "3.12.0"
 )
 
 // Variables that define build behaviour.

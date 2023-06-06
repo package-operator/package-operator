@@ -6,6 +6,7 @@ linters:
   #- containedctx     # Context.Context within a struct a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
   #- contextcheck     # Not that useful/false positives.
   #- cyclop           # Cyclo complexity already calculated by other linters.
+  #- depguard         # We do not restrict imports.
   #- dogsled          # Could be nice in the future.
   #- dupl             # Could be nice in the future.
   #- exhaustive       # Not that useful/false positives.
@@ -43,7 +44,6 @@ linters:
   - bidichk
   - bodyclose
   - decorder
-  - depguard
   - dupword
   - durationcheck
   - errcheck
