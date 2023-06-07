@@ -91,7 +91,11 @@ func (r *Registry) handleResponse(image string, res response) {
 	defer r.inFlightLock.Unlock()
 
 	for _, recv := range r.inFlight[image] {
-		recv <- res
+		recv <- response{
+			// DeepCopy to ensure clients can work concurrently on the returned files map.
+			Files: res.Files.DeepCopy(),
+			Err:   res.Err,
+		}
 	}
 
 	delete(r.inFlight, image)
