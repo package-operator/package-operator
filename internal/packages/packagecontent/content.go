@@ -17,3 +17,14 @@ type (
 		Objects             map[string][]unstructured.Unstructured
 	}
 )
+
+// Returns a deep copy of the files map.
+func (f Files) DeepCopy() Files {
+	newF := Files{}
+	for k, v := range f {
+		newV := make([]byte, len(v))
+		copy(newV, v)
+		newF[k] = newV
+	}
+	return newF
+}

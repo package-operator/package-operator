@@ -64,12 +64,21 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 	r.pullImage = ipm.Pull
 
 	ctx := context.Background()
-	var wg sync.WaitGroup
+	var (
+		wg sync.WaitGroup
+
+		files     []packagecontent.Files
+		filesLock sync.Mutex
+	)
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = r.Pull(ctx, "quay.io/test123")
+			f, _ := r.Pull(ctx, "quay.io/test123")
+
+			filesLock.Lock()
+			defer filesLock.Unlock()
+			files = append(files, f)
 		}()
 
 		time.Sleep(requestDelay)
@@ -77,6 +86,17 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 	wg.Wait()
 
 	ipm.AssertNumberOfCalls(t, "Pull", numRequests)
+	assert.Len(t, files, numRequests)
+
+	// Ensure no two returned file maps are the same map object.
+	maxRequestIndex := numRequests - 1
+	for i := 0; i <= maxRequestIndex; i++ {
+		for j := maxRequestIndex; j >= 0; j-- {
+			af := files[i]
+			bf := files[j]
+			assert.NotSame(t, af, bf)
+		}
+	}
 }
 
 type imagePullerMock struct {
