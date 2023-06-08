@@ -50,10 +50,12 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 	for i, object := range objs {
 		annotations := object.GetAnnotations()
 		phaseAnnotation := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
+		collisionProtectionAnnotation := annotations[manifestsv1alpha1.PackageCollisionProtectionAnnotation]
 		isExternalObject := annotations[manifestsv1alpha1.PackageExternalObjectAnnotation] == "True"
 		delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageExternalObjectAnnotation)
+		delete(annotations, manifestsv1alpha1.PackageCollisionProtectionAnnotation)
 		if len(annotations) == 0 {
 			// This is important!
 			// When submitted to the API server empty maps will be dropped.
@@ -72,8 +74,9 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 		object.SetAnnotations(annotations)
 
 		objSetObj := corev1alpha1.ObjectSetObject{
-			Object:            object,
-			ConditionMappings: conditionMapping,
+			Object:              object,
+			ConditionMappings:   conditionMapping,
+			CollisionProtection: corev1alpha1.CollisionProtection(collisionProtectionAnnotation),
 		}
 
 		if isExternalObject {
