@@ -48,7 +48,7 @@ func (p *Printer) PrintfErr(s string, args ...any) error {
 }
 
 func (p *Printer) PrintTable(t cmd.Table) error {
-	var data [][]string
+	data := [][]string{}
 
 	headers := t.Headers()
 
