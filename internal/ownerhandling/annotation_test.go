@@ -19,6 +19,62 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
+func TestOwnerStrategyAnnotation_HasController(t *testing.T) {
+	tests := []struct {
+		name     string
+		obj      metav1.Object
+		expected bool
+	}{
+		{
+			name: "controller in annotation",
+			obj: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cm1",
+					Namespace: "test",
+					UID:       types.UID("1234"),
+					Annotations: map[string]string{
+						ownerStrategyAnnotationKey: `[{"uid":"123456", "kind":"ConfigMap", "name":"cm1", "controller":true}]`,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "controller in ownerReferences",
+			obj: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cm1",
+					Namespace: "test",
+					UID:       types.UID("1234"),
+					OwnerReferences: []metav1.OwnerReference{
+						{},
+						{Controller: pointer.Bool(true)},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "none",
+			obj: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cm1",
+					Namespace: "test",
+					UID:       types.UID("1234"),
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := NewAnnotation(testScheme)
+			r := s.HasController(test.obj)
+			assert.Equal(t, test.expected, r)
+		})
+	}
+}
+
 func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

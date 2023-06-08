@@ -18,6 +18,8 @@ const (
 	// that the referenced object should only be observed during a phase
 	// rather than reconciled.
 	PackageExternalObjectAnnotation = "package-operator.run/external"
+	// Collision protection prevents Package Operator from working on objects already under management by a different operator.
+	PackageCollisionProtectionAnnotation = "package-operator.run/collision-protection"
 )
 
 const (

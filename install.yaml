@@ -273,6 +273,12 @@ spec:
                                 description: An object that is part of the phase of
                                   an ObjectSet.
                                 properties:
+                                  collisionProtection:
+                                    default: Prevent
+                                    description: Collision protection prevents Package
+                                      Operator from working on objects already under
+                                      management by a different operator.
+                                    type: string
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
@@ -309,6 +315,12 @@ spec:
                                 description: An object that is part of the phase of
                                   an ObjectSet.
                                 properties:
+                                  collisionProtection:
+                                    default: Prevent
+                                    description: Collision protection prevents Package
+                                      Operator from working on objects already under
+                                      management by a different operator.
+                                    type: string
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
@@ -626,6 +638,12 @@ spec:
                 items:
                   description: An object that is part of the phase of an ObjectSet.
                   properties:
+                    collisionProtection:
+                      default: Prevent
+                      description: Collision protection prevents Package Operator
+                        from working on objects already under management by a different
+                        operator.
+                      type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
@@ -657,6 +675,12 @@ spec:
                 items:
                   description: An object that is part of the phase of an ObjectSet.
                   properties:
+                    collisionProtection:
+                      default: Prevent
+                      description: Collision protection prevents Package Operator
+                        from working on objects already under management by a different
+                        operator.
+                      type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
@@ -1009,6 +1033,12 @@ spec:
                       items:
                         description: An object that is part of the phase of an ObjectSet.
                         properties:
+                          collisionProtection:
+                            default: Prevent
+                            description: Collision protection prevents Package Operator
+                              from working on objects already under management by
+                              a different operator.
+                            type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
                               Package Operator APIs.
@@ -1044,6 +1074,12 @@ spec:
                       items:
                         description: An object that is part of the phase of an ObjectSet.
                         properties:
+                          collisionProtection:
+                            default: Prevent
+                            description: Collision protection prevents Package Operator
+                              from working on objects already under management by
+                              a different operator.
+                            type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
                               Package Operator APIs.
@@ -1278,6 +1314,11 @@ spec:
             items:
               description: An object that is part of the phase of an ObjectSet.
               properties:
+                collisionProtection:
+                  default: Prevent
+                  description: Collision protection prevents Package Operator from
+                    working on objects already under management by a different operator.
+                  type: string
                 conditionMappings:
                   description: Maps conditions from this object into the Package Operator
                     APIs.
@@ -1896,6 +1937,12 @@ spec:
                                 description: An object that is part of the phase of
                                   an ObjectSet.
                                 properties:
+                                  collisionProtection:
+                                    default: Prevent
+                                    description: Collision protection prevents Package
+                                      Operator from working on objects already under
+                                      management by a different operator.
+                                    type: string
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
@@ -1932,6 +1979,12 @@ spec:
                                 description: An object that is part of the phase of
                                   an ObjectSet.
                                 properties:
+                                  collisionProtection:
+                                    default: Prevent
+                                    description: Collision protection prevents Package
+                                      Operator from working on objects already under
+                                      management by a different operator.
+                                    type: string
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
@@ -2246,6 +2299,12 @@ spec:
                 items:
                   description: An object that is part of the phase of an ObjectSet.
                   properties:
+                    collisionProtection:
+                      default: Prevent
+                      description: Collision protection prevents Package Operator
+                        from working on objects already under management by a different
+                        operator.
+                      type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
@@ -2277,6 +2336,12 @@ spec:
                 items:
                   description: An object that is part of the phase of an ObjectSet.
                   properties:
+                    collisionProtection:
+                      default: Prevent
+                      description: Collision protection prevents Package Operator
+                        from working on objects already under management by a different
+                        operator.
+                      type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
@@ -2627,6 +2692,12 @@ spec:
                       items:
                         description: An object that is part of the phase of an ObjectSet.
                         properties:
+                          collisionProtection:
+                            default: Prevent
+                            description: Collision protection prevents Package Operator
+                              from working on objects already under management by
+                              a different operator.
+                            type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
                               Package Operator APIs.
@@ -2662,6 +2733,12 @@ spec:
                       items:
                         description: An object that is part of the phase of an ObjectSet.
                         properties:
+                          collisionProtection:
+                            default: Prevent
+                            description: Collision protection prevents Package Operator
+                              from working on objects already under management by
+                              a different operator.
+                            type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
                               Package Operator APIs.
@@ -2896,6 +2973,11 @@ spec:
             items:
               description: An object that is part of the phase of an ObjectSet.
               properties:
+                collisionProtection:
+                  default: Prevent
+                  description: Collision protection prevents Package Operator from
+                    working on objects already under management by a different operator.
+                  type: string
                 conditionMappings:
                   description: Maps conditions from this object into the Package Operator
                     APIs.

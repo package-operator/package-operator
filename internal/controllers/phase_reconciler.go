@@ -46,12 +46,14 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
 	OwnerPatch(owner metav1.Object) ([]byte, error)
+	HasController(obj metav1.Object) bool
 }
 
 type adoptionChecker interface {
 	Check(
 		ctx context.Context, owner PhaseObjectOwner, obj client.Object,
 		previous []PreviousObjectSet,
+		collisionProtection corev1alpha1.CollisionProtection,
 	) (needsAdoption bool, err error)
 }
 
@@ -357,7 +359,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return actualObj, nil
 	}
 
-	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous); err != nil {
+	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous, phaseObject.CollisionProtection); err != nil {
 		return nil, err
 	}
 
@@ -490,6 +492,7 @@ func (e RevisionCollisionError) Error() string {
 func (r *PhaseReconciler) reconcileObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	desiredObj *unstructured.Unstructured, previous []PreviousObjectSet,
+	collisionProtection corev1alpha1.CollisionProtection,
 ) (actualObj *unstructured.Unstructured, err error) {
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
@@ -501,6 +504,13 @@ func (r *PhaseReconciler) reconcileObject(
 		// The object is not yet present on the cluster,
 		// just create it using desired state!
 		err := r.writer.Create(ctx, desiredObj)
+		if errors.IsAlreadyExists(err) {
+			// object already exists, but was not in our cache.
+			// get object via uncached client directly from the API server.
+			if err := r.uncachedClient.Get(ctx, objKey, currentObj); err != nil {
+				return nil, fmt.Errorf("getting %s from uncached client: %w", desiredObj.GroupVersionKind(), err)
+			}
+		}
 		if err != nil {
 			return nil, fmt.Errorf("creating: %w", err)
 		}
@@ -514,7 +524,7 @@ func (r *PhaseReconciler) reconcileObject(
 	updatedObj := currentObj.DeepCopy()
 
 	// Check if we can even work on this object or need to adopt it.
-	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous)
+	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous, collisionProtection)
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +554,7 @@ func (r *PhaseReconciler) reconcileObject(
 		}
 	}
 
-	// Only issue updates when this instance is already or will be controlled by this instance.
+	// Only issue updates when this instance is already controlled by this instance.
 	if r.ownerStrategy.IsController(owner.ClientObject(), updatedObj) {
 		if err := r.patcher.Patch(ctx, desiredObj, currentObj, updatedObj); err != nil {
 			return nil, err
@@ -619,23 +629,35 @@ type defaultAdoptionChecker struct {
 func (c *defaultAdoptionChecker) Check(
 	_ context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
+	collisionProtection corev1alpha1.CollisionProtection,
 ) (needsAdoption bool, err error) {
-	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 {
-		return true, nil
-	}
-
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
 		return false, nil
+	}
+
+	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 {
+		collisionProtection = corev1alpha1.CollisionProtectionNone
 	}
 
 	currentRevision, err := getObjectRevision(obj)
 	if err != nil {
 		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
+	// Never ever adopt objects of newer revisions.
 	if currentRevision > owner.GetRevision() {
 		// owned by newer revision.
 		return false, nil
+	}
+
+	switch collisionProtection {
+	case corev1alpha1.CollisionProtectionNone:
+		// I hope the user knows what he is doing ;)
+		return true, nil
+	case corev1alpha1.CollisionProtectionIfNoController:
+		if !c.ownerStrategy.HasController(obj) {
+			return true, nil
+		}
 	}
 
 	if !c.isControlledByPreviousRevision(obj, previous) {
