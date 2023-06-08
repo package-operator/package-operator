@@ -135,7 +135,7 @@ func Test_DeploymentReconciler_Reconcile(t *testing.T) {
 	assert.Equal(t, []corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name:   "test",
-			Slices: []string{"test-depl-85dfb9bbb4"},
+			Slices: []string{"test-depl-95565fb5c"},
 		},
 	}, updatedDeployment.Spec.Template.Spec.Phases)
 }
