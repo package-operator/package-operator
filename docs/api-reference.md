@@ -56,7 +56,8 @@ spec:
       phases:
       - class: ipsum
         externalObjects:
-        - conditionMappings:
+        - collisionProtection: Prevent
+          conditionMappings:
           - destinationType: consetetur
             sourceType: amet
           object:
@@ -66,7 +67,8 @@ spec:
               name: example-deployment
         name: lorem
         objects:
-        - conditionMappings:
+        - collisionProtection: Prevent
+          conditionMappings:
           - destinationType: sit
             sourceType: dolor
           object:
@@ -133,7 +135,8 @@ spec:
   phases:
   - class: sed
     externalObjects:
-    - conditionMappings:
+    - collisionProtection: Prevent
+      conditionMappings:
       - destinationType: tempor
         sourceType: eirmod
       object:
@@ -143,7 +146,8 @@ spec:
           name: example-deployment
     name: elitr
     objects:
-    - conditionMappings:
+    - collisionProtection: Prevent
+      conditionMappings:
       - destinationType: nonumy
         sourceType: diam
       object:
@@ -203,7 +207,8 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   externalObjects:
-  - conditionMappings:
+  - collisionProtection: Prevent
+    conditionMappings:
     - destinationType: amet
       sourceType: sit
     object:
@@ -212,7 +217,8 @@ spec:
       metadata:
         name: example-deployment
   objects:
-  - conditionMappings:
+  - collisionProtection: Prevent
+    conditionMappings:
     - destinationType: dolor
       sourceType: ipsum
     object:
@@ -259,7 +265,8 @@ kind: ClusterObjectSlice
 metadata:
   name: example
 objects:
-- conditionMappings:
+- collisionProtection: Prevent
+  conditionMappings:
   - destinationType: nonumy
     sourceType: diam
   object:
@@ -386,9 +393,10 @@ spec:
       phases:
       - class: sed
         externalObjects:
-        - conditionMappings:
-          - destinationType: tempor
-            sourceType: eirmod
+        - collisionProtection: Prevent
+          conditionMappings:
+          - destinationType: eirmod
+            sourceType: nonumy
           object:
             apiVersion: apps/v1
             kind: Deployment
@@ -396,9 +404,10 @@ spec:
               name: example-deployment
         name: elitr
         objects:
-        - conditionMappings:
-          - destinationType: nonumy
-            sourceType: diam
+        - collisionProtection: Prevent
+          conditionMappings:
+          - destinationType: diam
+            sourceType: sed
           object:
             apiVersion: apps/v1
             kind: Deployment
@@ -464,9 +473,10 @@ spec:
   phases:
   - class: dolor
     externalObjects:
-    - conditionMappings:
-      - destinationType: sadipscing
-        sourceType: consetetur
+    - collisionProtection: Prevent
+      conditionMappings:
+      - destinationType: consetetur
+        sourceType: amet
       object:
         apiVersion: apps/v1
         kind: Deployment
@@ -474,9 +484,10 @@ spec:
           name: example-deployment
     name: ipsum
     objects:
-    - conditionMappings:
-      - destinationType: amet
-        sourceType: sit
+    - collisionProtection: Prevent
+      conditionMappings:
+      - destinationType: sit
+        sourceType: dolor
       object:
         apiVersion: apps/v1
         kind: Deployment
@@ -534,18 +545,20 @@ spec:
         matchLabels:
           app.kubernetes.io/name: example-operator
   externalObjects:
-  - conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+  - collisionProtection: Prevent
+    conditionMappings:
+    - destinationType: nonumy
+      sourceType: diam
     object:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: example-deployment
   objects:
-  - conditionMappings:
-    - destinationType: diam
-      sourceType: sed
+  - collisionProtection: Prevent
+    conditionMappings:
+    - destinationType: sed
+      sourceType: elitr
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -591,9 +604,10 @@ metadata:
   name: example
   namespace: default
 objects:
-- conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+- collisionProtection: Prevent
+  conditionMappings:
+  - destinationType: sit
+    sourceType: dolor
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -854,6 +868,7 @@ ObjectSetObject is an object that is part of the phase of an ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `object` <b>required</b><br>unstructured.Unstructured |  |
+| `collisionProtection` <br><a href="#collisionprotection">CollisionProtection</a> | Collision protection prevents Package Operator from working on objects already under management by a different operator. |
 | `conditionMappings` <br><a href="#conditionmapping">[]ConditionMapping</a> | Maps conditions from this object into the Package Operator APIs. |
 
 

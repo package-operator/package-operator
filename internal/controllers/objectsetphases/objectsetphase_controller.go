@@ -38,6 +38,7 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
+	HasController(obj metav1.Object) bool
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
 		ownerType client.Object, mapper meta.RESTMapper, isController bool,
