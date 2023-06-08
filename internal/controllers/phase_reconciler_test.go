@@ -466,7 +466,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 
 	ctx := context.Background()
 	desired := &unstructured.Unstructured{}
-	actual, err := r.reconcileObject(ctx, owner, desired, nil)
+	actual, err := r.reconcileObject(ctx, owner, desired, nil, corev1alpha1.CollisionProtectionPrevent)
 	require.NoError(t, err)
 
 	assert.Same(t, desired, actual)
@@ -492,7 +492,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	owner.On("GetRevision").Return(int64(3))
 
 	acMock.
-		On("Check", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Check", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(true, nil)
 
 	dynamicCacheMock.
@@ -522,7 +522,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	obj := &unstructured.Unstructured{}
 	// set owner refs so we don't run into the panic
 	obj.SetOwnerReferences([]metav1.OwnerReference{{}})
-	actual, err := r.reconcileObject(ctx, owner, obj, nil)
+	actual, err := r.reconcileObject(ctx, owner, obj, nil, corev1alpha1.CollisionProtectionPrevent)
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
@@ -638,12 +638,13 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		mockPrepare   func(*ownerStrategyMock, *phaseObjectOwnerMock)
-		object        client.Object
-		previous      []PreviousObjectSet
-		errorAs       any
-		needsAdoption bool
+		name                string
+		mockPrepare         func(*ownerStrategyMock, *phaseObjectOwnerMock)
+		object              client.Object
+		previous            []PreviousObjectSet
+		collisionProtection corev1alpha1.CollisionProtection
+		errorAs             interface{}
+		needsAdoption       bool
 	}{
 		{
 			// Object is of revision 15, while our current revision is 34.
@@ -798,6 +799,64 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			errorAs:       &RevisionCollisionError{},
 			needsAdoption: false,
 		},
+		{
+			name: "collision protection IfNoController positive",
+			mockPrepare: func(
+				osm *ownerStrategyMock,
+				owner *phaseObjectOwnerMock,
+			) {
+				ownerObj := &unstructured.Unstructured{}
+				owner.On("ClientObject").Return(ownerObj)
+				owner.
+					On("GetRevision").Return(int64(100))
+
+				osm.
+					On("IsController", ownerObj, mock.Anything).
+					Return(false)
+				osm.
+					On("HasController", mock.Anything).
+					Return(false)
+			},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&corev1.ConfigMap{}),
+			},
+			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+			object: &unstructured.Unstructured{
+				Object: map[string]interface{}{},
+			},
+			needsAdoption: true,
+		},
+		{
+			// Object owner is not in previous revision list.
+			name: "collision protection IfNoController negative",
+			mockPrepare: func(
+				osm *ownerStrategyMock,
+				owner *phaseObjectOwnerMock,
+			) {
+				osm.
+					On("IsController", mock.Anything, mock.Anything).
+					Return(false)
+				ownerObj := &unstructured.Unstructured{
+					Object: map[string]interface{}{},
+				}
+				osm.
+					On("HasController", mock.Anything).
+					Return(true)
+				owner.On("ClientObject").Return(ownerObj)
+				owner.On("GetRevision").Return(int64(1))
+			},
+			previous: []PreviousObjectSet{
+				newPreviousObjectSetMockWithoutRemotes(
+					&unstructured.Unstructured{}),
+			},
+			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+			object: &unstructured.Unstructured{
+				Object: map[string]interface{}{},
+			},
+			errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
+			needsAdoption: false,
+		},
 	}
 
 	for i := range tests {
@@ -817,7 +876,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 
 			ctx := context.Background()
 			needsAdoption, err := c.Check(
-				ctx, owner, test.object, test.previous)
+				ctx, owner, test.object, test.previous, test.collisionProtection)
 			if test.errorAs == nil {
 				require.NoError(t, err)
 			} else {

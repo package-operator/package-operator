@@ -31,6 +31,15 @@ func NewNative(scheme *runtime.Scheme) *OwnerStrategyNative {
 	}
 }
 
+func (s *OwnerStrategyNative) HasController(obj metav1.Object) bool {
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.Controller != nil && *ref.Controller {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *OwnerStrategyNative) OwnerPatch(owner metav1.Object) ([]byte, error) {
 	annotations := owner.GetAnnotations()
 	patchMetadata := map[string]any{

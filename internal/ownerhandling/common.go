@@ -8,6 +8,7 @@ import (
 )
 
 type ownerStrategy interface {
+	HasController(obj metav1.Object) bool
 	IsOwner(owner, obj metav1.Object) bool
 	IsController(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
