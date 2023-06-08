@@ -50,7 +50,7 @@ func genObjectSet(
 		},
 	}
 
-	var phases []corev1alpha1.ObjectSetTemplatePhase
+	phases := make([]corev1alpha1.ObjectSetTemplatePhase, 0, len(phaseAndObjectMap))
 	for phaseName, objects := range phaseAndObjectMap {
 		currPhase := corev1alpha1.ObjectSetTemplatePhase{
 			Name:    phaseName,

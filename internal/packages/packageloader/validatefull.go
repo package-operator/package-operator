@@ -113,7 +113,7 @@ func (v TemplateTestValidator) runTestCase(
 		return err
 	}
 
-	var violations []packages.Violation
+	violations := make([]packages.Violation, 0, len(fileMap))
 	for relPath := range fileMap {
 		if !packages.IsTemplateFile(relPath) {
 			// template source files are of no interest for the test fixtures.

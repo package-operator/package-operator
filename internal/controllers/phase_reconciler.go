@@ -164,13 +164,13 @@ func (r *PhaseReconciler) ReconcilePhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
-	var desiredObjects []unstructured.Unstructured
-	for _, phaseObject := range phase.Objects {
+	desiredObjects := make([]unstructured.Unstructured, len(phase.Objects))
+	for i, phaseObject := range phase.Objects {
 		desired, err := r.desiredObject(ctx, owner, phaseObject)
 		if err != nil {
 			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
 		}
-		desiredObjects = append(desiredObjects, *desired)
+		desiredObjects[i] = *desired
 	}
 
 	violations, err := preflight.CheckAllInPhase(

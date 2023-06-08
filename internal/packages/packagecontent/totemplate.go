@@ -105,8 +105,7 @@ func (c phaseCollector) addExternalObjects(phaseName string, objs ...corev1alpha
 }
 
 func (c phaseCollector) Collect() []corev1alpha1.ObjectSetTemplatePhase {
-	var entries []phaseCollectorEntry
-
+	entries := make([]phaseCollectorEntry, 0, len(c))
 	for _, entry := range c {
 		if len(entry.Phase.Objects) == 0 && len(entry.Phase.ExternalObjects) == 0 {
 			// empty phases may happen due to templating for scope or topology restrictions.
@@ -126,10 +125,10 @@ func (c phaseCollector) Collect() []corev1alpha1.ObjectSetTemplatePhase {
 		return entries[i].Index < entries[j].Index
 	})
 
-	var phases []corev1alpha1.ObjectSetTemplatePhase
+	phases := make([]corev1alpha1.ObjectSetTemplatePhase, len(entries))
 
-	for _, e := range entries {
-		phases = append(phases, e.Phase)
+	for i, e := range entries {
+		phases[i] = e.Phase
 	}
 
 	return phases

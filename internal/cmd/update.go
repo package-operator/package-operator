@@ -78,14 +78,14 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		return nil, fmt.Errorf("loading package: %w", err)
 	}
 
-	var lockImages []v1alpha1.PackageManifestLockImage
-	for _, img := range pkg.PackageManifest.Spec.Images {
+	lockImages := make([]v1alpha1.PackageManifestLockImage, len(pkg.PackageManifest.Spec.Images))
+	for i, img := range pkg.PackageManifest.Spec.Images {
 		lockImg, err := u.lockImageFromManifestImage(cfg, img)
 		if err != nil {
 			return nil, fmt.Errorf("resolving lock image for %q: %w", img.Image, err)
 		}
 
-		lockImages = append(lockImages, lockImg)
+		lockImages[i] = lockImg
 	}
 
 	manifestLock := &v1alpha1.PackageManifestLock{

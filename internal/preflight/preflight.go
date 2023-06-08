@@ -17,10 +17,11 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	var vs []string
-	for _, v := range e.Violations {
-		vs = append(vs, v.String())
+	vs := make([]string, len(e.Violations))
+	for i, v := range e.Violations {
+		vs[i] = v.String()
 	}
+
 	return strings.Join(vs, ", ")
 }
 
