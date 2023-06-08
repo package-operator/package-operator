@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/package-operator/internal/environment"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -38,14 +41,17 @@ type preflightChecker interface {
 	) (violations []preflight.Violation, err error)
 }
 
+var _ environment.Sinker = (*GenericObjectTemplateController)(nil)
+
 type GenericObjectTemplateController struct {
-	newObjectTemplate genericObjectTemplateFactory
-	log               logr.Logger
-	scheme            *runtime.Scheme
-	client            client.Client
-	uncachedClient    client.Client
-	dynamicCache      dynamicCache
-	reconciler        []reconciler
+	newObjectTemplate  genericObjectTemplateFactory
+	log                logr.Logger
+	scheme             *runtime.Scheme
+	client             client.Client
+	uncachedClient     client.Client
+	dynamicCache       dynamicCache
+	templateReconciler *templateReconciler
+	reconciler         []reconciler
 }
 
 func NewObjectTemplateController(
@@ -80,21 +86,21 @@ func newGenericObjectTemplateController(
 	restMapper meta.RESTMapper,
 	newObjectTemplate genericObjectTemplateFactory,
 ) *GenericObjectTemplateController {
-	return &GenericObjectTemplateController{
+	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newObjectTemplate,
 		log:               log,
 		scheme:            scheme,
 		client:            client,
 		uncachedClient:    uncachedClient,
 		dynamicCache:      dynamicCache,
-		reconciler: []reconciler{
-			newTemplateReconciler(scheme, client, uncachedClient, dynamicCache, preflight.List{
-				preflight.NewAPIExistence(restMapper),
-				preflight.NewEmptyNamespaceNoDefault(restMapper),
-				preflight.NewNamespaceEscalation(restMapper),
-			}),
-		},
+		templateReconciler: newTemplateReconciler(scheme, client, uncachedClient, dynamicCache, preflight.List{
+			preflight.NewAPIExistence(restMapper),
+			preflight.NewEmptyNamespaceNoDefault(restMapper),
+			preflight.NewNamespaceEscalation(restMapper),
+		}),
 	}
+	controller.reconciler = []reconciler{controller.templateReconciler}
+	return controller
 }
 
 func (c *GenericObjectTemplateController) Reconcile(
@@ -144,6 +150,10 @@ func (c *GenericObjectTemplateController) updateStatus(ctx context.Context, obje
 		return fmt.Errorf("updating ObjectTemplate status: %w", err)
 	}
 	return nil
+}
+
+func (c *GenericObjectTemplateController) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
+	c.templateReconciler.SetEnvironment(env)
 }
 
 func (c *GenericObjectTemplateController) SetupWithManager(

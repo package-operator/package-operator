@@ -9,7 +9,8 @@ import (
 )
 
 type TemplateContext struct {
-	Config map[string]interface{} `json:"config"`
+	Config      map[string]interface{} `json:"config"`
+	Environment map[string]interface{} `json:"environment"`
 }
 
 type TemplateTransformer struct {

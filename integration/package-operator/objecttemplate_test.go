@@ -50,6 +50,7 @@ metadata:
 spec:
   image: %s
   config:
+	kubernetes: {{ .environment.kubernetes.version }}
     {{ toJson .config }}`, SuccessTestPackageImage)
 	objectTemplateName := "object-template"
 	objectTemplate := corev1alpha1.ObjectTemplate{
@@ -131,14 +132,14 @@ spec:
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	err := Client.Create(ctx, &cm1)
 	require.NoError(t, err)
-	defer cleanupOnSuccess(ctx, t, &cm1)
+	// defer cleanupOnSuccess(ctx, t, &cm1)
 
 	err = Client.Create(ctx, &cm2)
 	require.NoError(t, err)
-	defer cleanupOnSuccess(ctx, t, &cm2)
+	// defer cleanupOnSuccess(ctx, t, &cm2)
 	err = Client.Create(ctx, &objectTemplate)
 	require.NoError(t, err)
-	defer cleanupOnSuccess(ctx, t, &objectTemplate)
+	// defer cleanupOnSuccess(ctx, t, &objectTemplate)
 
 	// Test ClusterPackage
 	pkg := &corev1alpha1.Package{}
@@ -156,6 +157,7 @@ spec:
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
+	assert.Equal(t, "v1.26.3", packageConfig["kubernetes"])
 
 	// Patch config map
 
