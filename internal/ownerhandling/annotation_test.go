@@ -44,6 +44,37 @@ func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 	assert.Equal(t, `[]`, obj.Annotations[ownerStrategyAnnotationKey])
 }
 
+func TestOwnerStrategyAnnotation_SetOwnerReference(t *testing.T) {
+	s := NewAnnotation(testScheme)
+	cm1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: "cmtestns",
+			UID:       types.UID("1234"),
+		},
+	}
+	obj := testutil.NewSecret()
+
+	assert.NoError(t, s.SetOwnerReference(cm1, obj))
+
+	ownerRefs := s.getOwnerReferences(obj)
+	if assert.Len(t, ownerRefs, 1) {
+		assert.Equal(t, cm1.Name, ownerRefs[0].Name)
+		assert.Equal(t, cm1.Namespace, ownerRefs[0].Namespace)
+		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
+		assert.Nil(t, ownerRefs[0].Controller)
+	}
+
+	cm2 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm2",
+			Namespace: "cmtestns",
+			UID:       types.UID("56789"),
+		},
+	}
+	require.NoError(t, s.SetOwnerReference(cm2, obj))
+}
+
 func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
 	s := NewAnnotation(testScheme)
 	cm1 := &corev1.ConfigMap{

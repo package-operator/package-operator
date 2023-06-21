@@ -40,6 +40,37 @@ func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
 	assert.Equal(t, []metav1.OwnerReference{}, obj.GetOwnerReferences())
 }
 
+func TestOwnerStrategyNative_SetOwnerReference(t *testing.T) {
+	s := NewNative(testScheme)
+	obj := testutil.NewSecret()
+	cm1 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm1",
+			Namespace: obj.Namespace,
+			UID:       types.UID("1234"),
+		},
+	}
+
+	assert.NoError(t, s.SetOwnerReference(cm1, obj))
+
+	ownerRefs := obj.GetOwnerReferences()
+	if assert.Len(t, ownerRefs, 1) {
+		assert.Equal(t, cm1.Name, ownerRefs[0].Name)
+		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
+		assert.Nil(t, ownerRefs[0].Controller)
+	}
+
+	cm2 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm2",
+			Namespace: obj.Namespace,
+			UID:       types.UID("56789"),
+		},
+	}
+
+	assert.NoError(t, s.SetControllerReference(cm2, obj))
+}
+
 func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
