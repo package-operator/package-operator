@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,11 +47,13 @@ func (l *PreviousRevisionLookup) Lookup(
 	previousSets := make([]PreviousObjectSet, len(previous))
 	for i, prev := range previous {
 		set := l.newPreviousObjectSet(l.scheme)
-		if err := l.client.Get(
+		err := l.client.Get(
 			ctx, client.ObjectKey{
 				Name:      prev.Name,
 				Namespace: owner.ClientObject().GetNamespace(),
-			}, set.ClientObject()); err != nil {
+			}, set.ClientObject())
+		// Previous revisions may be garbage collected so ingore not found errors
+		if err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 		previousSets[i] = set

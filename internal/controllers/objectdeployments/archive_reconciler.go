@@ -31,10 +31,15 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("errored when trying to compute objects for archival: %w", err)
 	}
-	return ctrl.Result{}, a.markObjectSetsForArchival(ctx, objsetsEligibleForArchival, objectDeployment)
+	err = a.markObjectSetsForArchival(ctx, prevObjectSets, objsetsEligibleForArchival, objectDeployment)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
 }
 
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
+	previousObjectSets []genericObjectSet,
 	objectsToArchive []genericObjectSet,
 	objectDeployment objectDeploymentAccessor,
 ) error {
@@ -46,29 +51,16 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	// of revision so that the earlier revisions get deleted first.
 	sort.Sort(objectSetsByRevisionAscending(objectsToArchive))
 
-	revisionLimit := defaultRevisionLimit
-	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()
-	if deploymentRevisionLimit != nil {
-		revisionLimit = *deploymentRevisionLimit
-	}
-	numObjectsToDelete := len(objectsToArchive) - int(revisionLimit)
-	itemsDeleted := 0
 	for _, objectSet := range objectsToArchive {
-		currObject := objectSet.ClientObject()
-		if numObjectsToDelete > itemsDeleted {
-			if err := a.client.Delete(ctx, currObject); err != nil {
-				return fmt.Errorf("failed to delete objectset: %w", err)
-			}
-			itemsDeleted++
-			continue
-		}
-
-		// Mark everything else as archived
 		if !objectSet.IsArchived() && objectSet.IsStatusPaused() {
 			objectSet.SetArchived()
 			if err := a.client.Update(ctx, objectSet.ClientObject()); err != nil {
 				return fmt.Errorf("failed to archive objectset: %w", err)
 			}
+		}
+		// Only garbage collect older revisions if later ones successfully archive
+		if err := a.garbageCollectRevisions(ctx, previousObjectSets, objectDeployment); err != nil {
+			return fmt.Errorf("error garbage collecting revisions: %w", err)
 		}
 	}
 	return nil
@@ -225,4 +217,21 @@ func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
 		}
 	}
 	return
+}
+
+func (a *archiveReconciler) garbageCollectRevisions(ctx context.Context, previousObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor) error {
+	revisionLimit := defaultRevisionLimit
+	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()
+	if deploymentRevisionLimit != nil {
+		revisionLimit = *deploymentRevisionLimit
+	}
+	numToDelete := len(previousObjectSets) - (int(revisionLimit))
+	for numToDelete > 0 {
+		if err := a.client.Delete(ctx, previousObjectSets[0].ClientObject()); err != nil {
+			return fmt.Errorf("failed to delete objectset: %w", err)
+		}
+		numToDelete--
+	}
+
+	return nil
 }
