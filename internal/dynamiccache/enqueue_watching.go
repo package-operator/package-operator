@@ -1,6 +1,7 @@
 package dynamiccache
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,20 +32,20 @@ type ownerRefGetter interface {
 	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
 
-func (e *EnqueueWatchingObjects) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.ObjectNew, q)
 	e.enqueueWatchers(evt.ObjectOld, q)
 }
 
-func (e *EnqueueWatchingObjects) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 

@@ -1,4 +1,3 @@
-cmd/kubectl-package/deps/log.go
 cmd/kubectl-package/rolloutcmd/history_test.go
 cmd/kubectl-package/rolloutcmd/objectset_getter_test.go
 cmd/package-operator-manager/bootstrap/bootstrap.go
@@ -116,4 +115,3 @@ integration/package-operator/objectdeployment_test.go
 integration/package-operator/objectset_test.go
 integration/package-operator/objecttemplate_test.go
 integration/package-operator/package_test.go
-magefile.go
