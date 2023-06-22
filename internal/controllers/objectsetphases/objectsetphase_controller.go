@@ -323,6 +323,6 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
-		Watches(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, false)).
+		WatchesRawSource(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, false)).
 		Complete(c)
 }
