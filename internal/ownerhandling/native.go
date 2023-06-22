@@ -11,9 +11,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var _ ownerStrategy = (*OwnerStrategyNative)(nil)
+var mgr manager.Manager
 
 // NativeOwner handling strategy uses .metadata.ownerReferences.
 type OwnerStrategyNative struct {
@@ -89,10 +91,11 @@ func (s *OwnerStrategyNative) SetControllerReference(owner, obj metav1.Object) e
 func (s *OwnerStrategyNative) EnqueueRequestForOwner(
 	ownerType client.Object, isController bool,
 ) handler.EventHandler {
-	return &handler.EnqueueRequestForOwner{
-		OwnerType:    ownerType,
-		IsController: isController,
+	if isController {
+		return handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(),
+			ownerType, handler.OnlyControllerOwner())
 	}
+	return handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), ownerType)
 }
 
 func (s *OwnerStrategyNative) ownerRefForCompare(owner metav1.Object) metav1.OwnerReference {
