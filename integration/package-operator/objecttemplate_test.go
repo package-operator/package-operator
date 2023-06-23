@@ -42,6 +42,10 @@ func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm2Name := "config-map-2"
 	cm2, cm2Source := createCMAndObjectTemplateSource(cm2Key, cm2Destination, cm2Value, cm2Name)
 
+	kubernetesKey := "kubernetes"
+	kubernetesPath := ".environment.kubernetes.version"
+	kubernetesValue := "v1.27.1"
+
 	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
 kind: Package
 metadata:
@@ -50,7 +54,13 @@ metadata:
 spec:
   image: %s
   config:
-    {{ toJson .config }}`, SuccessTestPackageImage)
+    %s: {{ .config.%s }}
+    %s: {{ .config.%s }}
+    %s: {{ %s }}`, SuccessTestPackageImage,
+		cm1Destination, cm1Destination,
+		cm2Destination, cm2Destination,
+		kubernetesKey, kubernetesPath)
+
 	objectTemplateName := "object-template"
 	objectTemplate := corev1alpha1.ObjectTemplate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -73,7 +83,13 @@ metadata:
 spec:
   image: %s
   config:
-    {{ toJson .config }}`, SuccessTestPackageImage)
+    %s: {{ .config.%s }}
+    %s: {{ .config.%s }}
+    %s: {{ %s }}`, SuccessTestPackageImage,
+		cm1Destination, cm1Destination,
+		cm2Destination, cm2Destination,
+		kubernetesKey, kubernetesPath,
+	)
 
 	clusterObjectTemplateName := "cluster-object-template"
 	clusterObjectTemplate := corev1alpha1.ClusterObjectTemplate{
@@ -140,7 +156,7 @@ spec:
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, &objectTemplate)
 
-	// Test ClusterPackage
+	// Test Package
 	pkg := &corev1alpha1.Package{}
 	pkg.Name = "test-stub"
 	pkg.Namespace = defaultNamespace
@@ -156,6 +172,7 @@ spec:
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
+	assert.Equal(t, kubernetesValue, packageConfig[kubernetesKey])
 
 	// Patch config map
 
@@ -193,6 +210,7 @@ spec:
 	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
 	assert.Equal(t, cm1PatchedValue, clusterPackageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
+	assert.Equal(t, kubernetesValue, packageConfig[kubernetesKey])
 
 	// Test Deployment
 	err = Client.Create(ctx, &deploymentObjectTemplate)

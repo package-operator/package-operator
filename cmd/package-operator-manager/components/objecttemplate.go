@@ -11,8 +11,12 @@ import (
 // Type alias for dependency injector to differentiate
 // Cluster and non-cluster scoped *Generic<>Controllers.
 type (
-	ObjectTemplateController        struct{ controller }
-	ClusterObjectTemplateController struct{ controller }
+	ObjectTemplateController struct {
+		controllerAndEnvSinker
+	}
+	ClusterObjectTemplateController struct {
+		controllerAndEnvSinker
+	}
 )
 
 func ProvideObjectTemplateController(
