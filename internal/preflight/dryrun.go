@@ -53,7 +53,8 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonMethodNotAllowed,
 			metav1.StatusReasonRequestEntityTooLarge,
 			metav1.StatusReasonUnsupportedMediaType,
-			metav1.StatusReasonNotAcceptable:
+			metav1.StatusReasonNotAcceptable,
+			metav1.StatusReasonNotFound:
 			return []Violation{{Error: err.Error()}}, nil
 		case "":
 			logr.FromContextOrDiscard(ctx).Info("API status error with empty reason string", "err", apiErr.Status())
