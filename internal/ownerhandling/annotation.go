@@ -63,6 +63,33 @@ func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 	}
 }
 
+func (s *OwnerStrategyAnnotation) SetOwnerReference(owner, obj metav1.Object) error {
+	ownerRefs := s.getOwnerReferences(obj)
+
+	gvk, err := apiutil.GVKForObject(owner.(runtime.Object), s.scheme)
+	if err != nil {
+		return err
+	}
+
+	ownerRef := annotationOwnerRef{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		UID:        owner.GetUID(),
+		Name:       owner.GetName(),
+		Namespace:  owner.GetNamespace(),
+	}
+
+	ownerIndex := s.indexOf(ownerRefs, ownerRef)
+	if ownerIndex != -1 {
+		ownerRefs[ownerIndex] = ownerRef
+	} else {
+		ownerRefs = append(ownerRefs, ownerRef)
+	}
+	s.setOwnerReferences(obj, ownerRefs)
+
+	return nil
+}
+
 func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Object) error {
 	ownerRefComp := s.ownerRefForCompare(owner)
 	ownerRefs := s.getOwnerReferences(obj)
