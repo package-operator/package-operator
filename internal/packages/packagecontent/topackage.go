@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/package-operator/internal/packages"
@@ -62,7 +62,7 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 				err = packages.NewInvalidError(packages.Violation{
 					Reason:   packages.ViolationReasonInvalidYAML,
 					Details:  err.Error(),
-					Location: &packages.ViolationLocation{Path: path, DocumentIndex: pointer.Int(i)},
+					Location: &packages.ViolationLocation{Path: path, DocumentIndex: ptr.To(i)},
 				})
 
 				return

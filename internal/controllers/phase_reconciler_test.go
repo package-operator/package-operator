@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -839,7 +839,7 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 					APIVersion: corev1alpha1.GroupVersion.String(),
 					Kind:       "ObjectSetPhase",
 					Name:       "phase-1",
-					Controller: pointer.Bool(true),
+					Controller: ptr.To(true),
 				},
 			},
 		},
