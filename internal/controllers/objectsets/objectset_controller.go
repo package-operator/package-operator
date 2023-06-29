@@ -2,6 +2,7 @@ package objectsets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -30,10 +31,11 @@ type GenericObjectSetController struct {
 	newObjectSet      genericObjectSetFactory
 	newObjectSetPhase genericObjectSetPhaseFactory
 
-	client     client.Client
-	log        logr.Logger
-	scheme     *runtime.Scheme
-	reconciler []reconciler
+	client                 client.Client
+	log                    logr.Logger
+	scheme                 *runtime.Scheme
+	reconciler             []reconciler
+	phasesPreflightChecker phasesChecker
 
 	recorder        metricsRecorder
 	dynamicCache    dynamicCache
@@ -42,6 +44,12 @@ type GenericObjectSetController struct {
 
 type reconciler interface {
 	Reconcile(ctx context.Context, objectSet genericObjectSet) (ctrl.Result, error)
+}
+
+type phasesChecker interface {
+	Check(
+		ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+	) (violations []preflight.Violation, err error)
 }
 
 type dynamicCache interface {
@@ -110,6 +118,11 @@ func newGenericObjectSetController(
 		dynamicCache: dynamicCache,
 		recorder:     recorder,
 	}
+
+	checker := preflight.PhasesCheckerList{
+		preflight.NewObjectDuplicate(),
+	}
+	controller.phasesPreflightChecker = checker
 
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
@@ -212,6 +225,17 @@ func (c *GenericObjectSetController) Reconcile(
 		return res, err
 	}
 
+	violations, err := c.phasesPreflightChecker.Check(ctx, objectSet.GetPhases())
+	if err != nil {
+		return res, err
+	}
+	if len(violations) > 0 {
+		preflightErr := &preflight.Error{
+			Violations: violations,
+		}
+		return res, c.updateStatusPreflightError(ctx, objectSet, preflightErr)
+	}
+
 	for _, r := range c.reconciler {
 		res, err = r.Reconcile(ctx, objectSet)
 		if err != nil || !res.IsZero() {
@@ -223,6 +247,7 @@ func (c *GenericObjectSetController) Reconcile(
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)
 			})
+		return res, c.ifPreflightErrorUpdateStatus(ctx, objectSet, err)
 	}
 
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
@@ -230,6 +255,29 @@ func (c *GenericObjectSetController) Reconcile(
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
+}
+
+func (c *GenericObjectSetController) ifPreflightErrorUpdateStatus(ctx context.Context, objectSet genericObjectSet,
+	reconcileErr error,
+) error {
+	var preflightError *preflight.Error
+	if errors.As(reconcileErr, &preflightError) {
+		return c.updateStatusPreflightError(ctx, objectSet, preflightError)
+	}
+	return reconcileErr
+}
+
+func (c *GenericObjectSetController) updateStatusPreflightError(ctx context.Context, objectSet genericObjectSet,
+	preflightErr *preflight.Error,
+) error {
+	meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		Type:               corev1alpha1.ObjectSetAvailable,
+		Status:             metav1.ConditionFalse,
+		ObservedGeneration: objectSet.GetGeneration(),
+		Reason:             "PreflightError",
+		Message:            preflightErr.Error(),
+	})
+	return c.updateStatus(ctx, objectSet)
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {

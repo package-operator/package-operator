@@ -2,6 +2,7 @@ package objectsets
 
 import (
 	"context"
+	goerrors "errors"
 	"testing"
 	"time"
 
@@ -406,6 +407,40 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			}
 		})
 	}
+}
+
+var errTest = goerrors.New("explosion")
+
+func TestGenericObjectSetController_updateStatusError(t *testing.T) {
+	t.Run("just returns error", func(t *testing.T) {
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, _, _, _, _ := newControllerAndMocks()
+		ctx := context.Background()
+		err := c.ifPreflightErrorUpdateStatus(ctx, objectSet, errTest)
+		assert.EqualError(t, err, "explosion")
+	})
+
+	t.Run("reports preflight error", func(t *testing.T) {
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, client, _, _, _ := newControllerAndMocks()
+
+		client.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		err := c.ifPreflightErrorUpdateStatus(
+			ctx, objectSet, &preflight.Error{})
+		require.NoError(t, err)
+
+		client.StatusMock.AssertExpectations(t)
+	})
 }
 
 func newControllerAndMocks() (
