@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -40,6 +41,11 @@ func TestBootstrapperBootstrap(t *testing.T) {
 			NoProxy:    "noxxx",
 		},
 	})
+
+	c.On("Get", mock.Anything, mock.Anything,
+		mock.AnythingOfType("*v1.CustomResourceDefinition"),
+		mock.Anything).
+		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
 	c.On("Get", mock.Anything, mock.Anything,
 		mock.AnythingOfType("*v1.Deployment"),
@@ -157,4 +163,59 @@ func TestBootstrapper_isPKOAvailable(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, isPKOAvailable)
 	})
+}
+
+func TestBootstrapper_fixSliceCRDRenamingIssue(t *testing.T) {
+	c := testutil.NewClient()
+	b := &Bootstrapper{client: c}
+
+	c.On("Get", mock.Anything, mock.Anything,
+		mock.AnythingOfType("*v1.CustomResourceDefinition"),
+		mock.Anything).
+		Return(nil)
+
+	c.On("Delete", mock.Anything,
+		mock.AnythingOfType("*v1.Deployment"),
+		mock.Anything).
+		Return(nil)
+
+	c.On("List", mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterObjectSetList"),
+		mock.Anything).
+		Run(func(args mock.Arguments) {
+			l := args.Get(1).(*corev1alpha1.ClusterObjectSetList)
+			l.Items = []corev1alpha1.ClusterObjectSet{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Finalizers: []string{"xxx"},
+					},
+				}, {},
+			}
+		}).
+		Return(nil)
+
+	c.On("Get", mock.Anything, mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
+		mock.Anything).
+		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+
+	c.On("Delete", mock.Anything,
+		mock.AnythingOfType("*v1.CustomResourceDefinition"),
+		mock.Anything).
+		Return(nil)
+
+	c.On("Delete", mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
+		mock.Anything).
+		Return(nil)
+
+	c.On("Update", mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
+		mock.Anything).
+		Return(nil)
+
+	err := b.fixSliceCRDRenamingIssue(context.Background())
+	require.NoError(t, err)
+
+	c.AssertExpectations(t)
 }

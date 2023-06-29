@@ -8,7 +8,9 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,6 +73,10 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 		os.Setenv("NO_PROXY", env.Proxy.NoProxy)
 	}
 
+	if err := b.fixSliceCRDRenamingIssue(ctx); err != nil {
+		return err
+	}
+
 	if _, err := b.init(ctx); err != nil {
 		return err
 	}
@@ -83,6 +89,89 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 		return nil
 	}
 	return b.bootstrap(ctx, runManager)
+}
+
+// Fixes PackageOperator getting stuck upgrading itself,
+// After the objectslice and clusterobjectslice CRDs have been renamed to objectslices and clusterobjectslices.
+func (b *Bootstrapper) fixSliceCRDRenamingIssue(ctx context.Context) error {
+	log := logr.FromContextOrDiscard(ctx)
+	const (
+		objectsliceCRDName        = "objectslice.package-operator.run"
+		clusterobjectsliceCRDName = "clusterobjectslice.package-operator.run"
+	)
+
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	err := b.client.Get(ctx, client.ObjectKey{
+		Name: objectsliceCRDName,
+	}, crd)
+	if errors.IsNotFound(err) {
+		return nil // nothing to do \o/
+	}
+	if err != nil {
+		return err
+	}
+
+	// Fix
+	// 1. Stop Package Operator on the cluster
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      packageOperatorDeploymentName,
+			Namespace: b.pkoNamespace,
+		},
+	}
+	err = b.client.Delete(ctx, deploy)
+	if !errors.IsNotFound(err) && err != nil {
+		return err
+	}
+
+	// 2. Delete old CRDs
+	sliceCRD := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: objectsliceCRDName,
+		},
+	}
+	clustersliceCRD := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterobjectsliceCRDName,
+		},
+	}
+	err = b.client.Delete(ctx, sliceCRD)
+	if !errors.IsNotFound(err) && err != nil {
+		return err
+	}
+	err = b.client.Delete(ctx, clustersliceCRD)
+	if !errors.IsNotFound(err) && err != nil {
+		return err
+	}
+
+	// 3. Delete PKO ClusterObjectSets
+	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
+	if err := b.client.List(ctx, clusterObjectSetList, client.MatchingLabels{
+		"package-operator.run/instance": packageOperatorClusterPackageName,
+		"package-operator.run/package":  packageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
+	}
+	for i := range clusterObjectSetList.Items {
+		clusterObjectSet := &clusterObjectSetList.Items[i]
+		if err := b.client.Delete(ctx, clusterObjectSet); err != nil {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
+		}
+		if len(clusterObjectSet.Finalizers) > 0 {
+			clusterObjectSet.Finalizers = []string{}
+			if err := b.client.Update(ctx, clusterObjectSet); err != nil {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+			}
+		}
+		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
+		if err := b.client.Get(
+			ctx, client.ObjectKeyFromObject(clusterObjectSet), clusterObjectSet,
+		); !errors.IsNotFound(err) {
+			return fmt.Errorf("ensuring ClusterObjectSet is gone: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx context.Context) error) error {
