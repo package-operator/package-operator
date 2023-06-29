@@ -936,7 +936,6 @@ func (b Build) buildCmdImage(imageName string) {
 
 func (Build) populateCachePkg(imageName, sourcePath string) {
 	imageCacheDir := locations.ImageCache(imageName)
-	must(sh.Copy(filepath.Join(imageCacheDir, "Containerfile"), filepath.Join("config", "images", "package.Containerfile")))
 	must(sh.Run("cp", "-a", sourcePath+"/.", imageCacheDir+"/"))
 }
 
