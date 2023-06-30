@@ -17,7 +17,7 @@ func NewObjectDuplicate() *ObjectDuplicate {
 	return &ObjectDuplicate{}
 }
 
-func (v *ObjectDuplicate) Check(
+func (od *ObjectDuplicate) Check(
 	_ context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
 ) (violations []Violation, err error) {
 	visited := map[string]bool{}
