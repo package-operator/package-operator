@@ -80,6 +80,10 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 		}
 	}
 
+	if IsOLMBundle(ctx, files) {
+		return OLMBundleToPackageContent(ctx, files)
+	}
+
 	for _, t := range l.filesTransformers {
 		if err := t.TransformPackageFiles(ctx, files); err != nil {
 			return nil, fmt.Errorf("transform files: %w", err)

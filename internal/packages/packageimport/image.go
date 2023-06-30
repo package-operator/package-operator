@@ -37,6 +37,19 @@ func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err err
 		}
 
 		tarPath := hdr.Name
+
+		// Keep OLMv0 bundle files
+		if strings.HasPrefix(tarPath, "manifests/") ||
+			strings.HasPrefix(tarPath, "metadata/") {
+			data, err := io.ReadAll(tarReader)
+			if err != nil {
+				return nil, fmt.Errorf("read file header from layer: %w", err)
+			}
+
+			files[tarPath] = data
+			continue
+		}
+
 		path, err := filepath.Rel(packages.ImageFilePrefixPath, tarPath)
 		if err != nil {
 			return nil, fmt.Errorf("package image contains files not under the dir %s: %w", packages.ImageFilePrefixPath, err)

@@ -1,6 +1,9 @@
 package packagecontent
 
 import (
+	"io/fs"
+	"testing/fstest"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -27,4 +30,14 @@ func (f Files) DeepCopy() Files {
 		newF[k] = newV
 	}
 	return newF
+}
+
+func (f Files) ToFS() fs.FS {
+	fsMap := fstest.MapFS{}
+	for k, v := range f {
+		fsMap[k] = &fstest.MapFile{
+			Data: v,
+		}
+	}
+	return fsMap
 }
