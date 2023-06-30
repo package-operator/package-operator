@@ -15,6 +15,14 @@ type PhaseReconcilerMock struct {
 	mock.Mock
 }
 
+func (m *PhaseReconcilerMock) GetControllerOf(
+	ctx context.Context, owner controllers.PhaseObjectOwner,
+	phase corev1alpha1.ObjectSetTemplatePhase,
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	args := m.Called(ctx, owner, phase)
+	return args.Get(0).([]corev1alpha1.ControlledObjectReference), args.Error(1)
+}
+
 func (m *PhaseReconcilerMock) ReconcilePhase(
 	ctx context.Context, owner controllers.PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,

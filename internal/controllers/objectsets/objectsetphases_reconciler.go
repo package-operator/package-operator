@@ -67,6 +67,7 @@ type remotePhaseReconciler interface {
 		ctx context.Context, objectSet genericObjectSet,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (cleanupDone bool, err error)
+	GetControllerOf(ctx context.Context, objectSet genericObjectSet, phase corev1alpha1.ObjectSetTemplatePhase) ([]corev1alpha1.ControlledObjectReference, error)
 }
 
 type lookupPreviousRevisions func(
@@ -79,6 +80,8 @@ type phaseReconciler interface {
 		phase corev1alpha1.ObjectSetTemplatePhase,
 		probe probing.Prober, previous []controllers.PreviousObjectSet,
 	) ([]client.Object, controllers.ProbingResult, error)
+	GetControllerOf(ctx context.Context, owner controllers.PhaseObjectOwner,
+		phase corev1alpha1.ObjectSetTemplatePhase) ([]corev1alpha1.ControlledObjectReference, error)
 
 	TeardownPhase(
 		ctx context.Context, owner controllers.PhaseObjectOwner,
@@ -173,60 +176,52 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
-	var controllerOfAll []corev1alpha1.ControlledObjectReference
+	controllerOfAll := []corev1alpha1.ControlledObjectReference{} // All the objects we control.
+	failedProbingResult := controllers.ProbingResult{}            // The first probe that failed (or zero value).
+
 	for _, phase := range objectSet.GetPhases() {
-		controllerOf, probingResult, err := r.reconcilePhase(
-			ctx, objectSet, phase, probe, previous)
-		if err != nil {
-			return nil, controllers.ProbingResult{}, err
+		var controllerOf []corev1alpha1.ControlledObjectReference // Objects controlled by this phase.
+		var probingResult controllers.ProbingResult               // Current probe result.
+
+		//nolint:nestif
+		if failedProbingResult.IsZero() { // No probe error yet, reconcile phase
+			if len(phase.Class) > 0 { // Reconcile remote or local phase.
+				controllerOf, probingResult, err = r.remotePhase.Reconcile(ctx, objectSet, phase)
+			} else {
+				var actualObjects []client.Object
+				actualObjects, probingResult, err = r.phaseReconciler.ReconcilePhase(ctx, objectSet, phase, probe, previous)
+				if err != nil {
+					return nil, controllers.ProbingResult{}, err
+				}
+				controllerOf, err = controllers.GetControllerOf(ctx, r.scheme, r.ownerStrategy, objectSet.ClientObject(), actualObjects)
+			}
+
+			if err != nil {
+				return nil, failedProbingResult, err // Error immediately returns.
+			}
+
+			controllerOfAll = append(controllerOfAll, controllerOf...) // Add this phases owned objects to the our owned objects.
+
+			if failedProbingResult.IsZero() && !probingResult.IsZero() {
+				failedProbingResult = probingResult
+			}
+		} else { // Previous probe failed, only browse through this phase to find controlled objects.
+			// Browse remote or local phase.
+			if len(phase.Class) > 0 {
+				controllerOf, err = r.remotePhase.GetControllerOf(ctx, objectSet, phase)
+			} else {
+				controllerOf, err = r.phaseReconciler.GetControllerOf(ctx, objectSet, phase)
+			}
+
+			controllerOfAll = append(controllerOfAll, controllerOf...) // Add this phases owned objects to the our owned objects.
+
+			if err != nil {
+				return nil, failedProbingResult, err // Error immediately returns.
+			}
 		}
-
-		// always gather all objects we are controller of
-		controllerOfAll = append(controllerOfAll, controllerOf...)
-
-		if !probingResult.IsZero() {
-			// break on first failing probe
-			return controllerOfAll, probingResult, nil
-		}
 	}
 
-	return controllerOfAll, controllers.ProbingResult{}, nil
-}
-
-func (r *objectSetPhasesReconciler) reconcilePhase(
-	ctx context.Context, objectSet genericObjectSet,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
-	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	if len(phase.Class) > 0 {
-		return r.remotePhase.Reconcile(
-			ctx, objectSet, phase)
-	}
-	return r.reconcileLocalPhase(
-		ctx, objectSet, phase, probe, previous)
-}
-
-// Reconciles the Phase directly in-process.
-func (r *objectSetPhasesReconciler) reconcileLocalPhase(
-	ctx context.Context, objectSet genericObjectSet,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
-	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
-		ctx, objectSet, phase, probe, previous)
-	if err != nil {
-		return nil, probingResult, err
-	}
-
-	controllerOf, err := controllers.GetControllerOf(
-		ctx, r.scheme, r.ownerStrategy,
-		objectSet.ClientObject(), actualObjects)
-	if err != nil {
-		return nil, controllers.ProbingResult{}, err
-	}
-	return controllerOf, probingResult, nil
+	return controllerOfAll, failedProbingResult, nil
 }
 
 func (r *objectSetPhasesReconciler) Teardown(

@@ -34,6 +34,14 @@ func (m *remotePhaseReconcilerMock) Reconcile(
 		args.Error(2)
 }
 
+func (m *remotePhaseReconcilerMock) GetControllerOf(
+	ctx context.Context, objectSet genericObjectSet,
+	phase corev1alpha1.ObjectSetTemplatePhase,
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	args := m.Called(ctx, objectSet, phase)
+	return args.Get(0).([]corev1alpha1.ControlledObjectReference), args.Error(1)
+}
+
 func (m *remotePhaseReconcilerMock) Teardown(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,

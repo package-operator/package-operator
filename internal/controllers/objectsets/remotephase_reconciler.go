@@ -91,6 +91,31 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	return false, nil
 }
 
+func (r *objectSetRemotePhaseReconciler) GetControllerOf(
+	ctx context.Context, objectSet genericObjectSet,
+	phase corev1alpha1.ObjectSetTemplatePhase,
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	if len(phase.Class) == 0 {
+		return nil, nil
+	}
+
+	desiredObjectSetPhase, err := r.desiredObjectSetPhase(objectSet, phase)
+	if err != nil {
+		return nil, err
+	}
+
+	currentObjectSetPhase := r.newObjectSetPhase(r.scheme)
+	err = r.client.Get(
+		ctx, client.ObjectKeyFromObject(desiredObjectSetPhase.ClientObject()),
+		currentObjectSetPhase.ClientObject(),
+	)
+	if errors.IsNotFound(err) {
+		return nil, nil
+	}
+
+	return currentObjectSetPhase.GetStatusControllerOf(), nil
+}
+
 func (r *objectSetRemotePhaseReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 	phase corev1alpha1.ObjectSetTemplatePhase,

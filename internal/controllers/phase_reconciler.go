@@ -160,6 +160,38 @@ func (e *ProbingResult) String() string {
 		e.PhaseName, e.StringWithoutPhase())
 }
 
+func (r *PhaseReconciler) GetControllerOf(
+	ctx context.Context, owner PhaseObjectOwner, phase corev1alpha1.ObjectSetTemplatePhase,
+) ([]corev1alpha1.ControlledObjectReference, error) {
+	actualObjects := []client.Object{}
+	for _, phaseObject := range phase.Objects {
+		desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", phaseObject, err)
+		}
+
+		var actualObj unstructured.Unstructured
+		if owner.IsPaused() {
+			if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), &actualObj); err != nil {
+				return nil, fmt.Errorf("looking up object while paused: %w", err)
+			}
+
+			actualObjects = append(actualObjects, &actualObj)
+		} else {
+			err = r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), &actualObj)
+			switch {
+			case err == nil:
+				actualObjects = append(actualObjects, &actualObj)
+			case errors.IsNotFound(err):
+			default:
+				return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
+			}
+		}
+	}
+
+	return GetControllerOf(ctx, r.scheme, r.ownerStrategy, owner.ClientObject(), actualObjects)
+}
+
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
