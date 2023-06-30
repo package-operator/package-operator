@@ -50,6 +50,17 @@ func (r *revisionReconcilerMock) Reconcile(
 	return args.Get(0).(ctrl.Result), args.Error(1)
 }
 
+type phasesCheckerMock struct {
+	mock.Mock
+}
+
+func (pc *phasesCheckerMock) Check(
+	ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+) (violations []preflight.Violation, err error) {
+	args := pc.Called(ctx, phases)
+	return args.Get(0).([]preflight.Violation), args.Error(1)
+}
+
 func TestGenericObjectSetController_Reconcile(t *testing.T) {
 	t.Parallel()
 
@@ -88,7 +99,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, c, dc, pr, rr := newControllerAndMocks()
+			controller, c, dc, pr, rr, pc := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -106,6 +117,8 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				Return(true, nil).Once().Maybe()
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+			pc.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 			objectSet := GenericObjectSet{
 				ObjectSet: corev1alpha1.ObjectSet{
@@ -134,6 +147,8 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			if test.getObjectSetPhaseError != nil || test.condition.Type == corev1alpha1.ObjectSetArchived {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
+				pc.AssertNotCalled(t, "Check", mock.Anything, mock.Anything)
+
 				c.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
@@ -141,6 +156,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			if test.deletionTimestamp != nil || test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
+				pc.AssertNotCalled(t, "Check", mock.Anything, mock.Anything)
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
 				if test.deletionTimestamp == nil {
 					c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -148,11 +164,13 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				return
 			}
 
+			//  "run all the way through"
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			rr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			rr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+			pc.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
@@ -207,7 +225,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, c, _, _, _ := newControllerAndMocks()
+			controller, c, _, _, _, _ := newControllerAndMocks()
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
 					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
@@ -234,7 +252,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 
 func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testing.T) {
 	t.Parallel()
-	controller, c, _, _, _ := newControllerAndMocks()
+	controller, c, _, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	objectSet := &GenericObjectSet{}
@@ -300,7 +318,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, c, _, _, _ := newControllerAndMocks()
+			controller, c, _, _, _, _ := newControllerAndMocks()
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
 					arg := args.Get(2).(*corev1alpha1.ObjectSetPhase)
@@ -364,7 +382,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, client, dc, pr, _ := newControllerAndMocks()
+			controller, client, dc, pr, _, _ := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
 				Return(test.teardownDone, nil).Maybe()
@@ -417,7 +435,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
-		c, _, _, _, _ := newControllerAndMocks()
+		c, _, _, _, _, _ := newControllerAndMocks()
 		ctx := context.Background()
 		err := c.ifPreflightErrorUpdateStatus(ctx, objectSet, errTest)
 		assert.EqualError(t, err, "explosion")
@@ -428,7 +446,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
-		c, client, _, _, _ := newControllerAndMocks()
+		c, client, _, _, _, _ := newControllerAndMocks()
 
 		client.StatusMock.
 			On("Update", mock.Anything, mock.Anything, mock.Anything).
@@ -449,18 +467,21 @@ func newControllerAndMocks() (
 	*dynamicCacheMock,
 	*objectSetPhasesReconcilerMock,
 	*revisionReconcilerMock,
+	*phasesCheckerMock,
 ) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	dc := &dynamicCacheMock{}
 
+	pc := &phasesCheckerMock{}
 	controller := &GenericObjectSetController{
-		newObjectSet:      newGenericObjectSet,
-		newObjectSetPhase: newGenericObjectSetPhase,
-		client:            c,
-		log:               ctrl.Log.WithName("controllers"),
-		scheme:            scheme,
-		dynamicCache:      dc,
+		newObjectSet:           newGenericObjectSet,
+		newObjectSetPhase:      newGenericObjectSetPhase,
+		client:                 c,
+		log:                    ctrl.Log.WithName("controllers"),
+		scheme:                 scheme,
+		dynamicCache:           dc,
+		phasesPreflightChecker: pc,
 	}
 	pr := &objectSetPhasesReconcilerMock{}
 
@@ -471,5 +492,5 @@ func newControllerAndMocks() (
 		rr,
 		pr,
 	}
-	return controller, c, dc, pr, rr
+	return controller, c, dc, pr, rr, pc
 }
