@@ -124,9 +124,7 @@ func hostedClusterNamespace(cluster *v1beta1.HostedCluster) string {
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1.HostedCluster{}).
-		Watches(&source.Kind{
-			Type: &corev1alpha1.Package{},
-		}, c.ownerStrategy.EnqueueRequestForOwner(
+		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1alpha1.Package{}), c.ownerStrategy.EnqueueRequestForOwner(
 			&v1beta1.HostedCluster{}, true,
 		)).
 		Complete(c)
