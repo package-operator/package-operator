@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -155,16 +154,16 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSet, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
 		Owns(objectSetPhase).
-		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
-			OwnerType:    objectSet,
-			IsController: false,
-		}, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
-			c.log.Info(
-				"processing dynamic cache event",
-				"object", client.ObjectKeyFromObject(object),
-				"owners", object.GetOwnerReferences())
-			return true
-		}))).
+		WatchesRawSource(
+			c.dynamicCache.Source(),
+			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
+			builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+				c.log.Info(
+					"processing dynamic cache event",
+					"object", client.ObjectKeyFromObject(object),
+					"owners", object.GetOwnerReferences())
+				return true
+			}))).
 		Complete(c)
 }
 
