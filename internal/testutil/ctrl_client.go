@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,6 +16,18 @@ type CtrlClient struct {
 	mock.Mock
 
 	StatusMock *CtrlStatusClient
+}
+
+func (c *CtrlClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{
+		Group:   "mock",
+		Version: "mock",
+		Kind:    "mock",
+	}, nil
+}
+
+func (c *CtrlClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return true, nil
 }
 
 var _ client.Client = &CtrlClient{}
