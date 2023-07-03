@@ -233,7 +233,7 @@ func (c *GenericObjectSetController) Reconcile(
 		preflightErr := &preflight.Error{
 			Violations: violations,
 		}
-		return res, c.updateStatusPreflightError(ctx, objectSet, preflightErr)
+		return res, c.ifPreflightErrorUpdateStatus(ctx, objectSet, preflightErr)
 	}
 
 	for _, r := range c.reconciler {
@@ -262,22 +262,16 @@ func (c *GenericObjectSetController) ifPreflightErrorUpdateStatus(ctx context.Co
 ) error {
 	var preflightError *preflight.Error
 	if errors.As(reconcileErr, &preflightError) {
-		return c.updateStatusPreflightError(ctx, objectSet, preflightError)
+		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSet.GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            preflightError.Error(),
+		})
+		return c.updateStatus(ctx, objectSet)
 	}
 	return reconcileErr
-}
-
-func (c *GenericObjectSetController) updateStatusPreflightError(ctx context.Context, objectSet genericObjectSet,
-	preflightErr *preflight.Error,
-) error {
-	meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-		Type:               corev1alpha1.ObjectSetAvailable,
-		Status:             metav1.ConditionFalse,
-		ObservedGeneration: objectSet.GetGeneration(),
-		Reason:             "PreflightError",
-		Message:            preflightErr.Error(),
-	})
-	return c.updateStatus(ctx, objectSet)
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
