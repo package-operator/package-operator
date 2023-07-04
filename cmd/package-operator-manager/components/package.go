@@ -49,13 +49,14 @@ func ProvidePackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	registry *packageimport.Registry,
 	recorder *metrics.Recorder,
+	opts Options,
 ) PackageController {
 	return PackageController{
 		packages.NewPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
-			registry, recorder,
+			registry, recorder, opts.PackageHashModifier,
 		),
 	}
 }
@@ -64,13 +65,14 @@ func ProvideClusterPackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	registry *packageimport.Registry,
 	recorder *metrics.Recorder,
+	opts Options,
 ) ClusterPackageController {
 	return ClusterPackageController{
 		packages.NewClusterPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
-			registry, recorder,
+			registry, recorder, opts.PackageHashModifier,
 		),
 	}
 }

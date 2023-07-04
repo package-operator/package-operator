@@ -7,7 +7,9 @@ import (
 )
 
 func TestProvideOptions(t *testing.T) {
-	opts := ProvideOptions()
+	opts, err := ProvideOptions()
+
+	assert.Nil(t, err)
 	assert.Equal(t, Options{
 		MetricsAddr: ":8080",
 		ProbeAddr:   ":8081",

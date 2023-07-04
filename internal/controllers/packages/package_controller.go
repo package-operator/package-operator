@@ -50,11 +50,12 @@ func NewPackageController(
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
+	packageHashModifier *int32,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
 		c, log, scheme, imagePuller, packagedeploy.NewPackageDeployer(c, scheme),
-		metricsRecorder,
+		metricsRecorder, packageHashModifier,
 	)
 }
 
@@ -63,11 +64,12 @@ func NewClusterPackageController(
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
+	packageHashModifier *int32,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
 		c, log, scheme, imagePuller, packagedeploy.NewClusterPackageDeployer(c, scheme),
-		metricsRecorder,
+		metricsRecorder, packageHashModifier,
 	)
 }
 
@@ -79,6 +81,7 @@ func newGenericPackageController(
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	metricsRecorder metricsRecorder,
+	packageHashModifier *int32,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -88,7 +91,7 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		unpackReconciler: newUnpackReconciler(
-			imagePuller, packageDeployer, metricsRecorder),
+			imagePuller, packageDeployer, metricsRecorder, packageHashModifier),
 	}
 
 	controller.reconciler = []reconciler{
