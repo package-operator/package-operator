@@ -58,7 +58,8 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
 	}
 	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
-	if controllerRef != nil &&
+	if !conflictingObjectSet.IsArchived() &&
+		controllerRef != nil &&
 		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
 		equality.Semantic.DeepEqual(newObjectSet.GetTemplateSpec(), conflictingObjectSet.GetTemplateSpec()) {
 		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the desired new ObjectSet.
