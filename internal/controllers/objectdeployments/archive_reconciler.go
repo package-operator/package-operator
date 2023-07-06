@@ -225,9 +225,13 @@ func (a *archiveReconciler) garbageCollectRevisions(ctx context.Context, previou
 	if deploymentRevisionLimit != nil {
 		revisionLimit = *deploymentRevisionLimit
 	}
-	numToDelete := len(previousObjectSets) - (int(revisionLimit))
-	for numToDelete > 0 {
-		if err := a.client.Delete(ctx, previousObjectSets[0].ClientObject()); err != nil {
+	numToDelete := len(previousObjectSets) - int(revisionLimit)
+	for _, previousObjectSet := range previousObjectSets {
+		if numToDelete <= 0 {
+			break
+		}
+
+		if err := a.client.Delete(ctx, previousObjectSet.ClientObject()); err != nil && !errors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete objectset: %w", err)
 		}
 		numToDelete--
