@@ -2,7 +2,9 @@ package components
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strconv"
 )
 
 // Flags.
@@ -22,6 +24,7 @@ const (
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
 	registryHostOverrides = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
+	packageHashModifier   = "An additional value used for the generation of a package's unpackedHash."
 )
 
 type Options struct {
@@ -32,6 +35,7 @@ type Options struct {
 	ProbeAddr               string
 	RemotePhasePackageImage string
 	RegistryHostOverrides   string
+	PackageHashModifier     *int32
 
 	// sub commands
 	SelfBootstrap       string
@@ -40,7 +44,7 @@ type Options struct {
 	CopyTo              string
 }
 
-func ProvideOptions() (opts Options) {
+func ProvideOptions() (opts Options, err error) {
 	flag.StringVar(
 		&opts.MetricsAddr, "metrics-addr",
 		":8080",
@@ -77,6 +81,38 @@ func ProvideOptions() (opts Options) {
 		&opts.RegistryHostOverrides, "registry-host-overrides",
 		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
 		registryHostOverrides)
+
+	packageHashModifierInt, err := envToInt("PKO_PACKAGE_HASH_MODIFIER")
+	if err != nil {
+		return Options{}, err
+	}
+
+	tmpPackageHashModifier := flag.Int(
+		"package-hash-modifier", packageHashModifierInt,
+		packageHashModifier)
 	flag.Parse()
-	return opts
+
+	if *tmpPackageHashModifier != 0 {
+		packageHashModifierInt32 := int32(*tmpPackageHashModifier)
+		opts.PackageHashModifier = &packageHashModifierInt32
+	}
+
+	return opts, nil
+}
+
+// Parses an environment variable string value to integer value.
+// Returns 0 in case the environment variable is unset.
+func envToInt(env string) (int, error) {
+	envStrValue := os.Getenv(env)
+
+	if envStrValue == "" {
+		return 0, nil
+	}
+
+	parsedIntValue, err := strconv.Atoi(envStrValue)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse environment variable '%s' as integer: %w", env, err)
+	}
+
+	return parsedIntValue, nil
 }
