@@ -186,87 +186,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 	})
 
 	t.Run("It deletes older revisions over the revisionhistorylimit", func(t *testing.T) {
-		// setup Objectdeployment
-		objectDeployment := &genericObjectDeploymentMock{}
-		revisionLimit := int32(3)
-		objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
-
-		// Setup client
-		client := testutil.NewClient()
-
-		// No errors on updates
-		client.On("Update",
-			mock.Anything,
-			mock.Anything,
-			mock.Anything,
-		).Return(nil)
-
-		// No errors on delete
-		client.On("Delete",
-			mock.Anything,
-			mock.Anything,
-			mock.Anything,
-		).Return(nil)
-
-		// Setup revisions
-
-		// Unavailable
-		latestRevision := makeObjectSetMock(
-			8,
-			"",
-			makeControllerOfObjects("a", "b"),
-			makeObjects("a", "b"),
-			nil,
-			false,
-			false,
-			false,
-			Unavailable,
-		)
-
-		prevs := []*genericObjectSetMock{
-			// should be archived
-			makeObjectSetMock(7, "", makeControllerOfObjects("c"), makeObjects("c", "a", "d"), nil, true, false, false, Unavailable),
-			// Should not be archived
-			makeObjectSetMock(6, "", makeControllerOfObjects("d", "e"), makeObjects("c", "a", "d", "e"), nil, true, false, false, Unavailable),
-			// Should be archived
-			makeObjectSetMock(5, "", makeControllerOfObjects("f"), makeObjects("f", "g"), nil, true, false, false, Unavailable),
-			// Should not be archived
-			makeObjectSetMock(4, "", makeControllerOfObjects("g"), makeObjects("g", "h"), nil, true, false, false, Unavailable),
-			// No common objects but should not be archived as its available
-			makeObjectSetMock(3, "", makeControllerOfObjects("x", "y"), makeObjects("x", "y"), nil, true, false, false, available),
-			// Even though the rev 5, 6 have common objects, we expect them to be paused/archived as rev 4 is available
-			makeObjectSetMock(2, "", makeControllerOfObjects("p"), makeObjects("p", "q"), nil, true, false, false, Unavailable),
-			makeObjectSetMock(1, "", makeControllerOfObjects("q"), makeObjects("q", "z"), nil, true, false, false, Unavailable),
-		}
-
-		prevCasted := make([]genericObjectSet, len(prevs))
-		for i := range prevs {
-			prevCasted[i] = prevs[i]
-		}
-
-		// Invoke reconciler
-		r := archiveReconciler{
-			client: client,
-		}
-		res, err := r.Reconcile(context.Background(), latestRevision, prevCasted, objectDeployment)
-		require.NoError(t, err, "No error expected")
-		assert.True(t, res.IsZero(), "Unexpected requeue")
-
-		// Revision 7 should be archived
-		assertShouldBeArchived(t, prevs[0])
-		// Revision 5 should be archived
-		assertShouldBeArchived(t, prevs[2])
-		// Revision 2 should be archived
-		assertShouldBeArchived(t, prevs[5])
-
-		// Revision 1 is deleted
-		client.AssertCalled(t,
-			"Delete",
-			mock.Anything,
-			prevs[6].ClientObject(),
-			mock.Anything,
-		)
-		assertShouldNotBeArchived(t, prevs[6])
+		testDeleteArchive(t)
 	})
 }
 
@@ -473,6 +393,68 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	// Since prevs[1] is already archived, it is left alone
 	prevs[1].AssertNotCalled(t, "SetPaused")
 	prevs[1].AssertNotCalled(t, "SetArchived")
+}
+
+func testDeleteArchive(t *testing.T) {
+	t.Helper()
+	// setup Objectdeployment
+	objectDeployment := &genericObjectDeploymentMock{}
+	revisionLimit := int32(3)
+	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
+
+	// Setup client
+	client := testutil.NewClient()
+	client.On("Update",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
+
+	// No errors on delete
+	client.On("Delete",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
+
+	// Setup revisions
+	latestAvailableRevision := makeObjectSetMock(5, "", nil, nil, nil, false, false, false, true)
+
+	prevs := []*genericObjectSetMock{
+		// Already archived
+		makeObjectSetMock(1, "", nil, nil, nil, true, false, true, false),
+		makeObjectSetMock(2, "", nil, nil, nil, true, false, true, false),
+		makeObjectSetMock(2, "", nil, nil, nil, true, false, true, false),
+		// Paused and ready to be archived
+		makeObjectSetMock(4, "", nil, nil, nil, true, false, false, false),
+	}
+
+	prevCasted := make([]genericObjectSet, len(prevs))
+	for i := range prevs {
+		prevCasted[i] = prevs[i]
+	}
+
+	// Invoke reconciler
+	r := archiveReconciler{
+		client: client,
+	}
+	res, err := r.Reconcile(context.Background(), latestAvailableRevision, prevCasted, objectDeployment)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero(), "Unexpected requeue")
+
+	// Client assertions
+	client.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
+	client.AssertNumberOfCalls(t, "Update", 1)
+
+	prevs[3].AssertCalled(t, "SetArchived")
+	prevs[3].AssertNumberOfCalls(t, "SetArchived", 1)
+
+	client.AssertCalled(t,
+		"Delete",
+		mock.Anything,
+		prevs[0].ClientObject(),
+		mock.Anything,
+	)
 }
 
 func makeObjectIdentifiers(ids ...string) []objectIdentifier {
