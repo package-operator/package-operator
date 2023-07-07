@@ -11,6 +11,9 @@ spec:
     kind: ObjectSetPhase
     listKind: ObjectSetPhaseList
     plural: objectsetphases
+    shortNames:
+    - objsetphase
+    - osp
     singular: objectsetphase
   scope: Namespaced
   versions:

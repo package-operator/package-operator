@@ -6,7 +6,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // sources provided in the .Spec.Sources. The sources can come from objects from any namespace or cluster scoped
 // objects.
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName={"clobjtmpl","cot"}
 // +kubebuilder:subresource:status
 type ClusterObjectTemplate struct {
 	metav1.TypeMeta   `json:",inline"`

@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectSlice
     listKind: ClusterObjectSliceList
     plural: clusterobjectslices
+    shortNames:
+    - clobjslice
+    - cosl
     singular: clusterobjectslice
   scope: Cluster
   versions:

@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectSetPhase
     listKind: ClusterObjectSetPhaseList
     plural: clusterobjectsetphases
+    shortNames:
+    - clobjsetphase
+    - cosp
     singular: clusterobjectsetphase
   scope: Cluster
   versions:

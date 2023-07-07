@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectTemplate
     listKind: ClusterObjectTemplateList
     plural: clusterobjecttemplates
+    shortNames:
+    - clobjtmpl
+    - cot
     singular: clusterobjecttemplate
   scope: Cluster
   versions:
