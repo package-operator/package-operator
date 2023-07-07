@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
