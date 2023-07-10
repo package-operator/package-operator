@@ -2,7 +2,6 @@ package components
 
 import (
 	"fmt"
-
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	"go.uber.org/dig"
@@ -16,11 +15,13 @@ import (
 	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/package-operator/internal/controllers"
@@ -98,15 +99,15 @@ func ProvideManager(
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.MetricsAddr,
 		HealthProbeBindAddress:     opts.ProbeAddr,
-		Port:                       9443,
+		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
-		MapperProvider: func(c *rest.Config) (meta.RESTMapper, error) {
-			return apiutil.NewDynamicRESTMapper(c, apiutil.WithLazyDiscovery)
+		MapperProvider: func(c *rest.Config, cl *http.Client) (meta.RESTMapper, error) {
+			return apiutil.NewDynamicRESTMapper(c, cl)
 		},
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: cache.SelectorsByObject{
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				// We create Jobs to unpack package images.
 				// Limit caches to only contain Jobs that we create ourselves.
 				&batchv1.Job{}: {
@@ -115,7 +116,7 @@ func ProvideManager(
 					}),
 				},
 			},
-		}),
+		},
 	})
 	if err != nil {
 		return nil, err
