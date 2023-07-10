@@ -32,20 +32,20 @@ type ownerRefGetter interface {
 	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
 
-func (e *EnqueueWatchingObjects) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.ObjectNew, q)
 	e.enqueueWatchers(evt.ObjectOld, q)
 }
 
-func (e *EnqueueWatchingObjects) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 

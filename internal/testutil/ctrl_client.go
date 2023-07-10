@@ -18,7 +18,7 @@ type CtrlClient struct {
 	StatusMock *CtrlStatusClient
 }
 
-func (c *CtrlClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+func (c *CtrlClient) GroupVersionKindFor(_ runtime.Object) (schema.GroupVersionKind, error) {
 	return schema.GroupVersionKind{
 		Group:   "mock",
 		Version: "mock",
@@ -26,7 +26,7 @@ func (c *CtrlClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersio
 	}, nil
 }
 
-func (c *CtrlClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+func (c *CtrlClient) IsObjectNamespaced(_ runtime.Object) (bool, error) {
 	return true, nil
 }
 

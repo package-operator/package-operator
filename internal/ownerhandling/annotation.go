@@ -270,14 +270,14 @@ type AnnotationEnqueueRequestForOwner struct {
 }
 
 // Create implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Create(ctx context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Update implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.ObjectOld) {
 		q.Add(req)
 	}
@@ -287,14 +287,14 @@ func (e *AnnotationEnqueueRequestForOwner) Update(ctx context.Context, evt event
 }
 
 // Delete implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Generic implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
