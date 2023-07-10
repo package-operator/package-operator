@@ -26,11 +26,11 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	gotest.tools/v3 v3.4.0
-	k8s.io/api v0.26.3
-	k8s.io/apiextensions-apiserver v0.26.3
-	k8s.io/apimachinery v0.26.3
-	k8s.io/apiserver v0.26.3
-	k8s.io/client-go v0.26.3
+	k8s.io/api v0.27.2
+	k8s.io/apiextensions-apiserver v0.27.2
+	k8s.io/apimachinery v0.27.2
+	k8s.io/apiserver v0.27.2
+	k8s.io/client-go v0.27.2
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	package-operator.run/apis v0.0.0-00010101000000-000000000000
