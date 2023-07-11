@@ -29,6 +29,11 @@ func (m *OwnerStrategyMock) ReleaseController(obj metav1.Object) {
 	m.Called(obj)
 }
 
+func (m *OwnerStrategyMock) SetOwnerReference(owner, obj metav1.Object) error {
+	args := m.Called(owner, obj)
+	return args.Error(0)
+}
+
 func (m *OwnerStrategyMock) SetControllerReference(owner, obj metav1.Object) error {
 	args := m.Called(owner, obj)
 	return args.Error(0)

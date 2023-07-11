@@ -84,6 +84,10 @@ func (s *OwnerStrategyNative) ReleaseController(obj metav1.Object) {
 	obj.SetOwnerReferences(ownerRefs)
 }
 
+func (s *OwnerStrategyNative) SetOwnerReference(owner, obj metav1.Object) error {
+	return controllerutil.SetOwnerReference(owner, obj, s.scheme)
+}
+
 func (s *OwnerStrategyNative) SetControllerReference(owner, obj metav1.Object) error {
 	return controllerutil.SetControllerReference(owner, obj, s.scheme)
 }

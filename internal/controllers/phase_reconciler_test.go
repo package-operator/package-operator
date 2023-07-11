@@ -75,7 +75,7 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	dynamicCache.AssertNotCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 }
 
-func TestPhaseReconciler_TeardownPhase(t *testing.T) {
+func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	t.Run("already gone", func(t *testing.T) {
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
@@ -308,6 +308,112 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
 		ownerStrategy.AssertCalled(t, "RemoveOwner", ownerObj, currentObj)
 		testClient.AssertCalled(t, "Update", mock.Anything, currentObj, mock.Anything)
+	})
+
+	t.Run("external objects", func(t *testing.T) {
+		dynamicCache := &dynamicCacheMock{}
+		ownerStrategy := &ownerStrategyMock{}
+		testClient := testutil.NewClient()
+
+		r := &PhaseReconciler{
+			dynamicCache:  dynamicCache,
+			ownerStrategy: ownerStrategy,
+			writer:        testClient,
+		}
+
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+
+		dynamicCache.
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
+			Return(nil)
+
+		currentObj := &unstructured.Unstructured{}
+		dynamicCache.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*unstructured.Unstructured)
+				*out = *currentObj
+			}).
+			Return(nil)
+
+		ownerStrategy.
+			On("RemoveOwner", ownerObj, currentObj).
+			Return(false)
+
+		testClient.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+			ExternalObjects: []corev1alpha1.ObjectSetObject{
+				{
+					Object: unstructured.Unstructured{},
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.True(t, done)
+
+		owner.AssertExpectations(t)
+		dynamicCache.AssertExpectations(t)
+		ownerStrategy.AssertExpectations(t)
+		testClient.AssertExpectations(t)
+	})
+
+	t.Run("external objects error", func(t *testing.T) {
+		dynamicCache := &dynamicCacheMock{}
+		ownerStrategy := &ownerStrategyMock{}
+		testClient := testutil.NewClient()
+
+		r := &PhaseReconciler{
+			dynamicCache:  dynamicCache,
+			ownerStrategy: ownerStrategy,
+			writer:        testClient,
+		}
+
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		owner.On("ClientObject").Return(ownerObj)
+
+		dynamicCache.
+			On("Watch", mock.Anything, ownerObj, mock.Anything).
+			Return(nil)
+
+		currentObj := &unstructured.Unstructured{}
+		dynamicCache.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*unstructured.Unstructured)
+				*out = *currentObj
+			}).
+			Return(nil)
+
+		ownerStrategy.
+			On("RemoveOwner", ownerObj, currentObj).
+			Return(false)
+
+		testClient.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(errors.NewConflict(schema.GroupResource{}, "test", nil))
+
+		ctx := context.Background()
+		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+			ExternalObjects: []corev1alpha1.ObjectSetObject{
+				{
+					Object: unstructured.Unstructured{},
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.False(t, done)
+
+		owner.AssertExpectations(t)
+		dynamicCache.AssertExpectations(t)
+		ownerStrategy.AssertExpectations(t)
+		testClient.AssertExpectations(t)
 	})
 }
 
@@ -970,7 +1076,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range map[string]struct {
-		OwnerObject    unstructured.Unstructured
+		OwnerObject    corev1alpha1.ObjectSetObject
 		ExternalObject corev1alpha1.ObjectSetObject
 		ObservedObject *corev1alpha1.ObjectSetObject
 		ShouldFail     bool
@@ -988,11 +1094,13 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			ShouldFail: true,
 		},
 		"cached external object exists/owner namespace": {
-			OwnerObject: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name":      "owner",
-						"namespace": "owner-ns",
+			OwnerObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "owner",
+							"namespace": "owner-ns",
+						},
 					},
 				},
 			},
@@ -1020,11 +1128,13 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 		},
 		"uncached external object exists/owner namespace": {
-			OwnerObject: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name":      "owner",
-						"namespace": "owner-ns",
+			OwnerObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "owner",
+							"namespace": "owner-ns",
+						},
 					},
 				},
 			},
@@ -1049,11 +1159,13 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 		},
 		"uncached external object exists/external namespace": {
-			OwnerObject: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name":      "owner",
-						"namespace": "owner-ns",
+			OwnerObject: corev1alpha1.ObjectSetObject{
+				Object: unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"name":      "owner",
+							"namespace": "owner-ns",
+						},
 					},
 				},
 			},
@@ -1084,17 +1196,20 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ownerObj := &unstructured.Unstructured{}
-
 			owner := &phaseObjectOwnerMock{}
-			owner.On("ClientObject").Return(ownerObj)
+			owner.On("ClientObject").Return(&tc.OwnerObject.Object)
 
 			testClient := testutil.NewClient()
+
+			key := client.ObjectKeyFromObject(&tc.ExternalObject.Object)
+			if key.Namespace == "" {
+				key.Namespace = tc.OwnerObject.Object.GetNamespace()
+			}
 
 			clientCall := testClient.
 				On("Get",
 					mock.Anything,
-					client.ObjectKeyFromObject(&tc.ExternalObject.Object),
+					key,
 					&tc.ExternalObject.Object,
 					mock.Anything)
 
@@ -1114,17 +1229,18 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 				).Run(func(args mock.Arguments) {
-					labels := tc.ObservedObject.Object.GetLabels()
+					obj := args.Get(1).(*unstructured.Unstructured)
 
+					tc.ObservedObject.Object.DeepCopyInto(obj)
+
+					labels := tc.ObservedObject.Object.GetLabels()
 					if labels == nil {
 						labels = make(map[string]string)
 					}
 
 					labels[DynamicCacheLabel] = "True"
 
-					obj := args.Get(1).(*unstructured.Unstructured)
-
-					tc.ObservedObject.Object.DeepCopyInto(obj)
+					obj.SetLabels(labels)
 				}).Return(nil)
 			default:
 				clientCall.Maybe()
@@ -1132,13 +1248,13 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 
 			cacheMock := &dynamicCacheMock{}
 			cacheMock.
-				On("Watch", mock.Anything, ownerObj, mock.Anything).
+				On("Watch", mock.Anything, &tc.OwnerObject.Object, mock.Anything).
 				Return(nil)
 
 			cacheCall := cacheMock.
 				On("Get",
 					mock.Anything,
-					client.ObjectKeyFromObject(&tc.ExternalObject.Object),
+					key,
 					&tc.ExternalObject.Object,
 					mock.Anything)
 
@@ -1152,10 +1268,40 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 				}).Return(nil)
 			}
 
+			ownerStrategyMock := &ownerStrategyMock{}
+			if tc.ObservedObject != nil {
+				observed := &tc.ObservedObject.Object
+
+				labels := tc.ObservedObject.Object.GetLabels()
+				if labels == nil {
+					labels = make(map[string]string)
+				}
+
+				labels[DynamicCacheLabel] = "True"
+
+				observed.SetLabels(labels)
+
+				ownerStrategyMock.
+					On("SetOwnerReference", &tc.OwnerObject.Object, observed).
+					Return(nil)
+
+				ownerStrategyMock.
+					On("OwnerPatch", observed).
+					Return([]byte{}, nil)
+
+				testClient.On("Patch",
+					mock.Anything,
+					observed,
+					mock.Anything,
+					mock.Anything,
+				).Return(nil)
+			}
+
 			r := &PhaseReconciler{
 				writer:         testClient,
 				uncachedClient: testClient,
 				dynamicCache:   cacheMock,
+				ownerStrategy:  ownerStrategyMock,
 			}
 
 			ctx := context.Background()

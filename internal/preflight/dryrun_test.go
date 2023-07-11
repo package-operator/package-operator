@@ -1,4 +1,4 @@
-package preflight
+package preflight_test
 
 import (
 	"context"
@@ -9,15 +9,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
 var errTest = errors.New("explosion")
 
 func TestDryRun(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 
 	var objCalled *unstructured.Unstructured
@@ -33,7 +37,7 @@ func TestDryRun(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := NewDryRun(c)
+	dr := preflight.NewDryRun(c)
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.Error(t, err)
 	assert.Len(t, v, 0)
@@ -41,7 +45,48 @@ func TestDryRun(t *testing.T) {
 	assert.NotSame(t, objCalled, obj)
 }
 
+func TestDryRunViolations(t *testing.T) {
+	t.Parallel()
+
+	reasons := []metav1.StatusReason{
+		metav1.StatusReasonUnauthorized,
+		metav1.StatusReasonForbidden,
+		metav1.StatusReasonAlreadyExists,
+		metav1.StatusReasonConflict,
+		metav1.StatusReasonInvalid,
+		metav1.StatusReasonBadRequest,
+		metav1.StatusReasonMethodNotAllowed,
+		metav1.StatusReasonRequestEntityTooLarge,
+		metav1.StatusReasonUnsupportedMediaType,
+		metav1.StatusReasonNotAcceptable,
+	}
+
+	for i := range reasons {
+		reason := reasons[i]
+		t.Run(string(reason), func(t *testing.T) {
+			t.Parallel()
+			c := testutil.NewClient()
+
+			c.
+				On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: reason}})
+
+			obj := &unstructured.Unstructured{}
+			obj.SetName("test")
+			obj.SetNamespace("test-ns")
+			obj.SetKind("Hans")
+
+			dr := preflight.NewDryRun(c)
+			v, err := dr.Check(context.Background(), obj, obj)
+			require.NoError(t, err)
+			assert.Len(t, v, 1)
+		})
+	}
+}
+
 func TestDryRun_alreadyExists(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 
 	var objCalled *unstructured.Unstructured
@@ -58,10 +103,53 @@ func TestDryRun_alreadyExists(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := NewDryRun(c)
+	dr := preflight.NewDryRun(c)
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.NoError(t, err)
 	assert.Len(t, v, 0)
 	// MUST create an internal DeepCopy or the DryRun hook may have changed the object.
 	assert.NotSame(t, objCalled, obj)
+}
+
+func TestDryRun_notFround(t *testing.T) {
+	t.Parallel()
+
+	c := testutil.NewClient()
+
+	c.
+		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
+	c.
+		On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
+
+	obj := &unstructured.Unstructured{}
+	obj.SetName("test")
+	obj.SetNamespace("test-ns")
+	obj.SetKind("Hans")
+
+	dr := preflight.NewDryRun(c)
+	v, err := dr.Check(context.Background(), obj, obj)
+	require.NoError(t, err)
+	assert.Len(t, v, 1)
+}
+
+func TestDryRun_emptyreason(t *testing.T) {
+	c := testutil.NewClient()
+
+	e := &k8serrors.StatusError{
+		ErrStatus: metav1.Status{Reason: "", Message: "cheese, also failed to create typed patch object, also more cheese"},
+	}
+	c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(e)
+
+	obj := &unstructured.Unstructured{}
+	obj.SetName("test")
+	obj.SetNamespace("test-ns")
+	obj.SetKind("Hans")
+
+	dr := preflight.NewDryRun(c)
+	v, err := dr.Check(context.Background(), obj, obj)
+	require.NoError(t, err)
+	require.Len(t, v, 1)
+	require.Contains(t, v[0].Error, e.ErrStatus.Message)
 }

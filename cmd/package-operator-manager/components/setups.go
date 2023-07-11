@@ -3,6 +3,8 @@ package components
 import (
 	"fmt"
 
+	"package-operator.run/package-operator/internal/environment"
+
 	"go.uber.org/dig"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -25,6 +27,11 @@ func setupAll(mgr ctrl.Manager, controllers []controllerSetup) error {
 // interface implemented by all controllers.
 type controller interface {
 	SetupWithManager(mgr ctrl.Manager) error
+}
+
+type controllerAndEnvSinker interface {
+	controller
+	environment.Sinker
 }
 
 // DI container to get all controllers.

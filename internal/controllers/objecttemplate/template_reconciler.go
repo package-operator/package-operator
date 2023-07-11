@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"package-operator.run/package-operator/internal/environment"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,6 +34,7 @@ import (
 var defaultMissingResourceRetryInterval = 30 * time.Second
 
 type templateReconciler struct {
+	environment.Sink
 	scheme           *runtime.Scheme
 	client           client.Writer
 	uncachedClient   client.Reader
@@ -265,8 +268,13 @@ func (r *templateReconciler) templateObject(
 	ctx context.Context, sourcesConfig map[string]interface{},
 	objectTemplate genericObjectTemplate, object client.Object,
 ) error {
+	env, err := r.getEnvironment()
+	if err != nil {
+		return fmt.Errorf("getting environment: %w", err)
+	}
 	templateContext := TemplateContext{
-		Config: sourcesConfig,
+		Config:      sourcesConfig,
+		Environment: env,
 	}
 	transformer, err := NewTemplateTransformer(templateContext)
 	if err != nil {
@@ -295,6 +303,20 @@ func (r *templateReconciler) templateObject(
 	object.SetLabels(labels.Merge(object.GetLabels(), map[string]string{controllers.DynamicCacheLabel: "True"}))
 
 	return nil
+}
+
+func (r *templateReconciler) getEnvironment() (map[string]interface{}, error) {
+	env := map[string]interface{}{}
+	packageEnvironment, err := json.Marshal(r.GetEnvironment())
+	if err != nil {
+		return env, fmt.Errorf("marshaling: %w", err)
+	}
+
+	err = json.Unmarshal(packageEnvironment, &env)
+	if err != nil {
+		return env, fmt.Errorf("unmarshaling: %w", err)
+	}
+	return env, nil
 }
 
 func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {

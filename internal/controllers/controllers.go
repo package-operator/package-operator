@@ -191,3 +191,18 @@ func AddDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructure
 
 	return updated, nil
 }
+
+func RemoveDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	updated := obj.DeepCopy()
+
+	labels := updated.GetLabels()
+
+	delete(labels, DynamicCacheLabel)
+	updated.SetLabels(labels)
+
+	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {
+		return nil, fmt.Errorf("patching object labels: %w", err)
+	}
+
+	return updated, nil
+}

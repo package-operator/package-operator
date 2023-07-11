@@ -44,6 +44,7 @@ type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
+	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 }
@@ -248,6 +249,19 @@ func (r *PhaseReconciler) observeExternalObject(
 		return nil, fmt.Errorf("retrieving external object: %w", err)
 	}
 
+	if err := r.ownerStrategy.SetOwnerReference(ownerObj, observed); err != nil {
+		return nil, fmt.Errorf("setting owner reference: %w", err)
+	}
+	ownerPatch, err := r.ownerStrategy.OwnerPatch(observed)
+	if err != nil {
+		return nil, fmt.Errorf("determining owner patch: %w", err)
+	}
+	if err := r.writer.Patch(ctx, observed, client.RawPatch(
+		types.MergePatchType, ownerPatch,
+	)); err != nil {
+		return nil, fmt.Errorf("patching object ownership: %w", err)
+	}
+
 	if err := mapConditions(ctx, owner, extObj.ConditionMappings, observed); err != nil {
 		return nil, err
 	}
@@ -260,7 +274,7 @@ func (r *PhaseReconciler) TeardownPhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	var cleanupCounter int
-	objectsToCleanup := len(phase.Objects)
+	objectsToCleanup := len(phase.Objects) + len(phase.ExternalObjects)
 	for _, phaseObject := range phase.Objects {
 		done, err := r.teardownPhaseObject(ctx, owner, phaseObject)
 		if err != nil {
@@ -271,6 +285,18 @@ func (r *PhaseReconciler) TeardownPhase(
 			cleanupCounter++
 		}
 	}
+
+	for _, extObj := range phase.ExternalObjects {
+		done, err := r.teardownExternalObject(ctx, owner, extObj)
+		if err != nil {
+			return false, fmt.Errorf("tearing down external object: %w", err)
+		}
+
+		if done {
+			cleanupCounter++
+		}
+	}
+
 	return cleanupCounter == objectsToCleanup, nil
 }
 
@@ -330,6 +356,52 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	return false, nil
+}
+
+func (r *PhaseReconciler) teardownExternalObject(
+	ctx context.Context, owner PhaseObjectOwner,
+	extObj corev1alpha1.ObjectSetObject,
+) (cleanupDone bool, err error) {
+	var (
+		obj      = &extObj.Object
+		ownerObj = owner.ClientObject()
+	)
+
+	if len(obj.GetNamespace()) == 0 {
+		obj.SetNamespace(ownerObj.GetNamespace())
+	}
+
+	// handles the case where cache must be repaired after objectset
+	// was initially reconciled
+	if err := r.dynamicCache.Watch(ctx, ownerObj, obj); err != nil {
+		return false, fmt.Errorf("watching external object: %w", err)
+	}
+
+	var (
+		key      = client.ObjectKeyFromObject(obj)
+		observed = obj.DeepCopy()
+	)
+	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
+		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+			// external object does not exist therefore no action is needed
+			return true, nil
+		} else if err != nil {
+			return false, fmt.Errorf("retrieving external object: %w", err)
+		}
+
+		if _, err = RemoveDynamicCacheLabel(ctx, r.writer, observed); err != nil {
+			return false, fmt.Errorf("removing cache label: %w", err)
+		}
+	} else if err != nil {
+		return false, fmt.Errorf("retrieving external object: %w", err)
+	}
+
+	r.ownerStrategy.RemoveOwner(ownerObj, obj)
+	if err := r.writer.Update(ctx, obj); err != nil {
+		return false, fmt.Errorf("removing owner reference: %w", err)
+	}
+
+	return true, nil
 }
 
 func (r *PhaseReconciler) reconcilePhaseObject(

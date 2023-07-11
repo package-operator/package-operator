@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -213,4 +214,60 @@ func TestDeleteMappedConditions(t *testing.T) {
 	assert.Equal(t, []metav1.Condition{
 		{Type: "Available"},
 	}, conditions)
+}
+
+func TestAddDynamicCacheLabel(t *testing.T) {
+	t.Parallel()
+
+	expectedLabels := map[string]string{
+		DynamicCacheLabel: "True",
+	}
+
+	object := &unstructured.Unstructured{}
+
+	c := testutil.NewClient()
+	c.
+		On("Patch",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+		).
+		Return(nil)
+
+	updated, err := AddDynamicCacheLabel(context.Background(), c, object)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedLabels, updated.GetLabels())
+}
+
+func TestRemoveDynamicCacheLabel(t *testing.T) {
+	t.Parallel()
+
+	expectedLabels := map[string]string{}
+
+	object := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					DynamicCacheLabel: "True",
+				},
+			},
+		},
+	}
+
+	c := testutil.NewClient()
+	c.
+		On("Patch",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+		).
+		Return(nil)
+
+	updated, err := RemoveDynamicCacheLabel(context.Background(), c, object)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedLabels, updated.GetLabels())
 }

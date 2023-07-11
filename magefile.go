@@ -784,7 +784,12 @@ func (Build) ReleaseBinaries() {
 
 // Builds binaries from /cmd directory.
 func (Build) Binary(cmd string, goos, goarch string) {
-	env := map[string]string{"CGO_ENABLED": "0"}
+	env := map[string]string{}
+	_, cgoOK := os.LookupEnv("CGO_ENABLED")
+	if !cgoOK {
+		env["CGO_ENABLED"] = "0"
+	}
+
 	bin := locations.binaryDst(cmd, nativeArch)
 	if len(goos) != 0 || len(goarch) != 0 {
 		bin = locations.binaryDst(cmd, archTarget{goos, goarch})
