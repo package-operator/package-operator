@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -189,10 +190,15 @@ func newLocations() Locations {
 	return l
 }
 
+var errRegexpMatchNotFound = errors.New("no match found for regexp")
+
 func getGoVersion() (string, error) {
 	goVersion := runtime.Version()
-	r := regexp.MustCompile(`\d(\.\d+){2}`)
+	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
 	parsedVersion := r.FindString(goVersion)
+	if parsedVersion == "" {
+		return parsedVersion, errRegexpMatchNotFound
+	}
 	return parsedVersion, nil
 }
 

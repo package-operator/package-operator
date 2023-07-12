@@ -98,12 +98,18 @@ var _ = BeforeSuite(func() {
 	generateAllPackages(_tempDir, _registryDomain)
 })
 
-var errSetup = errors.New("test setup failed")
+var (
+	errSetup               = errors.New("test setup failed")
+	errRegexpMatchNotFound = errors.New("no match found for regexp")
+)
 
 func getGoVersion() (string, error) {
 	goVersion := runtime.Version()
-	r := regexp.MustCompile(`\d(\.\d+){2}`)
+	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
 	parsedVersion := r.FindString(goVersion)
+	if parsedVersion == "" {
+		return parsedVersion, errRegexpMatchNotFound
+	}
 	return parsedVersion, nil
 }
 
