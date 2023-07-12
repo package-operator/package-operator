@@ -28,8 +28,8 @@ spec:
     openAPIV3Schema:
       properties:
         packageHashModifier:
-          description: A value that is used when creating the package hash. 
-            This parameter can be used to force the redeployment of all packages by 
+          description: A value that is used when creating the package hash.
+            This parameter can be used to force the redeployment of all packages by
             modifying their calculated hash value.
           type: integer
           format: int32
