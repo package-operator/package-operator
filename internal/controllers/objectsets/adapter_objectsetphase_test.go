@@ -10,6 +10,8 @@ import (
 )
 
 func TestGenericObjectSetPhase(t *testing.T) {
+	t.Parallel()
+
 	objectSet := newGenericObjectSetPhase(testScheme).(*GenericObjectSetPhase)
 
 	co := objectSet.ClientObject()
@@ -54,6 +56,7 @@ func TestGenericObjectSetPhase(t *testing.T) {
 }
 
 func TestGenericClusterObjectSetPhase(t *testing.T) {
+	t.Parallel()
 	objectSet := newGenericClusterObjectSetPhase(testScheme).(*GenericClusterObjectSetPhase)
 
 	co := objectSet.ClientObject()

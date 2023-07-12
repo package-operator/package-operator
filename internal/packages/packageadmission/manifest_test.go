@@ -13,6 +13,7 @@ import (
 )
 
 func TestValidatePackageManifest(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		packageManifest *manifestsv1alpha1.PackageManifest
@@ -131,8 +132,11 @@ func TestValidatePackageManifest(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			ferrs, err := packageadmission.ValidatePackageManifest(ctx, testScheme, test.packageManifest)
 			require.NoError(t, err)

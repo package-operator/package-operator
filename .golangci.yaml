@@ -27,7 +27,6 @@ linters:
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
-  #- paralleltest     # Would be nice but we can't run all the integration tests in parallel and there is not a way to disable the linter for paths.
   #- testpackage      # Could be nice in the future.
   #- unparam          # Not that useful/false positives.
   #- varnamelen       # Not that useful/false positives.
@@ -77,6 +76,7 @@ linters:
   - noctx
   - nolintlint
   - nosprintfhostport
+  - paralleltest
   - prealloc
   - predeclared
   - promlinter
@@ -100,6 +100,11 @@ linters:
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
+  exclude-rules:
+    # Integration tests MUST NOT run in parallel.
+    - path: 'integration\/.+\.go'
+      linters:
+      - paralleltest
 run:
   skip-files: [ "zz_generated.deepcopy.go$" ]
 linters-settings:
@@ -107,6 +112,6 @@ linters-settings:
     local-prefixes: package-operator.run
   gosec:
     excludes:
-      - G301 # Poor file permissions used when creating a directory
-      - G302 # Poor file permissions used with chmod
-      - G306 # Poor file permissions used when writing to a new file
+    - G301 # Poor file permissions used when creating a directory
+    - G302 # Poor file permissions used with chmod
+    - G306 # Poor file permissions used when writing to a new file

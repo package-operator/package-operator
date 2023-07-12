@@ -2,6 +2,7 @@ package components
 
 import "testing"
 
-func TestSetupPPROF(_ *testing.T) {
+func TestSetupPPROF(t *testing.T) {
+	t.Parallel()
 	_ = newPPROFServer(":9999")
 }

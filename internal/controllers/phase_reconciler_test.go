@@ -33,6 +33,7 @@ func init() {
 }
 
 func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
+	t.Parallel()
 	dynamicCache := &dynamicCacheMock{}
 	ownerStrategy := &ownerStrategyMock{}
 	preflightChecker := &preflightCheckerMock{}
@@ -76,7 +77,9 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 }
 
 func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
+	t.Parallel()
 	t.Run("already gone", func(t *testing.T) {
+		t.Parallel()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		preflightChecker := &preflightCheckerMock{}
@@ -120,6 +123,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	})
 
 	t.Run("already gone on delete", func(t *testing.T) {
+		t.Parallel()
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
@@ -181,6 +185,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	})
 
 	t.Run("delete waits", func(t *testing.T) {
+		t.Parallel()
 		// delete returns false first,
 		// we are only really done when the object is gone
 		// from the apiserver after all finalizers are handled.
@@ -245,6 +250,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	})
 
 	t.Run("not controller", func(t *testing.T) {
+		t.Parallel()
+
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
@@ -311,6 +318,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	})
 
 	t.Run("external objects", func(t *testing.T) {
+		t.Parallel()
+
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
@@ -364,6 +373,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	})
 
 	t.Run("external objects error", func(t *testing.T) {
+		t.Parallel()
+
 		dynamicCache := &dynamicCacheMock{}
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
@@ -418,6 +429,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 }
 
 func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
+	t.Parallel()
+
 	testClient := testutil.NewClient()
 	dynamicCacheMock := &dynamicCacheMock{}
 	r := &PhaseReconciler{
@@ -442,6 +455,8 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 }
 
 func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
+	t.Parallel()
+
 	testClient := testutil.NewClient()
 	dynamicCacheMock := &dynamicCacheMock{}
 	acMock := &adoptionCheckerMock{}
@@ -512,6 +527,8 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 }
 
 func TestPhaseReconciler_desiredObject(t *testing.T) {
+	t.Parallel()
+
 	os := &ownerStrategyMock{}
 	r := &PhaseReconciler{
 		ownerStrategy: os,
@@ -551,6 +568,8 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 }
 
 func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
+	t.Parallel()
+
 	os := &ownerStrategyMock{}
 	r := &PhaseReconciler{
 		ownerStrategy: os,
@@ -592,6 +611,8 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 }
 
 func Test_defaultAdoptionChecker_Check(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		mockPrepare   func(*ownerStrategyMock, *phaseObjectOwnerMock)
@@ -755,8 +776,12 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			os := &ownerStrategyMock{}
 			c := &defaultAdoptionChecker{
 				ownerStrategy: os,
@@ -780,6 +805,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 }
 
 func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
+	t.Parallel()
+
 	os := &ownerStrategyMock{}
 	ac := &defaultAdoptionChecker{
 		scheme:        testScheme,
@@ -824,6 +851,8 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 }
 
 func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	r := &defaultPatcher{
 		writer: clientMock,
@@ -874,6 +903,8 @@ func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
 }
 
 func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	r := &defaultPatcher{
 		writer: clientMock,
@@ -931,6 +962,8 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 }
 
 func Test_defaultPatcher_patchObject_noop(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	r := &defaultPatcher{
 		writer: clientMock,
@@ -954,6 +987,8 @@ func Test_defaultPatcher_patchObject_noop(t *testing.T) {
 }
 
 func Test_mergeKeysFrom(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name             string
 		base, additional map[string]string
@@ -972,8 +1007,12 @@ func Test_mergeKeysFrom(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			r := mergeKeysFrom(test.base, test.additional)
 			assert.Equal(t, test.expected, r)
 		})
@@ -981,6 +1020,8 @@ func Test_mergeKeysFrom(t *testing.T) {
 }
 
 func Test_mapConditions(t *testing.T) {
+	t.Parallel()
+
 	const (
 		reason  = "ChickenSalad"
 		message = "Salad made with chicken!"
@@ -1039,8 +1080,12 @@ func Test_mapConditions(t *testing.T) {
 			mappedConditions: 0,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 			owner := &phaseObjectOwnerMock{}
 			ownerObj := &unstructured.Unstructured{
@@ -1075,7 +1120,7 @@ func Test_mapConditions(t *testing.T) {
 func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 	t.Parallel()
 
-	for name, tc := range map[string]struct {
+	tests := map[string]struct {
 		OwnerObject    corev1alpha1.ObjectSetObject
 		ExternalObject corev1alpha1.ObjectSetObject
 		ObservedObject *corev1alpha1.ObjectSetObject
@@ -1190,8 +1235,11 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 				},
 			},
 		},
-	} {
-		tc := tc
+	}
+
+	for i := range tests {
+		name := i
+		tc := tests[i]
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -1324,6 +1372,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 }
 
 func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
+	t.Parallel()
+
 	pcm := &preflightCheckerMock{}
 	pr := &PhaseReconciler{
 		scheme:           testScheme,

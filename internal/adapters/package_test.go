@@ -11,6 +11,7 @@ import (
 )
 
 func TestGenericPackage(t *testing.T) {
+	t.Parallel()
 	pkg := NewGenericPackage(testScheme)
 
 	assert.NotNil(t, pkg.ClientObject())
@@ -32,6 +33,7 @@ func TestGenericPackage(t *testing.T) {
 }
 
 func TestGenericClusterPackage(t *testing.T) {
+	t.Parallel()
 	pkg := NewGenericClusterPackage(testScheme)
 
 	assert.NotNil(t, pkg.ClientObject())
@@ -53,6 +55,7 @@ func TestGenericClusterPackage(t *testing.T) {
 }
 
 func Test_updatePackagePhase(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		conditions []metav1.Condition
@@ -112,8 +115,11 @@ func Test_updatePackagePhase(t *testing.T) {
 			expected: corev1alpha1.PackagePhaseNotReady,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			pkg := &GenericPackage{
 				Package: corev1alpha1.Package{
 					Status: corev1alpha1.PackageStatus{
@@ -128,6 +134,7 @@ func Test_updatePackagePhase(t *testing.T) {
 }
 
 func Test_templateContextObjectMetaFromObjectMeta(t *testing.T) {
+	t.Parallel()
 	var (
 		name        = "test"
 		namespace   = "testns"

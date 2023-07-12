@@ -12,6 +12,8 @@ import (
 )
 
 func TestParseConditionMap(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name             string
 		object           *unstructured.Unstructured
@@ -45,8 +47,12 @@ func TestParseConditionMap(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			mappings, err := ParseConditionMapAnnotation(test.object)
 			require.NoError(t, err)
 
@@ -56,6 +62,7 @@ func TestParseConditionMap(t *testing.T) {
 }
 
 func TestParseConditionMap_error(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		annotation string
@@ -78,8 +85,11 @@ func TestParseConditionMap_error(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			obj := &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{

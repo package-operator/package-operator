@@ -9,6 +9,8 @@ import (
 )
 
 func TestCobraVersion(t *testing.T) {
+	t.Parallel()
+
 	cmd := NewCmd()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}

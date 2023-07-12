@@ -53,6 +53,8 @@ func (r *revisionReconcilerMock) Reconcile(
 }
 
 func TestGenericObjectSetController_Reconcile(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name                   string
 		getObjectSetPhaseError error
@@ -83,8 +85,11 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			name: "run all the way through",
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller, c, dc, pr, rr := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -156,6 +161,8 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 }
 
 func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *testing.T) {
+	t.Parallel()
+
 	pausedCond := metav1.Condition{
 		Type:   corev1alpha1.ObjectSetPaused,
 		Status: metav1.ConditionTrue,
@@ -196,8 +203,12 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 			arePausedExpected: true,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller, c, _, _, _ := newControllerAndMocks()
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
@@ -224,6 +235,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 }
 
 func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testing.T) {
+	t.Parallel()
 	controller, c, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
@@ -236,6 +248,8 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 }
 
 func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(t *testing.T) {
+	t.Parallel()
+
 	pausedCond := metav1.Condition{
 		Type:   corev1alpha1.ObjectSetPaused,
 		Status: metav1.ConditionTrue,
@@ -282,8 +296,12 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller, c, _, _, _ := newControllerAndMocks()
 			c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
@@ -313,6 +331,8 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 }
 
 func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name                    string
 		teardownDone            bool
@@ -340,8 +360,12 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			teardownDone: true,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller, client, dc, pr, _ := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
@@ -390,7 +414,11 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 var errTest = goerrors.New("explosion")
 
 func TestGenericObjectSetController_updateStatusError(t *testing.T) {
+	t.Parallel()
+
 	t.Run("just returns error", func(t *testing.T) {
+		t.Parallel()
+
 		objectSet := &GenericObjectSet{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
@@ -402,6 +430,8 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	})
 
 	t.Run("reports preflight error", func(t *testing.T) {
+		t.Parallel()
+
 		objectSet := &GenericObjectSet{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}

@@ -93,6 +93,7 @@ func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlCl
 }
 
 func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                   string
 		getObjectSetPhaseError error
@@ -124,8 +125,11 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 			deletionTimestamp:      nil,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			controller, c, dc, pr := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -182,6 +186,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 }
 
 func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		teardownDone bool
@@ -195,8 +200,11 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 			teardownDone: true,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			controller, client, dc, pr := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
@@ -224,6 +232,8 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 }
 
 func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name               string
 		phasePaused        bool
@@ -244,8 +254,12 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller, _, _, _ := newControllerAndMocks()
 
 			p := &GenericObjectSetPhase{}
@@ -268,7 +282,10 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 var errTest = goerrors.New("explosion")
 
 func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
+	t.Parallel()
+
 	t.Run("just returns error", func(t *testing.T) {
+		t.Parallel()
 		objectSetPhase := &GenericObjectSetPhase{
 			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
 		}
@@ -281,6 +298,7 @@ func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
 	})
 
 	t.Run("reports preflight error", func(t *testing.T) {
+		t.Parallel()
 		objectSetPhase := &GenericObjectSetPhase{
 			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
 		}

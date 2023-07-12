@@ -30,6 +30,8 @@ func init() {
 }
 
 func TestHostedClusterController_noop(t *testing.T) {
+	t.Parallel()
+
 	mockClient := testutil.NewClient()
 
 	image := "image321"
@@ -60,6 +62,8 @@ func TestHostedClusterController_noop(t *testing.T) {
 }
 
 func TestHostedClusterController_DesiredPackage(t *testing.T) {
+	t.Parallel()
+
 	mockClient := testutil.NewClient()
 
 	image := "image321"
@@ -83,6 +87,8 @@ var readyHostedCluster = &hypershiftv1beta1.HostedCluster{
 }
 
 func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
@@ -102,6 +108,8 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 }
 
 func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 
@@ -129,6 +137,8 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 }
 
 func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
+	t.Parallel()
+
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
 

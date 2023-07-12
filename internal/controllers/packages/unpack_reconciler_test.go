@@ -18,6 +18,8 @@ import (
 )
 
 func TestUnpackReconciler(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
 	ur := newUnpackReconciler(ipm, pd, nil, nil)
@@ -56,6 +58,8 @@ func TestUnpackReconciler(t *testing.T) {
 }
 
 func TestUnpackReconciler_noop(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
 	ur := newUnpackReconciler(ipm, pd, nil, nil)
@@ -79,6 +83,8 @@ func TestUnpackReconciler_noop(t *testing.T) {
 var errTest = errors.New("test error")
 
 func TestUnpackReconciler_pullBackoff(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
 	ur := newUnpackReconciler(ipm, pd, nil, nil)

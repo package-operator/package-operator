@@ -20,7 +20,10 @@ const (
 )
 
 func Test_ArchivalReconciler(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Doesnt do anything if current revision is not present", func(t *testing.T) {
+		t.Parallel()
 		testClient := testutil.NewClient()
 
 		r := archiveReconciler{
@@ -42,6 +45,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 	})
 
 	t.Run("Doesnt archive anything if archival candidates dont follow the revision ordering", func(t *testing.T) {
+		t.Parallel()
 		testClient := testutil.NewClient()
 
 		r := archiveReconciler{
@@ -86,21 +90,25 @@ func Test_ArchivalReconciler(t *testing.T) {
 	})
 
 	t.Run("when the latest revision becomes available, all intermediate revisions are paused first", func(t *testing.T) {
+		t.Parallel()
 		testPauseAndArchivalWhenLatestIsAvailable(t, false)
 	})
 
 	t.Run("when the latest revision becomes available, all intermediate revisions are archived(if they are already paused)",
 		func(t *testing.T) {
+			t.Parallel()
 			testPauseAndArchivalWhenLatestIsAvailable(t, true)
 		})
 
 	t.Run("archives intermediate revision/s if they are not available and dont actively reconcile anything present in later revisions",
 		func(t *testing.T) {
+			t.Parallel()
 			testPauseAndArchivalIntermediateRevisions(t, false)
 			testPauseAndArchivalIntermediateRevisions(t, true)
 		})
 
 	t.Run("Doesnt archive anything if there are errors when pausing revision/s to be archived", func(t *testing.T) {
+		t.Parallel()
 		// setup Objectdeployment
 		objectDeployment := &genericObjectDeploymentMock{}
 		revisionLimit := int32(10)
@@ -186,6 +194,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 	})
 
 	t.Run("It deletes older revisions over the revisionhistorylimit", func(t *testing.T) {
+		t.Parallel()
 		testDeleteArchive(t)
 	})
 }

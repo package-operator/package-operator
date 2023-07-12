@@ -61,8 +61,13 @@ var tests = []struct {
 }
 
 func TestGenericObjectSet_UpdateStatusPhase(t *testing.T) {
-	for _, test := range tests {
+	t.Parallel()
+
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			clusterObjectSet := GenericObjectSet{}
 			clusterObjectSet.Status.Conditions = test.startConditions
 			clusterObjectSet.UpdateStatusPhase()
@@ -72,8 +77,12 @@ func TestGenericObjectSet_UpdateStatusPhase(t *testing.T) {
 }
 
 func TestGenericClusterObjectSet_UpdateStatusPhase(t *testing.T) {
-	for _, test := range tests {
+	t.Parallel()
+
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			clusterObjectSet := GenericClusterObjectSet{}
 			clusterObjectSet.Status.Conditions = test.startConditions
 			clusterObjectSet.UpdateStatusPhase()
@@ -83,6 +92,8 @@ func TestGenericClusterObjectSet_UpdateStatusPhase(t *testing.T) {
 }
 
 func TestGenericObjectSet(t *testing.T) {
+	t.Parallel()
+
 	objectSet := newGenericObjectSet(testScheme).(*GenericObjectSet)
 
 	co := objectSet.ClientObject()
@@ -125,6 +136,8 @@ func TestGenericObjectSet(t *testing.T) {
 }
 
 func TestGenericClusterObjectSet(t *testing.T) {
+	t.Parallel()
+
 	objectSet := newGenericClusterObjectSet(testScheme).(*GenericClusterObjectSet)
 
 	co := objectSet.ClientObject()

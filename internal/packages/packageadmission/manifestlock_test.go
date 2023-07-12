@@ -12,6 +12,7 @@ import (
 )
 
 func TestValidatePackageManifestLock(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		manifest       *manifestsv1alpha1.PackageManifestLock
@@ -71,8 +72,11 @@ func TestValidatePackageManifestLock(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			ferrs, err := packageadmission.ValidatePackageManifestLock(ctx, test.manifest)
 			require.NoError(t, err)

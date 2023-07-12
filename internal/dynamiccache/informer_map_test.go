@@ -11,6 +11,7 @@ import (
 )
 
 func Test_indexFuncForExtractor(t *testing.T) {
+	t.Parallel()
 	const indexedMetadataKey = "my-customer-index"
 	ifn := indexFuncForExtractor(
 		func(o client.Object) []string {
@@ -55,8 +56,11 @@ func Test_indexFuncForExtractor(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			vals, err := ifn(test.obj)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedIndexKeys, vals)

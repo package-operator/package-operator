@@ -14,6 +14,8 @@ import (
 )
 
 func TestRegistry_DelayedPull(t *testing.T) {
+	t.Parallel()
+
 	r := NewRegistry(map[string]string{
 		"quay.io": "localhost:123",
 	})
@@ -48,6 +50,8 @@ func TestRegistry_DelayedPull(t *testing.T) {
 }
 
 func TestRegistry_DelayedRequests(t *testing.T) {
+	t.Parallel()
+
 	const (
 		numRequests  = 3
 		requestDelay = 5 * time.Millisecond

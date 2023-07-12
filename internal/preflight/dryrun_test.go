@@ -135,6 +135,8 @@ func TestDryRun_notFround(t *testing.T) {
 }
 
 func TestDryRun_emptyreason(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 
 	e := &k8serrors.StatusError{
