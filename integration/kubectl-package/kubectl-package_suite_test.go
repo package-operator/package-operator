@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -100,13 +101,10 @@ var _ = BeforeSuite(func() {
 var errSetup = errors.New("test setup failed")
 
 func getGoVersion() (string, error) {
-	outputBytes, err := exec.Command("go", "version").Output()
-	if err != nil {
-		return "", fmt.Errorf("running go version: %w", err)
-	}
+	goVersion := runtime.Version()
 	r := regexp.MustCompile(`\d(\.\d+){2}`)
-	versionStr := r.FindString(string(outputBytes))
-	return versionStr, nil
+	parsedVersion := r.FindString(goVersion)
+	return parsedVersion, nil
 }
 
 func buildPluginBinary() (string, error) {

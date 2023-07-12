@@ -190,16 +190,10 @@ func newLocations() Locations {
 }
 
 func getGoVersion() (string, error) {
-	shOut, err := sh.Output("go", "version")
-	if err != nil {
-		return "", fmt.Errorf("running go version: %w", err)
-	}
-	r, err := regexp.Compile(`\d(\.\d+){2}`)
-	if err != nil {
-		return "", fmt.Errorf("compiling regexp: %w", err)
-	}
-	versionStr := r.FindString(shOut)
-	return versionStr, nil
+	goVersion := runtime.Version()
+	r := regexp.MustCompile(`\d(\.\d+){2}`)
+	parsedVersion := r.FindString(goVersion)
+	return parsedVersion, nil
 }
 
 func includeInPackageOperatorPackage(file string, outDir string) {
