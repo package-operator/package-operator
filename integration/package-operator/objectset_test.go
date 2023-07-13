@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -224,7 +223,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second)), wait.ErrWaitTimeout.Error())
+		}, dev.WithTimeout(5*time.Second)), "Some error") // TODO
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,

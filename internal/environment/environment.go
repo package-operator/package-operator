@@ -143,12 +143,14 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	err = m.client.Get(ctx, client.ObjectKey{
 		Name: openShiftClusterVersionName,
 	}, clusterVersion)
-	if meta.IsNoMatchError(err) {
+	if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
 		// API not registered in cluster
 		return nil, false, nil
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
+		panic("stupid error!!")
+		//panic(fmt.Sprintf("%T", err))
+		//return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
 	}
 
 	var openShiftVersion string
