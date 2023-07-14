@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -25,6 +27,7 @@ import (
 	"github.com/magefile/mage/sh"
 	"github.com/mt-sre/devkube/dev"
 	"github.com/mt-sre/devkube/magedeps"
+	"golang.org/x/mod/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +58,8 @@ const (
 	kindVersion          = "0.19.0"
 	k8sDocGenVersion     = "0.5.1"
 	helmVersion          = "3.12.0"
+
+	coverProfilingMinGoVersion = "1.20.0"
 )
 
 // Variables that define build behaviour.
@@ -183,6 +188,18 @@ func newLocations() Locations {
 	must(os.MkdirAll(l.IntegrationTestCache(), 0o755))
 
 	return l
+}
+
+var errRegexpMatchNotFound = errors.New("no match found for regexp")
+
+func getGoVersion() (string, error) {
+	goVersion := runtime.Version()
+	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
+	parsedVersion := r.FindString(goVersion)
+	if parsedVersion == "" {
+		return parsedVersion, errRegexpMatchNotFound
+	}
+	return parsedVersion, nil
 }
 
 func includeInPackageOperatorPackage(file string, outDir string) {
@@ -745,13 +762,18 @@ func (Test) kubectlPackageIntegration() {
 		panic(err)
 	}
 
-	covArgs := []string{
-		"tool", "covdata", "textfmt",
-		"-i", tmp,
-		"-o", locations.PluginIntegrationTestCoverageReport(),
-	}
-	if err := sh.Run("go", covArgs...); err != nil {
-		panic(err)
+	goVersion, err := getGoVersion()
+	must(err)
+
+	if semver.Compare("v"+goVersion, "v"+coverProfilingMinGoVersion) >= 0 {
+		covArgs := []string{
+			"tool", "covdata", "textfmt",
+			"-i", tmp,
+			"-o", locations.PluginIntegrationTestCoverageReport(),
+		}
+		if err := sh.Run("go", covArgs...); err != nil {
+			panic(err)
+		}
 	}
 }
 

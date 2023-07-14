@@ -13,8 +13,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"testing"
+
+	"golang.org/x/mod/semver"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/registry"
@@ -41,7 +45,10 @@ var (
 	_tempDir        string
 )
 
-const outputPath = "output"
+const (
+	outputPath                 = "output"
+	coverProfilingMinGoVersion = "1.20.0"
+)
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -91,7 +98,20 @@ var _ = BeforeSuite(func() {
 	generateAllPackages(_tempDir, _registryDomain)
 })
 
-var errSetup = errors.New("test setup failed")
+var (
+	errSetup               = errors.New("test setup failed")
+	errRegexpMatchNotFound = errors.New("no match found for regexp")
+)
+
+func getGoVersion() (string, error) {
+	goVersion := runtime.Version()
+	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
+	parsedVersion := r.FindString(goVersion)
+	if parsedVersion == "" {
+		return parsedVersion, errRegexpMatchNotFound
+	}
+	return parsedVersion, nil
+}
 
 func buildPluginBinary() (string, error) {
 	ldflags := strings.Join([]string{
@@ -99,10 +119,16 @@ func buildPluginBinary() (string, error) {
 		"--extldflags", "'-zrelro -znow -O1'",
 		"-X", fmt.Sprintf("'%s/internal/version.version=%s'", module, version),
 	}, " ")
-	args := []string{
-		"-cover",
-		"--ldflags", ldflags,
+
+	goVersion, err := getGoVersion()
+	if err != nil {
+		return "", fmt.Errorf("getting go version: %w", err)
 	}
+	args := []string{}
+	if semver.Compare("v"+goVersion, "v"+coverProfilingMinGoVersion) >= 0 {
+		args = append(args, "--cover")
+	}
+	args = append(args, "--ldflags", ldflags)
 
 	return gexec.Build(filepath.Join(_root, "cmd", "kubectl-package"), args...)
 }
