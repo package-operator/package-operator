@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +29,10 @@ type objectSetPhasesReconciler struct {
 	phaseReconciler         phaseReconciler
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
+	discoveryClient         discovery.DiscoveryInterface
 	ownerStrategy           ownerStrategy
 	backoff                 *flowcontrol.Backoff
+	clusterScopedCache      map[schema.GroupVersionKind]bool
 }
 
 type ownerStrategy interface {
@@ -40,6 +45,7 @@ func newObjectSetPhasesReconciler(
 	phaseReconciler phaseReconciler,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
+	discoveryClient discovery.DiscoveryInterface,
 	opts ...objectSetPhasesReconcilerOption,
 ) *objectSetPhasesReconciler {
 	var cfg objectSetPhasesReconcilerConfig
@@ -53,8 +59,10 @@ func newObjectSetPhasesReconciler(
 		phaseReconciler:         phaseReconciler,
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
+		discoveryClient:         discoveryClient,
 		ownerStrategy:           ownerhandling.NewNative(scheme),
 		backoff:                 cfg.GetBackoff(),
+		clusterScopedCache:      make(map[schema.GroupVersionKind]bool),
 	}
 }
 
@@ -107,7 +115,10 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
 
-	inTransition := r.isObjectSetInTransition(objectSet, controllerOf)
+	inTransition, err := r.isObjectSetInTransition(objectSet, controllerOf)
+	if err != nil {
+		return res, err
+	}
 	if inTransition {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetInTransition,
@@ -274,7 +285,7 @@ func reverse[T any](s []T) {
 func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 	objectSet genericObjectSet,
 	controllerOf []corev1alpha1.ControlledObjectReference,
-) bool {
+) (bool, error) {
 	controlledIndex := map[corev1alpha1.ControlledObjectReference]struct{}{}
 	for _, controlled := range controllerOf {
 		controlledIndex[controlled] = struct{}{}
@@ -283,10 +294,20 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 	for _, phase := range objectSet.GetPhases() {
 		for _, obj := range phase.Objects {
 			gvk := obj.Object.GroupVersionKind()
-			ns := obj.Object.GetNamespace()
-			if len(ns) == 0 {
-				ns = objectSet.ClientObject().GetNamespace()
+
+			isClusterScoped, err := r.isClusterScopedResource(gvk)
+			if err != nil {
+				return false, err
 			}
+
+			ns := ""
+			if !isClusterScoped {
+				ns = obj.Object.GetNamespace()
+				if len(ns) == 0 {
+					ns = objectSet.ClientObject().GetNamespace()
+				}
+			}
+
 			ref := corev1alpha1.ControlledObjectReference{
 				Kind:      gvk.Kind,
 				Group:     gvk.Group,
@@ -295,11 +316,34 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 			}
 			if _, isControlledByThisInstance := controlledIndex[ref]; !isControlledByThisInstance {
 				// This object is not yet reconciled by this instance or has been taken somewhere else.
-				return true
+				return true, nil
 			}
 		}
 	}
-	return false
+	return false, nil
+}
+
+func (r *objectSetPhasesReconciler) isClusterScopedResource(gvk schema.GroupVersionKind) (bool, error) {
+	cached, ok := r.clusterScopedCache[gvk]
+	if ok {
+		return cached, nil
+	}
+	apiResourceList, err := r.discoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	if err != nil {
+		return false, err
+	}
+	for _, apiResource := range apiResourceList.APIResources {
+		if apiResource.Kind == gvk.Kind {
+			if apiResource.Namespaced {
+				r.clusterScopedCache[gvk] = false
+				return false, nil
+			}
+			r.clusterScopedCache[gvk] = true
+			return true, nil
+		}
+	}
+	r.clusterScopedCache[gvk] = false
+	return false, nil
 }
 
 func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet genericObjectSet) bool {

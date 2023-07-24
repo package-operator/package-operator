@@ -3,6 +3,8 @@ package testutil
 import (
 	"context"
 
+	"k8s.io/client-go/discovery"
+
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,6 +15,7 @@ import (
 // CtrlClient is a mock for the controller-runtime client interface.
 type CtrlClient struct {
 	mock.Mock
+	discovery.DiscoveryInterface
 
 	StatusMock *CtrlStatusClient
 }

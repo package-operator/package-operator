@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"package-operator.run/package-operator/internal/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -48,7 +50,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, testutil.NewClient())
 
 	phase1 := corev1alpha1.ObjectSetTemplatePhase{
 		Name: "phase1",
@@ -96,7 +98,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, testutil.NewClient())
 
 	os := &GenericObjectSet{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
@@ -139,7 +141,7 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 				return []controllers.PreviousObjectSet{}, nil
 			}
-			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, testutil.NewClient())
 
 			phase1 := corev1alpha1.ObjectSetTemplatePhase{
 				Name: "phase1",
@@ -252,7 +254,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 				Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
 
 			rec := newObjectSetPhasesReconciler(
-				testScheme, prm, rprm, lookup,
+				testScheme, prm, rprm, lookup, testutil.NewClient(),
 				withClock{
 					Clock: cm,
 				},

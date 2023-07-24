@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/client-go/discovery"
+
 	"github.com/go-logr/logr"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -65,14 +67,14 @@ type metricsRecorder interface {
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dw dynamicCache, uc client.Reader,
+	dw dynamicCache, uc client.Reader, dc discovery.DiscoveryInterface,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
-		c, log, scheme, dw, uc, r,
+		c, log, scheme, dw, uc, dc, r,
 		restMapper,
 	)
 }
@@ -80,14 +82,14 @@ func NewObjectSetController(
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dw dynamicCache, uc client.Reader,
+	dw dynamicCache, uc client.Reader, dc discovery.DiscoveryInterface,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
-		c, log, scheme, dw, uc, r,
+		c, log, scheme, dw, uc, dc, r,
 		restMapper,
 	)
 }
@@ -98,7 +100,7 @@ func newGenericObjectSetController(
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dynamicCache dynamicCache, uncachedClient client.Reader,
+	dynamicCache dynamicCache, uncachedClient client.Reader, discoveryClient discovery.DiscoveryInterface,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
@@ -131,6 +133,7 @@ func newGenericObjectSetController(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
 			}, client).Lookup,
+		discoveryClient,
 	)
 
 	controller.teardownHandler = phasesReconciler
