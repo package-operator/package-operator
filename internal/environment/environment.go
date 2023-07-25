@@ -148,9 +148,7 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 		return nil, false, nil
 	}
 	if err != nil {
-		panic("stupid error!!")
-		//panic(fmt.Sprintf("%T", err))
-		//return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
+		return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
 	}
 
 	var openShiftVersion string

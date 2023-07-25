@@ -14,8 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var _ ownerStrategy = (*OwnerStrategyNative)(nil)
-var mgr manager.Manager
+var (
+	_   ownerStrategy = (*OwnerStrategyNative)(nil)
+	mgr manager.Manager
+)
 
 // NativeOwner handling strategy uses .metadata.ownerReferences.
 type OwnerStrategyNative struct {

@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	"go.uber.org/dig"
