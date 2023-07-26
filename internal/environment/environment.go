@@ -151,7 +151,7 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 		// API not registered in cluster
 		return nil, false, nil
 	case err != nil:
-		panic(fmt.Sprintf("%T", stdErrors.Unwrap(err)))
+		return nil, false, err
 	}
 
 	if meta.IsNoMatchError(err) || errors.IsNotFound(err) {

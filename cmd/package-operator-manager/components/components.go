@@ -1,7 +1,6 @@
 package components
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -78,7 +77,7 @@ func ProvideScheme() (*runtime.Scheme, error) {
 		hypershiftv1beta1.AddToScheme,
 		apiextensionsv1.AddToScheme,
 		apiextensions.AddToScheme,
-		configv1.AddToScheme,
+		configv1.AddToScheme, // TODO
 	}
 	if err := schemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -117,7 +116,7 @@ func ProvideManager(
 		},
 	})
 	if err != nil {
-		panic(fmt.Sprintf("MY WEIRD ERROR: %T", errors.Unwrap(err)))
+		return nil, err
 	}
 
 	// Health and Ready checks
