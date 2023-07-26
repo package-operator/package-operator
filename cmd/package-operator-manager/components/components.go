@@ -1,6 +1,7 @@
 package components
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -98,7 +99,7 @@ func ProvideManager(
 		Scheme:                     scheme,
 		MetricsBindAddress:         opts.MetricsAddr,
 		HealthProbeBindAddress:     opts.ProbeAddr,
-		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
+		WebhookServer:              webhook.NewServer(webhook.Options{}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
@@ -116,7 +117,7 @@ func ProvideManager(
 		},
 	})
 	if err != nil {
-		return nil, err
+		panic(fmt.Sprintf("MY WEIRD ERROR: %T", errors.Unwrap(err)))
 	}
 
 	// Health and Ready checks

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,6 +20,18 @@ var (
 	_   ownerStrategy = (*OwnerStrategyNative)(nil)
 	mgr manager.Manager
 )
+
+func init() {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		panic(fmt.Errorf("unable to get kubeconfig: %w", err))
+	}
+
+	mgr, err = manager.New(cfg, manager.Options{})
+	if err != nil {
+		panic(fmt.Errorf("unable to set up manager: %w", err))
+	}
+}
 
 // NativeOwner handling strategy uses .metadata.ownerReferences.
 type OwnerStrategyNative struct {
