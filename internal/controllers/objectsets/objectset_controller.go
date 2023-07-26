@@ -31,11 +31,10 @@ type GenericObjectSetController struct {
 	newObjectSet      genericObjectSetFactory
 	newObjectSetPhase genericObjectSetPhaseFactory
 
-	client                 client.Client
-	log                    logr.Logger
-	scheme                 *runtime.Scheme
-	reconciler             []reconciler
-	phasesPreflightChecker phasesChecker
+	client     client.Client
+	log        logr.Logger
+	scheme     *runtime.Scheme
+	reconciler []reconciler
 
 	recorder        metricsRecorder
 	dynamicCache    dynamicCache
@@ -44,12 +43,6 @@ type GenericObjectSetController struct {
 
 type reconciler interface {
 	Reconcile(ctx context.Context, objectSet genericObjectSet) (ctrl.Result, error)
-}
-
-type phasesChecker interface {
-	Check(
-		ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
-	) (violations []preflight.Violation, err error)
 }
 
 type dynamicCache interface {
@@ -119,11 +112,6 @@ func newGenericObjectSetController(
 		recorder:     recorder,
 	}
 
-	checker := preflight.PhasesCheckerList{
-		preflight.NewObjectDuplicate(),
-	}
-	controller.phasesPreflightChecker = checker
-
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
@@ -143,6 +131,9 @@ func newGenericObjectSetController(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
 			}, client).Lookup,
+		preflight.PhasesCheckerList{
+			preflight.NewObjectDuplicate(),
+		},
 	)
 
 	controller.teardownHandler = phasesReconciler
@@ -225,17 +216,6 @@ func (c *GenericObjectSetController) Reconcile(
 		return res, err
 	}
 
-	violations, err := c.phasesPreflightChecker.Check(ctx, objectSet.GetPhases())
-	if err != nil {
-		return res, err
-	}
-	if len(violations) > 0 {
-		preflightErr := &preflight.Error{
-			Violations: violations,
-		}
-		return res, c.ifPreflightErrorUpdateStatus(ctx, objectSet, preflightErr)
-	}
-
 	for _, r := range c.reconciler {
 		res, err = r.Reconcile(ctx, objectSet)
 		if err != nil || !res.IsZero() {
@@ -243,6 +223,7 @@ func (c *GenericObjectSetController) Reconcile(
 		}
 	}
 	if err != nil {
+		return res, c.updateStatusIfPreflightError(ctx, objectSet, err)
 		return controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, err,
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)
@@ -257,7 +238,7 @@ func (c *GenericObjectSetController) Reconcile(
 	return res, c.updateStatus(ctx, objectSet)
 }
 
-func (c *GenericObjectSetController) ifPreflightErrorUpdateStatus(ctx context.Context, objectSet genericObjectSet,
+func (c *GenericObjectSetController) updateStatusIfPreflightError(ctx context.Context, objectSet genericObjectSet,
 	reconcileErr error,
 ) error {
 	var preflightError *preflight.Error

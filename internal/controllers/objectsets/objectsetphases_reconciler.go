@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"package-operator.run/package-operator/internal/preflight"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +30,7 @@ type objectSetPhasesReconciler struct {
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
 	ownerStrategy           ownerStrategy
+	preflightChecker        phasesChecker
 	backoff                 *flowcontrol.Backoff
 }
 
@@ -36,11 +39,18 @@ type ownerStrategy interface {
 	IsOwner(owner, obj metav1.Object) bool
 }
 
+type phasesChecker interface {
+	Check(
+		ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+	) (violations []preflight.Violation, err error)
+}
+
 func newObjectSetPhasesReconciler(
 	scheme *runtime.Scheme,
 	phaseReconciler phaseReconciler,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
+	checker phasesChecker,
 	opts ...objectSetPhasesReconcilerOption,
 ) *objectSetPhasesReconciler {
 	var cfg objectSetPhasesReconcilerConfig
@@ -55,6 +65,7 @@ func newObjectSetPhasesReconciler(
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerhandling.NewNative(scheme),
+		preflightChecker:        checker,
 		backoff:                 cfg.GetBackoff(),
 	}
 }
@@ -91,6 +102,17 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
+
+	violations, err := r.preflightChecker.Check(ctx, objectSet.GetPhases())
+	if err != nil {
+		return res, err
+	}
+	if len(violations) > 0 {
+		preflightErr := &preflight.Error{
+			Violations: violations,
+		}
+		return res, preflightErr
+	}
 
 	controllers.DeleteMappedConditions(ctx, objectSet.GetConditions())
 
