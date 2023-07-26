@@ -188,13 +188,11 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 				Return(test.firstTeardownFinish, nil).Once()
 			pr.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).
 				Return(true, nil).Maybe()
-			checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 			done, err := r.Teardown(context.Background(), os)
 			assert.Equal(t, test.firstTeardownFinish, done)
 			assert.NoError(t, err)
 			remotePr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything, phase2)
-			checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 			if test.firstTeardownFinish {
 				pr.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, phase1)
 			}
