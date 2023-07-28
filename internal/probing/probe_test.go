@@ -22,6 +22,7 @@ func (m *proberMock) Probe(obj *unstructured.Unstructured) (
 }
 
 func TestList(t *testing.T) {
+	t.Parallel()
 	prober1 := &proberMock{}
 	prober2 := &proberMock{}
 
@@ -40,6 +41,7 @@ func TestList(t *testing.T) {
 }
 
 func TestCondition(t *testing.T) {
+	t.Parallel()
 	c := &conditionProbe{
 		Type:   "Available",
 		Status: "False",
@@ -216,8 +218,11 @@ func TestCondition(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			s, m := c.Probe(test.obj)
 			assert.Equal(t, test.succeeds, s)
 			assert.Equal(t, test.message, m)
@@ -226,6 +231,7 @@ func TestCondition(t *testing.T) {
 }
 
 func TestFieldsEqual(t *testing.T) {
+	t.Parallel()
 	fe := &fieldsEqualProbe{
 		FieldA: ".spec.fieldA",
 		FieldB: ".spec.fieldB",
@@ -338,8 +344,11 @@ func TestFieldsEqual(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			s, m := fe.Probe(test.obj)
 			assert.Equal(t, test.succeeds, s)
 			assert.Equal(t, test.message, m)
@@ -348,6 +357,7 @@ func TestFieldsEqual(t *testing.T) {
 }
 
 func TestStatusObservedGeneration(t *testing.T) {
+	t.Parallel()
 	properMock := &proberMock{}
 	og := &statusObservedGenerationProbe{
 		Prober: properMock,
@@ -406,8 +416,11 @@ func TestStatusObservedGeneration(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			s, m := og.Probe(test.obj)
 			assert.Equal(t, test.succeeds, s)
 			assert.Equal(t, test.message, m)

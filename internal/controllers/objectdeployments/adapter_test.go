@@ -80,6 +80,7 @@ func clientObjs2ObjectSetObjects(runtimeObjs []client.Object) []corev1alpha1.Obj
 }
 
 func TestGenericObjectSet_GetObjects(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		objectSet         GenericObjectSet
 		expectedObjectIDs []string
@@ -128,6 +129,7 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 }
 
 func TestGenericObjectSet_GetActivelyReconciledObjects(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		objectSet               GenericObjectSet
 		expectedControllerOfRef []string

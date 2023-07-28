@@ -34,6 +34,7 @@ func init() {
 type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 
 func TestPhaseReconciler_Reconcile(t *testing.T) {
+	t.Parallel()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	previousObject := newGenericObjectSet(scheme)
 	previousObject.ClientObject().SetName("test")
@@ -61,8 +62,11 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			objectSetPhase := newGenericObjectSetPhase(scheme)
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
 			m := &phaseReconcilerMock{}
@@ -96,6 +100,8 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 }
 
 func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
+	t.Parallel()
+
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	previousObject := newGenericObjectSet(scheme)
 	previousObject.ClientObject().SetName("test")
@@ -124,6 +130,8 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 }
 
 func TestPhaseReconciler_Teardown(t *testing.T) {
+	t.Parallel()
+
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}

@@ -22,12 +22,14 @@ import (
 )
 
 func TestCache_Source(t *testing.T) {
+	t.Parallel()
 	c, cacheSource, _ := setupTestCache(t)
 
 	assert.Same(t, cacheSource, c.Source())
 }
 
 func TestCache_Start(t *testing.T) {
+	t.Parallel()
 	c, cacheSource, _ := setupTestCache(t)
 
 	cacheSource.On("blockNewRegistrations")
@@ -40,6 +42,7 @@ func TestCache_Start(t *testing.T) {
 }
 
 func TestCache_OwnersForGVK(t *testing.T) {
+	t.Parallel()
 	c, _, _ := setupTestCache(t)
 
 	owner1 := OwnerReference{
@@ -75,7 +78,9 @@ func TestCache_OwnersForGVK(t *testing.T) {
 }
 
 func TestCache_Watch(t *testing.T) {
+	t.Parallel()
 	t.Run("default", func(t *testing.T) {
+		t.Parallel()
 		c, cacheSource, informerMap := setupTestCache(t)
 
 		informerMap.
@@ -107,6 +112,7 @@ func TestCache_Watch(t *testing.T) {
 	})
 
 	t.Run("informer exists", func(t *testing.T) {
+		t.Parallel()
 		c, cacheSource, informerMap := setupTestCache(t)
 		c.informerReferences[schema.GroupVersionKind{
 			Kind:    "Secret",
@@ -140,6 +146,7 @@ func TestCache_Watch(t *testing.T) {
 }
 
 func TestCache_Free(t *testing.T) {
+	t.Parallel()
 	c, _, informerMap := setupTestCache(t)
 	owner := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -169,22 +176,15 @@ func TestCache_Free(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest
 func TestCache_Reader(t *testing.T) {
 	c, _, informerMap := setupTestCache(t)
 	owner := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test42",
-			Namespace: "test",
-		},
+		ObjectMeta: metav1.ObjectMeta{Name: "test42", Namespace: "test"},
 	}
 	ref, err := c.ownerRef(owner)
 	require.NoError(t, err)
-	c.informerReferences[schema.GroupVersionKind{
-		Kind:    "Secret",
-		Version: "v1",
-	}] = map[OwnerReference]struct{}{
-		ref: {},
-	}
+	c.informerReferences[schema.GroupVersionKind{Kind: "Secret", Version: "v1"}] = map[OwnerReference]struct{}{ref: {}}
 
 	reader := &readerMock{}
 	reader.
@@ -242,6 +242,7 @@ func TestCache_Reader(t *testing.T) {
 }
 
 func TestCache_sampleMetrics(t *testing.T) {
+	t.Parallel()
 	c, _, informerMap := setupTestCache(t)
 	recorderMock := &metricsmocks.RecorderMock{}
 	c.recorder = recorderMock

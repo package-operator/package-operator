@@ -19,9 +19,8 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-func Test_newRevisionReconciler_delaysObjectSetCreation(
-	t *testing.T,
-) {
+func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
+	t.Parallel()
 	log := testr.New(t)
 	ctx := logr.NewContext(context.Background(), log)
 	clientMock := testutil.NewClient()
@@ -46,6 +45,8 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(
 }
 
 func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
+	t.Parallel()
+
 	hashCollisionOS := makeObjectSet("test-xyz", "test", 1, "xyz", true, true, false)
 	hashCollisionOS.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		{}, {},
@@ -122,8 +123,10 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i := range testCases {
+		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			log := testr.New(t)
 			ctx := logr.NewContext(context.Background(), log)
 			clientMock := testCase.client

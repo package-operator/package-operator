@@ -31,6 +31,7 @@ func (s *testSink) SetEnvironment(
 }
 
 func TestImplementsSinker(t *testing.T) {
+	t.Parallel()
 	type somethingElse struct{}
 
 	s := &testSink{}
@@ -39,6 +40,7 @@ func TestImplementsSinker(t *testing.T) {
 }
 
 func TestManager_Init_Kubernetes(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -71,6 +73,7 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 }
 
 func TestManager_Init_OpenShift(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -140,6 +143,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 }
 
 func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 
 	c.
@@ -158,6 +162,7 @@ func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
 }
 
 func TestManager_openShiftEnvironment_error(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 
 	c.
@@ -174,6 +179,7 @@ func TestManager_openShiftEnvironment_error(t *testing.T) {
 }
 
 func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		err  error
@@ -188,8 +194,11 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			c := testutil.NewClient()
 
 			c.
@@ -210,6 +219,8 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 }
 
 func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 
 	c.
@@ -235,6 +246,8 @@ func (c *discoveryClientMock) ServerVersion() (*version.Info, error) {
 }
 
 func TestSink(t *testing.T) {
+	t.Parallel()
+
 	s := &Sink{}
 	env := &manifestsv1alpha1.PackageEnvironment{
 		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{

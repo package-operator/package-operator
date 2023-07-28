@@ -17,6 +17,7 @@ import (
 )
 
 func TestEnsureFinalizer(t *testing.T) {
+	t.Parallel()
 	const finalizer = "test-finalizer"
 	clientMock := testutil.NewClient()
 
@@ -48,6 +49,7 @@ func TestEnsureFinalizer(t *testing.T) {
 }
 
 func TestRemoveFinalizer(t *testing.T) {
+	t.Parallel()
 	const finalizer = "test-finalizer"
 	clientMock := testutil.NewClient()
 
@@ -80,6 +82,7 @@ func TestRemoveFinalizer(t *testing.T) {
 }
 
 func TestReportOwnActiveObjects(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	ownerStrategy := &ownerStrategyMock{}
 	ownerStrategy.
@@ -119,6 +122,7 @@ func TestReportOwnActiveObjects(t *testing.T) {
 }
 
 func TestIsMappedCondition(t *testing.T) {
+	t.Parallel()
 	assert.False(t, IsMappedCondition(metav1.Condition{
 		Type: "Available",
 	}))
@@ -129,6 +133,7 @@ func TestIsMappedCondition(t *testing.T) {
 }
 
 func TestMapConditions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                   string
 		srcGeneration          int64
@@ -175,8 +180,11 @@ func TestMapConditions(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			var destConditions []metav1.Condition
 			MapConditions(
@@ -201,6 +209,7 @@ func TestMapConditions(t *testing.T) {
 }
 
 func TestDeleteMappedConditions(t *testing.T) {
+	t.Parallel()
 	conditions := []metav1.Condition{
 		{
 			Type: "Available",

@@ -132,7 +132,9 @@ func TestPackage_success(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
 			ctx := logr.NewContext(context.Background(), testr.New(t))
 

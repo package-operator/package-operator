@@ -179,6 +179,7 @@ func TestPackageDeployer_Load_Error(t *testing.T) {
 }
 
 func TestImageWithDigestOk(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		image  string
 		digest string
@@ -202,8 +203,12 @@ func TestImageWithDigestOk(t *testing.T) {
 		{"example.com:12345/imggroup/imgname:1.0.0@" + testDgst, testDgst, "example.com:12345/imggroup/imgname@" + testDgst},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.image, func(t *testing.T) {
+			t.Parallel()
+
 			out, err := ImageWithDigest(test.image, test.digest)
 			require.NoError(t, err)
 			require.Equal(t, test.expOut, out)
@@ -212,6 +217,8 @@ func TestImageWithDigestOk(t *testing.T) {
 }
 
 func TestImageWithDigestError(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		image  string
 		digest string
@@ -224,8 +231,12 @@ func TestImageWithDigestError(t *testing.T) {
 		{"nginx", "sha256:12345", "invalid digest format"},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.image, func(t *testing.T) {
+			t.Parallel()
+
 			_, err := ImageWithDigest(test.image, test.digest)
 			require.ErrorContains(t, err, test.expErr)
 		})

@@ -28,6 +28,8 @@ func init() {
 }
 
 func TestObjectTemplateController_Reconcile(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
@@ -58,6 +60,8 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 }
 
 func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)

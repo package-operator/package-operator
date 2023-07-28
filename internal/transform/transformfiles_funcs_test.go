@@ -64,6 +64,8 @@ var forbiddenFuncs = []string{
 }
 
 func TestSprigAllowedFuncs(t *testing.T) {
+	t.Parallel()
+
 	actual := SprigFuncs()
 
 	require.Equal(t, len(allowedFuncNames)+1, len(actual))
@@ -74,8 +76,12 @@ func TestSprigAllowedFuncs(t *testing.T) {
 }
 
 func TestSprigForbiddenFuncs(t *testing.T) {
-	for _, funcName := range forbiddenFuncs {
+	t.Parallel()
+
+	for i := range forbiddenFuncs {
+		funcName := forbiddenFuncs[i]
 		t.Run(funcName, func(t *testing.T) {
+			t.Parallel()
 			input := fmt.Sprintf("{{ %s }}", funcName)
 			expectedErrMsg := fmt.Sprintf("template: :1: function \"%s\" not defined", funcName)
 			_, err := TemplateWithSprigFuncs(input)
@@ -85,6 +91,7 @@ func TestSprigForbiddenFuncs(t *testing.T) {
 }
 
 func Test_base64decodeMap(t *testing.T) {
+	t.Parallel()
 	d := map[string]interface{}{
 		"test": "YWJjZGVm",
 	}

@@ -12,6 +12,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	kind := "Test"
 	group := "test-group"
@@ -40,6 +41,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseSelector(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	p, err := ParseSelector(ctx, corev1alpha1.ProbeSelector{
 		Kind: &corev1alpha1.PackageProbeKindSpec{
@@ -60,6 +62,7 @@ func TestParseSelector(t *testing.T) {
 }
 
 func TestParseProbes(t *testing.T) {
+	t.Parallel()
 	fep := corev1alpha1.Probe{
 		FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
 			FieldA: "asdf",

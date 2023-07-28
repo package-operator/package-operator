@@ -7,6 +7,7 @@ import (
 )
 
 func TestProvideOptions(t *testing.T) {
+	t.Parallel()
 	opts, err := ProvideOptions()
 
 	assert.Nil(t, err)

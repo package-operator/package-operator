@@ -16,6 +16,7 @@ import (
 )
 
 func TestNamespaceEscalation(t *testing.T) {
+	t.Parallel()
 	clusterScoped := &unstructured.Unstructured{}
 
 	nsOwner := &unstructured.Unstructured{}
@@ -62,8 +63,11 @@ func TestNamespaceEscalation(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			rm := &restmappermock.RestMapperMock{}
 			ne := NewNamespaceEscalation(rm)
 
@@ -75,6 +79,7 @@ func TestNamespaceEscalation(t *testing.T) {
 }
 
 func TestNamespaceEscalation_restMapper(t *testing.T) {
+	t.Parallel()
 	rm := &restmappermock.RestMapperMock{}
 	ne := NewNamespaceEscalation(rm)
 

@@ -21,6 +21,8 @@ import (
 )
 
 func TestBootstrapperBootstrap(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	var initCalled bool
 	b := &Bootstrapper{
@@ -67,6 +69,8 @@ func TestBootstrapperBootstrap(t *testing.T) {
 }
 
 func TestBootstrapper_bootstrap(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 	b := &Bootstrapper{client: c}
 
@@ -104,7 +108,10 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 }
 
 func TestBootstrapper_isPKOAvailable(t *testing.T) {
+	t.Parallel()
+
 	t.Run("not found", func(t *testing.T) {
+		t.Parallel()
 		c := testutil.NewClient()
 
 		c.On("Get", mock.Anything, mock.Anything,
@@ -120,6 +127,7 @@ func TestBootstrapper_isPKOAvailable(t *testing.T) {
 	})
 
 	t.Run("not available", func(t *testing.T) {
+		t.Parallel()
 		c := testutil.NewClient()
 
 		c.On("Get", mock.Anything, mock.Anything,
@@ -135,6 +143,8 @@ func TestBootstrapper_isPKOAvailable(t *testing.T) {
 	})
 
 	t.Run("available", func(t *testing.T) {
+		t.Parallel()
+
 		c := testutil.NewClient()
 
 		c.On("Get", mock.Anything, mock.Anything,

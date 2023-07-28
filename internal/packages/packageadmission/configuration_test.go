@@ -16,6 +16,7 @@ import (
 )
 
 func TestValidatePackageConfiguration(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                  string
 		packageManifestConfig *manifestsv1alpha1.PackageManifestSpecConfig
@@ -43,8 +44,11 @@ func TestValidatePackageConfiguration(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			ferrs, err := packageadmission.ValidatePackageConfiguration(ctx, testScheme, test.packageManifestConfig, test.config, nil)
 			require.NoError(t, err)
@@ -111,12 +115,12 @@ func TestPackageManifest_Validate(t *testing.T) {
 
 	ctx := context.Background()
 
-	for _, test := range tests {
-		thisTest := test
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			ferr, err := packageadmission.ValidatePackageManifest(ctx, testScheme, thisTest.manifest)
+			ferr, err := packageadmission.ValidatePackageManifest(ctx, testScheme, test.manifest)
 			require.NoError(t, err)
 
 			var errorStrings []string
@@ -124,7 +128,7 @@ func TestPackageManifest_Validate(t *testing.T) {
 				errorStrings = append(errorStrings, err.Error())
 			}
 
-			assert.Contains(t, errorStrings, thisTest.errorString)
+			assert.Contains(t, errorStrings, test.errorString)
 		})
 	}
 }

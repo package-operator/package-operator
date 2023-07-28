@@ -18,6 +18,7 @@ import (
 )
 
 func Test_ObjectSetReconciler(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name                    string
 		client                  *testutil.CtrlClient
@@ -83,8 +84,10 @@ func Test_ObjectSetReconciler(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i := range testCases {
+		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			client := testCase.client
 
 			// Setup reconciler

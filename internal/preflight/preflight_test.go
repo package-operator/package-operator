@@ -13,6 +13,7 @@ import (
 )
 
 func TestCheckAll(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := &unstructured.Unstructured{}
 
@@ -26,6 +27,7 @@ func TestCheckAll(t *testing.T) {
 }
 
 func TestCheckAllInPhase(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := &unstructured.Unstructured{}
 
@@ -41,6 +43,7 @@ func TestCheckAllInPhase(t *testing.T) {
 }
 
 func Test_addPositionToViolations(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	obj := &unstructured.Unstructured{}
 	obj.SetName("test")
@@ -56,6 +59,7 @@ func Test_addPositionToViolations(t *testing.T) {
 }
 
 func Test_addPositionToViolations_withPhase(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	ctx = NewContextWithPhase(ctx, corev1alpha1.ObjectSetTemplatePhase{
 		Name: "123",
@@ -76,6 +80,7 @@ func Test_addPositionToViolations_withPhase(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
+	t.Parallel()
 	var called bool
 	list := List{
 		CheckerFn(func(ctx context.Context, owner, obj client.Object) (violations []Violation, err error) {

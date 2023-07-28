@@ -18,6 +18,8 @@ import (
 )
 
 func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		mockPrepare func(clientMock *testutil.CtrlClient)
@@ -79,8 +81,11 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			clientMock := testutil.NewClient()
 			r := &objectSetRemotePhaseReconciler{
 				client:            clientMock,
@@ -109,9 +114,8 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 	}
 }
 
-func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(
-	t *testing.T,
-) {
+func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
+	t.Parallel()
 	r := &objectSetRemotePhaseReconciler{
 		scheme:            testScheme,
 		newObjectSetPhase: newGenericObjectSetPhase,
@@ -157,6 +161,8 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(
 }
 
 func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	c := testutil.NewClient()
 
@@ -210,6 +216,8 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 }
 
 func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectSet(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	c := testutil.NewClient()
 

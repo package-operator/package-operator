@@ -8,6 +8,7 @@ import (
 )
 
 func TestCacheSource(t *testing.T) {
+	t.Parallel()
 	cs := &cacheSource{}
 
 	ctx := context.Background()

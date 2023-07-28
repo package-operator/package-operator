@@ -43,6 +43,8 @@ func (m *remotePhaseReconcilerMock) Teardown(
 }
 
 func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
+	t.Parallel()
+
 	pr := &phaseReconcilerMock{}
 	remotePr := &remotePhaseReconcilerMock{}
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
@@ -91,6 +93,8 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 }
 
 func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
+	t.Parallel()
+
 	pr := &phaseReconcilerMock{}
 	remotePr := &remotePhaseReconcilerMock{}
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
@@ -119,6 +123,8 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 }
 
 func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name                string
 		firstTeardownFinish bool
@@ -132,8 +138,10 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			true,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			pr := &phaseReconcilerMock{}
 			remotePr := &remotePhaseReconcilerMock{}
 			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
@@ -171,7 +179,9 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 }
 
 func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
-	for name, tc := range map[string]struct {
+	t.Parallel()
+
+	tests := map[string]struct {
 		ObjectSet                 genericObjectSet
 		TimeSinceAvailable        time.Duration
 		ExpectedConditionStatuses map[string]metav1.ConditionStatus
@@ -236,8 +246,14 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 				corev1alpha1.ObjectSetSucceeded: metav1.ConditionTrue,
 			},
 		},
-	} {
+	}
+
+	for i := range tests {
+		name := i
+		tc := tests[i]
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			cm := &clockMock{}
 			prm := &phaseReconcilerMock{}
 			rprm := &remotePhaseReconcilerMock{}
