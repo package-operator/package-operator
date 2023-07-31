@@ -43,7 +43,7 @@ type Options struct {
 func ProvideOptions() (opts Options) {
 	flag.StringVar(
 		&opts.MetricsAddr, "metrics-addr",
-		":20000",
+		":8080",
 		metricsAddrFlagDescription)
 	flag.StringVar(
 		&opts.PPROFAddr, "pprof-addr",

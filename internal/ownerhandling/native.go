@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,25 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var (
-	_   ownerStrategy = (*OwnerStrategyNative)(nil)
-	mgr manager.Manager
-)
-
-func init() {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		panic(fmt.Errorf("unable to get kubeconfig: %w", err))
-	}
-
-	mgr, err = manager.New(cfg, manager.Options{})
-	if err != nil {
-		panic(fmt.Errorf("unable to set up manager: %w", err))
-	}
-}
+var _ ownerStrategy = (*OwnerStrategyNative)(nil)
 
 // NativeOwner handling strategy uses .metadata.ownerReferences.
 type OwnerStrategyNative struct {
@@ -111,11 +94,11 @@ func (s *OwnerStrategyNative) SetControllerReference(owner, obj metav1.Object) e
 func (s *OwnerStrategyNative) EnqueueRequestForOwner(
 	ownerType client.Object, isController bool,
 ) handler.EventHandler {
+	mapper := meta.NewDefaultRESTMapper(s.scheme.PrioritizedVersionsAllGroups())
 	if isController {
-		return handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(),
-			ownerType, handler.OnlyControllerOwner())
+		return handler.EnqueueRequestForOwner(s.scheme, mapper, ownerType, handler.OnlyControllerOwner())
 	}
-	return handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), ownerType)
+	return handler.EnqueueRequestForOwner(s.scheme, mapper, ownerType)
 }
 
 func (s *OwnerStrategyNative) ownerRefForCompare(owner metav1.Object) metav1.OwnerReference {

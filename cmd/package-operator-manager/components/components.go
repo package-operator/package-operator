@@ -77,7 +77,7 @@ func ProvideScheme() (*runtime.Scheme, error) {
 		hypershiftv1beta1.AddToScheme,
 		apiextensionsv1.AddToScheme,
 		apiextensions.AddToScheme,
-		configv1.AddToScheme, // TODO
+		configv1.AddToScheme,
 	}
 	if err := schemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, err

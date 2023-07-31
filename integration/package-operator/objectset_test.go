@@ -223,7 +223,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second)), "Some error") // TODO
+		}, dev.WithTimeout(5*time.Second)), "timed out waiting for the condition")
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
