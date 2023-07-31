@@ -3,6 +3,7 @@ package components
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 )
@@ -40,11 +41,13 @@ type Options struct {
 	// sub commands
 	SelfBootstrap       string
 	SelfBootstrapConfig string
-	PrintVersion        bool
+	PrintVersion        io.Writer
 	CopyTo              string
 }
 
 func ProvideOptions() (opts Options, err error) {
+	printVersion := false
+
 	flag.StringVar(
 		&opts.MetricsAddr, "metrics-addr",
 		":8080",
@@ -64,7 +67,7 @@ func ProvideOptions() (opts Options, err error) {
 	flag.StringVar(
 		&opts.ProbeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)
 	flag.BoolVar(
-		&opts.PrintVersion, "version", false,
+		&printVersion, "version", false,
 		versionFlagDescription)
 	flag.StringVar(
 		&opts.CopyTo, "copy-to", "",
@@ -95,6 +98,10 @@ func ProvideOptions() (opts Options, err error) {
 	if *tmpPackageHashModifier != 0 {
 		packageHashModifierInt32 := int32(*tmpPackageHashModifier)
 		opts.PackageHashModifier = &packageHashModifierInt32
+	}
+
+	if printVersion {
+		opts.PrintVersion = os.Stderr
 	}
 
 	return opts, nil

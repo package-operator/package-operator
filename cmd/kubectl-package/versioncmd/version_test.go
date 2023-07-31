@@ -16,7 +16,7 @@ func TestCobraVersion(t *testing.T) {
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
-	cmd.SetArgs([]string{"--embedded"})
+	cmd.SetArgs([]string{})
 
 	require.Nil(t, cmd.Execute())
 	require.Len(t, stderr.String(), 0)
