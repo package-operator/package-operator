@@ -3,7 +3,6 @@ package packageexport
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -26,7 +25,7 @@ func Image(files packagecontent.Files) (v1.Image, error) {
 
 	subFiles := packagecontent.Files{}
 	for k, v := range files {
-		subFiles[filepath.Join(packages.ImageFilePrefixPath, k)] = v
+		subFiles[packages.AddPathPrefix(k)] = v
 	}
 
 	layer, err := crane.Layer(subFiles)

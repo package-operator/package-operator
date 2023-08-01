@@ -113,7 +113,7 @@ func (v TemplateTestValidator) runTestCase(
 		return err
 	}
 
-	violations := make([]packages.Violation, 0, len(fileMap))
+	violations := make([]error, 0, len(fileMap))
 	for relPath := range fileMap {
 		if !packages.IsTemplateFile(relPath) {
 			// template source files are of no interest for the test fixtures.
@@ -133,19 +133,14 @@ func (v TemplateTestValidator) runTestCase(
 			continue
 		}
 
-		violations = append(violations, packages.Violation{
-			Reason:  fmt.Sprintf("Test %q: %s", testCase.Name, packages.ViolationReasonFixtureMismatch),
-			Details: string(diff),
-			Location: &packages.ViolationLocation{
-				Path: relPath,
-			},
+		violations = append(violations, packages.ViolationError{
+			Reason:  packages.ViolationReasonFixtureMismatch,
+			Details: fmt.Sprintf("Testcase %q\n%s", testCase.Name, string(diff)),
+			Path:    relPath,
 		})
 	}
 
-	if len(violations) > 0 {
-		return packages.NewInvalidError(violations...)
-	}
-	return nil
+	return errors.Join(violations...)
 }
 
 func renderTemplateFiles(folder string, fileMap packagecontent.Files) error {

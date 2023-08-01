@@ -36,10 +36,9 @@ func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err err
 			break
 		}
 
-		tarPath := hdr.Name
-		path, err := filepath.Rel(packages.ImageFilePrefixPath, tarPath)
+		path, err := packages.StripPathPrefix(hdr.Name)
 		if err != nil {
-			return nil, fmt.Errorf("package image contains files not under the dir %s: %w", packages.ImageFilePrefixPath, err)
+			return nil, err
 		}
 
 		if isFilePathToBeExcluded(path) {

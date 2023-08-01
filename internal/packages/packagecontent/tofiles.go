@@ -36,6 +36,6 @@ func FilesFromPackage(pkg *Package) (Files, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal YAML: %w", err)
 	}
-	files[packages.PackageManifestFile] = packageManifestBytes
+	files[packages.PackageManifestFilename] = packageManifestBytes
 	return files, nil
 }

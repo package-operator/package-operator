@@ -43,5 +43,5 @@ Object: null
 
 	require.Len(t, files, 2)
 	assert.Equal(t, expectedTestYaml, string(files["test.yaml"]))
-	assert.Equal(t, expectedPackageManifest, string(files[packages.PackageManifestFile]))
+	assert.Equal(t, expectedPackageManifest, string(files[packages.PackageManifestFilename]))
 }

@@ -217,16 +217,15 @@ func TestTemplateTestValidator(t *testing.T) {
 		"manifest.yaml":     []byte(testPackageManifestContent),
 		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1UpdatedContent),
 	}
-	expectedErr := `Package validation errors:
-- Test "t1": File mismatch against fixture in file.yaml.gotmpl:
-  --- FIXTURE/file.yaml
-  +++ ACTUAL/file.yaml
-  @@ -4,4 +4,4 @@
-     name: testfile1
-     annotations:
-       package-operator.run/phase: tesxx
-  -property: pkg-name
-  +property: pkg-namexxx`
+	expectedErr := `File mismatch against fixture in file.yaml.gotmpl: Testcase "t1"
+--- FIXTURE/file.yaml
++++ ACTUAL/file.yaml
+@@ -4,4 +4,4 @@
+   name: testfile1
+   annotations:
+     package-operator.run/phase: tesxx
+-property: pkg-name
++property: pkg-namexxx`
 	err = ttv.ValidatePackageAndFiles(ctx, pc, newFileMap)
 	require.Equal(t, expectedErr, err.Error())
 }
@@ -347,7 +346,7 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := opav.ValidatePackage(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- Missing package-operator.run/phase Annotation in test.yaml#0")
+	require.EqualError(t, err, "Missing package-operator.run/phase Annotation in test.yaml idx 0")
 }
 
 func TestObjectDuplicateValidator(t *testing.T) {
@@ -367,7 +366,7 @@ func TestObjectDuplicateValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := odv.ValidatePackage(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- Duplicate Object in test.yaml#1")
+	require.EqualError(t, err, "Duplicate Object in test.yaml idx 1")
 }
 
 func TestObjectGVKValidator(t *testing.T) {
@@ -388,7 +387,7 @@ func TestObjectGVKValidator(t *testing.T) {
 
 	ctx := context.Background()
 	err := ogvkv.ValidatePackage(ctx, packageContent)
-	require.EqualError(t, err, "Package validation errors:\n- GroupVersionKind not set in test.yaml#0")
+	require.EqualError(t, err, "GroupVersionKind not set in test.yaml idx 0")
 }
 
 func TestObjectLabelsValidator(t *testing.T) {
@@ -406,9 +405,7 @@ func TestObjectLabelsValidator(t *testing.T) {
 	}
 	ctx := context.Background()
 	err := olv.ValidatePackage(ctx, packageContent)
-	errString := `Package validation errors:
-- Labels invalid in test.yaml#1:
-  metadata.labels: Invalid value: "/123": prefix part must be non-empty`
+	errString := `Labels invalid in test.yaml idx 1: metadata.labels: Invalid value: "/123": prefix part must be non-empty`
 	require.EqualError(t, err, errString)
 }
 
@@ -425,5 +422,5 @@ func TestPackageScopeValidator(t *testing.T) {
 			},
 		},
 	})
-	require.EqualError(t, err, "Package validation errors:\n- Package unsupported scope in manifest.yaml")
+	require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
 }

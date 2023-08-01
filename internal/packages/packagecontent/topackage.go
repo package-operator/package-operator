@@ -3,11 +3,9 @@ package packagecontent
 import (
 	"bytes"
 	"context"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/internal/packages"
@@ -22,10 +20,10 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 			continue
 		case packages.IsManifestFile(path):
 			if pkg.PackageManifest != nil {
-				err = packages.NewInvalidError(packages.Violation{
-					Reason:   packages.ViolationReasonPackageManifestDuplicated,
-					Location: &packages.ViolationLocation{Path: path},
-				})
+				err = packages.ViolationError{
+					Reason: packages.ViolationReasonPackageManifestDuplicated,
+					Path:   path,
+				}
 
 				return
 			}
@@ -37,10 +35,10 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 			continue
 		case packages.IsManifestLockFile(path):
 			if pkg.PackageManifestLock != nil {
-				err = packages.NewInvalidError(packages.Violation{
-					Reason:   packages.ViolationReasonPackageManifestLockDuplicated,
-					Location: &packages.ViolationLocation{Path: path},
-				})
+				err = packages.ViolationError{
+					Reason: packages.ViolationReasonPackageManifestLockDuplicated,
+					Path:   path,
+				}
 
 				return
 			}
@@ -56,14 +54,15 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 		objects := []unstructured.Unstructured{}
 
 		// Split for every included yaml document.
-		for i, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
+		for idx, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
 			obj := unstructured.Unstructured{}
 			if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
-				err = packages.NewInvalidError(packages.Violation{
-					Reason:   packages.ViolationReasonInvalidYAML,
-					Details:  err.Error(),
-					Location: &packages.ViolationLocation{Path: path, DocumentIndex: ptr.To(i)},
-				})
+				err = packages.ViolationError{
+					Reason:  packages.ViolationReasonInvalidYAML,
+					Details: err.Error(),
+					Path:    path,
+					Index:   packages.Index(idx),
+				}
 
 				return
 			}
@@ -78,12 +77,7 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 	}
 
 	if pkg.PackageManifest == nil {
-		violation := packages.Violation{
-			Reason:  packages.ViolationReasonPackageManifestNotFound,
-			Details: "searched at " + strings.Join(packages.PackageManifestFileNames, ","),
-		}
-
-		err = packages.NewInvalidError(violation)
+		err = packages.ErrManifestNotFound
 		return
 	}
 
