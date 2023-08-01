@@ -18,9 +18,11 @@ import (
 )
 
 func TestUnpackReconciler(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil)
+	ur := newUnpackReconciler(ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -52,13 +54,15 @@ func TestUnpackReconciler(t *testing.T) {
 	assert.True(t,
 		meta.IsStatusConditionTrue(*pkg.GetConditions(),
 			corev1alpha1.PackageUnpacked))
-	assert.NotEmpty(t, pkg.GetSpecHash())
+	assert.NotEmpty(t, pkg.GetSpecHash(nil))
 }
 
 func TestUnpackReconciler_noop(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil)
+	ur := newUnpackReconciler(ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -69,7 +73,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 			},
 		},
 	}
-	pkg.Package.Status.UnpackedHash = pkg.GetSpecHash()
+	pkg.Package.Status.UnpackedHash = pkg.GetSpecHash(nil)
 	ctx := context.Background()
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
@@ -79,9 +83,11 @@ func TestUnpackReconciler_noop(t *testing.T) {
 var errTest = errors.New("test error")
 
 func TestUnpackReconciler_pullBackoff(t *testing.T) {
+	t.Parallel()
+
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil)
+	ur := newUnpackReconciler(ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 

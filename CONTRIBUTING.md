@@ -55,6 +55,12 @@ Package Operator uses [Mage](https://magefile.org/) (Think make, but all targets
 | `./mage dependency:all`  | Installs all project dependencies into the local checkout.                                |
 | `./mage dev:deploy`      | Creates a new cluster via kind and deploys PKO on it.                                     |
 
+#### Accessing a cluster deployed using dev:deploy
+
+```sh
+export KUBECONFIG=$PWD/.cache/dev-env/kubeconfig.yaml
+```
+
 ### Running Tests
 
 #### Linters

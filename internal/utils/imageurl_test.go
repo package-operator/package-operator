@@ -46,6 +46,7 @@ func TestCopyMap(t *testing.T) {
 }
 */
 
+//nolint:paralleltest
 func TestImageURLWithOverride(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		img := "quay.io/something/else:tag"
@@ -79,7 +80,8 @@ func TestImageURLWithOverride(t *testing.T) {
 		{"example.com:12345/imggroup/imgname:1.0.0@" + testDgst, regHost + "/imggroup/imgname@" + testDgst},
 	}
 
-	for _, test := range testsOk {
+	for i := range testsOk {
+		test := testsOk[i]
 		t.Run("ok/"+test.image, func(t *testing.T) {
 			t.Setenv("PKO_REPOSITORY_HOST", regHost)
 			out, err := ImageURLWithOverrideFromEnv(test.image)
@@ -96,7 +98,8 @@ func TestImageURLWithOverride(t *testing.T) {
 		{"/imgname:latest", "invalid reference format"},
 	}
 
-	for _, test := range testsErr {
+	for i := range testsErr {
+		test := testsErr[i]
 		t.Run("error/"+test.image, func(t *testing.T) {
 			t.Setenv("PKO_REPOSITORY_HOST", regHost)
 			_, err := ImageURLWithOverrideFromEnv(test.image)

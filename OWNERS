@@ -7,8 +7,11 @@ approvers:
 - nanyte25
 - kostola
 - ajpantuso
+- pbabic-redhat
+- erdii
 
 reviewers:
 - thetechnick
 - garrettthomaskth
 - eqrx
+- erdii

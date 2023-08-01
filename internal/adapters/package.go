@@ -16,7 +16,7 @@ type GenericPackageAccessor interface {
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetImage() string
-	GetSpecHash() string
+	GetSpecHash(packageHashModifier *int32) string
 	GetUnpackedHash() string
 	SetUnpackedHash(hash string)
 	setStatusPhase(phase corev1alpha1.PackageStatusPhase)
@@ -79,8 +79,8 @@ func (a *GenericPackage) GetImage() string {
 	return a.Spec.Image
 }
 
-func (a *GenericPackage) GetSpecHash() string {
-	return utils.ComputeSHA256Hash(a.Spec, nil)
+func (a *GenericPackage) GetSpecHash(packageHashModifier *int32) string {
+	return utils.ComputeSHA256Hash(a.Spec, packageHashModifier)
 }
 
 func (a *GenericPackage) SetUnpackedHash(hash string) {
@@ -132,8 +132,8 @@ func (a *GenericClusterPackage) GetImage() string {
 	return a.Spec.Image
 }
 
-func (a *GenericClusterPackage) GetSpecHash() string {
-	return utils.ComputeSHA256Hash(a.Spec, nil)
+func (a *GenericClusterPackage) GetSpecHash(packageHashModifier *int32) string {
+	return utils.ComputeSHA256Hash(a.Spec, packageHashModifier)
 }
 
 func (a *GenericClusterPackage) SetStatusRevision(rev int64) {

@@ -22,6 +22,7 @@ import (
 )
 
 func Test_initializer_ensureClusterPackage(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -38,6 +39,7 @@ func Test_initializer_ensureClusterPackage(t *testing.T) {
 }
 
 func Test_initializer_ensureClusterPackage_alreadyExists(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -57,6 +59,7 @@ func Test_initializer_ensureClusterPackage_alreadyExists(t *testing.T) {
 }
 
 func Test_initializer_ensureCRDs(t *testing.T) {
+	t.Parallel()
 	c := testutil.NewClient()
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -84,6 +87,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 }
 
 func Test_initializer_crdsFromPackage(t *testing.T) {
+	t.Parallel()
 	l := &loaderMock{}
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -123,6 +127,7 @@ func Test_initializer_crdsFromPackage(t *testing.T) {
 }
 
 func Test_crdsFromTemplateSpec(t *testing.T) {
+	t.Parallel()
 	crd := unstructured.Unstructured{}
 	crd.SetGroupVersionKind(crdGK.WithVersion("v1"))
 

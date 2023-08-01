@@ -16,6 +16,7 @@ import (
 var testScheme = testutil.NewTestSchemeWithCoreV1()
 
 func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
+	t.Parallel()
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cm1",
@@ -41,6 +42,7 @@ func TestOwnerStrategyNative_RemoveOwner(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_SetOwnerReference(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
@@ -72,6 +74,7 @@ func TestOwnerStrategyNative_SetOwnerReference(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
@@ -111,6 +114,7 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_IsController(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
@@ -135,6 +139,7 @@ func TestOwnerStrategyNative_IsController(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_IsOwner(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
@@ -160,6 +165,7 @@ func TestOwnerStrategyNative_IsOwner(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	owner := testutil.NewConfigMap()
@@ -181,6 +187,7 @@ func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
 }
 
 func TestOwnerStrategyNative_OwnerPatch(t *testing.T) {
+	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
 	owner := testutil.NewConfigMap()

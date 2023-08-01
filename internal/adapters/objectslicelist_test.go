@@ -10,6 +10,8 @@ import (
 )
 
 func TestObjectSliceList(t *testing.T) {
+	t.Parallel()
+
 	sliceList := NewObjectSliceList(testScheme).(*ObjectSliceList)
 	assert.IsType(t, &corev1alpha1.ObjectSliceList{}, sliceList.ClientObjectList())
 
@@ -25,6 +27,8 @@ func TestObjectSliceList(t *testing.T) {
 }
 
 func TestClusterObjectSliceList(t *testing.T) {
+	t.Parallel()
+
 	sliceList := NewClusterObjectSliceList(testScheme).(*ClusterObjectSliceList)
 	assert.IsType(t, &corev1alpha1.ClusterObjectSliceList{}, sliceList.ClientObjectList())
 

@@ -16,6 +16,8 @@ import (
 )
 
 func TestPreviousRevisionLookup(t *testing.T) {
+	t.Parallel()
+
 	factory := &previousObjectSetMockFactory{}
 	clientMock := testutil.NewClient()
 

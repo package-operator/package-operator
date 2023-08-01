@@ -20,6 +20,7 @@ import (
 )
 
 func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
+	t.Parallel()
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cm1",
@@ -45,6 +46,7 @@ func TestOwnerStrategyAnnotation_RemoveOwner(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_SetOwnerReference(t *testing.T) {
+	t.Parallel()
 	s := NewAnnotation(testScheme)
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -76,6 +78,7 @@ func TestOwnerStrategyAnnotation_SetOwnerReference(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
+	t.Parallel()
 	s := NewAnnotation(testScheme)
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,6 +119,7 @@ func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
+	t.Parallel()
 	s := NewAnnotation(testScheme)
 	owner := testutil.NewConfigMap()
 	obj := testutil.NewSecret()
@@ -136,6 +140,7 @@ func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name          string
 		ownerRef      annotationOwnerRef
@@ -219,8 +224,10 @@ func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i := range testCases {
+		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			s := OwnerStrategyAnnotation{}
 			resultIndex := s.indexOf(tc.ownerRefs, tc.ownerRef)
 			assert.Equal(t, tc.expectedIndex, resultIndex)
@@ -229,6 +236,7 @@ func TestOwnerStrategyAnnotation_IndexOf(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
+	t.Parallel()
 	ownerRef := newConfigMapAnnotationOwnerRef()
 	obj := testutil.NewSecret()
 
@@ -241,6 +249,7 @@ func TestOwnerStrategyAnnotation_setOwnerReferences(t *testing.T) {
 }
 
 func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		isOwnerController *bool
@@ -311,8 +320,11 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 			requestExpected: false,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			ownerRef := newConfigMapAnnotationOwnerRef()
 			ownerRef.Controller = test.isOwnerController
 			s := NewAnnotation(testScheme)
@@ -339,6 +351,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 }
 
 func TestAnnotationEnqueueOwnerHandler_ParseOwnerTypeGroupKind(t *testing.T) {
+	t.Parallel()
 	h := &AnnotationEnqueueRequestForOwner{
 		OwnerType:    &appsv1.Deployment{},
 		IsController: true,
@@ -368,6 +381,7 @@ func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
 }
 
 func TestOwnerStrategyAnnotation_IsController(t *testing.T) {
+	t.Parallel()
 	s := NewAnnotation(testScheme)
 	obj := testutil.NewSecret()
 	cm1 := &corev1.ConfigMap{
@@ -393,6 +407,7 @@ func TestOwnerStrategyAnnotation_IsController(t *testing.T) {
 }
 
 func TestIsOwner(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name          string
 		owner         *corev1.ConfigMap
@@ -422,8 +437,10 @@ func TestIsOwner(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i := range testCases {
+		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			s := NewAnnotation(testScheme)
 			resultOwner := s.IsOwner(tc.owner, tc.obj)
 			assert.Equal(t, tc.expectedOwner, resultOwner)
@@ -432,6 +449,7 @@ func TestIsOwner(t *testing.T) {
 }
 
 func TestIsController(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name               string
 		annOwnerRef        annotationOwnerRef
@@ -465,8 +483,10 @@ func TestIsController(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i := range testCases {
+		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			annOwnerRef := tc.annOwnerRef
 			resultController := annOwnerRef.isController()
 			assert.Equal(t, tc.expectedController, resultController)
@@ -475,6 +495,7 @@ func TestIsController(t *testing.T) {
 }
 
 func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
+	t.Parallel()
 	s := NewAnnotation(testScheme)
 	obj := testutil.NewSecret()
 	owner := testutil.NewConfigMap()

@@ -18,6 +18,8 @@ import (
 )
 
 func TestEnqueueWatchingObjects(t *testing.T) {
+	t.Parallel()
+
 	ownerRefGetter := &ownerRefGetterMock{}
 	q := &testutil.RateLimitingQueue{}
 	scheme := runtime.NewScheme()

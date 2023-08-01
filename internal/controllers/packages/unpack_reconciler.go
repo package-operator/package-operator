@@ -28,7 +28,8 @@ type unpackReconciler struct {
 	packageDeployer     packageDeployer
 	packageLoadRecorder packageLoadRecorder
 
-	backoff *flowcontrol.Backoff
+	backoff             *flowcontrol.Backoff
+	packageHashModifier *int32
 }
 
 type packageLoadRecorder interface {
@@ -40,6 +41,7 @@ func newUnpackReconciler(
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	packageLoadRecorder packageLoadRecorder,
+	packageHashModifier *int32,
 	opts ...unpackReconcilerOption,
 ) *unpackReconciler {
 	var cfg unpackReconcilerConfig
@@ -52,6 +54,7 @@ func newUnpackReconciler(
 		packageDeployer:     packageDeployer,
 		packageLoadRecorder: packageLoadRecorder,
 		backoff:             cfg.GetBackoff(),
+		packageHashModifier: packageHashModifier,
 	}
 }
 
@@ -73,7 +76,7 @@ func (r *unpackReconciler) Reconcile(
 	// run back off garbage collection to prevent stale data building up.
 	defer r.backoff.GC()
 
-	specHash := pkg.GetSpecHash()
+	specHash := pkg.GetSpecHash(r.packageHashModifier)
 	if pkg.GetUnpackedHash() == specHash {
 		// We have already unpacked this package \o/
 		return res, nil

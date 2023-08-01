@@ -7,9 +7,9 @@ import (
 )
 
 func TestFiles_DeepCopy(t *testing.T) {
-	f := Files{
-		"test": []byte("xxx"),
-	}
+	t.Parallel()
+
+	f := Files{"test": []byte("xxx")}
 
 	newF := f.DeepCopy()
 	assert.NotSame(t, f, newF)                 // new map

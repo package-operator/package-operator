@@ -25,6 +25,7 @@ import (
 )
 
 func Test_templateReconciler_getSourceObject(t *testing.T) {
+	t.Parallel()
 	client := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	dynamicCache := &dynamiccachemocks.DynamicCacheMock{}
@@ -69,6 +70,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 }
 
 func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
+	t.Parallel()
 	r := &templateReconciler{
 		preflightChecker: preflight.CheckerFn(func(
 			ctx context.Context, owner, obj client.Object,
@@ -92,6 +94,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 }
 
 func Test_copySourceItems(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		object   map[string]interface{}
@@ -158,8 +161,11 @@ func Test_copySourceItems(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			sourceObj := &unstructured.Unstructured{
 				Object: test.object,
 			}
@@ -176,6 +182,7 @@ func Test_copySourceItems(t *testing.T) {
 }
 
 func Test_copySourceItems_notfound(t *testing.T) {
+	t.Parallel()
 	sourceObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{},
 	}
@@ -189,6 +196,7 @@ func Test_copySourceItems_notfound(t *testing.T) {
 }
 
 func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
+	t.Parallel()
 	sourceObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"data": map[string]interface{}{
@@ -206,6 +214,7 @@ func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
 }
 
 func Test_templateReconciler_templateObject(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		packageFile string
@@ -219,8 +228,10 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 			packageFile: "package_template_to_json.yaml",
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			r := &templateReconciler{
 				preflightChecker: preflight.List{},
 			}
@@ -261,6 +272,8 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 }
 
 func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name               string
 		obj                *unstructured.Unstructured
@@ -331,8 +344,11 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 			objectTemplate := &GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
@@ -362,6 +378,7 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 }
 
 func Test_templateReconcilerReconcile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		deletionTimestamp *metav1.Time
@@ -370,8 +387,12 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 			name: "exists",
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			r, client, _, dc := newControllerAndMocks(t)
 
 			client.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -433,6 +454,8 @@ func newControllerAndMocks(t *testing.T) (
 var errTest = goerrors.New("something")
 
 func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name               string
 		objectTemplate     *GenericObjectTemplate
@@ -504,8 +527,11 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 			expectedErr:        errTest,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			outErr := setObjectTemplateConditionBasedOnError(test.objectTemplate, test.err)
 			if test.expectedErr == nil {
 				assert.NoError(t, outErr)

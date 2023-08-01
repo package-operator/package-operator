@@ -11,9 +11,7 @@ import (
 	"package-operator.run/package-operator/internal/packages/packageexport"
 )
 
-func TestFile(t *testing.T) {
-	t.Parallel()
-
+func TestFile(t *testing.T) { //nolint:paralleltest
 	f, err := os.CreateTemp("", "pko-*.tar.gz")
 	assert.Nil(t, err)
 

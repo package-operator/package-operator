@@ -23,9 +23,7 @@ func TestImage(t *testing.T) {
 	require.Len(t, layers, 1)
 }
 
-func TestPushedImage(t *testing.T) {
-	t.Parallel()
-
+func TestPushedImage(t *testing.T) { //nolint:paralleltest
 	ctx := context.Background()
 
 	reg := testutil.NewInMemoryRegistry()

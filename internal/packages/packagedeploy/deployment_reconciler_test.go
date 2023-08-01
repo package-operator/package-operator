@@ -321,6 +321,7 @@ func Test_sliceCollisionError(t *testing.T) {
 }
 
 func Test_getChangeCause(t *testing.T) {
+	t.Parallel()
 	const deploy1Cause = "Aaaaaaaaah!"
 	deploy1 := &adapters.ObjectDeployment{
 		ObjectDeployment: corev1alpha1.ObjectDeployment{
@@ -405,10 +406,12 @@ func Test_getChangeCause(t *testing.T) {
 			expected:          "Package source image and config changed.",
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
-			cause := getChangeCause(
-				test.actualDeployment, test.desiredDeployment)
+			t.Parallel()
+			cause := getChangeCause(test.actualDeployment, test.desiredDeployment)
 			assert.Equal(t, test.expected, cause)
 		})
 	}

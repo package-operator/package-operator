@@ -35,6 +35,7 @@ func (m *genericObjectSetMock) GetRevision() int64 {
 }
 
 func TestRecorder_RecordPackageMetrics(t *testing.T) {
+	t.Parallel()
 	creationTimestamp := time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)
 
 	tests := []struct {
@@ -103,8 +104,11 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 			expectedAvailability: 0,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			recorder := NewRecorder()
 			recorder.RecordPackageMetrics(test.pkg)
 
@@ -127,7 +131,8 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 	}
 }
 
-func TestRecorder_RecordPackageMetrics_delete(_ *testing.T) {
+func TestRecorder_RecordPackageMetrics_delete(t *testing.T) {
+	t.Parallel()
 	d := metav1.Now()
 	pkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{
@@ -144,6 +149,7 @@ func TestRecorder_RecordPackageMetrics_delete(_ *testing.T) {
 }
 
 func TestRecorder_RecordPackageLoadMetric(t *testing.T) {
+	t.Parallel()
 	pkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{
 			ObjectMeta: metav1.ObjectMeta{
@@ -163,6 +169,7 @@ func TestRecorder_RecordPackageLoadMetric(t *testing.T) {
 }
 
 func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
+	t.Parallel()
 	successTimestamp := time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)
 	tests := []struct {
 		name       string
@@ -184,8 +191,11 @@ func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			creationTimestamp := time.Date(2022, 5, 27, 15, 4, 2, 0, time.UTC)
 
 			obj := &unstructured.Unstructured{}

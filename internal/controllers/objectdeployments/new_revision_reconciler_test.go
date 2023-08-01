@@ -12,14 +12,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/package-operator/internal/adapters"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-func Test_newRevisionReconciler_delaysObjectSetCreation(
-	t *testing.T,
-) {
+func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
+	t.Parallel()
 	log := testr.New(t)
 	ctx := logr.NewContext(context.Background(), log)
 	clientMock := testutil.NewClient()
@@ -44,6 +45,13 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(
 }
 
 func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
+	t.Parallel()
+
+	hashCollisionOS := makeObjectSet("test-xyz", "test", 1, "xyz", true, true, false)
+	hashCollisionOS.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+		{}, {},
+	}
+
 	testCases := []struct {
 		name                       string
 		client                     *testutil.CtrlClient
@@ -58,10 +66,10 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			name:   "success",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, true),
-				makeObjectSet("rev1", "test", 1, "xyz", false, true),
-				makeObjectSet("rev2", "test", 2, "pqr", false, true),
-				makeObjectSet("rev4", "test", 4, "abc", true, true),
+				makeObjectSet("rev3", "test", 3, "abcd", false, true, false),
+				makeObjectSet("rev1", "test", 1, "xyz", false, true, false),
+				makeObjectSet("rev2", "test", 2, "pqr", false, true, false),
+				makeObjectSet("rev4", "test", 4, "abc", true, true, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "test1",
@@ -72,21 +80,53 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			name:   "hash collision",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, false),
-				makeObjectSet("rev1", "test", 1, "xyz", true, true),
-				makeObjectSet("rev2", "test", 2, "pqr", false, false),
-				makeObjectSet("rev4", "test", 4, "abc", false, false),
+				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
+				makeObjectSet("rev1", "test", 1, "xyz", true, true, false),
+				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
+				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "xyz",
 			conflict:                   true,
-			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true, true),
+			conflictObject:             hashCollisionOS,
+			expectedHashCollisionCount: 1,
+		},
+		{
+			name:   "hash collision - slow cache",
+			client: testutil.NewClient(),
+			prevRevisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
+				makeObjectSet("rev1", "test", 1, "xyz", true, true, false),
+				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
+				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
+			},
+			deploymentGeneration:       5,
+			deploymentHash:             "xyz",
+			conflict:                   true,
+			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true, true, false),
+			expectedHashCollisionCount: 0,
+		},
+		{
+			name:   "hash collision archived",
+			client: testutil.NewClient(),
+			prevRevisions: []corev1alpha1.ObjectSet{
+				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
+				makeObjectSet("rev1", "test", 1, "xyz", true, true, true),
+				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
+				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
+			},
+			deploymentGeneration:       5,
+			deploymentHash:             "xyz",
+			conflict:                   true,
+			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true, true, true),
 			expectedHashCollisionCount: 1,
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i := range testCases {
+		testCase := testCases[i]
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			log := testr.New(t)
 			ctx := logr.NewContext(context.Background(), log)
 			clientMock := testCase.client
@@ -98,17 +138,23 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				scheme:       testScheme,
 			}
 
-			objectDeploymentMock := makeObjectDeploymentMock(
-				"test",
-				"test",
-				testCase.deploymentGeneration,
-				testCase.deploymentHash,
-				nil,
-			)
+			objectDeployment := adapters.NewObjectDeployment(testScheme)
+			objectDeployment.ClientObject().SetName("test")
+			objectDeployment.ClientObject().SetNamespace("test")
+			objectDeployment.ClientObject().SetGeneration(testCase.deploymentGeneration)
+			objectDeployment.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
+			})
+			objectDeployment.SetStatusTemplateHash(testCase.deploymentHash)
 
 			// If conflict object is present
 			// make the client return an AlreadyExists error
 			if testCase.conflict {
+				if err := controllerutil.SetControllerReference(
+					objectDeployment.ClientObject(), &testCase.conflictObject, testScheme); err != nil {
+					require.NoError(t, err)
+				}
+
 				clientMock.On("Create",
 					mock.Anything,
 					mock.Anything,
@@ -138,22 +184,32 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			revisions := make([]genericObjectSet, len(testCase.prevRevisions))
 
 			for i := range testCase.prevRevisions {
+				obj := &testCase.prevRevisions[i]
+				if err := controllerutil.SetControllerReference(
+					objectDeployment.ClientObject(), obj, testScheme); err != nil {
+					require.NoError(t, err)
+				}
+
 				revisions[i] = &GenericObjectSet{
 					testCase.prevRevisions[i],
 				}
 			}
 
 			// Invoke reconciler
-			res, err := r.Reconcile(ctx, nil, revisions, objectDeploymentMock)
+			res, err := r.Reconcile(ctx, nil, revisions, objectDeployment)
 			require.NoError(t, err, "unexpected error")
 			require.True(t, res.IsZero(), "unexpected requeue")
 
 			// assert hash collisions
 			if testCase.expectedHashCollisionCount > 0 {
 				expectedCollison := int32(testCase.expectedHashCollisionCount)
-				objectDeploymentMock.AssertCalled(t, "SetStatusCollisionCount", &expectedCollison)
+
+				actualCount := objectDeployment.GetStatusCollisionCount()
+				if assert.NotNil(t, actualCount) {
+					assert.Equal(t, expectedCollison, *actualCount)
+				}
 			} else {
-				objectDeploymentMock.AssertNotCalled(t, "SetStatusCollisionCount", mock.AnythingOfType("*int32"))
+				assert.Nil(t, objectDeployment.GetStatusCollisionCount())
 			}
 
 			// Assert correct new revision is created

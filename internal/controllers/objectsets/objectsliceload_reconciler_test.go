@@ -19,6 +19,8 @@ import (
 )
 
 func TestObjectSliceLoadReconciler(t *testing.T) {
+	t.Parallel()
+
 	c := testutil.NewClient()
 
 	r := newObjectSliceLoadReconciler(testScheme, c, adapters.NewObjectSlice)

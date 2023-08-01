@@ -10,6 +10,8 @@ import (
 )
 
 func TestObjectDeployment(t *testing.T) {
+	t.Parallel()
+
 	deploy := NewObjectDeployment(testScheme).(*ObjectDeployment)
 
 	co := deploy.ClientObject()
@@ -49,6 +51,7 @@ func TestObjectDeployment(t *testing.T) {
 }
 
 func TestClusterObjectDeployment(t *testing.T) {
+	t.Parallel()
 	deploy := NewClusterObjectDeployment(testScheme).(*ClusterObjectDeployment)
 
 	co := deploy.ClientObject()
@@ -88,6 +91,7 @@ func TestClusterObjectDeployment(t *testing.T) {
 }
 
 func Test_objectDeploymentPhase(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		conditions    []metav1.Condition
@@ -125,8 +129,11 @@ func Test_objectDeploymentPhase(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			phase := objectDeploymentPhase(test.conditions)
 			assert.Equal(t, test.expectedPhase, phase)
 		})

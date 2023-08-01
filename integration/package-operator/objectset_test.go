@@ -300,7 +300,9 @@ func TestObjectSet_setupPauseTeardown(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
 			runObjectSetSetupPauseTeardownTest(t, "default", test.class)
 		})
@@ -589,7 +591,9 @@ func TestObjectSet_handover(t *testing.T) {
 			class: "default",
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
+
 		t.Run(test.name, func(t *testing.T) {
 			runObjectSetHandoverTest(t, "default", test.class)
 		})

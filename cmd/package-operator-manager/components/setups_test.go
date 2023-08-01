@@ -15,7 +15,9 @@ import (
 var errTest = errors.New("test")
 
 func Test_setupAll(t *testing.T) {
+	t.Parallel()
 	t.Run("success", func(t *testing.T) {
+		t.Parallel()
 		cm := &controllerMock{}
 
 		cm.On("SetupWithManager", mock.Anything).
@@ -28,6 +30,7 @@ func Test_setupAll(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
+		t.Parallel()
 		cm := &controllerMock{}
 
 		cm.On("SetupWithManager", mock.Anything).
@@ -42,6 +45,7 @@ func Test_setupAll(t *testing.T) {
 }
 
 func TestAllControllers(t *testing.T) {
+	t.Parallel()
 	var mocks []*controllerMock
 	newMock := func() *controllerMock {
 		m := &controllerMock{}
@@ -88,6 +92,7 @@ func TestAllControllers(t *testing.T) {
 }
 
 func TestBootstrapControllers(t *testing.T) {
+	t.Parallel()
 	var mocks []*controllerMock
 	newMock := func() *controllerMock {
 		m := &controllerMock{}
