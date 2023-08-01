@@ -692,10 +692,6 @@ func (c *defaultAdoptionChecker) Check(
 	_ context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
 ) (needsAdoption bool, err error) {
-	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 {
-		return true, nil
-	}
-
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
 		return false, nil
@@ -708,6 +704,20 @@ func (c *defaultAdoptionChecker) Check(
 	if currentRevision > owner.GetRevision() {
 		// owned by newer revision.
 		return false, nil
+	}
+
+	// Forced adoption is enabled:
+	// - for all objects via the envvar in `ForceAdoptionEnvironmentVariable`
+	// - for all objects in the package-operator (Cluster)Package
+
+	// TODO: check if `obj.GetLabels()` actually CAN return a non-initialized map (aka `nil`)
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
+	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 || labels[manifestsv1alpha1.PackageLabel] == "package-operator" {
+		return true, nil
 	}
 
 	if !c.isControlledByPreviousRevision(obj, previous) {
