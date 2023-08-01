@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectDeployment
     listKind: ClusterObjectDeploymentList
     plural: clusterobjectdeployments
+    shortNames:
+    - clobjdeploy
+    - cod
     singular: clusterobjectdeployment
   scope: Cluster
   versions:

@@ -6,7 +6,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // limit the size of ObjectSet and ObjectDeployments when big packages are installed.
 // This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName={"clobjslice","cosl"}
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectSlice struct {
 	metav1.TypeMeta   `json:",inline"`

@@ -12,7 +12,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // A Namespace-scoped version of this API is available as ObjectSet.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName={"clobjset","cos"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectSet struct {

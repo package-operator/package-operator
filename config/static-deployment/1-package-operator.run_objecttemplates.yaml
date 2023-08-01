@@ -11,6 +11,9 @@ spec:
     kind: ObjectTemplate
     listKind: ObjectTemplateList
     plural: objecttemplates
+    shortNames:
+    - objtmpl
+    - ot
     singular: objecttemplate
   scope: Namespaced
   versions:

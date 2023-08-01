@@ -34,7 +34,7 @@ type ClusterObjectDeploymentStatus struct {
 // ClusterObjectDeployment is the Schema for the ClusterObjectDeployments API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName={"clobjdeploy","cod"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectDeployment struct {

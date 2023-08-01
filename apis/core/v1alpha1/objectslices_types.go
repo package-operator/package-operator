@@ -7,6 +7,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:shortName{"objslice","osl"}
 type ObjectSlice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

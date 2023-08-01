@@ -6,6 +6,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // ObjectSets will create subordinate ObjectSetPhases when `.class` within the phase specification is set.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName={"objsetphase","osp"}
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectSetPhase struct {
 	metav1.TypeMeta   `json:",inline"`
