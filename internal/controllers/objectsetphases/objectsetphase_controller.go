@@ -41,7 +41,7 @@ type ownerStrategy interface {
 	SetControllerReference(owner, obj metav1.Object) error
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
-		ownerType client.Object, isController bool,
+		ownerType client.Object, mapper meta.RESTMapper, isController bool,
 	) handler.EventHandler
 }
 
@@ -324,6 +324,6 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
-		WatchesRawSource(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, false)).
+		WatchesRawSource(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false)).
 		Complete(c)
 }

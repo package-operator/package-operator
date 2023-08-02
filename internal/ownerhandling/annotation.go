@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,7 +57,7 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 }
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
-	ownerType client.Object, isController bool,
+	ownerType client.Object, _ meta.RESTMapper, isController bool,
 ) handler.EventHandler {
 	return &AnnotationEnqueueRequestForOwner{
 		OwnerType:     ownerType,

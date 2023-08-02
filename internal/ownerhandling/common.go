@@ -1,6 +1,7 @@
 package ownerhandling
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -12,7 +13,7 @@ type ownerStrategy interface {
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
-	EnqueueRequestForOwner(ownerType client.Object, isController bool) handler.EventHandler
+	EnqueueRequestForOwner(ownerType client.Object, mapper meta.RESTMapper, isController bool) handler.EventHandler
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 }
 

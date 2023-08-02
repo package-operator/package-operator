@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -92,9 +93,8 @@ func (s *OwnerStrategyNative) SetControllerReference(owner, obj metav1.Object) e
 }
 
 func (s *OwnerStrategyNative) EnqueueRequestForOwner(
-	ownerType client.Object, isController bool,
+	ownerType client.Object, mapper meta.RESTMapper, isController bool,
 ) handler.EventHandler {
-	mapper := meta.NewDefaultRESTMapper(s.scheme.PrioritizedVersionsAllGroups())
 	if isController {
 		return handler.EnqueueRequestForOwner(s.scheme, mapper, ownerType, handler.OnlyControllerOwner())
 	}
