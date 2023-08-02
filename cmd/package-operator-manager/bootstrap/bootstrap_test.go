@@ -21,6 +21,7 @@ func TestBootstrapperBootstrap(t *testing.T) {
 
 	c := testutil.NewClient()
 	var initCalled bool
+	var fixCalled bool
 	b := &Bootstrapper{
 		log:    testr.New(t),
 		client: c,
@@ -29,6 +30,10 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		) {
 			initCalled = true
 			return true, nil
+		},
+		fix: func(ctx context.Context) error {
+			fixCalled = true
+			return nil
 		},
 	}
 	b.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
@@ -56,6 +61,7 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		})
 	require.NoError(t, err)
 	assert.True(t, initCalled)
+	assert.True(t, fixCalled)
 
 	assert.Equal(t, os.Getenv("HTTP_PROXY"), "httpxxx")
 	assert.Equal(t, os.Getenv("HTTPS_PROXY"), "httpsxxx")
