@@ -11,6 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var _ ownerStrategy = (*OwnerStrategyNative)(nil)
@@ -27,8 +29,12 @@ func NewNative(scheme *runtime.Scheme) *OwnerStrategyNative {
 }
 
 func (s *OwnerStrategyNative) OwnerPatch(owner metav1.Object) ([]byte, error) {
+	annotations := owner.GetAnnotations()
 	patchMetadata := map[string]interface{}{
 		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				corev1alpha1.ObjectSetRevisionAnnotation: annotations[corev1alpha1.ObjectSetRevisionAnnotation],
+			},
 			"ownerReferences": owner.GetOwnerReferences(),
 		},
 	}

@@ -8,6 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// Revision annotations holds a revision generation number to order ObjectSets.
+const ObjectSetRevisionAnnotation = "package-operator.run/revision"
+
 // Specifies the lifecycle state of the ObjectSet.
 type ObjectSetLifecycleState string
 
