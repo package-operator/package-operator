@@ -792,11 +792,6 @@ func (c *defaultAdoptionChecker) isControlledByPreviousRevision(
 	return false
 }
 
-const (
-	// Revision annotations holds a revision generation number to order ObjectSets.
-	revisionAnnotation = "package-operator.run/revision"
-)
-
 // Retrieves the revision number from a well-known annotation on the given object.
 func getObjectRevision(obj client.Object) (int64, error) {
 	a := obj.GetAnnotations()
@@ -804,11 +799,11 @@ func getObjectRevision(obj client.Object) (int64, error) {
 		return 0, nil
 	}
 
-	if len(a[revisionAnnotation]) == 0 {
+	if len(a[corev1alpha1.ObjectSetRevisionAnnotation]) == 0 {
 		return 0, nil
 	}
 
-	return strconv.ParseInt(a[revisionAnnotation], 10, 64)
+	return strconv.ParseInt(a[corev1alpha1.ObjectSetRevisionAnnotation], 10, 64)
 }
 
 // Stores the revision number in a well-known annotation on the given object.
@@ -817,6 +812,6 @@ func setObjectRevision(obj client.Object, revision int64) {
 	if a == nil {
 		a = map[string]string{}
 	}
-	a[revisionAnnotation] = fmt.Sprintf("%d", revision)
+	a[corev1alpha1.ObjectSetRevisionAnnotation] = fmt.Sprintf("%d", revision)
 	obj.SetAnnotations(a)
 }

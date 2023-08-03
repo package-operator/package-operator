@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
@@ -46,7 +48,8 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 	patchMetadata := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				ownerStrategyAnnotationKey: annotations[ownerStrategyAnnotationKey],
+				ownerStrategyAnnotationKey:               annotations[ownerStrategyAnnotationKey],
+				corev1alpha1.ObjectSetRevisionAnnotation: annotations[corev1alpha1.ObjectSetRevisionAnnotation],
 			},
 		},
 	}
