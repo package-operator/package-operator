@@ -314,8 +314,8 @@ func (s *ObjectSet) MarshalJSON() ([]byte, error) {
 type ObjectSetList []ObjectSet
 
 func (l ObjectSetList) Sort() {
-	slices.SortFunc(l, func(a, b ObjectSet) bool {
-		return a.Revision() < b.Revision()
+	slices.SortFunc(l, func(a, b ObjectSet) int {
+		return int(a.Revision() - b.Revision())
 	})
 }
 

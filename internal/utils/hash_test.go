@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestComputeSHA256Hash(t *testing.T) {
@@ -19,7 +19,7 @@ func TestComputeSHA256Hash(t *testing.T) {
 
 	t.Run("with collisions", func(t *testing.T) {
 		t.Parallel()
-		hash := ComputeSHA256Hash(testObj, pointer.Int32(2))
+		hash := ComputeSHA256Hash(testObj, ptr.To(int32(2)))
 		assert.Equal(t, "21f3e24e03abf1c35cbafa23fbc9a4d200066c911ac1070539591639dc1500e2", hash)
 	})
 }
@@ -36,7 +36,7 @@ func TestComputeFNV32Hash(t *testing.T) {
 
 	t.Run("with collisions", func(t *testing.T) {
 		t.Parallel()
-		hash := ComputeFNV32Hash(testObj, pointer.Int32(2))
+		hash := ComputeFNV32Hash(testObj, ptr.To(int32(2)))
 		assert.Equal(t, "8697b5dc56", hash)
 	})
 }

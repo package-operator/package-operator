@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -258,7 +258,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 	}{
 		{
 			name:              "owner is controller, enqueue is controller, types match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: true,
@@ -267,7 +267,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is not controller, enqueue is controller, types match",
-			isOwnerController: pointer.Bool(false),
+			isOwnerController: ptr.To(false),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: true,
@@ -276,7 +276,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is controller, enqueue is not controller, types match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: false,
@@ -285,7 +285,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is not controller, enqueue is not controller, types match",
-			isOwnerController: pointer.Bool(false),
+			isOwnerController: ptr.To(false),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: false,
@@ -312,7 +312,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is controller, enqueue is controller, types do not match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &appsv1.Deployment{},
 				IsController: true,
@@ -375,7 +375,7 @@ func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
 		UID:        types.UID("cm1___3245"),
 		Name:       "cm1",
 		Namespace:  "cm1namespace",
-		Controller: pointer.Bool(false),
+		Controller: ptr.To(false),
 	}
 	return ownerRef1
 }
@@ -470,14 +470,14 @@ func TestIsController(t *testing.T) {
 		{
 			name: "controller is false",
 			annOwnerRef: annotationOwnerRef{
-				Controller: pointer.Bool(false),
+				Controller: ptr.To(false),
 			},
 			expectedController: false,
 		},
 		{
 			name: "conroller is defined and true",
 			annOwnerRef: annotationOwnerRef{
-				Controller: pointer.Bool(true),
+				Controller: ptr.To(true),
 			},
 			expectedController: true,
 		},

@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
@@ -68,7 +68,7 @@ func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, 
 			Reason: packages.ViolationReasonMissingPhaseAnnotation,
 			Location: &packages.ViolationLocation{
 				Path:          path,
-				DocumentIndex: pointer.Int(index),
+				DocumentIndex: ptr.To(index),
 			},
 		})
 	}
@@ -93,7 +93,7 @@ func (v *ObjectDuplicateValidator) ValidatePackage(_ context.Context, packageCon
 					Reason: packages.ViolationDuplicateObject,
 					Location: &packages.ViolationLocation{
 						Path:          path,
-						DocumentIndex: pointer.Int(i),
+						DocumentIndex: ptr.To(i),
 					},
 				}))
 			} else {
@@ -116,7 +116,7 @@ func (*ObjectGVKValidator) validate(_ context.Context, path string, index int, o
 			Reason: packages.ViolationReasonMissingGVK,
 			Location: &packages.ViolationLocation{
 				Path:          path,
-				DocumentIndex: pointer.Int(index),
+				DocumentIndex: ptr.To(index),
 			},
 		})
 	}
@@ -136,7 +136,7 @@ func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int
 			Details: errList.ToAggregate().Error(),
 			Location: &packages.ViolationLocation{
 				Path:          path,
-				DocumentIndex: pointer.Int(index),
+				DocumentIndex: ptr.To(index),
 			},
 		})
 	}

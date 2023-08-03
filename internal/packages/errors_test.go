@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestNewInvalidAggregate(t *testing.T) {
@@ -94,7 +94,7 @@ func TestViolationLocation(t *testing.T) {
 	t.Run("with doc index", func(t *testing.T) {
 		t.Parallel()
 
-		vl := &ViolationLocation{Path: "test/234.yaml", DocumentIndex: pointer.Int(3)}
+		vl := &ViolationLocation{Path: "test/234.yaml", DocumentIndex: ptr.To(3)}
 		assert.Equal(t, "test/234.yaml#3", vl.String())
 	})
 }

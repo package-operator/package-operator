@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -121,7 +121,7 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 		UID:        owner.GetUID(),
 		Name:       owner.GetName(),
 		Namespace:  owner.GetNamespace(),
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 
 	ownerIndex := s.indexOf(ownerRefs, ownerRef)
