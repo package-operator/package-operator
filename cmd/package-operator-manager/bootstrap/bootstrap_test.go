@@ -11,11 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
@@ -29,10 +25,10 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		log:    testr.New(t),
 		client: c,
 		init: func(ctx context.Context) (
-			*corev1alpha1.ClusterPackage, error,
+			bool, error,
 		) {
 			initCalled = true
-			return &corev1alpha1.ClusterPackage{}, nil
+			return true, nil
 		},
 	}
 	b.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
@@ -48,12 +44,7 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		mock.Anything).
 		Run(func(args mock.Arguments) {
 			depl := args.Get(2).(*appsv1.Deployment)
-			depl.Status.Conditions = []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			}
+			depl.Status.AvailableReplicas = 1
 		}).
 		Return(nil)
 
@@ -84,12 +75,7 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 		mock.Anything).
 		Run(func(args mock.Arguments) {
 			depl := args.Get(2).(*appsv1.Deployment)
-			depl.Status.Conditions = []appsv1.DeploymentCondition{
-				{
-					Type:   appsv1.DeploymentAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			}
+			depl.Status.AvailableReplicas = 1
 		}).
 		Return(nil)
 
@@ -105,66 +91,4 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, runManagerCalled)
 	assert.Equal(t, context.Canceled, runManagerCtx.Err())
-}
-
-func TestBootstrapper_isPKOAvailable(t *testing.T) {
-	t.Parallel()
-
-	t.Run("not found", func(t *testing.T) {
-		t.Parallel()
-		c := testutil.NewClient()
-
-		c.On("Get", mock.Anything, mock.Anything,
-			mock.AnythingOfType("*v1.Deployment"),
-			mock.Anything).
-			Return(errors.NewNotFound(schema.GroupResource{}, ""))
-
-		b := &Bootstrapper{client: c}
-		isPKOAvailable, err := b.isPKOAvailable(
-			context.Background())
-		require.NoError(t, err)
-		assert.False(t, isPKOAvailable)
-	})
-
-	t.Run("not available", func(t *testing.T) {
-		t.Parallel()
-		c := testutil.NewClient()
-
-		c.On("Get", mock.Anything, mock.Anything,
-			mock.AnythingOfType("*v1.Deployment"),
-			mock.Anything).
-			Return(nil)
-
-		b := &Bootstrapper{client: c}
-		isPKOAvailable, err := b.isPKOAvailable(
-			context.Background())
-		require.NoError(t, err)
-		assert.False(t, isPKOAvailable)
-	})
-
-	t.Run("available", func(t *testing.T) {
-		t.Parallel()
-
-		c := testutil.NewClient()
-
-		c.On("Get", mock.Anything, mock.Anything,
-			mock.AnythingOfType("*v1.Deployment"),
-			mock.Anything).
-			Run(func(args mock.Arguments) {
-				depl := args.Get(2).(*appsv1.Deployment)
-				depl.Status.Conditions = []appsv1.DeploymentCondition{
-					{
-						Type:   appsv1.DeploymentAvailable,
-						Status: corev1.ConditionTrue,
-					},
-				}
-			}).
-			Return(nil)
-
-		b := &Bootstrapper{client: c}
-		isPKOAvailable, err := b.isPKOAvailable(
-			context.Background())
-		require.NoError(t, err)
-		assert.True(t, isPKOAvailable)
-	})
 }
