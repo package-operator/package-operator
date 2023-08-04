@@ -12,7 +12,8 @@ func TestProvideOptions(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, Options{
-		MetricsAddr: ":8080",
-		ProbeAddr:   ":8081",
+		EnableLeaderElection: true,
+		MetricsAddr:          ":8080",
+		ProbeAddr:            ":8081",
 	}, opts)
 }
