@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -155,7 +156,11 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err != nil {
 		return fmt.Errorf("reading target cluster kubeconfig: %w", err)
 	}
-	targetMapper, err := apiutil.NewDynamicRESTMapper(targetCfg, http.DefaultClient)
+	targetHTTPClient, err := rest.HTTPClientFor(targetCfg)
+	if err != nil {
+		return fmt.Errorf("building http client for kubeconfig: %w", err)
+	}
+	targetMapper, err := apiutil.NewDynamicRESTMapper(targetCfg, targetHTTPClient)
 	if err != nil {
 		return fmt.Errorf("creating target cluster rest mapper: %w", err)
 	}
