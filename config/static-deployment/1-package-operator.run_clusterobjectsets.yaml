@@ -11,6 +11,9 @@ spec:
     kind: ClusterObjectSet
     listKind: ClusterObjectSetList
     plural: clusterobjectsets
+    shortNames:
+    - clobjset
+    - cos
     singular: clusterobjectset
   scope: Cluster
   versions:

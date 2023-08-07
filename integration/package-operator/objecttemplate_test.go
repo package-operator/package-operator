@@ -44,7 +44,7 @@ func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 
 	kubernetesKey := "kubernetes"
 	kubernetesPath := ".environment.kubernetes.version"
-	kubernetesValue := "v1.27.1"
+	kubernetesValue := "v1.27.3"
 
 	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
 kind: Package

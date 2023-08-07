@@ -11,6 +11,9 @@ spec:
     kind: ObjectDeployment
     listKind: ObjectDeploymentList
     plural: objectdeployments
+    shortNames:
+    - objdeploy
+    - od
     singular: objectdeployment
   scope: Namespaced
   versions:

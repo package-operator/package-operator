@@ -59,6 +59,7 @@ const (
 // ObjectDeployment is the Schema for the ObjectDeployments API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName={"objdeploy","od"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectDeployment struct {

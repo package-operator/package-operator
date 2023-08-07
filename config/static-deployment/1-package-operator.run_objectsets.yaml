@@ -11,6 +11,9 @@ spec:
     kind: ObjectSet
     listKind: ObjectSetList
     plural: objectsets
+    shortNames:
+    - objset
+    - os
     singular: objectset
   scope: Namespaced
   versions:

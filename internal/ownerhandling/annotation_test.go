@@ -11,11 +11,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -258,7 +259,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 	}{
 		{
 			name:              "owner is controller, enqueue is controller, types match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: true,
@@ -267,7 +268,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is not controller, enqueue is controller, types match",
-			isOwnerController: pointer.Bool(false),
+			isOwnerController: ptr.To(false),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: true,
@@ -276,7 +277,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is controller, enqueue is not controller, types match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: false,
@@ -285,7 +286,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is not controller, enqueue is not controller, types match",
-			isOwnerController: pointer.Bool(false),
+			isOwnerController: ptr.To(false),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &corev1.ConfigMap{},
 				IsController: false,
@@ -312,7 +313,7 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 		},
 		{
 			name:              "owner is controller, enqueue is controller, types do not match",
-			isOwnerController: pointer.Bool(true),
+			isOwnerController: ptr.To(true),
 			enqueue: AnnotationEnqueueRequestForOwner{
 				OwnerType:    &appsv1.Deployment{},
 				IsController: true,
@@ -375,7 +376,7 @@ func newConfigMapAnnotationOwnerRef() annotationOwnerRef {
 		UID:        types.UID("cm1___3245"),
 		Name:       "cm1",
 		Namespace:  "cm1namespace",
-		Controller: pointer.Bool(false),
+		Controller: ptr.To(false),
 	}
 	return ownerRef1
 }
@@ -470,14 +471,14 @@ func TestIsController(t *testing.T) {
 		{
 			name: "controller is false",
 			annOwnerRef: annotationOwnerRef{
-				Controller: pointer.Bool(false),
+				Controller: ptr.To(false),
 			},
 			expectedController: false,
 		},
 		{
 			name: "conroller is defined and true",
 			annOwnerRef: annotationOwnerRef{
-				Controller: pointer.Bool(true),
+				Controller: ptr.To(true),
 			},
 			expectedController: true,
 		},
@@ -498,6 +499,9 @@ func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
 	t.Parallel()
 	s := NewAnnotation(testScheme)
 	obj := testutil.NewSecret()
+	obj.Annotations = map[string]string{
+		corev1alpha1.ObjectSetRevisionAnnotation: "3",
+	}
 	owner := testutil.NewConfigMap()
 	owner.Namespace = obj.Namespace
 	err := s.SetControllerReference(owner, obj)
@@ -506,5 +510,5 @@ func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
 	patch, err := s.OwnerPatch(obj)
 	require.NoError(t, err)
 
-	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",\"controller\":true}]"}}}`, string(patch))
+	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",\"controller\":true}]","package-operator.run/revision":"3"}}}`, string(patch))
 }

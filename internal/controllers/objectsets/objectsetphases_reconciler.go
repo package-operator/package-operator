@@ -275,6 +275,10 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 	objectSet genericObjectSet,
 	controllerOf []corev1alpha1.ControlledObjectReference,
 ) bool {
+	if objectSet.IsArchived() {
+		return false
+	}
+
 	controlledIndex := map[corev1alpha1.ControlledObjectReference]struct{}{}
 	for _, controlled := range controllerOf {
 		controlledIndex[controlled] = struct{}{}

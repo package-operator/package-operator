@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -511,7 +511,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 		Object: map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
-					revisionAnnotation: "3",
+					corev1alpha1.ObjectSetRevisionAnnotation: "3",
 				},
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
@@ -557,7 +557,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 			"kind": "test",
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
-					revisionAnnotation: "5",
+					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]interface{}{
 					DynamicCacheLabel: "True",
@@ -599,7 +599,7 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 			"kind": "test",
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
-					revisionAnnotation: "5",
+					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]interface{}{
 					DynamicCacheLabel: "True",
@@ -650,7 +650,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							revisionAnnotation: "15",
+							corev1alpha1.ObjectSetRevisionAnnotation: "15",
 						},
 					},
 				},
@@ -706,7 +706,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							revisionAnnotation: "100",
+							corev1alpha1.ObjectSetRevisionAnnotation: "100",
 						},
 					},
 				},
@@ -766,7 +766,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"annotations": map[string]interface{}{
-							revisionAnnotation: "100",
+							corev1alpha1.ObjectSetRevisionAnnotation: "100",
 						},
 					},
 				},
@@ -839,7 +839,7 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 					APIVersion: corev1alpha1.GroupVersion.String(),
 					Kind:       "ObjectSetPhase",
 					Name:       "phase-1",
-					Controller: pointer.Bool(true),
+					Controller: ptr.To(true),
 				},
 			},
 		},

@@ -59,7 +59,7 @@ func ProvideOptions() (opts Options, err error) {
 		namespaceFlagDescription)
 	flag.BoolVar(
 		&opts.EnableLeaderElection, "enable-leader-election",
-		false,
+		true,
 		leaderElectionFlagDescription)
 	flag.StringVar(
 		&opts.ProbeAddr, "health-probe-bind-address", ":8081", probeAddrFlagDescription)

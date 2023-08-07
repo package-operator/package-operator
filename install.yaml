@@ -15,6 +15,9 @@ spec:
     kind: ClusterObjectDeployment
     listKind: ClusterObjectDeploymentList
     plural: clusterobjectdeployments
+    shortNames:
+    - clobjdeploy
+    - cod
     singular: clusterobjectdeployment
   scope: Cluster
   versions:
@@ -473,6 +476,9 @@ spec:
     kind: ClusterObjectSetPhase
     listKind: ClusterObjectSetPhaseList
     plural: clusterobjectsetphases
+    shortNames:
+    - clobjsetphase
+    - cosp
     singular: clusterobjectsetphase
   scope: Cluster
   versions:
@@ -826,6 +832,9 @@ spec:
     kind: ClusterObjectSet
     listKind: ClusterObjectSetList
     plural: clusterobjectsets
+    shortNames:
+    - clobjset
+    - cos
     singular: clusterobjectset
   scope: Cluster
   versions:
@@ -1247,6 +1256,9 @@ spec:
     kind: ClusterObjectSlice
     listKind: ClusterObjectSliceList
     plural: clusterobjectslices
+    shortNames:
+    - clobjslice
+    - cosl
     singular: clusterobjectslice
   scope: Cluster
   versions:
@@ -1323,6 +1335,9 @@ spec:
     kind: ClusterObjectTemplate
     listKind: ClusterObjectTemplateList
     plural: clusterobjecttemplates
+    shortNames:
+    - clobjtmpl
+    - cot
     singular: clusterobjecttemplate
   scope: Cluster
   versions:
@@ -1493,6 +1508,8 @@ spec:
     kind: ClusterPackage
     listKind: ClusterPackageList
     plural: clusterpackages
+    shortNames:
+    - clpkg
     singular: clusterpackage
   scope: Cluster
   versions:
@@ -1640,6 +1657,9 @@ spec:
     kind: ObjectDeployment
     listKind: ObjectDeploymentList
     plural: objectdeployments
+    shortNames:
+    - objdeploy
+    - od
     singular: objectdeployment
   scope: Namespaced
   versions:
@@ -2095,6 +2115,9 @@ spec:
     kind: ObjectSetPhase
     listKind: ObjectSetPhaseList
     plural: objectsetphases
+    shortNames:
+    - objsetphase
+    - osp
     singular: objectsetphase
   scope: Namespaced
   versions:
@@ -2445,6 +2468,9 @@ spec:
     kind: ObjectSet
     listKind: ObjectSetList
     plural: objectsets
+    shortNames:
+    - objset
+    - os
     singular: objectset
   scope: Namespaced
   versions:
@@ -2941,6 +2967,9 @@ spec:
     kind: ObjectTemplate
     listKind: ObjectTemplateList
     plural: objecttemplates
+    shortNames:
+    - objtmpl
+    - ot
     singular: objecttemplate
   scope: Namespaced
   versions:
@@ -3112,6 +3141,8 @@ spec:
     kind: Package
     listKind: PackageList
     plural: packages
+    shortNames:
+    - pkg
     singular: package
   scope: Namespaced
   versions:

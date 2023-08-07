@@ -34,3 +34,9 @@ repos:
     language: system
     exclude: ".*"
     always_run: true
+  - id: code-gen
+    name: code-gen
+    entry: ./mage generate:all
+    language: system
+    exclude: ".*"
+    always_run: true

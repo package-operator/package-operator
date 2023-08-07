@@ -13,13 +13,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var _ ownerStrategy = (*OwnerStrategyAnnotation)(nil)
@@ -49,7 +51,8 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 	patchMetadata := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				ownerStrategyAnnotationKey: annotations[ownerStrategyAnnotationKey],
+				ownerStrategyAnnotationKey:               annotations[ownerStrategyAnnotationKey],
+				corev1alpha1.ObjectSetRevisionAnnotation: annotations[corev1alpha1.ObjectSetRevisionAnnotation],
 			},
 		},
 	}
@@ -124,7 +127,7 @@ func (s *OwnerStrategyAnnotation) SetControllerReference(owner, obj metav1.Objec
 		UID:        owner.GetUID(),
 		Name:       owner.GetName(),
 		Namespace:  owner.GetNamespace(),
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 
 	ownerIndex := s.indexOf(ownerRefs, ownerRef)

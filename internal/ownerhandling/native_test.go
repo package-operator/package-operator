@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -190,6 +191,9 @@ func TestOwnerStrategyNative_OwnerPatch(t *testing.T) {
 	t.Parallel()
 	s := NewNative(testScheme)
 	obj := testutil.NewSecret()
+	obj.Annotations = map[string]string{
+		corev1alpha1.ObjectSetRevisionAnnotation: "3",
+	}
 	owner := testutil.NewConfigMap()
 	owner.Namespace = obj.Namespace
 	err := s.SetControllerReference(owner, obj)
@@ -198,5 +202,5 @@ func TestOwnerStrategyNative_OwnerPatch(t *testing.T) {
 	patch, err := s.OwnerPatch(obj)
 	require.NoError(t, err)
 
-	assert.Equal(t, `{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"ConfigMap","name":"cm","uid":"asdfjkl","controller":true,"blockOwnerDeletion":true}]}}`, string(patch))
+	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/revision":"3"},"ownerReferences":[{"apiVersion":"v1","kind":"ConfigMap","name":"cm","uid":"asdfjkl","controller":true,"blockOwnerDeletion":true}]}}`, string(patch))
 }

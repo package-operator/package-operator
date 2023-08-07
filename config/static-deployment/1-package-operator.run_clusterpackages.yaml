@@ -11,6 +11,8 @@ spec:
     kind: ClusterPackage
     listKind: ClusterPackageList
     plural: clusterpackages
+    shortNames:
+    - clpkg
     singular: clusterpackage
   scope: Cluster
   versions:
