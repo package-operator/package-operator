@@ -52,12 +52,12 @@ const (
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
 
-	controllerGenVersion = "0.12.0"
-	golangciLintVersion  = "1.53.2"
-	craneVersion         = "0.15.2"
-	kindVersion          = "0.19.0"
-	k8sDocGenVersion     = "0.5.1"
-	helmVersion          = "3.12.0"
+	controllerGenVersion = "0.12.1"
+	golangciLintVersion  = "1.53.3"
+	craneVersion         = "0.16.1"
+	kindVersion          = "0.20.0"
+	k8sDocGenVersion     = "0.6.0"
+	helmVersion          = "3.12.2"
 
 	coverProfilingMinGoVersion = "1.20.0"
 )
