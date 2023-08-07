@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -219,11 +220,10 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
 
 	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
-	require.EqualError(t,
-		Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
-			cm := obj.(*corev1.ConfigMap)
-			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second)), "timed out waiting for the condition")
+	require.True(t, wait.Interrupted(Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+		cm := obj.(*corev1.ConfigMap)
+		return cm.Data["banana"] == "bread", nil
+	}, dev.WithTimeout(5*time.Second))))
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
