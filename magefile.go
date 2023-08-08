@@ -530,37 +530,42 @@ func (l *Locations) DevEnv() *dev.Environment {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
+	var clusterInitializers []dev.ClusterInitializer
+	if _, isCI := os.LookupEnv("CI"); !isCI {
+		// don't install the monitoring stack in CI to speed up tests.
+		clusterInitializers = dev.WithClusterInitializers{
+			dev.ClusterHelmInstall{
+				RepoName:    "prometheus-community",
+				RepoURL:     "https://prometheus-community.github.io/helm-charts",
+				PackageName: "kube-prometheus-stack",
+				ReleaseName: "prometheus",
+				Namespace:   "monitoring",
+				SetVars: []string{
+					"grafana.enabled=true",
+					"kubeStateMetrics.enabled=false",
+					"nodeExporter.enabled=false",
+				},
+			},
+			dev.ClusterLoadObjectsFromFiles{
+				"config/service-monitor.yaml",
+			},
+		}
+	}
+
 	if l.devEnvironment == nil {
 		l.devEnvironment = dev.NewEnvironment(
 			clusterName,
 			filepath.Join(l.Cache(), "dev-env"),
-			dev.WithClusterInitializers{
-				dev.ClusterHelmInstall{
-					RepoName:    "prometheus-community",
-					RepoURL:     "https://prometheus-community.github.io/helm-charts",
-					PackageName: "kube-prometheus-stack",
-					ReleaseName: "prometheus",
-					Namespace:   "monitoring",
-					SetVars: []string{
-						"grafana.enabled=true",
-						"kubeStateMetrics.enabled=false",
-						"nodeExporter.enabled=false",
-					},
-				},
-				dev.ClusterLoadObjectsFromFiles{
-					"config/service-monitor.yaml",
-				},
-			},
 			dev.WithClusterOptions([]dev.ClusterOption{
 				dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
-			dev.WithClusterInitializers{
-				dev.ClusterLoadObjectsFromFiles{
+			dev.WithClusterInitializers(
+				append(clusterInitializers, dev.ClusterLoadObjectsFromFiles{
 					"config/local-registry.yaml",
-				},
-			},
+				}),
+			),
 			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
 				ContainerdConfigPatches: []string{
 					// Replace quay.io with our local dev-registry.

@@ -16,7 +16,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
@@ -30,7 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const UpgradeTestWaitTimeout = 5 * time.Minute
+const (
+	UpgradeTestWaitTimeout            = 5 * time.Minute
+	PackageOperatorClusterPackageName = "package-operator"
+)
 
 func TestUpgrade(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -93,46 +95,78 @@ func TestUpgrade(t *testing.T) {
 
 func deleteExistingPKO(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
-
-	cosList := &corev1alpha1.ClusterObjectSetList{}
-	err := Client.List(
-		ctx, cosList,
-		client.MatchingLabels{
-			"package-operator.run/object-deployment": "package-operator",
+	log.Info("Deleting existing PKO")
+	packageOperatorPackage := &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: PackageOperatorClusterPackageName,
 		},
-	)
-	if err != nil {
-		return err
 	}
-	for i := range cosList.Items {
-		cos := &cosList.Items[i]
-		log.Info(fmt.Sprintf("Removing finalizers from cluster object set %s: %v", cos.Name, cos.Finalizers))
-		patch := fmt.Sprintf("{\"metadata\":{\"resourceVersion\":\"%s\",\"finalizers\":[]}}", cos.ResourceVersion)
-		err = Client.Patch(ctx, cos, client.RawPatch(types.MergePatchType, []byte(patch)))
-		if err != nil {
-			return err
+
+	if err := Client.Delete(ctx, packageOperatorPackage); err != nil {
+		return fmt.Errorf("deleting stuck PackageOperator ClusterPackage: %w", err)
+	}
+	if len(packageOperatorPackage.Finalizers) > 0 {
+		packageOperatorPackage.Finalizers = []string{}
+		if err := Client.Patch(ctx, packageOperatorPackage,
+			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil {
+			return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterPackage: %w", err)
 		}
 	}
+	log.Info("deleted ClusterPackage", "obj", packageOperatorPackage)
 
-	pkg := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "package-operator",
-			Namespace: PackageOperatorNamespace,
-		},
+	// Also nuke all the ClusterObjectDeployment belonging to it.
+	clusterObjectDeploymentList := &corev1alpha1.ClusterObjectDeploymentList{}
+	if err := Client.List(ctx, clusterObjectDeploymentList, client.MatchingLabels{
+		"package-operator.run/instance": PackageOperatorClusterPackageName,
+		"package-operator.run/package":  PackageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectDeployments: %w", err)
+	}
+	for i := range clusterObjectDeploymentList.Items {
+		clusterObjectDeployment := &clusterObjectDeploymentList.Items[i]
+		if err := Client.Delete(ctx, clusterObjectDeployment); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectDeployment: %w", err)
+		}
+		if len(clusterObjectDeployment.Finalizers) > 0 {
+			if err := Client.Patch(ctx, clusterObjectDeployment,
+				client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectDeployment: %w", err)
+			}
+		}
+		log.Info("deleted ClusterObjectDeployment", "name", clusterObjectDeployment.Name, "obj", clusterObjectDeployment)
 	}
 
-	log.Info("Deleting existing PKO")
-	err = Client.Delete(ctx, pkg)
-	if err != nil {
+	// Also nuke all the ClusterObjectSets belonging to it.
+	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
+	if err := Client.List(ctx, clusterObjectSetList, client.MatchingLabels{
+		"package-operator.run/instance": PackageOperatorClusterPackageName,
+		"package-operator.run/package":  PackageOperatorClusterPackageName,
+	}); err != nil {
+		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
+	}
+	for i := range clusterObjectSetList.Items {
+		clusterObjectSet := &clusterObjectSetList.Items[i]
+		if err := Client.Delete(ctx, clusterObjectSet); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("deleting stuck PackageOperator ClusterObjectSet: %w", err)
+		}
+		if len(clusterObjectSet.Finalizers) > 0 {
+			clusterObjectSet.Finalizers = []string{}
+			if err := Client.Patch(ctx, clusterObjectSet,
+				client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("releasing finalizers on stuck PackageOperator ClusterObjectSet: %w", err)
+			}
+		}
+		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
+	}
+
+	if err := Waiter.WaitToBeGone(ctx, packageOperatorPackage,
+		func(obj client.Object) (done bool, err error) { return false, nil },
+		dev.WithTimeout(UpgradeTestWaitTimeout),
+	); err != nil {
 		return err
 	}
 
-	err = Waiter.WaitToBeGone(ctx, pkg, func(obj client.Object) (done bool, err error) { return false, nil })
-	if err != nil {
-		return err
-	}
-
-	err = Waiter.WaitToBeGone(ctx,
+	err := Waiter.WaitToBeGone(ctx,
 		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
 		func(obj client.Object) (done bool, err error) { return false, nil },
 		dev.WithTimeout(UpgradeTestWaitTimeout),
