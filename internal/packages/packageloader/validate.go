@@ -33,6 +33,11 @@ var (
 	_ Validator = (*ObjectGVKValidator)(nil)
 	_ Validator = (*ObjectLabelsValidator)(nil)
 	_ Validator = (PackageScopeValidator)("")
+
+	DefaultValidators = ValidatorList{
+		&ObjectDuplicateValidator{}, &ObjectGVKValidator{},
+		&ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{},
+	}
 )
 
 func (l ValidatorList) ValidatePackage(ctx context.Context, pkg *packagecontent.Package) error {

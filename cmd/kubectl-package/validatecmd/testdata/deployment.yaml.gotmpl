@@ -10,6 +10,7 @@ metadata:
     instance: "{{.package.metadata.name}}"
   annotations:
     package-operator.run/phase: deploy
+    from-define: {{ template "test" . }}
 spec:
   replicas: 2
   selector:

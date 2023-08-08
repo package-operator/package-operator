@@ -22,7 +22,6 @@ type genericObjectSet interface {
 	GetSuccessDelaySeconds() int32
 	SetRevision(revision int64)
 	GetRevision() int64
-	GetGeneration() int64
 	GetRemotePhases() []corev1alpha1.RemotePhaseReference
 	SetRemotePhases([]corev1alpha1.RemotePhaseReference)
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
@@ -115,10 +114,6 @@ func (a *GenericObjectSet) GetRevision() int64 {
 	return a.Status.Revision
 }
 
-func (a *GenericObjectSet) GetGeneration() int64 {
-	return a.Generation
-}
-
 func (a *GenericObjectSet) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
 	return a.Status.RemotePhases
 }
@@ -177,10 +172,6 @@ func (a *GenericClusterObjectSet) GetSuccessDelaySeconds() int32 {
 
 func (a *GenericClusterObjectSet) SetRevision(revision int64) {
 	a.Status.Revision = revision
-}
-
-func (a *GenericClusterObjectSet) GetGeneration() int64 {
-	return a.Generation
 }
 
 func (a *GenericClusterObjectSet) GetRevision() int64 {

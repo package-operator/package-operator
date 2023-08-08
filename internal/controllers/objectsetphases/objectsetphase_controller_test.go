@@ -2,7 +2,6 @@ package objectsetphases
 
 import (
 	"context"
-	goerrors "errors"
 	"testing"
 	"time"
 
@@ -22,7 +21,6 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/package-operator/internal/controllers"
 	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/preflight"
 	"package-operator.run/package-operator/internal/testutil"
 )
 
@@ -277,49 +275,6 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			}
 		})
 	}
-}
-
-var errTest = goerrors.New("explosion")
-
-func TestGenericObjectSetPhaseController_updateStatusError(t *testing.T) {
-	t.Parallel()
-
-	t.Run("just returns error", func(t *testing.T) {
-		t.Parallel()
-		objectSetPhase := &GenericObjectSetPhase{
-			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
-		}
-
-		c := &GenericObjectSetPhaseController{}
-		ctx := context.Background()
-		res, err := c.updateStatusError(ctx, objectSetPhase, errTest)
-		assert.False(t, res.IsZero())
-		assert.EqualError(t, err, "explosion")
-	})
-
-	t.Run("reports preflight error", func(t *testing.T) {
-		t.Parallel()
-		objectSetPhase := &GenericObjectSetPhase{
-			ObjectSetPhase: corev1alpha1.ObjectSetPhase{},
-		}
-
-		client := testutil.NewClient()
-		c := &GenericObjectSetPhaseController{
-			client: client,
-		}
-
-		client.StatusMock.
-			On("Update", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-
-		ctx := context.Background()
-		res, err := c.updateStatusError(
-			ctx, objectSetPhase, &preflight.Error{})
-		require.True(t, res.IsZero())
-		require.NoError(t, err)
-
-		client.StatusMock.AssertExpectations(t)
-	})
 }
 
 func TestInitializers(t *testing.T) {

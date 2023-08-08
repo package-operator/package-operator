@@ -2,9 +2,7 @@ package objectsetphases
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -244,7 +242,10 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	}
 
 	if err != nil {
-		return c.updateStatusError(ctx, objectSetPhase, err)
+		return controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSetPhase, err,
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSetPhase)
+			})
 	}
 
 	c.reportPausedCondition(ctx, objectSetPhase)
@@ -263,25 +264,6 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Contex
 	} else {
 		meta.RemoveStatusCondition(objectSetPhase.GetConditions(), corev1alpha1.ObjectSetPaused)
 	}
-}
-
-func (c *GenericObjectSetPhaseController) updateStatusError(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
-	reconcileErr error,
-) (ctrl.Result, error) {
-	var preflightError *preflight.Error
-	if errors.As(reconcileErr, &preflightError) {
-		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetPhaseAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSetPhase.GetGeneration(),
-			Reason:             "PreflightError",
-			Message:            preflightError.Error(),
-		})
-		return ctrl.Result{}, c.updateStatus(ctx, objectSetPhase)
-	}
-
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, reconcileErr
 }
 
 func (c *GenericObjectSetPhaseController) updateStatus(

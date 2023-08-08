@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -293,4 +295,81 @@ func (m *clockMock) Now() time.Time {
 	args := m.Called()
 
 	return args.Get(0).(time.Time)
+}
+
+func Test_isObjectSetInTransition(t *testing.T) {
+	t.Parallel()
+
+	examplePod := unstructured.Unstructured{}
+	examplePod.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind: "Pod", Version: "v1",
+	})
+	examplePod.SetName("pod-1")
+
+	testObjectSet1 := newGenericObjectSet(testScheme)
+	testObjectSet1.ClientObject().SetNamespace("test-ns")
+	testObjectSet1.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{
+		{
+			Name: "a",
+			Objects: []corev1alpha1.ObjectSetObject{
+				{
+					Object: examplePod,
+				},
+			},
+		},
+	})
+
+	testObjectSetArchived := &GenericObjectSet{
+		ObjectSet: *testObjectSet1.ClientObject().DeepCopyObject().(*corev1alpha1.ObjectSet),
+	}
+	testObjectSetArchived.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+
+	tests := []struct {
+		name         string
+		objectSet    genericObjectSet
+		controllerOf []corev1alpha1.ControlledObjectReference
+		expected     bool
+	}{
+		{
+			name:      "empty",
+			objectSet: newGenericObjectSet(testScheme),
+			expected:  false,
+		},
+		{
+			name:      "pod in transition",
+			objectSet: testObjectSet1,
+			expected:  true,
+		},
+		{
+			name:      "pod not in transition",
+			objectSet: testObjectSet1,
+			controllerOf: []corev1alpha1.ControlledObjectReference{
+				{Kind: "Pod", Name: "pod-1", Namespace: testObjectSet1.ClientObject().GetNamespace()},
+			},
+			expected: false,
+		},
+		{
+			// clone of "pod in transition" test, but with archived lifecycle state.
+			name:      "archived is never in transition",
+			objectSet: testObjectSetArchived,
+			expected:  false,
+		},
+		{
+			name:      "pod not in transition with cluster scope",
+			objectSet: testObjectSet1,
+			controllerOf: []corev1alpha1.ControlledObjectReference{
+				{Kind: "Pod", Name: "pod-1"},
+			},
+			expected: false,
+		},
+	}
+
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			r := isObjectSetInTransition(test.objectSet, test.controllerOf)
+			assert.Equal(t, test.expected, r)
+		})
+	}
 }

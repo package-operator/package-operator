@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"text/template"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/package-operator/internal/packages"
@@ -57,35 +58,35 @@ func NewTemplateTransformer(tmplCtx PackageFileTemplateContext) (*PackageFileTem
 	return &PackageFileTemplateTransformer{actualCtx}, nil
 }
 
-func (t *PackageFileTemplateTransformer) transform(_ context.Context, path string, content []byte) ([]byte, error) {
-	if !packages.IsTemplateFile(path) {
-		// Not a template file, skip.
-		return content, nil
-	}
+func (t *PackageFileTemplateTransformer) TransformPackageFiles(_ context.Context, fileMap packagecontent.Files) error {
+	templ := template.New("pkg").Option("missingkey=error").Funcs(transform.SprigFuncs())
 
-	template, err := transform.TemplateWithSprigFuncs(string(content))
-	if err != nil {
-		return nil, fmt.Errorf(
-			"parsing template from %s: %w", path, err)
-	}
-
-	var doc bytes.Buffer
-	if err := template.Execute(&doc, t.tctx); err != nil {
-		return nil, fmt.Errorf(
-			"executing template from %s with context %+v: %w", path, t.tctx, err)
-	}
-	return doc.Bytes(), nil
-}
-
-func (t *PackageFileTemplateTransformer) TransformPackageFiles(ctx context.Context, fileMap packagecontent.Files) error {
+	// gather all templates to allow cross-file declarations and reuse of helpers.
 	for path, content := range fileMap {
-		var err error
-		content, err = t.transform(ctx, path, content)
-		if err != nil {
-			return err
+		if !packages.IsTemplateFile(path) {
+			// Not a template file, skip.
+			continue
 		}
+
+		_, err := templ.New(path).Parse(string(content))
+		if err != nil {
+			return fmt.Errorf("parsing template from %s: %w", path, err)
+		}
+	}
+
+	for path := range fileMap {
+		if !packages.IsTemplateFile(path) {
+			// Not a template file, skip.
+			continue
+		}
+
+		var buf bytes.Buffer
+		if err := templ.ExecuteTemplate(&buf, path, t.tctx); err != nil {
+			return fmt.Errorf("executing template from %s with context %+v: %w", path, t.tctx, err)
+		}
+
 		// save back to file map without the template suffix
-		fileMap[packages.StripTemplateSuffix(path)] = content
+		fileMap[packages.StripTemplateSuffix(path)] = buf.Bytes()
 	}
 
 	return nil
