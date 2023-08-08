@@ -30,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const UpgradeTestWaitTimeout = 5 * time.Minute
+
 func TestUpgrade(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -43,7 +45,7 @@ func TestUpgrade(t *testing.T) {
 		},
 	}
 
-	log.Info("Installing latest released PKO")
+	log.Info("Installing latest released PKO", "job", LatestSelfBootstrapJobURL)
 	require.NoError(t, createAndWaitFromHTTP(ctx, []string{LatestSelfBootstrapJobURL}))
 
 	jobList := &batchv1.JobList{}
@@ -52,10 +54,16 @@ func TestUpgrade(t *testing.T) {
 		client.InNamespace("package-operator-system"),
 	))
 	for i := range jobList.Items {
-		require.NoError(t, Waiter.WaitToBeGone(ctx, &jobList.Items[i], func(obj client.Object) (done bool, err error) { return false, nil }, dev.WithTimeout(6*time.Minute)))
+		require.NoError(t,
+			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
+				func(obj client.Object) (done bool, err error) { return false, nil },
+				dev.WithTimeout(UpgradeTestWaitTimeout)))
 	}
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(5*time.Minute)))
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg,
+			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
+			dev.WithTimeout(UpgradeTestWaitTimeout)))
 	log.Info("Latest released PKO is now available")
 
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
@@ -67,11 +75,20 @@ func TestUpgrade(t *testing.T) {
 		client.InNamespace("package-operator-system"),
 	))
 	for i := range jobList.Items {
-		require.NoError(t, Waiter.WaitToBeGone(ctx, &jobList.Items[i], func(obj client.Object) (done bool, err error) { return false, nil }, dev.WithTimeout(6*time.Minute)))
+		require.NoError(t,
+			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
+				func(obj client.Object) (done bool, err error) { return false, nil },
+				dev.WithTimeout(UpgradeTestWaitTimeout)))
 	}
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageProgressing, metav1.ConditionFalse, dev.WithTimeout(6*time.Minute)))
-	require.NoError(t, Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(6*time.Minute)))
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg,
+			corev1alpha1.PackageProgressing, metav1.ConditionFalse,
+			dev.WithTimeout(UpgradeTestWaitTimeout)))
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg,
+			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
+			dev.WithTimeout(UpgradeTestWaitTimeout)))
 }
 
 func deleteExistingPKO(ctx context.Context) error {
@@ -118,7 +135,7 @@ func deleteExistingPKO(ctx context.Context) error {
 	err = Waiter.WaitToBeGone(ctx,
 		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "package-operator-system"}},
 		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(5*time.Minute),
+		dev.WithTimeout(UpgradeTestWaitTimeout),
 	)
 	if err != nil {
 		return err

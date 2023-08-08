@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -107,7 +108,9 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 
 	// ClusterPackage found.
 	// Check if ClusterPackage spec changed.
-	if equality.Semantic.DeepEqual(bootstrapClusterPackage.Spec, existingClusterPackage.Spec) {
+	clusterPackageEqual := equality.Semantic.DeepEqual(
+		bootstrapClusterPackage.Spec, existingClusterPackage.Spec)
+	if clusterPackageEqual {
 		// ClusterPackage specs are equal.
 		// Check if PKO is available.
 		isAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
@@ -131,11 +134,42 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
+	if err := init.ensurePKORevisionsPaused(ctx); err != nil {
 		return false, err
 	}
 
+	if !clusterPackageEqual {
+		if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
+			return false, err
+		}
+	}
+
 	return true, nil
+}
+
+// Pauses all existing PKO ObjectSets to ensure we don't install an old version again,
+// before moving on to the actual latest version.
+func (init *initializer) ensurePKORevisionsPaused(ctx context.Context) error {
+	cosList := &corev1alpha1.ClusterObjectSetList{}
+	err := init.client.List(
+		ctx, cosList,
+		client.MatchingLabels{
+			"package-operator.run/object-deployment": "package-operator",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("listing PKO ClusterObjectSets: %w", err)
+	}
+
+	for i := range cosList.Items {
+		cos := &cosList.Items[i]
+		cos.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+		if err := init.client.Update(ctx, cos); err != nil {
+			return fmt.Errorf("pausing PKO ClusterObjectSet: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {

@@ -199,6 +199,21 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					*pkg = *existingPkg
 				}).Return(nil)
 
+				c.On("List",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ClusterObjectSetList{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					list := args.Get(1).(*corev1alpha1.ClusterObjectSetList)
+					list.Items = append(list.Items, corev1alpha1.ClusterObjectSet{})
+				}).Return(nil)
+
+				c.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ClusterObjectSet{}),
+					mock.Anything,
+				).Return(nil)
+
 				// mock already deleted PKO
 				c.On("Delete",
 					mock.Anything,
