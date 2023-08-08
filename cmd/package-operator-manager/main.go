@@ -82,7 +82,7 @@ func run(opts components.Options) error {
 
 		if err := bs.Bootstrap(ctx, func(ctx context.Context) error {
 			// Lazy create manager after boot strapper is finished or
-			// the RESTMapper will not pick up the CRDs in the cluster.
+			// the RESTMapper will not pick up the new CRDs in the cluster.
 			return di.Invoke(func(
 				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
 				discoveryClient discovery.DiscoveryInterface,

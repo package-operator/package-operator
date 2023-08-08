@@ -2,10 +2,12 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/mt-sre/devkube/dev"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,58 +21,66 @@ import (
 )
 
 const (
-	packageOperatorClusterPackageName   = "package-operator"
-	packageOperatorPackageCheckInterval = 2 * time.Second
+	packageOperatorClusterPackageName              = "package-operator"
+	packageOperatorPackageCheckInterval            = 2 * time.Second
+	packageOperatorDeploymentDeletionCheckInterval = 2 * time.Second
+	packageOperatorDeploymentDeletionTimeout       = 2 * time.Minute
 )
 
 // Initializes PKO on the cluster by installing CRDs and
 // ensuring a package-operator ClusterPackage is present.
+// Will shut down PKO prior to bootstrapping if the ClusterPackage was updated to ensure that new "non-buggy" PKO code will handle the migration.
 type initializer struct {
 	client    client.Client
+	scheme    *runtime.Scheme
 	loader    packageLoader
 	pullImage bootstrapperPullImageFn
 
 	// config
-	selfBootstrapImage string
-	selfConfig         string
+	packageOperatorNamespace string
+	selfBootstrapImage       string
+	selfConfig               string
 }
 
 func newInitializer(
 	client client.Client,
+	scheme *runtime.Scheme,
 	loader packageLoader,
 	pullImage bootstrapperPullImageFn,
 
 	// config
+	packageOperatorNamespace string,
 	selfBootstrapImage string,
 	selfConfig string,
 ) *initializer {
 	return &initializer{
 		client:    client,
+		scheme:    scheme,
 		loader:    loader,
 		pullImage: pullImage,
 
-		selfBootstrapImage: selfBootstrapImage,
-		selfConfig:         selfConfig,
+		packageOperatorNamespace: packageOperatorNamespace,
+		selfBootstrapImage:       selfBootstrapImage,
+		selfConfig:               selfConfig,
 	}
 }
 
 func (init *initializer) Init(ctx context.Context) (
-	*corev1alpha1.ClusterPackage, error,
+	needsBootstrap bool, err error,
 ) {
 	crds, err := init.crdsFromPackage(ctx)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	if err := init.ensureCRDs(ctx, crds); err != nil {
-		return nil, err
+		return false, err
 	}
-	return init.ensureClusterPackage(ctx)
+
+	return init.ensureUpdatedPKO(ctx)
 }
 
-func (init *initializer) ensureClusterPackage(ctx context.Context) (
-	*corev1alpha1.ClusterPackage, error,
-) {
-	pkoPackage := &corev1alpha1.ClusterPackage{
+func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {
+	return &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: packageOperatorClusterPackageName,
 		},
@@ -79,22 +89,77 @@ func (init *initializer) ensureClusterPackage(ctx context.Context) (
 			Config: init.config(),
 		},
 	}
-	err := init.client.Create(ctx, pkoPackage)
-	if errors.IsAlreadyExists(err) {
-		return pkoPackage, init.updatePKOPackage(ctx, pkoPackage)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("creating Package Operator ClusterPackage: %w", err)
-	}
-	return pkoPackage, nil
 }
 
-func (init *initializer) updatePKOPackage(
-	ctx context.Context, packageOperatorPackage *corev1alpha1.ClusterPackage,
-) error {
-	packageOperatorPackage.Spec.Image = init.selfBootstrapImage
-	packageOperatorPackage.Spec.Config = init.config()
-	return init.client.Patch(ctx, packageOperatorPackage, client.Merge)
+// ensureUpdatedPKO compares new and old PKO ClusterPackages, looks at PKO availability, it handles eventual PKO shutdown, update of the PKO ClusterPackage and decides if bootstrap should be executed or not.
+func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
+	bootstrapClusterPackage := init.newPKOClusterPackage()
+
+	existingClusterPackage := &corev1alpha1.ClusterPackage{}
+	if err := init.client.Get(ctx, client.ObjectKey{
+		Name: packageOperatorClusterPackageName,
+	}, existingClusterPackage); errors.IsNotFound(err) {
+		// ClusterPackage not found. Create it and let bootstrapper run.
+		return true, init.client.Create(ctx, bootstrapClusterPackage)
+	} else if err != nil {
+		return false, err
+	}
+
+	// ClusterPackage found.
+	// Check if ClusterPackage spec changed.
+	if equality.Semantic.DeepEqual(bootstrapClusterPackage.Spec, existingClusterPackage.Spec) {
+		// ClusterPackage specs are equal.
+		// Check if PKO is available.
+		isAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
+		if err != nil {
+			return false, err
+		}
+		if isAvailable {
+			// PKO is available. Skip bootstrap.
+			return false, nil
+		}
+
+		// PKO is not available. Remove deployment and bootstrap.
+		if err := init.ensurePKODeploymentGone(ctx); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	// ClusterPackage specs differ. Shut down PKO, update ClusterPackage and run bootstrapper.
+	if err := init.ensurePKODeploymentGone(ctx); err != nil {
+		return false, err
+	}
+
+	if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: init.packageOperatorNamespace,
+			Name:      packageOperatorDeploymentName,
+		},
+	}
+
+	// use foreground deletion to ensure that all pods are gone when the deployment object vanishes from the apiserver
+	err := init.client.Delete(ctx, deployment, client.PropagationPolicy(metav1.DeletePropagationForeground))
+	if errors.IsNotFound(err) {
+		// object is already gone
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	// wait for object to be fully deleted
+	waiter := dev.NewWaiter(init.client, init.scheme,
+		dev.WithInterval(packageOperatorDeploymentDeletionCheckInterval),
+		dev.WithTimeout(packageOperatorDeploymentDeletionTimeout))
+	return waiter.WaitToBeGone(ctx, deployment, func(obj client.Object) (done bool, err error) { return false, nil })
 }
 
 func (init *initializer) config() *runtime.RawExtension {

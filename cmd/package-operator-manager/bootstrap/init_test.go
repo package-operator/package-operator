@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -9,9 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -21,41 +25,284 @@ import (
 	"package-operator.run/package-operator/internal/testutil"
 )
 
-func Test_initializer_ensureClusterPackage(t *testing.T) {
+type (
+	subTestFunc func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer)
+	subTest     struct {
+		name string
+		t    subTestFunc
+	}
+)
+
+func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 	t.Parallel()
-	c := testutil.NewClient()
-	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	b := &initializer{client: c}
+	subTests := []subTest{
+		{
+			name: "PKOPackageNotExistent_NeedsBootstrap",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
 
-	c.On("Create", mock.Anything,
-		mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-		Return(nil)
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Once().Return(
+					k8serrors.NewNotFound(schema.GroupResource{}, ""))
 
-	pkg, err := b.ensureClusterPackage(ctx)
-	require.NoError(t, err)
-	assert.NotNil(t, pkg)
-	c.AssertExpectations(t)
+				c.On("Create",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Once().Return(nil)
+
+				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
+				require.True(t, needsBootstrap)
+				require.NoError(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+		{
+			name: "PKOPackageNotExistent_GetErrors",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Once().Return(
+					k8serrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+
+				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
+				require.False(t, needsBootstrap)
+				require.True(t, k8serrors.IsInternalError(err))
+				c.AssertExpectations(t)
+			},
+		},
+		{
+			name: "PKOPackageNotExistent_CreateErrors",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Once().Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+
+				c.On("Create",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Once().Return(
+					k8serrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+
+				_, err := i.ensureUpdatedPKO(ctx)
+				require.True(t, k8serrors.IsInternalError(err))
+				c.AssertExpectations(t)
+			},
+		},
+		{
+			name: "PKOPackageExistentAndEqual_PKOUnavailable",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
+					*pkg = *i.newPKOClusterPackage()
+				}).Return(nil)
+
+				// it has to check if PKO deployment is available
+				// mock an unavailable PKO and validate its deletion
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					depl := args.Get(2).(*appsv1.Deployment)
+					depl.Status.AvailableReplicas = 0
+				}).Return(nil)
+
+				// skip waiting in ensurePKODeploymentGone() by directly sending a not found back
+				c.On("Delete",
+					mock.Anything,
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+
+				// Bootstrap is needed to get PKO back up running
+				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
+				require.True(t, needsBootstrap)
+				require.Nil(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+		{
+			name: "PKOPackageExistentAndEqual_PKOAvailable",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
+					*pkg = *i.newPKOClusterPackage()
+				}).Return(nil)
+
+				// it has to check if PKO deployment is available
+				// mock an available PKO and validate that nothing else happens
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					depl := args.Get(2).(*appsv1.Deployment)
+					depl.Status.AvailableReplicas = 1
+				}).Return(nil)
+
+				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
+				require.False(t, needsBootstrap)
+				require.Nil(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+
+		{
+			name: "PKOPackageExistentAndNotEqual_PKOUnavailable",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				// mock existing ClusterPackage with different spec
+				existingPkg := i.newPKOClusterPackage()
+				existingPkg.Spec.Image = "thisimagedoesnotexist.com"
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
+					*pkg = *existingPkg
+				}).Return(nil)
+
+				// mock already deleted PKO
+				c.On("Delete",
+					mock.Anything,
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+
+				c.On("Patch",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ClusterPackage{}),
+					mock.Anything,
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					pkg := args.Get(1).(*corev1alpha1.ClusterPackage)
+					// validate that pkg is NOT equal to the existing pkg in the cluster
+					require.False(t, equality.Semantic.DeepEqual(pkg, existingPkg))
+				}).Return(nil)
+
+				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
+				require.True(t, needsBootstrap)
+				require.Nil(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+	}
+
+	for i := range subTests {
+		subTest := subTests[i]
+		c := testutil.NewClient()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		t.Run(subTest.name, func(t *testing.T) {
+			t.Parallel()
+			subTest.t(
+				t,
+				c,
+				ctx,
+				&initializer{
+					client: c,
+				})
+		})
+	}
 }
 
-func Test_initializer_ensureClusterPackage_alreadyExists(t *testing.T) {
+func Test_initializer_ensureDeploymentGone(t *testing.T) {
 	t.Parallel()
-	c := testutil.NewClient()
-	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	b := &initializer{client: c}
+	subTests := []subTest{
+		{
+			name: "DeploymentNotFound",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
 
-	c.On("Create", mock.Anything,
-		mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-		Return(errors.NewAlreadyExists(schema.GroupResource{}, ""))
-	c.On("Patch", mock.Anything,
-		mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything, mock.Anything).
-		Return(nil)
+				c.On("Delete",
+					mock.Anything,
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
 
-	pkg, err := b.ensureClusterPackage(ctx)
-	require.NoError(t, err)
-	assert.NotNil(t, pkg)
-	c.AssertExpectations(t)
+				err := i.ensurePKODeploymentGone(ctx)
+				require.NoError(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+		{
+			name: "DeploymentFound",
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, i *initializer) {
+				t.Helper()
+
+				c.On("Delete",
+					mock.Anything,
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Return(nil)
+
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+
+				err := i.ensurePKODeploymentGone(ctx)
+				require.NoError(t, err)
+				c.AssertExpectations(t)
+			},
+		},
+	}
+
+	for i := range subTests {
+		subTest := subTests[i]
+		c := testutil.NewClient()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		t.Run(subTest.name, func(t *testing.T) {
+			t.Parallel()
+			subTest.t(
+				t,
+				c,
+				ctx,
+				&initializer{
+					client: c,
+					scheme: testScheme,
+				})
+		})
+	}
 }
 
 func Test_initializer_ensureCRDs(t *testing.T) {
@@ -70,7 +317,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 
 	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Once().
-		Return(errors.NewAlreadyExists(schema.GroupResource{}, ""))
+		Return(k8serrors.NewAlreadyExists(schema.GroupResource{}, ""))
 	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
