@@ -17,7 +17,6 @@ import (
 	"regexp"
 	"runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sort"
 	"strings"
 	"sync"
@@ -147,7 +146,7 @@ func init() {
 	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
 	packageImages[remotePhasePackageName].ExtraDeps = []interface{}{Generate.RemotePhasePackage}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(logger)
 }
 
 // Must panics if the given error is not nil.
