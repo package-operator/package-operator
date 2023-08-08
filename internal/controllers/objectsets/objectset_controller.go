@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/preflight"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/preflight"
 )
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.

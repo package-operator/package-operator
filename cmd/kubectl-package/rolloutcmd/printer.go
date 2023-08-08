@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"package-operator.run/package-operator/internal/cli"
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	"package-operator.run/internal/cli"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func newPrinter(p *cli.Printer) *printer {

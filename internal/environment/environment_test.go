@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 var errExample = errors.New("boom")

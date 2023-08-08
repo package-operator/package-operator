@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/testutil"
 )
 
 type DynamicCacheMock struct {

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packageadmission"
+	"package-operator.run/internal/packages/packageadmission"
 )
 
 func TestValidatePackageManifestLock(t *testing.T) {

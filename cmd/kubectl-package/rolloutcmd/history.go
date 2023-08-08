@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"package-operator.run/package-operator/internal/cli"
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	"package-operator.run/internal/cli"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func NewHistoryCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {

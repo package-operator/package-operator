@@ -7,7 +7,7 @@ import (
 
 	"github.com/pterm/pterm"
 
-	"package-operator.run/package-operator/internal/cmd"
+	"package-operator.run/internal/cmd"
 )
 
 func init() {

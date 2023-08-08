@@ -6,9 +6,9 @@ import (
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"package-operator.run/package-operator/internal/controllers/packages"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/internal/controllers/packages"
+	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/packages/packageimport"
 )
 
 // Type alias for dependency injector to differentiate

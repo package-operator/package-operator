@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageexport"
-	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageexport"
+	"package-operator.run/internal/packages/packageimport"
 )
 
 func TestImageLoadSave(t *testing.T) {

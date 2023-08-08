@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/dig"
 
-	"package-operator.run/package-operator/internal/version"
+	"package-operator.run/internal/version"
 )
 
 type Params struct {

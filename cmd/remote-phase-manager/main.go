@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	pkoapis "package-operator.run/apis"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/controllers/objectsetphases"
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/controllers/objectsetphases"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/metrics"
 )
 
 type opts struct {

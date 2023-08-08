@@ -17,7 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
-	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/internal/controllers"
 )
 
 // Reconciles ObjectSetPhase objects for the parent ObjectSet.

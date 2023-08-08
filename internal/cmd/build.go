@@ -10,10 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageexport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
-	"package-operator.run/package-operator/internal/utils"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageexport"
+	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/utils"
 )
 
 type BuildValidationError struct {

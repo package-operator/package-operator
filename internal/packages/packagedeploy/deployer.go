@@ -16,11 +16,11 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/packages/packageadmission"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/packages/packageadmission"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 // PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.

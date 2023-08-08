@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func TestRegistry_DelayedPull(t *testing.T) {

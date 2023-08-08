@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/utils"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/utils"
 )
 
 // Registry handles pulling images from a registry during PKO runtime.

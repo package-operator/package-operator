@@ -1,4 +1,4 @@
-module package-operator.run/package-operator
+module package-operator.run
 
 go 1.20
 

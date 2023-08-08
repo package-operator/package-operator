@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/assert"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
 )
 
 func TestValidateConfig(t *testing.T) {

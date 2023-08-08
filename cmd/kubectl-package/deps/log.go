@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/rootcmd"
+	"package-operator.run/cmd/kubectl-package/rootcmd"
 )
 
 func ProvideLogFactory(streams rootcmd.IOStreams) LogFactory {

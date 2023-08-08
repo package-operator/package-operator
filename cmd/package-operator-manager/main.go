@@ -16,10 +16,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"package-operator.run/package-operator/cmd/package-operator-manager/bootstrap"
-	"package-operator.run/package-operator/cmd/package-operator-manager/components"
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/environment"
+	"package-operator.run/cmd/package-operator-manager/bootstrap"
+	"package-operator.run/cmd/package-operator-manager/components"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/environment"
 )
 
 const (

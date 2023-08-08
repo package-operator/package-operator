@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil/restmappermock"
+	"package-operator.run/internal/testutil/restmappermock"
 )
 
 func TestNamespaceEscalation(t *testing.T) {

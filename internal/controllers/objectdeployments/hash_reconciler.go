@@ -6,7 +6,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/package-operator/internal/utils"
+	"package-operator.run/internal/utils"
 )
 
 type hashReconciler struct {

@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 const (
