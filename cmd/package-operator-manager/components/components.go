@@ -95,10 +95,12 @@ func ProvideManager(
 	opts Options,
 ) (ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         opts.MetricsAddr,
-		HealthProbeBindAddress:     opts.ProbeAddr,
-		WebhookServer:              webhook.NewServer(webhook.Options{}),
+		Scheme:                 scheme,
+		MetricsBindAddress:     opts.MetricsAddr,
+		HealthProbeBindAddress: opts.ProbeAddr,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
