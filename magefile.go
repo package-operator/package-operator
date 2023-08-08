@@ -45,12 +45,13 @@ import (
 
 // Constants that define build behaviour.
 const (
-	module                 = "package-operator.run/package-operator"
-	defaultImageOrg        = "quay.io/package-operator"
-	clusterName            = "package-operator-dev"
-	cliCmdName             = "kubectl-package"
-	pkoPackageName         = "package-operator-package"
-	remotePhasePackageName = "remote-phase-package"
+	module                       = "package-operator.run/package-operator"
+	defaultImageOrg              = "quay.io/package-operator"
+	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
+	clusterName                  = "package-operator-dev"
+	cliCmdName                   = "kubectl-package"
+	pkoPackageName               = "package-operator-package"
+	remotePhasePackageName       = "remote-phase-package"
 
 	controllerGenVersion = "0.12.0"
 	golangciLintVersion  = "1.53.2"
@@ -700,6 +701,9 @@ func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) 
 func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", locations.ImageURL("test-stub-package", false))
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
+	if len(os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")) == 0 {
+		os.Setenv("PKO_TEST_LATEST_BOOTSTRAP_JOB", defaultPKOLatestBootstrapJob)
+	}
 
 	// count=1 will force a new run, instead of using the cache
 	args := []string{
@@ -713,11 +717,6 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	}
 	args = append(args, "./integration/package-operator/...")
 
-	_, isCI := os.LookupEnv("CI")
-	if isCI {
-		// test output in json format
-		args = append(args, "-json", " > "+locations.PKOIntegrationTestExecReport())
-	}
 	testErr := sh.Run("go", args...)
 
 	devEnv := locations.DevEnvNoInit()

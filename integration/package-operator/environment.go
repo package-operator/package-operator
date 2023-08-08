@@ -41,6 +41,8 @@ var (
 	// SuccessTestPackageImage points to an image to use to test Package installation.
 	SuccessTestPackageImage string
 	FailureTestPackageImage = "localhost/does-not-exist"
+
+	LatestSelfBootstrapJobURL string
 )
 
 func init() {
@@ -59,6 +61,8 @@ func init() {
 	if err := initClients(ctx); err != nil {
 		panic(err)
 	}
+
+	LatestSelfBootstrapJobURL = os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")
 
 	var err error
 	PackageOperatorNamespace, err = findPackageOperatorNamespace(ctx)
