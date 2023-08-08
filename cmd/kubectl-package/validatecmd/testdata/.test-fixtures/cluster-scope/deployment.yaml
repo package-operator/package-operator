@@ -8,6 +8,7 @@ metadata:
     instance: "test"
   annotations:
     package-operator.run/phase: deploy
+    from-define: parent value
 spec:
   replicas: 2
   selector:

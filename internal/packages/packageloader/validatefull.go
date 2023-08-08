@@ -154,8 +154,13 @@ func renderTemplateFiles(folder string, fileMap packagecontent.Files) error {
 			// template source files are of no interest for the test fixtures.
 			continue
 		}
+
 		path := packages.StripTemplateSuffix(relPath)
 		content := fileMap[path]
+		if len(bytes.TrimSpace(content)) == 0 {
+			// don't process empty files
+			continue
+		}
 
 		absPath := filepath.Join(folder, path)
 		if err := os.MkdirAll(filepath.Dir(absPath), os.ModePerm); err != nil {
@@ -169,6 +174,12 @@ func renderTemplateFiles(folder string, fileMap packagecontent.Files) error {
 }
 
 func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
+	_, fileAStatErr := os.Stat(fileA)
+	_, fileBStatErr := os.Stat(fileB)
+	if os.IsNotExist(fileAStatErr) && os.IsNotExist(fileBStatErr) {
+		return nil, nil
+	}
+
 	//nolint:gosec
 	data, err := exec.
 		Command("diff", "-u", "--label="+labelA, "--label="+labelB, fileA, fileB).
