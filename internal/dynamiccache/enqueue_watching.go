@@ -28,6 +28,22 @@ type EnqueueWatchingObjects struct {
 
 var _ handler.EventHandler = (*EnqueueWatchingObjects)(nil)
 
+func NewEnqueueWatchingObjects(watcherRefGetter ownerRefGetter,
+	watcherType runtime.Object,
+	scheme *runtime.Scheme,
+) *EnqueueWatchingObjects {
+	e := &EnqueueWatchingObjects{
+		WatcherRefGetter: watcherRefGetter,
+		WatcherType:      watcherType,
+		scheme:           scheme,
+	}
+	if err := e.parseWatcherTypeGroupKind(scheme); err != nil {
+		// This (passing a type that is not in the scheme) HAS to be a programmer error and can't be recovered at runtime anyways.
+		panic(err)
+	}
+	return e
+}
+
 type ownerRefGetter interface {
 	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
@@ -47,12 +63,6 @@ func (e *EnqueueWatchingObjects) Delete(_ context.Context, evt event.DeleteEvent
 
 func (e *EnqueueWatchingObjects) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
-}
-
-// InjectScheme is called by the Controller to provide a singleton scheme to the EnqueueRequestForOwner.
-func (e *EnqueueWatchingObjects) InjectScheme(s *runtime.Scheme) error {
-	e.scheme = s
-	return e.parseWatcherTypeGroupKind(s)
 }
 
 func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object, q workqueue.RateLimitingInterface) {

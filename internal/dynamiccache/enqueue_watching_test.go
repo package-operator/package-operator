@@ -47,12 +47,7 @@ func TestEnqueueWatchingObjects(t *testing.T) {
 		},
 	})
 
-	h := &EnqueueWatchingObjects{
-		WatcherRefGetter: ownerRefGetter,
-		WatcherType:      &corev1.ConfigMap{},
-	}
-	require.NoError(t, h.InjectScheme(scheme))
-
+	h := NewEnqueueWatchingObjects(ownerRefGetter, &corev1.ConfigMap{}, scheme)
 	h.Create(context.Background(), event.CreateEvent{
 		Object: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

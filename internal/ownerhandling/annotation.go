@@ -62,11 +62,16 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 	ownerType client.Object, _ meta.RESTMapper, isController bool,
 ) handler.EventHandler {
-	return &AnnotationEnqueueRequestForOwner{
+	a := &AnnotationEnqueueRequestForOwner{
 		OwnerType:     ownerType,
 		IsController:  isController,
 		ownerStrategy: s,
 	}
+	if err := a.parseOwnerTypeGroupKind(s.scheme); err != nil {
+		// This (passing a type that is not in the scheme) HAS to be a programmer error and can't be recovered at runtime anyways.
+		panic(err)
+	}
+	return a
 }
 
 func (s *OwnerStrategyAnnotation) SetOwnerReference(owner, obj metav1.Object) error {
@@ -330,10 +335,6 @@ func (e *AnnotationEnqueueRequestForOwner) Generic(_ context.Context, evt event.
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
-}
-
-func (e *AnnotationEnqueueRequestForOwner) InjectScheme(s *runtime.Scheme) error {
-	return e.parseOwnerTypeGroupKind(s)
 }
 
 func (e *AnnotationEnqueueRequestForOwner) getOwnerReconcileRequest(object metav1.Object) []reconcile.Request {
