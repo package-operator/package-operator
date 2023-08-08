@@ -106,8 +106,14 @@ func TestLoader(t *testing.T) {
 						Object: map[string]interface{}{
 							"apiVersion": "apps/v1",
 							"kind":       "Deployment",
-							"metadata":   map[string]interface{}{"name": "controller-manager", "namespace": "test123-ns"},
-							"spec":       map[string]interface{}{"replicas": int64(1)},
+							"metadata": map[string]interface{}{
+								"name": "controller-manager", "namespace": "test123-ns",
+								"annotations": map[string]interface{}{
+									"other-test-helper": "other-test-helper",
+									"test-helper":       "test-helper",
+								},
+							},
+							"spec": map[string]interface{}{"replicas": int64(1)},
 						},
 					},
 				},
