@@ -19,6 +19,7 @@ type genericObjectSetPhase interface {
 	GetGeneration() int64
 	IsPaused() bool
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
+	UpdateStatusPhase()
 }
 
 var (
@@ -97,6 +98,7 @@ func (a *GenericObjectSetPhase) IsPaused() bool {
 func (a *GenericObjectSetPhase) GetGeneration() int64 {
 	return a.Generation
 }
+func (a *GenericObjectSetPhase) UpdateStatusPhase() {}
 
 func (a *GenericObjectSetPhase) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
@@ -147,3 +149,4 @@ func (a *GenericClusterObjectSetPhase) IsPaused() bool {
 func (a *GenericClusterObjectSetPhase) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
 }
+func (a *GenericClusterObjectSetPhase) UpdateStatusPhase() {}

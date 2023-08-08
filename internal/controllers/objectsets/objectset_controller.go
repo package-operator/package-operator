@@ -2,7 +2,6 @@ package objectsets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -220,7 +219,10 @@ func (c *GenericObjectSetController) Reconcile(
 		}
 	}
 	if err != nil {
-		return res, c.updateStatusError(ctx, objectSet, err)
+		return controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, err,
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSet)
+			})
 	}
 
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
@@ -228,23 +230,6 @@ func (c *GenericObjectSetController) Reconcile(
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
-}
-
-func (c *GenericObjectSetController) updateStatusError(ctx context.Context, objectSet genericObjectSet,
-	reconcileErr error,
-) error {
-	var preflightError *preflight.Error
-	if errors.As(reconcileErr, &preflightError) {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSet.GetGeneration(),
-			Reason:             "PreflightError",
-			Message:            preflightError.Error(),
-		})
-		return c.updateStatus(ctx, objectSet)
-	}
-	return reconcileErr
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
@@ -275,7 +260,7 @@ func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, 
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
 			Status:             metav1.ConditionUnknown,
-			ObservedGeneration: objectSet.GetGeneration(),
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 			Reason:             "PartiallyPaused",
 			Message:            "Waiting for ObjectSetPhases.",
 		})
@@ -285,7 +270,7 @@ func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, 
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
 			Status:             metav1.ConditionTrue,
-			ObservedGeneration: objectSet.GetGeneration(),
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 			Reason:             "Paused",
 			Message:            "Lifecycle state set to paused.",
 		})
@@ -347,7 +332,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 				Status:             metav1.ConditionFalse,
 				Reason:             "ArchivalInProgress",
 				Message:            "Object teardown in progress.",
-				ObservedGeneration: objectSet.GetGeneration(),
+				ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 			})
 		}
 		// don't remove finalizer before deletion is done
@@ -366,7 +351,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 			Type:               corev1alpha1.ObjectSetArchived,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Archived",
-			ObservedGeneration: objectSet.GetGeneration(),
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 		objectSet.SetStatusControllerOf(nil) // we are no longer controlling anything.
 	}
