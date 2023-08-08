@@ -41,7 +41,7 @@ func TestUpgrade(t *testing.T) {
 	pkg := &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "package-operator",
-			Namespace: "package-operator-system",
+			Namespace: PackageOperatorNamespace,
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestUpgrade(t *testing.T) {
 	jobList := &batchv1.JobList{}
 	require.NoError(t, Client.List(
 		ctx, jobList,
-		client.InNamespace("package-operator-system"),
+		client.InNamespace(PackageOperatorNamespace),
 	))
 	for i := range jobList.Items {
 		require.NoError(t,
@@ -72,7 +72,7 @@ func TestUpgrade(t *testing.T) {
 	jobList = &batchv1.JobList{}
 	require.NoError(t, Client.List(
 		ctx, jobList,
-		client.InNamespace("package-operator-system"),
+		client.InNamespace(PackageOperatorNamespace),
 	))
 	for i := range jobList.Items {
 		require.NoError(t,
@@ -117,7 +117,7 @@ func deleteExistingPKO(ctx context.Context) error {
 	pkg := &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "package-operator",
-			Namespace: "package-operator-system",
+			Namespace: PackageOperatorNamespace,
 		},
 	}
 
@@ -133,7 +133,7 @@ func deleteExistingPKO(ctx context.Context) error {
 	}
 
 	err = Waiter.WaitToBeGone(ctx,
-		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "package-operator-system"}},
+		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
 		func(obj client.Object) (done bool, err error) { return false, nil },
 		dev.WithTimeout(UpgradeTestWaitTimeout),
 	)
