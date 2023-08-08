@@ -107,7 +107,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
 
-	inTransition := r.isObjectSetInTransition(objectSet, controllerOf)
+	inTransition := isObjectSetInTransition(objectSet, controllerOf)
 	if inTransition {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetInTransition,
@@ -271,7 +271,7 @@ func reverse[T any](s []T) {
 // controlling all objects from spec.
 // This state is true until the ObjectSet has finished a successful rollout
 // or from the moment a newer revision is taking ownership until it has been archived.
-func (r *objectSetPhasesReconciler) isObjectSetInTransition(
+func isObjectSetInTransition(
 	objectSet genericObjectSet,
 	controllerOf []corev1alpha1.ControlledObjectReference,
 ) bool {
@@ -279,11 +279,8 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 		return false
 	}
 
-	controlledIndex := map[corev1alpha1.ControlledObjectReference]struct{}{}
-	for _, controlled := range controllerOf {
-		controlledIndex[controlled] = struct{}{}
-	}
-
+	// Build a lookup map of all objects that may be managed by this ObjectSet.
+	allObjectsThatMayBeUnderManagement := map[corev1alpha1.ControlledObjectReference]struct{}{}
 	for _, phase := range objectSet.GetPhases() {
 		for _, obj := range phase.Objects {
 			gvk := obj.Object.GroupVersionKind()
@@ -297,13 +294,33 @@ func (r *objectSetPhasesReconciler) isObjectSetInTransition(
 				Name:      obj.Object.GetName(),
 				Namespace: ns,
 			}
-			if _, isControlledByThisInstance := controlledIndex[ref]; !isControlledByThisInstance {
-				// This object is not yet reconciled by this instance or has been taken somewhere else.
-				return true
+			allObjectsThatMayBeUnderManagement[ref] = struct{}{}
+		}
+	}
+
+	for _, controlled := range controllerOf {
+		if _, found := allObjectsThatMayBeUnderManagement[controlled]; found {
+			// direct match
+			delete(allObjectsThatMayBeUnderManagement, controlled)
+			continue
+		}
+
+		// If object references originate from ObjectSetPhase API,
+		// we might have cluster scoped objects with empty namespace.
+		if len(controlled.Namespace) == 0 {
+			// scan for object without namespace
+			for objMayBeUnderManagement := range allObjectsThatMayBeUnderManagement {
+				if objMayBeUnderManagement.Kind == controlled.Kind &&
+					objMayBeUnderManagement.Group == controlled.Group &&
+					objMayBeUnderManagement.Name == controlled.Name {
+					controlled.Namespace = objMayBeUnderManagement.Namespace
+					delete(allObjectsThatMayBeUnderManagement, controlled)
+					break
+				}
 			}
 		}
 	}
-	return false
+	return len(allObjectsThatMayBeUnderManagement) > 0
 }
 
 func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet genericObjectSet) bool {
