@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	goerrors "errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1419,4 +1421,129 @@ func (m *preflightCheckerMock) Check(
 ) (violations []preflight.Violation, err error) {
 	args := m.Called(ctx, owner, obj)
 	return args.Get(0).([]preflight.Violation), args.Error(1)
+}
+
+var errTest = goerrors.New("xxx")
+
+func TestIsAdoptionRefusedError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		err    error
+		result bool
+	}{
+		{
+			name:   "other error",
+			err:    errTest,
+			result: false,
+		},
+		{
+			name:   "no error",
+			err:    nil,
+			result: false,
+		},
+		{
+			name:   "adoption refused",
+			err:    &ObjectNotOwnedByPreviousRevisionError{},
+			result: true,
+		},
+		{
+			name:   "collision",
+			err:    &RevisionCollisionError{},
+			result: true,
+		},
+	}
+
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			r := IsAdoptionRefusedError(test.err)
+			assert.Equal(t, test.result, r)
+		})
+	}
+}
+
+type testUpdateMock struct {
+	mock.Mock
+}
+
+func (m *testUpdateMock) Update(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+type objectSetOrPhaseStub struct {
+	ObjectSet corev1alpha1.ObjectSet
+}
+
+func (s *objectSetOrPhaseStub) ClientObject() client.Object {
+	return &s.ObjectSet
+}
+
+func (s *objectSetOrPhaseStub) GetConditions() *[]metav1.Condition {
+	return &s.ObjectSet.Status.Conditions
+}
+func (s *objectSetOrPhaseStub) UpdateStatusPhase() {}
+
+func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("just returns error", func(t *testing.T) {
+		t.Parallel()
+
+		objectSet := &objectSetOrPhaseStub{}
+
+		um := &testUpdateMock{}
+		ctx := context.Background()
+		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest, um.Update)
+
+		assert.EqualError(t, err, errTest.Error())
+		assert.True(t, res.IsZero())
+		assert.Empty(t, objectSet.GetConditions())
+	})
+
+	t.Run("reports preflight error", func(t *testing.T) {
+		t.Parallel()
+
+		objectSet := &objectSetOrPhaseStub{}
+
+		um := &testUpdateMock{}
+
+		um.On("Update", mock.Anything).Return(nil)
+
+		ctx := context.Background()
+		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{}, um.Update)
+
+		assert.NoError(t, err)
+		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
+		if assert.NotEmpty(t, objectSet.GetConditions()) {
+			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+			assert.Equal(t, "PreflightError", cond.Reason)
+		}
+
+		um.AssertExpectations(t)
+	})
+
+	t.Run("reports collision error", func(t *testing.T) {
+		t.Parallel()
+
+		objectSet := &objectSetOrPhaseStub{}
+
+		um := &testUpdateMock{}
+
+		um.On("Update", mock.Anything).Return(nil)
+
+		ctx := context.Background()
+		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &ObjectNotOwnedByPreviousRevisionError{}, um.Update)
+
+		assert.NoError(t, err)
+		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
+		if assert.NotEmpty(t, objectSet.GetConditions()) {
+			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+			assert.Equal(t, "CollisionDetected", cond.Reason)
+		}
+
+		um.AssertExpectations(t)
+	})
 }

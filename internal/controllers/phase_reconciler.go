@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -531,6 +533,63 @@ func (r *PhaseReconciler) desiredObject(
 	setObjectRevision(desiredObj, owner.GetRevision())
 
 	return desiredObj, nil
+}
+
+// Returns true if the underlying error is because adoption has been refused.
+func IsAdoptionRefusedError(err error) bool {
+	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
+	if goerrors.As(err, &prevRevisionError) {
+		return true
+	}
+
+	var revCollisionError *RevisionCollisionError
+	return goerrors.As(err, &revCollisionError)
+}
+
+// updateStatusError(ctx context.Context, objectSet genericObjectSet,
+// 	reconcileErr error,
+// ) (res ctrl.Result, err error)
+
+type ObjectSetOrPhase interface {
+	ClientObject() client.Object
+	GetConditions() *[]metav1.Condition
+	UpdateStatusPhase()
+}
+
+func UpdateObjectSetOrPhaseStatusFromError(
+	ctx context.Context, objectSetOrPhase ObjectSetOrPhase,
+	reconcileErr error, updateStatus func(ctx context.Context) error,
+) (res ctrl.Result, err error) {
+	var preflightError *preflight.Error
+	if goerrors.As(reconcileErr, &preflightError) {
+		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            preflightError.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
+	if IsAdoptionRefusedError(reconcileErr) {
+		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "CollisionDetected",
+			Message:            reconcileErr.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the conflicting resource has been deleted.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
+	// if we don't handle the error in any special way above,
+	// just return it unchanged.
+	return res, reconcileErr
 }
 
 type CommonObjectPhaseError struct {

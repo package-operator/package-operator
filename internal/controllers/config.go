@@ -7,6 +7,13 @@ import (
 )
 
 const (
+	// Use this delay if you want to retry an invalid user configuration.
+	// e.g.:
+	// - referencing objects that don't exist.
+	// - object collisions.
+	// - missing permissions.
+	DefaultGlobalMissConfigurationRetry = 30 * time.Second
+
 	DefaultInitialBackoff = 10 * time.Second
 	DefaultMaxBackoff     = 300 * time.Second
 )
