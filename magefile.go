@@ -445,6 +445,7 @@ func (l Locations) UnitTestCoverageReport() string {
 	return filepath.Join(l.unitTestCache(), "cov.out")
 }
 func (l Locations) UnitTestExecReport() string   { return filepath.Join(l.unitTestCache(), "exec.json") }
+func (l Locations) UnitTestStdOut() string       { return filepath.Join(l.unitTestCache(), "out.txt") }
 func (l Locations) IntegrationTestCache() string { return filepath.Join(l.Cache(), "integration") }
 func (l Locations) PKOIntegrationTestCoverageReport() string {
 	return filepath.Join(l.IntegrationTestCache(), "pko-cov.out")
@@ -635,20 +636,14 @@ func (Test) ValidateGitClean() {
 
 // Runs unittests.
 func (Test) Unit() {
-	_, isCI := os.LookupEnv("CI")
-	testCmd := fmt.Sprintf("go test -coverprofile=%s -race", locations.UnitTestCoverageReport())
-	if isCI {
-		// test output in json format
-		testCmd += " -json"
-	}
-	testCmd += " ./internal/... ./cmd/... ./apis/..."
-
-	if isCI {
-		testCmd = testCmd + " > " + locations.UnitTestExecReport()
-	}
+	testCmd := fmt.Sprintf("set -o pipefail; go test -coverprofile=%s -race -test.v", locations.UnitTestCoverageReport())
+	testCmd += " ./internal/... ./cmd/... ./apis/... "
+	testCmd += "| tee " + locations.UnitTestStdOut()
 
 	// cgo needed to enable race detector -race
-	must(sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd))
+	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
+	must(sh.RunV("bash", "-c", "cat "+locations.UnitTestStdOut()+" | go tool test2json > "+locations.UnitTestExecReport()))
+	must(testErr)
 }
 
 // Runs the given integration suite(s) as given by the first
