@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -53,12 +52,12 @@ const (
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
 
-	controllerGenVersion = "0.12.1"
-	golangciLintVersion  = "1.53.3"
-	craneVersion         = "0.16.1"
-	kindVersion          = "0.20.0"
+	controllerGenVersion = "0.12.0"
+	golangciLintVersion  = "1.53.2"
+	craneVersion         = "0.15.2"
+	kindVersion          = "0.19.0"
 	k8sDocGenVersion     = "0.6.0"
-	helmVersion          = "3.12.2"
+	helmVersion          = "3.12.0"
 
 	coverProfilingMinGoVersion = "1.20.0"
 )
@@ -145,8 +144,6 @@ func init() {
 	// Extra dependencies must be specified here to avoid a circular dependency.
 	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
 	packageImages[remotePhasePackageName].ExtraDeps = []interface{}{Generate.RemotePhasePackage}
-
-	ctrl.SetLogger(logger)
 }
 
 // Must panics if the given error is not nil.

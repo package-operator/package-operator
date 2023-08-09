@@ -2,7 +2,6 @@ package ownerhandlingmocks
 
 import (
 	"github.com/stretchr/testify/mock"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -40,7 +39,7 @@ func (m *OwnerStrategyMock) SetControllerReference(owner, obj metav1.Object) err
 	return args.Error(0)
 }
 
-func (m *OwnerStrategyMock) EnqueueRequestForOwner(ownerType client.Object, mapper meta.RESTMapper, isController bool) handler.EventHandler {
-	args := m.Called(ownerType, mapper, isController)
+func (m *OwnerStrategyMock) EnqueueRequestForOwner(ownerType client.Object, isController bool) handler.EventHandler {
+	args := m.Called(ownerType, isController)
 	return args.Get(0).(handler.EventHandler)
 }

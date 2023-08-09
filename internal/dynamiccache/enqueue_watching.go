@@ -1,7 +1,6 @@
 package dynamiccache
 
 import (
-	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,41 +27,31 @@ type EnqueueWatchingObjects struct {
 
 var _ handler.EventHandler = (*EnqueueWatchingObjects)(nil)
 
-func NewEnqueueWatchingObjects(watcherRefGetter ownerRefGetter,
-	watcherType runtime.Object,
-	scheme *runtime.Scheme,
-) *EnqueueWatchingObjects {
-	e := &EnqueueWatchingObjects{
-		WatcherRefGetter: watcherRefGetter,
-		WatcherType:      watcherType,
-		scheme:           scheme,
-	}
-	if err := e.parseWatcherTypeGroupKind(scheme); err != nil {
-		// This (passing a type that is not in the scheme) HAS to be a programmer error and can't be recovered at runtime anyways.
-		panic(err)
-	}
-	return e
-}
-
 type ownerRefGetter interface {
 	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
 
-func (e *EnqueueWatchingObjects) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.ObjectNew, q)
 	e.enqueueWatchers(evt.ObjectOld, q)
 }
 
-func (e *EnqueueWatchingObjects) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.enqueueWatchers(evt.Object, q)
+}
+
+// InjectScheme is called by the Controller to provide a singleton scheme to the EnqueueRequestForOwner.
+func (e *EnqueueWatchingObjects) InjectScheme(s *runtime.Scheme) error {
+	e.scheme = s
+	return e.parseWatcherTypeGroupKind(s)
 }
 
 func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object, q workqueue.RateLimitingInterface) {
