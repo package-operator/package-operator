@@ -18,6 +18,7 @@ spec:
       creationTimestamp: null
       labels:
         app.kubernetes.io/name: package-operator-remote-phase-manager
+        hypershift.openshift.io/need-management-kas-access: "true"
     spec:
       containers:
       - args:
