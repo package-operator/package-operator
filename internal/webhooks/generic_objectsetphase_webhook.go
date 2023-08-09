@@ -32,8 +32,9 @@ func NewObjectSetPhaseWebhookHandler(
 	client client.Client,
 ) *GenericObjectSetPhaseWebhookHandler[corev1alpha1.ObjectSetPhase] {
 	return &GenericObjectSetPhaseWebhookHandler[corev1alpha1.ObjectSetPhase]{
-		log:    log,
-		client: client,
+		decoder: admission.NewDecoder(client.Scheme()),
+		log:     log,
+		client:  client,
 	}
 }
 
@@ -42,8 +43,9 @@ func NewClusterObjectSetPhaseWebhookHandler(
 	client client.Client,
 ) *GenericObjectSetPhaseWebhookHandler[corev1alpha1.ClusterObjectSetPhase] {
 	return &GenericObjectSetPhaseWebhookHandler[corev1alpha1.ClusterObjectSetPhase]{
-		log:    log,
-		client: client,
+		decoder: admission.NewDecoder(client.Scheme()),
+		log:     log,
+		client:  client,
 	}
 }
 
@@ -82,11 +84,6 @@ func (wh *GenericObjectSetPhaseWebhookHandler[T]) Handle(
 	default:
 		return admission.Allowed("operation allowed")
 	}
-}
-
-func (wh *GenericObjectSetPhaseWebhookHandler[T]) InjectDecoder(d *admission.Decoder) error {
-	wh.decoder = d
-	return nil
 }
 
 func (wh *GenericObjectSetPhaseWebhookHandler[T]) validateUpdate(
