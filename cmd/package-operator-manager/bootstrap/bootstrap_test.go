@@ -50,7 +50,10 @@ func TestBootstrapperBootstrap(t *testing.T) {
 
 	ctx := context.Background()
 	err := b.Bootstrap(
-		ctx, func(ctx context.Context) error { return nil })
+		ctx, func(ctx context.Context) error {
+			<-ctx.Done()
+			return nil
+		})
 	require.NoError(t, err)
 	assert.True(t, initCalled)
 
