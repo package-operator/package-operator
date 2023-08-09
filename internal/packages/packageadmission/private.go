@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	apiserverapiscel "k8s.io/apiserver/pkg/apis/cel"
 	apiservercel "k8s.io/apiserver/pkg/cel"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
@@ -466,7 +467,7 @@ func validateSchemaStuffWithXPrefixedName(schema *apiextensions.JSONSchemaProps,
 	case typeInfo == nil:
 		allErrs.CELErrors = append(allErrs.CELErrors, field.InternalError(fldPath.Child("x-kubernetes-validations"), fmt.Errorf("internal error: %w", ErrXKubernetesValidations)))
 	default:
-		compResults, err := cel.Compile(typeInfo.Schema, typeInfo.DeclType, cel.PerCallLimit)
+		compResults, err := cel.Compile(typeInfo.Schema, typeInfo.DeclType, apiserverapiscel.PerCallLimit)
 		if err != nil {
 			allErrs.CELErrors = append(allErrs.CELErrors, field.InternalError(fldPath.Child("x-kubernetes-validations"), err))
 			return allErrs
