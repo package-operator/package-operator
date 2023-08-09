@@ -51,6 +51,7 @@ const (
 	cliCmdName             = "kubectl-package"
 	pkoPackageName         = "package-operator-package"
 	remotePhasePackageName = "remote-phase-package"
+  defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
 	controllerGenVersion = "0.12.0"
 	golangciLintVersion  = "1.53.2"
@@ -530,37 +531,42 @@ func (l *Locations) DevEnv() *dev.Environment {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
+	var clusterInitializers []dev.ClusterInitializer
+	if _, isCI := os.LookupEnv("CI"); !isCI {
+		// don't install the monitoring stack in CI to speed up tests.
+		clusterInitializers = dev.WithClusterInitializers{
+			dev.ClusterHelmInstall{
+				RepoName:    "prometheus-community",
+				RepoURL:     "https://prometheus-community.github.io/helm-charts",
+				PackageName: "kube-prometheus-stack",
+				ReleaseName: "prometheus",
+				Namespace:   "monitoring",
+				SetVars: []string{
+					"grafana.enabled=true",
+					"kubeStateMetrics.enabled=false",
+					"nodeExporter.enabled=false",
+				},
+			},
+			dev.ClusterLoadObjectsFromFiles{
+				"config/service-monitor.yaml",
+			},
+		}
+	}
+
 	if l.devEnvironment == nil {
 		l.devEnvironment = dev.NewEnvironment(
 			clusterName,
 			filepath.Join(l.Cache(), "dev-env"),
-			dev.WithClusterInitializers{
-				dev.ClusterHelmInstall{
-					RepoName:    "prometheus-community",
-					RepoURL:     "https://prometheus-community.github.io/helm-charts",
-					PackageName: "kube-prometheus-stack",
-					ReleaseName: "prometheus",
-					Namespace:   "monitoring",
-					SetVars: []string{
-						"grafana.enabled=true",
-						"kubeStateMetrics.enabled=false",
-						"nodeExporter.enabled=false",
-					},
-				},
-				dev.ClusterLoadObjectsFromFiles{
-					"config/service-monitor.yaml",
-				},
-			},
 			dev.WithClusterOptions([]dev.ClusterOption{
 				dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
 				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			}),
 			dev.WithContainerRuntime(containerRuntime),
-			dev.WithClusterInitializers{
-				dev.ClusterLoadObjectsFromFiles{
+			dev.WithClusterInitializers(
+				append(clusterInitializers, dev.ClusterLoadObjectsFromFiles{
 					"config/local-registry.yaml",
-				},
-			},
+				}),
+			),
 			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
 				ContainerdConfigPatches: []string{
 					// Replace quay.io with our local dev-registry.
@@ -695,6 +701,9 @@ func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) 
 func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", locations.ImageURL("test-stub-package", false))
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
+	if len(os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")) == 0 {
+		os.Setenv("PKO_TEST_LATEST_BOOTSTRAP_JOB", defaultPKOLatestBootstrapJob)
+	}
 
 	// count=1 will force a new run, instead of using the cache
 	args := []string{
@@ -708,11 +717,6 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	}
 	args = append(args, "./integration/package-operator/...")
 
-	_, isCI := os.LookupEnv("CI")
-	if isCI {
-		// test output in json format
-		args = append(args, "-json", " > "+locations.PKOIntegrationTestExecReport())
-	}
 	testErr := sh.Run("go", args...)
 
 	devEnv := locations.DevEnvNoInit()

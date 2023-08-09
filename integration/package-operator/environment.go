@@ -41,6 +41,8 @@ var (
 	// SuccessTestPackageImage points to an image to use to test Package installation.
 	SuccessTestPackageImage string
 	FailureTestPackageImage = "localhost/does-not-exist"
+
+	LatestSelfBootstrapJobURL string
 )
 
 func init() {
@@ -51,6 +53,10 @@ func init() {
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
 	if len(TestStubImage) == 0 {
 		panic("PKO_TEST_STUB_IMAGE not set!")
+	}
+	LatestSelfBootstrapJobURL = os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")
+	if len(LatestSelfBootstrapJobURL) == 0 {
+		panic("PKO_TEST_LATEST_BOOTSTRAP_JOB not set!")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
