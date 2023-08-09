@@ -212,7 +212,12 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.Anything,
 					mock.IsType(&corev1alpha1.ClusterObjectSet{}),
 					mock.Anything,
-				).Return(nil)
+				).Run(func(args mock.Arguments) {
+					cos := args.Get(1).(*corev1alpha1.ClusterObjectSet)
+					assert.Equal(t,
+						corev1alpha1.ObjectSetLifecycleStatePaused,
+						cos.Spec.LifecycleState)
+				}).Return(nil)
 
 				// mock already deleted PKO
 				c.On("Delete",
