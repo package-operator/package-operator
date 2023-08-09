@@ -54,6 +54,10 @@ func init() {
 	if len(TestStubImage) == 0 {
 		panic("PKO_TEST_STUB_IMAGE not set!")
 	}
+	LatestSelfBootstrapJobURL = os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")
+	if len(LatestSelfBootstrapJobURL) == 0 {
+		panic("PKO_TEST_LATEST_BOOTSTRAP_JOB not set!")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -61,8 +65,6 @@ func init() {
 	if err := initClients(ctx); err != nil {
 		panic(err)
 	}
-
-	LatestSelfBootstrapJobURL = os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")
 
 	var err error
 	PackageOperatorNamespace, err = findPackageOperatorNamespace(ctx)
