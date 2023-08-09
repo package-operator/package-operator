@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/probing"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/probing"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.

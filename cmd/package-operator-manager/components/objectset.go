@@ -4,9 +4,9 @@ import (
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"package-operator.run/package-operator/internal/controllers/objectsets"
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/internal/controllers/objectsets"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/metrics"
 )
 
 // Type alias for dependency injector to differentiate

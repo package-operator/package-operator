@@ -1,6 +1,7 @@
 package dynamiccache
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -13,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 func TestEnqueueWatchingObjects(t *testing.T) {
@@ -46,13 +47,8 @@ func TestEnqueueWatchingObjects(t *testing.T) {
 		},
 	})
 
-	h := &EnqueueWatchingObjects{
-		WatcherRefGetter: ownerRefGetter,
-		WatcherType:      &corev1.ConfigMap{},
-	}
-	require.NoError(t, h.InjectScheme(scheme))
-
-	h.Create(event.CreateEvent{
+	h := NewEnqueueWatchingObjects(ownerRefGetter, &corev1.ConfigMap{}, scheme)
+	h.Create(context.Background(), event.CreateEvent{
 		Object: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",

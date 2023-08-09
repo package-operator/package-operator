@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/preflight"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/preflight"
 )
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
@@ -154,16 +154,16 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSet, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
 		Owns(objectSetPhase).
-		Watches(c.dynamicCache.Source(), &handler.EnqueueRequestForOwner{
-			OwnerType:    objectSet,
-			IsController: false,
-		}, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
-			c.log.Info(
-				"processing dynamic cache event",
-				"object", client.ObjectKeyFromObject(object),
-				"owners", object.GetOwnerReferences())
-			return true
-		}))).
+		WatchesRawSource(
+			c.dynamicCache.Source(),
+			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
+			builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+				c.log.Info(
+					"processing dynamic cache event",
+					"object", client.ObjectKeyFromObject(object),
+					"owners", object.GetOwnerReferences())
+				return true
+			}))).
 		Complete(c)
 }
 

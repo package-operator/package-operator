@@ -13,7 +13,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func TestHistoryCmd(t *testing.T) { //nolint:maintidx

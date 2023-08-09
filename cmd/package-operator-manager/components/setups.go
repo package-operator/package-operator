@@ -3,7 +3,7 @@ package components
 import (
 	"fmt"
 
-	"package-operator.run/package-operator/internal/environment"
+	"package-operator.run/internal/environment"
 
 	"go.uber.org/dig"
 	ctrl "sigs.k8s.io/controller-runtime"

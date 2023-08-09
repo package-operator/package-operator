@@ -9,7 +9,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -21,13 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	pkoapis "package-operator.run/apis"
-	"package-operator.run/package-operator/internal/controllers"
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/internal/controllers"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/metrics"
 )
 
 // Returns a new pre-configured DI container.
@@ -95,18 +95,18 @@ func ProvideManager(
 	opts Options,
 ) (ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         opts.MetricsAddr,
-		HealthProbeBindAddress:     opts.ProbeAddr,
-		Port:                       9443,
+		Scheme:                 scheme,
+		MetricsBindAddress:     opts.MetricsAddr,
+		HealthProbeBindAddress: opts.ProbeAddr,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
-		MapperProvider: func(c *rest.Config) (meta.RESTMapper, error) {
-			return apiutil.NewDynamicRESTMapper(c, apiutil.WithLazyDiscovery)
-		},
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: cache.SelectorsByObject{
+		MapperProvider:             apiutil.NewDynamicRESTMapper,
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				// We create Jobs to unpack package images.
 				// Limit caches to only contain Jobs that we create ourselves.
 				&batchv1.Job{}: {
@@ -115,7 +115,7 @@ func ProvideManager(
 					}),
 				},
 			},
-		}),
+		},
 	})
 	if err != nil {
 		return nil, err

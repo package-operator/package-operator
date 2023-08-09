@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/ownerhandling"
 )
 
 // objectSliceLoadReconciler loads ObjectSlices to inline all objects into the ObjectSet again.

@@ -24,8 +24,8 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/preflight"
-	"package-operator.run/package-operator/internal/probing"
+	"package-operator.run/internal/preflight"
+	"package-operator.run/internal/probing"
 )
 
 // PhaseReconciler reconciles objects within a ObjectSet phase.

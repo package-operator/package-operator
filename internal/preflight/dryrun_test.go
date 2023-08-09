@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"package-operator.run/package-operator/internal/preflight"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/preflight"
+	"package-operator.run/internal/testutil"
 )
 
 var errTest = errors.New("explosion")

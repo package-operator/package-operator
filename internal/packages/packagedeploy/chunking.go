@@ -4,7 +4,7 @@ import (
 	"context"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/internal/adapters"
 )
 
 type (

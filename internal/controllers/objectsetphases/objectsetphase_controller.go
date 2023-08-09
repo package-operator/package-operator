@@ -15,9 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/preflight"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/preflight"
 )
 
 type reconciler interface {
@@ -39,7 +39,7 @@ type ownerStrategy interface {
 	SetControllerReference(owner, obj metav1.Object) error
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
-		ownerType client.Object, isController bool,
+		ownerType client.Object, mapper meta.RESTMapper, isController bool,
 	) handler.EventHandler
 }
 
@@ -306,6 +306,6 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
-		Watches(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, false)).
+		WatchesRawSource(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false)).
 		Complete(c)
 }

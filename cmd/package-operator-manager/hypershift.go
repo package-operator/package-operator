@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/discovery"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 type hypershift struct {
@@ -49,7 +52,7 @@ func (h *hypershift) Start(ctx context.Context) error {
 		case err == nil:
 			h.log.Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
-		case meta.IsNoMatchError(err):
+		case meta.IsNoMatchError(err) || k8serrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 			continue
 		default:
 			return fmt.Errorf("hypershiftv1beta1 probing: %w", err)

@@ -7,8 +7,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageexport"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageexport"
 )
 
 func TestFile(t *testing.T) { //nolint:paralleltest

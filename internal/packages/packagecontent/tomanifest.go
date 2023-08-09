@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages"
-	"package-operator.run/package-operator/internal/packages/packageadmission"
+	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/packageadmission"
 )
 
 func manifestFromFile(

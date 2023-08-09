@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {

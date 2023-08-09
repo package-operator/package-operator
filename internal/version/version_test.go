@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"package-operator.run/package-operator/internal/version"
+	"package-operator.run/internal/version"
 )
 
 func TestGet(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -45,20 +46,20 @@ import (
 
 // Constants that define build behaviour.
 const (
-	module                       = "package-operator.run/package-operator"
-	defaultImageOrg              = "quay.io/package-operator"
-	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
-	clusterName                  = "package-operator-dev"
-	cliCmdName                   = "kubectl-package"
-	pkoPackageName               = "package-operator-package"
-	remotePhasePackageName       = "remote-phase-package"
+	module                 = "package-operator.run"
+	defaultImageOrg        = "quay.io/package-operator"
+	clusterName            = "package-operator-dev"
+	cliCmdName             = "kubectl-package"
+	pkoPackageName         = "package-operator-package"
+	remotePhasePackageName = "remote-phase-package"
+  defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
-	controllerGenVersion = "0.12.0"
-	golangciLintVersion  = "1.53.2"
-	craneVersion         = "0.15.2"
-	kindVersion          = "0.19.0"
+	controllerGenVersion = "0.12.1"
+	golangciLintVersion  = "1.53.3"
+	craneVersion         = "0.16.1"
+	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.0"
-	helmVersion          = "3.12.0"
+	helmVersion          = "3.12.2"
 
 	coverProfilingMinGoVersion = "1.20.0"
 )
@@ -145,6 +146,8 @@ func init() {
 	// Extra dependencies must be specified here to avoid a circular dependency.
 	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
 	packageImages[remotePhasePackageName].ExtraDeps = []interface{}{Generate.RemotePhasePackage}
+
+	ctrl.SetLogger(logger)
 }
 
 // Must panics if the given error is not nil.

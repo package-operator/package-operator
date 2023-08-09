@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"context"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 type packageLoader interface {

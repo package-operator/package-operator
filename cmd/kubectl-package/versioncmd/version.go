@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"package-operator.run/package-operator/internal/version"
+	"package-operator.run/internal/version"
 )
 
 func NewCmd() *cobra.Command {

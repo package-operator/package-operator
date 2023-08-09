@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	pkoapis "package-operator.run/apis"
-	"package-operator.run/package-operator/internal/packages"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
 )
 
 var testScheme = runtime.NewScheme()

@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil"
-	"package-operator.run/package-operator/internal/testutil/ownerhandlingmocks"
+	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
 
 type previousOwnerMock struct {

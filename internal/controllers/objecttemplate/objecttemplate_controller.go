@@ -4,23 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/environment"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-
-	"package-operator.run/package-operator/internal/preflight"
-
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/dynamiccache"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/preflight"
 )
 
 type dynamicCache interface {
@@ -163,8 +159,8 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
-		Watches(c.dynamicCache.Source(), &dynamiccache.EnqueueWatchingObjects{
-			WatcherRefGetter: c.dynamicCache,
-			WatcherType:      objectTemplate,
-		}).Complete(c)
+		WatchesRawSource(
+			c.dynamicCache.Source(),
+			dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme())).
+		Complete(c)
 }

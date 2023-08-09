@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"package-operator.run/package-operator/internal/transform"
+	"package-operator.run/internal/transform"
 )
 
 type TemplateContext struct {

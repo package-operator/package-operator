@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"package-operator.run/package-operator/internal/testutil/metricsmocks"
+	"package-operator.run/internal/testutil/metricsmocks"
 )
 
 func TestCache_Source(t *testing.T) {

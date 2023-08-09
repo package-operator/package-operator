@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func TestBuildOutput(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/package-operator/internal/cmd"
+	"package-operator.run/internal/cmd"
 )
 
 func TestPrinter_PrintfOut(t *testing.T) {

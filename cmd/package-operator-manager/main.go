@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/go-logr/logr"
 	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -16,10 +18,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"package-operator.run/package-operator/cmd/package-operator-manager/bootstrap"
-	"package-operator.run/package-operator/cmd/package-operator-manager/components"
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/environment"
+	"package-operator.run/cmd/package-operator-manager/bootstrap"
+	"package-operator.run/cmd/package-operator-manager/components"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/environment"
 )
 
 const (
@@ -202,7 +204,7 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 				"unable to create controller for HostedCluster: %w", err)
 		}
 
-	case meta.IsNoMatchError(err):
+	case meta.IsNoMatchError(err) || k8serrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
 		if err := pkoMgr.mgr.Add(
 			newHypershift(

@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/objectdeployments"
+	"package-operator.run/internal/controllers/objectdeployments"
 )
 
 func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
+	"package-operator.run/internal/adapters"
 )
 
 func Test_determineChunkingStrategyForPackage(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	clocktesting "k8s.io/utils/clock/testing"
 
-	"package-operator.run/package-operator/internal/testutil/restmappermock"
+	"package-operator.run/internal/testutil/restmappermock"
 )
 
 var errTest = errors.New("cheese happened")

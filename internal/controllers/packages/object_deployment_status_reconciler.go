@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
 )
 
 type objectDeploymentStatusReconciler struct {

@@ -7,14 +7,14 @@ import (
 	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/buildcmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/rolloutcmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/rootcmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/treecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/updatecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/validatecmd"
-	"package-operator.run/package-operator/cmd/kubectl-package/versioncmd"
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	"package-operator.run/cmd/kubectl-package/buildcmd"
+	"package-operator.run/cmd/kubectl-package/rolloutcmd"
+	"package-operator.run/cmd/kubectl-package/rootcmd"
+	"package-operator.run/cmd/kubectl-package/treecmd"
+	"package-operator.run/cmd/kubectl-package/updatecmd"
+	"package-operator.run/cmd/kubectl-package/validatecmd"
+	"package-operator.run/cmd/kubectl-package/versioncmd"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func ProvideIOStreams() rootcmd.IOStreams {

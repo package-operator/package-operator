@@ -10,9 +10,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageimport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 func NewValidate(scheme *runtime.Scheme, opts ...ValidateOption) *Validate {

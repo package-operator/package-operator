@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func File(dst string, tags []string, files packagecontent.Files) error {

@@ -17,10 +17,10 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/ownerhandling"
-	"package-operator.run/package-operator/internal/utils"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/utils"
 )
 
 type (

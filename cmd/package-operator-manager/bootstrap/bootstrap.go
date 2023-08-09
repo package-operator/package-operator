@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/package-operator/cmd/package-operator-manager/components"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/packages/packageimport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/cmd/package-operator-manager/components"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 const packageOperatorDeploymentName = "package-operator-manager"
@@ -100,8 +100,8 @@ func (b *Bootstrapper) cancelWhenPackageAvailable(
 	ctx context.Context, cancel context.CancelFunc,
 ) {
 	log := logr.FromContextOrDiscard(ctx)
-	err := wait.PollImmediateUntilWithContext(
-		ctx, packageOperatorPackageCheckInterval,
+	err := wait.PollUntilContextCancel(
+		ctx, packageOperatorPackageCheckInterval, true,
 		func(ctx context.Context) (done bool, err error) {
 			return isPKOAvailable(ctx, b.client, b.pkoNamespace)
 		})
