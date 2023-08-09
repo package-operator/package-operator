@@ -159,8 +159,8 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
-		WatchesRawSource(
-			c.dynamicCache.Source(),
-			dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme())).
-		Complete(c)
+		Watches(c.dynamicCache.Source(), &dynamiccache.EnqueueWatchingObjects{
+			WatcherRefGetter: c.dynamicCache,
+			WatcherType:      objectTemplate,
+		}).Complete(c)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -512,14 +511,4 @@ func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",\"controller\":true}]","package-operator.run/revision":"3"}}}`, string(patch))
-}
-
-func TestOwnerStrategyAnnotation_EnqueueRequestForOwner(t *testing.T) {
-	t.Parallel()
-	scheme := runtime.NewScheme()
-	require.NoError(t, appsv1.AddToScheme(scheme))
-	s := NewAnnotation(scheme)
-	require.NotPanics(t, func() {
-		s.EnqueueRequestForOwner(&appsv1.Deployment{}, meta.RESTMapper(nil), true)
-	})
 }

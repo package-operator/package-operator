@@ -1,7 +1,6 @@
 package dynamiccache
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -47,8 +46,13 @@ func TestEnqueueWatchingObjects(t *testing.T) {
 		},
 	})
 
-	h := NewEnqueueWatchingObjects(ownerRefGetter, &corev1.ConfigMap{}, scheme)
-	h.Create(context.Background(), event.CreateEvent{
+	h := &EnqueueWatchingObjects{
+		WatcherRefGetter: ownerRefGetter,
+		WatcherType:      &corev1.ConfigMap{},
+	}
+	require.NoError(t, h.InjectScheme(scheme))
+
+	h.Create(event.CreateEvent{
 		Object: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
