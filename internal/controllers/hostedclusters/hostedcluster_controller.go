@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/ownerhandling"
+	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/ownerhandling"
 )
 
 type HostedClusterController struct {

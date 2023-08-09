@@ -11,8 +11,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
-	"package-operator.run/package-operator/internal/packages"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func Image(files packagecontent.Files) (v1.Image, error) {

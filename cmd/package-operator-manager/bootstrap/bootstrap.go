@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/package-operator/cmd/package-operator-manager/components"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/packages/packageimport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/cmd/package-operator-manager/components"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 const packageOperatorDeploymentName = "package-operator-manager"

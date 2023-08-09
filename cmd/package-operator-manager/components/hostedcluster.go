@@ -4,7 +4,7 @@ import (
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"package-operator.run/package-operator/internal/controllers/hostedclusters"
+	"package-operator.run/internal/controllers/hostedclusters"
 )
 
 // Type alias for dependency injector to differentiate

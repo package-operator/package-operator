@@ -7,8 +7,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/package-operator/internal/packages/packageexport"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/packages/packageexport"
+	"package-operator.run/internal/testutil"
 )
 
 func TestImage(t *testing.T) {

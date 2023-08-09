@@ -23,11 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	pkoapis "package-operator.run/apis"
-	"package-operator.run/package-operator/internal/controllers"
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/package-operator/internal/dynamiccache"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/metrics"
+	"package-operator.run/internal/controllers"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/dynamiccache"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/metrics"
 )
 
 // Returns a new pre-configured DI container.

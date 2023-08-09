@@ -12,7 +12,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packageadmission"
+	"package-operator.run/internal/packages/packageadmission"
 )
 
 func TestValidatePackageConfiguration(t *testing.T) {

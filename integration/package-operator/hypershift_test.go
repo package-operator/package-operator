@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	hypershiftv1beta1 "package-operator.run/package-operator/internal/controllers/hostedclusters/hypershift/v1beta1"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 func TestHyperShift(t *testing.T) {

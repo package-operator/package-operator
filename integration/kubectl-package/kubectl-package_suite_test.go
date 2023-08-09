@@ -28,8 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packageexport"
-	"package-operator.run/package-operator/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packageexport"
+	"package-operator.run/internal/packages/packageimport"
 )
 
 func TestKubectlPackage(t *testing.T) {
@@ -134,7 +134,7 @@ func buildPluginBinary() (string, error) {
 }
 
 const (
-	module  = "package-operator.run/package-operator"
+	module  = "package-operator.run"
 	version = "v0.0.0"
 )
 

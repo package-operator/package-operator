@@ -12,11 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/packages/packagedeploy"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/packages/packagedeploy"
 )
 
 const loaderJobFinalizer = "package-operator.run/loader-job"

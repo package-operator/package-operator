@@ -3,7 +3,7 @@ package deps
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 func ProvideScheme() (*runtime.Scheme, error) {

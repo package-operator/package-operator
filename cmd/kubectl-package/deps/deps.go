@@ -3,7 +3,7 @@ package deps
 import (
 	"go.uber.org/dig"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/rootcmd"
+	"package-operator.run/cmd/kubectl-package/rootcmd"
 )
 
 func Build() (*dig.Container, error) {

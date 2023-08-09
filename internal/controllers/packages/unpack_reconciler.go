@@ -13,11 +13,11 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/adapters"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/environment"
-	"package-operator.run/package-operator/internal/metrics"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.

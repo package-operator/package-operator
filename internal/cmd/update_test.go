@@ -13,7 +13,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func TestUpdate(t *testing.T) {

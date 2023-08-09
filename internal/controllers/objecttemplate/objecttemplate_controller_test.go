@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil"
-	"package-operator.run/package-operator/internal/testutil/dynamiccachemocks"
-	"package-operator.run/package-operator/internal/testutil/restmappermock"
+	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/dynamiccachemocks"
+	"package-operator.run/internal/testutil/restmappermock"
 )
 
 var testScheme = runtime.NewScheme()

@@ -17,9 +17,9 @@ import (
 	pkoapis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/packages/packageimport"
-	"package-operator.run/package-operator/internal/packages/packageloader"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packageloader"
 )
 
 var testScheme = runtime.NewScheme()

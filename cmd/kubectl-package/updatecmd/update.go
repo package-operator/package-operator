@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	internalcmd "package-operator.run/package-operator/internal/cmd"
-	"package-operator.run/package-operator/internal/packages"
+	internalcmd "package-operator.run/internal/cmd"
+	"package-operator.run/internal/packages"
 )
 
 type Updater interface {

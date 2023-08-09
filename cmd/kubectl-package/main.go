@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"package-operator.run/package-operator/cmd/kubectl-package/deps"
+	"package-operator.run/cmd/kubectl-package/deps"
 )
 
 const (

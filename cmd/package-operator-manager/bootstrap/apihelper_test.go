@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 func TestIsPKOAvailable(t *testing.T) {

@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"package-operator.run/package-operator/internal/environment"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -26,8 +24,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/package-operator/internal/controllers"
-	"package-operator.run/package-operator/internal/preflight"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
+	"package-operator.run/internal/preflight"
 )
 
 // Requeue every 30s to check if input sources exist now.

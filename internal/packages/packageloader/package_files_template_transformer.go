@@ -8,9 +8,9 @@ import (
 	"text/template"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
-	"package-operator.run/package-operator/internal/transform"
+	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/transform"
 )
 
 var _ FilesTransformer = (*PackageFileTemplateTransformer)(nil)

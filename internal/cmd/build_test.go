@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func TestPreBuildValidation(t *testing.T) {

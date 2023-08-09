@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 func TestEnqueueWatchingObjects(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	internalcmd "package-operator.run/package-operator/internal/cmd"
+	internalcmd "package-operator.run/internal/cmd"
 )
 
 type Validator interface {

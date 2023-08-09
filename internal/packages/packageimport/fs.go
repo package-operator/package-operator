@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"package-operator.run/package-operator/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagecontent"
 )
 
 func FS(ctx context.Context, src fs.FS) (packagecontent.Files, error) {

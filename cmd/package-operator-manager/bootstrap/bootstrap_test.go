@@ -13,7 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/package-operator/internal/testutil"
+	"package-operator.run/internal/testutil"
 )
 
 func TestBootstrapperBootstrap(t *testing.T) {
