@@ -220,11 +220,10 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
 
 	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
-	require.EqualError(t,
-		Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
-			cm := obj.(*corev1.ConfigMap)
-			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second)), wait.ErrWaitTimeout.Error())
+	require.True(t, wait.Interrupted(Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+		cm := obj.(*corev1.ConfigMap)
+		return cm.Data["banana"] == "bread", nil
+	}, dev.WithTimeout(5*time.Second))))
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,

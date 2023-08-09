@@ -31,7 +31,7 @@ type HostedClusterController struct {
 type ownerStrategy interface {
 	SetControllerReference(owner, obj metav1.Object) error
 	EnqueueRequestForOwner(
-		ownerType client.Object, isController bool,
+		ownerType client.Object, mapper meta.RESTMapper, isController bool,
 	) handler.EventHandler
 }
 
@@ -124,10 +124,8 @@ func hostedClusterNamespace(cluster *v1beta1.HostedCluster) string {
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1.HostedCluster{}).
-		Watches(&source.Kind{
-			Type: &corev1alpha1.Package{},
-		}, c.ownerStrategy.EnqueueRequestForOwner(
-			&v1beta1.HostedCluster{}, true,
+		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1alpha1.Package{}), c.ownerStrategy.EnqueueRequestForOwner(
+			&v1beta1.HostedCluster{}, mgr.GetRESTMapper(), true,
 		)).
 		Complete(c)
 }

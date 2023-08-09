@@ -4,6 +4,7 @@ package environment
 
 import (
 	"context"
+	stdErrors "errors"
 	"fmt"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -143,12 +145,13 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	err = m.client.Get(ctx, client.ObjectKey{
 		Name: openShiftClusterVersionName,
 	}, clusterVersion)
-	if meta.IsNoMatchError(err) {
+
+	switch {
+	case meta.IsNoMatchError(err) || errors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(stdErrors.Unwrap(err)):
 		// API not registered in cluster
 		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("getting OpenShift ClusterVersion: %w", err)
+	case err != nil:
+		return nil, false, err
 	}
 
 	var openShiftVersion string
