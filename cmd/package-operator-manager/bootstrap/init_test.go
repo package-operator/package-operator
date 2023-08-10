@@ -132,13 +132,6 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					depl.Status.AvailableReplicas = 0
 				}).Return(nil)
 
-				// skip waiting in ensurePKODeploymentGone() by directly sending a not found back
-				c.On("Delete",
-					mock.Anything,
-					mock.IsType(&appsv1.Deployment{}),
-					mock.Anything,
-				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
-
 				// Bootstrap is needed to get PKO back up running
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.True(t, needsBootstrap)

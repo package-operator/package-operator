@@ -124,10 +124,9 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 			return false, nil
 		}
 
-		// PKO is not available. Remove deployment and bootstrap.
-		if err := init.ensurePKODeploymentGone(ctx); err != nil {
-			return false, err
-		}
+		// PKO is not available. Run bootstrap.
+		// If we get a leader election lock, in-cluster PKO is down.
+		// If we don't, in-cluster PKO should come online eventually.
 		return true, nil
 	}
 
