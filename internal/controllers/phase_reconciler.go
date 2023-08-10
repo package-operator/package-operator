@@ -123,7 +123,14 @@ func (p *recordingProbe) Probe(obj *unstructured.Unstructured) {
 	if ok {
 		return
 	}
+	p.recordForObj(obj, msg)
+}
 
+func (p *recordingProbe) RecordMissingObject(obj *unstructured.Unstructured) {
+	p.recordForObj(obj, "not found")
+}
+
+func (p *recordingProbe) recordForObj(obj *unstructured.Unstructured, msg string) {
 	gvk := obj.GroupVersionKind()
 	msg = fmt.Sprintf("%s %s %s/%s: %s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName(), msg)
 
@@ -192,6 +199,11 @@ func (r *PhaseReconciler) ReconcilePhase(
 	for i, phaseObject := range phase.Objects {
 		desiredObj := &desiredObjects[i]
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, desiredObj, previous)
+		if errors.IsNotFound(err) {
+			// Don't error, just observe.
+			rec.RecordMissingObject(desiredObj)
+			continue
+		}
 		if err != nil {
 			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
 		}
