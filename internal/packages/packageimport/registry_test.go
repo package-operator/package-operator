@@ -54,7 +54,7 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 
 	const (
 		numRequests  = 3
-		requestDelay = 5 * time.Millisecond
+		requestDelay = 100 * time.Millisecond
 	)
 
 	ipm := &imagePullerMock{}

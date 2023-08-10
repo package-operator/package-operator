@@ -108,41 +108,39 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	// ClusterPackage found.
-	// Check if ClusterPackage spec changed.
-	clusterPackageEqual := equality.Semantic.DeepEqual(
-		bootstrapClusterPackage.Spec, existingClusterPackage.Spec)
-	if clusterPackageEqual {
-		// ClusterPackage specs are equal.
-		// Check if PKO is available.
-		isAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
-		if err != nil {
+	log := logr.FromContextOrDiscard(ctx)
+	if bootstrapClusterPackage.Spec.Image != existingClusterPackage.Spec.Image {
+		log.Info("image has been updated",
+			"from", existingClusterPackage.Spec.Image,
+			"to", bootstrapClusterPackage.Spec.Image)
+
+		// ClusterPackage specs differ. Shut down PKO, update ClusterPackage and run bootstrapper.
+		if err := init.ensurePKODeploymentGone(ctx); err != nil {
 			return false, err
 		}
-		if isAvailable {
-			// PKO is available. Skip bootstrap.
-			return false, nil
+		if err := init.ensurePKORevisionsPaused(ctx, bootstrapClusterPackage); err != nil {
+			return false, err
 		}
-
-		// PKO is not available. Run bootstrap.
-		// If we get a leader election lock, in-cluster PKO is down.
-		// If we don't, in-cluster PKO should come online eventually.
-		return true, nil
 	}
 
-	// ClusterPackage specs differ. Shut down PKO, update ClusterPackage and run bootstrapper.
-	if err := init.ensurePKODeploymentGone(ctx); err != nil {
+	if !equality.Semantic.DeepEqual(
+		bootstrapClusterPackage.Spec, existingClusterPackage.Spec) {
+		log.Info("patching PackageOperator ClusterPackage")
+		if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
+			return false, err
+		}
+	}
+
+	isAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
+	if err != nil {
 		return false, err
 	}
-
-	if err := init.ensurePKORevisionsPaused(ctx, bootstrapClusterPackage); err != nil {
-		return false, err
+	if isAvailable {
+		// PKO is available. Skip bootstrap.
+		log.Info("PackageOperator is available")
+		return false, nil
 	}
-
-	if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
-		return false, err
-	}
-
+	log.Info("PackageOperator is NOT available")
 	return true, nil
 }
 
