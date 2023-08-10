@@ -50,29 +50,17 @@ func TestUpgrade(t *testing.T) {
 
 	log.Info("Installing latest released PKO", "job", LatestSelfBootstrapJobURL)
 	require.NoError(t, createAndWaitFromHTTP(ctx, []string{LatestSelfBootstrapJobURL}))
-
-	jobList := &batchv1.JobList{}
-	require.NoError(t, Client.List(
-		ctx, jobList,
-		client.InNamespace(PackageOperatorNamespace),
-	))
-	for i := range jobList.Items {
-		require.NoError(t,
-			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
-				func(obj client.Object) (done bool, err error) { return false, nil },
-				dev.WithTimeout(UpgradeTestWaitTimeout)))
-	}
-
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg,
-			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
-			dev.WithTimeout(UpgradeTestWaitTimeout)))
+	assertInstallDone(ctx, t, pkg)
 	log.Info("Latest released PKO is now available")
 
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
 	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
+	assertInstallDone(ctx, t, pkg)
+}
 
-	jobList = &batchv1.JobList{}
+func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.ClusterPackage) {
+	t.Helper()
+	jobList := &batchv1.JobList{}
 	require.NoError(t, Client.List(
 		ctx, jobList,
 		client.InNamespace(PackageOperatorNamespace),

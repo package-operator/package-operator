@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/controllers/objectdeployments"
 	"package-operator.run/internal/packages/packagecontent"
@@ -135,14 +136,12 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if err := init.ensurePKORevisionsPaused(ctx); err != nil {
+	if err := init.ensurePKORevisionsPaused(ctx, bootstrapClusterPackage); err != nil {
 		return false, err
 	}
 
-	if !clusterPackageEqual {
-		if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
-			return false, err
-		}
+	if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
+		return false, err
 	}
 
 	return true, nil
@@ -150,7 +149,7 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 
 // Pauses all existing PKO ObjectSets to ensure we don't install an old version again,
 // before moving on to the actual latest version.
-func (init *initializer) ensurePKORevisionsPaused(ctx context.Context) error {
+func (init *initializer) ensurePKORevisionsPaused(ctx context.Context, pkg *corev1alpha1.ClusterPackage) error {
 	cosList := &corev1alpha1.ClusterObjectSetList{}
 	err := init.client.List(
 		ctx, cosList,
@@ -164,7 +163,22 @@ func (init *initializer) ensurePKORevisionsPaused(ctx context.Context) error {
 
 	for i := range cosList.Items {
 		cos := &cosList.Items[i]
-		cos.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+
+		var updateNeeded bool
+		cosPackageSource := cos.Annotations[manifestsv1alpha1.PackageSourceImageAnnotation]
+		if cosPackageSource == pkg.Spec.Image &&
+			cos.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused {
+			// This revision is supposed to be present, but has been paused for some reason.
+			cos.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
+			updateNeeded = true
+		} else if cos.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive {
+			cos.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+			updateNeeded = true
+		}
+
+		if !updateNeeded {
+			continue
+		}
 		if err := init.client.Update(ctx, cos); err != nil {
 			return fmt.Errorf("pausing PKO ClusterObjectSet: %w", err)
 		}
