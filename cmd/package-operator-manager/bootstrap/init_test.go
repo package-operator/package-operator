@@ -192,6 +192,18 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					*pkg = *existingPkg
 				}).Return(nil)
 
+				// it has to check if PKO deployment is available
+				// mock an available PKO and validate that nothing else happens
+				c.On("Get",
+					mock.Anything,
+					mock.IsType(client.ObjectKey{}),
+					mock.IsType(&appsv1.Deployment{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					depl := args.Get(2).(*appsv1.Deployment)
+					depl.Status.AvailableReplicas = 0
+				}).Return(nil)
+
 				c.On("List",
 					mock.Anything,
 					mock.IsType(&corev1alpha1.ClusterObjectSetList{}),
