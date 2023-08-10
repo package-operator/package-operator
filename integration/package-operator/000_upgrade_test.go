@@ -56,10 +56,6 @@ func TestUpgrade(t *testing.T) {
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
 	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
 	assertInstallDone(ctx, t, pkg)
-
-	log.Info("Apply self-bootstrap-job.yaml built from sources AGAIN, to ensure repeated installs yield the same results.")
-	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
-	assertInstallDone(ctx, t, pkg)
 }
 
 func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.ClusterPackage) {

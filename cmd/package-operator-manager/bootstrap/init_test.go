@@ -205,7 +205,11 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.Anything,
 				).Run(func(args mock.Arguments) {
 					list := args.Get(1).(*corev1alpha1.ClusterObjectSetList)
-					list.Items = append(list.Items, corev1alpha1.ClusterObjectSet{})
+					list.Items = append(list.Items, corev1alpha1.ClusterObjectSet{
+						Spec: corev1alpha1.ClusterObjectSetSpec{
+							LifecycleState: corev1alpha1.ObjectSetLifecycleStateActive,
+						},
+					})
 				}).Return(nil)
 
 				c.On("Update",
@@ -259,6 +263,63 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					client: c,
 				})
 		})
+	}
+}
+
+func Test_initializer_ensurePKORevisionsPaused(t *testing.T) {
+	t.Parallel()
+	c := testutil.NewClient()
+	init := &initializer{
+		client: c,
+	}
+
+	// Should be paused
+	cos1 := &corev1alpha1.ClusterObjectSet{}
+	cos1.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
+
+	// Should be unpaused
+	cos2 := &corev1alpha1.ClusterObjectSet{}
+	cos2.Annotations = map[string]string{
+		manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx",
+	}
+	cos2.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+	cosList := &corev1alpha1.ClusterObjectSetList{}
+	cosList.Items = []corev1alpha1.ClusterObjectSet{
+		*cos1, *cos2,
+	}
+
+	c.On("List",
+		mock.Anything,
+		mock.IsType(&corev1alpha1.ClusterObjectSetList{}),
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		l := args.Get(1).(*corev1alpha1.ClusterObjectSetList)
+		*l = *cosList
+	}).Return(nil)
+
+	var updatedCOS []corev1alpha1.ClusterObjectSet
+	c.On("Update",
+		mock.Anything,
+		mock.IsType(&corev1alpha1.ClusterObjectSet{}),
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		cos := args.Get(1).(*corev1alpha1.ClusterObjectSet)
+		updatedCOS = append(updatedCOS, *cos)
+	}).Return(nil)
+
+	ctx := context.Background()
+	err := init.ensurePKORevisionsPaused(ctx, &corev1alpha1.ClusterPackage{
+		Spec: corev1alpha1.PackageSpec{
+			Image: "quay.io/xxx",
+		},
+	})
+	require.NoError(t, err)
+
+	if assert.Len(t, updatedCOS, 2) {
+		assert.Equal(t,
+			corev1alpha1.ObjectSetLifecycleStatePaused, updatedCOS[0].Spec.LifecycleState)
+		assert.Equal(t,
+			corev1alpha1.ObjectSetLifecycleStateActive, updatedCOS[1].Spec.LifecycleState)
 	}
 }
 
