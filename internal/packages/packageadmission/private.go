@@ -83,7 +83,7 @@ func validateCustomResourceDefinitionValidation(ctx context.Context, customResou
 	}
 	schema := customResourceValidation.OpenAPIV3Schema
 	if schema == nil {
-		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation); err != nil {
+		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, "", fmt.Sprintf("error building validator: %v", err)))
 		}
 		return allErrs
@@ -136,7 +136,7 @@ func validateCustomResourceDefinitionValidation(ctx context.Context, customResou
 
 	// if validation passed otherwise, make sure we can actually construct a schema validator from this custom resource validation.
 	if len(allErrs) == 0 {
-		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation); err != nil {
+		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, "", fmt.Sprintf("error building validator: %v", err)))
 		}
 	}
@@ -467,7 +467,7 @@ func validateSchemaStuffWithXPrefixedName(schema *apiextensions.JSONSchemaProps,
 	case typeInfo == nil:
 		allErrs.CELErrors = append(allErrs.CELErrors, field.InternalError(fldPath.Child("x-kubernetes-validations"), fmt.Errorf("internal error: %w", ErrXKubernetesValidations)))
 	default:
-		compResults, err := cel.Compile(typeInfo.Schema, typeInfo.DeclType, apiserverapiscel.PerCallLimit)
+		compResults, err := cel.Compile(typeInfo.Schema, typeInfo.DeclType, apiserverapiscel.PerCallLimit, nil, nil)
 		if err != nil {
 			allErrs.CELErrors = append(allErrs.CELErrors, field.InternalError(fldPath.Child("x-kubernetes-validations"), err))
 			return allErrs

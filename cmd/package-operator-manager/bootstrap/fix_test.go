@@ -80,17 +80,14 @@ func newRunCheckerMock() *runCheckerMock {
 func (s *runCheckerMock) program(t *testing.T, checkResult bool, checkErr error, runErr error) *runCheckerMock {
 	t.Helper()
 
-	isTypeCtx := mock.IsType(context.TODO())
 	isTypeFixCtx := mock.IsType(fix.Context{})
 
 	// program `.Check(...)` with provided return values
-	s.On("Check", isTypeCtx, isTypeFixCtx).
-		Return(checkResult, checkErr)
+	s.On("Check", mock.Anything, isTypeFixCtx).Return(checkResult, checkErr)
 
 	// program `.Run(...)` if call to `.Check(...)` results in `true` and no error
 	if checkResult && checkErr == nil {
-		s.On("Run", isTypeCtx, isTypeFixCtx).
-			Return(runErr)
+		s.On("Run", mock.Anything, isTypeFixCtx).Return(runErr)
 	}
 
 	return s

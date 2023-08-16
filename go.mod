@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
-	github.com/mt-sre/devkube v0.6.4
+	github.com/mt-sre/devkube v0.6.5
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
 	github.com/opencontainers/go-digest v1.0.0
@@ -28,11 +28,11 @@ require (
 	golang.org/x/mod v0.12.0
 	gotest.tools/v3 v3.5.0
 	k8s.io/api v0.28.0
-	k8s.io/apiextensions-apiserver v0.27.4
+	k8s.io/apiextensions-apiserver v0.28.0
 	k8s.io/apimachinery v0.28.0
-	k8s.io/apiserver v0.27.4
+	k8s.io/apiserver v0.28.0
 	k8s.io/client-go v0.28.0
-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
+	k8s.io/kube-openapi v0.0.0-20230811205723-7ac0aad8c58d
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	package-operator.run/apis v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.15.1
@@ -83,7 +83,7 @@ require (
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
-	github.com/imdario/mergo v0.3.15 // indirect
+	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
