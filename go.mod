@@ -30,7 +30,7 @@ require (
 	k8s.io/api v0.28.0
 	k8s.io/apiextensions-apiserver v0.27.4
 	k8s.io/apimachinery v0.28.0
-	k8s.io/apiserver v0.27.4
+	k8s.io/apiserver v0.28.0
 	k8s.io/client-go v0.28.0
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
