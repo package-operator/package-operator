@@ -9,14 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -36,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/yaml"
@@ -46,20 +45,20 @@ import (
 
 // Constants that define build behaviour.
 const (
-	module                 = "package-operator.run"
-	defaultImageOrg        = "quay.io/package-operator"
-	clusterName            = "package-operator-dev"
-	cliCmdName             = "kubectl-package"
-	pkoPackageName         = "package-operator-package"
-	remotePhasePackageName = "remote-phase-package"
-  defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
+	module                       = "package-operator.run"
+	defaultImageOrg              = "quay.io/package-operator"
+	clusterName                  = "package-operator-dev"
+	cliCmdName                   = "kubectl-package"
+	pkoPackageName               = "package-operator-package"
+	remotePhasePackageName       = "remote-phase-package"
+	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
 	controllerGenVersion = "0.12.1"
-	golangciLintVersion  = "1.53.3"
+	golangciLintVersion  = "1.54.1"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.0"
-	helmVersion          = "3.12.2"
+	helmVersion          = "3.12.3"
 
 	coverProfilingMinGoVersion = "1.20.0"
 )
@@ -1210,7 +1209,7 @@ func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
 		new := []byte("kubernetes.default")
 		kubeconfigBytes = bytes.Replace(kubeconfigBytes, old, new, -1) // use in-cluster DNS
 	} else {
-		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
+		kubeconfigBytes, err = os.ReadFile(targetKubeconfigPath)
 		if err != nil {
 			panic(fmt.Errorf("reading in kubeconfig: %w", err))
 		}
