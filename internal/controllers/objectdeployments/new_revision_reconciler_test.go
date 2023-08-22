@@ -103,7 +103,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			deploymentGeneration:       5,
 			deploymentHash:             "xyz",
 			conflict:                   true,
-			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true, true, false),
+			conflictObject:             makeObjectSet("test-xyz", "test", 4, "xyz", true, true, false),
 			expectedHashCollisionCount: 0,
 		},
 		{

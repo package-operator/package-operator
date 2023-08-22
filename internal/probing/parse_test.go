@@ -75,11 +75,18 @@ func TestParseProbes(t *testing.T) {
 			Status: "asdf",
 		},
 	}
+	cel := corev1alpha1.Probe{
+		CEL: &corev1alpha1.ProbeCELSpec{
+			Message: "test",
+			Rule:    `self.metadata.name == "test"`,
+		},
+	}
 	emptyConfigProbe := corev1alpha1.Probe{}
 
-	p := ParseProbes(context.Background(), []corev1alpha1.Probe{
-		fep, cp, emptyConfigProbe,
+	p, err := ParseProbes(context.Background(), []corev1alpha1.Probe{
+		fep, cp, cel, emptyConfigProbe,
 	})
+	require.NoError(t, err)
 	// everything should be wrapped
 	require.IsType(t, &statusObservedGenerationProbe{}, p)
 
@@ -87,7 +94,7 @@ func TestParseProbes(t *testing.T) {
 	nested := ogProbe.Prober
 	require.IsType(t, list{}, nested)
 
-	if assert.Len(t, nested, 2) {
+	if assert.Len(t, nested, 3) {
 		nestedList := nested.(list)
 		assert.Equal(t, &fieldsEqualProbe{
 			FieldA: "asdf",

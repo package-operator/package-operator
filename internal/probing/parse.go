@@ -15,8 +15,14 @@ import (
 func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Prober, error) {
 	probeList := make(list, len(packageProbes))
 	for i, pkgProbe := range packageProbes {
-		probe := ParseProbes(ctx, pkgProbe.Probes)
-		var err error
+		var (
+			probe Prober
+			err   error
+		)
+		probe, err = ParseProbes(ctx, pkgProbe.Probes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing probe #%d: %w", i, err)
+		}
 		probe, err = ParseSelector(ctx, pkgProbe.Selector, probe)
 		if err != nil {
 			return nil, fmt.Errorf("parsing selector of probe #%d: %w", i, err)
@@ -52,10 +58,13 @@ func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe
 }
 
 // ParseProbes takes a []corev1alpha1.Probe and compiles it into a Prober.
-func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) Prober {
+func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) (Prober, error) {
 	var probeList list
 	for _, probeSpec := range probeSpecs {
-		var probe Prober
+		var (
+			probe Prober
+			err   error
+		)
 
 		switch {
 		case probeSpec.FieldsEqual != nil:
@@ -70,6 +79,15 @@ func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 				probeSpec.Condition.Status,
 			)
 
+		case probeSpec.CEL != nil:
+			probe, err = newCELProbe(
+				probeSpec.CEL.Rule,
+				probeSpec.CEL.Message,
+			)
+			if err != nil {
+				return nil, err
+			}
+
 		default:
 			// probe has no known config
 			continue
@@ -78,5 +96,5 @@ func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) Prober {
 	}
 
 	// Always check .status.observedCondition, if present.
-	return &statusObservedGenerationProbe{Prober: probeList}
+	return &statusObservedGenerationProbe{Prober: probeList}, nil
 }
