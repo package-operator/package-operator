@@ -57,7 +57,7 @@ func run(opts components.Options) error {
 		return nil
 	}
 
-	ctx := ctrl.SetupSignalHandler()
+	ctx := logr.NewContext(ctrl.SetupSignalHandler(), ctrl.Log)
 	if len(opts.SelfBootstrap) > 0 {
 		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {
 			return err
