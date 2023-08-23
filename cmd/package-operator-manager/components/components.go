@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	pkoapis "package-operator.run/apis"
@@ -95,12 +96,10 @@ func ProvideManager(
 	opts Options,
 ) (ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     opts.MetricsAddr,
-		HealthProbeBindAddress: opts.ProbeAddr,
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Port: 9443,
-		}),
+		Scheme:                     scheme,
+		Metrics:                    server.Options{BindAddress: opts.MetricsAddr},
+		HealthProbeBindAddress:     opts.ProbeAddr,
+		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",

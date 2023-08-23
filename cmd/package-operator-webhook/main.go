@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -55,9 +56,8 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     "0",
-		Port:                   port,
-		CertDir:                certDir,
+		Metrics:                server.Options{BindAddress: "0"},
+		WebhookServer:          webhook.NewServer(webhook.Options{Port: port, CertDir: certDir}),
 		HealthProbeBindAddress: probeAddr,
 	})
 	if err != nil {

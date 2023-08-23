@@ -17,11 +17,14 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	pkoapis "package-operator.run/apis"
 	"package-operator.run/internal/controllers"
@@ -90,12 +93,16 @@ func main() {
 }
 
 func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
+	namespaces := map[string]cache.Config{}
+	if opts.namespace != "" {
+		namespaces[opts.namespace] = cache.Config{}
+	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Namespace:                  opts.namespace,
+		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
+		Cache:                      cache.Options{DefaultNamespaces: namespaces},
+		Metrics:                    server.Options{BindAddress: opts.metricsAddr},
 		Scheme:                     scheme,
-		MetricsBindAddress:         opts.metricsAddr,
 		HealthProbeBindAddress:     opts.probeAddr,
-		Port:                       9443,
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "klsdfu452p3.package-operator-lock",
