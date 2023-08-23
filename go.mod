@@ -2,6 +2,8 @@ module package-operator.run
 
 go 1.20
 
+replace package-operator.run/apis => ./apis
+
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/davecgh/go-spew v1.1.1
@@ -9,14 +11,14 @@ require (
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/stdr v1.2.2
-	github.com/google/cel-go v0.16.0
+	github.com/google/cel-go v0.16.1
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.6.5
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/openshift/api v0.0.0-20230815081605-d7f5a4c98505
+	github.com/openshift/api v0.0.0-20230822121351-cd0541be0908
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/pterm/pterm v0.12.66
@@ -25,7 +27,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/dig v1.17.0
 	go.uber.org/zap v1.25.0
-	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	golang.org/x/mod v0.12.0
 	golang.org/x/sys v0.11.0
 	gotest.tools/v3 v3.5.0
@@ -36,7 +38,7 @@ require (
 	k8s.io/client-go v0.28.1
 	k8s.io/kube-openapi v0.0.0-20230811205723-7ac0aad8c58d
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
-	package-operator.run/apis v0.0.0-00010101000000-000000000000
+	package-operator.run/apis v1.8.0
 	sigs.k8s.io/controller-runtime v0.16.0
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.3.0
@@ -78,7 +80,7 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230811205829-9131a7e9cc17 // indirect
+	github.com/google/pprof v0.0.0-20230821062121-407c9e7a662f // indirect
 	github.com/google/safetext v0.0.0-20230106111101-7156a760e523 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/gookit/color v1.5.4 // indirect
@@ -131,7 +133,7 @@ require (
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.12.0 // indirect
+	golang.org/x/tools v0.12.1-0.20230815132531-74c255bcf846 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
@@ -147,5 +149,3 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect
 )
-
-replace package-operator.run/apis => ./apis
