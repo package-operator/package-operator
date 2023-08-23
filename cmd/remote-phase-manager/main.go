@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"runtime/debug"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,6 +28,7 @@ import (
 	"package-operator.run/internal/controllers/objectsetphases"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/version"
 )
 
 type opts struct {
@@ -66,6 +66,12 @@ func main() {
 	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
 	flag.Parse()
 
+	if opts.printVersion {
+		_ = version.Get().Write(os.Stderr)
+
+		os.Exit(2)
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	scheme := runtime.NewScheme()
@@ -75,17 +81,6 @@ func main() {
 	}
 	if err := pkoapis.AddToScheme(scheme); err != nil {
 		panic(err)
-	}
-
-	if opts.printVersion {
-		version := "binary compiled without version info"
-
-		if info, ok := debug.ReadBuildInfo(); ok {
-			version = info.String()
-		}
-
-		_, _ = fmt.Fprintln(os.Stderr, version)
-		os.Exit(2)
 	}
 
 	if err := run(setupLog, scheme, opts); err != nil {
