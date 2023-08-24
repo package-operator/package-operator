@@ -29,7 +29,7 @@ require (
 	gotest.tools/v3 v3.5.0
 	k8s.io/api v0.28.0
 	k8s.io/apiextensions-apiserver v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/apiserver v0.28.0
 	k8s.io/client-go v0.28.0
 	k8s.io/kube-openapi v0.0.0-20230811205723-7ac0aad8c58d
