@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -99,7 +100,8 @@ var (
 	locations                      = newLocations()
 	logger             logr.Logger = stdr.New(nil)
 	applicationVersion string
-	// Push to development registry instead of pushing to quay.io.
+	imageRegistry      string
+	// Push to development registry instead of pushing to `imageOrg`.
 	pushToDevRegistry bool
 )
 
@@ -161,6 +163,8 @@ func newLocations() Locations {
 	absCache, err := filepath.Abs(".cache")
 	must(err)
 
+	// TODO(jgwosdz) Why is application version set right here inside newLocations?
+
 	// Use version from VERSION env if present, use "git describe" elsewise.
 	applicationVersion = strings.TrimSpace(os.Getenv("VERSION"))
 	if len(applicationVersion) == 0 {
@@ -180,6 +184,11 @@ func newLocations() Locations {
 	if len(imageOrg) == 0 {
 		imageOrg = defaultImageOrg
 	}
+
+	// extract image registry 'hostname' from `imageOrg`
+	url, err := url.Parse(fmt.Sprintf("http://%s", imageOrg))
+	must(err)
+	imageRegistry = url.Host
 
 	l := Locations{
 		lock: &sync.Mutex{}, cache: absCache, imageOrg: imageOrg,
@@ -506,7 +515,7 @@ func (l Locations) ImageURL(name string, useDigest bool) string {
 
 func (l Locations) LocalImageURL(name string) string {
 	url := l.ImageURL(name, false)
-	return strings.Replace(url, "quay.io", "localhost:5001", 1)
+	return strings.Replace(url, imageRegistry, "localhost:5001", 1)
 }
 
 func (l *Locations) ContainerRuntime() string {
@@ -571,9 +580,9 @@ func (l *Locations) DevEnv() *dev.Environment {
 			),
 			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
 				ContainerdConfigPatches: []string{
-					// Replace quay.io with our local dev-registry.
-					`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-	endpoint = ["http://localhost:31320"]`,
+					// Replace `imageRegistry` with our local dev-registry.
+					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
+	endpoint = ["http://localhost:31320"]`, imageRegistry),
 				},
 				Nodes: []kindv1alpha4.Node{
 					{
@@ -1443,11 +1452,6 @@ func (Generate) RemotePhasePackage() error {
 // generates a self-bootstrap-job.yaml based on the current VERSION.
 // requires the images to have been build beforehand.
 func (Generate) SelfBootstrapJob() {
-	const (
-		pkoDefaultManagerImage = "quay.io/package-operator/package-operator-manager:latest"
-		pkoDefaultPackageImage = "quay.io/package-operator/package-operator-package:latest"
-	)
-
 	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
 	if err != nil {
 		panic(err)
@@ -1471,15 +1475,15 @@ func (Generate) SelfBootstrapJob() {
 		pkoConfig        string
 	)
 	if pushToDevRegistry {
-		registyOverrides = "quay.io=dev-registry.dev-registry.svc.cluster.local:5001"
+		registyOverrides = fmt.Sprintf("%s=dev-registry.dev-registry.svc.cluster.local:5001", imageRegistry)
 		pkoConfig = fmt.Sprintf(`{"registryHostOverrides":"%s"}`, registyOverrides)
 	}
 
 	latestJob = bytes.ReplaceAll(latestJob, []byte(`##registry-overrides##`), []byte(registyOverrides))
 	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-config##`), []byte(pkoConfig))
 
-	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
-	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-manager-image##`), []byte(packageOperatorManagerImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-package-image##`), []byte(packageOperatorPackageImage))
 
 	must(os.WriteFile("config/self-bootstrap-job.yaml", latestJob, os.ModePerm))
 }
