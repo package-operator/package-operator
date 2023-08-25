@@ -6,10 +6,12 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/sys/unix"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/cmd/package-operator-manager/bootstrap/proxy"
 	"package-operator.run/cmd/package-operator-manager/components"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
@@ -57,17 +59,14 @@ func NewBootstrapper(
 
 func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx context.Context) error) error {
 	ctx = logr.NewContext(ctx, b.log)
-
 	log := b.log
+
+	if err := proxy.RestartPKOWithEnvvarsIfNeeded(log, unix.Exec, b.GetEnvironment()); err != nil {
+		return err
+	}
+
 	log.Info("running self-bootstrap")
 	defer log.Info("self-bootstrap done")
-
-	if env := b.GetEnvironment(); env.Proxy != nil {
-		// Make sure proxy settings are respected.
-		os.Setenv("HTTP_PROXY", env.Proxy.HTTPProxy)
-		os.Setenv("HTTPS_PROXY", env.Proxy.HTTPSProxy)
-		os.Setenv("NO_PROXY", env.Proxy.NoProxy)
-	}
 
 	needsBootstrap, err := b.init(ctx)
 	if err != nil {
