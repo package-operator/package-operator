@@ -12,7 +12,7 @@ require (
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.6.5
-	github.com/onsi/ginkgo/v2 v2.11.0
+	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/openshift/api v0.0.0-20230815081605-d7f5a4c98505
