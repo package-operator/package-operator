@@ -101,7 +101,7 @@ var (
 	logger             logr.Logger = stdr.New(nil)
 	applicationVersion string
 	imageRegistry      string
-	// Push to development registry instead of pushing to `imageOrg`.
+	// Push to development registry instead of pushing to `imageRegistry`.
 	pushToDevRegistry bool
 )
 
