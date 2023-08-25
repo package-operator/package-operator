@@ -319,6 +319,7 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
+  component: sadipscing
   config: runtime.RawExtension
   image: consetetur
 status:
@@ -369,28 +370,28 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: elitr
+      - class: sed
         externalObjects:
         - conditionMappings:
-          - destinationType: eirmod
-            sourceType: nonumy
+          - destinationType: tempor
+            sourceType: eirmod
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
-        name: sadipscing
+        name: elitr
         objects:
         - conditionMappings:
-          - destinationType: diam
-            sourceType: sed
+          - destinationType: nonumy
+            sourceType: diam
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - tempor
+        - lorem
       successDelaySeconds: 42
 status:
   phase:Pending: null
@@ -443,28 +444,28 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: ipsum
+  - class: dolor
     externalObjects:
     - conditionMappings:
-      - destinationType: consetetur
-        sourceType: amet
+      - destinationType: sadipscing
+        sourceType: consetetur
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
-    name: lorem
+    name: ipsum
     objects:
     - conditionMappings:
-      - destinationType: sit
-        sourceType: dolor
+      - destinationType: amet
+        sourceType: sit
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - sadipscing
+    - elitr
   previous:
   - name: previous-revision
   successDelaySeconds: 42
@@ -513,8 +514,8 @@ spec:
           app.kubernetes.io/name: example-operator
   externalObjects:
   - conditionMappings:
-    - destinationType: nonumy
-      sourceType: diam
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -522,8 +523,8 @@ spec:
         name: example-deployment
   objects:
   - conditionMappings:
-    - destinationType: sed
-      sourceType: elitr
+    - destinationType: diam
+      sourceType: sed
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -538,10 +539,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: tempor
-    kind: eirmod
-    name: lorem
-    namespace: ipsum
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -570,8 +571,8 @@ metadata:
   namespace: default
 objects:
 - conditionMappings:
-  - destinationType: sit
-    sourceType: dolor
+  - destinationType: amet
+    sourceType: sit
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -604,15 +605,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: consetetur
+  - apiVersion: sadipscing
     items:
-    - destination: nonumy
-      key: diam
-    kind: sadipscing
-    name: sed
-    namespace: elitr
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
     optional: "true"
-  template: amet
+  template: consetetur
 status:
   conditions:
   - metav1.Condition
@@ -642,8 +643,9 @@ metadata:
   name: example
   namespace: default
 spec:
+  component: lorem
   config: runtime.RawExtension
-  image: eirmod
+  image: tempor
 status:
   phase: Pending
 
@@ -1063,6 +1065,7 @@ Package specification.
 | ----- | ----------- |
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
+| `component` <br>string | Desired compenent to deploy from multi-component packages. |
 
 
 Used in:
@@ -1198,6 +1201,7 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
+  component: amet
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1214,20 +1218,20 @@ test:
       config: runtime.RawExtension
       environment:
         kubernetes:
-          version: elitr
-        openShift:
           version: sed
+        openShift:
+          version: diam
         proxy:
-          httpProxy: diam
-          httpsProxy: nonumy
-          noProxy: eirmod
+          httpProxy: nonumy
+          httpsProxy: eirmod
+          noProxy: tempor
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: consetetur
-          namespace: sadipscing
-    name: amet
+          name: sadipscing
+          namespace: elitr
+    name: consetetur
 
 ```
 
@@ -1254,9 +1258,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: ipsum
-    image: lorem
-    name: tempor
+  - digest: dolor
+    image: ipsum
+    name: lorem
 
 ```
 
@@ -1396,6 +1400,7 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `availabilityProbes` <br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
+| `component` <br>string | Desired compenent to deploy from multi-component packages. |
 
 
 Used in:

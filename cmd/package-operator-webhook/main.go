@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/version"
 	"package-operator.run/internal/webhooks"
 )
 
@@ -30,9 +31,10 @@ func init() {
 
 func main() {
 	var (
-		port      int
-		certDir   string
-		probeAddr string
+		port         int
+		certDir      string
+		probeAddr    string
+		printVersion bool
 	)
 
 	flag.IntVar(&port, "port", 8080, "The port the webhook server binds to")
@@ -40,7 +42,14 @@ func main() {
 		"The directory that contains the server key and certificate")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081",
 		"The address the probe endpoint binds to")
+	flag.BoolVar(&printVersion, "version", false, "print version information and exit")
 	flag.Parse()
+
+	if printVersion {
+		_ = version.Get().Write(os.Stderr)
+
+		os.Exit(2)
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 

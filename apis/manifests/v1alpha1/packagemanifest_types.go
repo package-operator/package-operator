@@ -67,6 +67,9 @@ type PackageManifestSpec struct {
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
 	// List of images to be resolved
 	Images []PackageManifestImage `json:"images"`
+	// Desired compenent to deploy from multi-component packages.
+	// +optional
+	Component string `json:"component,omitempty"`
 }
 
 type PackageManifestSpecConfig struct {

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"runtime/debug"
 	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,6 +21,7 @@ import (
 	"package-operator.run/cmd/package-operator-manager/teardown"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/environment"
+	"package-operator.run/internal/version"
 )
 
 const (
@@ -46,8 +45,9 @@ func main() {
 }
 
 func run(opts components.Options) error {
-	if opts.PrintVersion {
-		printVersion()
+	if opts.PrintVersion != nil {
+		_ = version.Get().Write(opts.PrintVersion)
+
 		return nil
 	}
 
@@ -128,14 +128,6 @@ func run(opts components.Options) error {
 	return di.Invoke(func(pkoMgr *packageOperatorManager) error {
 		return pkoMgr.Start(ctx)
 	})
-}
-
-func printVersion() {
-	version := "binary compiled without version info"
-	if info, ok := debug.ReadBuildInfo(); ok {
-		version = info.String()
-	}
-	fmt.Fprintln(os.Stderr, version)
 }
 
 type packageOperatorManager struct {
