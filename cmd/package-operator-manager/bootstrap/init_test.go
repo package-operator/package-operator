@@ -13,6 +13,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -152,6 +154,12 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 				).Run(func(args mock.Arguments) {
 					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
 					*pkg = *i.newPKOClusterPackage()
+					pkg.Generation = 5
+					meta.SetStatusCondition(&pkg.Status.Conditions, metav1.Condition{
+						Type:               corev1alpha1.PackageAvailable,
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: pkg.Generation,
+					})
 				}).Return(nil)
 
 				// it has to check if PKO deployment is available
@@ -164,6 +172,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 				).Run(func(args mock.Arguments) {
 					depl := args.Get(2).(*appsv1.Deployment)
 					depl.Status.AvailableReplicas = 1
+					depl.Status.UpdatedReplicas = depl.Status.AvailableReplicas
 				}).Return(nil)
 
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
@@ -401,10 +410,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 	crd := unstructured.Unstructured{}
 	crd.SetGroupVersionKind(crdGK.WithVersion("v1"))
 
-	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
-		Once().
-		Return(k8serrors.NewAlreadyExists(schema.GroupResource{}, ""))
-	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
+	c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	crds := []unstructured.Unstructured{crd, crd}

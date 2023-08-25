@@ -445,7 +445,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	testClient.
-		On("Create", mock.Anything, mock.Anything, mock.Anything).
+		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	ctx := context.Background()
@@ -809,47 +809,70 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 	t.Parallel()
 
-	os := &ownerStrategyMock{}
-	ac := &defaultAdoptionChecker{
-		scheme:        testScheme,
-		ownerStrategy: os,
-	}
-
-	os.On("IsController",
-		mock.AnythingOfType("*v1alpha1.ObjectSet"),
-		mock.Anything,
-	).Return(false)
-
-	os.On("IsController",
-		mock.AnythingOfType("*unstructured.Unstructured"),
-		mock.Anything,
-	).Return(true)
-
-	previousObj := &corev1alpha1.ObjectSet{}
-	previous := &previousObjectSetMock{}
-	previous.On("ClientObject").Return(previousObj)
-	previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
+	tests := []struct {
+		name string
+		obj  client.Object
+	}{
 		{
-			Name: "phase-1",
+			name: "ObjectSet",
+			obj:  &corev1alpha1.ObjectSet{},
 		},
-	})
-
-	obj := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: corev1alpha1.GroupVersion.String(),
-					Kind:       "ObjectSetPhase",
-					Name:       "phase-1",
-					Controller: ptr.To(true),
-				},
-			},
+		{
+			name: "ClusterObjectSet",
+			obj:  &corev1alpha1.ClusterObjectSet{},
 		},
 	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			os := &ownerStrategyMock{}
+			ac := &defaultAdoptionChecker{
+				scheme:        testScheme,
+				ownerStrategy: os,
+			}
 
-	isController := ac.isControlledByPreviousRevision(
-		obj, []PreviousObjectSet{previous})
-	assert.True(t, isController)
+			os.On("IsController",
+				mock.AnythingOfType("*v1alpha1.ObjectSet"),
+				mock.Anything,
+			).Return(false)
+
+			os.On("IsController",
+				mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
+				mock.Anything,
+			).Return(false)
+
+			os.On("IsController",
+				mock.AnythingOfType("*unstructured.Unstructured"),
+				mock.Anything,
+			).Return(true)
+
+			previous := &previousObjectSetMock{}
+			previous.On("ClientObject").Return(test.obj)
+			previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
+				{
+					Name: "phase-1",
+				},
+			})
+
+			obj := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: corev1alpha1.GroupVersion.String(),
+							Kind:       "ObjectSetPhase",
+							Name:       "phase-1",
+							Controller: ptr.To(true),
+						},
+					},
+				},
+			}
+
+			isController := ac.isControlledByPreviousRevision(
+				obj, []PreviousObjectSet{previous})
+			assert.True(t, isController)
+		})
+	}
 }
 
 func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
@@ -900,7 +923,7 @@ func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"},"resourceVersion":"123"}}`, string(patch))
+			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"}}}`, string(patch))
 	}
 }
 
@@ -959,11 +982,11 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"},"resourceVersion":"123"},"spec":{"key":"val"}}`, string(patch))
+			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"}},"spec":{"key":"val"}}`, string(patch))
 	}
 }
 
-func Test_defaultPatcher_patchObject_noop(t *testing.T) {
+func Test_defaultPatcher_fixFieldManagers(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
@@ -976,16 +999,124 @@ func Test_defaultPatcher_patchObject_noop(t *testing.T) {
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	// no need to patch anything, all objects are the same
-	desiredObj := &unstructured.Unstructured{}
-	currentObj := &unstructured.Unstructured{}
-	updatedObj := &unstructured.Unstructured{}
+	currentObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"name": "test",
+			},
+		},
+	}
+	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
+		{
+			Manager:   "package-operator-manager",
+			Operation: metav1.ManagedFieldsOperationUpdate,
+			FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+		},
+	})
 
-	err := r.Patch(ctx, desiredObj, currentObj, updatedObj)
+	err := r.fixFieldManagers(ctx, currentObj)
 	require.NoError(t, err)
 
-	clientMock.AssertNotCalled(
-		t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	clientMock.AssertExpectations(t)
+}
+
+func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
+	t.Parallel()
+
+	clientMock := testutil.NewClient()
+	r := &defaultPatcher{
+		writer: clientMock,
+	}
+	ctx := context.Background()
+
+	clientMock.
+		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(errTest)
+
+	currentObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"name": "test",
+			},
+		},
+	}
+	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
+		{
+			Manager:   "package-operator-manager",
+			Operation: metav1.ManagedFieldsOperationUpdate,
+			FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+		},
+	})
+
+	err := r.fixFieldManagers(ctx, currentObj)
+	require.Error(t, err, errTest.Error())
+
+	clientMock.AssertExpectations(t)
+}
+
+func Test_hasOldFieldOwners(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		managedFields []metav1.ManagedFieldsEntry
+		expected      bool
+	}{
+		{
+			name:     "No managed fields",
+			expected: false,
+		},
+		{
+			name: "package-operator owner with Apply operation",
+			managedFields: []metav1.ManagedFieldsEntry{
+				{
+					Manager:   FieldOwner,
+					Operation: metav1.ManagedFieldsOperationApply,
+					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "package-operator owner with Update operation",
+			managedFields: []metav1.ManagedFieldsEntry{
+				{
+					Manager:   FieldOwner,
+					Operation: metav1.ManagedFieldsOperationUpdate,
+					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Go-http-client with Update",
+			managedFields: []metav1.ManagedFieldsEntry{
+				{
+					Manager:   FieldOwner,
+					Operation: metav1.ManagedFieldsOperationUpdate,
+					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+				},
+			},
+			expected: true,
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"name": "test",
+					},
+				},
+			}
+			obj.SetManagedFields(test.managedFields)
+
+			out := hasOldFieldOwners(obj)
+			assert.Equal(t, test.expected, out)
+		})
+	}
 }
 
 func Test_mergeKeysFrom(t *testing.T) {

@@ -11,10 +11,15 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/testutil"
 )
+
+const testBootstrapTimeout = 2 * time.Second
 
 func TestBootstrapperBootstrap(t *testing.T) {
 	t.Parallel()
@@ -45,15 +50,31 @@ func TestBootstrapperBootstrap(t *testing.T) {
 	})
 
 	c.On("Get", mock.Anything, mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterPackage"),
+		mock.Anything).
+		Run(func(args mock.Arguments) {
+			cp := args.Get(2).(*corev1alpha1.ClusterPackage)
+			cp.Generation = 5
+			meta.SetStatusCondition(&cp.Status.Conditions, metav1.Condition{
+				Type:               corev1alpha1.PackageAvailable,
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: cp.Generation,
+			})
+		}).
+		Return(nil)
+	c.On("Get", mock.Anything, mock.Anything,
 		mock.AnythingOfType("*v1.Deployment"),
 		mock.Anything).
 		Run(func(args mock.Arguments) {
 			depl := args.Get(2).(*appsv1.Deployment)
 			depl.Status.AvailableReplicas = 1
+			depl.Status.UpdatedReplicas = depl.Status.AvailableReplicas
 		}).
 		Return(nil)
 
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, testBootstrapTimeout)
+	defer cancel()
 	err := b.Bootstrap(
 		ctx, func(ctx context.Context) error {
 			<-ctx.Done()
@@ -80,21 +101,36 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	)
 
 	c.On("Get", mock.Anything, mock.Anything,
+		mock.AnythingOfType("*v1alpha1.ClusterPackage"),
+		mock.Anything).
+		Run(func(args mock.Arguments) {
+			cp := args.Get(2).(*corev1alpha1.ClusterPackage)
+			cp.Generation = 5
+			meta.SetStatusCondition(&cp.Status.Conditions, metav1.Condition{
+				Type:               corev1alpha1.PackageAvailable,
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: cp.Generation,
+			})
+		}).
+		Return(nil)
+	c.On("Get", mock.Anything, mock.Anything,
 		mock.AnythingOfType("*v1.Deployment"),
 		mock.Anything).
 		Run(func(args mock.Arguments) {
 			depl := args.Get(2).(*appsv1.Deployment)
 			depl.Status.AvailableReplicas = 1
+			depl.Status.UpdatedReplicas = depl.Status.AvailableReplicas
 		}).
 		Return(nil)
 
 	ctx, cancel := context.WithTimeout(
-		context.Background(), 2*time.Second)
+		context.Background(), testBootstrapTimeout)
 	defer cancel()
 	err := b.bootstrap(ctx, func(ctx context.Context) error {
 		runManagerCalled = true
 		runManagerCtx = ctx
 		<-ctx.Done()
+		t.Log("CONTEXT DONE")
 		return nil
 	})
 	require.NoError(t, err)

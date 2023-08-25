@@ -182,8 +182,8 @@ func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
 
 	s.ReleaseController(obj)
 	ownerRefs = obj.GetOwnerReferences()
-	if assert.Len(t, ownerRefs, 1) {
-		assert.Nil(t, ownerRefs[0].Controller)
+	if assert.Len(t, ownerRefs, 1) && assert.NotNil(t, ownerRefs[0].Controller) {
+		assert.False(t, *ownerRefs[0].Controller)
 	}
 }
 

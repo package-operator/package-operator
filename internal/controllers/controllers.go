@@ -27,6 +27,8 @@ const (
 	ChangeCauseAnnotation = "kubernetes.io/change-cause"
 	// Causes PKO to skip ownership checks, used during self-bootstrap.
 	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
+	// Name of the PKO field manager for server-side apply.
+	FieldOwner = "package-operator"
 )
 
 // Ensures the given finalizer is set and persisted on the given object.

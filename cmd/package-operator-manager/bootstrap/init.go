@@ -193,7 +193,9 @@ func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
 	}
 
 	// use foreground deletion to ensure that all pods are gone when the deployment object vanishes from the apiserver
-	err := init.client.Delete(ctx, deployment, client.PropagationPolicy(metav1.DeletePropagationForeground))
+	err := init.client.Delete(ctx, deployment,
+		client.PropagationPolicy(metav1.DeletePropagationForeground),
+		client.GracePeriodSeconds(0))
 	if errors.IsNotFound(err) {
 		// object is already gone
 		return nil
@@ -251,8 +253,7 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		crd.SetLabels(labels)
 
 		log.Info("ensuring CRD", "name", crd.GetName())
-		if err := init.client.Create(ctx, crd); err != nil &&
-			!errors.IsAlreadyExists(err) {
+		if err := init.client.Patch(ctx, crd, client.Apply, client.FieldOwner(controllers.FieldOwner), client.ForceOwnership); err != nil {
 			return err
 		}
 	}

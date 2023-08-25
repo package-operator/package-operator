@@ -110,7 +110,12 @@ func (b *Bootstrapper) cancelWhenPackageAvailable(
 	err := wait.PollUntilContextCancel(
 		ctx, packageOperatorPackageCheckInterval, true,
 		func(ctx context.Context) (done bool, err error) {
-			return isPKOAvailable(ctx, b.client, b.pkoNamespace)
+			available, err := isPKOAvailable(ctx, b.client, b.pkoNamespace)
+			if err != nil {
+				return false, err
+			}
+			log.Info("waiting for PKO to become available", "available", available)
+			return available, nil
 		})
 	if err != nil {
 		panic(err)
