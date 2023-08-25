@@ -2,7 +2,7 @@ module package-operator.run/apis
 
 go 1.20
 
-require k8s.io/apimachinery v0.28.0
+require k8s.io/apimachinery v0.28.1
 
 require github.com/kr/text v0.2.0 // indirect
 
