@@ -27,11 +27,11 @@ require (
 	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
 	golang.org/x/mod v0.12.0
 	gotest.tools/v3 v3.5.0
-	k8s.io/api v0.28.0
+	k8s.io/api v0.28.1
 	k8s.io/apiextensions-apiserver v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/apiserver v0.28.0
-	k8s.io/client-go v0.28.0
+	k8s.io/client-go v0.28.1
 	k8s.io/kube-openapi v0.0.0-20230811205723-7ac0aad8c58d
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	package-operator.run/apis v0.0.0-00010101000000-000000000000
