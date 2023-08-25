@@ -37,7 +37,10 @@ spec:
     spec:
       availabilityProbes:
       - probes:
-        - condition:
+        - cel:
+            message: Object must be named Hans
+            rule: self.metadata.name == "Hans"
+          condition:
             status: "True"
             type: Available
           fieldsEqual:
@@ -109,7 +112,10 @@ metadata:
 spec:
   availabilityProbes:
   - probes:
-    - condition:
+    - cel:
+        message: Object must be named Hans
+        rule: self.metadata.name == "Hans"
+      condition:
         status: "True"
         type: Available
       fieldsEqual:
@@ -178,7 +184,10 @@ metadata:
 spec:
   availabilityProbes:
   - probes:
-    - condition:
+    - cel:
+        message: Object must be named Hans
+        rule: self.metadata.name == "Hans"
+      condition:
         status: "True"
         type: Available
       fieldsEqual:
@@ -356,7 +365,10 @@ spec:
     spec:
       availabilityProbes:
       - probes:
-        - condition:
+        - cel:
+            message: Object must be named Hans
+            rule: self.metadata.name == "Hans"
+          condition:
             status: "True"
             type: Available
           fieldsEqual:
@@ -429,7 +441,10 @@ metadata:
 spec:
   availabilityProbes:
   - probes:
-    - condition:
+    - cel:
+        message: Object must be named Hans
+        rule: self.metadata.name == "Hans"
+      condition:
         status: "True"
         type: Available
       fieldsEqual:
@@ -499,7 +514,10 @@ metadata:
 spec:
   availabilityProbes:
   - probes:
-    - condition:
+    - cel:
+        message: Object must be named Hans
+        rule: self.metadata.name == "Hans"
+      condition:
         status: "True"
         type: Available
       fieldsEqual:
@@ -1114,10 +1132,29 @@ Defines probe parameters. Only one can be filled.
 | ----- | ----------- |
 | `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | Checks whether or not the object reports a condition with given type and status. |
 | `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> | Compares two fields specified by JSON Paths. |
+| `cel` <br><a href="#probecelspec">ProbeCELSpec</a> | Uses Common Expression Language (CEL) to probe an object.<br>CEL rules have to evaluate to a boolean to be valid.<br>See:<br>https://kubernetes.io/docs/reference/using-api/cel<br>https://github.com/google/cel-go |
 
 
 Used in:
 * [ObjectSetProbe](#objectsetprobe)
+
+
+### ProbeCELSpec
+
+Uses Common Expression Language (CEL) to probe an object.
+CEL rules have to evaluate to a boolean to be valid.
+See:
+https://kubernetes.io/docs/reference/using-api/cel
+https://github.com/google/cel-go
+
+| Field | Description |
+| ----- | ----------- |
+| `rule` <b>required</b><br>string | CEL rule to evaluate. |
+| `message` <b>required</b><br>string | Error message to output if rule evaluates to false. |
+
+
+Used in:
+* [Probe](#probe)
 
 
 ### ProbeConditionSpec
