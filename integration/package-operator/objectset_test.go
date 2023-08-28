@@ -629,6 +629,34 @@ func simpleObjectSet(cm *corev1.ConfigMap, namespace, class string) (*corev1alph
 	}, nil
 }
 
+func objectsSetPhaseKey(objectSet *corev1alpha1.ObjectSet) client.ObjectKey {
+	return client.ObjectKey{
+		Name:      objectSet.Name + "-" + objectSet.Spec.ObjectSetTemplateSpec.Phases[0].Name,
+		Namespace: objectSet.Namespace,
+	}
+}
+
+func objectSetPhaseTestHelper(ctx context.Context, t *testing.T, objectSet *corev1alpha1.ObjectSet, cm *corev1.ConfigMap) {
+	t.Helper()
+
+	require.NotNil(t, objectSet)
+	require.NotNil(t, cm)
+
+	// expect objectSetPhase to be present
+	objectSetPhase := &corev1alpha1.ObjectSetPhase{}
+	require.NoError(t, Client.Get(ctx, objectsSetPhaseKey(objectSet), objectSetPhase))
+
+	// delete objectSetPhase with orphan cascade
+	require.NoError(t, Client.Delete(ctx, objectSetPhase, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
+	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil }))
+
+	// expect cm to still be there
+	currentCM := &corev1.ConfigMap{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm.Name, Namespace: objectSet.Namespace,
+	}, currentCM))
+}
+
 func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string) {
 	t.Helper()
 
@@ -684,6 +712,11 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm.Name, Namespace: objectSet.Namespace,
 	}, currentCM))
+
+	// run objectSetPhase checks if an objectSetPhase object is present
+	if class != "" {
+		objectSetPhaseTestHelper(ctx, t, objectSet, cm)
+	}
 }
 
 func TestObjectSet_orphanCascadeDeletion(t *testing.T) {
