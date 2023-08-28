@@ -96,4 +96,7 @@ func TestHyperShift(t *testing.T) {
 	t.Run("ObjectSetHandover", func(t *testing.T) {
 		runObjectSetHandoverTest(t, ns.Name, "hosted-cluster")
 	})
+	t.Run("ObjectSetOrphanCascadeDeletion", func(t *testing.T) {
+		runObjectSetOrphanCascadeDeletionTest(t, ns.Name, "hosted-cluster")
+	})
 }
