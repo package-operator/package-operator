@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/sys/unix"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,7 +60,7 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 	ctx = logr.NewContext(ctx, b.log)
 	log := b.log
 
-	if err := proxy.RestartPKOWithEnvvarsIfNeeded(log, unix.Exec, b.GetEnvironment()); err != nil {
+	if err := proxy.RestartPKOWithEnvvarsIfNeeded(log, b.GetEnvironment()); err != nil {
 		return err
 	}
 
@@ -89,7 +88,7 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 	ctx, cancel := context.WithCancel(ctx)
 	go b.cancelWhenPackageAvailable(ctx, cancel)
 
-	// TODO(erdii): investigate if it would make sense to stop using envvars and instead go through a central configuration facility (like opts?)
+	// TODO(jgwosdz): investigate if it would make sense to stop using envvars and instead go through a central configuration facility (like opts?)
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
 	// CRDs, Namespace, ServiceAccount and ClusterRoleBinding.

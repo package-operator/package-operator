@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/sys/unix"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -16,36 +17,56 @@ const (
 	noProxyVar    = "NO_PROXY"
 )
 
-// typically `unix.Exec` but configurable to make code testable
-// https://pkg.go.dev/golang.org/x/sys/unix#Exec
-type ExecveFunc func(argv0 string, argv []string, envv []string) error
+// Compare proxy settings in environment variables with settings in `apiEnv` and replace current pko process with a new instance with updated environment variables by using unix.Exec (execve).
+// This is needed as a workaround because Go caches proxy settings that are read from the envvars `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` on the first global http(s) client call.
+func RestartPKOWithEnvvarsIfNeeded(log logr.Logger, apiEnv *manifestsv1alpha1.PackageEnvironment) error {
+	return restartPKOWithEnvvarsIfNeeded(
+		log,
+		unix.Exec,
+		os.Getenv,
+		os.Executable,
+		apiEnv,
+	)
+}
 
-func RestartPKOWithEnvvarsIfNeeded(log logr.Logger, execve ExecveFunc, env *manifestsv1alpha1.PackageEnvironment) error {
-	if env.Proxy == nil {
+type (
+	// Typically `unix.Exec` but configurable to make code testable.
+	// https://pkg.go.dev/golang.org/x/sys/unix#Exec
+	execveFn func(argv0 string, argv []string, envv []string) error
+
+	// Typically `os.Getenv` but configurable to make code testable.
+	getenvFn func(key string) string
+
+	// Typically `os.Executable` but configurable to make code testable.
+	executableFn func() (string, error)
+)
+
+func restartPKOWithEnvvarsIfNeeded(log logr.Logger, execve execveFn, getenv getenvFn, getAndResolveArgv0 executableFn, apiEnv *manifestsv1alpha1.PackageEnvironment) error {
+	if apiEnv.Proxy == nil {
 		log.Info("no proxy configured via PackageEnvironment")
 		// no restart needed
 		return nil
 	}
 
 	vars := proxyVars{
-		httpProxy:  os.Getenv(httpProxyVar),
-		httpsProxy: os.Getenv(httpsProxyVar),
-		noProxy:    os.Getenv(noProxyVar),
+		httpProxy:  getenv(httpProxyVar),
+		httpsProxy: getenv(httpsProxyVar),
+		noProxy:    getenv(noProxyVar),
 	}
 
-	if !vars.differentFrom(*env.Proxy) {
+	if !vars.differentFrom(*apiEnv.Proxy) {
 		log.Info("proxy settings in environment variables match those in PackageEnvironment config")
 		// no restart needed
 		return nil
 	}
 
-	vars.httpProxy = env.Proxy.HTTPProxy
-	vars.httpsProxy = env.Proxy.HTTPSProxy
-	vars.noProxy = env.Proxy.NoProxy
+	vars.httpProxy = apiEnv.Proxy.HTTPProxy
+	vars.httpsProxy = apiEnv.Proxy.HTTPSProxy
+	vars.noProxy = apiEnv.Proxy.NoProxy
 
 	log.Info("proxy settings in environment variables do not match those in PackageEnvironment config")
 	log.Info("restarting with updated proxy envvars")
-	executable, err := os.Executable()
+	executable, err := getAndResolveArgv0()
 	if err != nil {
 		return fmt.Errorf("resolving executable path: %w", err)
 	}
@@ -58,14 +79,14 @@ type proxyVars struct {
 	httpProxy, httpsProxy, noProxy string
 }
 
-// helper to compare against proxy object from PackageEnvironment.
+// Compare against proxy object from PackageEnvironment.
 func (pv proxyVars) differentFrom(proxy manifestsv1alpha1.PackageEnvironmentProxy) bool {
 	return pv.httpProxy != proxy.HTTPProxy ||
 		pv.httpsProxy != proxy.HTTPSProxy ||
 		pv.noProxy != proxy.NoProxy
 }
 
-// merges proxy envvars with environ kv-string slice (overriding pre-existing variables) and returns the result.
+// Merge proxy envvars with environ kv-string slice (overriding pre-existing variables) and return the result.
 func (pv proxyVars) mergeTo(environ []string) []string {
 	merged := []string{}
 
