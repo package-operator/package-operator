@@ -27,6 +27,7 @@ type Bootstrapper struct {
 	init   func(ctx context.Context) (
 		needsBootstrap bool, err error,
 	)
+	fix func(ctx context.Context) error
 
 	pkoNamespace string
 }
@@ -42,11 +43,13 @@ func NewBootstrapper(
 		c, scheme, packageloader.New(scheme, packageloader.WithDefaults),
 		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig,
 	)
+	fixer := newFixer(c, log, opts.Namespace)
 
 	return &Bootstrapper{
 		log:    log.WithName("bootstrapper"),
 		client: c,
 		init:   init.Init,
+		fix:    fixer.fix,
 
 		pkoNamespace: opts.Namespace,
 	}, nil
@@ -68,6 +71,10 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 
 	needsBootstrap, err := b.init(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := b.fix(ctx); err != nil {
 		return err
 	}
 

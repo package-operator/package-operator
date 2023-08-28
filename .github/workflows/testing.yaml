@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   lint-and-unit:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -21,9 +21,9 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: '>=1.20.0'
+        go-version: '>=1.21.0'
 
     - uses: actions/cache@v3
       with:
@@ -41,6 +41,12 @@ jobs:
     - name: Unit
       run: ./mage test:unit
 
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./.cache/unit/cov.out,./.cache/integration/pko-cov.out
+        token: ${{ secrets.CODECOV_TOKEN }}
+
     - name: Archive cluster logs
       uses: actions/upload-artifact@v3
       if: success() || failure()
@@ -49,7 +55,7 @@ jobs:
         path: .cache/unit
 
   integration:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -57,9 +63,9 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: '>=1.20.0'
+        go-version: '>=1.21.0'
 
     - uses: actions/cache@v3
       with:

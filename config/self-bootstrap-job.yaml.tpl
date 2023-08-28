@@ -44,8 +44,8 @@ spec:
       serviceAccountName: package-operator
       containers:
       - name: package-operator
-        image: quay.io/package-operator/package-operator-manager:latest
-        args: ["-self-bootstrap=quay.io/package-operator/package-operator-package:latest"]
+        image: "##pko-manager-image##"
+        args: ["-self-bootstrap=##pko-package-image##"]
         env:
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: "##registry-overrides##"

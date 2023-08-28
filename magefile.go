@@ -9,14 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -36,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/yaml"
@@ -46,20 +46,20 @@ import (
 
 // Constants that define build behaviour.
 const (
-	module                 = "package-operator.run"
-	defaultImageOrg        = "quay.io/package-operator"
-	clusterName            = "package-operator-dev"
-	cliCmdName             = "kubectl-package"
-	pkoPackageName         = "package-operator-package"
-	remotePhasePackageName = "remote-phase-package"
-  defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
+	module                       = "package-operator.run"
+	defaultImageOrg              = "quay.io/package-operator"
+	clusterName                  = "package-operator-dev"
+	cliCmdName                   = "kubectl-package"
+	pkoPackageName               = "package-operator-package"
+	remotePhasePackageName       = "remote-phase-package"
+	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
 	controllerGenVersion = "0.12.1"
-	golangciLintVersion  = "1.53.3"
+	golangciLintVersion  = "1.54.1"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"
-	k8sDocGenVersion     = "0.6.0"
-	helmVersion          = "3.12.2"
+	k8sDocGenVersion     = "0.6.2"
+	helmVersion          = "3.12.3"
 
 	coverProfilingMinGoVersion = "1.20.0"
 )
@@ -100,7 +100,8 @@ var (
 	locations                      = newLocations()
 	logger             logr.Logger = stdr.New(nil)
 	applicationVersion string
-	// Push to development registry instead of pushing to quay.io.
+	imageRegistry      string
+	// Push to development registry instead of pushing to `imageRegistry`.
 	pushToDevRegistry bool
 )
 
@@ -162,6 +163,8 @@ func newLocations() Locations {
 	absCache, err := filepath.Abs(".cache")
 	must(err)
 
+	// TODO(jgwosdz) Why is application version set right here inside newLocations?
+
 	// Use version from VERSION env if present, use "git describe" elsewise.
 	applicationVersion = strings.TrimSpace(os.Getenv("VERSION"))
 	if len(applicationVersion) == 0 {
@@ -181,6 +184,11 @@ func newLocations() Locations {
 	if len(imageOrg) == 0 {
 		imageOrg = defaultImageOrg
 	}
+
+	// extract image registry 'hostname' from `imageOrg`
+	url, err := url.Parse(fmt.Sprintf("http://%s", imageOrg))
+	must(err)
+	imageRegistry = url.Host
 
 	l := Locations{
 		lock: &sync.Mutex{}, cache: absCache, imageOrg: imageOrg,
@@ -507,7 +515,7 @@ func (l Locations) ImageURL(name string, useDigest bool) string {
 
 func (l Locations) LocalImageURL(name string) string {
 	url := l.ImageURL(name, false)
-	return strings.Replace(url, "quay.io", "localhost:5001", 1)
+	return strings.Replace(url, imageRegistry, "localhost:5001", 1)
 }
 
 func (l *Locations) ContainerRuntime() string {
@@ -572,9 +580,9 @@ func (l *Locations) DevEnv() *dev.Environment {
 			),
 			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
 				ContainerdConfigPatches: []string{
-					// Replace quay.io with our local dev-registry.
-					`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-	endpoint = ["http://localhost:31320"]`,
+					// Replace `imageRegistry` with our local dev-registry.
+					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
+	endpoint = ["http://localhost:31320"]`, imageRegistry),
 				},
 				Nodes: []kindv1alpha4.Node{
 					{
@@ -1210,7 +1218,7 @@ func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
 		new := []byte("kubernetes.default")
 		kubeconfigBytes = bytes.Replace(kubeconfigBytes, old, new, -1) // use in-cluster DNS
 	} else {
-		kubeconfigBytes, err = ioutil.ReadFile(targetKubeconfigPath)
+		kubeconfigBytes, err = os.ReadFile(targetKubeconfigPath)
 		if err != nil {
 			panic(fmt.Errorf("reading in kubeconfig: %w", err))
 		}
@@ -1444,11 +1452,6 @@ func (Generate) RemotePhasePackage() error {
 // generates a self-bootstrap-job.yaml based on the current VERSION.
 // requires the images to have been build beforehand.
 func (Generate) SelfBootstrapJob() {
-	const (
-		pkoDefaultManagerImage = "quay.io/package-operator/package-operator-manager:latest"
-		pkoDefaultPackageImage = "quay.io/package-operator/package-operator-package:latest"
-	)
-
 	latestJob, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
 	if err != nil {
 		panic(err)
@@ -1472,15 +1475,15 @@ func (Generate) SelfBootstrapJob() {
 		pkoConfig        string
 	)
 	if pushToDevRegistry {
-		registyOverrides = "quay.io=dev-registry.dev-registry.svc.cluster.local:5001"
+		registyOverrides = fmt.Sprintf("%s=dev-registry.dev-registry.svc.cluster.local:5001", imageRegistry)
 		pkoConfig = fmt.Sprintf(`{"registryHostOverrides":"%s"}`, registyOverrides)
 	}
 
 	latestJob = bytes.ReplaceAll(latestJob, []byte(`##registry-overrides##`), []byte(registyOverrides))
 	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-config##`), []byte(pkoConfig))
 
-	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultManagerImage), []byte(packageOperatorManagerImage))
-	latestJob = bytes.ReplaceAll(latestJob, []byte(pkoDefaultPackageImage), []byte(packageOperatorPackageImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-manager-image##`), []byte(packageOperatorManagerImage))
+	latestJob = bytes.ReplaceAll(latestJob, []byte(`##pko-package-image##`), []byte(packageOperatorPackageImage))
 
 	must(os.WriteFile("config/self-bootstrap-job.yaml", latestJob, os.ModePerm))
 }

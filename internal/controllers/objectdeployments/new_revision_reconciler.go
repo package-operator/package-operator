@@ -51,14 +51,19 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("errored while creating new ObjectSet: %w", err)
 	}
 
+	latestRevisionNumber := latestRevisionNumber(prevObjectSets)
 	conflictingObjectSet := r.newObjectSet(r.scheme)
 	if err := r.client.Get(
 		ctx, client.ObjectKeyFromObject(newObjectSet.ClientObject()), conflictingObjectSet.ClientObject(),
 	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
 	}
+	log.Info("collision revision",
+		"collisionRev", conflictingObjectSet.GetRevision(),
+		"latestRev", latestRevisionNumber)
 	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
 	if !conflictingObjectSet.IsArchived() &&
+		conflictingObjectSet.GetRevision() >= latestRevisionNumber &&
 		controllerRef != nil &&
 		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
 		equality.Semantic.DeepEqual(newObjectSet.GetTemplateSpec(), conflictingObjectSet.GetTemplateSpec()) {
@@ -115,4 +120,11 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 		return nil, err
 	}
 	return newObjectSet, nil
+}
+
+func latestRevisionNumber(prevObjectSets []genericObjectSet) int64 {
+	if len(prevObjectSets) == 0 {
+		return 0
+	}
+	return prevObjectSets[len(prevObjectSets)-1].GetRevision()
 }

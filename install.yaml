@@ -142,6 +142,23 @@ spec:
                                 description: Defines probe parameters. Only one can
                                   be filled.
                                 properties:
+                                  cel:
+                                    description: 'Uses Common Expression Language
+                                      (CEL) to probe an object. CEL rules have to
+                                      evaluate to a boolean to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                                      https://github.com/google/cel-go'
+                                    properties:
+                                      message:
+                                        description: Error message to output if rule
+                                          evaluates to false.
+                                        type: string
+                                      rule:
+                                        description: CEL rule to evaluate.
+                                        type: string
+                                    required:
+                                    - message
+                                    - rule
+                                    type: object
                                   condition:
                                     description: Checks whether or not the object
                                       reports a condition with given type and status.
@@ -524,6 +541,23 @@ spec:
                       items:
                         description: Defines probe parameters. Only one can be filled.
                         properties:
+                          cel:
+                            description: 'Uses Common Expression Language (CEL) to
+                              probe an object. CEL rules have to evaluate to a boolean
+                              to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                              https://github.com/google/cel-go'
+                            properties:
+                              message:
+                                description: Error message to output if rule evaluates
+                                  to false.
+                                type: string
+                              rule:
+                                description: CEL rule to evaluate.
+                                type: string
+                            required:
+                            - message
+                            - rule
+                            type: object
                           condition:
                             description: Checks whether or not the object reports
                               a condition with given type and status.
@@ -886,6 +920,23 @@ spec:
                       items:
                         description: Defines probe parameters. Only one can be filled.
                         properties:
+                          cel:
+                            description: 'Uses Common Expression Language (CEL) to
+                              probe an object. CEL rules have to evaluate to a boolean
+                              to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                              https://github.com/google/cel-go'
+                            properties:
+                              message:
+                                description: Error message to output if rule evaluates
+                                  to false.
+                                type: string
+                              rule:
+                                description: CEL rule to evaluate.
+                                type: string
+                            required:
+                            - message
+                            - rule
+                            type: object
                           condition:
                             description: Checks whether or not the object reports
                               a condition with given type and status.
@@ -1539,6 +1590,9 @@ spec:
           spec:
             description: Package specification.
             properties:
+              component:
+                description: Desired compenent to deploy from multi-component packages.
+                type: string
               config:
                 description: Package configuration parameters.
                 type: object
@@ -1782,6 +1836,23 @@ spec:
                                 description: Defines probe parameters. Only one can
                                   be filled.
                                 properties:
+                                  cel:
+                                    description: 'Uses Common Expression Language
+                                      (CEL) to probe an object. CEL rules have to
+                                      evaluate to a boolean to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                                      https://github.com/google/cel-go'
+                                    properties:
+                                      message:
+                                        description: Error message to output if rule
+                                          evaluates to false.
+                                        type: string
+                                      rule:
+                                        description: CEL rule to evaluate.
+                                        type: string
+                                    required:
+                                    - message
+                                    - rule
+                                    type: object
                                   condition:
                                     description: Checks whether or not the object
                                       reports a condition with given type and status.
@@ -2161,6 +2232,23 @@ spec:
                       items:
                         description: Defines probe parameters. Only one can be filled.
                         properties:
+                          cel:
+                            description: 'Uses Common Expression Language (CEL) to
+                              probe an object. CEL rules have to evaluate to a boolean
+                              to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                              https://github.com/google/cel-go'
+                            properties:
+                              message:
+                                description: Error message to output if rule evaluates
+                                  to false.
+                                type: string
+                              rule:
+                                description: CEL rule to evaluate.
+                                type: string
+                            required:
+                            - message
+                            - rule
+                            type: object
                           condition:
                             description: Checks whether or not the object reports
                               a condition with given type and status.
@@ -2521,6 +2609,23 @@ spec:
                       items:
                         description: Defines probe parameters. Only one can be filled.
                         properties:
+                          cel:
+                            description: 'Uses Common Expression Language (CEL) to
+                              probe an object. CEL rules have to evaluate to a boolean
+                              to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                              https://github.com/google/cel-go'
+                            properties:
+                              message:
+                                description: Error message to output if rule evaluates
+                                  to false.
+                                type: string
+                              rule:
+                                description: CEL rule to evaluate.
+                                type: string
+                            required:
+                            - message
+                            - rule
+                            type: object
                           condition:
                             description: Checks whether or not the object reports
                               a condition with given type and status.
@@ -3172,6 +3277,9 @@ spec:
           spec:
             description: Package specification.
             properties:
+              component:
+                description: Desired compenent to deploy from multi-component packages.
+                type: string
               config:
                 description: Package configuration parameters.
                 type: object

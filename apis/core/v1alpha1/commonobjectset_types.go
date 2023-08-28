@@ -153,6 +153,7 @@ type PackageProbeKindSpec struct {
 type Probe struct {
 	Condition   *ProbeConditionSpec   `json:"condition,omitempty"`
 	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
+	CEL         *ProbeCELSpec         `json:"cel,omitempty"`
 }
 
 // Checks whether or not the object reports a condition with given type and status.
@@ -173,6 +174,20 @@ type ProbeFieldsEqualSpec struct {
 	// Second field for comparison.
 	// +example=.status.fieldB
 	FieldB string `json:"fieldB"`
+}
+
+// Uses Common Expression Language (CEL) to probe an object.
+// CEL rules have to evaluate to a boolean to be valid.
+// See:
+// https://kubernetes.io/docs/reference/using-api/cel
+// https://github.com/google/cel-go
+type ProbeCELSpec struct {
+	// CEL rule to evaluate.
+	// +example=self.metadata.name == "Hans"
+	Rule string `json:"rule"`
+	// Error message to output if rule evaluates to false.
+	// +example=Object must be named Hans
+	Message string `json:"message"`
 }
 
 // References a previous revision of an ObjectSet or ClusterObjectSet.
