@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"github.com/mt-sre/devkube/dev"
-	apps "k8s.io/api/apps/v1"
-	ext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -16,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	pkoapis "package-operator.run/apis"
-	hypershift "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 const (
@@ -81,8 +80,7 @@ func initClients(_ context.Context) error {
 	AddToSchemes := runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,
 		pkoapis.AddToScheme,
-		hypershift.AddToScheme,
-		ext.AddToScheme,
+		hypershiftv1beta1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		return fmt.Errorf("could not load schemes: %w", err)
@@ -108,12 +106,12 @@ func findPackageOperatorNamespace(ctx context.Context) (
 	err error,
 ) {
 	// discover packageOperator Namespace
-	deploymentList := &apps.DeploymentList{}
+	deploymentList := &appsv1.DeploymentList{}
 	// We can't use a label-selector, because OLM is overriding the deployment labels...
 	if err := Client.List(ctx, deploymentList); err != nil {
 		panic(fmt.Errorf("listing package-operator deployments on the cluster: %w", err))
 	}
-	var packageOperatorDeployments []apps.Deployment
+	var packageOperatorDeployments []appsv1.Deployment
 	for _, deployment := range deploymentList.Items {
 		if deployment.Name == "package-operator-manager" {
 			packageOperatorDeployments = append(packageOperatorDeployments, deployment)
