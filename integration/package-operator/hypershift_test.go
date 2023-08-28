@@ -11,7 +11,6 @@ import (
 	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,10 +30,7 @@ func TestHyperShift(t *testing.T) {
 	require.NoError(t, err)
 	hostedClusterCRD := &unstructured.Unstructured{}
 	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
-	err = Client.Create(ctx, hostedClusterCRD)
-	if !k8serrors.IsAlreadyExists(err) {
-		require.NoError(t, err)
-	}
+	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
 	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
 
 	require.NoError(t, initClients(ctx))

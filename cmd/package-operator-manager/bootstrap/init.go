@@ -24,16 +24,7 @@ import (
 )
 
 const (
-	// ClusterPackageFinalizer is the name of the finalizer that is attached to the PKO cluster package.
-	//
-	// When the PKO package is deleted, a teardown job gets created by the manager. This job removes
-	// all resources associated with PKO and clears this finalizer after done.
-	ClusterPackageFinalizer = "package-operator.run/teardown-job"
-	// ClusterPackageName is the name of the cluster package that contains the PKO installation.
-	ClusterPackageName = "package-operator"
-)
-
-const (
+	packageOperatorClusterPackageName              = "package-operator"
 	packageOperatorPackageCheckInterval            = 2 * time.Second
 	packageOperatorDeploymentDeletionCheckInterval = 2 * time.Second
 	packageOperatorDeploymentDeletionTimeout       = 2 * time.Minute
@@ -94,8 +85,7 @@ func (init *initializer) Init(ctx context.Context) (
 func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {
 	return &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       ClusterPackageName,
-			Finalizers: []string{ClusterPackageFinalizer},
+			Name: packageOperatorClusterPackageName,
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image:  init.selfBootstrapImage,
@@ -109,7 +99,9 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 	bootstrapClusterPackage := init.newPKOClusterPackage()
 
 	existingClusterPackage := &corev1alpha1.ClusterPackage{}
-	if err := init.client.Get(ctx, client.ObjectKey{Name: ClusterPackageName}, existingClusterPackage); errors.IsNotFound(err) {
+	if err := init.client.Get(ctx, client.ObjectKey{
+		Name: packageOperatorClusterPackageName,
+	}, existingClusterPackage); errors.IsNotFound(err) {
 		// ClusterPackage not found. Create it and let bootstrapper run.
 		return true, init.client.Create(ctx, bootstrapClusterPackage)
 	} else if err != nil {
