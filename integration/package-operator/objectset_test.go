@@ -3,6 +3,7 @@ package packageoperator
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -596,6 +597,147 @@ func TestObjectSet_handover(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			runObjectSetHandoverTest(t, "default", test.class)
+		})
+	}
+}
+
+func simpleObjectSet(cm *corev1.ConfigMap, namespace, class string) (*corev1alpha1.ObjectSet, error) {
+	cmObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-orphan-cascade-delete",
+			Namespace: namespace,
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{
+					{
+						Name:  "phase-1",
+						Class: class,
+						Objects: []corev1alpha1.ObjectSetObject{
+							{
+								Object: unstructured.Unstructured{Object: cmObj},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func objectsSetPhaseKey(objectSet *corev1alpha1.ObjectSet) client.ObjectKey {
+	return client.ObjectKey{
+		Name:      objectSet.Name + "-" + objectSet.Spec.ObjectSetTemplateSpec.Phases[0].Name,
+		Namespace: objectSet.Namespace,
+	}
+}
+
+func objectSetPhaseTestHelper(ctx context.Context, t *testing.T, objectSet *corev1alpha1.ObjectSet, cm *corev1.ConfigMap) {
+	t.Helper()
+
+	require.NotNil(t, objectSet)
+	require.NotNil(t, cm)
+
+	// expect objectSetPhase to be present
+	objectSetPhase := &corev1alpha1.ObjectSetPhase{}
+	require.NoError(t, Client.Get(ctx, objectsSetPhaseKey(objectSet), objectSetPhase))
+
+	// delete objectSetPhase with orphan cascade
+	require.NoError(t, Client.Delete(ctx, objectSetPhase, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
+	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil }))
+
+	// expect cm to still be there
+	currentCM := &corev1.ConfigMap{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm.Name, Namespace: objectSet.Namespace,
+	}, currentCM))
+}
+
+func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string) {
+	t.Helper()
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cm",
+			Namespace: namespace,
+			Labels:    map[string]string{"test.package-operator.run/test": "True"},
+		},
+	}
+	cmGVK, err := apiutil.GVKForObject(cm, Scheme)
+	require.NoError(t, err)
+	cm.SetGroupVersionKind(cmGVK)
+
+	objectSet, err := simpleObjectSet(cm, namespace, class)
+	require.NoError(t, err)
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	cleanupOnSuccess(ctx, t, cm)
+
+	require.NoError(t, Client.Create(ctx, objectSet))
+
+	// Expect ObjectSet to become Available.
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+
+	// expect cm to be present.
+	currentCM := &corev1.ConfigMap{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm.Name, Namespace: objectSet.Namespace,
+	}, currentCM))
+
+	// expect cm to be reported under "ControllerOf"
+	require.Equal(t, []corev1alpha1.ControlledObjectReference{
+		{
+			Kind:      "ConfigMap",
+			Name:      currentCM.Name,
+			Namespace: currentCM.Namespace,
+		},
+	}, objectSet.Status.ControllerOf)
+
+	// delete objectSet with orphan cascade
+	require.NoError(t, Client.Delete(ctx, objectSet, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
+	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSet, func(obj client.Object) (done bool, err error) { return false, nil }))
+
+	// expect objectSet not to be present anymore
+	currentObjectSet := &corev1alpha1.ObjectSet{}
+	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
+		Name: objectSet.Name, Namespace: objectSet.Namespace,
+	}, currentObjectSet), fmt.Sprintf(`objectsets.package-operator.run "%s" not found`, objectSet.Name))
+
+	// expect cm to still be there
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm.Name, Namespace: objectSet.Namespace,
+	}, currentCM))
+
+	// run objectSetPhase checks if an objectSetPhase object is present
+	if class != "" {
+		objectSetPhaseTestHelper(ctx, t, objectSet, cm)
+	}
+}
+
+func TestObjectSet_orphanCascadeDeletion(t *testing.T) {
+	tests := []struct {
+		name  string
+		class string
+	}{
+		{
+			name:  "run without objectsetphase objects",
+			class: "",
+		},
+		{
+			name:  "run with sameclusterobjectsetphasecontroller",
+			class: "default",
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+
+		t.Run(test.name, func(t *testing.T) {
+			runObjectSetOrphanCascadeDeletionTest(t, "default", test.class)
 		})
 	}
 }

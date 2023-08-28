@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -126,6 +128,11 @@ func (r *objectSetPhaseReconciler) Reconcile(
 func (r *objectSetPhaseReconciler) Teardown(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 ) (cleanupDone bool, err error) {
+	// objectSetPhase is deleted with the `orphan` cascade option, so we don't delete the owned objects
+	if controllerutil.ContainsFinalizer(objectSetPhase.ClientObject(), "orphan") {
+		return true, nil
+	}
+
 	return r.phaseReconciler.TeardownPhase(
 		ctx, objectSetPhase, objectSetPhase.GetPhase())
 }

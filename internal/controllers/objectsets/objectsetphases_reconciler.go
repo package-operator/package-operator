@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
@@ -233,6 +234,11 @@ func (r *objectSetPhasesReconciler) Teardown(
 	ctx context.Context, objectSet genericObjectSet,
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
+
+	// objectSet is deleted with the `orphan` cascade option, so we don't delete the owned objects
+	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), "orphan") {
+		return true, nil
+	}
 
 	phases := objectSet.GetPhases()
 	reverse(phases) // teardown in reverse order
