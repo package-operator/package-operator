@@ -142,6 +142,16 @@ type phasesChecker interface {
 	) (violations []Violation, err error)
 }
 
+type phasesCheckerFn func(
+	ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+) (violations []Violation, err error)
+
+func (fn phasesCheckerFn) Check(
+	ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+) (violations []Violation, err error) {
+	return fn(ctx, phases)
+}
+
 var _ phasesChecker = PhasesCheckerList(nil)
 
 type PhasesCheckerList []phasesChecker
