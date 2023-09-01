@@ -537,7 +537,7 @@ func (r *PhaseReconciler) desiredObject(
 			labels[manifestsv1alpha1.PackageLabel] = pkgLabel
 		}
 		if pkgInstanceLabel, ok := ownerLabels[manifestsv1alpha1.PackageInstanceLabel]; ok {
-			labels[manifestsv1alpha1.PackageLabel] = pkgInstanceLabel
+			labels[manifestsv1alpha1.PackageInstanceLabel] = pkgInstanceLabel
 		}
 	}
 

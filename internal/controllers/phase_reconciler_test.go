@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 )
@@ -544,6 +545,10 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 	ctx := context.Background()
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
+	ownerObj.SetLabels(map[string]string{
+		manifestsv1alpha1.PackageLabel:         "pkg-label",
+		manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+	})
 	owner.On("ClientObject").Return(ownerObj)
 	owner.On("GetRevision").Return(int64(5))
 
@@ -563,7 +568,9 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]interface{}{
-					DynamicCacheLabel: "True",
+					DynamicCacheLabel:                      "True",
+					manifestsv1alpha1.PackageLabel:         "pkg-label",
+					manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
 				},
 			},
 		},
