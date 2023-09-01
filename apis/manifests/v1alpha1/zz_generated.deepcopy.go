@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
@@ -171,6 +172,13 @@ func (in *PackageManifestLockSpec) DeepCopyInto(out *PackageManifestLockSpec) {
 		in, out := &in.Images, &out.Images
 		*out = make([]PackageManifestLockImage, len(*in))
 		copy(*out, *in)
+	}
+	if in.InstallPermissions != nil {
+		in, out := &in.InstallPermissions, &out.InstallPermissions
+		*out = make([]v1.PolicyRule, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

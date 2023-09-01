@@ -1298,6 +1298,8 @@ spec:
   - digest: dolor
     image: ipsum
     name: lorem
+  installPermissions:
+  - rbacv1.PolicyRule
 
 ```
 
@@ -1406,6 +1408,7 @@ Used in:
 | Field | Description |
 | ----- | ----------- |
 | `images` <b>required</b><br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | List of resolved images |
+| `installPermissions` <b>required</b><br>[]rbacv1.PolicyRule | Permissions required to install this package.<br>For every object that is part of the package get,list,create,update,patch,delete,watch verbs are required.<br>For external objects get,list,watch verbs are required. |
 
 
 Used in:
