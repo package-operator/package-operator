@@ -410,7 +410,10 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 	crd := unstructured.Unstructured{}
 	crd.SetGroupVersionKind(crdGK.WithVersion("v1"))
 
-	c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
+		Once().
+		Return(k8serrors.NewAlreadyExists(schema.GroupResource{}, ""))
+	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	crds := []unstructured.Unstructured{crd, crd}
