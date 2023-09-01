@@ -1,7 +1,6 @@
 package packagecontent
 
 import (
-	"bytes"
 	"context"
 	"strings"
 
@@ -56,9 +55,9 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 		objects := []unstructured.Unstructured{}
 
 		// Split for every included yaml document.
-		for i, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
+		for i, yamlDocument := range packages.YAMLDocumentSplitRegex.Split(strings.Trim(string(content), "---\n"), -1) {
 			obj := unstructured.Unstructured{}
-			if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
+			if err = yaml.Unmarshal([]byte(yamlDocument), &obj); err != nil {
 				err = packages.NewInvalidError(packages.Violation{
 					Reason:   packages.ViolationReasonInvalidYAML,
 					Details:  err.Error(),

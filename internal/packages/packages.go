@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"regexp"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,6 +32,8 @@ var (
 
 	PackageManifestLockFileNames = []string{"manifest.lock.yaml"}
 	PackageManifestLockGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifestLock"}
+
+	YAMLDocumentSplitRegex = regexp.MustCompile(`^---$`)
 )
 
 // Is path suffixed by .gotmpl.

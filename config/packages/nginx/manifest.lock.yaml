@@ -1,0 +1,31 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifestLock
+metadata:
+  creationTimestamp: "2023-09-01T07:56:03Z"
+spec:
+  images: []
+  installPermissions:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - create
+    - delete
+  - apiGroups:
+    - apps
+    resources:
+    - deployments
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - create
+    - delete
