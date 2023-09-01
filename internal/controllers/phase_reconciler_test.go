@@ -17,8 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 )
@@ -543,6 +545,10 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 	ctx := context.Background()
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
+	ownerObj.SetLabels(map[string]string{
+		manifestsv1alpha1.PackageLabel:         "pkg-label",
+		manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+	})
 	owner.On("ClientObject").Return(ownerObj)
 	owner.On("GetRevision").Return(int64(5))
 
@@ -562,7 +568,9 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]interface{}{
-					DynamicCacheLabel: "True",
+					DynamicCacheLabel:                      "True",
+					manifestsv1alpha1.PackageLabel:         "pkg-label",
+					manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
 				},
 			},
 		},
@@ -944,7 +952,6 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		}).
 		Return(nil)
 
-	// no need to patch anything, all objects are the same
 	desiredObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -972,8 +979,10 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		},
 	}
 	updatedObj := currentObj.DeepCopy()
+	err := controllerutil.SetControllerReference(&corev1.ConfigMap{}, updatedObj, testScheme)
+	require.NoError(t, err)
 
-	err := r.Patch(ctx, desiredObj, currentObj, updatedObj)
+	err = r.Patch(ctx, desiredObj, currentObj, updatedObj)
 	require.NoError(t, err)
 
 	clientMock.AssertNumberOfCalls(t, "Patch", 1) // only a single PATCH request
@@ -982,7 +991,7 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"}},"spec":{"key":"val"}}`, string(patch))
+			`{"metadata":{"labels":{"banana":"hans","my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch))
 	}
 }
 

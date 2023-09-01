@@ -537,7 +537,7 @@ func (r *PhaseReconciler) desiredObject(
 			labels[manifestsv1alpha1.PackageLabel] = pkgLabel
 		}
 		if pkgInstanceLabel, ok := ownerLabels[manifestsv1alpha1.PackageInstanceLabel]; ok {
-			labels[manifestsv1alpha1.PackageLabel] = pkgInstanceLabel
+			labels[manifestsv1alpha1.PackageInstanceLabel] = pkgInstanceLabel
 		}
 	}
 
@@ -699,9 +699,10 @@ func (p *defaultPatcher) Patch(
 	// deepCopy of currentObj, already updated for owner handling
 	updatedObj *unstructured.Unstructured,
 ) error {
-	// Ensure desired labels and annotations are present
+	// Ensure desired labels, annotations and owners are present
 	desiredObj.SetLabels(mergeKeysFrom(updatedObj.GetLabels(), desiredObj.GetLabels()))
 	desiredObj.SetAnnotations(mergeKeysFrom(updatedObj.GetAnnotations(), desiredObj.GetAnnotations()))
+	desiredObj.SetOwnerReferences(updatedObj.GetOwnerReferences())
 
 	patch := desiredObj.DeepCopy()
 	// never patch status, even if specified
