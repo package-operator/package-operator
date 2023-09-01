@@ -253,7 +253,8 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		crd.SetLabels(labels)
 
 		log.Info("ensuring CRD", "name", crd.GetName())
-		if err := init.client.Patch(ctx, crd, client.Apply, client.FieldOwner(controllers.FieldOwner), client.ForceOwnership); err != nil {
+		if err := init.client.Create(ctx, crd); err != nil &&
+			!errors.IsAlreadyExists(err) {
 			return err
 		}
 	}
