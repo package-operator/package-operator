@@ -36,8 +36,8 @@ const (
 	remotePhasePackageName       = "remote-phase-package"
 	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
-	controllerGenVersion = "0.12.1"
-	golangciLintVersion  = "1.54.1"
+	controllerGenVersion = "0.13.0"
+	golangciLintVersion  = "1.54.2"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.2"

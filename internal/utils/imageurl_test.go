@@ -56,7 +56,7 @@ func TestImageURLWithOverride(t *testing.T) {
 	})
 
 	regHost := "localhost:123"
-	testDgst := "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
+	testDgst := "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4" //nolint:gosec // no credential.
 
 	testsOk := []struct {
 		image  string

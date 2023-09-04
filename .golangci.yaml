@@ -112,6 +112,8 @@ linters-settings:
     local-prefixes: package-operator.run
   gosec:
     excludes:
-    - G301 # Poor file permissions used when creating a directory
-    - G302 # Poor file permissions used with chmod
-    - G306 # Poor file permissions used when writing to a new file
+    - G301 # Poor file permissions used when creating a directory.
+    - G302 # Poor file permissions used with chmod.
+    - G306 # Poor file permissions used when writing to a new file.
+    - G601 # Taking address of loop variable - not relevant anymore.
+    - G602 # Should reports out of bound access but is broken.

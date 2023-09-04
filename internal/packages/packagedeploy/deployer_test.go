@@ -28,7 +28,7 @@ var (
 	_          deploymentReconciler = (*deploymentReconcilerMock)(nil)
 	_          packageContentLoader = (*packageContentLoaderMock)(nil)
 	errExample                      = errors.New("example error")
-	testDgst                        = "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
+	testDgst                        = "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4" //nolint:gosec // no credential.
 )
 
 type (
