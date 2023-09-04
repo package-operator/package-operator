@@ -103,6 +103,7 @@ func ProvideManager(
 		}),
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
+		LeaderElectionNamespace:    opts.Namespace,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
 		MapperProvider:             apiutil.NewDynamicRESTMapper,
 		Cache: cache.Options{
