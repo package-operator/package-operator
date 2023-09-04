@@ -40,7 +40,7 @@ const (
 	golangciLintVersion  = "1.54.2"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"
-	k8sDocGenVersion     = "0.6.0"
+	k8sDocGenVersion     = "0.6.2"
 	helmVersion          = "3.12.3"
 
 	coverProfilingMinGoVersion = "1.20.0"
