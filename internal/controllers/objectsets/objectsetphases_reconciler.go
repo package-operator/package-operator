@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"package-operator.run/package-operator/internal/preflight"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +17,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/ownerhandling"
+	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/probing"
 )
 

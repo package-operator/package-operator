@@ -223,12 +223,10 @@ func (c *GenericObjectSetController) Reconcile(
 		}
 	}
 	if err != nil {
-		return res, c.updateStatusIfPreflightError(ctx, objectSet, err)
 		return controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, err,
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)
 			})
-		return res, c.ifPreflightErrorUpdateStatus(ctx, objectSet, err)
 	}
 
 	if err := c.reportPausedCondition(ctx, objectSet); err != nil {
@@ -246,7 +244,7 @@ func (c *GenericObjectSetController) updateStatusIfPreflightError(ctx context.Co
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSet.GetGeneration(),
+			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 			Reason:             "PreflightError",
 			Message:            preflightError.Error(),
 		})

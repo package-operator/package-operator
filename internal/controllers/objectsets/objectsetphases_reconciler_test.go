@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"package-operator.run/package-operator/internal/preflight"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil/controllersmocks"
 )
 

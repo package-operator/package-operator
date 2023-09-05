@@ -11,6 +11,8 @@ import (
 )
 
 func TestObjectDuplicate(t *testing.T) {
+	t.Parallel()
+
 	obj := corev1alpha1.ObjectSetObject{}
 	obj.Object.SetName("test")
 	obj.Object.SetNamespace("test-ns")

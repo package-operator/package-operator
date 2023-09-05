@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/dynamiccachemocks"
 )
@@ -413,7 +416,11 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 var errTest = goerrors.New("explosion")
 
 func TestGenericObjectSetController_updateStatusError(t *testing.T) {
+	t.Parallel()
+
 	t.Run("just returns error", func(t *testing.T) {
+		t.Parallel()
+
 		objectSet := &GenericObjectSet{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
@@ -425,6 +432,8 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	})
 
 	t.Run("reports preflight error", func(t *testing.T) {
+		t.Parallel()
+
 		objectSet := &GenericObjectSet{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
