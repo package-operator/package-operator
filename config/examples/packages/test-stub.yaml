@@ -2,8 +2,7 @@ apiVersion: package-operator.run/v1alpha1
 kind: Package
 metadata:
   name: test-stub
-  annotations:
-    package-operator.run/test-stub-image: "quay.io/package-operator/test-stub:v1.0.0-47-g3405dde"
-    packages.package-operator.run/chunking-strategy: EachObject
 spec:
-  image: "quay.io/package-operator/test-stub-package:v1.0.0-47-g3405dde"
+  image: "quay.io/package-operator/test-stub-package:v1.8.3-2-g293f877"
+  config:
+    testStubImage: quay.io/package-operator/test-stub:v1.8.3-2-g293f877
