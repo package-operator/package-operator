@@ -22,18 +22,11 @@ import (
 )
 
 func TestHyperShift(t *testing.T) {
-	// tests that PackageOperator will deploy a new remote-phase-manager
-	// for every ready HyperShift HostedCluster.
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
-	require.NoError(t, err)
-	hostedClusterCRD := &unstructured.Unstructured{}
-	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
-	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
-	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
-
-	require.NoError(t, initClients(ctx))
+	t.Run("HyperShift Installation", func(t *testing.T) {
+		installHyperShift(ctx, t)
+	})
 
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,7 +35,7 @@ func TestHyperShift(t *testing.T) {
 		},
 	}
 
-	err = Client.Create(ctx, hc)
+	err := Client.Create(ctx, hc)
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, hc)
 
@@ -89,6 +82,7 @@ func TestHyperShift(t *testing.T) {
 	// longer timeout because PKO is restarting to enable HyperShift integration and needs a few seconds for leader election.
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(100*time.Second)))
+
 	// Test ObjectSetPhase integration
 	t.Run("ObjectSetSetupPauseTeardown", func(t *testing.T) {
 		runObjectSetSetupPauseTeardownTest(t, ns.Name, "hosted-cluster")
@@ -99,4 +93,19 @@ func TestHyperShift(t *testing.T) {
 	t.Run("ObjectSetOrphanCascadeDeletion", func(t *testing.T) {
 		runObjectSetOrphanCascadeDeletionTest(t, ns.Name, "hosted-cluster")
 	})
+}
+
+func installHyperShift(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	// tests that PackageOperator will deploy a new remote-phase-manager
+	// for every ready HyperShift HostedCluster.
+	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
+	require.NoError(t, err)
+	hostedClusterCRD := &unstructured.Unstructured{}
+	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
+	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
+	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
+
+	require.NoError(t, initClients(ctx))
 }
