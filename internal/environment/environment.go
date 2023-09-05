@@ -74,12 +74,18 @@ func (m *Manager) Init(ctx context.Context, sinks []Sinker) error {
 func (m *Manager) Start(ctx context.Context) error {
 	t := time.NewTicker(environmentProbeInterval)
 	defer t.Stop()
-	for range t.C {
-		if err := m.do(ctx); err != nil {
-			return err
+
+	// periodically re-probe environment until context is closed
+	for {
+		select {
+		case <-t.C:
+			if err := m.do(ctx); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
-	return nil
 }
 
 func (m *Manager) do(ctx context.Context) error {
