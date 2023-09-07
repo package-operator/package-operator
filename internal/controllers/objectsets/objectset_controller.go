@@ -2,7 +2,6 @@ package objectsets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -234,23 +233,6 @@ func (c *GenericObjectSetController) Reconcile(
 	}
 
 	return res, c.updateStatus(ctx, objectSet)
-}
-
-func (c *GenericObjectSetController) updateStatusIfPreflightError(ctx context.Context, objectSet genericObjectSet,
-	reconcileErr error,
-) error {
-	var preflightError *preflight.Error
-	if errors.As(reconcileErr, &preflightError) {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
-			Reason:             "PreflightError",
-			Message:            preflightError.Error(),
-		})
-		return c.updateStatus(ctx, objectSet)
-	}
-	return reconcileErr
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {

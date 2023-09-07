@@ -427,7 +427,10 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 
 		c, _, _, _, _ := newControllerAndMocks()
 		ctx := context.Background()
-		err := c.updateStatusIfPreflightError(ctx, objectSet, errTest)
+		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest,
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSet)
+			})
 		assert.EqualError(t, err, "explosion")
 	})
 
@@ -445,8 +448,10 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 			Return(nil)
 
 		ctx := context.Background()
-		err := c.updateStatusIfPreflightError(
-			ctx, objectSet, &preflight.Error{})
+		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{},
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSet)
+			})
 		require.NoError(t, err)
 
 		client.StatusMock.AssertExpectations(t)
