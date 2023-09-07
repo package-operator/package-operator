@@ -17,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil/controllersmocks"
 )
 
@@ -44,6 +45,17 @@ func (m *remotePhaseReconcilerMock) Teardown(
 	return args.Bool(0), args.Error(1)
 }
 
+type phasesCheckerMock struct {
+	mock.Mock
+}
+
+func (pc *phasesCheckerMock) Check(
+	ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
+) (violations []preflight.Violation, err error) {
+	args := pc.Called(ctx, phases)
+	return args.Get(0).([]preflight.Violation), args.Error(1)
+}
+
 func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
 
@@ -52,7 +64,8 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+	checker := &phasesCheckerMock{}
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
 
 	phase1 := corev1alpha1.ObjectSetTemplatePhase{
 		Name: "phase1",
@@ -72,6 +85,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		Return([]client.Object{}, controllers.ProbingResult{}, nil)
 	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
 		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 	res, err := r.Reconcile(context.Background(), os)
 	assert.Empty(t, res)
@@ -79,6 +93,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 
 	pr.AssertCalled(t, "ReconcilePhase", mock.Anything, mock.Anything, phase1, mock.Anything, mock.Anything)
 	remotePr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything, phase2)
+	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
 	conds := *os.GetConditions()
 	require.Len(t, conds, 2)
@@ -102,7 +117,8 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+	checker := &phasesCheckerMock{}
+	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
 
 	os := &GenericObjectSet{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
@@ -115,10 +131,12 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil))
 	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
 		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 	res, err := r.Reconcile(context.Background(), os)
 	require.NoError(t, err)
 
+	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 	assert.Equal(t, reconcile.Result{
 		RequeueAfter: controllers.DefaultInitialBackoff,
 	}, res)
@@ -149,7 +167,8 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 				return []controllers.PreviousObjectSet{}, nil
 			}
-			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup)
+			checker := &phasesCheckerMock{}
+			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
 
 			phase1 := corev1alpha1.ObjectSetTemplatePhase{
 				Name: "phase1",
@@ -262,15 +281,17 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
 				return []controllers.PreviousObjectSet{}, nil
 			}
+			checker := &phasesCheckerMock{}
 
 			cm.On("Now").Return(time.Now().Add(tc.TimeSinceAvailable))
 			prm.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return([]client.Object{}, controllers.ProbingResult{}, nil)
 			rprm.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
 				Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+			checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 			rec := newObjectSetPhasesReconciler(
-				testScheme, prm, rprm, lookup,
+				testScheme, prm, rprm, lookup, checker,
 				withClock{
 					Clock: cm,
 				},
@@ -279,6 +300,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetConditions()), tc.ObjectSet.GetConditions())
+			checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
 			for cond, stat := range tc.ExpectedConditionStatuses {
 				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetConditions(), cond, stat))

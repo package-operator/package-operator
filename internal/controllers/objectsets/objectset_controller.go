@@ -130,6 +130,9 @@ func newGenericObjectSetController(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
 			}, client).Lookup,
+		preflight.PhasesCheckerList{
+			preflight.NewObjectDuplicate(),
+		},
 	)
 
 	controller.teardownHandler = phasesReconciler

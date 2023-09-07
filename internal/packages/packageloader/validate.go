@@ -2,6 +2,9 @@ package packageloader
 
 import (
 	"context"
+	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -88,11 +91,10 @@ func (v *ObjectDuplicateValidator) ValidatePackage(_ context.Context, packageCon
 	for path, objects := range packageContent.Objects {
 		for i, object := range objects {
 			gvk := object.GroupVersionKind()
-			group := gvk.Group
-			kind := gvk.Kind
-			namespace := object.GetNamespace()
-			name := object.GetName()
-			key := group + "." + kind + "/" + namespace + "/" + name
+			groupKind := gvk.GroupKind().String()
+			object := object
+			objectKey := client.ObjectKeyFromObject(&object).String() // namespace and name
+			key := fmt.Sprintf("%s %s", groupKind, objectKey)
 			if _, ok := visited[key]; ok {
 				errors = append(errors, packages.NewInvalidError(packages.Violation{
 					Reason: packages.ViolationDuplicateObject,

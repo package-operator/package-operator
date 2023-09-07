@@ -2,8 +2,11 @@ package objectsets
 
 import (
 	"context"
+	goerrors "errors"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/dynamiccachemocks"
 )
@@ -147,6 +151,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				return
 			}
 
+			//  "run all the way through"
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			rr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
@@ -406,6 +411,51 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			}
 		})
 	}
+}
+
+var errTest = goerrors.New("explosion")
+
+func TestGenericObjectSetController_updateStatusError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("just returns error", func(t *testing.T) {
+		t.Parallel()
+
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, _, _, _, _ := newControllerAndMocks()
+		ctx := context.Background()
+		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest,
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSet)
+			})
+		assert.EqualError(t, err, "explosion")
+	})
+
+	t.Run("reports preflight error", func(t *testing.T) {
+		t.Parallel()
+
+		objectSet := &GenericObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
+
+		c, client, _, _, _ := newControllerAndMocks()
+
+		client.StatusMock.
+			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{},
+			func(ctx context.Context) error {
+				return c.updateStatus(ctx, objectSet)
+			})
+		require.NoError(t, err)
+
+		client.StatusMock.AssertExpectations(t)
+	})
 }
 
 func newControllerAndMocks() (
