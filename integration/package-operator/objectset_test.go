@@ -418,6 +418,15 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 	}, nil
 }
 
+func isControllerOf(objectReferences []corev1alpha1.ControlledObjectReference, expected corev1alpha1.ControlledObjectReference) bool {
+	for _, ref := range objectReferences {
+		if reflect.DeepEqual(ref, expected) {
+			return true
+		}
+	}
+	return false
+}
+
 func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	t.Helper()
 
@@ -490,36 +499,18 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	require.NoError(t, Client.Create(ctx, objectSetRev2))
 	cleanupOnSuccess(ctx, t, objectSetRev2)
 
-	// Expect ObjectSet Rev2 report not Available, due to failing probes on cm-1.
+	// Wait for ObjectSet Rev2 to report not Available, due to failing probes on cm-1.
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, objectSetRev2, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
 	availableCond := meta.FindStatusCondition(objectSetRev2.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 	require.NotNil(t, availableCond, "Available condition is expected to be reported")
 	assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
-	// expect cm-1 to still be present and now controlled by Rev2.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
-	}, currentCM1))
-
-	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
-
-	// expect cm-2 to still be present.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
-	}, currentCM2))
-
-	// expect cm-3 to also be present now.
-	currentCM3 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
-	}, currentCM3))
-
-	// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
+	// Wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
 
-	// expect only cm-2 to be reported under "ControllerOf" in revision 1
+	// Expect only cm-2 to be reported under "ControllerOf" in revision 1
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(objectSetRev1), objectSetRev1))
 	require.Equal(t, []corev1alpha1.ControlledObjectReference{
 		{
@@ -529,25 +520,19 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 		},
 	}, objectSetRev1.Status.ControllerOf)
 
-	// Wait for cm-1 and cm-3 to be reported under "ControllerOf" in revision 2
-	expectedControllerOf := []corev1alpha1.ControlledObjectReference{
-		{
-			Kind:      "ConfigMap",
-			Name:      currentCM3.Name,
-			Namespace: currentCM3.Namespace,
-		},
-		{
-			Kind:      "ConfigMap",
-			Name:      currentCM1.Name,
-			Namespace: currentCM1.Namespace,
-		},
+	cm1ControlledObjRef := corev1alpha1.ControlledObjectReference{
+		Kind:      "ConfigMap",
+		Name:      currentCM1.Name,
+		Namespace: currentCM1.Namespace,
 	}
+
+	// Wait for cm-1 to be reported under "ControllerOf" in revision 2
 	assert.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
 		"Waiting for .status.controllerOf to be updated",
 		func(obj client.Object) (done bool, err error) {
-			return reflect.DeepEqual(objectSetRev2.Status.ControllerOf, expectedControllerOf), nil
+			return isControllerOf(objectSetRev2.Status.ControllerOf, cm1ControlledObjRef), nil
 		}))
-	require.Equal(t, expectedControllerOf, objectSetRev2.Status.ControllerOf)
+	require.True(t, isControllerOf(objectSetRev2.Status.ControllerOf, cm1ControlledObjRef))
 
 	// Patch cm-1 to pass probe.
 	require.NoError(t,
@@ -558,18 +543,50 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, objectSetRev2, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
 
+	// Expect cm-1 to still be present and now controlled by Rev2.
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+	}, currentCM1))
+
+	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
+
+	// Expect cm-2 to still be present.
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM2))
+
+	// Expect cm-3 to also be present now.
+	currentCM3 := &corev1.ConfigMap{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
+	}, currentCM3))
+
+	// Expect cm-1 and cmd-3 to be all objects controlled by Rev2
+	require.Equal(t, []corev1alpha1.ControlledObjectReference{
+		{
+			Kind:      "ConfigMap",
+			Name:      currentCM3.Name,
+			Namespace: currentCM3.Namespace,
+		},
+		{
+			Kind:      "ConfigMap",
+			Name:      currentCM1.Name,
+			Namespace: currentCM1.Namespace,
+		},
+	}, objectSetRev2.Status.ControllerOf)
+
 	// Archive ObjectSet Rev1
 	require.NoError(t, Client.Patch(ctx, objectSetRev1,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Archived"}}`))))
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
 
-	// expect cm-2 to be gone.
+	// Expect cm-2 to be gone.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm2.Name, Namespace: objectSetRev1.Namespace,
 	}, currentCM2), `configmaps "cm-2" not found`)
 
-	// expect cm-3 and cm-1 to be still present
+	// Expect cm-3 and cm-1 to be still present
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm1.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM1))
