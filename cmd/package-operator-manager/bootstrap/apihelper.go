@@ -27,9 +27,7 @@ func isPKOAvailable(ctx context.Context, c client.Client, pkoNamespace string) (
 
 func isPKOClusterPackageAvailable(ctx context.Context, c client.Client) (bool, error) {
 	clusterPackage := &corev1alpha1.ClusterPackage{}
-	err := c.Get(ctx, client.ObjectKey{
-		Name: packageOperatorClusterPackageName,
-	}, clusterPackage)
+	err := c.Get(ctx, client.ObjectKey{Name: ClusterPackageName}, clusterPackage)
 	if errors.IsNotFound(err) {
 		// ClusterPackage does not exist.
 		return false, nil

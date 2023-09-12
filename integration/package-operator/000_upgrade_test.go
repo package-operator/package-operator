@@ -3,7 +3,7 @@ package packageoperator
 import (
 	"bytes"
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,23 +11,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/mt-sre/devkube/dev"
-
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/stretchr/testify/require"
+	batch "k8s.io/api/batch/v1"
+	core "k8s.io/api/core/v1"
+	ext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pkocore "package-operator.run/apis/core/v1alpha1"
 )
 
 const (
@@ -36,31 +34,68 @@ const (
 )
 
 func TestUpgrade(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	log := testr.New(t)
+	ctx := logr.NewContext(context.Background(), log)
 
-	require.NoError(t, deleteExistingPKO(ctx))
-
-	log := logr.FromContextOrDiscard(ctx)
-	pkg := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "package-operator",
-			Namespace: PackageOperatorNamespace,
+	// package that is installed to ensure the teardown job cleans up packages.
+	payloadPkg := &pkocore.Package{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      "success",
+			Namespace: "default",
 		},
+		Spec: pkocore.PackageSpec{
+			Image: SuccessTestPackageImage,
+			Config: &runtime.RawExtension{
+				Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			},
+		},
+	}
+
+	pkoPackage := &pkocore.ClusterPackage{ObjectMeta: meta.ObjectMeta{Name: PackageOperatorClusterPackageName}}
+	pkoNamespace := &core.Namespace{ObjectMeta: meta.ObjectMeta{Name: "package-operator-system"}}
+
+	selector, err := labels.ValidatedSelectorFromSet(map[string]string{"package-operator.run/package": "package-operator"})
+	if err != nil {
+		panic(err)
+	}
+
+	// Install payload package.
+	require.NoError(t, Client.Create(ctx, payloadPkg))
+	require.NoError(t, Waiter.WaitForCondition(ctx, payloadPkg, pkocore.PackageAvailable, meta.ConditionTrue))
+
+	// Delete existing PKO installation and wait for it to be gone.
+	require.NoError(t, Client.Delete(ctx, pkoPackage))
+
+	// Ensure PKO namespace and package is gone
+	require.NoError(t, Waiter.WaitToBeGone(ctx, pkoNamespace, func(obj client.Object) (done bool, err error) { return }, dev.WithTimeout(30*time.Minute)))
+	require.NoError(t, Waiter.WaitToBeGone(ctx, pkoPackage, func(obj client.Object) (done bool, err error) { return }, dev.WithTimeout(30*time.Minute)))
+
+	// Ensure PKO CRDs are gone.
+	crdl := ext.CustomResourceDefinitionList{}
+	require.NoError(t, Client.List(ctx, &crdl, &client.ListOptions{LabelSelector: selector}))
+
+	for i := range crdl.Items {
+		require.NoError(t, Waiter.WaitToBeGone(
+			ctx,
+			&crdl.Items[i],
+			func(obj client.Object) (done bool, err error) { return },
+			dev.WithTimeout(15*time.Minute),
+		))
 	}
 
 	log.Info("Installing latest released PKO", "job", LatestSelfBootstrapJobURL)
 	require.NoError(t, createAndWaitFromHTTP(ctx, []string{LatestSelfBootstrapJobURL}))
-	assertInstallDone(ctx, t, pkg)
+	assertInstallDone(ctx, t, pkoPackage)
 	log.Info("Latest released PKO is now available")
 
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
 	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
-	assertInstallDone(ctx, t, pkg)
+	assertInstallDone(ctx, t, pkoPackage)
 }
 
-func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.ClusterPackage) {
+func assertInstallDone(ctx context.Context, t *testing.T, pkg *pkocore.ClusterPackage) {
 	t.Helper()
-	jobList := &batchv1.JobList{}
+	jobList := &batch.JobList{}
 	require.NoError(t, Client.List(
 		ctx, jobList,
 		client.InNamespace(PackageOperatorNamespace),
@@ -74,99 +109,12 @@ func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.Clus
 
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg,
-			corev1alpha1.PackageProgressing, metav1.ConditionFalse,
+			pkocore.PackageProgressing, meta.ConditionFalse,
 			dev.WithTimeout(UpgradeTestWaitTimeout)))
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg,
-			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
+			pkocore.PackageAvailable, meta.ConditionTrue,
 			dev.WithTimeout(UpgradeTestWaitTimeout)))
-}
-
-func deleteExistingPKO(ctx context.Context) error {
-	log := logr.FromContextOrDiscard(ctx)
-	log.Info("Deleting existing PKO")
-	packageOperatorPackage := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: PackageOperatorClusterPackageName,
-		},
-	}
-
-	if err := nukeObject(ctx, packageOperatorPackage); err != nil {
-		return fmt.Errorf("stuck PackageOperator ClusterPackage: %w", err)
-	}
-	log.Info("deleted ClusterPackage", "obj", packageOperatorPackage)
-
-	// Also nuke all the ClusterObjectDeployments belonging to it.
-	clusterObjectDeploymentList := &corev1alpha1.ClusterObjectDeploymentList{}
-	if err := Client.List(ctx, clusterObjectDeploymentList, client.MatchingLabels{
-		manifestsv1alpha1.PackageInstanceLabel: PackageOperatorClusterPackageName,
-		manifestsv1alpha1.PackageLabel:         PackageOperatorClusterPackageName,
-	}); err != nil {
-		return fmt.Errorf("listing stuck PackageOperator ClusterObjectDeployments: %w", err)
-	}
-	for i := range clusterObjectDeploymentList.Items {
-		clusterObjectDeployment := &clusterObjectDeploymentList.Items[i]
-		if err := nukeObject(ctx, clusterObjectDeployment); err != nil {
-			return fmt.Errorf("stuck PackageOperator ClusterObjectDeployment: %w", err)
-		}
-		log.Info("deleted ClusterObjectDeployment", "name", clusterObjectDeployment.Name, "obj", clusterObjectDeployment)
-	}
-
-	// Also nuke all the ClusterObjectSets belonging to it.
-	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
-	if err := Client.List(ctx, clusterObjectSetList, client.MatchingLabels{
-		manifestsv1alpha1.PackageInstanceLabel: PackageOperatorClusterPackageName,
-		manifestsv1alpha1.PackageLabel:         PackageOperatorClusterPackageName,
-	}); err != nil {
-		return fmt.Errorf("listing stuck PackageOperator ClusterObjectSets: %w", err)
-	}
-	for i := range clusterObjectSetList.Items {
-		clusterObjectSet := &clusterObjectSetList.Items[i]
-		if err := nukeObject(ctx, clusterObjectSet); err != nil {
-			return fmt.Errorf("stuck PackageOperator ClusterObjectSet: %w", err)
-		}
-		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
-	}
-
-	if err := Waiter.WaitToBeGone(ctx, packageOperatorPackage,
-		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
-	); err != nil {
-		return err
-	}
-
-	if err := Waiter.WaitToBeGone(ctx,
-		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
-		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
-	); err != nil {
-		return err
-	}
-
-	log.Info("Existing PKO fully deleted")
-	return nil
-}
-
-func nukeObject(ctx context.Context, obj client.Object) error {
-	if err := Client.Delete(ctx, obj); errors.IsNotFound(err) {
-		// Object already gone.
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("nuking %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
-	}
-
-	return removeAllFinalizersForDeletion(ctx, obj)
-}
-
-func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) error {
-	if len(obj.GetFinalizers()) > 0 {
-		obj.SetFinalizers([]string{})
-		if err := Client.Patch(ctx, obj,
-			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("releasing finalizers on stuck object %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
-		}
-	}
-	return nil
 }
 
 func createAndWaitFromFiles(ctx context.Context, files []string) error {
@@ -225,17 +173,15 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 }
 
 // Creates the given objects and waits for them to be considered ready.
-func createAndWaitForReadiness(
-	ctx context.Context, object client.Object,
-) error {
+func createAndWaitForReadiness(ctx context.Context, object client.Object) error {
 	if err := Client.Create(ctx, object); err != nil &&
-		!errors.IsAlreadyExists(err) {
+		!k8serrors.IsAlreadyExists(err) {
 		return fmt.Errorf("creating object: %w", err)
 	}
 
 	if err := Waiter.WaitForReadiness(ctx, object); err != nil {
 		var unknownTypeErr *dev.UnknownTypeError
-		if goerrors.As(err, &unknownTypeErr) {
+		if errors.As(err, &unknownTypeErr) {
 			// A lot of types don't require waiting for readiness,
 			// so we should not error in cases when object types
 			// are not registered for the generic wait method.
