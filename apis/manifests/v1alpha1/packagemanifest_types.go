@@ -67,10 +67,12 @@ type PackageManifestSpec struct {
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
 	// List of images to be resolved
 	Images []PackageManifestImage `json:"images"`
-	// Desired compenent to deploy from multi-component packages.
+	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
 	// +optional
-	Component string `json:"component,omitempty"`
+	Component *PackageManifestComponentConfig `json:"component,omitempty"`
 }
+
+type PackageManifestComponentConfig struct{}
 
 type PackageManifestSpecConfig struct {
 	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
