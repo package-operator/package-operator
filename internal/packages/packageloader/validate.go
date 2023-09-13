@@ -2,15 +2,14 @@ package packageloader
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages"
@@ -44,25 +43,25 @@ var (
 )
 
 func (l ValidatorList) ValidatePackage(ctx context.Context, pkg *packagecontent.Package) error {
-	var errors []error
+	var errs []error
 	for _, t := range l {
 		if err := t.ValidatePackage(ctx, pkg); err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
 		}
 	}
-	return packages.NewInvalidAggregate(errors...)
+	return errors.Join(errs...)
 }
 
 func ValidateEachObject(ctx context.Context, pkg *packagecontent.Package, validate ValidateEachObjectFn) error {
-	var errors []error
+	var errs []error
 	for path, objects := range pkg.Objects {
 		for i, object := range objects {
 			if err := validate(ctx, path, i, object); err != nil {
-				errors = append(errors, err)
+				errs = append(errs, err)
 			}
 		}
 	}
-	return packages.NewInvalidAggregate(errors...)
+	return errors.Join(errs...)
 }
 
 func (v *ObjectPhaseAnnotationValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
@@ -72,13 +71,11 @@ func (v *ObjectPhaseAnnotationValidator) ValidatePackage(ctx context.Context, pa
 func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
 	if obj.GetAnnotations() == nil ||
 		len(obj.GetAnnotations()[manifestsv1alpha1.PackagePhaseAnnotation]) == 0 {
-		return packages.NewInvalidError(packages.Violation{
+		return packages.ViolationError{
 			Reason: packages.ViolationReasonMissingPhaseAnnotation,
-			Location: &packages.ViolationLocation{
-				Path:          path,
-				DocumentIndex: ptr.To(index),
-			},
-		})
+			Path:   path,
+			Index:  packages.Index(index),
+		}
 	}
 	return nil
 }
@@ -86,29 +83,28 @@ func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, 
 // Objects with the same name/namespace/kind/group must only exist once over all phases.
 // APIVersion does not matter for the check.
 func (v *ObjectDuplicateValidator) ValidatePackage(_ context.Context, packageContent *packagecontent.Package) error {
-	var errors []error
+	var errs []error
 	visited := map[string]bool{}
 	for path, objects := range packageContent.Objects {
-		for i, object := range objects {
+		for idx, object := range objects {
 			gvk := object.GroupVersionKind()
 			groupKind := gvk.GroupKind().String()
 			object := object
 			objectKey := client.ObjectKeyFromObject(&object).String() // namespace and name
 			key := fmt.Sprintf("%s %s", groupKind, objectKey)
 			if _, ok := visited[key]; ok {
-				errors = append(errors, packages.NewInvalidError(packages.Violation{
-					Reason: packages.ViolationDuplicateObject,
-					Location: &packages.ViolationLocation{
-						Path:          path,
-						DocumentIndex: ptr.To(i),
-					},
-				}))
+				errs = append(errs, packages.ViolationError{
+					Reason: packages.ViolationReasonDuplicateObject,
+					Path:   path,
+					Index:  packages.Index(idx),
+				})
 			} else {
 				visited[key] = true
 			}
 		}
 	}
-	return packages.NewInvalidAggregate(errors...)
+
+	return errors.Join(errs...)
 }
 
 func (v *ObjectGVKValidator) ValidatePackage(ctx context.Context, packageContent *packagecontent.Package) error {
@@ -119,13 +115,11 @@ func (*ObjectGVKValidator) validate(_ context.Context, path string, index int, o
 	gvk := obj.GroupVersionKind()
 	// Don't validate Group, because an empty group is valid and indicates the kube core API group.
 	if len(gvk.Version) == 0 || len(gvk.Kind) == 0 {
-		return packages.NewInvalidError(packages.Violation{
+		return packages.ViolationError{
 			Reason: packages.ViolationReasonMissingGVK,
-			Location: &packages.ViolationLocation{
-				Path:          path,
-				DocumentIndex: ptr.To(index),
-			},
-		})
+			Path:   path,
+			Index:  packages.Index(index),
+		}
 	}
 	return nil
 }
@@ -138,14 +132,12 @@ func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int
 	errList := validation.ValidateLabels(
 		obj.GetLabels(), field.NewPath("metadata").Child("labels"))
 	if len(errList) > 0 {
-		return packages.NewInvalidError(packages.Violation{
+		return packages.ViolationError{
 			Reason:  packages.ViolationReasonLabelsInvalid,
 			Details: errList.ToAggregate().Error(),
-			Location: &packages.ViolationLocation{
-				Path:          path,
-				DocumentIndex: ptr.To(index),
-			},
-		})
+			Path:    path,
+			Index:   packages.Index(index),
+		}
 	}
 	return nil
 }
@@ -153,12 +145,10 @@ func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int
 func (scope PackageScopeValidator) ValidatePackage(_ context.Context, packageContent *packagecontent.Package) error {
 	if !slices.Contains(packageContent.PackageManifest.Spec.Scopes, manifestsv1alpha1.PackageManifestScope(scope)) {
 		// Package does not support installation in this scope.
-		return packages.NewInvalidError(packages.Violation{
+		return packages.ViolationError{
 			Reason: packages.ViolationReasonUnsupportedScope,
-			Location: &packages.ViolationLocation{
-				Path: packages.PackageManifestFile,
-			},
-		})
+			Path:   packages.PackageManifestFilename,
+		}
 	}
 
 	return nil

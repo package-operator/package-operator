@@ -60,34 +60,28 @@ func TestPackageManifestLoader_Errors(t *testing.T) {
 	}{
 		{
 			name: "not found",
-			err:  "Package validation errors:\n- PackageManifest not found:\n  searched at manifest.yaml,manifest.yml",
+			err:  "PackageManifest not found: searched at manifest.yaml and manifest.yml",
 		},
 		{
 			name: "invalid YAML",
 			fileMap: packagecontent.Files{
-				packages.PackageManifestFile: []byte("{xxx..,akd:::"),
+				packages.PackageManifestFilename: []byte("{xxx..,akd:::"),
 			},
-			err: `Package validation errors:
-- Invalid YAML in manifest.yaml:
-  error converting YAML to JSON: yaml: line 1: did not find expected node content`,
+			err: `Invalid YAML in manifest.yaml: error converting YAML to JSON: yaml: line 1: did not find expected node content`,
 		},
 		{
 			name: "invalid GVK",
 			fileMap: packagecontent.Files{
-				packages.PackageManifestFile: []byte("apiVersion: fruits/v1\nkind: Banana"),
+				packages.PackageManifestFilename: []byte("apiVersion: fruits/v1\nkind: Banana"),
 			},
-			err: `Package validation errors:
-- PackageManifest unknown GVK in manifest.yaml:
-  GroupKind must be PackageManifest.manifests.package-operator.run, is: Banana.fruits`,
+			err: `PackageManifest unknown GVK in manifest.yaml: GroupKind must be PackageManifest.manifests.package-operator.run, is: Banana.fruits`,
 		},
 		{
 			name: "unsupported Version",
 			fileMap: packagecontent.Files{
-				packages.PackageManifestFile: []byte("apiVersion: manifests.package-operator.run/v23\nkind: PackageManifest"),
+				packages.PackageManifestFilename: []byte("apiVersion: manifests.package-operator.run/v23\nkind: PackageManifest"),
 			},
-			err: `Package validation errors:
-- PackageManifest unknown GVK in manifest.yaml:
-  unknown version v23, supported versions: v1alpha1`,
+			err: `PackageManifest unknown GVK in manifest.yaml: unknown version v23, supported versions: v1alpha1`,
 		},
 	}
 
