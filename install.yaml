@@ -1591,7 +1591,7 @@ spec:
             description: Package specification.
             properties:
               component:
-                description: Desired compenent to deploy from multi-component packages.
+                description: Desired component to deploy from multi-component packages.
                 type: string
               config:
                 description: Package configuration parameters.
@@ -3278,7 +3278,7 @@ spec:
             description: Package specification.
             properties:
               component:
-                description: Desired compenent to deploy from multi-component packages.
+                description: Desired component to deploy from multi-component packages.
                 type: string
               config:
                 description: Package configuration parameters.

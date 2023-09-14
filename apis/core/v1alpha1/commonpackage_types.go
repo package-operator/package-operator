@@ -60,7 +60,7 @@ type PackageSpec struct {
 	// Package configuration parameters.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Config *runtime.RawExtension `json:"config,omitempty"`
-	// Desired compenent to deploy from multi-component packages.
+	// Desired component to deploy from multi-component packages.
 	// +optional
 	Component string `json:"component,omitempty"`
 }

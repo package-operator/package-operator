@@ -1083,7 +1083,7 @@ Package specification.
 | ----- | ----------- |
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
-| `component` <br>string | Desired compenent to deploy from multi-component packages. |
+| `component` <br>string | Desired component to deploy from multi-component packages. |
 
 
 Used in:
@@ -1238,7 +1238,7 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
-  component: amet
+  component: PackageManifestComponentConfig
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1255,20 +1255,20 @@ test:
       config: runtime.RawExtension
       environment:
         kubernetes:
-          version: sed
+          version: elitr
         openShift:
-          version: diam
+          version: sed
         proxy:
-          httpProxy: nonumy
-          httpsProxy: eirmod
-          noProxy: tempor
+          httpProxy: diam
+          httpsProxy: nonumy
+          noProxy: eirmod
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: sadipscing
-          namespace: elitr
-    name: consetetur
+          name: consetetur
+          namespace: sadipscing
+    name: amet
 
 ```
 
@@ -1295,9 +1295,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: dolor
-    image: ipsum
-    name: lorem
+  - digest: ipsum
+    image: lorem
+    name: tempor
 
 ```
 
@@ -1437,7 +1437,7 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `availabilityProbes` <br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
-| `component` <br>string | Desired compenent to deploy from multi-component packages. |
+| `component` <br><a href="#packagemanifestcomponentconfig">PackageManifestComponentConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
 
 
 Used in:
