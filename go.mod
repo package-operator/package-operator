@@ -8,18 +8,14 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/davecgh/go-spew v1.1.1
 	github.com/disiqueira/gotree v1.0.0
-	github.com/docker/distribution v2.8.2+incompatible
 	github.com/go-logr/logr v1.2.4
-	github.com/go-logr/stdr v1.2.2
 	github.com/google/cel-go v0.16.1
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.0
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
-	github.com/opencontainers/go-digest v1.0.0
-	github.com/openshift/api v0.0.0-20230914122746-448e48019998
-	github.com/pkg/errors v0.9.1
+	github.com/openshift/api v0.0.0-20230915112357-693d4b64813c
 	github.com/prometheus/client_golang v1.16.0
 	github.com/pterm/pterm v0.12.66
 	github.com/spf13/cobra v1.7.0
@@ -30,7 +26,6 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/mod v0.12.0
 	golang.org/x/sys v0.12.0
-	gotest.tools/v3 v3.5.0
 	k8s.io/api v0.28.2
 	k8s.io/apiextensions-apiserver v0.28.2
 	k8s.io/apimachinery v0.28.2
@@ -62,6 +57,7 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/docker/cli v24.0.6+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v24.0.6+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
@@ -69,6 +65,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -102,8 +99,10 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect

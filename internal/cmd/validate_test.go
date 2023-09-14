@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/v3/assert"
 
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"

@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/distribution/reference"
-	"github.com/opencontainers/go-digest"
+	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -87,18 +86,17 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 	}
 }
 
-func ImageWithDigest(image string, imageDigest string) (string, error) {
-	ref, err := reference.ParseDockerRef(image)
+// ImageWithDigest replaces the tag/digest part of the given reference with the digest specified by digest.
+// It does not sanitize the reference and expands well known registries.
+func ImageWithDigest(reference string, digest string) (string, error) {
+	// Parse reference into something we can use.
+	ref, err := name.ParseReference(reference)
 	if err != nil {
-		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
+		return "", fmt.Errorf("parse image reference: %w", err)
 	}
 
-	canonical, err := reference.WithDigest(reference.TrimNamed(ref), digest.Digest(imageDigest))
-	if err != nil {
-		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
-	}
-
-	return canonical.String(), nil
+	// Create a new digest reference from the context of the parsed reference with the parameter digest and return the string.
+	return ref.Context().Digest(digest).String(), nil
 }
 
 func (l *PackageDeployer) Load(

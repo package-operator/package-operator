@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 // Initialize all the global variables.
@@ -93,10 +92,10 @@ var (
 
 // Variables that are automatically set and should not be touched.
 var (
-	nativeArch                     = archTarget{runtime.GOOS, runtime.GOARCH}
-	linuxAMD64Arch                 = archTarget{"linux", "amd64"}
-	locations                      = newLocations()
-	logger             logr.Logger = stdr.New(nil)
+	nativeArch         = archTarget{runtime.GOOS, runtime.GOARCH}
+	linuxAMD64Arch     = archTarget{"linux", "amd64"}
+	locations          = newLocations()
+	logger             = zap.New(zap.UseDevMode(true))
 	applicationVersion string
 	imageRegistry      string
 	// Push to development registry instead of pushing to `imageRegistry`.
