@@ -497,13 +497,6 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	require.NotNil(t, availableCond, "Available condition is expected to be reported")
 	assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
-	// expect cm-1 to still be present and now controlled by Rev2.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
-	}, currentCM1))
-
-	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
-
 	// expect cm-2 to still be present.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
@@ -518,6 +511,13 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
+
+	// expect cm-1 to still be present and now controlled by Rev2.
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+	}, currentCM1))
+
+	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
 
 	// expect only cm-2 to be reported under "ControllerOf" in revision 1
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(objectSetRev1), objectSetRev1))
