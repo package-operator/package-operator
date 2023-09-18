@@ -15,6 +15,7 @@ type (
 		PackageManifest     *manifestsv1alpha1.PackageManifest
 		PackageManifestLock *manifestsv1alpha1.PackageManifestLock
 		Objects             map[string][]unstructured.Unstructured
+		Components          map[string]*Package
 	}
 )
 
