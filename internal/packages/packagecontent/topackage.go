@@ -12,7 +12,7 @@ import (
 )
 
 func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
-	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}, nil}
+	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
 		case !packages.IsYAMLFile(path):
