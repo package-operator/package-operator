@@ -3,9 +3,8 @@ package utils
 import (
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/docker/distribution/reference"
+	"github.com/google/go-containerregistry/pkg/name"
 
 	"package-operator.run/apis/manifests/v1alpha1"
 )
@@ -14,17 +13,43 @@ func ImageURLWithOverrideFromEnv(img string) (string, error) {
 	return ImageURLWithOverride(img, os.Getenv("PKO_REPOSITORY_HOST"))
 }
 
+// ImageURLWithOverride replaces the registry of the given image reference with the registry defined by override.
 func ImageURLWithOverride(img string, override string) (string, error) {
-	if len(override) == 0 {
+	if override == "" {
 		return img, nil
 	}
 
-	ref, err := reference.ParseDockerRef(img)
+	// Parse img and override parameter into something we cann use.
+
+	registry, err := name.NewRegistry(override)
 	if err != nil {
-		return "", fmt.Errorf(`image "%s" with host "%s": %w`, img, override, err)
+		return "", fmt.Errorf("image registry override: %w", err)
 	}
 
-	return strings.Replace(ref.String(), reference.Domain(ref), override, 1), nil
+	ref, err := name.ParseReference(img)
+	if err != nil {
+		return "", fmt.Errorf(`image reference: %w`, err)
+	}
+
+	// Reference can either be tagged by name or by digest. Handle both explicitly.
+	switch v := ref.(type) {
+	case name.Digest:
+		// Override registry.
+		v.Registry = registry
+		// Rewrite repository the be below the registry.
+		v.Repository = registry.Repo(ref.Context().RepositoryStr())
+		// Return full name of the reference
+		return v.Name(), nil
+	case name.Tag:
+		// Override registry.
+		v.Registry = registry
+		// Rewrite repository the be below the registry.
+		v.Repository = registry.Repo(ref.Context().RepositoryStr())
+		// Return full name of the reference
+		return v.Name(), nil
+	default:
+		panic(fmt.Sprintf("unknown reference type: %T", v))
+	}
 }
 
 // GenerateStaticImages generates a static set of images to be used for tests and other purposes.
