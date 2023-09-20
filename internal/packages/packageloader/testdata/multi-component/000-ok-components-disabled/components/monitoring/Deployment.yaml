@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/name: monitoring
+  annotations:
+    package-operator.run/phase: deploy-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: monitoring
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: monitoring
+    spec:
+      containers:
+      - image: my-application/monitoring:v1.0
+        name: monitoring

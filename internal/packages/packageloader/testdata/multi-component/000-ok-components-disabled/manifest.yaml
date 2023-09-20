@@ -1,0 +1,24 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: nginx
+spec:
+  scopes:
+    - Namespaced
+  phases:
+    - name: configure
+    - name: deploy-backend
+    - name: deploy-frontend
+    - name: deploy-monitoring
+  availabilityProbes:
+    - probes:
+        - condition:
+            type: Available
+            status: "True"
+        - fieldsEqual:
+            fieldA: .status.updatedReplicas
+            fieldB: .status.replicas
+      selector:
+        kind:
+          group: apps
+          kind: Deployment
