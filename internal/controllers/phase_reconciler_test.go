@@ -1063,69 +1063,30 @@ func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
 	clientMock.AssertExpectations(t)
 }
 
-func Test_hasOldFieldOwners(t *testing.T) {
+// Test_defaultPatcher_fixFieldManagers_nowork ensures that fixFieldManagers
+// does not call Patch when no changes are needed.
+func Test_defaultPatcher_fixFieldManagers_nowork(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name          string
-		managedFields []metav1.ManagedFieldsEntry
-		expected      bool
-	}{
-		{
-			name:     "No managed fields",
-			expected: false,
-		},
-		{
-			name: "package-operator owner with Apply operation",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationApply,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "package-operator owner with Update operation",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationUpdate,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "Go-http-client with Update",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationUpdate,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: true,
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name": "test",
-					},
-				},
-			}
-			obj.SetManagedFields(test.managedFields)
+	clientMock := testutil.NewClient()
+	r := &defaultPatcher{writer: clientMock}
+	ctx := context.Background()
 
-			out := hasOldFieldOwners(obj)
-			assert.Equal(t, test.expected, out)
-		})
+	currentObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"metadata": map[string]interface{}{"name": "test"},
+		},
 	}
+	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{{
+		Manager:   "package-operator",
+		Operation: metav1.ManagedFieldsOperationApply,
+		FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+	}})
+
+	err := r.fixFieldManagers(ctx, currentObj)
+	require.NoError(t, err)
+
+	clientMock.AssertExpectations(t)
 }
 
 func Test_mergeKeysFrom(t *testing.T) {

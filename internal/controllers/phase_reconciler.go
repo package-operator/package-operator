@@ -737,36 +737,25 @@ func (p *defaultPatcher) fixFieldManagers(
 	ctx context.Context,
 	currentObj *unstructured.Unstructured,
 ) error {
-	if !hasOldFieldOwners(currentObj) {
+	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, FieldOwner)
+	switch {
+	case err != nil:
+		return err
+	case len(patch) == 0:
+		// csaupgrade.UpgradeManagedFieldsPatch return nil, nil when no work is to be done. Empty patch cannot be applied so
+		// exit early.
 		return nil
 	}
 
-	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, FieldOwner)
-	if err != nil {
-		return err
-	}
 	if err := p.writer.Patch(ctx, currentObj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
 		return fmt.Errorf("update field managers: %w", err)
 	}
 	return nil
 }
 
-func hasOldFieldOwners(obj metav1.Object) bool {
-	for _, mgrField := range obj.GetManagedFields() {
-		if oldFieldOwners.Has(mgrField.Manager) {
-			if mgrField.Manager == FieldOwner && mgrField.Operation == metav1.ManagedFieldsOperationApply {
-				// ignore ourself, if we are already an Apply Operation Field Manager.
-				continue
-			}
-			return true
-		}
-	}
-	return false
-}
-
-func mergeKeysFrom(base, additional map[string]string) map[string]string {
+func mergeKeysFrom[K comparable, V any](base, additional map[K]V) map[K]V {
 	if base == nil {
-		base = map[string]string{}
+		base = map[K]V{}
 	}
 	for k, v := range additional {
 		base[k] = v
