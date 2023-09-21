@@ -13,7 +13,7 @@ import (
 	"package-operator.run/internal/packages"
 )
 
-func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
+func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, _ string) (pkg *Package, err error) {
 	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {

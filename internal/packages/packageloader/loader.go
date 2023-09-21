@@ -16,6 +16,7 @@ type (
 		transformers             []Transformer
 		filesTransformers        []FilesTransformer
 		packageAndFilesValidator []PackageAndFilesValidator
+		component                string
 	}
 	Option func(l *Loader)
 
@@ -52,12 +53,16 @@ func WithFilesTransformers(transformers ...FilesTransformer) Option {
 	return func(l *Loader) { l.filesTransformers = append(l.filesTransformers, transformers...) }
 }
 
+func WithComponent(component string) Option {
+	return func(l *Loader) { l.component = component }
+}
+
 func WithDefaults(l *Loader) {
 	WithValidators(&ObjectDuplicateValidator{}, &ObjectGVKValidator{}, &ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{})(l)
 }
 
 func New(scheme *runtime.Scheme, opts ...Option) *Loader {
-	l := &Loader{scheme, []Validator{}, []Transformer{}, []FilesTransformer{}, []PackageAndFilesValidator{}}
+	l := &Loader{scheme, []Validator{}, []Transformer{}, []FilesTransformer{}, []PackageAndFilesValidator{}, ""}
 	for _, opt := range opts {
 		opt(l)
 	}
@@ -73,6 +78,7 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 			append([]Transformer{}, l.transformers...),
 			append([]FilesTransformer{}, l.filesTransformers...),
 			append([]PackageAndFilesValidator{}, l.packageAndFilesValidator...),
+			"",
 		}
 
 		for _, opt := range opts {
@@ -86,7 +92,7 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 		}
 	}
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, l.scheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, l.scheme, files, l.component)
 	if err != nil {
 		return nil, fmt.Errorf("convert files to package: %w", err)
 	}
