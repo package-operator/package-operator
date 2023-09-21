@@ -91,7 +91,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 			client := testCase.client
 
 			// Setup reconciler
-			deploymentController := NewObjectDeploymentController(client, logr.Discard(), testScheme)
+			deploymentController := NewObjectDeploymentController(client, logr.Discard(), testScheme, false)
 			mockedSubreconciler := &objectSetSubReconcilerMock{}
 
 			mockedSubreconciler.On(

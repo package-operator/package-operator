@@ -21,6 +21,7 @@ func ProvideObjectSetController(
 	dc *dynamiccache.Cache,
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
+	opts Options,
 ) ObjectSetController {
 	return ObjectSetController{
 		objectsets.NewObjectSetController(
@@ -28,6 +29,7 @@ func ProvideObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), dc, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			opts.SelfBootstrap != "",
 		),
 	}
 }
@@ -37,6 +39,7 @@ func ProvideClusterObjectSetController(
 	dc *dynamiccache.Cache,
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
+	opts Options,
 ) ClusterObjectSetController {
 	return ClusterObjectSetController{
 		objectsets.NewClusterObjectSetController(
@@ -44,6 +47,7 @@ func ProvideClusterObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), dc, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			opts.SelfBootstrap != "",
 		),
 	}
 }

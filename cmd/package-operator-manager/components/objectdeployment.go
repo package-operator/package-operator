@@ -14,26 +14,24 @@ type (
 	ClusterObjectDeploymentController struct{ controller }
 )
 
-func ProvideObjectDeploymentController(
-	mgr ctrl.Manager, log logr.Logger,
-) ObjectDeploymentController {
+func ProvideObjectDeploymentController(mgr ctrl.Manager, log logr.Logger, isBootstrap bool) ObjectDeploymentController {
 	return ObjectDeploymentController{
 		objectdeployments.NewObjectDeploymentController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ObjectDeployment"),
 			mgr.GetScheme(),
+			isBootstrap,
 		),
 	}
 }
 
-func ProvideClusterObjectDeploymentController(
-	mgr ctrl.Manager, log logr.Logger,
-) ClusterObjectDeploymentController {
+func ProvideClusterObjectDeploymentController(mgr ctrl.Manager, log logr.Logger, isBootstrap bool) ClusterObjectDeploymentController {
 	return ClusterObjectDeploymentController{
 		objectdeployments.NewClusterObjectDeploymentController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ClusterObjectDeployment"),
 			mgr.GetScheme(),
+			isBootstrap,
 		),
 	}
 }

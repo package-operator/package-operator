@@ -24,7 +24,7 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 	log := testr.New(t)
 	ctx := logr.NewContext(context.Background(), log)
 	clientMock := testutil.NewClient()
-	deploymentController := NewObjectDeploymentController(clientMock, log, testScheme)
+	deploymentController := NewObjectDeploymentController(clientMock, log, testScheme, false)
 	r := newRevisionReconciler{
 		client:       clientMock,
 		newObjectSet: deploymentController.newObjectSet,
@@ -131,7 +131,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			ctx := logr.NewContext(context.Background(), log)
 			clientMock := testCase.client
 			// Setup reconciler
-			deploymentController := NewObjectDeploymentController(testCase.client, log, testScheme)
+			deploymentController := NewObjectDeploymentController(testCase.client, log, testScheme, false)
 			r := newRevisionReconciler{
 				client:       clientMock,
 				newObjectSet: deploymentController.newObjectSet,
