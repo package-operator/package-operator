@@ -9,7 +9,6 @@ spec:
     - name: configure
     - name: deploy-backend
     - name: deploy-frontend
-    - name: deploy-monitoring
   availabilityProbes:
     - probes:
         - condition:
