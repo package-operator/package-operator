@@ -2,7 +2,9 @@ package transform
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -208,10 +210,15 @@ var allowedFuncNames = map[string]struct{}{
 }
 
 func TemplateWithSprigFuncs(content string) (*template.Template, error) {
-	return template.New("").Option("missingkey=error").Funcs(SprigFuncs()).Parse(content)
+	tmpl := template.New("").Option("missingkey=error")
+	return tmpl.Funcs(SprigFuncs(tmpl)).Parse(content)
 }
 
-func SprigFuncs() template.FuncMap {
+const recursionDepth = 1000
+
+var ErrExceededIncludeRecursion = errors.New("exceeded max include recursion depth")
+
+func SprigFuncs(t *template.Template) template.FuncMap {
 	allowedFuncs := map[string]any{}
 	for key, value := range sprig.FuncMap() {
 		if _, exists := allowedFuncNames[key]; exists {
@@ -219,6 +226,27 @@ func SprigFuncs() template.FuncMap {
 		}
 	}
 	allowedFuncs["b64decMap"] = base64decodeMap
+
+	includedNames := map[string]int{}
+	// Include function executes a template with given data and returns the result as string.
+	// Use this helper function if you need to modify the resulting output via e.g. | indent.
+	// Example:
+	// {{- define "test-helper" -}}{{.}}{{- end -}}{{- include "test-helper" . | upper -}}
+	allowedFuncs["include"] = func(name string, data interface{}) (string, error) {
+		var buf strings.Builder
+		if v, ok := includedNames[name]; ok {
+			if v > recursionDepth {
+				return "", fmt.Errorf("including template with name %s: %w", name, ErrExceededIncludeRecursion)
+			}
+			includedNames[name]++
+		} else {
+			includedNames[name] = 1
+		}
+		err := t.ExecuteTemplate(&buf, name, data)
+		includedNames[name]--
+		return buf.String(), err
+	}
+
 	return allowedFuncs
 }
 

@@ -111,6 +111,7 @@ func TestLoader(t *testing.T) {
 								"annotations": map[string]interface{}{
 									"other-test-helper": "other-test-helper",
 									"test-helper":       "test-helper",
+									"include-test":      "\nKEY1: VAL1\nKEY2: VAL2",
 								},
 							},
 							"spec": map[string]interface{}{"replicas": int64(1)},

@@ -7,5 +7,6 @@ metadata:
     package-operator.run/phase: main-stuff
     test-helper: {{ template "test-helper" }}
     other-test-helper: {{ template "other-test-helper" }}
+    include-test: {{include "include-test" . | upper | quote}}
 spec:
   replicas: 1

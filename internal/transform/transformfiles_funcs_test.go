@@ -1,8 +1,10 @@
 package transform
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
+	"text/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,9 +68,10 @@ var forbiddenFuncs = []string{
 func TestSprigAllowedFuncs(t *testing.T) {
 	t.Parallel()
 
-	actual := SprigFuncs()
+	tmpl := template.New("xxx")
+	actual := SprigFuncs(tmpl)
 
-	require.Equal(t, len(allowedFuncNames)+1, len(actual))
+	require.Equal(t, len(allowedFuncNames)+2, len(actual))
 
 	for key := range allowedFuncNames {
 		require.Contains(t, actual, key)
@@ -88,6 +91,37 @@ func TestSprigForbiddenFuncs(t *testing.T) {
 			require.ErrorContains(t, err, expectedErrMsg)
 		})
 	}
+}
+
+func Test_include(t *testing.T) {
+	t.Parallel()
+
+	tmpl := template.New("xxx")
+	tmpl = tmpl.Funcs(SprigFuncs(tmpl))
+
+	_, err := tmpl.Parse(`{{- define "test-helper" -}}{{.}}{{- end -}}{{- include "test-helper" . | upper -}}`)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	require.NoError(t, tmpl.Execute(&buf, "test"))
+
+	assert.Equal(t, "TEST", buf.String())
+}
+
+func Test_include_recursionError(t *testing.T) {
+	t.Parallel()
+
+	tmpl := template.New("xxx")
+	tmpl = tmpl.Funcs(SprigFuncs(tmpl))
+
+	_, err := tmpl.Parse(
+		`{{- define "test-helper" -}}{{- include "test-helper" . -}}{{- end -}}{{- include "test-helper" . -}}`,
+	)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, "test")
+	assert.ErrorIs(t, err, ErrExceededIncludeRecursion)
 }
 
 func Test_base64decodeMap(t *testing.T) {
