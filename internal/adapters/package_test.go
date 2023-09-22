@@ -33,7 +33,7 @@ func TestGenericPackage(t *testing.T) {
 
 	assert.Empty(t, pkg.GetComponent())
 	p.Spec.Component = "test_component"
-	assert.Equal(t, p.Spec.Component, pkg.GetImage())
+	assert.Equal(t, p.Spec.Component, pkg.GetComponent())
 }
 
 func TestGenericClusterPackage(t *testing.T) {
@@ -59,7 +59,7 @@ func TestGenericClusterPackage(t *testing.T) {
 
 	assert.Empty(t, pkg.GetComponent())
 	p.Spec.Component = "test_component"
-	assert.Equal(t, p.Spec.Component, pkg.GetImage())
+	assert.Equal(t, p.Spec.Component, pkg.GetComponent())
 }
 
 func Test_updatePackagePhase(t *testing.T) {
