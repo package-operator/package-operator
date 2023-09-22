@@ -42,19 +42,9 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 			continue
 
 		case packages.IsManifestFile(path):
-			if pkg.PackageManifest != nil {
-				err = packages.ViolationError{
-					Reason: packages.ViolationReasonPackageManifestDuplicated,
-					Path:   path,
-				}
-
-				return
-			}
-			pkg.PackageManifest, err = manifestFromFile(ctx, scheme, path, content)
-			if err != nil {
+			if pkg.PackageManifest, err = processManifestFile(ctx, scheme, pkg.PackageManifest, path, content); err != nil {
 				return nil, err
 			}
-
 			continue
 		case packages.IsManifestLockFile(path):
 			if pkg.PackageManifestLock != nil {
@@ -107,18 +97,21 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 	return
 }
 
+func processManifestFile(ctx context.Context, scheme *runtime.Scheme, manifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (*manifestsv1alpha1.PackageManifest, error) {
+	if manifest != nil {
+		return manifest, packages.ViolationError{
+			Reason: packages.ViolationReasonPackageManifestDuplicated,
+			Path:   path,
+		}
+	}
+	return manifestFromFile(ctx, scheme, path, content)
+}
+
 func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Files) (result bool, err error) {
 	var manifest *manifestsv1alpha1.PackageManifest
 	for path, content := range files {
 		if packages.IsManifestFile(path) {
-			if manifest != nil {
-				return false, packages.ViolationError{
-					Reason: packages.ViolationReasonPackageManifestDuplicated,
-					Path:   path,
-				}
-			}
-			manifest, err = manifestFromFile(ctx, scheme, path, content)
-			if err != nil {
+			if manifest, err = processManifestFile(ctx, scheme, manifest, path, content); err != nil {
 				return false, err
 			}
 		}
