@@ -69,7 +69,7 @@ type PackageManifestSpec struct {
 	Images []PackageManifestImage `json:"images"`
 	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
 	// +optional
-	Component *PackageManifestComponentConfig `json:"component,omitempty"`
+	Component *PackageManifestComponentConfig `json:"components,omitempty"`
 }
 
 type PackageManifestComponentConfig struct{}

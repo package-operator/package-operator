@@ -3,8 +3,11 @@ package packagecontent
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
+
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,7 +16,21 @@ import (
 	"package-operator.run/internal/packages"
 )
 
-func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, _ string) (pkg *Package, err error) {
+func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (pkg *Package, err error) {
+	componentsEnabled, err := areComponentsEnabled(ctx, scheme, files)
+	if err != nil {
+		return nil, err
+	}
+	if !componentsEnabled {
+		if component != "" {
+			return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}
+		}
+		return buildPackageFromFiles(ctx, scheme, files)
+	}
+	return buildPackageFromFiles(ctx, scheme, filterComponentFiles(files, component))
+}
+
+func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
 	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
@@ -88,4 +105,43 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, 
 	}
 
 	return
+}
+
+func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Files) (result bool, err error) {
+	var manifest *manifestsv1alpha1.PackageManifest
+	for path, content := range files {
+		if packages.IsManifestFile(path) {
+			if manifest != nil {
+				return false, packages.ViolationError{
+					Reason: packages.ViolationReasonPackageManifestDuplicated,
+					Path:   path,
+				}
+			}
+			manifest, err = manifestFromFile(ctx, scheme, path, content)
+			if err != nil {
+				return false, err
+			}
+		}
+	}
+	if manifest == nil {
+		return false, packages.ErrManifestNotFound
+	}
+	return manifest.Spec.Component != nil, nil
+}
+
+func filterComponentFiles(files Files, component string) Files {
+	var filtered Files = make(map[string][]byte)
+	for path := range files {
+		if isComponentFile(path, component) {
+			filtered[path] = files[path]
+		}
+	}
+	return filtered
+}
+
+func isComponentFile(path string, component string) bool {
+	if component == "" {
+		return !strings.HasPrefix(path, "components/")
+	}
+	return strings.HasPrefix(path, fmt.Sprintf("components/%s/", component))
 }

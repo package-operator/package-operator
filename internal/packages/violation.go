@@ -35,6 +35,7 @@ const (
 	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"
 	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
 	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
+	ViolationReasonComponentsNotEnabled          ViolationReason = "Components not enabled"
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
 )
 
