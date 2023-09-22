@@ -131,17 +131,21 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 
 func filterComponentFiles(files Files, component string) Files {
 	var filtered Files = make(map[string][]byte)
-	for path := range files {
-		if isComponentFile(path, component) {
-			filtered[path] = files[path]
+	for path, content := range files {
+		if isComponent, newPath := checkComponentPath(path, component); isComponent {
+			filtered[newPath] = content
 		}
 	}
 	return filtered
 }
 
-func isComponentFile(path string, component string) bool {
+func checkComponentPath(path string, component string) (bool, string) {
 	if component == "" {
-		return !strings.HasPrefix(path, "components/")
+		return !strings.HasPrefix(path, "components/"), path
 	}
-	return strings.HasPrefix(path, fmt.Sprintf("components/%s/", component))
+	prefix := fmt.Sprintf("components/%s/", component)
+	if strings.HasPrefix(path, prefix) {
+		return true, strings.TrimPrefix(path, prefix)
+	}
+	return false, path
 }
