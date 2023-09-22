@@ -30,6 +30,10 @@ func TestGenericPackage(t *testing.T) {
 	p.Spec.Config = &runtime.RawExtension{}
 	tc := pkg.TemplateContext()
 	assert.Same(t, p.Spec.Config, tc.Config)
+
+	assert.Empty(t, pkg.GetComponent())
+	p.Spec.Component = "test_component"
+	assert.Equal(t, p.Spec.Component, pkg.GetImage())
 }
 
 func TestGenericClusterPackage(t *testing.T) {
@@ -52,6 +56,10 @@ func TestGenericClusterPackage(t *testing.T) {
 	p.Spec.Config = &runtime.RawExtension{}
 	tc := pkg.TemplateContext()
 	assert.Same(t, p.Spec.Config, tc.Config)
+
+	assert.Empty(t, pkg.GetComponent())
+	p.Spec.Component = "test_component"
+	assert.Equal(t, p.Spec.Component, pkg.GetImage())
 }
 
 func Test_updatePackagePhase(t *testing.T) {
