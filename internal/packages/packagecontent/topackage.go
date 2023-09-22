@@ -3,6 +3,8 @@ package packagecontent
 import (
 	"bytes"
 	"context"
+	"path/filepath"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,9 +17,11 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
-		case !packages.IsYAMLFile(path):
+		case !packages.IsYAMLFile(path) ||
+			strings.HasPrefix(filepath.Base(path), "_"):
 			// skip non YAML files
 			continue
+
 		case packages.IsManifestFile(path):
 			if pkg.PackageManifest != nil {
 				err = packages.ViolationError{

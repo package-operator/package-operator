@@ -8,5 +8,7 @@ metadata:
     test-helper: {{ template "test-helper" }}
     other-test-helper: {{ template "other-test-helper" }}
     include-test: {{include "include-test" . | upper | quote}}
+    fileGet: |
+      {{ getFile "_stuff.txt" }}
 spec:
   replicas: 1

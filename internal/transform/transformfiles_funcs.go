@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"sigs.k8s.io/yaml"
 )
 
 // allow all sprig functions except dates, random, crypto, os, network and filepath.
@@ -247,6 +248,8 @@ func SprigFuncs(t *template.Template) template.FuncMap {
 		return buf.String(), err
 	}
 
+	allowedFuncs["toYAML"] = toYAML
+	allowedFuncs["fromYAML"] = fromYAML
 	return allowedFuncs
 }
 
@@ -269,4 +272,29 @@ func base64decodeMap(data map[string]interface{}) (
 	}
 
 	return decodedData, nil
+}
+
+func toYAML(v interface{}) (string, error) {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(string(data), "\n"), nil
+}
+
+var ErrInvalidType = errors.New("invalid type")
+
+func fromYAML(y interface{}) (out interface{}, err error) {
+	var b []byte
+	switch v := y.(type) {
+	case string:
+		b = []byte(v)
+	case []byte:
+		b = v
+	default:
+		return nil, fmt.Errorf(
+			"fromYAML requires string or []byte as input: %w", ErrInvalidType)
+	}
+
+	return out, yaml.Unmarshal(b, &out)
 }
