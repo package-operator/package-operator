@@ -2,6 +2,7 @@ package packagecontent_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,10 @@ import (
 	"package-operator.run/internal/packages/packageimport"
 )
 
-var testScheme = runtime.NewScheme()
+var (
+	testScheme   = runtime.NewScheme()
+	testDataPath = filepath.Join("testdata", "base")
+)
 
 func init() {
 	if err := pkoapis.AddToScheme(testScheme); err != nil {
@@ -26,7 +30,7 @@ func TestPackageFromFile(t *testing.T) {
 
 	ctx := context.Background()
 
-	files, err := packageimport.Folder(ctx, "testdata")
+	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
 	// TODO: handle components
@@ -40,7 +44,7 @@ func TestTemplateSpecFromPackage(t *testing.T) {
 
 	ctx := context.Background()
 
-	files, err := packageimport.Folder(ctx, "testdata")
+	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
 	// TODO: handle components

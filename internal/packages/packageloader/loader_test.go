@@ -3,7 +3,6 @@ package packageloader_test
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -46,7 +45,7 @@ func TestLoader(t *testing.T) {
 	l := packageloader.New(testScheme, packageloader.WithDefaults, packageloader.WithFilesTransformers(transformer))
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	files, err := packageimport.Folder(ctx, filepath.Join("testdata", "base"))
+	files, err := packageimport.Folder(ctx, "testdata")
 	require.NoError(t, err)
 
 	pc, err := l.FromFiles(ctx, files)
