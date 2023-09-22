@@ -33,7 +33,6 @@ func TestPackageFromFile(t *testing.T) {
 	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	// TODO: handle components
 	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
@@ -47,7 +46,6 @@ func TestTemplateSpecFromPackage(t *testing.T) {
 	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	// TODO: handle components
 	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
