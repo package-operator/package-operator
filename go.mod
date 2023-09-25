@@ -10,7 +10,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cel-go v0.16.1
+	github.com/google/cel-go v0.18.0
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.0
