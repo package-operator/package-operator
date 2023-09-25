@@ -17,6 +17,15 @@ import (
 var (
 	testScheme   = runtime.NewScheme()
 	testDataPath = filepath.Join("testdata", "base")
+	testManifest = "apiVersion: manifests.package-operator.run/v1alpha1\n" +
+		"kind: PackageManifest\n" +
+		"metadata:\n" +
+		"  name: test\n" +
+		"spec:\n" +
+		"  scopes:\n" +
+		"    - Namespaced\n" +
+		"  phases:\n" +
+		"    - name: configure"
 )
 
 func init() {
@@ -87,8 +96,15 @@ func TestPackageManifestLoader_Errors(t *testing.T) {
 			},
 			err: `PackageManifest unknown GVK in manifest.yaml: unknown version v23, supported versions: v1alpha1`,
 		},
+		{
+			name: "multiple manifests",
+			fileMap: packagecontent.Files{
+				packages.PackageManifestFilename: []byte(testManifest),
+				"manifest.yml":                   []byte(testManifest),
+			},
+			err: `PackageManifest present multiple times in manifest.yml`,
+		},
 	}
-
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {

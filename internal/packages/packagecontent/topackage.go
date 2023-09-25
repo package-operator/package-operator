@@ -97,9 +97,9 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 	return
 }
 
-func processManifestFile(ctx context.Context, scheme *runtime.Scheme, manifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (*manifestsv1alpha1.PackageManifest, error) {
-	if manifest != nil {
-		return manifest, packages.ViolationError{
+func processManifestFile(ctx context.Context, scheme *runtime.Scheme, previousManifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (newManifest *manifestsv1alpha1.PackageManifest, err error) {
+	if previousManifest != nil {
+		return previousManifest, packages.ViolationError{
 			Reason: packages.ViolationReasonPackageManifestDuplicated,
 			Path:   path,
 		}
