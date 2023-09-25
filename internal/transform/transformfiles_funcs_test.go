@@ -71,7 +71,7 @@ func TestSprigAllowedFuncs(t *testing.T) {
 	tmpl := template.New("xxx")
 	actual := SprigFuncs(tmpl)
 
-	require.Equal(t, len(allowedFuncNames)+2, len(actual))
+	require.Equal(t, len(allowedFuncNames)+4, len(actual))
 
 	for key := range allowedFuncNames {
 		require.Contains(t, actual, key)
@@ -135,4 +135,46 @@ func Test_base64decodeMap(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"test": "abcdef",
 	}, out)
+}
+
+func Test_toYAML(t *testing.T) {
+	t.Parallel()
+
+	obj := map[string]string{
+		"t": "2",
+	}
+	y, err := toYAML(obj)
+	require.NoError(t, err)
+	assert.Equal(t, `t: "2"`, y)
+}
+
+func Test_fromYAML(t *testing.T) {
+	t.Parallel()
+
+	t.Run("string", func(t *testing.T) {
+		t.Parallel()
+
+		y, err := fromYAML(`t: "2"`)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"t": "2",
+		}, y)
+	})
+
+	t.Run("[]byte", func(t *testing.T) {
+		t.Parallel()
+
+		y, err := fromYAML([]byte(`t: "2"`))
+		require.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"t": "2",
+		}, y)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := fromYAML(map[string]interface{}{})
+		require.ErrorIs(t, err, ErrInvalidType)
+	})
 }
