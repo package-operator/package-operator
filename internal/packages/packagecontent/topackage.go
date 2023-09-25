@@ -123,7 +123,7 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 }
 
 func filterComponentFiles(files Files, component string) Files {
-	var filtered Files = make(map[string][]byte)
+	filtered := Files{}
 	for path, content := range files {
 		if isComponent, newPath := checkComponentPath(path, component); isComponent {
 			filtered[newPath] = content

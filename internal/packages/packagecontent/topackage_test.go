@@ -94,7 +94,6 @@ func TestPackageManifestLoader_Errors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			// TODO: handle components
 			_, err := packagecontent.PackageFromFiles(context.Background(), testScheme, test.fileMap, "")
 			require.EqualError(t, err, test.err)
 		})

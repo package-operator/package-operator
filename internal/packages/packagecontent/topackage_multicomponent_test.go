@@ -6,12 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"package-operator.run/internal/packages/packagecontent"
-
-	"package-operator.run/internal/packages"
-
 	"github.com/stretchr/testify/require"
 
+	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"
 )
 
@@ -33,8 +31,8 @@ func TestMultiComponentLoader(t *testing.T) {
 		{"components-enabled", "foobar", packages.ErrManifestNotFound},
 	}
 
-	for i, tst := range tests {
-		test := tst
+	for i := range tests {
+		test := tests[i]
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
 
