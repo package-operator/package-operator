@@ -17,8 +17,10 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
-		case !packages.IsYAMLFile(path) ||
-			strings.HasPrefix(filepath.Base(path), "_"):
+		case strings.HasPrefix(filepath.Base(path), "_"):
+			// skip template helper files.
+			continue
+		case !packages.IsYAMLFile(path):
 			// skip non YAML files
 			continue
 
