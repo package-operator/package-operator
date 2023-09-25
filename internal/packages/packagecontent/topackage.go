@@ -119,7 +119,7 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 	if manifest == nil {
 		return false, packages.ErrManifestNotFound
 	}
-	return manifest.Spec.Component != nil, nil
+	return manifest.Spec.Components != nil, nil
 }
 
 func filterComponentFiles(files Files, component string) Files {
