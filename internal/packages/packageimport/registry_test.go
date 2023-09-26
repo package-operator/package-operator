@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
 )
 
@@ -26,7 +27,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 		"test.yaml": []byte("test"),
 	}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			time.Sleep(500 * time.Millisecond)
 		}).
@@ -38,7 +39,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ff, err := r.Pull(ctx, "quay.io/test123")
+			ff, err := r.Pull(ctx, "quay.io/test123", corev1alpha1.PackageTypePackageOperator)
 			require.NoError(t, err)
 			assert.Equal(t, f, ff)
 		}()
@@ -46,7 +47,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 	wg.Wait()
 
 	ipm.AssertNumberOfCalls(t, "Pull", 1)
-	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest")
+	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest", corev1alpha1.PackageTypePackageOperator)
 }
 
 func TestRegistry_DelayedRequests(t *testing.T) {
@@ -59,7 +60,7 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(packagecontent.Files{}, nil)
 
 	r := NewRegistry(map[string]string{
@@ -78,7 +79,7 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			f, _ := r.Pull(ctx, "quay.io/test123")
+			f, _ := r.Pull(ctx, "quay.io/test123", corev1alpha1.PackageTypePackageOperator)
 
 			filesLock.Lock()
 			defer filesLock.Unlock()
@@ -109,7 +110,8 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, ref string,
+	pkgType corev1alpha1.PackageType,
 ) (packagecontent.Files, error) {
-	args := m.Called(ctx, ref)
+	args := m.Called(ctx, ref, pkgType)
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }

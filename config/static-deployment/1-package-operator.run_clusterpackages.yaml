@@ -50,9 +50,12 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               image:
-                description: the image containing the contents of the package this
+                description: The image containing the contents of the package this
                   image will be unpacked by the package-loader to render the ObjectDeployment
                   for propagating the installation of the package.
+                type: string
+              type:
+                description: Package content type.
                 type: string
             required:
             - image

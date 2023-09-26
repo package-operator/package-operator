@@ -223,7 +223,9 @@ func (init *initializer) config() *runtime.RawExtension {
 func (init *initializer) crdsFromPackage(ctx context.Context) (
 	crds []unstructured.Unstructured, err error,
 ) {
-	files, err := init.pullImage(ctx, init.selfBootstrapImage)
+	files, err := init.pullImage(
+		ctx, init.selfBootstrapImage,
+		corev1alpha1.PackageTypePackageOperator)
 	if err != nil {
 		return nil, err
 	}

@@ -59,8 +59,10 @@ func newUnpackReconciler(
 }
 
 type imagePuller interface {
-	Pull(ctx context.Context, image string) (
-		packagecontent.Files, error)
+	Pull(
+		ctx context.Context, image string,
+		pkgType corev1alpha1.PackageType,
+	) (packagecontent.Files, error)
 }
 
 type packageDeployer interface {
@@ -84,7 +86,7 @@ func (r *unpackReconciler) Reconcile(
 
 	pullStart := time.Now()
 	log := logr.FromContextOrDiscard(ctx)
-	files, err := r.imagePuller.Pull(ctx, pkg.GetImage())
+	files, err := r.imagePuller.Pull(ctx, pkg.GetImage(), pkg.GetType())
 	if err != nil {
 		meta.SetStatusCondition(
 			pkg.GetConditions(), metav1.Condition{

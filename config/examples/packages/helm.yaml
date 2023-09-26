@@ -1,0 +1,7 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: nginx
+spec:
+  image: registry-1.docker.io/bitnamicharts/nginx:15.3.1
+  type: Helm

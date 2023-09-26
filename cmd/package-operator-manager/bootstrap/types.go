@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageloader"
 )
@@ -15,4 +16,6 @@ type packageLoader interface {
 }
 
 type bootstrapperPullImageFn func(
-	ctx context.Context, image string) (packagecontent.Files, error)
+	ctx context.Context, image string,
+	pkgType corev1alpha1.PackageType,
+) (packagecontent.Files, error)

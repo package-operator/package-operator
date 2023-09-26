@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"
 	"package-operator.run/internal/packages/packageloader"
@@ -57,7 +58,11 @@ type ValidateOption interface {
 }
 
 type Puller interface {
-	Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error)
+	Pull(
+		ctx context.Context, ref string,
+		pkgType corev1alpha1.PackageType,
+		opts ...packageimport.PullOption,
+	) (packagecontent.Files, error)
 }
 
 func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageOption) error {
@@ -118,7 +123,7 @@ func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePack
 		packageimport.WithInsecure(cfg.Insecure),
 	}
 
-	filemap, err := v.cfg.Puller.Pull(ctx, ref.String(), pullOpts...)
+	filemap, err := v.cfg.Puller.Pull(ctx, ref.String(), corev1alpha1.PackageTypePackageOperator, pullOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("importing package from image: %w", err)
 	}

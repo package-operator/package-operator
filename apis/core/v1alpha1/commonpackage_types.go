@@ -51,12 +51,21 @@ const (
 	PackagePhaseInvalid     PackageStatusPhase = "Invalid"
 )
 
+type PackageType string
+
+const (
+	PackageTypePackageOperator PackageType = "PackageOperator"
+	PackageTypeHelm            PackageType = "Helm"
+)
+
 // Package specification.
 type PackageSpec struct {
-	// the image containing the contents of the package
+	// The image containing the contents of the package
 	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+	// Package content type.
+	Type PackageType `json:"type,omitempty"`
 	// Package configuration parameters.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Config *runtime.RawExtension `json:"config,omitempty"`

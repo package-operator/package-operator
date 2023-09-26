@@ -331,6 +331,7 @@ spec:
   component: sadipscing
   config: runtime.RawExtension
   image: consetetur
+  type: PackageType
 status:
   phase: Pending
 
@@ -664,6 +665,7 @@ spec:
   component: lorem
   config: runtime.RawExtension
   image: tempor
+  type: PackageType
 status:
   phase: Pending
 
@@ -1081,7 +1083,8 @@ Package specification.
 
 | Field | Description |
 | ----- | ----------- |
-| `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `image` <b>required</b><br>string | The image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `type` <br><a href="#packagetype">PackageType</a> | Package content type. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
 | `component` <br>string | Desired component to deploy from multi-component packages. |
 

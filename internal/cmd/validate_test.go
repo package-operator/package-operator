@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"
 )
@@ -172,7 +173,10 @@ type pullerMock struct {
 	mock.Mock
 }
 
-func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error) {
+func (m *pullerMock) Pull(
+	ctx context.Context, ref string, _ corev1alpha1.PackageType,
+	opts ...packageimport.PullOption,
+) (packagecontent.Files, error) {
 	actualArgs := []any{ctx, ref}
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)

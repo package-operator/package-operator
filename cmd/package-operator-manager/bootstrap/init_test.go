@@ -435,7 +435,7 @@ func Test_initializer_crdsFromPackage(t *testing.T) {
 
 	b := &initializer{
 		loader: l,
-		pullImage: func(ctx context.Context, path string) (
+		pullImage: func(ctx context.Context, path string, pkgType corev1alpha1.PackageType) (
 			packagecontent.Files, error,
 		) {
 			return nil, nil

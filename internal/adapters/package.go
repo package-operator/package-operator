@@ -15,6 +15,7 @@ type GenericPackageAccessor interface {
 	ClientObject() client.Object
 	UpdatePhase()
 	GetConditions() *[]metav1.Condition
+	GetType() corev1alpha1.PackageType
 	GetImage() string
 	GetSpecHash(packageHashModifier *int32) string
 	GetUnpackedHash() string
@@ -75,6 +76,13 @@ func (a *GenericPackage) UpdatePhase() {
 	updatePackagePhase(a)
 }
 
+func (a *GenericPackage) GetType() corev1alpha1.PackageType {
+	if len(a.Spec.Type) == 0 {
+		return corev1alpha1.PackageTypePackageOperator
+	}
+	return a.Spec.Type
+}
+
 func (a *GenericPackage) GetImage() string {
 	return a.Spec.Image
 }
@@ -126,6 +134,13 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 
 func (a *GenericClusterPackage) UpdatePhase() {
 	updatePackagePhase(a)
+}
+
+func (a *GenericClusterPackage) GetType() corev1alpha1.PackageType {
+	if len(a.Spec.Type) == 0 {
+		return corev1alpha1.PackageTypePackageOperator
+	}
+	return a.Spec.Type
 }
 
 func (a *GenericClusterPackage) GetImage() string {

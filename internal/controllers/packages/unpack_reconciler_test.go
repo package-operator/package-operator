@@ -28,7 +28,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	f := packagecontent.Files{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(f, nil)
 	pd.
 		On("Load", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -93,7 +93,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	f := packagecontent.Files{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(f, errTest)
 
 	pkg := &adapters.GenericPackage{
@@ -120,8 +120,9 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, image string,
+	pkgType corev1alpha1.PackageType,
 ) (packagecontent.Files, error) {
-	args := m.Called(ctx, image)
+	args := m.Called(ctx, image, pkgType)
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }
 

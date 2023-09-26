@@ -153,3 +153,59 @@ func Test_templateContextObjectMetaFromObjectMeta(t *testing.T) {
 	assert.Equal(t, labels, tcom.Labels)
 	assert.Equal(t, annotations, tcom.Annotations)
 }
+
+func TestGenericPackageGetType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		pkg          GenericPackageAccessor
+		expectedType corev1alpha1.PackageType
+	}{
+		{
+			name: "Package default",
+			pkg: &GenericPackage{
+				Package: corev1alpha1.Package{},
+			},
+			expectedType: corev1alpha1.PackageTypePackageOperator,
+		},
+		{
+			name: "ClusterPackage default",
+			pkg: &GenericClusterPackage{
+				ClusterPackage: corev1alpha1.ClusterPackage{},
+			},
+			expectedType: corev1alpha1.PackageTypePackageOperator,
+		},
+		{
+			name: "Package value from spec",
+			pkg: &GenericPackage{
+				Package: corev1alpha1.Package{
+					Spec: corev1alpha1.PackageSpec{
+						Type: corev1alpha1.PackageTypeHelm,
+					},
+				},
+			},
+			expectedType: corev1alpha1.PackageTypeHelm,
+		},
+		{
+			name: "ClusterPackage value from spec",
+			pkg: &GenericClusterPackage{
+				ClusterPackage: corev1alpha1.ClusterPackage{
+					Spec: corev1alpha1.PackageSpec{
+						Type: corev1alpha1.PackageTypeHelm,
+					},
+				},
+			},
+			expectedType: corev1alpha1.PackageTypeHelm,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			pkgType := test.pkg.GetType()
+			assert.Equal(t, test.expectedType, pkgType)
+		})
+	}
+}

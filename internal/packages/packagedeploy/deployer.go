@@ -19,6 +19,7 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/packages/packageadmission"
 	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageconversion"
 	"package-operator.run/internal/packages/packageloader"
 )
 
@@ -99,14 +100,13 @@ func ImageWithDigest(reference string, digest string) (string, error) {
 	return ref.Context().Digest(digest).String(), nil
 }
 
-func (l *PackageDeployer) Load(
+func (l *PackageDeployer) loadPackageOperatorPackage(
 	ctx context.Context, pkg adapters.GenericPackageAccessor,
 	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
-) error {
+) (*packagecontent.Package, error) {
 	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
 	if err != nil {
-		setInvalidConditionBasedOnLoadError(pkg, err)
-		return nil
+		return nil, err
 	}
 
 	tmplCtx := pkg.TemplateContext()
@@ -115,17 +115,16 @@ func (l *PackageDeployer) Load(
 
 	if tmplCtx.Config != nil {
 		if err := json.Unmarshal(tmplCtx.Config.Raw, &configuration); err != nil {
-			return fmt.Errorf("unmarshal config: %w", err)
+			return nil, fmt.Errorf("unmarshal config: %w", err)
 		}
 	}
 	validationErrors, err := packageadmission.AdmitPackageConfiguration(
 		ctx, l.scheme, configuration, packageContent.PackageManifest, field.NewPath("spec", "config"))
 	if err != nil {
-		return fmt.Errorf("validate Package configuration: %w", err)
+		return nil, fmt.Errorf("validate Package configuration: %w", err)
 	}
 	if len(validationErrors) > 0 {
-		setInvalidConditionBasedOnLoadError(pkg, validationErrors.ToAggregate())
-		return nil
+		return nil, validationErrors.ToAggregate()
 	}
 
 	images := map[string]string{}
@@ -133,7 +132,7 @@ func (l *PackageDeployer) Load(
 		for _, packageImage := range packageContent.PackageManifestLock.Spec.Images {
 			resolvedImage, err := ImageWithDigest(packageImage.Image, packageImage.Digest)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			images[packageImage.Name] = resolvedImage
 		}
@@ -146,12 +145,33 @@ func (l *PackageDeployer) Load(
 		Environment: tmplCtx.Environment,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	packageContent, err = l.packageContentLoader.FromFiles(
 		ctx, files,
 		packageloader.WithFilesTransformers(tt),
 		packageloader.WithTransformers(&packageloader.PackageTransformer{Package: pkg.ClientObject()}))
+	if err != nil {
+		return nil, err
+	}
+	return packageContent, nil
+}
+
+func (l *PackageDeployer) Load(
+	ctx context.Context, pkg adapters.GenericPackageAccessor,
+	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
+) error {
+	var (
+		packageContent *packagecontent.Package
+		err            error
+	)
+	switch pkg.GetType() {
+	case corev1alpha1.PackageTypePackageOperator:
+		packageContent, err = l.loadPackageOperatorPackage(ctx, pkg, files, env)
+
+	case corev1alpha1.PackageTypeHelm:
+		packageContent, err = packageconversion.Helm(ctx, pkg, files)
+	}
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil

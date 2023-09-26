@@ -56,26 +56,9 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 			continue
 		}
 
-		// Trim empty starting and ending objects
-		objects := []unstructured.Unstructured{}
-
-		// Split for every included yaml document.
-		for idx, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
-			obj := unstructured.Unstructured{}
-			if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
-				err = packages.ViolationError{
-					Reason:  packages.ViolationReasonInvalidYAML,
-					Details: err.Error(),
-					Path:    path,
-					Index:   packages.Index(idx),
-				}
-
-				return
-			}
-
-			if len(obj.Object) != 0 {
-				objects = append(objects, obj)
-			}
+		objects, err := UnstructuredFromFile(path, content)
+		if err != nil {
+			return nil, err
 		}
 		if len(objects) != 0 {
 			pkg.Objects[path] = objects
@@ -88,4 +71,30 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) 
 	}
 
 	return
+}
+
+func UnstructuredFromFile(path string, content []byte) (
+	[]unstructured.Unstructured, error,
+) {
+	var objects []unstructured.Unstructured
+
+	// Split for every included yaml document.
+	for idx, yamlDocument := range bytes.Split(
+		bytes.Trim(content, "---\n"), []byte("---\n")) {
+		obj := unstructured.Unstructured{}
+		if err := yaml.Unmarshal(yamlDocument, &obj); err != nil {
+			err = packages.ViolationError{
+				Reason:  packages.ViolationReasonInvalidYAML,
+				Details: err.Error(),
+				Path:    path,
+				Index:   packages.Index(idx),
+			}
+			return nil, err
+		}
+
+		if len(obj.Object) != 0 {
+			objects = append(objects, obj)
+		}
+	}
+	return objects, nil
 }

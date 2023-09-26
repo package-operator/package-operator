@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/utils"
 )
@@ -14,27 +15,35 @@ type Registry struct {
 	registryHostOverrides map[string]string
 
 	pullImage    pullImageFn
-	inFlight     map[string][]chan<- response
+	inFlight     map[inFlightKey][]chan<- response
 	inFlightLock sync.Mutex
 }
 
-type pullImageFn func(ctx context.Context, ref string) (packagecontent.Files, error)
+type inFlightKey struct {
+	image   string
+	pkgType corev1alpha1.PackageType
+}
+
+type pullImageFn func(ctx context.Context, ref string, pkgType corev1alpha1.PackageType) (packagecontent.Files, error)
 
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
 		pullImage:             PulledImage,
-		inFlight:              make(map[string][]chan<- response),
+		inFlight:              make(map[inFlightKey][]chan<- response),
 	}
 }
 
-func (r *Registry) Pull(ctx context.Context, image string) (packagecontent.Files, error) {
+func (r *Registry) Pull(
+	ctx context.Context, image string,
+	pkgType corev1alpha1.PackageType,
+) (packagecontent.Files, error) {
 	image, err := r.applyOverride(image)
 	if err != nil {
 		return nil, err
 	}
 
-	res := <-r.handleRequest(ctx, image)
+	res := <-r.handleRequest(ctx, image, pkgType)
 
 	return res.Files, res.Err
 }
@@ -55,26 +64,34 @@ func (r *Registry) applyOverride(image string) (string, error) {
 // on the in flight pull requests, more specifically, a check if an image pull
 // is in flight after a pull attempt has started, but before the first receiver
 // is registered.
-func (r *Registry) handleRequest(ctx context.Context, image string) <-chan response {
+func (r *Registry) handleRequest(
+	ctx context.Context, image string,
+	pkgType corev1alpha1.PackageType,
+) <-chan response {
 	r.inFlightLock.Lock()
 	defer r.inFlightLock.Unlock()
 
-	if _, inFlight := r.inFlight[image]; !inFlight {
-		go func(ctx context.Context, image string) {
-			files, err := r.pullImage(ctx, image)
+	key := inFlightKey{
+		image:   image,
+		pkgType: pkgType,
+	}
 
-			r.handleResponse(image, response{
+	if _, inFlight := r.inFlight[key]; !inFlight {
+		go func(ctx context.Context, image string, pkgType corev1alpha1.PackageType) {
+			files, err := r.pullImage(ctx, image, pkgType)
+
+			r.handleResponse(key, response{
 				Files: files,
 				Err:   err,
 			})
-		}(ctx, image)
+		}(ctx, image, pkgType)
 	}
 
 	// buffer size of 1 ensures that response handler
 	// is never blocked by a receiver.
 	recv := make(chan response, 1)
 
-	r.inFlight[image] = append(r.inFlight[image], recv)
+	r.inFlight[key] = append(r.inFlight[key], recv)
 
 	return recv
 }
@@ -86,11 +103,11 @@ func (r *Registry) handleRequest(ctx context.Context, image string) <-chan respo
 // writes, more specifically, the registration of a new receiver
 // after broadcast has occurred, but before the image entry is
 // deleted.
-func (r *Registry) handleResponse(image string, res response) {
+func (r *Registry) handleResponse(key inFlightKey, res response) {
 	r.inFlightLock.Lock()
 	defer r.inFlightLock.Unlock()
 
-	for _, recv := range r.inFlight[image] {
+	for _, recv := range r.inFlight[key] {
 		recv <- response{
 			// DeepCopy to ensure clients can work concurrently on the returned files map.
 			Files: res.Files.DeepCopy(),
@@ -98,7 +115,7 @@ func (r *Registry) handleResponse(image string, res response) {
 		}
 	}
 
-	delete(r.inFlight, image)
+	delete(r.inFlight, key)
 }
 
 type response struct {
