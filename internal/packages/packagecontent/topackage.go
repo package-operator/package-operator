@@ -5,6 +5,7 @@ import (
 	"context"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -48,7 +49,13 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 		}
 		filesMap[ROOT] = files
 	} else {
-		for path := range files {
+		paths := make([]string, 0, len(files))
+		for key := range files {
+			paths = append(paths, key)
+		}
+		sort.Strings(paths)
+
+		for _, path := range paths {
 			componentName, componentPath, err := getComponentNameAndPath(path)
 			if err != nil {
 				return nil, err
