@@ -206,8 +206,6 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
-	defer log.Info("reconciled")
-
 	objectSetPhase := c.newObjectSetPhase(c.scheme)
 	if err := c.client.Get(
 		ctx, req.NamespacedName, objectSetPhase.ClientObject()); err != nil {
