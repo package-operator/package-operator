@@ -36,6 +36,8 @@ const (
 	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
 	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
 	ViolationReasonComponentsNotEnabled          ViolationReason = "Components not enabled"
+	ViolationReasonComponentNotFound             ViolationReason = "Component not found"
+	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
 )
 

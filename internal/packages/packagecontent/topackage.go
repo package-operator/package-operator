@@ -3,8 +3,8 @@ package packagecontent
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -16,18 +16,69 @@ import (
 	"package-operator.run/internal/packages"
 )
 
-func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (pkg *Package, err error) {
+const ROOT = "_root_"
+
+var componentFileRE = regexp.MustCompile("^([a-z][a-z0-9-]{0,62})/(.+)$")
+
+func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (*Package, error) {
+	return PackageComponentFromFiles(ctx, scheme, files, "")
+}
+
+func PackageComponentFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
+	pkgMap, err := AllPackagesFromFiles(ctx, scheme, files, component)
+	if err != nil {
+		return nil, err
+	}
+	if component != "" {
+		return pkgMap[component], nil
+	}
+	return pkgMap[ROOT], nil
+}
+
+func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (map[string]*Package, error) {
 	componentsEnabled, err := areComponentsEnabled(ctx, scheme, files)
 	if err != nil {
 		return nil, err
 	}
+
+	filesMap := make(map[string]Files)
 	if !componentsEnabled {
 		if component != "" {
 			return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}
 		}
-		return buildPackageFromFiles(ctx, scheme, files)
+		filesMap[ROOT] = files
+	} else {
+		for path := range files {
+			componentName, componentPath, err := getComponentNameAndPath(path)
+			if err != nil {
+				return nil, err
+			}
+			if _, exists := filesMap[componentName]; !exists {
+				filesMap[componentName] = Files{}
+			}
+			filesMap[componentName][componentPath] = files[path]
+		}
 	}
-	return buildPackageFromFiles(ctx, scheme, filterComponentFiles(files, component))
+
+	componentKey := ROOT
+	if component != "" {
+		componentKey = component
+	}
+	_, exists := filesMap[componentKey]
+	if !exists {
+		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound}
+	}
+
+	pkgMap := make(map[string]*Package)
+	for componentName, componentFiles := range filesMap {
+		pkg, err := buildPackageFromFiles(ctx, scheme, componentFiles)
+		if err != nil {
+			return nil, err
+		}
+		pkgMap[componentName] = pkg
+	}
+
+	return pkgMap, nil
 }
 
 func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
@@ -122,23 +173,15 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 	return manifest.Spec.Components != nil, nil
 }
 
-func filterComponentFiles(files Files, component string) Files {
-	filtered := Files{}
-	for path, content := range files {
-		if isComponent, newPath := checkComponentPath(path, component); isComponent {
-			filtered[newPath] = content
-		}
+func getComponentNameAndPath(path string) (componentName string, componentPath string, err error) {
+	if !strings.HasPrefix(path, "components/") {
+		return ROOT, path, nil
 	}
-	return filtered
-}
-
-func checkComponentPath(path string, component string) (bool, string) {
-	if component == "" {
-		return !strings.HasPrefix(path, "components/"), path
+	if matches := componentFileRE.FindStringSubmatch(path[11:]); len(matches) == 3 {
+		return matches[1], matches[2], nil
 	}
-	prefix := fmt.Sprintf("components/%s/", component)
-	if strings.HasPrefix(path, prefix) {
-		return true, strings.TrimPrefix(path, prefix)
+	return "", "", packages.ViolationError{
+		Reason: packages.ViolationReasonInvalidComponentPath,
+		Path:   path,
 	}
-	return false, path
 }

@@ -25,10 +25,14 @@ func TestMultiComponentLoader(t *testing.T) {
 	tests := []testData{
 		{"components-disabled", "", nil},
 		{"components-disabled", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}},
-		{"components-enabled", "", nil},
-		{"components-enabled", "backend", nil},
-		{"components-enabled", "frontend", nil},
-		{"components-enabled", "foobar", packages.ErrManifestNotFound},
+		{"components-enabled-invalid", "3backend", packages.ViolationError{
+			Reason: packages.ViolationReasonInvalidComponentPath,
+			Path:   "components/3backend/Deployment.yaml",
+		}},
+		{"components-enabled-valid", "", nil},
+		{"components-enabled-valid", "backend", nil},
+		{"components-enabled-valid", "frontend", nil},
+		{"components-enabled-valid", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound}},
 	}
 
 	for i := range tests {
@@ -40,7 +44,7 @@ func TestMultiComponentLoader(t *testing.T) {
 			files, err := packageimport.Folder(ctx, filepath.Join("testdata", "multi-component", test.directory))
 			require.NoError(t, err)
 
-			pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, test.component)
+			pkg, err := packagecontent.AllPackagesFromFiles(ctx, testScheme, files, test.component)
 
 			if test.error == nil {
 				require.NoError(t, err)

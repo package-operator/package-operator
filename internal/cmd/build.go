@@ -80,15 +80,11 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	b.cfg.Log.Info("creating image")
 
-	loader := packageloader.New(b.scheme, append(loaderOpts, packageloader.WithDefaults)...)
+	loader := packageloader.New(b.scheme, append(loaderOpts, packageloader.WithDefaults, packageloader.WithValidators(b))...)
 
-	pkg, err := loader.FromFiles(ctx, files)
+	_, err = loader.FromFiles(ctx, files)
 	if err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
-	}
-
-	if err := b.validatePackage(pkg); err != nil {
-		return fmt.Errorf("validating package: %w", err)
 	}
 
 	if cfg.OutputPath != "" {
@@ -114,7 +110,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	return nil
 }
 
-func (b *Build) validatePackage(pkg *packagecontent.Package) error {
+func (b *Build) ValidatePackage(_ context.Context, pkg *packagecontent.Package) error {
 	if pkg.PackageManifestLock == nil {
 		if len(pkg.PackageManifest.Spec.Images) > 0 {
 			return err(`manifest.lock.yaml is missing (try running "kubectl package update")`)

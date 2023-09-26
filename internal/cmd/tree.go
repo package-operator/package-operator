@@ -72,7 +72,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("loading package contents from folder: %w", err)
 	}
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, t.scheme, files, cfg.Component)
+	pkg, err := packagecontent.PackageComponentFromFiles(ctx, t.scheme, files, cfg.Component)
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
