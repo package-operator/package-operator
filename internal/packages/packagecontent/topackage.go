@@ -33,7 +33,7 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 		return nil, err
 	}
 
-	filesMap := make(map[string]Files)
+	filesMap := map[string]Files{}
 	if !componentsEnabled {
 		if component != "" {
 			return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}
@@ -63,7 +63,7 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: component}
 	}
 
-	pkgMap := make(map[string]*Package)
+	pkgMap := map[string]*Package{}
 	for componentName, componentFiles := range filesMap {
 		pkg, err := buildPackageFromFiles(ctx, scheme, componentFiles)
 		if err != nil {
