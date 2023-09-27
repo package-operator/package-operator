@@ -17,7 +17,11 @@ import (
 	"package-operator.run/internal/packages"
 )
 
-var componentFileRE = regexp.MustCompile("^([a-z][a-z0-9-]{0,62})/(.+)$")
+// this regex matches a path inside the "components/" folder consisting of:
+//   - the component directory, whose name must match "RFC 1123 Label Names"
+//     see https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names
+//   - the rest of the path (separated from the first element by a "/") which will be processed as separate package
+var componentFileRE = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)/(.+)$`)
 
 func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
 	pkgMap, err := AllPackagesFromFiles(ctx, scheme, files, component)
@@ -179,8 +183,8 @@ func getComponentNameAndPath(path string) (componentName string, componentPath s
 	if !strings.HasPrefix(path, "components/") {
 		return "", path, nil
 	}
-	if matches := componentFileRE.FindStringSubmatch(path[11:]); len(matches) == 3 {
-		return matches[1], matches[2], nil
+	if matches := componentFileRE.FindStringSubmatch(path[11:]); len(matches) == 4 {
+		return matches[1], matches[3], nil
 	}
 	return "", "", packages.ViolationError{
 		Reason: packages.ViolationReasonInvalidComponentPath,

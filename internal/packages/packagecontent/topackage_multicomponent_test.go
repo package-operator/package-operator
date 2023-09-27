@@ -25,9 +25,9 @@ func TestMultiComponentLoader(t *testing.T) {
 	tests := []testData{
 		{"components-disabled", "", nil},
 		{"components-disabled", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}},
-		{"components-enabled-invalid", "3backend", packages.ViolationError{
+		{"components-enabled-invalid", "_backend", packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidComponentPath,
-			Path:   "components/3backend/Deployment.yaml",
+			Path:   "components/_backend/Deployment.yaml",
 		}},
 		{"components-enabled-valid", "", nil},
 		{"components-enabled-valid", "backend", nil},
