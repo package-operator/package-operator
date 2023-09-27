@@ -72,7 +72,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("loading package contents from folder: %w", err)
 	}
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, t.scheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, t.scheme, files, cfg.Component)
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
@@ -235,6 +235,7 @@ type RenderPackageConfig struct {
 	ClusterScope   bool
 	ConfigPath     string
 	ConfigTestcase string
+	Component      string
 }
 
 func (c *RenderPackageConfig) Option(opts ...RenderPackageOption) {

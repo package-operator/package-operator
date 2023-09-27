@@ -69,10 +69,10 @@ type PackageManifestSpec struct {
 	Images []PackageManifestImage `json:"images"`
 	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
 	// +optional
-	Component *PackageManifestComponentConfig `json:"component,omitempty"`
+	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
 }
 
-type PackageManifestComponentConfig struct{}
+type PackageManifestComponentsConfig struct{}
 
 type PackageManifestSpecConfig struct {
 	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.

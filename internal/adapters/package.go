@@ -23,6 +23,7 @@ type GenericPackageAccessor interface {
 	TemplateContext() manifestsv1alpha1.TemplateContext
 	SetStatusRevision(rev int64)
 	GetStatusRevision() int64
+	GetComponent() string
 }
 
 type GenericPackageFactory func(scheme *runtime.Scheme) GenericPackageAccessor
@@ -65,6 +66,10 @@ type GenericPackage struct {
 
 func (a *GenericPackage) ClientObject() client.Object {
 	return &a.Package
+}
+
+func (a *GenericPackage) GetComponent() string {
+	return a.Spec.Component
 }
 
 func (a *GenericPackage) GetConditions() *[]metav1.Condition {
@@ -118,6 +123,10 @@ type GenericClusterPackage struct {
 
 func (a *GenericClusterPackage) ClientObject() client.Object {
 	return &a.ClusterPackage
+}
+
+func (a *GenericClusterPackage) GetComponent() string {
+	return a.Spec.Component
 }
 
 func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {

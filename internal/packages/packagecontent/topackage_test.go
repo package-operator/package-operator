@@ -2,6 +2,7 @@ package packagecontent_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,19 @@ import (
 	"package-operator.run/internal/packages/packageimport"
 )
 
-var testScheme = runtime.NewScheme()
+var (
+	testScheme   = runtime.NewScheme()
+	testDataPath = filepath.Join("testdata", "base")
+	testManifest = "apiVersion: manifests.package-operator.run/v1alpha1\n" +
+		"kind: PackageManifest\n" +
+		"metadata:\n" +
+		"  name: test\n" +
+		"spec:\n" +
+		"  scopes:\n" +
+		"    - Namespaced\n" +
+		"  phases:\n" +
+		"    - name: configure"
+)
 
 func init() {
 	if err := pkoapis.AddToScheme(testScheme); err != nil {
@@ -26,10 +39,10 @@ func TestPackageFromFile(t *testing.T) {
 
 	ctx := context.Background()
 
-	files, err := packageimport.Folder(ctx, "testdata")
+	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
 }
@@ -39,10 +52,10 @@ func TestTemplateSpecFromPackage(t *testing.T) {
 
 	ctx := context.Background()
 
-	files, err := packageimport.Folder(ctx, "testdata")
+	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
 
@@ -83,14 +96,21 @@ func TestPackageManifestLoader_Errors(t *testing.T) {
 			},
 			err: `PackageManifest unknown GVK in manifest.yaml: unknown version v23, supported versions: v1alpha1`,
 		},
+		{
+			name: "multiple manifests",
+			fileMap: packagecontent.Files{
+				packages.PackageManifestFilename: []byte(testManifest),
+				"manifest.yml":                   []byte(testManifest),
+			},
+			err: `PackageManifest present multiple times in manifest.yml`,
+		},
 	}
-
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := packagecontent.PackageFromFiles(context.Background(), testScheme, test.fileMap)
+			_, err := packagecontent.PackageFromFiles(context.Background(), testScheme, test.fileMap, "")
 			require.EqualError(t, err, test.err)
 		})
 	}

@@ -42,6 +42,7 @@ func NewCmd(rendererFactory RendererFactory) *cobra.Command {
 			internalcmd.WithClusterScope(opts.ClusterScope),
 			internalcmd.WithConfigPath(opts.ConfigPath),
 			internalcmd.WithConfigTestcase(opts.ConfigTestcase),
+			internalcmd.WithComponent(opts.Component),
 		)
 		if err != nil {
 			return fmt.Errorf("rendering package: %w", err)
@@ -59,6 +60,7 @@ type options struct {
 	ClusterScope   bool
 	ConfigPath     string
 	ConfigTestcase string
+	Component      string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
@@ -66,6 +68,7 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		clusterScopeUse   = "render package in cluster scope"
 		configTestcaseUse = "name of the testcase which config is for templating"
 		configPathUse     = "file containing config which is used for templating."
+		componentUse      = "select which component to render"
 	)
 
 	flags.BoolVar(
@@ -84,6 +87,12 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		&o.ConfigTestcase,
 		"config-testcase",
 		o.ConfigTestcase,
+		configTestcaseUse,
+	)
+	flags.StringVar(
+		&o.Component,
+		"component",
+		o.Component,
 		configTestcaseUse,
 	)
 }

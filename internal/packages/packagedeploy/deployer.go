@@ -103,7 +103,7 @@ func (l *PackageDeployer) Load(
 	ctx context.Context, pkg adapters.GenericPackageAccessor,
 	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
 ) error {
-	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
+	packageContent, err := l.LoadFromFiles(ctx, files, pkg.GetComponent())
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil
@@ -148,8 +148,9 @@ func (l *PackageDeployer) Load(
 	if err != nil {
 		return err
 	}
-	packageContent, err = l.packageContentLoader.FromFiles(
+	packageContent, err = l.LoadFromFiles(
 		ctx, files,
+		pkg.GetComponent(),
 		packageloader.WithFilesTransformers(tt),
 		packageloader.WithTransformers(&packageloader.PackageTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
@@ -170,6 +171,13 @@ func (l *PackageDeployer) Load(
 	// Load success
 	meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
 	return nil
+}
+
+func (l *PackageDeployer) LoadFromFiles(ctx context.Context, path packagecontent.Files, component string, opts ...packageloader.Option) (*packagecontent.Package, error) {
+	if component != "" {
+		opts = append(opts, packageloader.WithComponent(component))
+	}
+	return l.packageContentLoader.FromFiles(ctx, path, opts...)
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestPreBuildValidation(t *testing.T) {
 				WithDigestResolver{Resolver: mResolver},
 			)
 
-			err = build.validatePackage(tc.Package)
+			err = build.ValidatePackage(context.Background(), tc.Package)
 
 			if tc.ExpectError != "" {
 				require.ErrorContains(t, err, tc.ExpectError)
