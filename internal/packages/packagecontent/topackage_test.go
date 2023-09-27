@@ -42,7 +42,7 @@ func TestPackageFromFile(t *testing.T) {
 	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
 }
@@ -55,7 +55,7 @@ func TestTemplateSpecFromPackage(t *testing.T) {
 	files, err := packageimport.Folder(ctx, testDataPath)
 	require.NoError(t, err)
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files)
+	pkg, err := packagecontent.PackageFromFiles(ctx, testScheme, files, "")
 	require.NoError(t, err)
 	require.NotNil(t, pkg)
 
@@ -110,7 +110,7 @@ func TestPackageManifestLoader_Errors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := packagecontent.PackageFromFiles(context.Background(), testScheme, test.fileMap)
+			_, err := packagecontent.PackageFromFiles(context.Background(), testScheme, test.fileMap, "")
 			require.EqualError(t, err, test.err)
 		})
 	}

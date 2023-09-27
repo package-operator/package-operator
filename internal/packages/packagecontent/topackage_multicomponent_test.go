@@ -32,7 +32,7 @@ func TestMultiComponentLoader(t *testing.T) {
 		{"components-enabled-valid", "", nil},
 		{"components-enabled-valid", "backend", nil},
 		{"components-enabled-valid", "frontend", nil},
-		{"components-enabled-valid", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound}},
+		{"components-enabled-valid", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}},
 	}
 
 	for i := range tests {
@@ -50,7 +50,7 @@ func TestMultiComponentLoader(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, pkg)
 			} else {
-				require.ErrorIs(t, err, test.error)
+				require.EqualError(t, err, test.error.Error())
 			}
 		})
 	}

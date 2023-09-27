@@ -6,7 +6,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/internal/packages"
 	"package-operator.run/internal/packages/packagecontent"
 )
 
@@ -118,14 +117,5 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 		}
 	}
 
-	componentKey := packagecontent.ROOT
-	if l.component != "" {
-		componentKey = l.component
-	}
-
-	pkg, exists := pkgMap[componentKey]
-	if !exists {
-		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound}
-	}
-	return pkg, nil
+	return packagecontent.ExtractComponentPackage(pkgMap, l.component)
 }

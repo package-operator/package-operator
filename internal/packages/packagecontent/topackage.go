@@ -17,23 +17,14 @@ import (
 	"package-operator.run/internal/packages"
 )
 
-const ROOT = "_root_"
-
 var componentFileRE = regexp.MustCompile("^([a-z][a-z0-9-]{0,62})/(.+)$")
 
-func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (*Package, error) {
-	return PackageComponentFromFiles(ctx, scheme, files, "")
-}
-
-func PackageComponentFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
+func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
 	pkgMap, err := AllPackagesFromFiles(ctx, scheme, files, component)
 	if err != nil {
 		return nil, err
 	}
-	if component != "" {
-		return pkgMap[component], nil
-	}
-	return pkgMap[ROOT], nil
+	return ExtractComponentPackage(pkgMap, component)
 }
 
 func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (map[string]*Package, error) {
@@ -47,7 +38,7 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 		if component != "" {
 			return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}
 		}
-		filesMap[ROOT] = files
+		filesMap[""] = files
 	} else {
 		paths := make([]string, 0, len(files))
 		for key := range files {
@@ -67,13 +58,9 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 		}
 	}
 
-	componentKey := ROOT
-	if component != "" {
-		componentKey = component
-	}
-	_, exists := filesMap[componentKey]
+	_, exists := filesMap[component]
 	if !exists {
-		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound}
+		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: component}
 	}
 
 	pkgMap := make(map[string]*Package)
@@ -86,6 +73,14 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 	}
 
 	return pkgMap, nil
+}
+
+func ExtractComponentPackage(pkgMap map[string]*Package, component string) (*Package, error) {
+	pkg, exists := pkgMap[component]
+	if !exists {
+		return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: component}
+	}
+	return pkg, nil
 }
 
 func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
@@ -182,7 +177,7 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 
 func getComponentNameAndPath(path string) (componentName string, componentPath string, err error) {
 	if !strings.HasPrefix(path, "components/") {
-		return ROOT, path, nil
+		return "", path, nil
 	}
 	if matches := componentFileRE.FindStringSubmatch(path[11:]); len(matches) == 3 {
 		return matches[1], matches[2], nil
