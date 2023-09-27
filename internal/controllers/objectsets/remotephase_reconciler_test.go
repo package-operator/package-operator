@@ -2,12 +2,15 @@ package objectsets
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -17,46 +20,60 @@ import (
 	"package-operator.run/internal/testutil"
 )
 
+var ErrStatic = errors.New("static")
+
 func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name        string
-		mockPrepare func(clientMock *testutil.CtrlClient)
+		mockPrepare func(t *testing.T, objectSet *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient)
 		cleanupDone bool
-		assertCalls func(t *testing.T, clientMock *testutil.CtrlClient)
+		assertCalls func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient)
+		expectedErr error
 	}{
 		{
 			name: "deletes object",
-			mockPrepare: func(clientMock *testutil.CtrlClient) {
-				clientMock.
+			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+						out.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(os, os.GroupVersionKind())})
+					}).
+					Return(nil)
+				clientMock.
+					On("Get", mock.Anything, mock.Anything, mock.IsType(&corev1.Namespace{}), mock.Anything).
 					Return(nil)
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			cleanupDone: false,
-			assertCalls: func(t *testing.T, clientMock *testutil.CtrlClient) {
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
 				t.Helper()
+				uncachedClient.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				clientMock.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.IsType(&corev1.Namespace{}), mock.Anything)
 				clientMock.AssertCalled(
 					t, "Delete", mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{
 			name: "already gone",
-			mockPrepare: func(clientMock *testutil.CtrlClient) {
-				clientMock.
+			mockPrepare: func(_ *testing.T, _ *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.NewNotFound(schema.GroupResource{}, ""))
+					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			cleanupDone: true,
-			assertCalls: func(t *testing.T, clientMock *testutil.CtrlClient) {
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
 				t.Helper()
-				clientMock.AssertCalled(
+				uncachedClient.AssertCalled(
 					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				clientMock.AssertNotCalled(
 					t, "Delete", mock.Anything, mock.Anything, mock.Anything)
@@ -64,19 +81,101 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 		},
 		{
 			name: "already gone on delete",
-			mockPrepare: func(clientMock *testutil.CtrlClient) {
-				clientMock.
+			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+						out.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(os, os.GroupVersionKind())})
+					}).
+					Return(nil)
+				clientMock.
+					On("Get", mock.Anything, mock.Anything, mock.IsType(&corev1.Namespace{}), mock.Anything).
 					Return(nil)
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.NewNotFound(schema.GroupResource{}, ""))
+					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
 			},
 			cleanupDone: true,
-			assertCalls: func(t *testing.T, clientMock *testutil.CtrlClient) {
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
 				t.Helper()
+				uncachedClient.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				clientMock.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				clientMock.AssertCalled(
 					t, "Delete", mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "uncached get errors",
+			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				uncachedClient.
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("wrap: %w", ErrStatic))
+			},
+			cleanupDone: false,
+			expectedErr: ErrStatic,
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
+				t.Helper()
+				uncachedClient.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "orphaned phase",
+			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				uncachedClient.
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+			},
+			cleanupDone: true,
+			expectedErr: nil,
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
+				t.Helper()
+				uncachedClient.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "phase in deleting namespace",
+			mockPrepare: func(t *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+				t.Helper()
+				uncachedClient.
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
+						out.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(os, os.GroupVersionKind())})
+						out.SetFinalizers([]string{"block"})
+					}).
+					Return(nil)
+				// Mock deleted Namespace.
+				clientMock.
+					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						out := args.Get(2).(*corev1.Namespace)
+						out.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+					}).
+					Return(nil)
+				// Assert empty finalizers on update.
+				clientMock.
+					On("Update", mock.Anything, mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						out := args.Get(1).(*corev1alpha1.ObjectSetPhase)
+						assert.Empty(t, out.Finalizers)
+					}).
+					Return(nil)
+			},
+			cleanupDone: false,
+			expectedErr: nil,
+			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
+				t.Helper()
+				uncachedClient.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				clientMock.AssertCalled(
+					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				clientMock.AssertCalled(
+					t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 	}
@@ -87,8 +186,11 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			t.Parallel()
 
 			clientMock := testutil.NewClient()
+			uncachedClient := testutil.NewClient()
+
 			r := &objectSetRemotePhaseReconciler{
 				client:            clientMock,
+				uncachedClient:    uncachedClient,
 				scheme:            testScheme,
 				newObjectSetPhase: newGenericObjectSetPhase,
 			}
@@ -102,14 +204,18 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 				Name: "phase-1",
 			}
 
-			test.mockPrepare(clientMock)
+			test.mockPrepare(t, objectSet, clientMock, uncachedClient)
 
 			ctx := context.Background()
 			cleanupDone, err := r.Teardown(ctx, genObjectSet, phase)
-			require.NoError(t, err)
+			if test.expectedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, test.expectedErr)
+			}
 			assert.Equal(t, test.cleanupDone, cleanupDone)
 
-			test.assertCalls(t, clientMock)
+			test.assertCalls(t, clientMock, uncachedClient)
 		})
 	}
 }
@@ -165,6 +271,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 
 	ctx := context.Background()
 	c := testutil.NewClient()
+	uncachedClient := testutil.NewClient()
 
 	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1.Namespace"), mock.Anything).
 		Run(func(args mock.Arguments) {
@@ -178,7 +285,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 		}).
 		Return(nil)
 
-	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
+	uncachedClient.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
 		Run(func(args mock.Arguments) {
 			out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
 			*out = corev1alpha1.ObjectSetPhase{
@@ -193,10 +300,11 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(errors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,
+		uncachedClient:    uncachedClient,
 		scheme:            testScheme,
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
@@ -220,6 +328,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 
 	ctx := context.Background()
 	c := testutil.NewClient()
+	uncachedClient := testutil.NewClient()
 
 	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1.Namespace"), mock.Anything).
 		Run(func(args mock.Arguments) {
@@ -233,7 +342,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 		}).
 		Return(nil)
 
-	c.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
+	uncachedClient.On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSetPhase"), mock.Anything).
 		Run(func(args mock.Arguments) {
 			out := args.Get(2).(*corev1alpha1.ObjectSetPhase)
 			*out = corev1alpha1.ObjectSetPhase{
@@ -248,10 +357,11 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(errors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,
+		uncachedClient:    uncachedClient,
 		scheme:            testScheme,
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}

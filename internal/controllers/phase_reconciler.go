@@ -45,6 +45,7 @@ type PhaseReconciler struct {
 
 type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
+	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
@@ -319,6 +320,8 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (cleanupDone bool, err error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
 	if err != nil {
 		return false, fmt.Errorf("building desired object: %w", err)
@@ -340,7 +343,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	currentObj := desiredObj.DeepCopy()
-	err = r.dynamicCache.Get(
+	err = r.uncachedClient.Get(
 		ctx, client.ObjectKeyFromObject(desiredObj), currentObj)
 	if err != nil && errors.IsNotFound(err) {
 		// No matter who the owner of this object is,
@@ -352,15 +355,25 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	if !r.ownerStrategy.IsController(owner.ClientObject(), currentObj) {
-		// this object is owned by someone else
-		// so we don't have to delete it for cleanup,
-		// but we still want to remove ourselves as owner.
+		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
+			return true, nil
+		}
+
+		// This object is controlled by someone else
+		// so we don't have to delete it for cleanup.
+		// But we still want to remove ourselves as potential owner.
 		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
 		if err := r.writer.Update(ctx, currentObj); err != nil {
 			return false, fmt.Errorf("removing owner reference: %w", err)
 		}
 		return true, nil
 	}
+
+	log.Info("deleting managed object",
+		"apiVersion", currentObj.GetAPIVersion(),
+		"kind", currentObj.GroupVersionKind().Kind,
+		"namespace", currentObj.GetNamespace(),
+		"name", currentObj.GetName())
 
 	err = r.writer.Delete(ctx, currentObj)
 	if err != nil && errors.IsNotFound(err) {

@@ -128,7 +128,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 func (r *objectSetPhaseReconciler) Teardown(
 	ctx context.Context, objectSetPhase genericObjectSetPhase,
 ) (cleanupDone bool, err error) {
-	// objectSetPhase is deleted with the `orphan` cascade option, so we don't delete the owned objects
+	// objectSetPhase is deleted with the `orphan` cascade option, so we don't need to delete the owned objects.
 	if controllerutil.ContainsFinalizer(objectSetPhase.ClientObject(), "orphan") {
 		return true, nil
 	}
