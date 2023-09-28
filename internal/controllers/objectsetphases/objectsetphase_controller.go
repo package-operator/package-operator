@@ -33,6 +33,7 @@ type dynamicCache interface {
 
 type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
+	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error

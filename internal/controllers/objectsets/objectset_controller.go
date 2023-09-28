@@ -125,7 +125,7 @@ func newGenericObjectSetController(
 			},
 		),
 		newObjectSetRemotePhaseReconciler(
-			client, scheme, newObjectSetPhase),
+			client, uncachedClient, scheme, newObjectSetPhase),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
@@ -203,7 +203,7 @@ func (c *GenericObjectSetController) Reconcile(
 		}
 
 		if !objectSet.IsArchived() {
-			// Object was deleted an not just archived.
+			// Object was deleted and not just archived.
 			// no way to update status now :)
 			return res, nil
 		}
@@ -347,7 +347,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		return err
 	}
 
-	// Needs to be called _after_ FreeCacheAndFinalizer,
+	// Needs to be called _after_ FreeCacheAndRemoveFinalizer,
 	// because .Update is loading new state into objectSet, overriding changes to conditions.
 	if objectSet.IsArchived() {
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
