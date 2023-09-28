@@ -24,6 +24,8 @@ type GenericPackageAccessor interface {
 	SetStatusRevision(rev int64)
 	GetStatusRevision() int64
 	GetComponent() string
+	GetImagePullSecret() *string
+	GetSecrets() []corev1alpha1.PackageSpecSecret
 }
 
 type GenericPackageFactory func(scheme *runtime.Scheme) GenericPackageAccessor
@@ -104,6 +106,14 @@ func (a *GenericPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
+func (a *GenericPackage) GetImagePullSecret() *string {
+	return a.Spec.ImagePullSecret
+}
+
+func (a *GenericPackage) GetSecrets() []corev1alpha1.PackageSpecSecret {
+	return a.Spec.Secrets
+}
+
 func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
 	a.Status.Phase = phase
 }
@@ -151,6 +161,14 @@ func (a *GenericClusterPackage) SetStatusRevision(rev int64) {
 
 func (a *GenericClusterPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
+}
+
+func (a *GenericClusterPackage) GetImagePullSecret() *string {
+	return a.Spec.ImagePullSecret
+}
+
+func (a *GenericClusterPackage) GetSecrets() []corev1alpha1.PackageSpecSecret {
+	return a.Spec.Secrets
 }
 
 func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {

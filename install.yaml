@@ -1588,7 +1588,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Package specification.
+            description: Package specification. Require that, if specified, .spec.imagePullSecret
+              points to a Secret in .spec.secrets
             properties:
               component:
                 description: Desired component to deploy from multi-component packages.
@@ -1602,9 +1603,48 @@ spec:
                   image will be unpacked by the package-loader to render the ObjectDeployment
                   for propagating the installation of the package.
                 type: string
+              imagePullSecret:
+                description: Optional secret that will be used to pull the package
+                  image from it's registry. References an item within .secrets by
+                  name.
+                maxLength: 100
+                type: string
+              secrets:
+                items:
+                  description: Package Secret specification.
+                  properties:
+                    name:
+                      maxLength: 512
+                      type: string
+                    secretRef:
+                      description: Secret reference.
+                      properties:
+                        name:
+                          description: Name of the target secret.
+                          type: string
+                        namespace:
+                          description: Namespace of the target secret. Package Operator
+                            will ignore this field for namespace-scoped packages.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  required:
+                  - name
+                  - secretRef
+                  type: object
+                maxItems: 100
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             required:
             - image
             type: object
+            x-kubernetes-validations:
+            - message: imagePullSecret must be a name reference to an element of .secrets.
+              rule: '!has(self.imagePullSecret) || (has(self.secrets) && self.secrets.exists_one(s,
+                s.name == self.imagePullSecret))'
           status:
             default:
               phase: Pending
@@ -3275,7 +3315,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Package specification.
+            description: Package specification. Require that, if specified, .spec.imagePullSecret
+              points to a Secret in .spec.secrets
             properties:
               component:
                 description: Desired component to deploy from multi-component packages.
@@ -3289,9 +3330,48 @@ spec:
                   image will be unpacked by the package-loader to render the ObjectDeployment
                   for propagating the installation of the package.
                 type: string
+              imagePullSecret:
+                description: Optional secret that will be used to pull the package
+                  image from it's registry. References an item within .secrets by
+                  name.
+                maxLength: 100
+                type: string
+              secrets:
+                items:
+                  description: Package Secret specification.
+                  properties:
+                    name:
+                      maxLength: 512
+                      type: string
+                    secretRef:
+                      description: Secret reference.
+                      properties:
+                        name:
+                          description: Name of the target secret.
+                          type: string
+                        namespace:
+                          description: Namespace of the target secret. Package Operator
+                            will ignore this field for namespace-scoped packages.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  required:
+                  - name
+                  - secretRef
+                  type: object
+                maxItems: 100
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             required:
             - image
             type: object
+            x-kubernetes-validations:
+            - message: imagePullSecret must be a name reference to an element of .secrets.
+              rule: '!has(self.imagePullSecret) || (has(self.secrets) && self.secrets.exists_one(s,
+                s.name == self.imagePullSecret))'
           status:
             default:
               phase: Pending

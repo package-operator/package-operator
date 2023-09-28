@@ -127,6 +127,7 @@ func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePack
 }
 
 type ValidatePackageConfig struct {
+	PullSecrets     map[string][]byte
 	Insecure        bool
 	Path            string
 	RemoteReference string

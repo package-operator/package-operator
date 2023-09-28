@@ -52,15 +52,45 @@ const (
 )
 
 // Package specification.
+// Require that, if specified, .spec.imagePullSecret points to a Secret in .spec.secrets
+// +kubebuilder:validation:XValidation:rule="!has(self.imagePullSecret) || (has(self.secrets) && self.secrets.exists_one(s, s.name == self.imagePullSecret))",message="imagePullSecret must be a name reference to an element of .secrets."
 type PackageSpec struct {
 	// the image containing the contents of the package
 	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+
+	// Optional secret that will be used to pull the package image from it's registry.
+	// References an item within .secrets by name.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=100
+	ImagePullSecret *string `json:"imagePullSecret,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=100
+	// +listType=map
+	// +listMapKey=name
+	Secrets []PackageSpecSecret `json:"secrets,omitempty"`
+
 	// Package configuration parameters.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Config *runtime.RawExtension `json:"config,omitempty"`
+
 	// Desired component to deploy from multi-component packages.
-	// +optional
 	Component string `json:"component,omitempty"`
+}
+
+// Package Secret specification.
+type PackageSpecSecret struct {
+	// +kubebuilder:validation:MaxLength=512
+	Name            string          `json:"name"`
+	SecretReference SecretReference `json:"secretRef"`
+}
+
+// Secret reference.
+type SecretReference struct {
+	// Name of the target secret.
+	Name string `json:"name"`
+	// Namespace of the target secret. Package Operator will ignore this field for namespace-scoped packages.
+	Namespace string `json:"namespace,omitempty"`
 }

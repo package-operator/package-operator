@@ -328,9 +328,15 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  component: sadipscing
+  component: nonumy
   config: runtime.RawExtension
   image: consetetur
+  imagePullSecret: sadipscing
+  secrets:
+  - name: elitr
+    secretRef:
+      name: sed
+      namespace: diam
 status:
   phase: Pending
 
@@ -340,7 +346,7 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification.<br>Require that, if specified, .spec.imagePullSecret points to a Secret in .spec.secrets |
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
@@ -382,28 +388,28 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: sed
+      - class: tempor
         externalObjects:
         - conditionMappings:
-          - destinationType: tempor
-            sourceType: eirmod
+          - destinationType: sit
+            sourceType: dolor
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
-        name: elitr
+        name: eirmod
         objects:
         - conditionMappings:
-          - destinationType: nonumy
-            sourceType: diam
+          - destinationType: ipsum
+            sourceType: lorem
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - lorem
+        - amet
       successDelaySeconds: 42
 status:
   phase:Pending: null
@@ -459,28 +465,28 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: dolor
+  - class: sadipscing
     externalObjects:
     - conditionMappings:
-      - destinationType: sadipscing
-        sourceType: consetetur
+      - destinationType: nonumy
+        sourceType: diam
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
-    name: ipsum
+    name: consetetur
     objects:
     - conditionMappings:
-      - destinationType: amet
-        sourceType: sit
+      - destinationType: sed
+        sourceType: elitr
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - elitr
+    - eirmod
   previous:
   - name: previous-revision
   successDelaySeconds: 42
@@ -532,8 +538,8 @@ spec:
           app.kubernetes.io/name: example-operator
   externalObjects:
   - conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: dolor
+      sourceType: ipsum
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -541,8 +547,8 @@ spec:
         name: example-deployment
   objects:
   - conditionMappings:
-    - destinationType: diam
-      sourceType: sed
+    - destinationType: lorem
+      sourceType: tempor
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -557,10 +563,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
 
 ```
 
@@ -589,8 +595,8 @@ metadata:
   namespace: default
 objects:
 - conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: sed
+    sourceType: elitr
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -623,15 +629,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: nonumy
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: dolor
+      key: ipsum
+    kind: eirmod
+    name: lorem
+    namespace: tempor
     optional: "true"
-  template: consetetur
+  template: diam
 status:
   conditions:
   - metav1.Condition
@@ -661,9 +667,15 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: lorem
+  component: sed
   config: runtime.RawExtension
-  image: tempor
+  image: sit
+  imagePullSecret: amet
+  secrets:
+  - name: consetetur
+    secretRef:
+      name: sadipscing
+      namespace: elitr
 status:
   phase: Pending
 
@@ -673,7 +685,7 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification.<br>Require that, if specified, .spec.imagePullSecret points to a Secret in .spec.secrets |
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
@@ -1078,10 +1090,13 @@ Used in:
 ### PackageSpec
 
 Package specification.
+Require that, if specified, .spec.imagePullSecret points to a Secret in .spec.secrets
 
 | Field | Description |
 | ----- | ----------- |
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `imagePullSecret` <br>string | Optional secret that will be used to pull the package image from it's registry.<br>References an item within .secrets by name. |
+| `secrets` <br><a href="#packagespecsecret">[]PackageSpecSecret</a> |  |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
 | `component` <br>string | Desired component to deploy from multi-component packages. |
 
@@ -1089,6 +1104,20 @@ Package specification.
 Used in:
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
+
+
+### PackageSpecSecret
+
+Package Secret specification.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string |  |
+| `secretRef` <b>required</b><br><a href="#secretreference">SecretReference</a> | Secret reference. |
+
+
+Used in:
+* [PackageSpec](#packagespec)
 
 
 ### PackageStatus
@@ -1213,6 +1242,20 @@ References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to whi
 Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetStatus](#objectsetstatus)
+
+
+### SecretReference
+
+Secret reference.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name of the target secret. |
+| `namespace` <br>string | Namespace of the target secret. Package Operator will ignore this field for namespace-scoped packages. |
+
+
+Used in:
+* [PackageSpecSecret](#packagespecsecret)
 ## manifests.package-operator.run/v1alpha1
 
 The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,

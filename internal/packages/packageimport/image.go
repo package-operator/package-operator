@@ -3,6 +3,7 @@ package packageimport
 import (
 	"archive/tar"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -57,10 +59,10 @@ func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err err
 	return files, nil
 }
 
-func PulledImage(ctx context.Context, ref string) (packagecontent.Files, error) {
+func PulledImage(ctx context.Context, ref string, opts ...PullOption) (packagecontent.Files, error) {
 	puller := NewPuller()
 
-	return puller.Pull(ctx, ref)
+	return puller.Pull(ctx, ref, opts...)
 }
 
 func isFilePathToBeExcluded(path string) bool {
@@ -74,39 +76,53 @@ func isFilePathToBeExcluded(path string) bool {
 }
 
 func NewPuller() *Puller {
-	return &Puller{}
+	return &Puller{
+		cranePull: crane.Pull,
+		image:     Image,
+	}
 }
 
-type Puller struct{}
+type cranePullFn func(src string, opt ...crane.Option) (v1.Image, error)
+
+type imageFn func(ctx context.Context, image v1.Image) (m packagecontent.Files, err error)
+
+type Puller struct {
+	cranePull cranePullFn
+	image     imageFn
+}
+
+type dockerConfigJSON struct {
+	Auths map[string]authn.AuthConfig
+}
 
 func (p *Puller) Pull(ctx context.Context, ref string, opts ...PullOption) (packagecontent.Files, error) {
-	var cfg PullConfig
+	var cfg pullConfig
 
 	cfg.Option(opts...)
 
-	var craneOpts []crane.Option
+	craneOpts := []crane.Option{}
+
+	// Prepare authenticator(s) if pull secret was specified.
+	if len(cfg.PullSecret) != 0 {
+		var dockerConfig dockerConfigJSON
+
+		if err := json.Unmarshal(cfg.PullSecret, &dockerConfig); err != nil {
+			return nil, err
+		}
+
+		for _, auth := range dockerConfig.Auths {
+			craneOpts = append(craneOpts, crane.WithAuth(authn.FromConfig(auth)))
+		}
+	}
+
 	if cfg.Insecure {
 		craneOpts = append(craneOpts, crane.Insecure)
 	}
 
-	img, err := crane.Pull(ref, craneOpts...)
+	img, err := p.cranePull(ref, craneOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return Image(ctx, img)
-}
-
-type PullConfig struct {
-	Insecure bool
-}
-
-func (c *PullConfig) Option(opts ...PullOption) {
-	for _, opt := range opts {
-		opt.ConfigurePull(c)
-	}
-}
-
-type PullOption interface {
-	ConfigurePull(*PullConfig)
+	return p.image(ctx, img)
 }

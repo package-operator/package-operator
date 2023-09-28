@@ -91,7 +91,7 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		unpackReconciler: newUnpackReconciler(
-			imagePuller, packageDeployer, metricsRecorder, packageHashModifier),
+			client, imagePuller, packageDeployer, metricsRecorder, packageHashModifier),
 	}
 
 	controller.reconciler = []reconciler{
