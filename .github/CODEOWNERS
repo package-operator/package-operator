@@ -1,1 +1,14 @@
+# Everything that is not owned by somebody defined via patterns below this one.
 * @ajpantuso @apahim @erdii @eqrx @kostola @nanyte25 @pbabic-redhat @robshelly @thetechnick
+
+# Go module files.
+go.mod @eqrx
+go.sum @eqrx
+go.work @eqrx
+go.work.sum @eqrx
+
+# Github actions.
+/.github/workflows/ @eqrx
+
+# Dependabot.
+/.github/dependabot.yml @eqrx
