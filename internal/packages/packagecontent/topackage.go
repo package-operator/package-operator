@@ -96,6 +96,14 @@ func parseSimplePackage(ctx context.Context, scheme *runtime.Scheme, files Files
 			if err != nil {
 				return nil, err
 			}
+
+			if isMultiComponent(pkg.PackageManifest) {
+				// nesting multi-component packages is not allowed
+				err = packages.ViolationError{
+					Reason: packages.ViolationReasonNestedMultiComponentPkg,
+					Path:   path,
+				}
+			}
 			continue
 		case packages.IsManifestLockFile(path):
 			if pkg.PackageManifestLock != nil {

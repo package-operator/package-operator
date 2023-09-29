@@ -36,6 +36,7 @@ const (
 	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
 	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
+	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
 )
 
 func (v ViolationError) Error() string {
