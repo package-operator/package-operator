@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"package-operator.run/internal/utils"
+
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,6 +33,30 @@ func PackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, 
 	return ExtractComponentPackage(pkgMap, component)
 }
 
+func parseComponentsFiles(files Files, filesMap map[string]Files) (err error) {
+	paths := make([]string, 0, len(files))
+	for key := range files {
+		paths = append(paths, key)
+	}
+	sort.Strings(paths)
+
+	if err = validateComponentsDirContent(paths); err != nil {
+		return
+	}
+
+	for _, path := range paths {
+		componentName, componentPath, err := getComponentNameAndPath(path)
+		if err != nil {
+			return err
+		}
+		if _, exists := filesMap[componentName]; !exists {
+			filesMap[componentName] = Files{}
+		}
+		filesMap[componentName][componentPath] = files[path]
+	}
+	return
+}
+
 func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (map[string]*Package, error) {
 	componentsEnabled, err := areComponentsEnabled(ctx, scheme, files)
 	if err != nil {
@@ -43,23 +69,8 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 			return nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}
 		}
 		filesMap[""] = files
-	} else {
-		paths := make([]string, 0, len(files))
-		for key := range files {
-			paths = append(paths, key)
-		}
-		sort.Strings(paths)
-
-		for _, path := range paths {
-			componentName, componentPath, err := getComponentNameAndPath(path)
-			if err != nil {
-				return nil, err
-			}
-			if _, exists := filesMap[componentName]; !exists {
-				filesMap[componentName] = Files{}
-			}
-			filesMap[componentName][componentPath] = files[path]
-		}
+	} else if err = parseComponentsFiles(files, filesMap); err != nil {
+		return nil, err
 	}
 
 	_, exists := filesMap[component]
@@ -69,7 +80,7 @@ func AllPackagesFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fil
 
 	pkgMap := map[string]*Package{}
 	for componentName, componentFiles := range filesMap {
-		pkg, err := buildPackageFromFiles(ctx, scheme, componentFiles)
+		pkg, err := buildPackageFromFiles(ctx, scheme, componentFiles, componentName)
 		if err != nil {
 			return nil, err
 		}
@@ -87,71 +98,89 @@ func ExtractComponentPackage(pkgMap map[string]*Package, component string) (*Pac
 	return pkg, nil
 }
 
-func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files) (pkg *Package, err error) {
-	pkg = &Package{nil, nil, map[string][]unstructured.Unstructured{}}
+func parseObjects(pkg *Package, path string, content []byte) (err error) {
+	// Trim empty starting and ending objects
+	objects := []unstructured.Unstructured{}
+
+	// Split for every included yaml document.
+	for idx, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
+		obj := unstructured.Unstructured{}
+		if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
+			err = packages.ViolationError{
+				Reason:  packages.ViolationReasonInvalidYAML,
+				Details: err.Error(),
+				Path:    path,
+				Index:   packages.Index(idx),
+			}
+			return
+		}
+
+		if len(obj.Object) != 0 {
+			objects = append(objects, obj)
+		}
+	}
+	if len(objects) != 0 {
+		pkg.Objects[path] = objects
+	}
+	return
+}
+
+func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
+	pkg := &Package{nil, nil, map[string][]unstructured.Unstructured{}}
+	var err error
 	for path, content := range files {
 		switch {
 		case strings.HasPrefix(filepath.Base(path), "_"):
 			// skip template helper files.
-			continue
 		case !packages.IsYAMLFile(path):
 			// skip non YAML files
-			continue
-
 		case packages.IsManifestFile(path):
+			if pkg.PackageManifest != nil {
+				// multiple package manifests not allowed
+				err = packages.ViolationError{
+					Reason: packages.ViolationReasonPackageManifestDuplicated,
+					Path:   path,
+				}
+				return nil, err
+			}
+
 			if pkg.PackageManifest, err = processManifestFile(ctx, scheme, pkg.PackageManifest, path, content); err != nil {
 				return nil, err
 			}
-			continue
+
+			if isMultiComponent(pkg.PackageManifest) && component != "" {
+				// when building a component, do not allow nested components
+				err = packages.ViolationError{
+					Reason:    packages.ViolationReasonNestedMultiComponentPkg,
+					Path:      path,
+					Component: component,
+				}
+				return nil, err
+			}
 		case packages.IsManifestLockFile(path):
 			if pkg.PackageManifestLock != nil {
 				err = packages.ViolationError{
 					Reason: packages.ViolationReasonPackageManifestLockDuplicated,
 					Path:   path,
 				}
-
-				return
+				return nil, err
 			}
 			pkg.PackageManifestLock, err = manifestLockFromFile(ctx, scheme, path, content)
 			if err != nil {
 				return nil, err
 			}
-
-			continue
-		}
-
-		// Trim empty starting and ending objects
-		objects := []unstructured.Unstructured{}
-
-		// Split for every included yaml document.
-		for idx, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
-			obj := unstructured.Unstructured{}
-			if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
-				err = packages.ViolationError{
-					Reason:  packages.ViolationReasonInvalidYAML,
-					Details: err.Error(),
-					Path:    path,
-					Index:   packages.Index(idx),
-				}
-
-				return
+		default:
+			if err = parseObjects(pkg, path, content); err != nil {
+				return nil, err
 			}
-
-			if len(obj.Object) != 0 {
-				objects = append(objects, obj)
-			}
-		}
-		if len(objects) != 0 {
-			pkg.Objects[path] = objects
 		}
 	}
 
 	if pkg.PackageManifest == nil {
-		err = packages.ErrManifestNotFound
-		return
+		return nil, packages.ErrManifestNotFound
 	}
 
-	return
+	return pkg, nil
 }
 
 func processManifestFile(ctx context.Context, scheme *runtime.Scheme, previousManifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (newManifest *manifestsv1alpha1.PackageManifest, err error) {
@@ -164,10 +193,14 @@ func processManifestFile(ctx context.Context, scheme *runtime.Scheme, previousMa
 	return manifestFromFile(ctx, scheme, path, content)
 }
 
+func isMultiComponent(manifest *manifestsv1alpha1.PackageManifest) bool {
+	return manifest != nil && manifest.Spec.Components != nil
+}
+
 func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Files) (result bool, err error) {
 	var manifest *manifestsv1alpha1.PackageManifest
 	for path, content := range files {
-		if packages.IsManifestFile(path) {
+		if !strings.HasPrefix(path, "components/") && packages.IsManifestFile(path) {
 			if manifest, err = processManifestFile(ctx, scheme, manifest, path, content); err != nil {
 				return false, err
 			}
@@ -176,7 +209,7 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 	if manifest == nil {
 		return false, packages.ErrManifestNotFound
 	}
-	return manifest.Spec.Components != nil, nil
+	return isMultiComponent(manifest), nil
 }
 
 func getComponentNameAndPath(path string) (componentName string, componentPath string, err error) {
@@ -190,4 +223,29 @@ func getComponentNameAndPath(path string) (componentName string, componentPath s
 		Reason: packages.ViolationReasonInvalidComponentPath,
 		Path:   path,
 	}
+}
+
+func inComponentsDir(path interface{}) (bool, error) {
+	strPath := path.(string)
+	return strings.HasPrefix(strPath, "components/") &&
+		strPath != "components/" &&
+		strings.Count(strPath, "/") == 1, nil
+}
+
+func validateComponentsDirContent(paths []string) error {
+	filesInComponentsDir, err := utils.Filter(paths, inComponentsDir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range filesInComponentsDir {
+		if !strings.HasPrefix(file, "components/.") {
+			err = packages.ViolationError{
+				Reason: packages.ViolationReasonInvalidFileInComponentsDir,
+				Path:   file,
+			}
+			return err
+		}
+	}
+	return nil
 }
