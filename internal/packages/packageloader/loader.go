@@ -16,6 +16,7 @@ type (
 		transformers             []Transformer
 		filesTransformers        []FilesTransformer
 		packageAndFilesValidator []PackageAndFilesValidator
+		component                string
 	}
 	Option func(l *Loader)
 
@@ -52,12 +53,16 @@ func WithFilesTransformers(transformers ...FilesTransformer) Option {
 	return func(l *Loader) { l.filesTransformers = append(l.filesTransformers, transformers...) }
 }
 
+func WithComponent(component string) Option {
+	return func(l *Loader) { l.component = component }
+}
+
 func WithDefaults(l *Loader) {
 	WithValidators(&ObjectDuplicateValidator{}, &ObjectGVKValidator{}, &ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{})(l)
 }
 
 func New(scheme *runtime.Scheme, opts ...Option) *Loader {
-	l := &Loader{scheme, []Validator{}, []Transformer{}, []FilesTransformer{}, []PackageAndFilesValidator{}}
+	l := &Loader{scheme, []Validator{}, []Transformer{}, []FilesTransformer{}, []PackageAndFilesValidator{}, ""}
 	for _, opt := range opts {
 		opt(l)
 	}
@@ -73,6 +78,7 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 			append([]Transformer{}, l.transformers...),
 			append([]FilesTransformer{}, l.filesTransformers...),
 			append([]PackageAndFilesValidator{}, l.packageAndFilesValidator...),
+			"",
 		}
 
 		for _, opt := range opts {
@@ -86,28 +92,30 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 		}
 	}
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, l.scheme, files)
+	pkgMap, err := packagecontent.AllPackagesFromFiles(ctx, l.scheme, files, l.component)
 	if err != nil {
 		return nil, fmt.Errorf("convert files to package: %w", err)
 	}
 
-	for _, t := range l.transformers {
-		if err := t.TransformPackage(ctx, pkg); err != nil {
-			return nil, fmt.Errorf("transform package: %w", err)
+	for _, pkg := range pkgMap {
+		for _, t := range l.transformers {
+			if err := t.TransformPackage(ctx, pkg); err != nil {
+				return nil, fmt.Errorf("transform package: %w", err)
+			}
+		}
+
+		for _, t := range l.validators {
+			if err := t.ValidatePackage(ctx, pkg); err != nil {
+				return nil, fmt.Errorf("validate package: %w", err)
+			}
+		}
+
+		for _, t := range l.packageAndFilesValidator {
+			if err := t.ValidatePackageAndFiles(ctx, pkg, files); err != nil {
+				return nil, fmt.Errorf("validate package and files: %w", err)
+			}
 		}
 	}
 
-	for _, t := range l.validators {
-		if err := t.ValidatePackage(ctx, pkg); err != nil {
-			return nil, fmt.Errorf("validate package: %w", err)
-		}
-	}
-
-	for _, t := range l.packageAndFilesValidator {
-		if err := t.ValidatePackageAndFiles(ctx, pkg, files); err != nil {
-			return nil, fmt.Errorf("validate package and files: %w", err)
-		}
-	}
-
-	return pkg, nil
+	return packagecontent.ExtractComponentPackage(pkgMap, l.component)
 }

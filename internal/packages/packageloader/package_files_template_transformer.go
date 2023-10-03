@@ -59,7 +59,9 @@ func NewTemplateTransformer(tmplCtx PackageFileTemplateContext) (*PackageFileTem
 }
 
 func (t *PackageFileTemplateTransformer) TransformPackageFiles(_ context.Context, fileMap packagecontent.Files) error {
-	templ := template.New("pkg").Option("missingkey=error").Funcs(transform.SprigFuncs())
+	templ := template.New("pkg").Option("missingkey=error")
+	templ = templ.Funcs(transform.SprigFuncs(templ)).
+		Funcs(transform.FileFuncs(fileMap))
 
 	// gather all templates to allow cross-file declarations and reuse of helpers.
 	for path, content := range fileMap {

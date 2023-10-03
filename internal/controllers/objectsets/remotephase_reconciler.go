@@ -23,17 +23,20 @@ import (
 // Reconciles ObjectSetPhase objects for the parent ObjectSet.
 type objectSetRemotePhaseReconciler struct {
 	client            client.Client
+	uncachedClient    client.Reader
 	scheme            *runtime.Scheme
 	newObjectSetPhase genericObjectSetPhaseFactory
 }
 
 func newObjectSetRemotePhaseReconciler(
 	client client.Client,
+	uncachedClient client.Reader,
 	scheme *runtime.Scheme,
 	newObjectSetPhase genericObjectSetPhaseFactory,
 ) *objectSetRemotePhaseReconciler {
 	return &objectSetRemotePhaseReconciler{
 		client:            client,
+		uncachedClient:    uncachedClient,
 		scheme:            scheme,
 		newObjectSetPhase: newObjectSetPhase,
 	}
@@ -51,17 +54,30 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 
 	defer log.Info("teardown of remote phase", "phase", phase.Name, "cleanupDone", cleanupDone)
 	objectSetPhase := r.newObjectSetPhase(r.scheme)
-	err = r.client.Get(ctx, client.ObjectKey{
+	err = r.uncachedClient.Get(ctx, client.ObjectKey{
 		Name:      objectSetPhaseName(objectSet, phase),
 		Namespace: objectSet.ClientObject().GetNamespace(),
 	}, objectSetPhase.ClientObject())
-	if err != nil && errors.IsNotFound(err) {
-		// object is already gone -> nothing to cleanup
+	if errors.IsNotFound(err) {
+		// Phase is already gone -> nothing to cleanup.
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if !metav1.IsControlledBy(objectSetPhase.ClientObject(), objectSet.ClientObject()) {
+		log.Info("orphaned remote phase",
+			"namespace", objectSetPhase.ClientObject().GetNamespace(),
+			"name", objectSetPhase.ClientObject().GetName())
+		// Phase has been orphaned -> not cleaning up.
 		return true, nil
 	}
 
-	// If object has a namespace check if it is already in the process of being deleted.
-	// If so, remove finalizer from object to let it go.
+	// If ObjectSet is namespace-scoped check if that namespace is already in the process of being deleted.
+	// If so, remove finalizers from the Phase object to let it go immediately.
+	// This is  hypershift-specific behavior because Phases live in the same namespace as the guest cluster apiserver pods and ACM just kills the full namespace to uninstall a guest cluster.
+	// TODO(erdii): I think we should probably just patch-remove all of OUR finalizers so we can't accidentally wipe finalizers of other owners.
 	if len(objectSet.ClientObject().GetNamespace()) != 0 {
 		ns := corev1.Namespace{}
 
@@ -70,17 +86,15 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 		}
 
 		if !ns.DeletionTimestamp.IsZero() {
-			log.Info("removing finalizer from object since containing namespace in deletion")
-
+			log.Info("removing finalizer from phase object since containing namespace is in deletion")
 			objectSetPhase.ClientObject().SetFinalizers(nil)
-			if err := r.client.Update(ctx, objectSetPhase.ClientObject()); err != nil {
-				return false, err
-			}
+			err := r.client.Update(ctx, objectSetPhase.ClientObject())
+			return err != nil, err
 		}
 	}
 
 	err = r.client.Delete(ctx, objectSetPhase.ClientObject())
-	if err != nil && errors.IsNotFound(err) {
+	if errors.IsNotFound(err) {
 		return true, nil
 	}
 	if err != nil {

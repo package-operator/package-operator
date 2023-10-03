@@ -22,6 +22,11 @@ func (m *OwnerStrategyMock) IsController(owner, obj metav1.Object) bool {
 	return args.Bool(0)
 }
 
+func (m *OwnerStrategyMock) IsOwner(owner, obj metav1.Object) bool {
+	args := m.Called(owner, obj)
+	return args.Bool(0)
+}
+
 func (m *OwnerStrategyMock) RemoveOwner(owner, obj metav1.Object) {
 	m.Called(owner, obj)
 }

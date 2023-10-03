@@ -85,10 +85,12 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 	t.Run("already gone", func(t *testing.T) {
 		t.Parallel()
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
 			dynamicCache:     dynamicCache,
+			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
 		}
@@ -105,7 +107,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 
-		dynamicCache.
+		uncachedClient.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
@@ -124,17 +126,20 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		require.NoError(t, err)
 		assert.True(t, done)
 		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
+		uncachedClient.AssertExpectations(t)
 	})
 
 	t.Run("already gone on delete", func(t *testing.T) {
 		t.Parallel()
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
 			writer:           testClient,
 			dynamicCache:     dynamicCache,
+			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
 		}
@@ -155,7 +160,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		dynamicCache.
+		uncachedClient.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
@@ -182,6 +187,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		require.NoError(t, err)
 		assert.True(t, done)
 		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
+		uncachedClient.AssertExpectations(t)
 
 		// Ensure that IsController was called with currentObj and not desiredObj.
 		// If checking desiredObj, IsController will _always_ return true, which could lead to really nasty behavior.
@@ -195,11 +201,14 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		// from the apiserver after all finalizers are handled.
 		testClient := testutil.NewClient()
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		preflightChecker := &preflightCheckerMock{}
+
 		r := &PhaseReconciler{
 			writer:           testClient,
 			dynamicCache:     dynamicCache,
+			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
 		}
@@ -221,7 +230,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		dynamicCache.
+		uncachedClient.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
@@ -248,6 +257,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		require.NoError(t, err)
 		assert.False(t, done) // wait for delete confirm
 		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
+		uncachedClient.AssertExpectations(t)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
 		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
@@ -257,11 +267,13 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		t.Parallel()
 
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
 		preflightChecker := &preflightCheckerMock{}
 		r := &PhaseReconciler{
 			dynamicCache:     dynamicCache,
+			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			writer:           testClient,
 			preflightChecker: preflightChecker,
@@ -284,7 +296,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			On("Watch", mock.Anything, ownerObj, mock.Anything).
 			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		dynamicCache.
+		uncachedClient.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
@@ -296,12 +308,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			On("IsController", ownerObj, currentObj).
 			Return(false)
 		ownerStrategy.
-			On("RemoveOwner", ownerObj, currentObj).
+			On("IsOwner", ownerObj, currentObj).
 			Return(false)
-
-		testClient.
-			On("Update", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
 
 		ctx := context.Background()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
@@ -314,24 +322,26 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		require.NoError(t, err)
 		assert.True(t, done)
 		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
+		uncachedClient.AssertExpectations(t)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
 		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
-		ownerStrategy.AssertCalled(t, "RemoveOwner", ownerObj, currentObj)
-		testClient.AssertCalled(t, "Update", mock.Anything, currentObj, mock.Anything)
+		ownerStrategy.AssertCalled(t, "IsOwner", ownerObj, currentObj)
 	})
 
 	t.Run("external objects", func(t *testing.T) {
 		t.Parallel()
 
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
 
 		r := &PhaseReconciler{
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
-			writer:        testClient,
+			dynamicCache:   dynamicCache,
+			uncachedClient: uncachedClient,
+			ownerStrategy:  ownerStrategy,
+			writer:         testClient,
 		}
 
 		owner := &phaseObjectOwnerMock{}
@@ -372,6 +382,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 
 		owner.AssertExpectations(t)
 		dynamicCache.AssertExpectations(t)
+		uncachedClient.AssertExpectations(t)
 		ownerStrategy.AssertExpectations(t)
 		testClient.AssertExpectations(t)
 	})
@@ -380,13 +391,15 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 		t.Parallel()
 
 		dynamicCache := &dynamicCacheMock{}
+		uncachedClient := testutil.NewClient()
 		ownerStrategy := &ownerStrategyMock{}
 		testClient := testutil.NewClient()
 
 		r := &PhaseReconciler{
-			dynamicCache:  dynamicCache,
-			ownerStrategy: ownerStrategy,
-			writer:        testClient,
+			dynamicCache:   dynamicCache,
+			ownerStrategy:  ownerStrategy,
+			uncachedClient: uncachedClient,
+			writer:         testClient,
 		}
 
 		owner := &phaseObjectOwnerMock{}
@@ -427,6 +440,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 
 		owner.AssertExpectations(t)
 		dynamicCache.AssertExpectations(t)
+		uncachedClient.AssertExpectations(t)
 		ownerStrategy.AssertExpectations(t)
 		testClient.AssertExpectations(t)
 	})
@@ -1063,69 +1077,30 @@ func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
 	clientMock.AssertExpectations(t)
 }
 
-func Test_hasOldFieldOwners(t *testing.T) {
+// Test_defaultPatcher_fixFieldManagers_nowork ensures that fixFieldManagers
+// does not call Patch when no changes are needed.
+func Test_defaultPatcher_fixFieldManagers_nowork(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name          string
-		managedFields []metav1.ManagedFieldsEntry
-		expected      bool
-	}{
-		{
-			name:     "No managed fields",
-			expected: false,
-		},
-		{
-			name: "package-operator owner with Apply operation",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationApply,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "package-operator owner with Update operation",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationUpdate,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "Go-http-client with Update",
-			managedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   FieldOwner,
-					Operation: metav1.ManagedFieldsOperationUpdate,
-					FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-				},
-			},
-			expected: true,
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"name": "test",
-					},
-				},
-			}
-			obj.SetManagedFields(test.managedFields)
+	clientMock := testutil.NewClient()
+	r := &defaultPatcher{writer: clientMock}
+	ctx := context.Background()
 
-			out := hasOldFieldOwners(obj)
-			assert.Equal(t, test.expected, out)
-		})
+	currentObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"metadata": map[string]interface{}{"name": "test"},
+		},
 	}
+	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{{
+		Manager:   "package-operator",
+		Operation: metav1.ManagedFieldsOperationApply,
+		FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+	}})
+
+	err := r.fixFieldManagers(ctx, currentObj)
+	require.NoError(t, err)
+
+	clientMock.AssertExpectations(t)
 }
 
 func Test_mergeKeysFrom(t *testing.T) {

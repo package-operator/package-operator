@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/v3/assert"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )

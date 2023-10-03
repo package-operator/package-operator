@@ -33,6 +33,7 @@ type dynamicCache interface {
 
 type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
+	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
@@ -205,8 +206,6 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	log := c.log.WithValues("ObjectSetPhase", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
-
-	defer log.Info("reconciled")
 
 	objectSetPhase := c.newObjectSetPhase(c.scheme)
 	if err := c.client.Get(

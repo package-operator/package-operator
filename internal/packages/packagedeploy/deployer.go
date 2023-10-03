@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/distribution/reference"
-	"github.com/opencontainers/go-digest"
+	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -87,25 +86,24 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 	}
 }
 
-func ImageWithDigest(image string, imageDigest string) (string, error) {
-	ref, err := reference.ParseDockerRef(image)
+// ImageWithDigest replaces the tag/digest part of the given reference with the digest specified by digest.
+// It does not sanitize the reference and expands well known registries.
+func ImageWithDigest(reference string, digest string) (string, error) {
+	// Parse reference into something we can use.
+	ref, err := name.ParseReference(reference)
 	if err != nil {
-		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
+		return "", fmt.Errorf("parse image reference: %w", err)
 	}
 
-	canonical, err := reference.WithDigest(reference.TrimNamed(ref), digest.Digest(imageDigest))
-	if err != nil {
-		return "", fmt.Errorf("image \"%s\" with digest \"%s\": %w", image, imageDigest, err)
-	}
-
-	return canonical.String(), nil
+	// Create a new digest reference from the context of the parsed reference with the parameter digest and return the string.
+	return ref.Context().Digest(digest).String(), nil
 }
 
 func (l *PackageDeployer) Load(
 	ctx context.Context, pkg adapters.GenericPackageAccessor,
 	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
 ) error {
-	packageContent, err := l.packageContentLoader.FromFiles(ctx, files)
+	packageContent, err := l.LoadFromFiles(ctx, files, pkg.GetComponent())
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(pkg, err)
 		return nil
@@ -150,8 +148,9 @@ func (l *PackageDeployer) Load(
 	if err != nil {
 		return err
 	}
-	packageContent, err = l.packageContentLoader.FromFiles(
+	packageContent, err = l.LoadFromFiles(
 		ctx, files,
+		pkg.GetComponent(),
 		packageloader.WithFilesTransformers(tt),
 		packageloader.WithTransformers(&packageloader.PackageTransformer{Package: pkg.ClientObject()}))
 	if err != nil {
@@ -172,6 +171,13 @@ func (l *PackageDeployer) Load(
 	// Load success
 	meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
 	return nil
+}
+
+func (l *PackageDeployer) LoadFromFiles(ctx context.Context, path packagecontent.Files, component string, opts ...packageloader.Option) (*packagecontent.Package, error) {
+	if component != "" {
+		opts = append(opts, packageloader.WithComponent(component))
+	}
+	return l.packageContentLoader.FromFiles(ctx, path, opts...)
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(

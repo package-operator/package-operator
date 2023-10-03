@@ -8,7 +8,6 @@ updates:
   - dependency-type: all
     dependency-name: "*"
   assignees: [ eqrx ]
-  reviewers: [ eqrx ]
   open-pull-requests-limit: 100
   labels: [ dependencies, ok-to-test]
 - package-ecosystem: gomod
@@ -19,12 +18,12 @@ updates:
   - dependency-type: all
     dependency-name: "*"
   assignees: [ eqrx ]
-  reviewers: [ eqrx ]
   open-pull-requests-limit: 100
   labels: [ dependencies, ok-to-test]
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
+  assignees: [ eqrx ]
   open-pull-requests-limit: 100
   labels: [ dependencies, ok-to-test]

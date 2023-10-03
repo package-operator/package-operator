@@ -1238,7 +1238,7 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
-  component: PackageManifestComponentConfig
+  components: PackageManifestComponentsConfig
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1437,7 +1437,7 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `availabilityProbes` <br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
-| `component` <br><a href="#packagemanifestcomponentconfig">PackageManifestComponentConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
+| `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
 
 
 Used in:

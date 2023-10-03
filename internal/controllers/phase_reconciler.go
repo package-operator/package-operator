@@ -45,6 +45,7 @@ type PhaseReconciler struct {
 
 type ownerStrategy interface {
 	IsController(owner, obj metav1.Object) bool
+	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
@@ -319,6 +320,8 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (cleanupDone bool, err error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
 	if err != nil {
 		return false, fmt.Errorf("building desired object: %w", err)
@@ -340,7 +343,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	currentObj := desiredObj.DeepCopy()
-	err = r.dynamicCache.Get(
+	err = r.uncachedClient.Get(
 		ctx, client.ObjectKeyFromObject(desiredObj), currentObj)
 	if err != nil && errors.IsNotFound(err) {
 		// No matter who the owner of this object is,
@@ -352,15 +355,25 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	if !r.ownerStrategy.IsController(owner.ClientObject(), currentObj) {
-		// this object is owned by someone else
-		// so we don't have to delete it for cleanup,
-		// but we still want to remove ourselves as owner.
+		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
+			return true, nil
+		}
+
+		// This object is controlled by someone else
+		// so we don't have to delete it for cleanup.
+		// But we still want to remove ourselves as potential owner.
 		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
 		if err := r.writer.Update(ctx, currentObj); err != nil {
 			return false, fmt.Errorf("removing owner reference: %w", err)
 		}
 		return true, nil
 	}
+
+	log.Info("deleting managed object",
+		"apiVersion", currentObj.GetAPIVersion(),
+		"kind", currentObj.GroupVersionKind().Kind,
+		"namespace", currentObj.GetNamespace(),
+		"name", currentObj.GetName())
 
 	err = r.writer.Delete(ctx, currentObj)
 	if err != nil && errors.IsNotFound(err) {
@@ -737,36 +750,25 @@ func (p *defaultPatcher) fixFieldManagers(
 	ctx context.Context,
 	currentObj *unstructured.Unstructured,
 ) error {
-	if !hasOldFieldOwners(currentObj) {
+	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, FieldOwner)
+	switch {
+	case err != nil:
+		return err
+	case len(patch) == 0:
+		// csaupgrade.UpgradeManagedFieldsPatch return nil, nil when no work is to be done. Empty patch cannot be applied so
+		// exit early.
 		return nil
 	}
 
-	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, FieldOwner)
-	if err != nil {
-		return err
-	}
 	if err := p.writer.Patch(ctx, currentObj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
 		return fmt.Errorf("update field managers: %w", err)
 	}
 	return nil
 }
 
-func hasOldFieldOwners(obj metav1.Object) bool {
-	for _, mgrField := range obj.GetManagedFields() {
-		if oldFieldOwners.Has(mgrField.Manager) {
-			if mgrField.Manager == FieldOwner && mgrField.Operation == metav1.ManagedFieldsOperationApply {
-				// ignore ourself, if we are already an Apply Operation Field Manager.
-				continue
-			}
-			return true
-		}
-	}
-	return false
-}
-
-func mergeKeysFrom(base, additional map[string]string) map[string]string {
+func mergeKeysFrom[K comparable, V any](base, additional map[K]V) map[K]V {
 	if base == nil {
-		base = map[string]string{}
+		base = map[K]V{}
 	}
 	for k, v := range additional {
 		base[k] = v

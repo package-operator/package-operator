@@ -28,6 +28,12 @@ func (w WithConfigTestcase) ConfigureRenderPackage(c *RenderPackageConfig) {
 	c.ConfigTestcase = string(w)
 }
 
+type WithComponent string
+
+func (w WithComponent) ConfigureRenderPackage(c *RenderPackageConfig) {
+	c.Component = string(w)
+}
+
 type WithDigestResolver struct{ Resolver DigestResolver }
 
 func (w WithDigestResolver) ConfigureBuild(c *BuildConfig) {

@@ -2,10 +2,10 @@ package objectdeployments
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -153,7 +153,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			mock.Anything,
 			prevs[2].ClientObject(),
 			mock.Anything,
-		).Return(errors.New("Failed to update revision 5 for pausing"))
+		).Return(errors.New("Failed to update revision 5 for pausing")) //nolint:goerr113
 
 		// No errors on other updates
 		client.On("Update",

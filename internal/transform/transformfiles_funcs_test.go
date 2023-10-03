@@ -1,8 +1,10 @@
 package transform
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
+	"text/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,9 +68,10 @@ var forbiddenFuncs = []string{
 func TestSprigAllowedFuncs(t *testing.T) {
 	t.Parallel()
 
-	actual := SprigFuncs()
+	tmpl := template.New("xxx")
+	actual := SprigFuncs(tmpl)
 
-	require.Equal(t, len(allowedFuncNames)+1, len(actual))
+	require.Equal(t, len(allowedFuncNames)+4, len(actual))
 
 	for key := range allowedFuncNames {
 		require.Contains(t, actual, key)
@@ -90,6 +93,37 @@ func TestSprigForbiddenFuncs(t *testing.T) {
 	}
 }
 
+func Test_include(t *testing.T) {
+	t.Parallel()
+
+	tmpl := template.New("xxx")
+	tmpl = tmpl.Funcs(SprigFuncs(tmpl))
+
+	_, err := tmpl.Parse(`{{- define "test-helper" -}}{{.}}{{- end -}}{{- include "test-helper" . | upper -}}`)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	require.NoError(t, tmpl.Execute(&buf, "test"))
+
+	assert.Equal(t, "TEST", buf.String())
+}
+
+func Test_include_recursionError(t *testing.T) {
+	t.Parallel()
+
+	tmpl := template.New("xxx")
+	tmpl = tmpl.Funcs(SprigFuncs(tmpl))
+
+	_, err := tmpl.Parse(
+		`{{- define "test-helper" -}}{{- include "test-helper" . -}}{{- end -}}{{- include "test-helper" . -}}`,
+	)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, "test")
+	assert.ErrorIs(t, err, ErrExceededIncludeRecursion)
+}
+
 func Test_base64decodeMap(t *testing.T) {
 	t.Parallel()
 	d := map[string]interface{}{
@@ -101,4 +135,46 @@ func Test_base64decodeMap(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"test": "abcdef",
 	}, out)
+}
+
+func Test_toYAML(t *testing.T) {
+	t.Parallel()
+
+	obj := map[string]string{
+		"t": "2",
+	}
+	y, err := toYAML(obj)
+	require.NoError(t, err)
+	assert.Equal(t, `t: "2"`, y)
+}
+
+func Test_fromYAML(t *testing.T) {
+	t.Parallel()
+
+	t.Run("string", func(t *testing.T) {
+		t.Parallel()
+
+		y, err := fromYAML(`t: "2"`)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"t": "2",
+		}, y)
+	})
+
+	t.Run("[]byte", func(t *testing.T) {
+		t.Parallel()
+
+		y, err := fromYAML([]byte(`t: "2"`))
+		require.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"t": "2",
+		}, y)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := fromYAML(map[string]interface{}{})
+		require.ErrorIs(t, err, ErrInvalidType)
+	})
 }
