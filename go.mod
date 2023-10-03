@@ -58,7 +58,7 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/docker/cli v24.0.6+incompatible // indirect
-	github.com/docker/distribution v2.8.2+incompatible // indirect
+	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v24.0.6+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
