@@ -204,12 +204,10 @@ func areComponentsEnabled(ctx context.Context, scheme *runtime.Scheme, files Fil
 			if manifest, err = processManifestFile(ctx, scheme, manifest, path, content); err != nil {
 				return false, err
 			}
+			return isMultiComponent(manifest), nil
 		}
 	}
-	if manifest == nil {
-		return false, packages.ErrManifestNotFound
-	}
-	return isMultiComponent(manifest), nil
+	return false, packages.ErrManifestNotFound
 }
 
 func getComponentNameAndPath(path string) (componentName string, componentPath string, err error) {
