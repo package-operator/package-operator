@@ -9,6 +9,8 @@ import (
 	"package-operator.run/internal/controllers/packages"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/packages/packageimport"
+
+	pkocore "package-operator.run/apis/core/v1alpha1"
 )
 
 // Type alias for dependency injector to differentiate
@@ -52,7 +54,7 @@ func ProvidePackageController(
 	opts Options,
 ) PackageController {
 	return PackageController{
-		packages.NewPackageController(
+		packages.NewPackageController[pkocore.Package, pkocore.ObjectDeployment](
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
@@ -68,7 +70,7 @@ func ProvideClusterPackageController(
 	opts Options,
 ) ClusterPackageController {
 	return ClusterPackageController{
-		packages.NewClusterPackageController(
+		packages.NewPackageController[pkocore.ClusterPackage, pkocore.ClusterObjectDeployment](
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),

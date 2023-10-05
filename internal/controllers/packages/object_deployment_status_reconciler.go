@@ -4,51 +4,51 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 )
 
-type objectDeploymentStatusReconciler struct {
-	client              client.Client
-	scheme              *runtime.Scheme
-	newObjectDeployment adapters.ObjectDeploymentFactory
-}
+func (c *GenericPackageController[P, D]) reconcileObjectDeploymentStatus(ctx context.Context, pkg *P) (ctrl.Result, error) {
+	var d D
 
-func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj adapters.GenericPackageAccessor) (ctrl.Result, error) {
-	objDep := r.newObjectDeployment(r.scheme)
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(packageObj.ClientObject()), objDep.ClientObject()); err != nil {
+	depl := &d
+	deplObj := any(depl).(client.Object)
+	deplConditions := ConditionsPtr(depl)
+
+	pkgObj := any(pkg).(client.Object)
+	pkgConditions := ConditionsPtr(pkg)
+
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkgObj), deplObj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	objDepAvailableCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
-	if objDepAvailableCondition != nil && objDepAvailableCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
+	objDepAvailableCondition := meta.FindStatusCondition(*deplConditions, corev1alpha1.ObjectDeploymentAvailable)
+	if objDepAvailableCondition != nil && objDepAvailableCondition.ObservedGeneration == deplObj.GetGeneration() {
 		packageAvailableCond := objDepAvailableCondition.DeepCopy()
-		packageAvailableCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
+		packageAvailableCond.ObservedGeneration = deplObj.GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetConditions(), *packageAvailableCond)
+		meta.SetStatusCondition(pkgConditions, *packageAvailableCond)
 	}
 
-	objDepProgressingCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
-	if objDepProgressingCondition != nil && objDepProgressingCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
+	objDepProgressingCondition := meta.FindStatusCondition(*deplConditions, corev1alpha1.ObjectDeploymentProgressing)
+	if objDepProgressingCondition != nil && objDepProgressingCondition.ObservedGeneration == deplObj.GetGeneration() {
 		packageProgressingCond := objDepProgressingCondition.DeepCopy()
-		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
+		packageProgressingCond.ObservedGeneration = pkgObj.GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
+		meta.SetStatusCondition(pkgConditions, *packageProgressingCond)
 	}
 
-	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
+	controllers.DeleteMappedConditions(ctx, pkgConditions)
 	controllers.MapConditions(
 		ctx,
-		objDep.ClientObject().GetGeneration(), *objDep.GetConditions(),
-		packageObj.ClientObject().GetGeneration(), packageObj.GetConditions(),
+		deplObj.GetGeneration(), *deplConditions,
+		pkgObj.GetGeneration(), pkgConditions,
 	)
 
-	packageObj.SetStatusRevision(objDep.GetStatusRevision())
+	*StatusRevisionPtr(pkg) = *StatusRevisionPtr(depl)
 
 	return ctrl.Result{}, nil
 }

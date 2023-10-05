@@ -7,130 +7,114 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	pkocore "package-operator.run/apis/core/v1alpha1"
+	pkomanifests "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packagedeploy"
+
+	machinerymeta "k8s.io/apimachinery/pkg/api/meta"
 )
 
 const loaderJobFinalizer = "package-operator.run/loader-job"
 
-var _ environment.Sinker = (*GenericPackageController)(nil)
+type (
+	imagePuller interface {
+		Pull(ctx context.Context, image string) (packagecontent.Files, error)
+	}
 
-type reconciler interface {
-	Reconcile(ctx context.Context, pkg adapters.GenericPackageAccessor) (ctrl.Result, error)
-}
+	packageDeployer interface {
+		Load(ctx context.Context, pkg adapters.GenericPackageAccessor, files packagecontent.Files, env pkomanifests.PackageEnvironment) error
+	}
 
-type metricsRecorder interface {
-	RecordPackageMetrics(pkg metrics.GenericPackage)
-	RecordPackageLoadMetric(pkg metrics.GenericPackage, d time.Duration)
-}
+	/*
+		packageTypes interface {
+			pkocore.Package | pkocore.ClusterPackage
+		}
+
+		objectDeploymentTypes interface {
+			pkocore.ObjectDeployment | pkocore.ClusterObjectDeployment
+		}
+	*/
+
+	metricsRecorder interface {
+		RecordPackageMetrics(pkg metrics.GenericPackage)
+		RecordPackageLoadMetric(pkg metrics.GenericPackage, d time.Duration)
+	}
+)
 
 // Generic reconciler for both Package and ClusterPackage objects.
-type GenericPackageController struct {
-	newPackage          adapters.GenericPackageFactory
-	newObjectDeployment adapters.ObjectDeploymentFactory
-
-	recorder         metricsRecorder
-	client           client.Client
-	log              logr.Logger
-	scheme           *runtime.Scheme
-	reconciler       []reconciler
-	unpackReconciler *unpackReconciler
+type GenericPackageController[P pkocore.ClusterPackage | pkocore.Package, D pkocore.ClusterObjectDeployment | pkocore.ObjectDeployment] struct {
+	environment.Sink
+	recorder            metricsRecorder
+	client              client.Client
+	log                 logr.Logger
+	backoff             *flowcontrol.Backoff
+	imagePuller         imagePuller
+	packageHashModifier *int32
+	packageDeployer     packageDeployer
 }
 
-func NewPackageController(
-	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme,
-	imagePuller imagePuller,
-	metricsRecorder metricsRecorder,
-	packageHashModifier *int32,
-) *GenericPackageController {
-	return newGenericPackageController(
-		adapters.NewGenericPackage, adapters.NewObjectDeployment,
-		c, log, scheme, imagePuller, packagedeploy.NewPackageDeployer(c, scheme),
-		metricsRecorder, packageHashModifier,
-	)
-}
-
-func NewClusterPackageController(
-	c client.Client, log logr.Logger,
-	scheme *runtime.Scheme,
-	imagePuller imagePuller,
-	metricsRecorder metricsRecorder,
-	packageHashModifier *int32,
-) *GenericPackageController {
-	return newGenericPackageController(
-		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
-		c, log, scheme, imagePuller, packagedeploy.NewClusterPackageDeployer(c, scheme),
-		metricsRecorder, packageHashModifier,
-	)
-}
-
-func newGenericPackageController(
-	newPackage adapters.GenericPackageFactory,
-	newObjectDeployment adapters.ObjectDeploymentFactory,
+func NewPackageController[P pkocore.ClusterPackage | pkocore.Package, D pkocore.ClusterObjectDeployment | pkocore.ObjectDeployment](
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
-	packageDeployer packageDeployer,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
-) *GenericPackageController {
-	controller := &GenericPackageController{
-		newPackage:          newPackage,
-		newObjectDeployment: newObjectDeployment,
-		recorder:            metricsRecorder,
-		client:              client,
-		log:                 log,
-		scheme:              scheme,
-		unpackReconciler: newUnpackReconciler(
-			imagePuller, packageDeployer, metricsRecorder, packageHashModifier),
+) *GenericPackageController[P, D] {
+	var cfg controllers.BackoffConfig
+	cfg.Default()
+
+	controller := &GenericPackageController[P, D]{
+		environment.Sink{},
+		metricsRecorder,
+		client,
+		log,
+		cfg.GetBackoff(),
+		imagePuller,
+		packageHashModifier,
+		nil,
 	}
 
-	controller.reconciler = []reconciler{
-		controller.unpackReconciler,
-		&objectDeploymentStatusReconciler{
-			client:              client,
-			scheme:              scheme,
-			newObjectDeployment: newObjectDeployment,
-		},
+	switch any(P{}).(type) {
+	case pkocore.Package:
+		controller.packageDeployer = packagedeploy.NewPackageDeployer(client, scheme)
+	case pkocore.ClusterPackage:
+		controller.packageDeployer = packagedeploy.NewClusterPackageDeployer(client, scheme)
+	default:
+		panic("invalid type")
 	}
 
 	return controller
 }
 
-func (c *GenericPackageController) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
-	c.unpackReconciler.SetEnvironment(env)
-}
-
-func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
-	pkg := c.newPackage(c.scheme).ClientObject()
-	objDep := c.newObjectDeployment(c.scheme).ClientObject()
-
+func (c *GenericPackageController[P, D]) SetupWithManager(mgr ctrl.Manager) error {
+	var d D
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
-		For(pkg).
-		Owns(objDep).
+		For(any(&P{}).(client.Object)).
+		Owns(any(&d).(client.Object)).
 		Complete(c)
 }
 
-func (c *GenericPackageController) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (res ctrl.Result, err error) {
+func (c *GenericPackageController[P, D]) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := c.log.WithValues("Package", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
-	pkg := c.newPackage(c.scheme)
+	pkg := &P{}
+	obj := any(pkg).(client.Object)
+
 	if err := c.client.Get(
-		ctx, req.NamespacedName, pkg.ClientObject()); err != nil {
+		ctx, req.NamespacedName, obj); err != nil {
 		return res, client.IgnoreNotFound(err)
 	}
 	defer func() {
@@ -138,47 +122,56 @@ func (c *GenericPackageController) Reconcile(
 			return
 		}
 		if c.recorder != nil {
-			c.recorder.RecordPackageMetrics(pkg)
+			c.recorder.RecordPackageMetrics(GenericPackage(*pkg))
 		}
 	}()
 
-	pkgClientObject := pkg.ClientObject()
-	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
-		if err := c.handleDeletion(ctx, pkg); err != nil {
+	if !obj.GetDeletionTimestamp().IsZero() {
+		// Remove finalizer from previous versions of PKO.
+		if err := controllers.RemoveFinalizer(
+			ctx, c.client, obj, loaderJobFinalizer); err != nil {
+			return res, err
+		}
+
+		if err := c.client.Update(ctx, obj); err != nil {
 			return res, err
 		}
 		return res, nil
 	}
 
-	for _, r := range c.reconciler {
-		res, err = r.Reconcile(ctx, pkg)
-		if err != nil || !res.IsZero() {
-			break
+	res, err = c.unpackReconcile(ctx, pkg)
+	if err != nil {
+		return
+	}
+
+	if res.IsZero() {
+		res, err = c.reconcileObjectDeploymentStatus(ctx, pkg)
+		if err != nil {
+			return
 		}
 	}
-	if err != nil {
-		return res, err
-	}
 
-	return res, c.updateStatus(ctx, pkg)
+	c.setPackagePhase(pkg)
+	if err := c.client.Status().Update(ctx, obj); err != nil {
+		return res, fmt.Errorf("updating Package status: %w", err)
+	}
+	return res, nil
 }
 
-func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapters.GenericPackageAccessor) error {
-	pkg.UpdatePhase()
-	if err := c.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
-		return fmt.Errorf("updating Package status: %w", err)
-	}
-	return nil
-}
+func (c *GenericPackageController[P, D]) setPackagePhase(pkg *P) {
+	conditions := ConditionsPtr(pkg)
+	phase := PackagePhasePtr(pkg)
 
-func (c *GenericPackageController) handleDeletion(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
-) error {
-	// Remove finalizer from previous versions of PKO.
-	if err := controllers.RemoveFinalizer(
-		ctx, c.client, pkg.ClientObject(), loaderJobFinalizer); err != nil {
-		return err
+	switch {
+	case machinerymeta.IsStatusConditionTrue(*conditions, pkocore.PackageInvalid):
+		*phase = pkocore.PackagePhaseInvalid
+	case machinerymeta.FindStatusCondition(*conditions, pkocore.PackageUnpacked) == nil:
+		*phase = pkocore.PackagePhaseUnpacking
+	case machinerymeta.IsStatusConditionTrue(*conditions, pkocore.PackageProgressing):
+		*phase = pkocore.PackagePhaseProgressing
+	case machinerymeta.IsStatusConditionTrue(*conditions, pkocore.PackageAvailable):
+		*phase = pkocore.PackagePhaseAvailable
+	default:
+		*phase = pkocore.PackagePhaseNotReady
 	}
-
-	return c.client.Update(ctx, pkg.ClientObject())
 }
