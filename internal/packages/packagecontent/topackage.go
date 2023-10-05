@@ -8,12 +8,11 @@ import (
 	"sort"
 	"strings"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages"
 )
 
@@ -119,9 +118,8 @@ func parseObjects(pkg *Package, path string, content []byte) (err error) {
 	return
 }
 
-func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
-	pkg := &Package{nil, nil, map[string][]unstructured.Unstructured{}}
-	var err error
+func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (pkg *Package, err error) {
+	pkg = &Package{Objects: map[string][]unstructured.Unstructured{}}
 	for path, content := range files {
 		switch {
 		case strings.HasPrefix(filepath.Base(path), "_"):
@@ -165,7 +163,8 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 		return nil, packages.ErrManifestNotFound
 	}
 
-	return pkg, nil
+	pkg.Permissions, err = permissions(ctx, pkg.Objects, files)
+	return
 }
 
 func processManifestFile(ctx context.Context, scheme *runtime.Scheme, previousManifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (newManifest *manifestsv1alpha1.PackageManifest, err error) {

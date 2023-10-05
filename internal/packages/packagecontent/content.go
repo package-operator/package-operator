@@ -2,6 +2,7 @@ package packagecontent
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -15,6 +16,14 @@ type (
 		PackageManifest     *manifestsv1alpha1.PackageManifest
 		PackageManifestLock *manifestsv1alpha1.PackageManifestLock
 		Objects             map[string][]unstructured.Unstructured
+		Permissions         PackagePermissions
+	}
+
+	PackagePermissions struct {
+		// ObjectTypes managed by this package.
+		Managed []schema.GroupKind `json:"managed"`
+		// ObjectTypes external to the package, that are included for evaluating status.
+		External []schema.GroupKind `json:"external"`
 	}
 )
 
