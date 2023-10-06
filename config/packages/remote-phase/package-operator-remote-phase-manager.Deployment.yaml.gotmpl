@@ -20,6 +20,12 @@ spec:
         app.kubernetes.io/name: package-operator-remote-phase-manager
         hypershift.openshift.io/need-management-kas-access: "true"
     spec:
+{{- if hasKey .config "affinity" }}
+      affinity: {{ toJson .config.affinity }}
+{{- end}}
+{{- if hasKey .config "tolerations" }}
+      tolerations: {{ toJson .config.tolerations }}
+{{- end}}
       containers:
       - args:
         - --enable-leader-election

@@ -41,6 +41,14 @@ spec:
         - name: PKO_PACKAGE_HASH_MODIFIER
           value: {{ .config.packageHashModifier | quote }}
 {{- end}}
+{{- if hasKey .config "affinity" }}
+        - name: PKO_SUB_COMPONENT_AFFINITY
+          value: {{ toJson .config.affinity | quote }}
+{{- end}}
+{{- if hasKey .config "tolerations" }}
+        - name: PKO_SUB_COMPONENT_TOLERATIONS
+          value: {{ toJson .config.tolerations | quote }}
+{{- end}}
         - name: PKO_NAMESPACE
           valueFrom:
             fieldRef:

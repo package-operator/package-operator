@@ -29,6 +29,10 @@ spec:
         - name: metrics
           containerPort: 8080
         env:
+        - name: PKO_SUB_COMPONENT_AFFINITY
+          value: "{\"nodeAffinity\":{\"requiredDuringSchedulingIgnoredDuringExecution\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"node-role.kubernetes.io/infra\",\"operator\":\"Exists\"}]}]}}}"
+        - name: PKO_SUB_COMPONENT_TOLERATIONS
+          value: "[{\"effect\":\"NoSchedule\",\"key\":\"node-role.kubernetes.io/infra\"}]"
         - name: PKO_NAMESPACE
           valueFrom:
             fieldRef:

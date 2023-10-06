@@ -1,11 +1,14 @@
 package components
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Flags.
@@ -26,6 +29,9 @@ const (
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
 	registryHostOverrides = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
 	packageHashModifier   = "An additional value used for the generation of a package's unpackedHash."
+
+	subComponentAffinityFlagDescription    = "Pod affinity settings used in PKO deployed subcomponents, like remote-phase-manager."
+	subComponentTolerationsFlagDescription = "Pod tolerations settings used in PKO deployed subcomponents, like remote-phase-manager."
 )
 
 type Options struct {
@@ -43,6 +49,10 @@ type Options struct {
 	SelfBootstrapConfig string
 	PrintVersion        io.Writer
 	CopyTo              string
+
+	// Sub component Settings
+	SubComponentAffinity    *corev1.Affinity
+	SubComponentTolerations []corev1.Toleration
 }
 
 func ProvideOptions() (opts Options, err error) {
@@ -84,6 +94,31 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.RegistryHostOverrides, "registry-host-overrides",
 		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
 		registryHostOverrides)
+
+	var (
+		subComponentAffinityJSON    string
+		subComponentTolerationsJSON string
+	)
+	flag.StringVar(
+		&subComponentAffinityJSON, "sub-component-affinity",
+		os.Getenv("PKO_SUB_COMPONENT_AFFINITY"),
+		subComponentAffinityFlagDescription,
+	)
+	flag.StringVar(
+		&subComponentTolerationsJSON, "sub-component-tolerations",
+		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
+		subComponentAffinityFlagDescription,
+	)
+	if len(subComponentAffinityJSON) > 0 {
+		if err := json.Unmarshal([]byte(subComponentAffinityJSON), &opts.SubComponentAffinity); err != nil {
+			return Options{}, err
+		}
+	}
+	if len(subComponentTolerationsJSON) > 0 {
+		if err := json.Unmarshal([]byte(subComponentTolerationsJSON), &opts.SubComponentTolerations); err != nil {
+			return Options{}, err
+		}
+	}
 
 	packageHashModifierInt, err := envToInt("PKO_PACKAGE_HASH_MODIFIER")
 	if err != nil {
