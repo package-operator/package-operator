@@ -2,10 +2,12 @@ package hostedclusters
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +28,9 @@ type HostedClusterController struct {
 	scheme                  *runtime.Scheme
 	remotePhasePackageImage string
 	ownerStrategy           ownerStrategy
+
+	remotePhaseAffinity     *corev1.Affinity
+	remotePhaseTollerations []corev1.Toleration
 }
 
 type ownerStrategy interface {
@@ -38,6 +43,8 @@ type ownerStrategy interface {
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	remotePhasePackageImage string,
+	remotePhaseAffinity *corev1.Affinity,
+	remotePhaseTollerations []corev1.Toleration,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
 		client:                  c,
@@ -48,6 +55,9 @@ func NewHostedClusterController(
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
 		ownerStrategy: ownerhandling.NewAnnotation(scheme),
+
+		remotePhaseAffinity:     remotePhaseAffinity,
+		remotePhaseTollerations: remotePhaseTollerations,
 	}
 	return controller
 }
@@ -75,9 +85,11 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	desiredPkg := c.desiredPackage(hostedCluster)
-	err := c.ownerStrategy.SetControllerReference(hostedCluster, desiredPkg)
+	desiredPkg, err := c.desiredPackage(hostedCluster)
 	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
+	}
+	if err = c.ownerStrategy.SetControllerReference(hostedCluster, desiredPkg); err != nil {
 		return ctrl.Result{}, fmt.Errorf("setting controller reference: %w", err)
 	}
 
@@ -102,7 +114,7 @@ func (c *HostedClusterController) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster) *corev1alpha1.Package {
+func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "remote-phase",
@@ -112,7 +124,24 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 			Image: c.remotePhasePackageImage,
 		},
 	}
-	return pkg
+
+	config := map[string]interface{}{}
+	if c.remotePhaseAffinity != nil {
+		config["affinity"] = c.remotePhaseAffinity
+	}
+	if c.remotePhaseTollerations != nil {
+		config["tollerations"] = c.remotePhaseTollerations
+	}
+	if len(config) > 0 {
+		configJSON, err := json.Marshal(config)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling config: %w", err)
+		}
+
+		pkg.Spec.Config = &runtime.RawExtension{Raw: configJSON}
+	}
+
+	return pkg, nil
 }
 
 // From

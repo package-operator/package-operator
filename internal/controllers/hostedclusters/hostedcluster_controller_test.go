@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +37,7 @@ func TestHostedClusterController_noop(t *testing.T) {
 	mockClient := testutil.NewClient()
 
 	image := "image321"
-	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image)
+	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil)
 	hcName := "testing123"
 	now := metav1.Now()
 	hc := &hypershiftv1beta1.HostedCluster{
@@ -67,15 +69,21 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	mockClient := testutil.NewClient()
 
 	image := "image321"
-	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image)
+	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image,
+		&corev1.Affinity{},
+		[]corev1.Toleration{{}})
 	hcName := "testing123"
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: hcName},
 	}
 
-	pkg := controller.desiredPackage(hc)
+	pkg, err := controller.desiredPackage(hc)
+	require.NoError(t, err)
 	assert.Equal(t, "remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)
+	if assert.NotNil(t, pkg.Spec.Config) {
+		assert.Equal(t, `{"affinity":{},"tollerations":[{}]}`, string(pkg.Spec.Config.Raw))
+	}
 }
 
 var readyHostedCluster = &hypershiftv1beta1.HostedCluster{
@@ -90,7 +98,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
@@ -111,7 +119,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
@@ -140,7 +148,7 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test")
+	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).

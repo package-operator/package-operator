@@ -6,3 +6,12 @@ spec:
   image: "quay.io/package-operator/test-stub-package:v1.8.3-2-g293f877"
   config:
     testStubImage: quay.io/package-operator/test-stub:v1.8.3-2-g293f877
+  packagePullSecrets:
+  - pull-secret
+  secrets:
+  - name: this-my-secret
+    secretRef:
+      name: xxx
+  - name: pull-secret
+    secretRef:
+      name: yyy

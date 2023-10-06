@@ -21,6 +21,8 @@ func ProvideHostedClusterController(
 			log.WithName("controllers").WithName("HostedCluster"),
 			mgr.GetScheme(),
 			opts.RemotePhasePackageImage,
+			opts.SubComponentAffinity,
+			opts.SubComponentTolerations,
 		),
 	}
 }
