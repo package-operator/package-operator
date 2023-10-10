@@ -13,9 +13,15 @@ import (
 	"package-operator.run/internal/packages/packageimport"
 )
 
+type testFile struct {
+	name    string
+	content []byte
+}
+
 type testData struct {
 	directory string
 	component string
+	file      *testFile
 	error     error
 }
 
@@ -23,16 +29,36 @@ func TestMultiComponentLoader(t *testing.T) {
 	t.Parallel()
 
 	tests := []testData{
-		{"components-disabled", "", nil},
-		{"components-disabled", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}},
-		{"components-enabled/not-dns1123", "_backend", packages.ViolationError{
+		{"components-disabled", "", nil, nil},
+		{"components-disabled", "foobar", nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}},
+
+		{"components-enabled/not-dns1123", "_backend", nil, packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidComponentPath,
 			Path:   "components/_backend/Deployment.yaml",
 		}},
-		{"components-enabled/valid", "", nil},
-		{"components-enabled/valid", "backend", nil},
-		{"components-enabled/valid", "frontend", nil},
-		{"components-enabled/valid", "foobar", packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}},
+		{"components-enabled/nested-components", "", nil, packages.ViolationError{
+			Reason:    packages.ViolationReasonNestedMultiComponentPkg,
+			Path:      "manifest.yaml",
+			Component: "backend",
+		}},
+
+		{"components-enabled/valid", "", nil, nil},
+		{"components-enabled/valid", "backend", nil, nil},
+		{"components-enabled/valid", "frontend", nil, nil},
+		{"components-enabled/valid", "foobar", nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}},
+		{"components-enabled/valid", "frontend", nil, nil},
+
+		{"components-enabled/valid", "", &testFile{
+			"components/banana.txt",
+			[]byte("bread"),
+		}, packages.ViolationError{
+			Reason: packages.ViolationReasonInvalidFileInComponentsDir,
+			Path:   "components/banana.txt",
+		}},
+		{"components-enabled/valid", "", &testFile{
+			"components/.sneaky-banana.txt",
+			[]byte("bread"),
+		}, nil},
 	}
 
 	for i := range tests {
@@ -43,6 +69,10 @@ func TestMultiComponentLoader(t *testing.T) {
 			ctx := context.Background()
 			files, err := packageimport.Folder(ctx, filepath.Join("testdata", "multi-component", test.directory))
 			require.NoError(t, err)
+
+			if test.file != nil {
+				files[test.file.name] = test.file.content
+			}
 
 			pkg, err := packagecontent.AllPackagesFromFiles(ctx, testScheme, files, test.component)
 

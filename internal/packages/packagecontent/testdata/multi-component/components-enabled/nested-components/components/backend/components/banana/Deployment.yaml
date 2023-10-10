@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banana
+  labels:
+    app.kubernetes.io/name: banana
+  annotations:
+    package-operator.run/phase: deploy-banana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: banana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: banana
+    spec:
+      containers:
+      - image: my-application/banana:v1.0
+        name: banana

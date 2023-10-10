@@ -3,6 +3,7 @@ kind: PackageManifest
 metadata:
   name: backend
 spec:
+  components: {}
   scopes:
     - Namespaced
   phases:
