@@ -59,6 +59,13 @@ func TestMultiComponentLoader(t *testing.T) {
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
 		}, nil},
+		{"components-enabled/valid", "", &testFile{
+			"components/backend/manifest.yml",
+			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest"),
+		}, packages.ViolationError{
+			Reason: packages.ViolationReasonPackageManifestDuplicated,
+			Path:   "manifest.yml",
+		}},
 	}
 
 	for i := range tests {
