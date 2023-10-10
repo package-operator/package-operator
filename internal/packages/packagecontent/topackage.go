@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"package-operator.run/internal/utils"
-
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,10 +37,6 @@ func parseComponentsFiles(files Files, filesMap map[string]Files) (err error) {
 		paths = append(paths, key)
 	}
 	sort.Strings(paths)
-
-	if err = validateComponentsDirContent(paths); err != nil {
-		return
-	}
 
 	for _, path := range paths {
 		componentName, componentPath, err := getComponentNameAndPath(path)
@@ -135,15 +129,6 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 		case !packages.IsYAMLFile(path):
 			// skip non YAML files
 		case packages.IsManifestFile(path):
-			if pkg.PackageManifest != nil {
-				// multiple package manifests not allowed
-				err = packages.ViolationError{
-					Reason: packages.ViolationReasonPackageManifestDuplicated,
-					Path:   path,
-				}
-				return nil, err
-			}
-
 			if pkg.PackageManifest, err = processManifestFile(ctx, scheme, pkg.PackageManifest, path, content); err != nil {
 				return nil, err
 			}
@@ -214,36 +199,26 @@ func getComponentNameAndPath(path string) (componentName string, componentPath s
 	if !strings.HasPrefix(path, "components/") {
 		return "", path, nil
 	}
+
 	if matches := componentFileRE.FindStringSubmatch(path[11:]); len(matches) == 4 {
 		return matches[1], matches[3], nil
 	}
-	return "", "", packages.ViolationError{
-		Reason: packages.ViolationReasonInvalidComponentPath,
-		Path:   path,
-	}
-}
 
-func inComponentsDir(path interface{}) (bool, error) {
-	strPath := path.(string)
-	return strings.HasPrefix(strPath, "components/") &&
-		strPath != "components/" &&
-		strings.Count(strPath, "/") == 1, nil
-}
-
-func validateComponentsDirContent(paths []string) error {
-	filesInComponentsDir, err := utils.Filter(paths, inComponentsDir)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range filesInComponentsDir {
-		if !strings.HasPrefix(file, "components/.") {
-			err = packages.ViolationError{
-				Reason: packages.ViolationReasonInvalidFileInComponentsDir,
-				Path:   file,
-			}
-			return err
+	if strings.Count(path, "/") > 1 {
+		// invalid component name
+		return "", "", packages.ViolationError{
+			Reason: packages.ViolationReasonInvalidComponentPath,
+			Path:   path,
 		}
 	}
-	return nil
+
+	if !strings.HasPrefix(path, "components/.") {
+		// not a dot file in the components dir
+		return "", "", packages.ViolationError{
+			Reason: packages.ViolationReasonInvalidFileInComponentsDir,
+			Path:   path,
+		}
+	}
+
+	return "", path, nil
 }

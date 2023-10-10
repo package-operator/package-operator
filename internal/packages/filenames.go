@@ -43,8 +43,7 @@ func IsYAMLFile(fileName string) bool {
 
 // IsManifestFile returns true if the given file name is considered a package manifest.
 func IsManifestFile(fileName string) bool {
-	base := filepath.Base(fileName)
-	return base == PackageManifestFilename || base == "manifest.yml"
+	return fileName == PackageManifestFilename || fileName == "manifest.yml"
 }
 
 // IsManifestFile returns true if the given file name is considered a package manifest lock file.
