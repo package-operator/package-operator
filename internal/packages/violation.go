@@ -40,6 +40,8 @@ const (
 	ViolationReasonComponentNotFound             ViolationReason = "Component not found"
 	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
+	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
+	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
 )
 
 func (v ViolationError) Error() string {

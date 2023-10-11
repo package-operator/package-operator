@@ -1,13 +1,12 @@
 apiVersion: manifests.package-operator.run/v1alpha1
 kind: PackageManifest
 metadata:
-  name: frontend
+  name: backend
 spec:
-  components: {}
   scopes:
     - Namespaced
   phases:
-    - name: deploy-frontend
+    - name: deploy-backend
   availabilityProbes:
     - probes:
         - condition:
