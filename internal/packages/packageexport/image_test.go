@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/require"
 
+	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageexport"
 	"package-operator.run/internal/testutil"
 )
@@ -16,7 +17,7 @@ func TestImage(t *testing.T) {
 
 	seedingFileMap := map[string][]byte{"manifest.yaml": {5, 6}, "manifest.yml": {7, 8}, "subdir/somethingelse": {9, 10}}
 
-	image, err := packageexport.Image(seedingFileMap)
+	image, err := packageexport.Image(seedingFileMap, packagecontent.Metadata{})
 	require.Nil(t, err)
 	layers, err := image.Layers()
 	require.Nil(t, err)
@@ -31,7 +32,7 @@ func TestPushedImage(t *testing.T) { //nolint:paralleltest
 	ref := "chickens:oldest"
 	seedingFileMap := map[string][]byte{"manifest.yaml": {5, 6}, "manifest.yml": {7, 8}, "subdir/somethingelse": {9, 10}}
 
-	err := packageexport.PushedImage(ctx, []string{ref}, seedingFileMap, reg.CraneOpt)
+	err := packageexport.PushedImage(ctx, []string{ref}, seedingFileMap, packagecontent.Metadata{}, reg.CraneOpt)
 	require.NoError(t, err)
 
 	_, err = crane.Pull(ref, reg.CraneOpt)

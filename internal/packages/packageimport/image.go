@@ -18,7 +18,7 @@ import (
 	"package-operator.run/internal/packages/packagecontent"
 )
 
-func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err error) {
+func Image(ctx context.Context, image v1.Image) (m *packagecontent.Package, err error) {
 	files := packagecontent.Files{}
 	reader := mutate.Extract(image)
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
@@ -57,10 +57,8 @@ func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err err
 	return files, nil
 }
 
-func PulledImage(ctx context.Context, ref string) (packagecontent.Files, error) {
-	puller := NewPuller()
-
-	return puller.Pull(ctx, ref)
+func PulledImage(ctx context.Context, ref string) (*packagecontent.Package, error) {
+	return NewPuller().Pull(ctx, ref)
 }
 
 func isFilePathToBeExcluded(path string) bool {
@@ -79,7 +77,7 @@ func NewPuller() *Puller {
 
 type Puller struct{}
 
-func (p *Puller) Pull(ctx context.Context, ref string, opts ...PullOption) (packagecontent.Files, error) {
+func (p *Puller) Pull(ctx context.Context, ref string, opts ...PullOption) (*packagecontent.Package, error) {
 	var cfg PullConfig
 
 	cfg.Option(opts...)

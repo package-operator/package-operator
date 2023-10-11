@@ -8,14 +8,24 @@ import (
 	"sort"
 	"strings"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages"
 )
+
+/*
+TODO IN THIS PR
+RawPackage -> files + metadata: just imported
+PackageTemplate -> metadaten, files, manifeste, liste von templates und objekten: parsed but not templated
+ParsedPackage -> metadata, files, manifests, templated object, env that was used to template things: fully parsed
+
+importing -> RawPackage -> grobes parsing, hauptsächlich files & manifest
+aus RawPackage -> Package mit objekten drin
+TemplatedPackage?
+*/
 
 // this regex matches a path inside the "components/" folder consisting of:
 //   - the component directory, whose name must match "RFC 1123 Label Names"
@@ -120,7 +130,7 @@ func parseObjects(pkg *Package, path string, content []byte) (err error) {
 }
 
 func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Files, component string) (*Package, error) {
-	pkg := &Package{nil, nil, map[string][]unstructured.Unstructured{}}
+	pkg := &Package{Metadata{}, nil, nil, map[string][]unstructured.Unstructured{}, files}
 	var err error
 	for path, content := range files {
 		switch {
@@ -165,7 +175,12 @@ func buildPackageFromFiles(ctx context.Context, scheme *runtime.Scheme, files Fi
 		return nil, packages.ErrManifestNotFound
 	}
 
-	return pkg, nil
+	pkg.Metadata, err = metadata(pkg.Objects)
+	if err != nil {
+		return pkg, err
+	}
+
+	return pkg, err
 }
 
 func processManifestFile(ctx context.Context, scheme *runtime.Scheme, previousManifest *manifestsv1alpha1.PackageManifest, path string, content []byte) (newManifest *manifestsv1alpha1.PackageManifest, err error) {

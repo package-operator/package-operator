@@ -27,7 +27,7 @@ func TestImageLoadSave(t *testing.T) {
 		"bla/.xxx/something.yml":        {11, 12},
 	}
 
-	image, err := packageexport.Image(seedingFiles)
+	image, err := packageexport.Image(seedingFiles, packagecontent.Metadata{})
 	assert.Nil(t, err)
 
 	reapedFiles, err := packageimport.Image(ctx, image)

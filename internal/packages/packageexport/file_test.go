@@ -18,7 +18,7 @@ func TestFile(t *testing.T) { //nolint:paralleltest
 	defer func() { assert.Nil(t, os.Remove(f.Name())) }()
 	defer func() { assert.Nil(t, f.Close()) }()
 
-	err = packageexport.File(f.Name(), []string{"chickens:oldest"}, packagecontent.Files{})
+	err = packageexport.File(f.Name(), []string{"chickens:oldest"}, packagecontent.Files{}, packagecontent.Metadata{})
 	assert.Nil(t, err)
 
 	i, err := tarball.ImageFromPath(f.Name(), nil)

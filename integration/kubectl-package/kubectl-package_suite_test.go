@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageexport"
 	"package-operator.run/internal/packages/packageimport"
 )
@@ -161,7 +162,7 @@ func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) erro
 
 		tags := []string{info.Ref}
 
-		if err := packageexport.PushedImage(ctx, tags, files, crane.Insecure); err != nil {
+		if err := packageexport.PushedImage(ctx, tags, files, packagecontent.Metadata{}, crane.Insecure); err != nil {
 			return fmt.Errorf("pushing package image: %w", err)
 		}
 	}

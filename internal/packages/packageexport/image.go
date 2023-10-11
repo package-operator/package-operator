@@ -2,6 +2,7 @@ package packageexport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -14,17 +15,26 @@ import (
 	"package-operator.run/internal/packages/packagecontent"
 )
 
-func Image(files packagecontent.Files) (v1.Image, error) {
-	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on our target architecture.
-	// We will drop this after refactoring our in-cluster package loading process to make it architecture agnostic.
-	configFile := &v1.ConfigFile{Architecture: "amd64", OS: "linux", Config: v1.Config{}, RootFS: v1.RootFS{Type: "layers"}}
-	image, err := mutate.ConfigFile(empty.Image, configFile)
+const (
+	managedLabelKey  = "run.package-operator.managed-objects"
+	externalLabelKey = "run.package-operator.external-objects"
+)
+
+func Image(pkg *packagecontent.Package) (v1.Image, error) {
+	managedBytes, err := json.Marshal(pkg.Metadata.ManagedObjectTypes)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	externalBytes, err := json.Marshal(pkg.Metadata.ExternalObjectTypes)
+	if err != nil {
+		panic(err)
+	}
+	annotations := map[string]string{managedLabelKey: string(managedBytes), externalLabelKey: string(externalBytes)}
+
+	image := mutate.Annotations(empty.Image, annotations).(v1.Image)
 
 	subFiles := packagecontent.Files{}
-	for k, v := range files {
+	for k, v := range pkg.Files {
 		subFiles[packages.AddPathPrefix(k)] = v
 	}
 
@@ -46,8 +56,8 @@ func Image(files packagecontent.Files) (v1.Image, error) {
 	return image, nil
 }
 
-func PushedImage(ctx context.Context, references []string, files packagecontent.Files, opts ...crane.Option) error {
-	image, err := Image(files)
+func PushedImage(ctx context.Context, references []string, pkg *packagecontent.Package, opts ...crane.Option) error {
+	image, err := Image(pkg)
 	if err != nil {
 		return err
 	}

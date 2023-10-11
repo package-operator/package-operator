@@ -82,7 +82,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	loader := packageloader.New(b.scheme, append(loaderOpts, packageloader.WithDefaults, packageloader.WithValidators(b))...)
 
-	_, err = loader.FromFiles(ctx, files)
+	ppp, err := loader.FromFiles(ctx, files)
 	if err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
@@ -90,7 +90,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	if cfg.OutputPath != "" {
 		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
-		if err := packageexport.File(cfg.OutputPath, cfg.Tags, files); err != nil {
+		if err := packageexport.File(cfg.OutputPath, cfg.Tags, files, ppp.Metadata); err != nil {
 			return fmt.Errorf("exporting package to file: %w", err)
 		}
 	}
@@ -102,7 +102,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 			craneOpts = append(craneOpts, crane.Insecure)
 		}
 
-		if err := packageexport.PushedImage(ctx, cfg.Tags, files, craneOpts...); err != nil {
+		if err := packageexport.PushedImage(ctx, cfg.Tags, files, ppp.Metadata, craneOpts...); err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
 		}
 	}

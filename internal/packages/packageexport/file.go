@@ -9,8 +9,8 @@ import (
 	"package-operator.run/internal/packages/packagecontent"
 )
 
-func File(dst string, tags []string, files packagecontent.Files) error {
-	image, err := Image(files)
+func File(dst string, tags []string, pkg *packagecontent.Package) error {
+	image, err := Image(pkg)
 	if err != nil {
 		return err
 	}
