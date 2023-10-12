@@ -35,6 +35,7 @@ var forbiddenFuncs = []string{
 	"randNumeric",
 	"randInt",
 	"randBytes",
+	"shuffle",
 	// Crypto
 	"bcrypt",
 	"htpasswd",

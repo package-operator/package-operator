@@ -32,7 +32,6 @@ var allowedFuncNames = map[string]struct{}{
 	"nospace":    {},
 	"initials":   {},
 	"swapcase":   {},
-	"shuffle":    {},
 	"snakecase":  {},
 	"camelcase":  {},
 	"kebabcase":  {},
