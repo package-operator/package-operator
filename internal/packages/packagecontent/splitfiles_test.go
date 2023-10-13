@@ -38,7 +38,6 @@ func TestMultiComponentLoader(t *testing.T) {
 		}}},
 		{"components-enabled/nested-components", "", nil, []error{packages.ViolationError{
 			Reason:    packages.ViolationReasonNestedMultiComponentPkg,
-			Path:      "manifest.yaml",
 			Component: "backend",
 		}}},
 
@@ -87,7 +86,7 @@ func TestMultiComponentLoader(t *testing.T) {
 				files[test.file.name] = test.file.content
 			}
 
-			pkg, err := packagecontent.AllPackagesFromFiles(ctx, testScheme, files, test.component)
+			pkg, err := packagecontent.SplitFilesByComponent(ctx, testScheme, files, test.component)
 
 			if test.errors == nil || len(test.errors) == 0 {
 				require.NoError(t, err)
