@@ -38,7 +38,6 @@ func TestMultiComponentLoader(t *testing.T) {
 		}},
 		{"components-enabled/nested-components", "", nil, packages.ViolationError{
 			Reason:    packages.ViolationReasonNestedMultiComponentPkg,
-			Path:      "manifest.yaml",
 			Component: "backend",
 		}},
 
@@ -59,13 +58,6 @@ func TestMultiComponentLoader(t *testing.T) {
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
 		}, nil},
-		{"components-enabled/valid", "", &testFile{
-			"components/backend/manifest.yml",
-			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest"),
-		}, packages.ViolationError{
-			Reason: packages.ViolationReasonPackageManifestDuplicated,
-			Path:   "manifest.yml",
-		}},
 	}
 
 	for i := range tests {
@@ -81,7 +73,7 @@ func TestMultiComponentLoader(t *testing.T) {
 				files[test.file.name] = test.file.content
 			}
 
-			pkg, err := packagecontent.AllPackagesFromFiles(ctx, testScheme, files, test.component)
+			pkg, err := packagecontent.SplitFilesByComponent(ctx, testScheme, files, test.component)
 
 			if test.error == nil {
 				require.NoError(t, err)
