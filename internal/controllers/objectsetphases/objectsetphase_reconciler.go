@@ -15,7 +15,8 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/probing"
+	internalprobing "package-operator.run/internal/probing"
+	"package-operator.run/pkg/probing"
 )
 
 // objectSetPhaseReconciler reconciles objects within a phase.
@@ -77,7 +78,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, fmt.Errorf("lookup previous revisions: %w", err)
 	}
 
-	probe, err := probing.Parse(
+	probe, err := internalprobing.Parse(
 		ctx, objectSetPhase.GetAvailabilityProbes())
 	if err != nil {
 		return res, fmt.Errorf("parsing probes: %w", err)

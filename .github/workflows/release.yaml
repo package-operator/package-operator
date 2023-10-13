@@ -17,12 +17,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Create git tag for apis/ submodule
+    - name: Create git tag for submodules
       run: |
         git config user.email "$(git show --format=%ae -s $GITHUB_REF_NAME | tail -1)"
         git config user.name "$(git show --format=%an -s $GITHUB_REF_NAME | tail -1)"
         git tag -f -a apis/$GITHUB_REF_NAME -m apis/$GITHUB_REF_NAME ${GITHUB_REF_NAME}^{}
         git push -f origin apis/$GITHUB_REF_NAME
+        git tag -f -a pkg/$GITHUB_REF_NAME -m pkg/$GITHUB_REF_NAME ${GITHUB_REF_NAME}^{}
+        git push -f origin pkg/$GITHUB_REF_NAME
 
     - name: Setup Go
       uses: actions/setup-go@v4

@@ -15,10 +15,14 @@ type celProbe struct {
 	Message string
 }
 
+var _ Prober = (*celProbe)(nil)
+
 var ErrCELInvalidEvaluationType = errors.New(
 	"cel expression must evaluate to a bool")
 
-func newCELProbe(rule, message string) (
+// Creates a new CEL (Common Expression Language) Probe.
+// A CEL probe runs a CEL expression against the target object that needs to evaluate to a bool.
+func NewCELProbe(rule, message string) (
 	*celProbe, error,
 ) {
 	env, err := cel.NewEnv(
