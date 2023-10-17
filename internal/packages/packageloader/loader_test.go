@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -451,4 +452,57 @@ func TestPackageScopeValidator(t *testing.T) {
 		},
 	})
 	require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
+}
+
+func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		Component   string
+		ObjectNames []string
+		Config      map[string]interface{}
+	}{
+		"root": {
+			Component:   "",
+			ObjectNames: []string{"backend-package.yaml", "frontend-package.yaml"},
+		},
+		"backend": {
+			Component:   "backend",
+			ObjectNames: []string{"deployment.yaml", "service.yaml"},
+		},
+		"frontend": {
+			Component:   "frontend",
+			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
+		},
+	} {
+		tc := tc
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			transformer, err := packageloader.NewTemplateTransformer(
+				packageloader.PackageFileTemplateContext{
+					Package: manifestsv1alpha1.TemplateContextPackage{
+						TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
+					},
+					Config: tc.Config,
+				},
+			)
+			require.NoError(t, err)
+
+			l := packageloader.New(testScheme, packageloader.WithDefaults, packageloader.WithFilesTransformers(transformer), packageloader.WithComponent(tc.Component))
+
+			ctx := logr.NewContext(context.Background(), testr.New(t))
+			files, err := packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", "multi-with-config"))
+			require.NoError(t, err)
+
+			pkg, err := l.FromFiles(ctx, files)
+			require.NoError(t, err)
+
+			for _, obj := range tc.ObjectNames {
+				require.Contains(t, pkg.Objects, obj)
+			}
+		})
+	}
 }

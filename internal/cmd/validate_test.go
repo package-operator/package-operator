@@ -100,7 +100,7 @@ func TestValidatePackageConfig(t *testing.T) {
 	}
 }
 
-//go:embed testdata/simple/manifest.yaml
+//go:embed testdata/manifest.yaml
 var _manifest []byte
 
 func TestValidate_ValidatePackage(t *testing.T) {

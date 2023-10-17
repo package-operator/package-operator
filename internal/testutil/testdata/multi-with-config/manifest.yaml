@@ -1,21 +1,20 @@
 apiVersion: manifests.package-operator.run/v1alpha1
 kind: PackageManifest
 metadata:
-  name: my-webapp-backend
+  name: test-webapp
 spec:
+  components: {}
   scopes:
     - Namespaced
   phases:
-    - name: deploy
+    - name: deploy-backend
+    - name: deploy-frontend
   availabilityProbes:
     - probes:
         - condition:
             type: Available
             status: "True"
-        - fieldsEqual:
-            fieldA: .status.updatedReplicas
-            fieldB: .status.replicas
       selector:
         kind:
-          group: apps
-          kind: Deployment
+          group: package-operator.run
+          kind: Package

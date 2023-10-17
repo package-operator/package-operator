@@ -45,7 +45,6 @@ func TestMultiComponentLoader(t *testing.T) {
 		{"components-enabled/valid", "backend", nil, nil},
 		{"components-enabled/valid", "frontend", nil, nil},
 		{"components-enabled/valid", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
-		{"components-enabled/valid", "frontend", nil, nil},
 
 		{"components-enabled/valid", "", &testFile{
 			"components/banana.txt",
@@ -58,6 +57,7 @@ func TestMultiComponentLoader(t *testing.T) {
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
 		}, nil},
+
 		{"components-enabled/valid", "", &testFile{
 			"components/backend/manifest.yml",
 			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest\nmetadata:\n  name: application\nspec:\n  scopes:\n    - Namespaced\n  phases:\n    - name: configure"),
@@ -71,15 +71,24 @@ func TestMultiComponentLoader(t *testing.T) {
 				Path:   "manifest.yml",
 			},
 		}},
+
+		// these will be loaded from internal/testutil/testdata
+		{"multi-with-config", "", nil, nil},
+		{"multi-with-config", "backend", nil, nil},
+		{"multi-with-config", "frontend", nil, nil},
+		{"multi-with-config", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
 	}
 
 	for i := range tests {
 		test := tests[i]
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d/%s/%s", i, test.directory, test.component), func(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
 			files, err := packageimport.Folder(ctx, filepath.Join("testdata", "multi-component", test.directory))
+			if err != nil {
+				files, err = packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", test.directory))
+			}
 			require.NoError(t, err)
 
 			if test.file != nil {

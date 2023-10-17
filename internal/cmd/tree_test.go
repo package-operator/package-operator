@@ -19,7 +19,7 @@ func TestTree_RenderPackage(t *testing.T) {
 		ExpectedOutput string
 	}{
 		"simple/valid source/no options": {
-			SourcePath: "testdata/simple",
+			SourcePath: "testdata",
 			Assertion:  require.NoError,
 			ExpectedOutput: strings.Join([]string{
 				"test-stub",
@@ -28,7 +28,7 @@ func TestTree_RenderPackage(t *testing.T) {
 			}, "\n"),
 		},
 		"simple/valid source/cluster scope": {
-			SourcePath: "testdata/simple",
+			SourcePath: "testdata",
 			Options: []RenderPackageOption{
 				WithClusterScope(true),
 			},
@@ -44,11 +44,15 @@ func TestTree_RenderPackage(t *testing.T) {
 			Assertion:  require.Error,
 		},
 		"multi/valid package source/no options": {
-			SourcePath: "testdata/multi",
+			SourcePath: "../testutil/testdata/multi-with-config",
 			Assertion:  require.NoError,
 			ExpectedOutput: strings.Join([]string{
-				"test-stub",
-				"Package test-ns/test",
+				"test-webapp",
+				"Package namespace/name",
+				"└── Phase deploy-backend",
+				"│   ├── package-operator.run/v1alpha1, Kind=Package /name-backend",
+				"└── Phase deploy-frontend",
+				"    └── package-operator.run/v1alpha1, Kind=Package /name-frontend",
 				"",
 			}, "\n"),
 		},

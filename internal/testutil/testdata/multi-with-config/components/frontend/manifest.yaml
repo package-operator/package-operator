@@ -1,7 +1,7 @@
 apiVersion: manifests.package-operator.run/v1alpha1
 kind: PackageManifest
 metadata:
-  name: my-webapp-frontend
+  name: test-webapp-frontend
 spec:
   scopes:
     - Namespaced
