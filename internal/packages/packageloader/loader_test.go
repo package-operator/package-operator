@@ -458,22 +458,29 @@ func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range map[string]struct {
+		Directory   string
 		Component   string
 		ObjectNames []string
 		Config      map[string]interface{}
 	}{
-		"root": {
+		"simple": {
+			Directory:   "simple-with-config",
+			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+		},
+		"multi/root": {
+			Directory:   "multi-with-config",
 			Component:   "",
 			ObjectNames: []string{"backend-package.yaml", "frontend-package.yaml"},
 		},
-		"backend": {
+		"multi/backend": {
+			Directory:   "multi-with-config",
 			Component:   "backend",
 			ObjectNames: []string{"deployment.yaml", "service.yaml"},
 		},
-		"frontend": {
+		"multi/frontend": {
+			Directory:   "multi-with-config",
 			Component:   "frontend",
 			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
-			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
 		},
 	} {
 		tc := tc
@@ -494,7 +501,7 @@ func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
 			l := packageloader.New(testScheme, packageloader.WithDefaults, packageloader.WithFilesTransformers(transformer), packageloader.WithComponent(tc.Component))
 
 			ctx := logr.NewContext(context.Background(), testr.New(t))
-			files, err := packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", "multi-with-config"))
+			files, err := packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", tc.Directory))
 			require.NoError(t, err)
 
 			pkg, err := l.FromFiles(ctx, files)
