@@ -38,6 +38,7 @@ func TestLoader(t *testing.T) {
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
+			Config: map[string]interface{}{"foobar": "traintrain456"},
 		},
 	)
 	require.NoError(t, err)

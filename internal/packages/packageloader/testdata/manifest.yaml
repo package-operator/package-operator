@@ -37,3 +37,11 @@ spec:
       kind:
         group: apps
         kind: Deployment
+  config:
+    openAPIV3Schema:
+      properties:
+        foobar:
+          description: some string of some sort
+          type: string
+          default: "planeplane123"
+      type: object
