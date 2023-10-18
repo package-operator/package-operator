@@ -92,14 +92,17 @@ func ExtractComponentPackage(pkgMap map[string]*Package, component string) (*Pac
 	return pkg, nil
 }
 
+var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
+
 func parseObjects(pkg *Package, path string, content []byte) (err error) {
 	// Trim empty starting and ending objects
 	objects := []unstructured.Unstructured{}
 
 	// Split for every included yaml document.
-	for idx, yamlDocument := range bytes.Split(bytes.Trim(content, "---\n"), []byte("---\n")) {
+
+	for idx, yamlDocument := range splitYAMLDocumentsRegEx.Split(string(bytes.Trim(content, "---\n")), -1) {
 		obj := unstructured.Unstructured{}
-		if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
+		if err = yaml.Unmarshal([]byte(yamlDocument), &obj); err != nil {
 			err = packages.ViolationError{
 				Reason:  packages.ViolationReasonInvalidYAML,
 				Details: err.Error(),
