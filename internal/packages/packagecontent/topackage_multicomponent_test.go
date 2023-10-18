@@ -22,7 +22,7 @@ type testData struct {
 	directory string
 	component string
 	file      *testFile
-	error     error
+	errors    []error
 }
 
 func TestMultiComponentLoader(t *testing.T) {
@@ -30,31 +30,31 @@ func TestMultiComponentLoader(t *testing.T) {
 
 	tests := []testData{
 		{"components-disabled", "", nil, nil},
-		{"components-disabled", "foobar", nil, packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}},
+		{"components-disabled", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}}},
 
-		{"components-enabled/not-dns1123", "_backend", nil, packages.ViolationError{
+		{"components-enabled/not-dns1123", "_backend", nil, []error{packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidComponentPath,
 			Path:   "components/_backend/Deployment.yaml",
-		}},
-		{"components-enabled/nested-components", "", nil, packages.ViolationError{
+		}}},
+		{"components-enabled/nested-components", "", nil, []error{packages.ViolationError{
 			Reason:    packages.ViolationReasonNestedMultiComponentPkg,
 			Path:      "manifest.yaml",
 			Component: "backend",
-		}},
+		}}},
 
 		{"components-enabled/valid", "", nil, nil},
 		{"components-enabled/valid", "backend", nil, nil},
 		{"components-enabled/valid", "frontend", nil, nil},
-		{"components-enabled/valid", "foobar", nil, packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}},
+		{"components-enabled/valid", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
 		{"components-enabled/valid", "frontend", nil, nil},
 
 		{"components-enabled/valid", "", &testFile{
 			"components/banana.txt",
 			[]byte("bread"),
-		}, packages.ViolationError{
+		}, []error{packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidFileInComponentsDir,
 			Path:   "components/banana.txt",
-		}},
+		}}},
 		{"components-enabled/valid", "", &testFile{
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
@@ -62,9 +62,15 @@ func TestMultiComponentLoader(t *testing.T) {
 		{"components-enabled/valid", "", &testFile{
 			"components/backend/manifest.yml",
 			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest\nmetadata:\n  name: application\nspec:\n  scopes:\n    - Namespaced\n  phases:\n    - name: configure"),
-		}, packages.ViolationError{
-			Reason: packages.ViolationReasonPackageManifestDuplicated,
-			Path:   "manifest.yml",
+		}, []error{
+			packages.ViolationError{
+				Reason: packages.ViolationReasonPackageManifestDuplicated,
+				Path:   "manifest.yaml",
+			},
+			packages.ViolationError{
+				Reason: packages.ViolationReasonPackageManifestDuplicated,
+				Path:   "manifest.yml",
+			},
 		}},
 	}
 
@@ -83,12 +89,28 @@ func TestMultiComponentLoader(t *testing.T) {
 
 			pkg, err := packagecontent.AllPackagesFromFiles(ctx, testScheme, files, test.component)
 
-			if test.error == nil {
+			if test.errors == nil || len(test.errors) == 0 {
 				require.NoError(t, err)
 				require.NotNil(t, pkg)
 			} else {
-				require.EqualError(t, err, test.error.Error())
+				requireErrEqualsOneOf(t, err, test.errors)
 			}
 		})
 	}
+}
+
+func requireErrEqualsOneOf(t *testing.T, err error, targets []error) {
+	t.Helper()
+
+	isOneOf := false
+	for _, target := range targets {
+		if err.Error() == target.Error() {
+			isOneOf = true
+			break
+		}
+	}
+	require.True(t, isOneOf, "require error message to match one of target errors",
+		"err", err,
+		"targets", targets,
+	)
 }
