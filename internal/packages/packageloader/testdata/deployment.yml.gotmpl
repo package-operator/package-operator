@@ -11,5 +11,10 @@ metadata:
     include-test: {{include "include-test" . | upper | quote}}
     fileGet: |
       {{ getFile "_stuff.txt" }}
+    # testing that it's not split on ---
+    certificate-key: |
+      -----BEGIN CERTIFICATE-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBj08sp5++4anG
+      -----END CERTIFICATE-----
 spec:
   replicas: 1

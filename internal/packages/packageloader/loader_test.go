@@ -138,6 +138,7 @@ func TestLoader(t *testing.T) {
 									"foobar-from-config": foobarValue,
 									"include-test":       "\nKEY1: VAL1\nKEY2: VAL2",
 									"fileGet":            "lorem ipsum...\n",
+									"certificate-key":    "-----BEGIN CERTIFICATE-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBj08sp5++4anG\n-----END CERTIFICATE-----\n",
 								},
 							},
 							"spec": map[string]interface{}{"replicas": int64(1)},
