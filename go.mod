@@ -29,7 +29,7 @@ require (
 	golang.org/x/sys v0.13.0
 	k8s.io/api v0.28.2
 	k8s.io/apiextensions-apiserver v0.28.2
-	k8s.io/apimachinery v0.28.2
+	k8s.io/apimachinery v0.28.3
 	k8s.io/apiserver v0.28.2
 	k8s.io/client-go v0.28.2
 	k8s.io/kube-openapi v0.0.0-20230928205116-a78145627833
