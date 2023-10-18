@@ -78,14 +78,29 @@ func doSplitFilesByComponent(files Files) (map[string]Files, error) {
 	sort.Strings(paths)
 
 	filesMap := map[string]Files{}
+	manifMap := map[string]bool{}
+
 	for _, path := range paths {
 		componentName, componentPath, err := getComponentNameAndPath(path)
 		if err != nil {
 			return map[string]Files{}, err
 		}
+
 		if _, exists := filesMap[componentName]; !exists {
 			filesMap[componentName] = Files{}
+			manifMap[componentName] = false
 		}
+
+		if packages.IsManifestFile(componentPath) {
+			if manifestAlreadyExists, entryExists := manifMap[componentName]; entryExists && manifestAlreadyExists {
+				return map[string]Files{}, packages.ViolationError{
+					Reason: packages.ViolationReasonPackageManifestDuplicated,
+					Path:   componentPath,
+				}
+			}
+			manifMap[componentName] = true
+		}
+
 		filesMap[componentName][componentPath] = files[path]
 	}
 	return filesMap, nil

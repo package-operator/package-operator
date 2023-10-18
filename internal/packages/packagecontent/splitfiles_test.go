@@ -18,17 +18,15 @@ type testFile struct {
 	content []byte
 }
 
-type testData struct {
-	directory string
-	component string
-	file      *testFile
-	errors    []error
-}
-
 func TestMultiComponentLoader(t *testing.T) {
 	t.Parallel()
 
-	tests := []testData{
+	for i, test := range []struct {
+		directory string
+		component string
+		file      *testFile
+		errors    []error
+	}{
 		{"components-disabled", "", nil, nil},
 		{"components-disabled", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}}},
 
@@ -57,7 +55,6 @@ func TestMultiComponentLoader(t *testing.T) {
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
 		}, nil},
-
 		{"components-enabled/valid", "", &testFile{
 			"components/backend/manifest.yml",
 			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest\nmetadata:\n  name: application\nspec:\n  scopes:\n    - Namespaced\n  phases:\n    - name: configure"),
@@ -77,10 +74,8 @@ func TestMultiComponentLoader(t *testing.T) {
 		{"multi-with-config", "backend", nil, nil},
 		{"multi-with-config", "frontend", nil, nil},
 		{"multi-with-config", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
-	}
-
-	for i := range tests {
-		test := tests[i]
+	} {
+		test := test
 		t.Run(fmt.Sprintf("%d/%s/%s", i, test.directory, test.component), func(t *testing.T) {
 			t.Parallel()
 

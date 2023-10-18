@@ -466,6 +466,7 @@ func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
 		"simple": {
 			Directory:   "simple-with-config",
 			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
 		},
 		"multi/root": {
 			Directory:   "multi-with-config",
@@ -481,6 +482,7 @@ func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
 			Directory:   "multi-with-config",
 			Component:   "frontend",
 			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
 		},
 	} {
 		tc := tc
