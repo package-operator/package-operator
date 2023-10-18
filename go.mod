@@ -28,14 +28,14 @@ require (
 	golang.org/x/mod v0.13.0
 	golang.org/x/sys v0.13.0
 	k8s.io/api v0.28.3
-	k8s.io/apiextensions-apiserver v0.28.2
+	k8s.io/apiextensions-apiserver v0.28.3
 	k8s.io/apimachinery v0.28.3
-	k8s.io/apiserver v0.28.2
+	k8s.io/apiserver v0.28.3
 	k8s.io/client-go v0.28.3
 	k8s.io/kube-openapi v0.0.0-20230928205116-a78145627833
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	package-operator.run/apis v1.8.0
-	sigs.k8s.io/controller-runtime v0.16.2
+	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.3.0
 )
