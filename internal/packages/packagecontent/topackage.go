@@ -108,6 +108,7 @@ func parseObjects(pkg *Package, path string, content []byte) (err error) {
 				Details: err.Error(),
 				Path:    path,
 				Index:   packages.Index(idx),
+				Subject: yamlDocument,
 			}
 			return
 		}
