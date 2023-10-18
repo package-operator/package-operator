@@ -2,8 +2,12 @@ package packageloader_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
+
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -25,7 +29,12 @@ import (
 var testScheme = runtime.NewScheme()
 
 func init() {
-	if err := pkoapis.AddToScheme(testScheme); err != nil {
+	builder := runtime.SchemeBuilder{
+		pkoapis.AddToScheme,
+		apiextensions.AddToScheme,
+		apiextensionsv1.AddToScheme,
+	}
+	if err := builder.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }
@@ -33,11 +42,14 @@ func init() {
 func TestLoader(t *testing.T) {
 	t.Parallel()
 
+	foobarValue := "planeplane123"
+
 	transformer, err := packageloader.NewTemplateTransformer(
 		packageloader.PackageFileTemplateContext{
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
+			Config: map[string]interface{}{"foobar": foobarValue},
 		},
 	)
 	require.NoError(t, err)
@@ -68,6 +80,18 @@ func TestLoader(t *testing.T) {
 			Scopes:             []manifestsv1alpha1.PackageManifestScope{manifestsv1alpha1.PackageManifestScopeNamespaced},
 			Phases:             []manifestsv1alpha1.PackageManifestPhase{{Name: "pre-requisites"}, {Name: "main-stuff"}, {Name: "empty"}},
 			AvailabilityProbes: expectedProbes,
+			Config: manifestsv1alpha1.PackageManifestSpecConfig{
+				OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"foobar": {
+							Description: "some string of some sort",
+							Type:        "string",
+							Default:     &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf("\"%s\"", foobarValue))},
+						},
+					},
+					Type: "object",
+				},
+			},
 		},
 	}, pc.PackageManifest)
 
@@ -109,10 +133,11 @@ func TestLoader(t *testing.T) {
 							"metadata": map[string]interface{}{
 								"name": "controller-manager", "namespace": "test123-ns",
 								"annotations": map[string]interface{}{
-									"other-test-helper": "other-test-helper",
-									"test-helper":       "test-helper",
-									"include-test":      "\nKEY1: VAL1\nKEY2: VAL2",
-									"fileGet":           "lorem ipsum...\n",
+									"other-test-helper":  "other-test-helper",
+									"test-helper":        "test-helper",
+									"foobar-from-config": foobarValue,
+									"include-test":       "\nKEY1: VAL1\nKEY2: VAL2",
+									"fileGet":            "lorem ipsum...\n",
 								},
 							},
 							"spec": map[string]interface{}{"replicas": int64(1)},

@@ -61,7 +61,7 @@ func TestMultiComponentLoader(t *testing.T) {
 		}, nil},
 		{"components-enabled/valid", "", &testFile{
 			"components/backend/manifest.yml",
-			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest"),
+			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest\nmetadata:\n  name: application\nspec:\n  scopes:\n    - Namespaced\n  phases:\n    - name: configure"),
 		}, packages.ViolationError{
 			Reason: packages.ViolationReasonPackageManifestDuplicated,
 			Path:   "manifest.yml",

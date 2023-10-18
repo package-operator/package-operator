@@ -5,6 +5,7 @@ metadata:
   namespace: "{{.package.metadata.namespace}}"
   annotations:
     package-operator.run/phase: main-stuff
+    foobar-from-config: {{ .config.foobar }}
     test-helper: {{ template "test-helper" }}
     other-test-helper: {{ template "other-test-helper" }}
     include-test: {{include "include-test" . | upper | quote}}
