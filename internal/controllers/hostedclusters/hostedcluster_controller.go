@@ -29,8 +29,8 @@ type HostedClusterController struct {
 	remotePhasePackageImage string
 	ownerStrategy           ownerStrategy
 
-	remotePhaseAffinity     *corev1.Affinity
-	remotePhaseTollerations []corev1.Toleration
+	remotePhaseAffinity    *corev1.Affinity
+	remotePhaseTolerations []corev1.Toleration
 }
 
 type ownerStrategy interface {
@@ -44,7 +44,7 @@ func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	remotePhasePackageImage string,
 	remotePhaseAffinity *corev1.Affinity,
-	remotePhaseTollerations []corev1.Toleration,
+	remotePhaseTolerations []corev1.Toleration,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
 		client:                  c,
@@ -56,8 +56,8 @@ func NewHostedClusterController(
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
 		ownerStrategy: ownerhandling.NewAnnotation(scheme),
 
-		remotePhaseAffinity:     remotePhaseAffinity,
-		remotePhaseTollerations: remotePhaseTollerations,
+		remotePhaseAffinity:    remotePhaseAffinity,
+		remotePhaseTolerations: remotePhaseTolerations,
 	}
 	return controller
 }
@@ -129,8 +129,8 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 	if c.remotePhaseAffinity != nil {
 		config["affinity"] = c.remotePhaseAffinity
 	}
-	if c.remotePhaseTollerations != nil {
-		config["tollerations"] = c.remotePhaseTollerations
+	if c.remotePhaseTolerations != nil {
+		config["tolerations"] = c.remotePhaseTolerations
 	}
 	if len(config) > 0 {
 		configJSON, err := json.Marshal(config)
