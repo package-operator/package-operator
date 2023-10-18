@@ -131,6 +131,20 @@ func TestValidatePackageManifest(t *testing.T) {
 				"spec.images[1].name: Invalid value: \"nginx\": must be unique",
 			},
 		},
+		{
+			name: "kubeconform missing kubernetesVersion",
+			packageManifest: &manifestsv1alpha1.PackageManifest{
+				Test: manifestsv1alpha1.PackageManifestTest{
+					Kubeconform: &manifestsv1alpha1.PackageManifestTestKubeconform{},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				"test.kubeconform.kubernetesVersion: Required value",
+			},
+		},
 	}
 	for i := range tests {
 		test := tests[i]

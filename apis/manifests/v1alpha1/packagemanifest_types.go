@@ -99,7 +99,8 @@ type PackageManifestImage struct {
 // PackageManifestTest configures test cases.
 type PackageManifestTest struct {
 	// Template testing configuration.
-	Template []PackageManifestTestCaseTemplate `json:"template,omitempty"`
+	Template    []PackageManifestTestCaseTemplate `json:"template,omitempty"`
+	Kubeconform *PackageManifestTestKubeconform   `json:"kubeconform,omitempty"`
 }
 
 // PackageManifestTestCaseTemplate template testing configuration.
@@ -108,6 +109,16 @@ type PackageManifestTestCaseTemplate struct {
 	Name string `json:"name"`
 	// Template data to use in the test case.
 	Context TemplateContext `json:"context,omitempty"`
+}
+
+type PackageManifestTestKubeconform struct {
+	// Kubernetes version to use schemas from.
+	KubernetesVersion string `json:"kubernetesVersion"`
+	// OpenAPI schema locations for kubeconform
+	// defaults to:
+	// - https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json
+	// - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+	SchemaLocations []string `json:"schemaLocations,omitempty"`
 }
 
 // TemplateContext is available within the package templating process.
