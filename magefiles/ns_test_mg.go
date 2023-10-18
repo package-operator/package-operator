@@ -55,10 +55,27 @@ func (Test) ValidateGitClean() {
 }
 
 // Runs unittests.
-func (Test) Unit() {
-	testCmd := fmt.Sprintf("set -o pipefail; go test -coverprofile=%s -race -test.v", locations.UnitTestCoverageReport())
-	testCmd += " ./internal/... ./cmd/... ./apis/... "
-	testCmd += "| tee " + locations.UnitTestStdOut()
+func (t Test) Unit() {
+	t.unit(false)
+}
+
+// Runs unittests and stops on first failed test. Convenient for developing.
+func (t Test) UnitFailFast() {
+	t.unit(true)
+}
+
+func (Test) unit(failfast bool) {
+	failfastFlag := ""
+	if failfast {
+		failfastFlag = "-failfast"
+	}
+
+	testCmd := fmt.Sprintf(
+		`set -o pipefail; go test %s -coverprofile="%s" -race -test.v ./internal/... ./cmd/... ./apis/... | tee "%s"`,
+		failfastFlag,
+		locations.UnitTestCoverageReport(),
+		locations.UnitTestStdOut(),
+	)
 
 	// cgo needed to enable race detector -race
 	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
@@ -107,7 +124,7 @@ func (t Test) Integration(ctx context.Context, suite string) {
 }
 
 // Runs PKO integration tests against whatever cluster your KUBECONFIG is pointing at.
-// Also allows specifying only sub tests to run e.g. ./mage test:integrationrun TestPackage_success
+// Also allows specifying only sub tests to run e.g. ./mage test:packageoperatorintegrationrun TestPackage_success
 func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) {
 	t.packageOperatorIntegration(ctx, filter)
 }
