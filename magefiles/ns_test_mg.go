@@ -6,16 +6,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"golang.org/x/mod/semver"
 )
 
 type Test mg.Namespace
@@ -175,29 +171,12 @@ func (Test) kubectlPackageIntegration() {
 		panic(err)
 	}
 
-	goVersion, err := getGoVersion()
-	must(err)
-
-	if semver.Compare("v"+goVersion, "v"+coverProfilingMinGoVersion) >= 0 {
-		covArgs := []string{
-			"tool", "covdata", "textfmt",
-			"-i", tmp,
-			"-o", locations.PluginIntegrationTestCoverageReport(),
-		}
-		if err := sh.Run("go", covArgs...); err != nil {
-			panic(err)
-		}
+	covArgs := []string{
+		"tool", "covdata", "textfmt",
+		"-i", tmp,
+		"-o", locations.PluginIntegrationTestCoverageReport(),
 	}
-}
-
-var errRegexpMatchNotFound = errors.New("no match found for regexp")
-
-func getGoVersion() (string, error) {
-	goVersion := runtime.Version()
-	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
-	parsedVersion := r.FindString(goVersion)
-	if parsedVersion == "" {
-		return parsedVersion, errRegexpMatchNotFound
+	if err := sh.Run("go", covArgs...); err != nil {
+		panic(err)
 	}
-	return parsedVersion, nil
 }
