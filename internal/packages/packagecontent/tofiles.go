@@ -22,7 +22,7 @@ func FilesFromPackage(pkg *Package) (Files, error) {
 			}
 
 			if i > 0 {
-				_, _ = fileBytes.Write([]byte("---\n"))
+				_, _ = fileBytes.WriteString("---\n")
 			}
 			_, _ = fileBytes.Write(objectBytes)
 		}
