@@ -22,40 +22,40 @@ func TestMultiComponentLoader(t *testing.T) {
 	t.Parallel()
 
 	for i, test := range []struct {
-		directory string
-		component string
-		file      *testFile
-		errors    []error
+		directories []string
+		component   string
+		file        *testFile
+		errors      []error
 	}{
-		{"components-disabled", "", nil, nil},
-		{"components-disabled", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}}},
+		{[]string{"components-disabled"}, "", nil, nil},
+		{[]string{"components-disabled"}, "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentsNotEnabled}}},
 
-		{"components-enabled/not-dns1123", "_backend", nil, []error{packages.ViolationError{
+		{[]string{"components-enabled/not-dns1123"}, "_backend", nil, []error{packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidComponentPath,
 			Path:   "components/_backend/Deployment.yaml",
 		}}},
-		{"components-enabled/nested-components", "", nil, []error{packages.ViolationError{
+		{[]string{"components-enabled/nested-components"}, "", nil, []error{packages.ViolationError{
 			Reason:    packages.ViolationReasonNestedMultiComponentPkg,
 			Component: "backend",
 		}}},
 
-		{"components-enabled/valid", "", nil, nil},
-		{"components-enabled/valid", "backend", nil, nil},
-		{"components-enabled/valid", "frontend", nil, nil},
-		{"components-enabled/valid", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
+		{[]string{"components-enabled/valid", "multi-with-config"}, "", nil, nil},
+		{[]string{"components-enabled/valid", "multi-with-config"}, "backend", nil, nil},
+		{[]string{"components-enabled/valid", "multi-with-config"}, "frontend", nil, nil},
+		{[]string{"components-enabled/valid", "multi-with-config"}, "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
 
-		{"components-enabled/valid", "", &testFile{
+		{[]string{"components-enabled/valid", "multi-with-config"}, "", &testFile{
 			"components/banana.txt",
 			[]byte("bread"),
 		}, []error{packages.ViolationError{
 			Reason: packages.ViolationReasonInvalidFileInComponentsDir,
 			Path:   "components/banana.txt",
 		}}},
-		{"components-enabled/valid", "", &testFile{
+		{[]string{"components-enabled/valid", "multi-with-config"}, "", &testFile{
 			"components/.sneaky-banana.txt",
 			[]byte("bread"),
 		}, nil},
-		{"components-enabled/valid", "", &testFile{
+		{[]string{"components-enabled/valid", "multi-with-config"}, "", &testFile{
 			"components/backend/manifest.yml",
 			[]byte("apiVersion: manifests.package-operator.run/v1alpha1\nkind: PackageManifest\nmetadata:\n  name: application\nspec:\n  scopes:\n    - Namespaced\n  phases:\n    - name: configure"),
 		}, []error{
@@ -68,37 +68,34 @@ func TestMultiComponentLoader(t *testing.T) {
 				Path:   "manifest.yml",
 			},
 		}},
-
-		// these will be loaded from internal/testutil/testdata
-		{"multi-with-config", "", nil, nil},
-		{"multi-with-config", "backend", nil, nil},
-		{"multi-with-config", "frontend", nil, nil},
-		{"multi-with-config", "foobar", nil, []error{packages.ViolationError{Reason: packages.ViolationReasonComponentNotFound, Component: "foobar"}}},
 	} {
 		test := test
-		t.Run(fmt.Sprintf("%d/%s/%s", i, test.directory, test.component), func(t *testing.T) {
-			t.Parallel()
+		for _, directory := range test.directories {
+			directory := directory
+			t.Run(fmt.Sprintf("%02d/%s/%s", i, directory, test.component), func(t *testing.T) {
+				t.Parallel()
 
-			ctx := context.Background()
-			files, err := packageimport.Folder(ctx, filepath.Join("testdata", "multi-component", test.directory))
-			if err != nil {
-				files, err = packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", test.directory))
-			}
-			require.NoError(t, err)
-
-			if test.file != nil {
-				files[test.file.name] = test.file.content
-			}
-
-			pkg, err := packagecontent.SplitFilesByComponent(ctx, testScheme, files, test.component)
-
-			if test.errors == nil || len(test.errors) == 0 {
+				ctx := context.Background()
+				files, err := packageimport.Folder(ctx, filepath.Join("testdata", "multi-component", directory))
+				if err != nil {
+					files, err = packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", directory))
+				}
 				require.NoError(t, err)
-				require.NotNil(t, pkg)
-			} else {
-				requireErrEqualsOneOf(t, err, test.errors)
-			}
-		})
+
+				if test.file != nil {
+					files[test.file.name] = test.file.content
+				}
+
+				pkg, err := packagecontent.SplitFilesByComponent(ctx, testScheme, files, test.component)
+
+				if test.errors == nil || len(test.errors) == 0 {
+					require.NoError(t, err)
+					require.NotNil(t, pkg)
+				} else {
+					requireErrEqualsOneOf(t, err, test.errors)
+				}
+			})
+		}
 	}
 }
 
