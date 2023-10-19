@@ -3,15 +3,7 @@ kind: Package
 metadata:
   name: test-stub
 spec:
-  image: "quay.io/package-operator/test-stub-package:v1.8.3-2-g293f877"
+  component: default
+  image: "quay.io/package-operator/test-stub-package:v1.9.1-25-ga7e841e"
   config:
-    testStubImage: quay.io/package-operator/test-stub:v1.8.3-2-g293f877
-  packagePullSecrets:
-  - pull-secret
-  secrets:
-  - name: this-my-secret
-    secretRef:
-      name: xxx
-  - name: pull-secret
-    secretRef:
-      name: yyy
+    testStubImage: quay.io/package-operator/test-stub:v1.9.1-25-ga7e841e

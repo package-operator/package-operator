@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/exp/maps"
@@ -60,6 +61,14 @@ func (v TemplateTestValidator) runTestCase(
 ) error {
 	log := logr.FromContextOrDiscard(ctx)
 	fileMap = maps.Clone(fileMap)
+	// ignore sub-components
+	if manifest.Spec.Components != nil {
+		for path := range fileMap {
+			if strings.HasPrefix(path, "components/") {
+				delete(fileMap, path)
+			}
+		}
+	}
 
 	configuration := map[string]interface{}{}
 	if testCase.Context.Config != nil {
