@@ -13,7 +13,7 @@ require (
 	github.com/google/cel-go v0.16.1
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
-	github.com/mt-sre/devkube v0.7.0
+	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
 	github.com/openshift/api v0.0.0-20231003083825-c3f7566f6ef6
@@ -31,7 +31,7 @@ require (
 	k8s.io/apimachinery v0.28.3
 	k8s.io/apiserver v0.28.3
 	k8s.io/client-go v0.28.3
-	k8s.io/kube-openapi v0.0.0-20230928205116-a78145627833
+	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	package-operator.run/apis v1.8.0
 	sigs.k8s.io/controller-runtime v0.16.3
