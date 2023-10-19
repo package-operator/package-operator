@@ -1250,6 +1250,10 @@ spec:
   scopes:
   - PackageManifestScope
 test:
+  kubeconform:
+    kubernetesVersion: tempor
+    schemaLocations:
+    - lorem
   template:
   - context:
       config: runtime.RawExtension
@@ -1295,9 +1299,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: ipsum
-    image: lorem
-    name: tempor
+  - digest: sit
+    image: dolor
+    name: ipsum
 
 ```
 
@@ -1464,6 +1468,7 @@ PackageManifestTest configures test cases.
 | Field | Description |
 | ----- | ----------- |
 | `template` <br><a href="#packagemanifesttestcasetemplate">[]PackageManifestTestCaseTemplate</a> | Template testing configuration. |
+| `kubeconform` <br><a href="#packagemanifesttestkubeconform">PackageManifestTestKubeconform</a> |  |
 
 
 Used in:
@@ -1478,6 +1483,20 @@ PackageManifestTestCaseTemplate template testing configuration.
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name describing the test case. |
 | `context` <br><a href="#templatecontext">TemplateContext</a> | Template data to use in the test case. |
+
+
+Used in:
+* [PackageManifestTest](#packagemanifesttest)
+
+
+### PackageManifestTestKubeconform
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `kubernetesVersion` <b>required</b><br>string | Kubernetes version to use schemas from. |
+| `schemaLocations` <br>[]string | OpenAPI schema locations for kubeconform<br>defaults to:<br>- https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json<br>- https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json |
 
 
 Used in:

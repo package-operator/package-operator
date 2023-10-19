@@ -44,6 +44,7 @@ const (
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
 	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
 	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
+	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
 )
 
 func (v ViolationError) Error() string {

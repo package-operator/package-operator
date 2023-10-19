@@ -845,6 +845,8 @@ spec:
   scopes:
   - Namespaced
 test:
+  kubeconform:
+    kubernetesVersion: v1.28.2
   template:
   - context:
       package:

@@ -99,6 +99,12 @@ func ValidatePackageManifest(ctx context.Context, scheme *runtime.Scheme, obj *m
 			allErrs = append(allErrs, valerrors...)
 		}
 	}
+	if obj.Test.Kubeconform != nil {
+		if len(obj.Test.Kubeconform.KubernetesVersion) == 0 {
+			allErrs = append(allErrs,
+				field.Required(field.NewPath("test").Child("kubeconform").Child("kubernetesVersion"), ""))
+		}
+	}
 
 	return allErrs, nil
 }
