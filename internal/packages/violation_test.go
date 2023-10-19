@@ -42,3 +42,10 @@ func TestViolationErrorDetailPath(t *testing.T) {
 	v := packages.ViolationError{Reason: packages.ViolationReason("cheese reason"), Details: "zoom 200x", Path: "a/b"}
 	require.EqualError(t, v, "cheese reason in a/b: zoom 200x")
 }
+
+func TestViolationErrorDetailPathSubject(t *testing.T) {
+	t.Parallel()
+
+	v := packages.ViolationError{Reason: packages.ViolationReason("cheese reason"), Details: "zoom 200x", Path: "a/b", Subject: "yaml: test\n"}
+	require.EqualError(t, v, "cheese reason in a/b: zoom 200x\nyaml: test")
+}
