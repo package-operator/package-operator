@@ -4,6 +4,6 @@ metadata:
   name: test-stub
 spec:
   component: default
-  image: "quay.io/package-operator/test-stub-package:v1.9.1-25-ga7e841e"
+  image: "quay.io/package-operator/test-stub-package:v1.9.1-26-g394d6a4"
   config:
-    testStubImage: quay.io/package-operator/test-stub:v1.9.1-25-ga7e841e
+    subTestStubImage: quay.io/package-operator/test-stub:v1.9.1-26-g394d6a4

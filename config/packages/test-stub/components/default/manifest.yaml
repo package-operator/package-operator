@@ -24,9 +24,9 @@ spec:
   config:
     openAPIV3Schema:
       properties:
-        testStubImage:
+        subTestStubImage:
           description: TestStubImage provides the container image to use for the Deployment.
           type: string
       required:
-      - testStubImage
+      - subTestStubImage
       type: object
