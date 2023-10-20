@@ -171,7 +171,7 @@ func (t *Tree) getTemplateContext(pkg *packagecontent.Package, cfg RenderPackage
 }
 
 func (t *Tree) getConfig(pkg *packagecontent.Package, cfg RenderPackageConfig) (map[string]any, error) {
-	var config map[string]any
+	config := map[string]any{}
 
 	switch {
 	case cfg.ConfigPath != "":
