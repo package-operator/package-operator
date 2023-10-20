@@ -53,7 +53,7 @@ func (Test) ValidateGitClean() {
 // Runs unittests.
 func (Test) Unit() {
 	testCmd := fmt.Sprintf("set -o pipefail; go test -coverprofile=%s -race -test.v", locations.UnitTestCoverageReport())
-	testCmd += " ./internal/... ./cmd/... ./apis/... "
+	testCmd += " ./internal/... ./cmd/... ./apis/... ./pkg/..."
 	testCmd += "| tee " + locations.UnitTestStdOut()
 
 	// cgo needed to enable race detector -race
