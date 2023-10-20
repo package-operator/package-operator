@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/packagetypes"
 )
 
 func TestPreBuildValidation(t *testing.T) {
@@ -19,7 +19,7 @@ func TestPreBuildValidation(t *testing.T) {
 	)
 
 	for name, tc := range map[string]struct {
-		Package             *packagecontent.Package
+		Package             *packagetypes.Package
 		RetrieveDigestError bool
 		ImageToDigest       map[string]string
 		ExpectError         string
@@ -102,23 +102,38 @@ type LockImageTestData struct {
 	Digest string
 }
 
-func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestData) *packagecontent.Package {
-	imgManifest := make([]v1alpha1.PackageManifestImage, 0, len(manifestImages))
+func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestData) *packagetypes.Package {
+	imgManifest := make([]manifests.PackageManifestImage, 0, len(manifestImages))
 	for key, value := range manifestImages {
-		imgManifest = append(imgManifest, v1alpha1.PackageManifestImage{Name: key, Image: value})
+		imgManifest = append(imgManifest, manifests.PackageManifestImage{
+			Name:  key,
+			Image: value,
+		})
 	}
 
-	var lock *v1alpha1.PackageManifestLock
+	var lock *manifests.PackageManifestLock
 	if len(lockImages) > 0 {
-		var imgLock []v1alpha1.PackageManifestLockImage
+		var imgLock []manifests.PackageManifestLockImage
 		for key, value := range lockImages {
-			imgLock = append(imgLock, v1alpha1.PackageManifestLockImage{Name: key, Image: value.Image, Digest: value.Digest})
+			imgLock = append(imgLock, manifests.PackageManifestLockImage{
+				Name:   key,
+				Image:  value.Image,
+				Digest: value.Digest,
+			})
 		}
-		lock = &v1alpha1.PackageManifestLock{Spec: v1alpha1.PackageManifestLockSpec{Images: imgLock}}
+		lock = &manifests.PackageManifestLock{
+			Spec: manifests.PackageManifestLockSpec{
+				Images: imgLock,
+			},
+		}
 	}
 
-	return &packagecontent.Package{
-		PackageManifest:     &v1alpha1.PackageManifest{Spec: v1alpha1.PackageManifestSpec{Images: imgManifest}},
-		PackageManifestLock: lock,
+	return &packagetypes.Package{
+		Manifest: &manifests.PackageManifest{
+			Spec: manifests.PackageManifestSpec{
+				Images: imgManifest,
+			},
+		},
+		ManifestLock: lock,
 	}
 }

@@ -22,8 +22,6 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageloader"
 	"package-operator.run/internal/testutil"
 )
 
@@ -428,81 +426,14 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 	c.AssertExpectations(t)
 }
 
-func Test_initializer_crdsFromPackage(t *testing.T) {
-	t.Parallel()
-	l := &loaderMock{}
-	ctx := logr.NewContext(context.Background(), testr.New(t))
-
-	b := &initializer{
-		loader: l,
-		pullImage: func(ctx context.Context, path string) (
-			packagecontent.Files, error,
-		) {
-			return nil, nil
-		},
-	}
-
-	crd := unstructured.Unstructured{}
-	crd.SetGroupVersionKind(crdGK.WithVersion("v1"))
-	crd.SetAnnotations(map[string]string{
-		manifestsv1alpha1.PackagePhaseAnnotation: "test",
-	})
-
-	l.On("FromFiles", mock.Anything, mock.Anything, mock.Anything).
-		Return(&packagecontent.Package{
-			PackageManifest: &manifestsv1alpha1.PackageManifest{
-				Spec: manifestsv1alpha1.PackageManifestSpec{
-					Phases: []manifestsv1alpha1.PackageManifestPhase{
-						{Name: "test"},
-					},
-				},
-			},
-			Objects: map[string][]unstructured.Unstructured{
-				"": {crd},
-			},
-		}, nil)
-
-	crds, err := b.crdsFromPackage(ctx)
-	require.NoError(t, err)
-	assert.Len(t, crds, 1)
-	l.AssertExpectations(t)
-}
-
-func Test_crdsFromTemplateSpec(t *testing.T) {
+func Test_crdsFromObjects(t *testing.T) {
 	t.Parallel()
 	crd := unstructured.Unstructured{}
 	crd.SetGroupVersionKind(crdGK.WithVersion("v1"))
 
-	ts := corev1alpha1.ObjectSetTemplateSpec{
-		Phases: []corev1alpha1.ObjectSetTemplatePhase{
-			{
-				Objects: []corev1alpha1.ObjectSetObject{
-					{
-						Object: unstructured.Unstructured{},
-					},
-				},
-			},
-			{
-				Objects: []corev1alpha1.ObjectSetObject{
-					{
-						Object: crd,
-					},
-				},
-			},
-		},
+	objs := []unstructured.Unstructured{
+		{}, crd,
 	}
-	crds := crdsFromTemplateSpec(ts)
+	crds := crdsFromObjects(objs)
 	assert.Len(t, crds, 1)
-}
-
-type loaderMock struct {
-	mock.Mock
-}
-
-func (m *loaderMock) FromFiles(
-	ctx context.Context, files packagecontent.Files,
-	opts ...packageloader.Option,
-) (*packagecontent.Package, error) {
-	args := m.Called(ctx, files, opts)
-	return args.Get(0).(*packagecontent.Package), args.Error(1)
 }

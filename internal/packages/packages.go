@@ -1,3 +1,20 @@
-// Package packages contains common definitiond and helper methods that are required by
-// sub packages which are responsible for handling PKO packages and package images.
 package packages
+
+// Stages:
+// 1. Import
+// - from OCI
+// - from Registry URL
+// - from FS
+//
+// 2. Structure
+// - Load PackageManifests
+// - Parse Package and Component structure
+//
+// 3. Validation
+// (3. Update lockfile)
+//
+// 4. Render
+
+// 5. Deploy
+// 5. Export
+// - OCI image

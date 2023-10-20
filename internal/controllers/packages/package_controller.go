@@ -11,12 +11,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/packages/packagedeploy"
+	"package-operator.run/internal/packages"
 )
 
 const loaderJobFinalizer = "package-operator.run/loader-job"
@@ -54,7 +54,7 @@ func NewPackageController(
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
-		c, log, scheme, imagePuller, packagedeploy.NewPackageDeployer(c, scheme),
+		c, log, scheme, imagePuller, packages.NewPackageDeployer(c, scheme),
 		metricsRecorder, packageHashModifier,
 	)
 }
@@ -68,7 +68,7 @@ func NewClusterPackageController(
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
-		c, log, scheme, imagePuller, packagedeploy.NewClusterPackageDeployer(c, scheme),
+		c, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme),
 		metricsRecorder, packageHashModifier,
 	)
 }
@@ -106,7 +106,7 @@ func newGenericPackageController(
 	return controller
 }
 
-func (c *GenericPackageController) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
+func (c *GenericPackageController) SetEnvironment(env *manifests.PackageEnvironment) {
 	c.unpackReconciler.SetEnvironment(env)
 }
 

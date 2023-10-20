@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagetypes"
 )
 
 func TestRegistry_DelayedPull(t *testing.T) {
@@ -22,15 +23,13 @@ func TestRegistry_DelayedPull(t *testing.T) {
 	ipm := &imagePullerMock{}
 	r.pullImage = ipm.Pull
 
-	f := packagecontent.Files{
-		"test.yaml": []byte("test"),
-	}
+	pkg := &packagetypes.RawPackage{Files: packagetypes.Files{"test": []byte{}}}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			time.Sleep(500 * time.Millisecond)
 		}).
-		Return(f, nil)
+		Return(pkg, nil)
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
@@ -40,13 +39,13 @@ func TestRegistry_DelayedPull(t *testing.T) {
 			defer wg.Done()
 			ff, err := r.Pull(ctx, "quay.io/test123")
 			require.NoError(t, err)
-			assert.Equal(t, f, ff)
+			assert.Equal(t, pkg, ff)
 		}()
 	}
 	wg.Wait()
 
 	ipm.AssertNumberOfCalls(t, "Pull", 1)
-	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest")
+	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest", mock.Anything)
 }
 
 func TestRegistry_DelayedRequests(t *testing.T) {
@@ -59,8 +58,11 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
-		Return(packagecontent.Files{}, nil)
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			time.Sleep(requestDelay)
+		}).
+		Return(&packagetypes.RawPackage{Files: packagetypes.Files{"test": nil}}, nil)
 
 	r := NewRegistry(map[string]string{
 		"quay.io": "localhost:123",
@@ -71,33 +73,32 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 	var (
 		wg sync.WaitGroup
 
-		files     []packagecontent.Files
-		filesLock sync.Mutex
+		pkg     []*packagetypes.RawPackage
+		pkgLock sync.Mutex
 	)
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			f, _ := r.Pull(ctx, "quay.io/test123")
+			f, err := r.Pull(ctx, "quay.io/test123")
+			require.NoError(t, err)
 
-			filesLock.Lock()
-			defer filesLock.Unlock()
-			files = append(files, f)
+			pkgLock.Lock()
+			defer pkgLock.Unlock()
+			pkg = append(pkg, f)
 		}()
-
-		time.Sleep(requestDelay)
 	}
 	wg.Wait()
 
-	ipm.AssertNumberOfCalls(t, "Pull", numRequests)
-	assert.Len(t, files, numRequests)
+	ipm.AssertNumberOfCalls(t, "Pull", 1)
+	assert.Len(t, pkg, numRequests)
 
 	// Ensure no two returned file maps are the same map object.
 	maxRequestIndex := numRequests - 1
 	for i := 0; i <= maxRequestIndex; i++ {
 		for j := maxRequestIndex; j >= 0; j-- {
-			af := files[i]
-			bf := files[j]
+			af := pkg[i].Files
+			bf := pkg[j].Files
 			assert.NotSame(t, af, bf)
 		}
 	}
@@ -109,7 +110,8 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, ref string,
-) (packagecontent.Files, error) {
-	args := m.Called(ctx, ref)
-	return args.Get(0).(packagecontent.Files), args.Error(1)
+	opts ...crane.Option,
+) (*packagetypes.RawPackage, error) {
+	args := m.Called(ctx, ref, opts)
+	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)
 }

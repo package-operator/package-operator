@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/utils"
 )
 
@@ -20,7 +20,7 @@ type GenericPackageAccessor interface {
 	GetUnpackedHash() string
 	SetUnpackedHash(hash string)
 	setStatusPhase(phase corev1alpha1.PackageStatusPhase)
-	TemplateContext() manifestsv1alpha1.TemplateContext
+	TemplateContext() manifests.TemplateContext
 	SetStatusRevision(rev int64)
 	GetStatusRevision() int64
 	GetComponent() string
@@ -108,9 +108,9 @@ func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
 	a.Status.Phase = phase
 }
 
-func (a *GenericPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
-	return manifestsv1alpha1.TemplateContext{
-		Package: manifestsv1alpha1.TemplateContextPackage{
+func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
+	return manifests.TemplateContext{
+		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
 		Config: a.Package.Spec.Config,
@@ -157,9 +157,9 @@ func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusP
 	a.Status.Phase = phase
 }
 
-func (a *GenericClusterPackage) TemplateContext() manifestsv1alpha1.TemplateContext {
-	return manifestsv1alpha1.TemplateContext{
-		Package: manifestsv1alpha1.TemplateContextPackage{
+func (a *GenericClusterPackage) TemplateContext() manifests.TemplateContext {
+	return manifests.TemplateContext{
+		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 		},
 		Config: a.Spec.Config,
@@ -205,8 +205,8 @@ func updatePackagePhase(pkg GenericPackageAccessor) {
 	pkg.setStatusPhase(corev1alpha1.PackagePhaseNotReady)
 }
 
-func templateContextObjectMetaFromObjectMeta(om metav1.ObjectMeta) manifestsv1alpha1.TemplateContextObjectMeta {
-	return manifestsv1alpha1.TemplateContextObjectMeta{
+func templateContextObjectMetaFromObjectMeta(om metav1.ObjectMeta) manifests.TemplateContextObjectMeta {
+	return manifests.TemplateContextObjectMeta{
 		Name:        om.Name,
 		Namespace:   om.Namespace,
 		Labels:      om.Labels,

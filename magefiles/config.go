@@ -36,6 +36,7 @@ const (
 	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
 	controllerGenVersion = "0.13.0"
+	conversionGenVersion = "0.28.3"
 	golangciLintVersion  = "1.54.2"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"

@@ -14,18 +14,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/testutil"
 )
 
 var errExample = errors.New("boom")
 
 type testSink struct {
-	env *manifestsv1alpha1.PackageEnvironment
+	env *manifests.PackageEnvironment
 }
 
 func (s *testSink) SetEnvironment(
-	env *manifestsv1alpha1.PackageEnvironment,
+	env *manifests.PackageEnvironment,
 ) {
 	s.env = env
 }
@@ -65,8 +65,8 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 	require.NoError(t, err)
 
 	env := sink.env
-	assert.Equal(t, &manifestsv1alpha1.PackageEnvironment{
-		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+	assert.Equal(t, &manifests.PackageEnvironment{
+		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v1.2.3",
 		},
 	}, env)
@@ -127,14 +127,14 @@ func TestManager_Init_OpenShift(t *testing.T) {
 	require.NoError(t, err)
 
 	env := sink.env
-	assert.Equal(t, &manifestsv1alpha1.PackageEnvironment{
-		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+	assert.Equal(t, &manifests.PackageEnvironment{
+		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v1.2.3",
 		},
-		OpenShift: &manifestsv1alpha1.PackageEnvironmentOpenShift{
+		OpenShift: &manifests.PackageEnvironmentOpenShift{
 			Version: "v123",
 		},
-		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
+		Proxy: &manifests.PackageEnvironmentProxy{
 			HTTPProxy:  "httpxxx",
 			HTTPSProxy: "httpsxxx",
 			NoProxy:    "noproxyxxx",
@@ -249,8 +249,8 @@ func TestSink(t *testing.T) {
 	t.Parallel()
 
 	s := &Sink{}
-	env := &manifestsv1alpha1.PackageEnvironment{
-		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+	env := &manifests.PackageEnvironment{
+		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v12345",
 		},
 	}

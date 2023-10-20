@@ -1,4 +1,4 @@
-package packageimport_test
+package packageimport
 
 import (
 	"context"
@@ -10,26 +10,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages/packagetypes"
 )
 
-func TestFS(t *testing.T) {
+func TestFromFS(t *testing.T) {
 	t.Parallel()
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	invalidEntries := packagecontent.Files{".git/chicken": {1, 2}, ".something": {3, 4}}
-	validEntries := packagecontent.Files{"manifest.yaml": {5, 6}, "manifest.yml": {7, 8}, "subdir/somethingelse": {9, 10}}
+	validEntries := packagetypes.Files{"manifest.yaml": {5, 6}, "manifest.yml": {7, 8}, "subdir/somethingelse": {9, 10}}
 
 	memFS := fstest.MapFS{}
 	for k, v := range validEntries {
 		memFS[k] = &fstest.MapFile{Data: v}
 	}
-	for k, v := range invalidEntries {
-		memFS[k] = &fstest.MapFile{Data: v}
-	}
 
-	contents, err := packageimport.FS(ctx, memFS)
+	rawPkg, err := FromFS(ctx, memFS)
 	require.Nil(t, err)
-	assert.Equal(t, validEntries, contents)
+	assert.Equal(t, validEntries, rawPkg.Files)
+}
+
+func TestFromFolder(t *testing.T) {
+	t.Parallel()
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	rawPkg, err := FromFolder(ctx, "testdata/fs")
+	require.Nil(t, err)
+	assert.Len(t, rawPkg.Files, 2)
+	assert.Equal(t, "xxx\n", string(rawPkg.Files["my-stuff.txt"]))
+	assert.Equal(t, "test: test\n", string(rawPkg.Files["file1.yaml"]))
 }

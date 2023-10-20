@@ -16,10 +16,13 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/packages/packageadmission"
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/packages/packagemanifestvalidation"
+	"package-operator.run/internal/packages/packagerender"
+	"package-operator.run/internal/packages/packagestructure"
+	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages/packagevalidation"
 )
 
 // PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.
@@ -28,18 +31,20 @@ type PackageDeployer struct {
 	scheme *runtime.Scheme
 
 	newObjectDeployment adapters.ObjectDeploymentFactory
+	structuralLoader    structuralLoader
 
 	deploymentReconciler deploymentReconciler
-	packageContentLoader packageContentLoader
+	packageValidators    packagevalidation.PackageValidatorList
 }
 
 type (
-	packageContentLoader interface {
-		FromFiles(ctx context.Context, path packagecontent.Files, opts ...packageloader.Option) (*packagecontent.Package, error)
-	}
-
 	deploymentReconciler interface {
 		Reconcile(ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor, chunker objectChunker) error
+	}
+	structuralLoader interface {
+		LoadComponent(
+			ctx context.Context, rawPkg *packagetypes.RawPackage, componentName string,
+		) (*packagetypes.Package, error)
 	}
 )
 
@@ -50,17 +55,16 @@ func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeploye
 		scheme: scheme,
 
 		newObjectDeployment: adapters.NewObjectDeployment,
-
-		packageContentLoader: packageloader.New(
-			scheme,
-			packageloader.WithDefaults,
-			packageloader.WithValidators(packageloader.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeNamespaced)),
-		),
+		structuralLoader:    packagestructure.DefaultStructuralLoader,
 
 		deploymentReconciler: newDeploymentReconciler(
 			scheme, c,
 			adapters.NewObjectDeployment, adapters.NewObjectSlice,
 			adapters.NewObjectSliceList, newGenericObjectSetList,
+		),
+		packageValidators: append(
+			packagevalidation.DefaultPackageValidators,
+			packagevalidation.PackageScopeValidator(manifests.PackageManifestScopeNamespaced),
 		),
 	}
 }
@@ -72,16 +76,14 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 		scheme: scheme,
 
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
-
-		packageContentLoader: packageloader.New(
-			scheme, packageloader.WithValidators(
-				packageloader.PackageScopeValidator(manifestsv1alpha1.PackageManifestScopeCluster),
-				&packageloader.ObjectPhaseAnnotationValidator{},
-			),
-		),
+		structuralLoader:    packagestructure.DefaultStructuralLoader,
 
 		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, adapters.NewClusterObjectSlice,
 			adapters.NewClusterObjectSliceList, newGenericClusterObjectSetList,
+		),
+		packageValidators: append(
+			packagevalidation.DefaultPackageValidators,
+			packagevalidation.PackageScopeValidator(manifests.PackageManifestScopeCluster),
 		),
 	}
 }
@@ -99,38 +101,38 @@ func ImageWithDigest(reference string, digest string) (string, error) {
 	return ref.Context().Digest(digest).String(), nil
 }
 
-func (l *PackageDeployer) Load(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
-	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
+func (l *PackageDeployer) Deploy(
+	ctx context.Context,
+	apiPkg adapters.GenericPackageAccessor,
+	rawPkg *packagetypes.RawPackage,
+	env manifests.PackageEnvironment,
 ) error {
-	packageContent, err := l.LoadFromFiles(ctx, files, pkg.GetComponent())
+	pkg, err := l.structuralLoader.LoadComponent(ctx, rawPkg, apiPkg.GetComponent())
 	if err != nil {
-		setInvalidConditionBasedOnLoadError(pkg, err)
+		setInvalidConditionBasedOnLoadError(apiPkg, err)
 		return nil
 	}
 
-	tmplCtx := pkg.TemplateContext()
-	tmplCtx.Environment = env
+	// prepare package render/template context
+	tmplCtx := apiPkg.TemplateContext()
 	configuration := map[string]interface{}{}
-
 	if tmplCtx.Config != nil {
 		if err := json.Unmarshal(tmplCtx.Config.Raw, &configuration); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
 	}
-	validationErrors, err := packageadmission.AdmitPackageConfiguration(
-		ctx, l.scheme, configuration, packageContent.PackageManifest, field.NewPath("spec", "config"))
+	validationErrors, err := packagemanifestvalidation.AdmitPackageConfiguration(
+		ctx, configuration, pkg.Manifest, field.NewPath("spec", "config"))
 	if err != nil {
 		return fmt.Errorf("validate Package configuration: %w", err)
 	}
 	if len(validationErrors) > 0 {
-		setInvalidConditionBasedOnLoadError(pkg, validationErrors.ToAggregate())
+		setInvalidConditionBasedOnLoadError(apiPkg, validationErrors.ToAggregate())
 		return nil
 	}
-
 	images := map[string]string{}
-	if packageContent.PackageManifestLock != nil {
-		for _, packageImage := range packageContent.PackageManifestLock.Spec.Images {
+	if pkg.ManifestLock != nil {
+		for _, packageImage := range pkg.ManifestLock.Spec.Images {
 			resolvedImage, err := ImageWithDigest(packageImage.Image, packageImage.Digest)
 			if err != nil {
 				return err
@@ -139,52 +141,40 @@ func (l *PackageDeployer) Load(
 		}
 	}
 
-	tt, err := packageloader.NewTemplateTransformer(packageloader.PackageFileTemplateContext{
-		Package:     tmplCtx.Package,
-		Config:      configuration,
-		Images:      images,
-		Environment: tmplCtx.Environment,
-	})
+	// render package instance
+	pkgInstance, err := packagerender.RenderPackageInstance(
+		ctx, pkg,
+		packagetypes.PackageRenderContext{
+			Package:     tmplCtx.Package,
+			Config:      configuration,
+			Images:      images,
+			Environment: env,
+		}, l.packageValidators, packagevalidation.DefaultObjectValidators)
 	if err != nil {
-		return err
-	}
-	packageContent, err = l.LoadFromFiles(
-		ctx, files,
-		pkg.GetComponent(),
-		packageloader.WithFilesTransformers(tt),
-		packageloader.WithTransformers(&packageloader.PackageTransformer{Package: pkg.ClientObject()}))
-	if err != nil {
-		setInvalidConditionBasedOnLoadError(pkg, err)
+		setInvalidConditionBasedOnLoadError(apiPkg, err)
 		return nil
 	}
 
-	desiredDeploy, err := l.desiredObjectDeployment(ctx, pkg, packageContent)
+	desiredDeploy, err := l.desiredObjectDeployment(ctx, apiPkg, pkgInstance)
 	if err != nil {
 		return fmt.Errorf("creating desired ObjectDeployment: %w", err)
 	}
 
-	chunker := determineChunkingStrategyForPackage(pkg)
+	chunker := determineChunkingStrategyForPackage(apiPkg)
 	if err := l.deploymentReconciler.Reconcile(ctx, desiredDeploy, chunker); err != nil {
 		return fmt.Errorf("reconciling ObjectDeployment: %w", err)
 	}
 
 	// Load success
-	meta.RemoveStatusCondition(pkg.GetConditions(), corev1alpha1.PackageInvalid)
+	meta.RemoveStatusCondition(apiPkg.GetConditions(), corev1alpha1.PackageInvalid)
 	return nil
 }
 
-func (l *PackageDeployer) LoadFromFiles(ctx context.Context, path packagecontent.Files, component string, opts ...packageloader.Option) (*packagecontent.Package, error) {
-	if component != "" {
-		opts = append(opts, packageloader.WithComponent(component))
-	}
-	return l.packageContentLoader.FromFiles(ctx, path, opts...)
-}
-
 func (l *PackageDeployer) desiredObjectDeployment(
-	_ context.Context, pkg adapters.GenericPackageAccessor, packageContent *packagecontent.Package,
+	_ context.Context, pkg adapters.GenericPackageAccessor, pkgInstance *packagetypes.PackageInstance,
 ) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	labels := map[string]string{
-		manifestsv1alpha1.PackageLabel:         packageContent.PackageManifest.Name,
+		manifestsv1alpha1.PackageLabel:         pkgInstance.Manifest.Name,
 		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
 	}
 
@@ -196,7 +186,7 @@ func (l *PackageDeployer) desiredObjectDeployment(
 		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetImage(),
 		manifestsv1alpha1.PackageConfigAnnotation:      string(configJSON),
 		controllers.ChangeCauseAnnotation: fmt.Sprintf(
-			"Installing %s package.", packageContent.PackageManifest.Name),
+			"Installing %s package.", pkgInstance.Manifest.Name),
 	}
 
 	deploy = l.newObjectDeployment(l.scheme)
@@ -206,7 +196,7 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	deploy.ClientObject().SetName(pkg.ClientObject().GetName())
 	deploy.ClientObject().SetNamespace(pkg.ClientObject().GetNamespace())
 
-	deploy.SetTemplateSpec(packagecontent.TemplateSpecFromPackage(packageContent))
+	deploy.SetTemplateSpec(packagerender.RenderObjectSetTemplateSpec(pkgInstance))
 	deploy.SetSelector(labels)
 
 	if err := controllerutil.SetControllerReference(

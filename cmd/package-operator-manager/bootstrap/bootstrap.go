@@ -15,7 +15,6 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packageloader"
 )
 
 const packageOperatorDeploymentName = "package-operator-manager"
@@ -41,7 +40,7 @@ func NewBootstrapper(
 ) (*Bootstrapper, error) {
 	c := uncachedClient
 	init := newInitializer(
-		c, scheme, packageloader.New(scheme, packageloader.WithDefaults),
+		c, scheme, &packageObjectLoad{},
 		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig,
 	)
 	fixer := newFixer(c, log, opts.Namespace)

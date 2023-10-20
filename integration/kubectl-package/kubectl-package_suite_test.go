@@ -124,14 +124,14 @@ func projectRoot() (string, error) {
 
 func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) error {
 	for _, info := range infos {
-		files, err := packageimport.FS(ctx, os.DirFS(info.Path))
+		rawPkg, err := packageimport.FromFS(ctx, os.DirFS(info.Path))
 		if err != nil {
 			return fmt.Errorf("importing package from directory: %w", err)
 		}
 
 		tags := []string{info.Ref}
 
-		if err := packageexport.PushedImage(ctx, tags, files, crane.Insecure); err != nil {
+		if err := packageexport.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure); err != nil {
 			return fmt.Errorf("pushing package image: %w", err)
 		}
 	}

@@ -5,11 +5,24 @@ import (
 	"strings"
 	"sync"
 
-	"package-operator.run/internal/packages/packagecontent"
+	"github.com/google/go-containerregistry/pkg/crane"
+
+	"package-operator.run/internal/packages/packagetypes"
 	"package-operator.run/internal/utils"
 )
 
-// Registry handles pulling images from a registry during PKO runtime.
+// Imports a RawPackage from a container image registry.
+func FromRegistry(ctx context.Context, ref string, opts ...crane.Option) (
+	*packagetypes.RawPackage, error,
+) {
+	img, err := crane.Pull(ref, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return FromOCI(ctx, img)
+}
+
+// Registry de-duplicates multiple parallel container image pulls.
 type Registry struct {
 	registryHostOverrides map[string]string
 
@@ -18,17 +31,23 @@ type Registry struct {
 	inFlightLock sync.Mutex
 }
 
-type pullImageFn func(ctx context.Context, ref string) (packagecontent.Files, error)
+type response struct {
+	RawPackage *packagetypes.RawPackage
+	Err        error
+}
+
+type pullImageFn func(
+	ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
 
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
-		pullImage:             PulledImage,
+		pullImage:             FromRegistry,
 		inFlight:              make(map[string][]chan<- response),
 	}
 }
 
-func (r *Registry) Pull(ctx context.Context, image string) (packagecontent.Files, error) {
+func (r *Registry) Pull(ctx context.Context, image string) (*packagetypes.RawPackage, error) {
 	image, err := r.applyOverride(image)
 	if err != nil {
 		return nil, err
@@ -36,7 +55,7 @@ func (r *Registry) Pull(ctx context.Context, image string) (packagecontent.Files
 
 	res := <-r.handleRequest(ctx, image)
 
-	return res.Files, res.Err
+	return res.RawPackage, res.Err
 }
 
 func (r *Registry) applyOverride(image string) (string, error) {
@@ -61,11 +80,11 @@ func (r *Registry) handleRequest(ctx context.Context, image string) <-chan respo
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			files, err := r.pullImage(ctx, image)
+			rawPkg, err := r.pullImage(ctx, image, crane.Insecure)
 
 			r.handleResponse(image, response{
-				Files: files,
-				Err:   err,
+				RawPackage: rawPkg,
+				Err:        err,
 			})
 		}(ctx, image)
 	}
@@ -93,15 +112,10 @@ func (r *Registry) handleResponse(image string, res response) {
 	for _, recv := range r.inFlight[image] {
 		recv <- response{
 			// DeepCopy to ensure clients can work concurrently on the returned files map.
-			Files: res.Files.DeepCopy(),
-			Err:   res.Err,
+			RawPackage: res.RawPackage.DeepCopy(),
+			Err:        res.Err,
 		}
 	}
 
 	delete(r.inFlight, image)
-}
-
-type response struct {
-	Files packagecontent.Files
-	Err   error
 }

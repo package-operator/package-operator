@@ -10,12 +10,19 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packagetypes"
 )
 
-func FS(ctx context.Context, src fs.FS) (packagecontent.Files, error) {
+// Import a RawPackage from the given folder path.
+func FromFolder(ctx context.Context, path string) (*packagetypes.RawPackage, error) {
+	return FromFS(ctx, os.DirFS(path))
+}
+
+// Import a RawPackage from the given FileSystem.
+func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
-	bundle := packagecontent.Files{}
+	files := packagetypes.Files{}
+
 	walker := func(path string, entry fs.DirEntry, ioErr error) error {
 		switch {
 		case ioErr != nil:
@@ -24,7 +31,7 @@ func FS(ctx context.Context, src fs.FS) (packagecontent.Files, error) {
 		case entry.Name() == ".":
 			// continue at root
 
-		case isFileToBeExcluded(entry):
+		case strings.HasPrefix(path, "."):
 			verboseLog.Info("skipping file in source", "path", path)
 			if entry.IsDir() {
 				return filepath.SkipDir
@@ -39,7 +46,7 @@ func FS(ctx context.Context, src fs.FS) (packagecontent.Files, error) {
 			if err != nil {
 				return fmt.Errorf("read file %s: %w", path, err)
 			}
-			bundle[path] = data
+			files[path] = data
 		}
 
 		return nil
@@ -48,18 +55,7 @@ func FS(ctx context.Context, src fs.FS) (packagecontent.Files, error) {
 	if err := fs.WalkDir(src, ".", walker); err != nil {
 		return nil, fmt.Errorf("walk source dir: %w", err)
 	}
-
-	return bundle, nil
-}
-
-func Folder(ctx context.Context, path string) (packagecontent.Files, error) {
-	return FS(ctx, os.DirFS(path))
-}
-
-func isFileToBeExcluded(entry fs.DirEntry) bool {
-	return isFilenameToBeExcluded(entry.Name())
-}
-
-func isFilenameToBeExcluded(fileName string) bool {
-	return strings.HasPrefix(fileName, ".")
+	return &packagetypes.RawPackage{
+		Files: files,
+	}, nil
 }

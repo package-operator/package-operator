@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/packagetypes"
 )
 
 func TestUpdate(t *testing.T) {
@@ -27,7 +27,7 @@ func TestUpdate(t *testing.T) {
 	now := v1.Now()
 
 	for name, tc := range map[string]struct {
-		Package       *packagecontent.Package
+		Package       *packagetypes.Package
 		ImageToDigest map[string]string
 		Expected      expected
 	}{
@@ -171,10 +171,10 @@ type packageLoaderMock struct {
 	mock.Mock
 }
 
-func (m *packageLoaderMock) LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error) {
+func (m *packageLoaderMock) LoadPackage(ctx context.Context, path string) (*packagetypes.Package, error) {
 	args := m.Called(ctx, path)
-
-	return args.Get(0).(*packagecontent.Package), args.Error(1)
+	pkg, _ := args.Get(0).(*packagetypes.Package)
+	return pkg, args.Error(1)
 }
 
 type clockMock struct {
@@ -192,41 +192,41 @@ const (
 	testOtherDigest = "56789"
 )
 
-var testPkgNoLockFile = packagecontent.Package{
-	PackageManifest: testManifest,
+var testPkgNoLockFile = packagetypes.Package{
+	Manifest: testManifest,
 }
 
-var testPkgDifferentLockFile1 = packagecontent.Package{
-	PackageManifest: testManifest,
-	PackageManifestLock: &v1alpha1.PackageManifestLock{Spec: v1alpha1.PackageManifestLockSpec{
-		Images: []v1alpha1.PackageManifestLockImage{
+var testPkgDifferentLockFile1 = packagetypes.Package{
+	Manifest: testManifest,
+	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
+		Images: []manifests.PackageManifestLockImage{
 			{Name: "nginx1", Image: "nginx:1.22.1", Digest: testOtherDigest},
 		},
 	}},
 }
 
-var testPkgDifferentLockFile2 = packagecontent.Package{
-	PackageManifest: testManifest,
-	PackageManifestLock: &v1alpha1.PackageManifestLock{Spec: v1alpha1.PackageManifestLockSpec{
-		Images: []v1alpha1.PackageManifestLockImage{
+var testPkgDifferentLockFile2 = packagetypes.Package{
+	Manifest: testManifest,
+	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
+		Images: []manifests.PackageManifestLockImage{
 			{Name: "nginx1", Image: "nginx:1.22.1", Digest: testDigest},
 			{Name: "foobar", Image: "foobar:2.18", Digest: testOtherDigest},
 		},
 	}},
 }
 
-var testPkgSameLockFile = packagecontent.Package{
-	PackageManifest: testManifest,
-	PackageManifestLock: &v1alpha1.PackageManifestLock{Spec: v1alpha1.PackageManifestLockSpec{
-		Images: []v1alpha1.PackageManifestLockImage{
+var testPkgSameLockFile = packagetypes.Package{
+	Manifest: testManifest,
+	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
+		Images: []manifests.PackageManifestLockImage{
 			{Name: "nginx1", Image: "nginx:1.22.1", Digest: testDigest},
 			{Name: "nginx2", Image: "nginx:1.23.3", Digest: testDigest},
 		},
 	}},
 }
 
-var testManifest = &v1alpha1.PackageManifest{Spec: v1alpha1.PackageManifestSpec{
-	Images: []v1alpha1.PackageManifestImage{
+var testManifest = &manifests.PackageManifest{Spec: manifests.PackageManifestSpec{
+	Images: []manifests.PackageManifestImage{
 		{Name: "nginx1", Image: "nginx:1.22.1"},
 		{Name: "nginx2", Image: "nginx:1.23.3"},
 	},

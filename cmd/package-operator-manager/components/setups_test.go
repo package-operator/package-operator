@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
 
 var errTest = errors.New("test")
@@ -129,6 +129,6 @@ func (m *controllerMock) SetupWithManager(mgr ctrl.Manager) error {
 	return args.Error(0)
 }
 
-func (m *controllerMock) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
+func (m *controllerMock) SetEnvironment(env *manifests.PackageEnvironment) {
 	m.Called(env)
 }

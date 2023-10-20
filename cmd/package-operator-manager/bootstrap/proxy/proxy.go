@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 
 // Compare proxy settings in environment variables with settings in `apiEnv` and replace current pko process with a new instance with updated environment variables by using unix.Exec (execve).
 // This is needed as a workaround because Go caches proxy settings that are read from the envvars `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` on the first global http(s) client call.
-func RestartPKOWithEnvvarsIfNeeded(log logr.Logger, apiEnv *manifestsv1alpha1.PackageEnvironment) error {
+func RestartPKOWithEnvvarsIfNeeded(log logr.Logger, apiEnv *manifests.PackageEnvironment) error {
 	return restartPKOWithEnvvarsIfNeeded(
 		log,
 		unix.Exec,
@@ -41,7 +41,7 @@ type (
 	executableFn func() (string, error)
 )
 
-func restartPKOWithEnvvarsIfNeeded(log logr.Logger, execve execveFn, getenv getenvFn, getAndResolveArgv0 executableFn, apiEnv *manifestsv1alpha1.PackageEnvironment) error {
+func restartPKOWithEnvvarsIfNeeded(log logr.Logger, execve execveFn, getenv getenvFn, getAndResolveArgv0 executableFn, apiEnv *manifests.PackageEnvironment) error {
 	if apiEnv.Proxy == nil {
 		log.Info("no proxy configured via PackageEnvironment")
 		// no restart needed
@@ -80,7 +80,7 @@ type proxyVars struct {
 }
 
 // Compare against proxy object from PackageEnvironment.
-func (pv proxyVars) differentFrom(proxy manifestsv1alpha1.PackageEnvironmentProxy) bool {
+func (pv proxyVars) differentFrom(proxy manifests.PackageEnvironmentProxy) bool {
 	return pv.httpProxy != proxy.HTTPProxy ||
 		pv.httpsProxy != proxy.HTTPSProxy ||
 		pv.noProxy != proxy.NoProxy
