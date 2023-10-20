@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  labels:
+    app.kubernetes.io/name: test-webapp
+    app.kubernetes.io/component: frontend
+  annotations:
+    package-operator.run/phase: deploy
+data:
+  PUBLIC_API_BASE_URL: "{{ .config.apiBaseUrl }}"

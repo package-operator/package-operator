@@ -86,36 +86,41 @@ func (l Loader) FromFiles(ctx context.Context, files packagecontent.Files, opts 
 		}
 	}
 
-	for _, t := range l.filesTransformers {
-		if err := t.TransformPackageFiles(ctx, files); err != nil {
-			return nil, fmt.Errorf("transform files: %w", err)
-		}
-	}
-
-	pkgMap, err := packagecontent.AllPackagesFromFiles(ctx, l.scheme, files, l.component)
+	pkgFilesMap, err := packagecontent.SplitFilesByComponent(ctx, l.scheme, files, l.component)
 	if err != nil {
 		return nil, fmt.Errorf("convert files to package: %w", err)
 	}
 
-	for _, pkg := range pkgMap {
-		for _, t := range l.transformers {
-			if err := t.TransformPackage(ctx, pkg); err != nil {
-				return nil, fmt.Errorf("transform package: %w", err)
-			}
-		}
+	pkgFiles := pkgFilesMap[l.component]
 
-		for _, t := range l.validators {
-			if err := t.ValidatePackage(ctx, pkg); err != nil {
-				return nil, fmt.Errorf("validate package: %w", err)
-			}
-		}
-
-		for _, t := range l.packageAndFilesValidator {
-			if err := t.ValidatePackageAndFiles(ctx, pkg, files); err != nil {
-				return nil, fmt.Errorf("validate package and files: %w", err)
-			}
+	for _, t := range l.filesTransformers {
+		if err := t.TransformPackageFiles(ctx, pkgFiles); err != nil {
+			return nil, fmt.Errorf("transform files: %w", err)
 		}
 	}
 
-	return packagecontent.ExtractComponentPackage(pkgMap, l.component)
+	pkg, err := packagecontent.PackageFromFiles(ctx, l.scheme, pkgFiles)
+	if err != nil {
+		return nil, fmt.Errorf("convert files to package: %w", err)
+	}
+
+	for _, t := range l.transformers {
+		if err := t.TransformPackage(ctx, pkg); err != nil {
+			return nil, fmt.Errorf("transform package: %w", err)
+		}
+	}
+
+	for _, t := range l.validators {
+		if err := t.ValidatePackage(ctx, pkg); err != nil {
+			return nil, fmt.Errorf("validate package: %w", err)
+		}
+	}
+
+	for _, t := range l.packageAndFilesValidator {
+		if err := t.ValidatePackageAndFiles(ctx, pkg, files); err != nil {
+			return nil, fmt.Errorf("validate package and files: %w", err)
+		}
+	}
+
+	return pkg, nil
 }
