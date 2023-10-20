@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	// Package Phase annotation to assign objects to a phase.
+	// PackagePhaseAnnotation annotation to assign objects to a phase.
 	PackagePhaseAnnotation = "package-operator.run/phase"
-	// Package ConditionMap annotation specifies object conditions to map back into Package Operator APIs.
+	// PackageConditionMapAnnotation specifies object conditions to map back into Package Operator APIs.
 	// Example: Available => my-own-prefix/Available.
 	PackageConditionMapAnnotation = "package-operator.run/condition-map"
-	// Package ExternalObject annotation, when set to "True", indicates
+	// PackageExternalObjectAnnotation when set to "True", indicates
 	// that the referenced object should only be observed during a phase
 	// rather than reconciled.
 	PackageExternalObjectAnnotation = "package-operator.run/external"
@@ -31,6 +31,7 @@ const (
 	PackageInstanceLabel = "package-operator.run/instance"
 )
 
+// PackageManifest defines the manifest of a package.
 // +kubebuilder:object:root=true
 type PackageManifest struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -44,10 +45,10 @@ type PackageManifest struct {
 type PackageManifestScope string
 
 const (
-	// Cluster scope allows the package to be installed for the whole cluster.
+	// PackageManifestScopeCluster scope allows the package to be installed for the whole cluster.
 	// The package needs to default installation namespaces and create them.
 	PackageManifestScopeCluster PackageManifestScope = "Cluster"
-	// Namespace scope allows the package to be installed for specific namespaces.
+	// PackageManifestScopeNamespaced scope allows the package to be installed for specific namespaces.
 	PackageManifestScopeNamespaced PackageManifestScope = "Namespaced"
 )
 
@@ -72,13 +73,16 @@ type PackageManifestSpec struct {
 	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
 }
 
+// PackageManifestComponentsConfig configures components of a package.
 type PackageManifestComponentsConfig struct{}
 
+// PackageManifestSpecConfig configutes a package manifest.
 type PackageManifestSpecConfig struct {
 	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
 	OpenAPIV3Schema *apiextensionsv1.JSONSchemaProps `json:"openAPIV3Schema,omitempty"`
 }
 
+// PackageManifestPhase defines a package phase.
 type PackageManifestPhase struct {
 	// Name of the reconcile phase. Must be unique within a PackageManifest
 	Name string `json:"name"`
@@ -111,6 +115,7 @@ type PackageManifestTestCaseTemplate struct {
 	Context TemplateContext `json:"context,omitempty"`
 }
 
+// PackageManifestTestKubeconform configures kubeconform testing.
 type PackageManifestTestKubeconform struct {
 	// Kubernetes version to use schemas from.
 	KubernetesVersion string `json:"kubernetesVersion"`
@@ -141,17 +146,19 @@ type PackageEnvironment struct {
 	Proxy *PackageEnvironmentProxy `json:"proxy,omitempty"`
 }
 
+// PackageEnvironmentKubernetes configures kubernetes environments.
 type PackageEnvironmentKubernetes struct {
 	// Kubernetes server version.
 	Version string `json:"version"`
 }
 
+// PackageEnvironmentOpenShift configures openshift environments.
 type PackageEnvironmentOpenShift struct {
 	// OpenShift server version.
 	Version string `json:"version"`
 }
 
-// Environment proxy settings.
+// PackageEnvironmentProxy configures proxy environments.
 // On OpenShift, this config is taken from the cluster Proxy object.
 // https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
 type PackageEnvironmentProxy struct {

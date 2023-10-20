@@ -45,6 +45,7 @@ const (
 	ObjectDeploymentProgressing = "Progressing"
 )
 
+// ObjectDeploymentPhase specifies a phase that a deployment is in.
 type ObjectDeploymentPhase string
 
 // Well-known ObjectDeployment Phases for printing a Status in kubectl,

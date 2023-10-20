@@ -133,13 +133,14 @@ spec:
                             probes:
                               description: Probe configuration parameters.
                               items:
-                                description: Defines probe parameters. Only one can
-                                  be filled.
+                                description: Probe defines probe parameters. Only
+                                  one can be filled.
                                 properties:
                                   cel:
-                                    description: 'Uses Common Expression Language
-                                      (CEL) to probe an object. CEL rules have to
-                                      evaluate to a boolean to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                                    description: 'ProbeCELSpec uses Common Expression
+                                      Language (CEL) to probe an object. CEL rules
+                                      have to evaluate to a boolean to be valid. See:
+                                      https://kubernetes.io/docs/reference/using-api/cel
                                       https://github.com/google/cel-go'
                                     properties:
                                       message:
@@ -154,8 +155,9 @@ spec:
                                     - rule
                                     type: object
                                   condition:
-                                    description: Checks whether or not the object
-                                      reports a condition with given type and status.
+                                    description: ProbeConditionSpec checks whether
+                                      or not the object reports a condition with given
+                                      type and status.
                                     properties:
                                       status:
                                         default: "True"
@@ -169,8 +171,8 @@ spec:
                                     - type
                                     type: object
                                   fieldsEqual:
-                                    description: Compares two fields specified by
-                                      JSON Paths.
+                                    description: ProbeFieldsEqualSpec compares two
+                                      fields specified by JSON Paths.
                                     properties:
                                       fieldA:
                                         description: First field for comparison.
@@ -268,7 +270,8 @@ spec:
                           checked against given probes before continuing with the
                           next phase.
                         items:
-                          description: ObjectSet reconcile phase.
+                          description: ObjectSetTemplatePhase configures the reconcile
+                            phase of ObjectSets.
                           properties:
                             class:
                               description: If non empty, the ObjectSet controller
@@ -284,13 +287,15 @@ spec:
                               description: ExternalObjects observed, but not reconciled
                                 by this phase.
                               items:
-                                description: An object that is part of the phase of
-                                  an ObjectSet.
+                                description: ObjectSetObject is an object that is
+                                  part of the phase of an ObjectSet.
                                 properties:
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
                                     items:
+                                      description: ConditionMapping maps one condition
+                                        type to another.
                                       properties:
                                         destinationType:
                                           description: Destination condition type
@@ -320,13 +325,15 @@ spec:
                             objects:
                               description: Objects belonging to this phase.
                               items:
-                                description: An object that is part of the phase of
-                                  an ObjectSet.
+                                description: ObjectSetObject is an object that is
+                                  part of the phase of an ObjectSet.
                                 properties:
                                   conditionMappings:
                                     description: Maps conditions from this object
                                       into the Package Operator APIs.
                                     items:
+                                      description: ConditionMapping maps one condition
+                                        type to another.
                                       properties:
                                         destinationType:
                                           description: Destination condition type

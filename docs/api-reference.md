@@ -1,6 +1,6 @@
 ## package-operator.run/v1alpha1
 
-The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
+Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
 containing basic building blocks that other auxiliary APIs can build on top of.
 
 * [ClusterObjectDeployment](#clusterobjectdeployment)
@@ -244,7 +244,7 @@ status:
 
 ### ClusterObjectSlice
 
-ClusterObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+ClusterObjectSlice is referenced by ObjectSets or ObjectDeployments and contain objects to
 limit the size of ObjectSet and ObjectDeployments when big packages are installed.
 This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
 
@@ -317,7 +317,7 @@ status:
 
 ### ClusterPackage
 
-
+ClusterPackage defines a cluster scoped package installation.
 
 
 **Example**
@@ -340,7 +340,7 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | PackageSpec specifies a package. |
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
@@ -574,7 +574,7 @@ status:
 
 ### ObjectSlice
 
-ObjectSlices are referenced by ObjectSets or ObjectDeployments and contain objects to
+ObjectSlice is referenced by ObjectSets or ObjectDeployments and contain objects to
 limit the size of ObjectSets and ObjectDeployments when big packages are installed.
 This is necessary to work around the etcd object size limit of ~1.5MiB and to reduce load on the kube-apiserver.
 
@@ -608,7 +608,7 @@ objects:
 
 ### ObjectTemplate
 
-ObjectTemplates contain a go template of a Kubernetes manifest. This manifest is then templated with the
+ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
 sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
 as the ObjectTemplate.
 
@@ -649,7 +649,7 @@ status:
 
 ### Package
 
-
+Package defines a namespaced package installationn.
 
 
 **Example**
@@ -673,7 +673,7 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagespec">PackageSpec</a> | Package specification. |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | PackageSpec specifies a package. |
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
@@ -781,7 +781,7 @@ Used in:
 
 ### ConditionMapping
 
-
+ConditionMapping maps one condition type to another.
 
 | Field | Description |
 | ----- | ----------- |
@@ -795,7 +795,7 @@ Used in:
 
 ### ControlledObjectReference
 
-References an object controlled by this ObjectSet/ObjectSetPhase.
+ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
@@ -846,7 +846,7 @@ Used in:
 
 ### ObjectSetObject
 
-An object that is part of the phase of an ObjectSet.
+ObjectSetObject is an object that is part of the phase of an ObjectSet.
 
 | Field | Description |
 | ----- | ----------- |
@@ -966,7 +966,7 @@ Used in:
 
 ### ObjectSetTemplatePhase
 
-ObjectSet reconcile phase.
+ObjectSetTemplatePhase configures the reconcile phase of ObjectSets.
 
 | Field | Description |
 | ----- | ----------- |
@@ -985,7 +985,7 @@ Used in:
 
 ### ObjectSetTemplateSpec
 
-ObjectSet specification.
+ObjectSetTemplateSpec defines an object set.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1000,7 +1000,7 @@ Used in:
 
 ### ObjectTemplateSource
 
-
+ObjectTemplateSource defines a source for a template.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1018,7 +1018,7 @@ Used in:
 
 ### ObjectTemplateSourceItem
 
-
+ObjectTemplateSourceItem defines a source item for an object template.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1062,7 +1062,7 @@ Used in:
 
 ### PackageProbeKindSpec
 
-Kind package probe parameters.
+PackageProbeKindSpec package probe parameters.
 selects objects based on Kind and API Group.
 
 | Field | Description |
@@ -1077,7 +1077,7 @@ Used in:
 
 ### PackageSpec
 
-Package specification.
+PackageSpec specifies a package.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1110,7 +1110,7 @@ Used in:
 
 ### PreviousRevisionReference
 
-References a previous revision of an ObjectSet or ClusterObjectSet.
+PreviousRevisionReference references a previous revision of an ObjectSet or ClusterObjectSet.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1126,13 +1126,13 @@ Used in:
 
 ### Probe
 
-Defines probe parameters. Only one can be filled.
+Probe defines probe parameters. Only one can be filled.
 
 | Field | Description |
 | ----- | ----------- |
-| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | Checks whether or not the object reports a condition with given type and status. |
-| `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> | Compares two fields specified by JSON Paths. |
-| `cel` <br><a href="#probecelspec">ProbeCELSpec</a> | Uses Common Expression Language (CEL) to probe an object.<br>CEL rules have to evaluate to a boolean to be valid.<br>See:<br>https://kubernetes.io/docs/reference/using-api/cel<br>https://github.com/google/cel-go |
+| `condition` <br><a href="#probeconditionspec">ProbeConditionSpec</a> | ProbeConditionSpec checks whether or not the object reports a condition with given type and status. |
+| `fieldsEqual` <br><a href="#probefieldsequalspec">ProbeFieldsEqualSpec</a> | ProbeFieldsEqualSpec compares two fields specified by JSON Paths. |
+| `cel` <br><a href="#probecelspec">ProbeCELSpec</a> | ProbeCELSpec uses Common Expression Language (CEL) to probe an object.<br>CEL rules have to evaluate to a boolean to be valid.<br>See:<br>https://kubernetes.io/docs/reference/using-api/cel<br>https://github.com/google/cel-go |
 
 
 Used in:
@@ -1141,7 +1141,7 @@ Used in:
 
 ### ProbeCELSpec
 
-Uses Common Expression Language (CEL) to probe an object.
+ProbeCELSpec uses Common Expression Language (CEL) to probe an object.
 CEL rules have to evaluate to a boolean to be valid.
 See:
 https://kubernetes.io/docs/reference/using-api/cel
@@ -1159,7 +1159,7 @@ Used in:
 
 ### ProbeConditionSpec
 
-Checks whether or not the object reports a condition with given type and status.
+ProbeConditionSpec checks whether or not the object reports a condition with given type and status.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1173,7 +1173,7 @@ Used in:
 
 ### ProbeFieldsEqualSpec
 
-Compares two fields specified by JSON Paths.
+ProbeFieldsEqualSpec compares two fields specified by JSON Paths.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1187,7 +1187,7 @@ Used in:
 
 ### ProbeSelector
 
-Selects a subset of objects to apply probes to.
+ProbeSelector selects a subset of objects to apply probes to.
 e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 
 | Field | Description |
@@ -1202,7 +1202,7 @@ Used in:
 
 ### RemotePhaseReference
 
-References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
+RemotePhaseReference remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1215,7 +1215,7 @@ Used in:
 * [ObjectSetStatus](#objectsetstatus)
 ## manifests.package-operator.run/v1alpha1
 
-The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
+Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
 containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
@@ -1224,7 +1224,7 @@ containing file-based manifests for the packaging infrastructure.
 
 ### PackageManifest
 
-
+PackageManifest defines the manifest of a package.
 
 
 **Example**
@@ -1286,7 +1286,7 @@ test:
 
 ### PackageManifestLock
 
-
+PackageManifestLock allows locking packages to specific versions.
 
 
 **Example**
@@ -1309,7 +1309,7 @@ spec:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> |  |
+| `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> | PackageManifestLockSpec defines a set of packages that are locked to a specific version. |
 
 
 
@@ -1333,7 +1333,7 @@ Used in:
 
 ### PackageEnvironmentKubernetes
 
-
+PackageEnvironmentKubernetes configures kubernetes environments.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1346,7 +1346,7 @@ Used in:
 
 ### PackageEnvironmentOpenShift
 
-
+PackageEnvironmentOpenShift configures openshift environments.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1359,7 +1359,7 @@ Used in:
 
 ### PackageEnvironmentProxy
 
-Environment proxy settings.
+PackageEnvironmentProxy configures proxy environments.
 On OpenShift, this config is taken from the cluster Proxy object.
 https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
 
@@ -1405,7 +1405,7 @@ Used in:
 
 ### PackageManifestLockSpec
 
-
+PackageManifestLockSpec defines a set of packages that are locked to a specific version.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1418,7 +1418,7 @@ Used in:
 
 ### PackageManifestPhase
 
-
+PackageManifestPhase defines a package phase.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1450,7 +1450,7 @@ Used in:
 
 ### PackageManifestSpecConfig
 
-
+PackageManifestSpecConfig configutes a package manifest.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1468,7 +1468,7 @@ PackageManifestTest configures test cases.
 | Field | Description |
 | ----- | ----------- |
 | `template` <br><a href="#packagemanifesttestcasetemplate">[]PackageManifestTestCaseTemplate</a> | Template testing configuration. |
-| `kubeconform` <br><a href="#packagemanifesttestkubeconform">PackageManifestTestKubeconform</a> |  |
+| `kubeconform` <br><a href="#packagemanifesttestkubeconform">PackageManifestTestKubeconform</a> | PackageManifestTestKubeconform configures kubeconform testing. |
 
 
 Used in:
@@ -1491,7 +1491,7 @@ Used in:
 
 ### PackageManifestTestKubeconform
 
-
+PackageManifestTestKubeconform configures kubeconform testing.
 
 | Field | Description |
 | ----- | ----------- |

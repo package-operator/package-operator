@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterPackage defines a cluster scoped package installation.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=clpkg
@@ -18,7 +19,7 @@ type ClusterPackage struct {
 	Status PackageStatus `json:"status,omitempty"`
 }
 
-// PackageList contains a list of Packages.
+// ClusterPackageList contains a list of Packages.
 // +kubebuilder:object:root=true
 type ClusterPackageList struct {
 	metav1.TypeMeta `json:",inline"`

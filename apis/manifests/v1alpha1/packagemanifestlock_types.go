@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// PackageManifestLock allows locking packages to specific versions.
 // +kubebuilder:object:root=true
 type PackageManifestLock struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -12,6 +13,7 @@ type PackageManifestLock struct {
 	Spec PackageManifestLockSpec `json:"spec,omitempty"`
 }
 
+// PackageManifestLockSpec defines a set of packages that are locked to a specific version.
 type PackageManifestLockSpec struct {
 	// List of resolved images
 	Images []PackageManifestLockImage `json:"images"`

@@ -15,6 +15,7 @@ type FieldsEqualProbe struct {
 
 var _ Prober = (*FieldsEqualProbe)(nil)
 
+// Probe executes the probe.
 func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	fieldAPath := strings.Split(strings.Trim(fe.FieldA, "."), ".")
 	fieldBPath := strings.Split(strings.Trim(fe.FieldB, "."), ".")

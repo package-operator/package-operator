@@ -10,6 +10,7 @@ import (
 	"k8s.io/apiserver/pkg/cel/library"
 )
 
+// CELProbe uses the common expression language for probing.
 type CELProbe struct {
 	Program cel.Program
 	Message string
@@ -17,10 +18,10 @@ type CELProbe struct {
 
 var _ Prober = (*CELProbe)(nil)
 
-var ErrCELInvalidEvaluationType = errors.New(
-	"cel expression must evaluate to a bool")
+// ErrCELInvalidEvaluationType is raised when a CEL expression does not evaluate to a boolean.
+var ErrCELInvalidEvaluationType = errors.New("cel expression must evaluate to a bool")
 
-// Creates a new CEL (Common Expression Language) Probe.
+// NewCELProbe creates a new CEL (Common Expression Language) Probe.
 // A CEL probe runs a CEL expression against the target object that needs to evaluate to a bool.
 func NewCELProbe(rule, message string) (
 	*CELProbe, error,
@@ -59,6 +60,7 @@ func NewCELProbe(rule, message string) (
 	}, nil
 }
 
+// Probe executes the probe.
 func (p *CELProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	val, _, err := p.Program.Eval(map[string]any{
 		"self": obj.Object,

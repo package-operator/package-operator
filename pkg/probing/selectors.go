@@ -16,6 +16,7 @@ type GroupKindSelector struct {
 
 var _ Prober = (*GroupKindSelector)(nil)
 
+// Probe executes the probe.
 func (kp *GroupKindSelector) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	if kp.GroupKind == gk {
@@ -37,6 +38,7 @@ type LabelSelector struct {
 
 var _ Prober = (*LabelSelector)(nil)
 
+// Probe executes the probe.
 func (ss *LabelSelector) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	if !ss.Selector.Matches(labels.Set(obj.GetLabels())) {
 		// We want to _skip_ objects, that don't match.

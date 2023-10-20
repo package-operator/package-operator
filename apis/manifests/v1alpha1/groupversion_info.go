@@ -1,4 +1,4 @@
-// The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
+// Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
 // containing file-based manifests for the packaging infrastructure.
 // +kubebuilder:object:generate=true
 // +groupName=manifests.package-operator.run

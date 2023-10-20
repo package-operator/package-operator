@@ -26,6 +26,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Package defines a namespaced package installationn.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -40,7 +41,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Package specification.
+            description: PackageSpec specifies a package.
             properties:
               component:
                 description: Desired component to deploy from multi-component packages.

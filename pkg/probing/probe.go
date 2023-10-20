@@ -17,6 +17,7 @@ type And []Prober
 
 var _ Prober = (And)(nil)
 
+// Probe executes the probe.
 func (p And) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	var messages []string
 	for _, probe := range p {

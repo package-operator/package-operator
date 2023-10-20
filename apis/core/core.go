@@ -1,3 +1,4 @@
+// Package core contains general API schema definitons.
 package core
 
 import (

@@ -1,3 +1,4 @@
+// Package manifests contains API schema definitons for packages.
 package manifests
 
 import (

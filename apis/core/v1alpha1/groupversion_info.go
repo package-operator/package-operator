@@ -1,4 +1,4 @@
-// The package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
+// Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the core Package Operator API group,
 // containing basic building blocks that other auxiliary APIs can build on top of.
 // +kubebuilder:object:generate=true
 // +groupName=package-operator.run

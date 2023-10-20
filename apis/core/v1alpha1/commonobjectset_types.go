@@ -8,25 +8,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Revision annotations holds a revision generation number to order ObjectSets.
+// ObjectSetRevisionAnnotation annotations holds a revision generation number to order ObjectSets.
 const ObjectSetRevisionAnnotation = "package-operator.run/revision"
 
-// Specifies the lifecycle state of the ObjectSet.
+// ObjectSetLifecycleState specifies the lifecycle state of the ObjectSet.
 type ObjectSetLifecycleState string
 
 const (
-	// "Active" is the default lifecycle state.
+	// ObjectSetLifecycleStateActive / "Active" is the default lifecycle state.
 	ObjectSetLifecycleStateActive ObjectSetLifecycleState = "Active"
-	// "Paused" disables reconciliation of the ObjectSet.
+	// ObjectSetLifecycleStatePaused / "Paused" disables reconciliation of the ObjectSet.
 	// Only Status updates will still propagated, but object changes will not be reconciled.
 	ObjectSetLifecycleStatePaused ObjectSetLifecycleState = "Paused"
-	// "Archived" disables reconciliation while also "scaling to zero",
+	// ObjectSetLifecycleStateArchived / "Archived" disables reconciliation while also "scaling to zero",
 	// which deletes all objects that are not excluded via the pausedFor property and
 	// removes itself from the owner list of all other objects previously under management.
 	ObjectSetLifecycleStateArchived ObjectSetLifecycleState = "Archived"
 )
 
-// ObjectSet specification.
+// ObjectSetTemplateSpec defines an object set.
 type ObjectSetTemplateSpec struct {
 	// Reconcile phase configuration for a ObjectSet.
 	// Phases will be reconciled in order and the contained objects checked
@@ -44,7 +44,7 @@ type ObjectSetTemplateSpec struct {
 	SuccessDelaySeconds int32 `json:"successDelaySeconds,omitempty"`
 }
 
-// ObjectSet reconcile phase.
+// ObjectSetTemplatePhase configures the reconcile phase of ObjectSets.
 type ObjectSetTemplatePhase struct {
 	// Name of the reconcile phase. Must be unique within a ObjectSet.
 	Name string `json:"name"`
@@ -61,7 +61,7 @@ type ObjectSetTemplatePhase struct {
 	Slices []string `json:"slices,omitempty"`
 }
 
-// An object that is part of the phase of an ObjectSet.
+// ObjectSetObject is an object that is part of the phase of an ObjectSet.
 type ObjectSetObject struct {
 	// +kubebuilder:validation:EmbeddedResource
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -95,6 +95,7 @@ const (
 	ObjectSetInTransition = "InTransition"
 )
 
+// ObjectSetStatusPhase defines the status phase of an object set.
 type ObjectSetStatusPhase string
 
 // Well-known ObjectSet Phases for printing a Status in kubectl,
@@ -120,6 +121,7 @@ type ObjectSetProbe struct {
 	Selector ProbeSelector `json:"selector"`
 }
 
+// ConditionMapping maps one condition type to another.
 type ConditionMapping struct {
 	// Source condition type.
 	SourceType string `json:"sourceType"`
@@ -128,7 +130,7 @@ type ConditionMapping struct {
 	DestinationType string `json:"destinationType"`
 }
 
-// Selects a subset of objects to apply probes to.
+// ProbeSelector selects a subset of objects to apply probes to.
 // e.g. ensures that probes defined for apps/Deployments are not checked against ConfigMaps.
 type ProbeSelector struct {
 	// Kind and API Group of the object to probe.
@@ -138,7 +140,7 @@ type ProbeSelector struct {
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
-// Kind package probe parameters.
+// PackageProbeKindSpec package probe parameters.
 // selects objects based on Kind and API Group.
 type PackageProbeKindSpec struct {
 	// Object Group to apply a probe to.
@@ -149,14 +151,14 @@ type PackageProbeKindSpec struct {
 	Kind string `json:"kind"`
 }
 
-// Defines probe parameters. Only one can be filled.
+// Probe defines probe parameters. Only one can be filled.
 type Probe struct {
 	Condition   *ProbeConditionSpec   `json:"condition,omitempty"`
 	FieldsEqual *ProbeFieldsEqualSpec `json:"fieldsEqual,omitempty"`
 	CEL         *ProbeCELSpec         `json:"cel,omitempty"`
 }
 
-// Checks whether or not the object reports a condition with given type and status.
+// ProbeConditionSpec checks whether or not the object reports a condition with given type and status.
 type ProbeConditionSpec struct {
 	// Condition type to probe for.
 	// +example=Available
@@ -166,7 +168,7 @@ type ProbeConditionSpec struct {
 	Status string `json:"status"`
 }
 
-// Compares two fields specified by JSON Paths.
+// ProbeFieldsEqualSpec compares two fields specified by JSON Paths.
 type ProbeFieldsEqualSpec struct {
 	// First field for comparison.
 	// +example=.spec.fieldA
@@ -176,7 +178,7 @@ type ProbeFieldsEqualSpec struct {
 	FieldB string `json:"fieldB"`
 }
 
-// Uses Common Expression Language (CEL) to probe an object.
+// ProbeCELSpec uses Common Expression Language (CEL) to probe an object.
 // CEL rules have to evaluate to a boolean to be valid.
 // See:
 // https://kubernetes.io/docs/reference/using-api/cel
@@ -190,20 +192,20 @@ type ProbeCELSpec struct {
 	Message string `json:"message"`
 }
 
-// References a previous revision of an ObjectSet or ClusterObjectSet.
+// PreviousRevisionReference references a previous revision of an ObjectSet or ClusterObjectSet.
 type PreviousRevisionReference struct {
 	// Name of a previous revision.
 	// +example=previous-revision
 	Name string `json:"name"`
 }
 
-// References remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
+// RemotePhaseReference remote phases aka ObjectSetPhase/ClusterObjectSetPhase objects to which a phase is delegated.
 type RemotePhaseReference struct {
 	Name string    `json:"name"`
 	UID  types.UID `json:"uid"`
 }
 
-// References an object controlled by this ObjectSet/ObjectSetPhase.
+// ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
 type ControlledObjectReference struct {
 	// Object Kind.
 	Kind string `json:"kind"`
