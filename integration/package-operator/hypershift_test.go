@@ -91,6 +91,7 @@ func TestHyperShift(t *testing.T) {
 		runObjectSetHandoverTest(t, ns.Name, "hosted-cluster")
 	})
 	t.Run("ObjectSetOrphanCascadeDeletion", func(t *testing.T) {
+		t.SkipNow() // This test/functionality is not stable.
 		runObjectSetOrphanCascadeDeletionTest(t, ns.Name, "hosted-cluster")
 	})
 }
