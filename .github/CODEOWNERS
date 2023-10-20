@@ -1,5 +1,5 @@
 # Everything that is not owned by somebody defined via patterns below this one.
-* @ajpantuso @apahim @erdii @eqrx @kostola @nanyte25 @pbabic-redhat @robshelly @thetechnick
+* @package-operator/core-maintainers
 
 # Go module files.
 go.mod @eqrx
