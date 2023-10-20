@@ -2,10 +2,10 @@ name: Testing
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-    - main
   pull_request:
+  merge_group:
+  push:
+    branches: [main]
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
