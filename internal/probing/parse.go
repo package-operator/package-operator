@@ -8,15 +8,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/pkg/probing"
 )
 
 // Parse takes a list of ObjectSetProbes (commonly defined within a ObjectSetPhaseSpec)
 // and compiles a single Prober to test objects with.
-func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Prober, error) {
-	probeList := make(list, len(packageProbes))
+func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (probing.Prober, error) {
+	probeList := make(probing.And, len(packageProbes))
 	for i, pkgProbe := range packageProbes {
 		var (
-			probe Prober
+			probe probing.Prober
 			err   error
 		)
 		probe, err = ParseProbes(ctx, pkgProbe.Probes)
@@ -34,9 +35,9 @@ func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (Pr
 
 // ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober,
 // only executing the Prober when the selector criteria match.
-func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe Prober) (Prober, error) {
+func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe probing.Prober) (probing.Prober, error) {
 	if selector.Kind != nil {
-		probe = &kindSelector{
+		probe = &probing.GroupKindSelector{
 			Prober: probe,
 			GroupKind: schema.GroupKind{
 				Group: selector.Kind.Group,
@@ -49,7 +50,7 @@ func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe
 		if err != nil {
 			return nil, err
 		}
-		probe = &selectorSelector{
+		probe = &probing.LabelSelector{
 			Prober:   probe,
 			Selector: s,
 		}
@@ -58,29 +59,29 @@ func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe
 }
 
 // ParseProbes takes a []corev1alpha1.Probe and compiles it into a Prober.
-func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) (Prober, error) {
-	var probeList list
+func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) (probing.Prober, error) {
+	var probeList probing.And
 	for _, probeSpec := range probeSpecs {
 		var (
-			probe Prober
+			probe probing.Prober
 			err   error
 		)
 
 		switch {
 		case probeSpec.FieldsEqual != nil:
-			probe = &fieldsEqualProbe{
+			probe = &probing.FieldsEqualProbe{
 				FieldA: probeSpec.FieldsEqual.FieldA,
 				FieldB: probeSpec.FieldsEqual.FieldB,
 			}
 
 		case probeSpec.Condition != nil:
-			probe = NewConditionProbe(
-				probeSpec.Condition.Type,
-				probeSpec.Condition.Status,
-			)
+			probe = &probing.ConditionProbe{
+				Type:   probeSpec.Condition.Type,
+				Status: probeSpec.Condition.Status,
+			}
 
 		case probeSpec.CEL != nil:
-			probe, err = newCELProbe(
+			probe, err = probing.NewCELProbe(
 				probeSpec.CEL.Rule,
 				probeSpec.CEL.Message,
 			)
@@ -96,5 +97,5 @@ func ParseProbes(_ context.Context, probeSpecs []corev1alpha1.Probe) (Prober, er
 	}
 
 	// Always check .status.observedCondition, if present.
-	return &statusObservedGenerationProbe{Prober: probeList}, nil
+	return &probing.ObservedGenerationProbe{Prober: probeList}, nil
 }
