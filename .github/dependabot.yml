@@ -20,6 +20,16 @@ updates:
   assignees: [ eqrx ]
   open-pull-requests-limit: 100
   labels: [ dependencies, ok-to-test]
+- package-ecosystem: gomod
+  directory: /pkg
+  schedule:
+    interval: daily
+  allow:
+  - dependency-type: all
+    dependency-name: "*"
+  assignees: [ eqrx ]
+  open-pull-requests-limit: 100
+  labels: [ dependencies, ok-to-test]
 - package-ecosystem: github-actions
   directory: /
   schedule:
