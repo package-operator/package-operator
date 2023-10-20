@@ -10,11 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages"
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packageloader"
 	"package-operator.run/internal/utils"
 )
 
@@ -78,8 +75,8 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		return nil, fmt.Errorf("loading package: %w", err)
 	}
 
-	lockImages := make([]v1alpha1.PackageManifestLockImage, len(pkg.PackageManifest.Spec.Images))
-	for i, img := range pkg.PackageManifest.Spec.Images {
+	lockImages := make([]manifests.PackageManifestLockImage, len(pkg.Manifest.Spec.Images))
+	for i, img := range pkg.Manifest.Spec.Images {
 		lockImg, err := u.lockImageFromManifestImage(cfg, img)
 		if err != nil {
 			return nil, fmt.Errorf("resolving lock image for %q: %w", img.Image, err)
@@ -88,24 +85,28 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		lockImages[i] = lockImg
 	}
 
-	manifestLock := &v1alpha1.PackageManifestLock{
+	manifestLock := &manifests.PackageManifestLock{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       packages.PackageManifestLockGroupKind.Kind,
-			APIVersion: v1alpha1.GroupVersion.String(),
+			APIVersion: manifests.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			CreationTimestamp: u.cfg.Clock.Now(),
 		},
-		Spec: v1alpha1.PackageManifestLockSpec{
+		Spec: manifests.PackageManifestLockSpec{
 			Images: lockImages,
 		},
 	}
 
-	if pkg.PackageManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.PackageManifestLock.Spec) {
+	if pkg.ManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
 		return nil, ErrLockDataUnchanged
 	}
+	v1alpha1ManifestLock, err := packages.ToV1Alpha1ManifestLock(manifestLock)
+	if err != nil {
+		return nil, err
+	}
 
-	manifestLockYaml, err := yaml.Marshal(manifestLock)
+	manifestLockYaml, err := yaml.Marshal(v1alpha1ManifestLock)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling manifest lock file: %w", err)
 	}
@@ -115,31 +116,31 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 
 var ErrLockDataUnchanged = errors.New("lock data unchanged")
 
-func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img v1alpha1.PackageManifestImage) (v1alpha1.PackageManifestLockImage, error) {
+func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img manifests.PackageManifestImage) (manifests.PackageManifestLockImage, error) {
 	overriddenImage, err := utils.ImageURLWithOverrideFromEnv(img.Image)
 	if err != nil {
-		return v1alpha1.PackageManifestLockImage{}, fmt.Errorf("resolving image URL: %w", err)
+		return manifests.PackageManifestLockImage{}, fmt.Errorf("resolving image URL: %w", err)
 	}
 
 	digest, err := u.cfg.Resolver.ResolveDigest(overriddenImage, WithInsecure(cfg.Insecure))
 	if err != nil {
-		return v1alpha1.PackageManifestLockImage{}, fmt.Errorf("resolving image digest: %w", err)
+		return manifests.PackageManifestLockImage{}, fmt.Errorf("resolving image digest: %w", err)
 	}
 
-	return v1alpha1.PackageManifestLockImage{
+	return manifests.PackageManifestLockImage{
 		Name:   img.Name,
 		Image:  img.Image,
 		Digest: digest,
 	}, nil
 }
 
-func lockSpecsAreEqual(spec v1alpha1.PackageManifestLockSpec, other v1alpha1.PackageManifestLockSpec) bool {
-	thisImages := map[string]v1alpha1.PackageManifestLockImage{}
+func lockSpecsAreEqual(spec manifests.PackageManifestLockSpec, other manifests.PackageManifestLockSpec) bool {
+	thisImages := map[string]manifests.PackageManifestLockImage{}
 	for _, image := range spec.Images {
 		thisImages[image.Name] = image
 	}
 
-	otherImages := map[string]v1alpha1.PackageManifestLockImage{}
+	otherImages := map[string]manifests.PackageManifestLockImage{}
 	for _, image := range other.Images {
 		otherImages[image.Name] = image
 	}
@@ -173,7 +174,7 @@ type GenerateLockDataOption interface {
 }
 
 type PackageLoader interface {
-	LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error)
+	LoadPackage(ctx context.Context, path string) (*packages.Package, error)
 }
 
 func NewDefaultPackageLoader(scheme *runtime.Scheme) *DefaultPackageLoader {
@@ -186,15 +187,15 @@ type DefaultPackageLoader struct {
 	scheme *runtime.Scheme
 }
 
-func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packagecontent.Package, error) {
-	var fileMap packagecontent.Files
+func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packages.Package, error) {
+	var rawPkg *packages.RawPackage
 
-	fileMap, err := packageimport.Folder(ctx, path)
+	rawPkg, err := packages.FromFolder(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := packageloader.New(l.scheme).FromFiles(ctx, fileMap)
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
 		return nil, err
 	}

@@ -3,16 +3,28 @@ package bootstrap
 import (
 	"context"
 
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageloader"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"package-operator.run/internal/packages"
 )
 
-type packageLoader interface {
-	FromFiles(
-		ctx context.Context, files packagecontent.Files,
-		opts ...packageloader.Option,
-	) (*packagecontent.Package, error)
+type packageObjectLoader interface {
+	FromPkg(
+		ctx context.Context, rawPkg *packages.RawPackage,
+	) ([]unstructured.Unstructured, error)
 }
 
 type bootstrapperPullImageFn func(
-	ctx context.Context, image string) (packagecontent.Files, error)
+	ctx context.Context, image string) (*packages.RawPackage, error)
+
+type packageObjectLoad struct{}
+
+func (pol *packageObjectLoad) FromPkg(
+	ctx context.Context, rawPkg *packages.RawPackage,
+) ([]unstructured.Unstructured, error) {
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
+	if err != nil {
+		return nil, err
+	}
+	return packages.RenderObjects(ctx, pkg, packages.PackageRenderContext{}, nil)
+}

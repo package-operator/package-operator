@@ -40,8 +40,13 @@ func (Generate) code() {
 	}
 
 	// code gen
-	codeCmd := exec.Command("controller-gen", "object", "paths=./...")
-	codeCmd.Dir = locations.APISubmodule()
+	apiCodeCmd := exec.Command("controller-gen", "object", "paths=./...")
+	apiCodeCmd.Dir = locations.APISubmodule()
+	if err := apiCodeCmd.Run(); err != nil {
+		panic(fmt.Errorf("generating deep copy methods: %w", err))
+	}
+
+	codeCmd := exec.Command("controller-gen", "object", "paths=./internal/...")
 	if err := codeCmd.Run(); err != nil {
 		panic(fmt.Errorf("generating deep copy methods: %w", err))
 	}

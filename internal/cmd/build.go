@@ -3,16 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageexport"
-	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/utils"
 )
 
@@ -73,24 +72,35 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	cfg.Option(opts...)
 
-	files, loaderOpts, err := getPackageFromPath(ctx, b.scheme, srcPath)
+	rawPkg, err := getPackageFromPath(ctx, srcPath)
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", srcPath, err)
 	}
 
 	b.cfg.Log.Info("creating image")
 
-	loader := packageloader.New(b.scheme, append(loaderOpts, packageloader.WithDefaults, packageloader.WithValidators(b))...)
-
-	_, err = loader.FromFiles(ctx, files)
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
+		return fmt.Errorf("loading package from files: %w", err)
+	}
+	if err := b.ValidatePackage(ctx, pkg); err != nil {
+		return fmt.Errorf("loading package from files: %w", err)
+	}
+
+	validators := append(
+		packages.PackageValidatorList{
+			packages.NewTemplateTestValidator(filepath.Join(srcPath, ".test-fixtures")),
+		},
+		packages.DefaultPackageValidators...,
+	)
+	if err := validators.ValidatePackage(ctx, pkg); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
 	if cfg.OutputPath != "" {
 		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
-		if err := packageexport.File(cfg.OutputPath, cfg.Tags, files); err != nil {
+		if err := packages.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
 			return fmt.Errorf("exporting package to file: %w", err)
 		}
 	}
@@ -102,7 +112,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 			craneOpts = append(craneOpts, crane.Insecure)
 		}
 
-		if err := packageexport.PushedImage(ctx, cfg.Tags, files, craneOpts...); err != nil {
+		if err := packages.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...); err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
 		}
 	}
@@ -110,20 +120,20 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	return nil
 }
 
-func (b *Build) ValidatePackage(_ context.Context, pkg *packagecontent.Package) error {
-	if pkg.PackageManifestLock == nil {
-		if len(pkg.PackageManifest.Spec.Images) > 0 {
+func (b *Build) ValidatePackage(_ context.Context, pkg *packages.Package) error {
+	if pkg.ManifestLock == nil {
+		if len(pkg.Manifest.Spec.Images) > 0 {
 			return err(`manifest.lock.yaml is missing (try running "kubectl package update")`)
 		}
 		return nil
 	}
 
-	pkgImages := map[string]v1alpha1.PackageManifestImage{}
-	for _, image := range pkg.PackageManifest.Spec.Images {
+	pkgImages := map[string]manifests.PackageManifestImage{}
+	for _, image := range pkg.Manifest.Spec.Images {
 		pkgImages[image.Name] = image
 	}
-	pkgLockImages := map[string]v1alpha1.PackageManifestLockImage{}
-	for _, image := range pkg.PackageManifestLock.Spec.Images {
+	pkgLockImages := map[string]manifests.PackageManifestLockImage{}
+	for _, image := range pkg.ManifestLock.Spec.Images {
 		pkgLockImages[image.Name] = image
 	}
 

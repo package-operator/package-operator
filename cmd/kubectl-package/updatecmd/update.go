@@ -52,7 +52,7 @@ func NewCmd(updater Updater) *cobra.Command {
 			return fmt.Errorf("generating lock data: %w", err)
 		}
 
-		lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFilename)
+		lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFilename+".yaml")
 		if err := os.WriteFile(lockFilePath, data, 0o644); err != nil {
 			return fmt.Errorf("writing lock file: %w", err)
 		}

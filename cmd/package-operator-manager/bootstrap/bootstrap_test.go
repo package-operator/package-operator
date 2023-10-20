@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/testutil"
 )
 
@@ -41,8 +41,8 @@ func TestBootstrapperBootstrap(t *testing.T) {
 			return nil
 		},
 	}
-	b.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
-		Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
+	b.SetEnvironment(&manifests.PackageEnvironment{
+		Proxy: &manifests.PackageEnvironmentProxy{
 			HTTPProxy:  "httpxxx",
 			HTTPSProxy: "httpsxxx",
 			NoProxy:    "noxxx",

@@ -1,0 +1,3 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifestLock
+spec: {}

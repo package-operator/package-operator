@@ -16,6 +16,7 @@ type Dependency mg.Namespace
 func (d Dependency) All() {
 	mg.Deps(
 		Dependency.ControllerGen,
+		Dependency.ConversionGen,
 		Dependency.GolangciLint,
 		Dependency.Kind,
 		Dependency.Docgen,
@@ -28,6 +29,11 @@ func (d Dependency) All() {
 func (d Dependency) ControllerGen() error {
 	url := "sigs.k8s.io/controller-tools/cmd/controller-gen"
 	return locations.Deps().GoInstall("controller-gen", url, controllerGenVersion)
+}
+
+func (d Dependency) ConversionGen() error {
+	url := "k8s.io/code-generator/cmd/conversion-gen"
+	return locations.Deps().GoInstall("conversion-gen", url, conversionGenVersion)
 }
 
 func (d Dependency) GolangciLint() error {

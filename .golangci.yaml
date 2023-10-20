@@ -145,6 +145,8 @@ linters-settings:
       alias: internalcmd
     - pkg: package-operator\.run\/internal\/probing
       alias: internalprobing
+    - pkg: package-operator\.run\/internal\/controllers\/packages
+      alias: controllerspackages
     - pkg: github\.com\/google\/go-containerregistry\/pkg\/v1
       alias: containerregistrypkgv1
     - pkg: k8s\.io\/utils\/clock\/testing

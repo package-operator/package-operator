@@ -12,12 +12,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
@@ -59,14 +59,15 @@ func newUnpackReconciler(
 }
 
 type imagePuller interface {
-	Pull(ctx context.Context, image string) (
-		packagecontent.Files, error)
+	Pull(ctx context.Context, image string) (*packages.RawPackage, error)
 }
 
 type packageDeployer interface {
-	Load(
-		ctx context.Context, pkg adapters.GenericPackageAccessor,
-		files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
+	Deploy(
+		ctx context.Context,
+		apiPkg adapters.GenericPackageAccessor,
+		rawPkg *packages.RawPackage,
+		env manifests.PackageEnvironment,
 	) error
 }
 
@@ -84,7 +85,7 @@ func (r *unpackReconciler) Reconcile(
 
 	pullStart := time.Now()
 	log := logr.FromContextOrDiscard(ctx)
-	files, err := r.imagePuller.Pull(ctx, pkg.GetImage())
+	rawPkg, err := r.imagePuller.Pull(ctx, pkg.GetImage())
 	if err != nil {
 		meta.SetStatusCondition(
 			pkg.GetConditions(), metav1.Condition{
@@ -104,7 +105,7 @@ func (r *unpackReconciler) Reconcile(
 		}, nil
 	}
 
-	if err := r.packageDeployer.Load(ctx, pkg, files, *r.GetEnvironment()); err != nil {
+	if err := r.packageDeployer.Deploy(ctx, pkg, rawPkg, *r.GetEnvironment()); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
 

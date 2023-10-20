@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
 
 func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
@@ -27,7 +27,7 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 
 		var err error
 		require.NotPanics(t, func() {
-			err = restartPKOWithEnvvarsIfNeeded(log, nil, nil, nil, &manifestsv1alpha1.PackageEnvironment{
+			err = restartPKOWithEnvvarsIfNeeded(log, nil, nil, nil, &manifests.PackageEnvironment{
 				Proxy: nil,
 			})
 		})
@@ -47,8 +47,8 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 			noProxyVar:    noProxy,
 		})
 
-		apiEnv := &manifestsv1alpha1.PackageEnvironment{
-			Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
+		apiEnv := &manifests.PackageEnvironment{
+			Proxy: &manifests.PackageEnvironmentProxy{
 				HTTPProxy:  httpProxy,
 				HTTPSProxy: httpsProxy,
 				NoProxy:    noProxy,
@@ -75,8 +75,8 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 			noProxyVar:    "http://no-proxy",
 		}
 
-		apiEnv := &manifestsv1alpha1.PackageEnvironment{
-			Proxy: &manifestsv1alpha1.PackageEnvironmentProxy{
+		apiEnv := &manifests.PackageEnvironment{
+			Proxy: &manifests.PackageEnvironmentProxy{
 				HTTPProxy:  expectedEnv[httpProxyVar],
 				HTTPSProxy: expectedEnv[httpsProxyVar],
 				NoProxy:    expectedEnv[noProxyVar],
@@ -143,11 +143,11 @@ func TestProxyVarsDifferentFrom(t *testing.T) {
 	}
 
 	tcases := []struct {
-		proxy    manifestsv1alpha1.PackageEnvironmentProxy
+		proxy    manifests.PackageEnvironmentProxy
 		expected bool
 	}{
 		{
-			proxy: manifestsv1alpha1.PackageEnvironmentProxy{
+			proxy: manifests.PackageEnvironmentProxy{
 				HTTPProxy:  "foo",
 				HTTPSProxy: "bar",
 				NoProxy:    "baz",
@@ -155,7 +155,7 @@ func TestProxyVarsDifferentFrom(t *testing.T) {
 			expected: false,
 		},
 		{
-			proxy: manifestsv1alpha1.PackageEnvironmentProxy{
+			proxy: manifests.PackageEnvironmentProxy{
 				HTTPProxy:  "http",
 				HTTPSProxy: "https",
 				NoProxy:    "no",

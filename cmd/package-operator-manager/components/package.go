@@ -6,9 +6,9 @@ import (
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"package-operator.run/internal/controllers/packages"
+	controllerspackages "package-operator.run/internal/controllers/packages"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages"
 )
 
 // Type alias for dependency injector to differentiate
@@ -22,8 +22,8 @@ type (
 	}
 )
 
-func ProvideRegistry(log logr.Logger, opts Options) *packageimport.Registry {
-	return packageimport.NewRegistry(
+func ProvideRegistry(log logr.Logger, opts Options) *packages.Registry {
+	return packages.NewRegistry(
 		prepareRegistryHostOverrides(log, opts.RegistryHostOverrides))
 }
 
@@ -47,12 +47,12 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 
 func ProvidePackageController(
 	mgr ctrl.Manager, log logr.Logger,
-	registry *packageimport.Registry,
+	registry *packages.Registry,
 	recorder *metrics.Recorder,
 	opts Options,
 ) PackageController {
 	return PackageController{
-		packages.NewPackageController(
+		controllerspackages.NewPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
@@ -63,12 +63,12 @@ func ProvidePackageController(
 
 func ProvideClusterPackageController(
 	mgr ctrl.Manager, log logr.Logger,
-	registry *packageimport.Registry,
+	registry *packages.Registry,
 	recorder *metrics.Recorder,
 	opts Options,
 ) ClusterPackageController {
 	return ClusterPackageController{
-		packages.NewClusterPackageController(
+		controllerspackages.NewClusterPackageController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
