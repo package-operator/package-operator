@@ -57,10 +57,23 @@ type PackageSpec struct {
 	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
+
+	// Optional reference to in-cluster secret that will be used to pull the package image from its registry.
+	ImagePullSecretRef *SecretReference `json:"imagePullSecretRef,omitempty"`
+
 	// Package configuration parameters.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Config *runtime.RawExtension `json:"config,omitempty"`
+
 	// Desired component to deploy from multi-component packages.
 	// +optional
 	Component string `json:"component,omitempty"`
+}
+
+// Secret reference.
+type SecretReference struct {
+	// Name of the target secret.
+	Name string `json:"name"`
+	// Namespace of the target secret. Package Operator will ignore this field for namespace-scoped packages.
+	Namespace string `json:"namespace,omitempty"`
 }

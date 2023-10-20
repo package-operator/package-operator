@@ -108,8 +108,13 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, ref string,
+	ctx context.Context, ref string, opts ...PullOption,
 ) (packagecontent.Files, error) {
-	args := m.Called(ctx, ref)
+	actualArgs := []any{ctx, ref}
+	for _, opt := range opts {
+		actualArgs = append(actualArgs, opt)
+	}
+
+	args := m.Called(actualArgs...)
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }

@@ -1602,6 +1602,20 @@ spec:
                   image will be unpacked by the package-loader to render the ObjectDeployment
                   for propagating the installation of the package.
                 type: string
+              imagePullSecretRef:
+                description: Optional reference to in-cluster secret that will be
+                  used to pull the package image from its registry.
+                properties:
+                  name:
+                    description: Name of the target secret.
+                    type: string
+                  namespace:
+                    description: Namespace of the target secret. Package Operator
+                      will ignore this field for namespace-scoped packages.
+                    type: string
+                required:
+                - name
+                type: object
             required:
             - image
             type: object
@@ -3289,6 +3303,20 @@ spec:
                   image will be unpacked by the package-loader to render the ObjectDeployment
                   for propagating the installation of the package.
                 type: string
+              imagePullSecretRef:
+                description: Optional reference to in-cluster secret that will be
+                  used to pull the package image from its registry.
+                properties:
+                  name:
+                    description: Name of the target secret.
+                    type: string
+                  namespace:
+                    description: Namespace of the target secret. Package Operator
+                      will ignore this field for namespace-scoped packages.
+                    type: string
+                required:
+                - name
+                type: object
             required:
             - image
             type: object

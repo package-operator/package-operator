@@ -18,7 +18,7 @@ type Registry struct {
 	inFlightLock sync.Mutex
 }
 
-type pullImageFn func(ctx context.Context, ref string) (packagecontent.Files, error)
+type pullImageFn func(ctx context.Context, ref string, opts ...PullOption) (packagecontent.Files, error)
 
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
@@ -28,13 +28,13 @@ func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	}
 }
 
-func (r *Registry) Pull(ctx context.Context, image string) (packagecontent.Files, error) {
+func (r *Registry) Pull(ctx context.Context, image string, opts ...PullOption) (packagecontent.Files, error) {
 	image, err := r.applyOverride(image)
 	if err != nil {
 		return nil, err
 	}
 
-	res := <-r.handleRequest(ctx, image)
+	res := <-r.handleRequest(ctx, image, opts...)
 
 	return res.Files, res.Err
 }
@@ -55,13 +55,13 @@ func (r *Registry) applyOverride(image string) (string, error) {
 // on the in flight pull requests, more specifically, a check if an image pull
 // is in flight after a pull attempt has started, but before the first receiver
 // is registered.
-func (r *Registry) handleRequest(ctx context.Context, image string) <-chan response {
+func (r *Registry) handleRequest(ctx context.Context, image string, opts ...PullOption) <-chan response {
 	r.inFlightLock.Lock()
 	defer r.inFlightLock.Unlock()
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			files, err := r.pullImage(ctx, image)
+			files, err := r.pullImage(ctx, image, opts...)
 
 			r.handleResponse(image, response{
 				Files: files,

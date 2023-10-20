@@ -23,6 +23,7 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
 	"package-operator.run/internal/packages/packageloader"
 	"package-operator.run/internal/testutil"
 )
@@ -435,7 +436,7 @@ func Test_initializer_crdsFromPackage(t *testing.T) {
 
 	b := &initializer{
 		loader: l,
-		pullImage: func(ctx context.Context, path string) (
+		pullImage: func(ctx context.Context, path string, opts ...packageimport.PullOption) (
 			packagecontent.Files, error,
 		) {
 			return nil, nil

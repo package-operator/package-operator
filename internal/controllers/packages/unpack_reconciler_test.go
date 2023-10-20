@@ -8,13 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/testutil"
 )
 
 func TestUnpackReconciler(t *testing.T) {
@@ -22,7 +27,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(nil, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -55,6 +60,89 @@ func TestUnpackReconciler(t *testing.T) {
 		meta.IsStatusConditionTrue(*pkg.GetConditions(),
 			corev1alpha1.PackageUnpacked))
 	assert.NotEmpty(t, pkg.GetSpecHash(nil))
+
+	ipm.AssertExpectations(t)
+	pd.AssertExpectations(t)
+}
+
+// TODO: pull secret unit tests could use a nicer setup to facilitate testing a couple of combinations:
+// - ClusterPackage/Package.
+// - Packages illegally declaring pull secrets from other namespaces.
+// - Existing vs non-existing secret objects.
+func TestUnpackReconciler_pullSecret(t *testing.T) {
+	t.Parallel()
+
+	ipm := &imagePullerMock{}
+	pd := &packageDeployerMock{}
+	c := testutil.NewClient()
+	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
+
+	const image = "test123:latest"
+
+	f := packagecontent.Files{}
+
+	c.On("Get", mock.Anything, mock.Anything, mock.IsType(&corev1.Secret{}), mock.Anything).
+		Run(func(args mock.Arguments) {
+			nsn := args.Get(1).(types.NamespacedName)
+			assert.Equal(t, "my-secret-object", nsn.Name)
+			assert.Equal(t, "default", nsn.Namespace)
+			*args.Get(2).(*corev1.Secret) = corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      nsn.Name,
+					Namespace: nsn.Namespace,
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte("not-a-valid-docker-config-json"),
+				},
+			}
+		}).
+		Return(nil)
+	ipm.
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			opt := args.Get(2).(packageimport.PullOption)
+			require.NotEmpty(t, opt)
+			require.IsType(t, packageimport.WithPullSecret{}, opt)
+			require.Equal(t, []byte("not-a-valid-docker-config-json"), opt.(packageimport.WithPullSecret).Data)
+		}).
+		Return(f, nil)
+	pd.
+		On("Load", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil)
+
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: corev1alpha1.PackageSpec{
+				Image: image,
+				ImagePullSecretRef: &corev1alpha1.SecretReference{
+					Name:      "my-secret-object",
+					Namespace: "trying-to-hack-another-namespace",
+				},
+			},
+		},
+	}
+	ctx := context.Background()
+	ur.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
+		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+			Version: "v11111",
+		},
+	})
+	res, err := ur.Reconcile(ctx, pkg)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero())
+
+	assert.True(t,
+		meta.IsStatusConditionTrue(*pkg.GetConditions(),
+			corev1alpha1.PackageUnpacked))
+	assert.NotEmpty(t, pkg.GetSpecHash(nil))
+
+	c.AssertExpectations(t)
+	ipm.AssertExpectations(t)
+	pd.AssertExpectations(t)
 }
 
 func TestUnpackReconciler_noop(t *testing.T) {
@@ -62,7 +150,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(nil, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -78,6 +166,9 @@ func TestUnpackReconciler_noop(t *testing.T) {
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
+
+	ipm.AssertExpectations(t)
+	pd.AssertExpectations(t)
 }
 
 var errTest = errors.New("test error")
@@ -87,7 +178,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(nil, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -119,9 +210,14 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, image string,
+	ctx context.Context, ref string, opts ...packageimport.PullOption,
 ) (packagecontent.Files, error) {
-	args := m.Called(ctx, image)
+	actualArgs := []any{ctx, ref}
+	for _, opt := range opts {
+		actualArgs = append(actualArgs, opt)
+	}
+
+	args := m.Called(actualArgs...)
 	return args.Get(0).(packagecontent.Files), args.Error(1)
 }
 
