@@ -2,7 +2,7 @@ package objecttemplate
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +36,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 
 	dynamicCache.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	uncachedClient.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -451,7 +451,7 @@ func newControllerAndMocks(t *testing.T) (
 	return r, c, uncachedC, dc
 }
 
-var errTest = goerrors.New("something")
+var errTest = errors.New("something")
 
 func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 	t.Parallel()

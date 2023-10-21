@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimetav1 "k8s.io/apimachinery/pkg/api/meta"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachinerymeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
-	cache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -28,13 +28,13 @@ type mapEntry struct {
 // usually fulfilled by meta.RESTMapper.
 type restMapper interface {
 	RESTMapping(gk schema.GroupKind, versions ...string) (
-		*apimetav1.RESTMapping, error)
+		*apimachinerymeta.RESTMapping, error)
 }
 
 func NewInformerMap(
 	config *rest.Config,
 	scheme *runtime.Scheme,
-	mapper apimetav1.RESTMapper,
+	mapper apimachinerymeta.RESTMapper,
 	resync time.Duration,
 	selectors SelectorsByGVK,
 	indexers FieldIndexersByGVK,
@@ -111,7 +111,7 @@ func (im *InformerMap) Get(
 	if !informer.HasSynced() {
 		// Wait for it to sync before returning the Informer so that folks don't read from a stale cache.
 		if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
-			return nil, nil, apierrors.NewTimeoutError(fmt.Sprintf("failed waiting for %T Informer to sync", obj), 0)
+			return nil, nil, apimachineryerrors.NewTimeoutError(fmt.Sprintf("failed waiting for %T Informer to sync", obj), 0)
 		}
 	}
 	return
@@ -231,7 +231,7 @@ func indexFuncForExtractor(extractor client.IndexerFunc) func(objRaw interface{}
 			//nolint:goerr113
 			return nil, fmt.Errorf("object of type %T is not an Object", objRaw)
 		}
-		meta, err := apimetav1.Accessor(obj)
+		meta, err := apimachinerymeta.Accessor(obj)
 		if err != nil {
 			return nil, err
 		}

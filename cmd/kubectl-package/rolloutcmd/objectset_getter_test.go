@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	internalcmd "package-operator.run/internal/cmd"
 )
 
@@ -55,7 +55,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
@@ -95,7 +95,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 					Status: corev1alpha1.ObjectSetStatus{
@@ -128,7 +128,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 				},
@@ -136,7 +136,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
@@ -170,7 +170,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 				},
@@ -179,7 +179,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "test",
+							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
 					Status: corev1alpha1.ObjectSetStatus{

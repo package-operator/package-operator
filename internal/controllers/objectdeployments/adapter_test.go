@@ -10,22 +10,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var testScheme *runtime.Scheme
 
 func init() {
-	testScheme = runtime.NewScheme()
 	requiredSchemes := runtime.SchemeBuilder{
-		clientgoscheme.AddToScheme,
-		pkoapis.AddToScheme,
+		scheme.AddToScheme,
+		apis.AddToScheme,
 	}
+	testScheme = runtime.NewScheme()
 	if err := requiredSchemes.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}

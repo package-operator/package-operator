@@ -4,15 +4,15 @@ package environment
 
 import (
 	"context"
-	stdErrors "errors"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachinerymeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -153,7 +153,7 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	}, clusterVersion)
 
 	switch {
-	case meta.IsNoMatchError(err) || errors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(stdErrors.Unwrap(err)):
+	case apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		// API not registered in cluster
 		return nil, false, nil
 	case err != nil:
@@ -181,7 +181,7 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	err = m.client.Get(ctx, client.ObjectKey{
 		Name: openShiftProxyName,
 	}, proxy)
-	if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
+	if apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) {
 		// API not registered in cluster or no proxy config.
 		return nil, false, nil
 	}

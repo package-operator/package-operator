@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,7 +55,7 @@ func (wh *GenericObjectSetPhaseWebhookHandler[T]) newObjectSetPhase() *T {
 
 func (wh *GenericObjectSetPhaseWebhookHandler[T]) decode(req admission.Request) (*T, error) {
 	obj := wh.newObjectSetPhase()
-	if req.Operation == v1.Operation(admissionv1beta1.Delete) {
+	if req.Operation == admissionv1.Operation(admissionv1beta1.Delete) {
 		return obj, nil
 	}
 	if err := wh.decoder.Decode(
@@ -74,7 +74,7 @@ func (wh *GenericObjectSetPhaseWebhookHandler[T]) Handle(
 	}
 
 	switch req.Operation {
-	case v1.Operation(admissionv1beta1.Update):
+	case admissionv1.Operation(admissionv1beta1.Update):
 		oldObj := wh.newObjectSetPhase()
 		if err := wh.decoder.DecodeRaw(
 			req.OldObject, any(oldObj).(runtime.Object)); err != nil {

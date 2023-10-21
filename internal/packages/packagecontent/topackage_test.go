@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	"package-operator.run/internal/packages"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"
@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-	if err := pkoapis.AddToScheme(testScheme); err != nil {
+	if err := apis.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }

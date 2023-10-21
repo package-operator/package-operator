@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 
 	. "github.com/onsi/gomega"
 )
@@ -39,7 +39,7 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 
 	ExpectWithOffset(1, os.MkdirAll(dir, 0o755)).To(Succeed())
 
-	man := manv1alpha1.PackageManifest{
+	man := manifestsv1alpha1.PackageManifest{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "manifests.package-operator.run/v1alpha1",
 			Kind:       "PackageManifest",
@@ -47,14 +47,14 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-package",
 		},
-		Spec: manv1alpha1.PackageManifestSpec{
-			Phases: []manv1alpha1.PackageManifestPhase{
+		Spec: manifestsv1alpha1.PackageManifestSpec{
+			Phases: []manifestsv1alpha1.PackageManifestPhase{
 				{
 					Name: "test",
 				},
 			},
-			Scopes: []manv1alpha1.PackageManifestScope{
-				manv1alpha1.PackageManifestScopeCluster,
+			Scopes: []manifestsv1alpha1.PackageManifestScope{
+				manifestsv1alpha1.PackageManifestScopeCluster,
 			},
 			AvailabilityProbes: []corev1alpha1.ObjectSetProbe{
 				{
@@ -96,8 +96,8 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 }
 
 type generatePackageConfig struct {
-	Images   []manv1alpha1.PackageManifestImage
-	LockData *manv1alpha1.PackageManifestLock
+	Images   []manifestsv1alpha1.PackageManifestImage
+	LockData *manifestsv1alpha1.PackageManifestLock
 }
 
 func (c *generatePackageConfig) Option(opts ...generatePackageOption) {
@@ -110,14 +110,14 @@ type generatePackageOption interface {
 	ConfigureGeneratePackage(*generatePackageConfig)
 }
 
-type withImages []manv1alpha1.PackageManifestImage
+type withImages []manifestsv1alpha1.PackageManifestImage
 
 func (w withImages) ConfigureGeneratePackage(c *generatePackageConfig) {
 	c.Images = append(c.Images, w...)
 }
 
 type withLockData struct {
-	LockData *manv1alpha1.PackageManifestLock
+	LockData *manifestsv1alpha1.PackageManifestLock
 }
 
 func (w withLockData) ConfigureGeneratePackage(c *generatePackageConfig) {

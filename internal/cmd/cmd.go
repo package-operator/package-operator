@@ -10,7 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
@@ -19,7 +19,7 @@ var ErrInvalidArgs = errors.New("arguments invalid")
 func NewScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 
-	if err := pkoapis.AddToScheme(scheme); err != nil {
+	if err := apis.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 	if err := manifestsv1alpha1.AddToScheme(scheme); err != nil {

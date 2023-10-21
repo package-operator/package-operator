@@ -3,7 +3,7 @@ package packageoperator
 import (
 	"bytes"
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -24,7 +24,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/mt-sre/devkube/dev"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,7 +136,7 @@ func deleteExistingPKO(ctx context.Context) error {
 	}
 
 	if err := Waiter.WaitToBeGone(ctx,
-		&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
 		func(obj client.Object) (done bool, err error) { return false, nil },
 		dev.WithTimeout(UpgradeTestWaitTimeout),
 	); err != nil {
@@ -148,7 +148,7 @@ func deleteExistingPKO(ctx context.Context) error {
 }
 
 func nukeObject(ctx context.Context, obj client.Object) error {
-	if err := Client.Delete(ctx, obj); errors.IsNotFound(err) {
+	if err := Client.Delete(ctx, obj); apimachineryerrors.IsNotFound(err) {
 		// Object already gone.
 		return nil
 	} else if err != nil {
@@ -162,7 +162,7 @@ func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) erro
 	if len(obj.GetFinalizers()) > 0 {
 		obj.SetFinalizers([]string{})
 		if err := Client.Patch(ctx, obj,
-			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !errors.IsNotFound(err) {
+			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !apimachineryerrors.IsNotFound(err) {
 			return fmt.Errorf("releasing finalizers on stuck object %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 		}
 	}
@@ -229,13 +229,13 @@ func createAndWaitForReadiness(
 	ctx context.Context, object client.Object,
 ) error {
 	if err := Client.Create(ctx, object); err != nil &&
-		!errors.IsAlreadyExists(err) {
+		!apimachineryerrors.IsAlreadyExists(err) {
 		return fmt.Errorf("creating object: %w", err)
 	}
 
 	if err := Waiter.WaitForReadiness(ctx, object); err != nil {
 		var unknownTypeErr *dev.UnknownTypeError
-		if goerrors.As(err, &unknownTypeErr) {
+		if errors.As(err, &unknownTypeErr) {
 			// A lot of types don't require waiting for readiness,
 			// so we should not error in cases when object types
 			// are not registered for the generic wait method.

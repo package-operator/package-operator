@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	"go.uber.org/dig"
@@ -196,7 +196,7 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 				"unable to create controller for HostedCluster: %w", err)
 		}
 
-	case meta.IsNoMatchError(err) || k8serrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+	case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
 		if err := pkoMgr.mgr.Add(
 			newHypershift(

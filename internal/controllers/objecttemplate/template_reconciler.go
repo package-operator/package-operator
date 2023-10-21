@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -87,7 +87,7 @@ func (r *templateReconciler) Reconcile(
 
 	existingObj := &unstructured.Unstructured{}
 	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
-	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); errors.IsNotFound(err) {
+	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
 		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 			return res, fmt.Errorf("handling creation: %w", err)
 		}
@@ -176,7 +176,7 @@ func (r *templateReconciler) getSourceObject(
 
 	objectKey := client.ObjectKeyFromObject(sourceObj)
 
-	if err := r.dynamicCache.Get(ctx, objectKey, sourceObj); errors.IsNotFound(err) {
+	if err := r.dynamicCache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
 		// the referenced object might not be labeled correctly for the cache to pick up,
 		// fallback to an uncached read to discover.
 		found, err := r.lookupUncached(ctx, src, objectKey, sourceObj)
@@ -200,7 +200,7 @@ func (r *templateReconciler) getSourceObject(
 }
 
 func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha1.ObjectTemplateSource, key client.ObjectKey, obj client.Object) (found bool, err error) {
-	if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+	if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
 		if src.Optional {
 			// just skip this one if it's optional.
 			return false, nil
@@ -341,7 +341,7 @@ func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate gen
 	for _, cond := range objectConds {
 		condMap, ok := cond.(map[string]interface{})
 		if !ok {
-			return errors.NewBadRequest("malformed condition")
+			return apimachineryerrors.NewBadRequest("malformed condition")
 		}
 
 		condObservedGeneration, _, err := unstructured.NestedInt64(condMap, "observedGeneration")
@@ -368,7 +368,7 @@ func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate gen
 
 func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate, err error) error {
 	var sourceError *SourceError
-	if goerrors.As(err, &sourceError) {
+	if errors.As(err, &sourceError) {
 		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,
@@ -379,7 +379,7 @@ func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate
 		return nil // don't retry error
 	}
 	var templateError *TemplateError
-	if goerrors.As(err, &templateError) {
+	if errors.As(err, &templateError) {
 		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,

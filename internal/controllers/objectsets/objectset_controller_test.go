@@ -2,7 +2,7 @@ package objectsets
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"testing"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -65,7 +65,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 	}{
 		{
 			name:                   "objectset does not exist",
-			getObjectSetPhaseError: errors.NewNotFound(schema.GroupResource{}, ""),
+			getObjectSetPhaseError: apimachineryerrors.NewNotFound(schema.GroupResource{}, ""),
 		},
 		{
 			name: "archived condition",
@@ -240,7 +240,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	t.Parallel()
 	controller, c, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 	objectSet := &GenericObjectSet{}
 	objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
 	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
@@ -270,7 +270,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 	}{
 		{
 			name:                  "areRemotePhasesPaused unknown",
-			getPhaseError:         errors.NewNotFound(schema.GroupResource{}, ""),
+			getPhaseError:         apimachineryerrors.NewNotFound(schema.GroupResource{}, ""),
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
 		{
@@ -413,7 +413,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 	}
 }
 
-var errTest = goerrors.New("explosion")
+var errTest = errors.New("explosion")
 
 func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	t.Parallel()

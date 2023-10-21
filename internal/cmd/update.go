@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
@@ -89,11 +89,11 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 	}
 
 	manifestLock := &v1alpha1.PackageManifestLock{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       packages.PackageManifestLockGroupKind.Kind,
 			APIVersion: v1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			CreationTimestamp: u.cfg.Clock.Now(),
 		},
 		Spec: v1alpha1.PackageManifestLockSpec{
@@ -203,11 +203,11 @@ func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*p
 }
 
 type Clock interface {
-	Now() v1.Time
+	Now() metav1.Time
 }
 
 type defaultClock struct{}
 
-func (c *defaultClock) Now() v1.Time {
-	return v1.Now()
+func (c *defaultClock) Now() metav1.Time {
+	return metav1.Now()
 }

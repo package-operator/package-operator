@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	v1apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -137,7 +137,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 					mock.IsType(client.ObjectKey{}),
 					mock.IsType(&corev1alpha1.ClusterObjectSet{}),
 					mock.Anything).
-					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				fix := &CRDPluralizationFix{}
 				require.NoError(t, fix.ensureClusterObjectSetsGoneWithOrphansLeft(ctx, Context{
@@ -328,9 +328,9 @@ func TestEnsureCRDGone(t *testing.T) {
 
 				c.On("Delete",
 					mock.Anything,
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
-					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				fix := &CRDPluralizationFix{}
 				require.NoError(t, fix.ensureCRDGone(ctx, Context{
@@ -351,15 +351,15 @@ func TestEnsureCRDGone(t *testing.T) {
 
 				c.On("Delete",
 					mock.Anything,
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
 					Return(nil)
 				c.On("Get",
 					mock.Anything,
 					mock.Anything,
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
-					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				fix := &CRDPluralizationFix{}
 				require.NoError(t, fix.ensureCRDGone(ctx, Context{
@@ -378,7 +378,7 @@ func TestEnsureCRDGone(t *testing.T) {
 
 				c.On("Delete",
 					mock.Anything,
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
 					Return(errTest)
 
@@ -401,14 +401,14 @@ func TestEnsureCRDGone(t *testing.T) {
 
 				c.On("Delete",
 					mock.Anything,
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
 					Return(nil)
 
 				c.On("Get",
 					mock.Anything,
 					mock.IsType(client.ObjectKey{}),
-					mock.IsType(&v1apiextensions.CustomResourceDefinition{}),
+					mock.IsType(&apiextensionsv1.CustomResourceDefinition{}),
 					mock.Anything).
 					Return(errTest)
 

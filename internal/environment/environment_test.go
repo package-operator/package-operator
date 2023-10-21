@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
@@ -190,7 +190,7 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 		},
 		{
 			name: "not found",
-			err:  k8serrors.NewNotFound(schema.GroupResource{}, ""),
+			err:  apimachineryerrors.NewNotFound(schema.GroupResource{}, ""),
 		},
 	}
 
