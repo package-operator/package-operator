@@ -910,6 +910,6 @@ func setObjectRevision(obj client.Object, revision int64) {
 	if a == nil {
 		a = map[string]string{}
 	}
-	a[corev1alpha1.ObjectSetRevisionAnnotation] = fmt.Sprintf("%d", revision)
+	a[corev1alpha1.ObjectSetRevisionAnnotation] = strconv.FormatInt(revision, 10)
 	obj.SetAnnotations(a)
 }

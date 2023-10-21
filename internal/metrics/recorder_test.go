@@ -112,21 +112,27 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 			recorder := NewRecorder()
 			recorder.RecordPackageMetrics(test.pkg)
 
-			assert.Equal(t,
+			assert.InDelta(t,
 				test.expectedAvailability,
 				testutil.ToFloat64(recorder.packageAvailability.WithLabelValues(
 					test.pkg.GetName(), test.pkg.GetNamespace(),
-				)))
-			assert.Equal(t,
+				)),
+				0.01,
+			)
+			assert.InDelta(t,
 				float64(creationTimestamp.Unix()),
 				testutil.ToFloat64(recorder.packageCreated.WithLabelValues(
 					test.pkg.GetName(), test.pkg.GetNamespace(),
-				)))
-			assert.Equal(t,
+				)),
+				0.01,
+			)
+			assert.InDelta(t,
 				float64(32),
 				testutil.ToFloat64(recorder.packageRevision.WithLabelValues(
 					test.pkg.GetName(), test.pkg.GetNamespace(),
-				)))
+				)),
+				0.01,
+			)
 		})
 	}
 }
@@ -161,11 +167,13 @@ func TestRecorder_RecordPackageLoadMetric(t *testing.T) {
 
 	recorder := NewRecorder()
 	recorder.RecordPackageLoadMetric(pkg, 10*time.Second)
-	assert.Equal(t,
+	assert.InDelta(t,
 		float64(10),
 		testutil.ToFloat64(recorder.packageLoadDuration.WithLabelValues(
 			pkg.GetName(), pkg.GetNamespace(),
-		)))
+		)),
+		0.01,
+	)
 }
 
 func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
@@ -209,16 +217,20 @@ func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
 			recorder.RecordObjectSetMetrics(osMock)
 
 			// is always emitted.
-			assert.Equal(t,
+			assert.InDelta(t,
 				float64(creationTimestamp.Unix()),
-				testutil.ToFloat64(recorder.objectSetCreated))
+				testutil.ToFloat64(recorder.objectSetCreated),
+				0.01,
+			)
 
 			if len(test.conditions) == 0 {
 				assert.Equal(t, 0, testutil.CollectAndCount(recorder.objectSetSucceeded))
 			} else {
-				assert.Equal(t,
+				assert.InDelta(t,
 					float64(successTimestamp.Unix()),
-					testutil.ToFloat64(recorder.objectSetSucceeded))
+					testutil.ToFloat64(recorder.objectSetSucceeded),
+					0.01,
+				)
 			}
 		})
 	}

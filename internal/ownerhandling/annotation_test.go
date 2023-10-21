@@ -59,7 +59,7 @@ func TestOwnerStrategyAnnotation_SetOwnerReference(t *testing.T) {
 	}
 	obj := testutil.NewSecret()
 
-	assert.NoError(t, s.SetOwnerReference(cm1, obj))
+	require.NoError(t, s.SetOwnerReference(cm1, obj))
 
 	ownerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, ownerRefs, 1) {
@@ -92,14 +92,14 @@ func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
 	obj := testutil.NewSecret()
 
 	err := s.SetControllerReference(cm1, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ownerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, ownerRefs, 1) {
 		assert.Equal(t, cm1.Name, ownerRefs[0].Name)
 		assert.Equal(t, cm1.Namespace, ownerRefs[0].Namespace)
 		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
-		assert.Equal(t, true, *ownerRefs[0].Controller)
+		assert.True(t, *ownerRefs[0].Controller)
 	}
 
 	cm2 := &corev1.ConfigMap{
@@ -110,12 +110,12 @@ func TestOwnerStrategyAnnotation_SetControllerReference(t *testing.T) {
 		},
 	}
 	err = s.SetControllerReference(cm2, obj)
-	assert.Error(t, err, controllerutil.AlreadyOwnedError{})
+	require.Error(t, err, controllerutil.AlreadyOwnedError{})
 
 	s.ReleaseController(obj)
 
 	err = s.SetControllerReference(cm2, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, s.IsOwner(cm1, obj))
 	assert.True(t, s.IsOwner(cm2, obj))
 }
@@ -127,7 +127,7 @@ func TestOwnerStrategyAnnotation_ReleaseController(t *testing.T) {
 	obj := testutil.NewSecret()
 
 	err := s.SetControllerReference(owner, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ownerRefs := s.getOwnerReferences(obj)
 	if assert.Len(t, ownerRefs, 1) {
@@ -337,16 +337,16 @@ func TestAnnotationEnqueueOwnerHandler_GetOwnerReconcileRequest(t *testing.T) {
 			require.NoError(t, err)
 			r := test.enqueue.getOwnerReconcileRequest(obj)
 			if test.requestExpected {
-				assert.Equal(t, r, []reconcile.Request{
+				assert.Equal(t, []reconcile.Request{
 					{
 						NamespacedName: client.ObjectKey{
 							Name:      ownerRef.Name,
 							Namespace: ownerRef.Namespace,
 						},
 					},
-				})
+				}, r)
 			} else {
-				assert.Len(t, r, 0)
+				assert.Empty(t, r)
 			}
 		})
 	}
@@ -362,7 +362,7 @@ func TestAnnotationEnqueueOwnerHandler_ParseOwnerTypeGroupKind(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, appsv1.AddToScheme(scheme))
 	err := h.parseOwnerTypeGroupKind(scheme)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expectedGK := schema.GroupKind{
 		Group: "apps",
 		Kind:  "Deployment",

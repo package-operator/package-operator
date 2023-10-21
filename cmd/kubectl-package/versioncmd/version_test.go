@@ -18,7 +18,7 @@ func TestCobraVersion(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{})
 
-	require.Nil(t, cmd.Execute())
-	require.Len(t, stderr.String(), 0)
+	require.NoError(t, cmd.Execute())
+	require.Empty(t, stderr.String())
 	require.Contains(t, stdout.String(), runtime.Version())
 }

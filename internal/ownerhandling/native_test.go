@@ -54,7 +54,7 @@ func TestOwnerStrategyNative_SetOwnerReference(t *testing.T) {
 		},
 	}
 
-	assert.NoError(t, s.SetOwnerReference(cm1, obj))
+	require.NoError(t, s.SetOwnerReference(cm1, obj))
 
 	ownerRefs := obj.GetOwnerReferences()
 	if assert.Len(t, ownerRefs, 1) {
@@ -71,7 +71,7 @@ func TestOwnerStrategyNative_SetOwnerReference(t *testing.T) {
 		},
 	}
 
-	assert.NoError(t, s.SetControllerReference(cm2, obj))
+	require.NoError(t, s.SetControllerReference(cm2, obj))
 }
 
 func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
@@ -87,13 +87,13 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 	}
 
 	err := s.SetControllerReference(cm1, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ownerRefs := obj.GetOwnerReferences()
 	if assert.Len(t, ownerRefs, 1) {
 		assert.Equal(t, cm1.Name, ownerRefs[0].Name)
 		assert.Equal(t, "ConfigMap", ownerRefs[0].Kind)
-		assert.Equal(t, true, *ownerRefs[0].Controller)
+		assert.True(t, *ownerRefs[0].Controller)
 	}
 
 	cm2 := &corev1.ConfigMap{
@@ -104,12 +104,12 @@ func TestOwnerStrategyNative_SetControllerReference(t *testing.T) {
 		},
 	}
 	err = s.SetControllerReference(cm2, obj)
-	assert.Error(t, err, controllerutil.AlreadyOwnedError{})
+	require.Error(t, err, controllerutil.AlreadyOwnedError{})
 
 	s.ReleaseController(obj)
 
 	err = s.SetControllerReference(cm2, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, s.IsOwner(cm1, obj))
 	assert.True(t, s.IsOwner(cm2, obj))
 }
@@ -173,7 +173,7 @@ func TestOwnerStrategyNative_ReleaseController(t *testing.T) {
 	owner.Namespace = obj.Namespace
 
 	err := s.SetControllerReference(owner, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ownerRefs := obj.GetOwnerReferences()
 	if assert.Len(t, ownerRefs, 1) {

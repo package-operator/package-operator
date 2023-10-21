@@ -135,7 +135,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 				// Bootstrap is needed to get PKO back up running
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.True(t, needsBootstrap)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				c.AssertExpectations(t)
 			},
 		},
@@ -175,7 +175,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.False(t, needsBootstrap)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				c.AssertExpectations(t)
 			},
 		},
@@ -255,7 +255,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.True(t, needsBootstrap)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				c.AssertExpectations(t)
 			},
 		},

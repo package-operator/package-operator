@@ -24,7 +24,7 @@ func TestCheckAll(t *testing.T) {
 			&unstructured.Unstructured{},
 		})
 	require.NoError(t, err)
-	assert.Len(t, violations, 0)
+	assert.Empty(t, violations)
 }
 
 func TestCheckAllInPhase(t *testing.T) {
@@ -40,7 +40,7 @@ func TestCheckAllInPhase(t *testing.T) {
 			},
 		}, []unstructured.Unstructured{{}})
 	require.NoError(t, err)
-	assert.Len(t, violations, 0)
+	assert.Empty(t, violations)
 }
 
 func Test_addPositionToViolations(t *testing.T) {
@@ -95,7 +95,7 @@ func TestList(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := list.Check(ctx, owner, obj)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, called, "must have been called")
 }
 
@@ -121,7 +121,7 @@ func TestPreflightListOk(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := list.Check(ctx, phases)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, called1, "first checker must have been called")
 	assert.True(t, called2, "second checker must have been called")
 }
@@ -153,7 +153,7 @@ func TestPreflightListWithError(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := list.Check(ctx, phases)
-	assert.ErrorIs(t, err, errChecker)
+	require.ErrorIs(t, err, errChecker)
 	assert.True(t, called1, "first checker must have been called")
 	assert.True(t, called2, "second checker must have been called")
 	assert.False(t, called3, "third checker must not have been called")

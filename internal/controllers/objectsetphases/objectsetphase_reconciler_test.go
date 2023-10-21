@@ -87,7 +87,7 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 
 			res, err := r.Reconcile(context.Background(), objectSetPhase)
 			assert.Empty(t, res)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			conds := *objectSetPhase.GetConditions()
 			assert.Len(t, conds, 1)
@@ -142,6 +142,6 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
 	r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
 	_, err := r.Teardown(context.Background(), objectSetPhase)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
 }

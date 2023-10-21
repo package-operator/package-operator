@@ -426,7 +426,7 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 
 			res, err := r.Reconcile(context.Background(), objectTemplate)
 			assert.Empty(t, res)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -534,9 +534,9 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 
 			outErr := setObjectTemplateConditionBasedOnError(test.objectTemplate, test.err)
 			if test.expectedErr == nil {
-				assert.NoError(t, outErr)
+				require.NoError(t, outErr)
 			} else {
-				assert.ErrorIs(t, outErr, test.expectedErr)
+				require.ErrorIs(t, outErr, test.expectedErr)
 			}
 
 			conds := *test.objectTemplate.GetConditions()

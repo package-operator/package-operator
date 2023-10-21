@@ -5,23 +5,23 @@ package kubectlpackage
 import (
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 )
 
-var _ = DescribeTable("update subcommand",
+var _ = ginkgo.DescribeTable("update subcommand",
 	testSubCommand("update"),
-	Entry("given no path",
+	ginkgo.Entry("given no path",
 		subCommandTestCase{
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given an invalid path",
+	ginkgo.Entry("given an invalid path",
 		subCommandTestCase{
 			Args:             []string{"dne"},
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given a valid package",
+	ginkgo.Entry("given a valid package",
 		subCommandTestCase{
 			Args: []string{
 				"--insecure",
@@ -30,7 +30,7 @@ var _ = DescribeTable("update subcommand",
 			ExpectedExitCode: 0,
 		},
 	),
-	Entry("given a valid package with a valid lock file",
+	ginkgo.Entry("given a valid package with a valid lock file",
 		subCommandTestCase{
 			Args: []string{
 				"--insecure",
@@ -42,7 +42,7 @@ var _ = DescribeTable("update subcommand",
 			},
 		},
 	),
-	Entry("given a valid package with lock file containing unresolvable images",
+	ginkgo.Entry("given a valid package with lock file containing unresolvable images",
 		subCommandTestCase{
 			Args: []string{
 				"--insecure",

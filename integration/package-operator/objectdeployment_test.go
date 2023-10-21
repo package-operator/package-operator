@@ -5,6 +5,7 @@ package packageoperator
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -145,7 +146,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 				),
 			)
 			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, cond.Status == expectedStatus)
+			require.Equal(t, expectedStatus, cond.Status)
 		}
 
 		// ObjectSet for the current deployment revision should be present
@@ -170,7 +171,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		)
 		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
+		require.Equal(t, testCase.expectedRevisionAvailability, availableCond.Status)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -197,13 +198,13 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		require.Equal(t, len(currObjectSetList.Items), testCase.expectedObjectSetCount)
+		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSet := currObjectSet
 			currObjectSetRevision := currObjectSet.Status.Revision
-			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
+			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				require.NoError(t,
 					Waiter.WaitForCondition(ctx,
 						&currObjectSet,
@@ -213,9 +214,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 				)
 				archivedCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
 				require.NotNil(t, archivedCond, "Archived condition is expected to be reported")
-				require.True(t, archivedCond.Status == metav1.ConditionTrue)
+				require.Equal(t, metav1.ConditionTrue, archivedCond.Status)
 			} else {
-				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
+				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
 		}
 
@@ -549,7 +550,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				),
 			)
 			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, cond.Status == expectedStatus)
+			require.Equal(t, expectedStatus, cond.Status)
 		}
 
 		// ObjectSet for the current deployment revision should be present
@@ -574,7 +575,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		)
 		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
+		require.Equal(t, testCase.expectedRevisionAvailability, availableCond.Status)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -600,13 +601,13 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		require.Equal(t, len(currObjectSetList.Items), testCase.expectedObjectSetCount)
+		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, item := range currObjectSetList.Items {
 			currObjectSet := item
 			currObjectSetRevision := currObjectSet.Status.Revision
-			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
+			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				require.NoError(t,
 					Waiter.WaitForCondition(ctx,
 						&currObjectSet,
@@ -616,16 +617,16 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				)
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
-				require.True(t, availableCond.Status == metav1.ConditionTrue)
+				require.Equal(t, metav1.ConditionTrue, availableCond.Status)
 			} else {
-				require.True(t, currObjectSet.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateActive)
+				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
 
 			// Assert that expected revision is available
-			if fmt.Sprint(currObjectSetRevision) == testCase.expectedAvailableRevision {
+			if strconv.FormatInt(currObjectSetRevision, 10) == testCase.expectedAvailableRevision {
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
-				require.True(t, availableCond.Status == metav1.ConditionTrue)
+				require.Equal(t, metav1.ConditionTrue, availableCond.Status)
 			}
 		}
 	}

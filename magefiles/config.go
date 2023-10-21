@@ -37,7 +37,7 @@ const (
 
 	controllerGenVersion = "0.13.0"
 	conversionGenVersion = "0.28.3"
-	golangciLintVersion  = "1.54.2"
+	golangciLintVersion  = "1.55.0"
 	craneVersion         = "0.16.1"
 	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.2"

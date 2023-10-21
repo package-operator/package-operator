@@ -6,37 +6,37 @@ import (
 	"path"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
-var _ = DescribeTable("build subcommand",
+var _ = ginkgo.DescribeTable("build subcommand",
 	testSubCommand("build"),
-	Entry("given no path",
+	ginkgo.Entry("given no path",
 		subCommandTestCase{
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given an invalid path",
+	ginkgo.Entry("given an invalid path",
 		subCommandTestCase{
 			Args:             []string{"dne"},
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given the path of a valid package",
+	ginkgo.Entry("given the path of a valid package",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("valid_without_config")},
 			ExpectedExitCode: 0,
 		},
 	),
-	Entry("given the path of a package with an invalid manifest",
+	ginkgo.Entry("given the path of a package with an invalid manifest",
 		subCommandTestCase{
 			Args:                []string{sourcePathFixture("invalid_bad_manifest")},
 			ExpectedExitCode:    1,
 			ExpectedErrorOutput: []string{"spec.scopes: Required value"},
 		},
 	),
-	Entry("given the path of a package with images, but no lock file",
+	ginkgo.Entry("given the path of a package with images, but no lock file",
 		subCommandTestCase{
 			Args:                []string{sourcePathFixture("invalid_missing_lock_file")},
 			ExpectedExitCode:    1,
@@ -59,14 +59,14 @@ var _ = DescribeTable("build subcommand",
 	// 		ExpectedErrorOutput: []string{""},
 	// 	},
 	// ),
-	Entry("given the path of a package with images, but no lock file",
+	ginkgo.Entry("given the path of a package with images, but no lock file",
 		subCommandTestCase{
 			Args:                []string{sourcePathFixture("invalid_missing_lock_file")},
 			ExpectedExitCode:    1,
 			ExpectedErrorOutput: []string{"manifest.lock.yaml is missing"},
 		},
 	),
-	Entry("given '--output' without tags",
+	ginkgo.Entry("given '--output' without tags",
 		subCommandTestCase{
 			Args: []string{
 				"--output", filepath.Join("dne", "dne"),
@@ -76,7 +76,7 @@ var _ = DescribeTable("build subcommand",
 			ExpectedErrorOutput: []string{"output or push is requested but no tags are set"},
 		},
 	),
-	Entry("given '--output' with an invalid path",
+	ginkgo.Entry("given '--output' with an invalid path",
 		subCommandTestCase{
 			Args: []string{
 				"--output", filepath.Join("dne", "dne"),
@@ -87,7 +87,7 @@ var _ = DescribeTable("build subcommand",
 			ExpectedErrorOutput: []string{"no such file or directory"},
 		},
 	),
-	Entry("given '--output' with an invalid tag",
+	ginkgo.Entry("given '--output' with an invalid tag",
 		subCommandTestCase{
 			Args: []string{
 				"--output", filepath.Join("dne", "dne"),
@@ -98,7 +98,7 @@ var _ = DescribeTable("build subcommand",
 			ExpectedErrorOutput: []string{"invalid tag specified as parameter"},
 		},
 	),
-	Entry("given '--push' with no tags",
+	ginkgo.Entry("given '--push' with no tags",
 		subCommandTestCase{
 			Args: []string{
 				"--push",
@@ -108,7 +108,7 @@ var _ = DescribeTable("build subcommand",
 			ExpectedErrorOutput: []string{"output or push is requested but no tags are set"},
 		},
 	),
-	Entry("given '--output' with valid path",
+	ginkgo.Entry("given '--output' with valid path",
 		subCommandTestCase{
 			Args: []string{
 				sourcePathFixture("valid_without_config"),
@@ -117,11 +117,11 @@ var _ = DescribeTable("build subcommand",
 			},
 			ExpectedExitCode: 0,
 			AdditionalValidations: func() {
-				Expect(filepath.Join(outputPath, "valid_build.tar")).To(BeAnExistingFile())
+				gomega.Expect(filepath.Join(outputPath, "valid_build.tar")).To(gomega.BeAnExistingFile())
 			},
 		},
 	),
-	Entry("given '--push' with valid tag",
+	ginkgo.Entry("given '--push' with valid tag",
 		subCommandTestCase{
 			Args: []string{
 				"--push",
@@ -131,7 +131,7 @@ var _ = DescribeTable("build subcommand",
 			},
 			ExpectedExitCode: 0,
 			AdditionalValidations: func() {
-				Expect(path.Join(_registryDomain, "valid-package")).To(ExistOnRegistry())
+				gomega.Expect(path.Join(_registryDomain, "valid-package")).To(ExistOnRegistry())
 			},
 		},
 	),

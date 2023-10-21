@@ -22,7 +22,7 @@ func TestValidateFolder(t *testing.T) {
 	cmd.SetErr(stderr)
 	cmd.SetArgs([]string{"testdata"})
 
-	require.Nil(t, cmd.Execute())
-	require.Len(t, stdout.String(), 0)
-	require.Len(t, stderr.String(), 0)
+	require.NoError(t, cmd.Execute())
+	require.Empty(t, stdout.String())
+	require.Empty(t, stderr.String())
 }

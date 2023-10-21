@@ -31,7 +31,7 @@ func TestTree_Success(t *testing.T) {
 		cmd.SetArgs([]string{"--config-testcase", "namespace-scope", "testdata"})
 
 		require.NoError(t, cmd.Execute())
-		require.Len(t, stderr.String(), 0)
+		require.Empty(t, stderr.String())
 
 		const expectedOutput = `test-stub
 Package namespace/name
@@ -59,7 +59,7 @@ Package namespace/name
 		cmd.SetArgs([]string{"--config-testcase", "namespace-scope", "--cluster", "testdata"})
 
 		require.NoError(t, cmd.Execute())
-		require.Len(t, stderr.String(), 0)
+		require.Empty(t, stderr.String())
 
 		const expectedOutput = `test-stub
 ClusterPackage /name
@@ -260,7 +260,7 @@ func TestTree_FileConfig(t *testing.T) {
 		cmd.SetArgs([]string{"--config-path", "testdata/.config.yaml", "testdata"})
 
 		require.NoError(t, cmd.Execute())
-		require.Len(t, stderr.String(), 0)
+		require.Empty(t, stderr.String())
 
 		const expectedOutput = `test-stub
 Package namespace/name
@@ -288,7 +288,7 @@ Package namespace/name
 		cmd.SetArgs([]string{"--config-path", "testdata/.config.yaml", "--cluster", "testdata"})
 
 		require.NoError(t, cmd.Execute())
-		require.Len(t, stderr.String(), 0)
+		require.Empty(t, stderr.String())
 
 		const expectedOutput = `test-stub
 ClusterPackage /name

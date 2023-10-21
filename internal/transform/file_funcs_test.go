@@ -26,7 +26,7 @@ func Test_getFile(t *testing.T) {
 	assert.Equal(t, `t: v`, found)
 
 	_, err = getFile(testFiles)("xxx.yaml")
-	assert.ErrorIs(t, err, ErrFileNotFound)
+	require.ErrorIs(t, err, ErrFileNotFound)
 }
 
 func Test_getFileGlob(t *testing.T) {

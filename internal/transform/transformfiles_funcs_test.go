@@ -72,7 +72,7 @@ func TestSprigAllowedFuncs(t *testing.T) {
 	tmpl := template.New("xxx")
 	actual := SprigFuncs(tmpl)
 
-	require.Equal(t, len(allowedFuncNames)+4, len(actual))
+	require.Len(t, actual, len(allowedFuncNames)+4)
 
 	for key := range allowedFuncNames {
 		require.Contains(t, actual, key)
@@ -122,7 +122,7 @@ func Test_include_recursionError(t *testing.T) {
 
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, "test")
-	assert.ErrorIs(t, err, ErrExceededIncludeRecursion)
+	require.ErrorIs(t, err, ErrExceededIncludeRecursion)
 }
 
 func Test_base64decodeMap(t *testing.T) {

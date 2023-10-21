@@ -237,8 +237,8 @@ func requireObject(t *testing.T,
 	t.Helper()
 	hash, ok1 := obj.Annotations[ObjectSetHashAnnotation]
 	require.True(t, ok1)
-	require.Equal(t, hash, expectedHash)
-	require.True(t, len(prevs) == len(obj.Spec.Previous))
+	require.Equal(t, expectedHash, hash)
+	require.Equal(t, len(prevs), len(obj.Spec.Previous))
 
 	objprevs := make([]string, len(obj.Spec.Previous))
 	for i, prev := range obj.Spec.Previous {

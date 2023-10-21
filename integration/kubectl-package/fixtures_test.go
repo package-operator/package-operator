@@ -10,7 +10,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 func sourcePathFixture(name string) string {
@@ -37,7 +37,7 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 
 	cfg.Option(opts...)
 
-	ExpectWithOffset(1, os.MkdirAll(dir, 0o755)).To(Succeed())
+	gomega.ExpectWithOffset(1, os.MkdirAll(dir, 0o755)).To(gomega.Succeed())
 
 	man := manifestsv1alpha1.PackageManifest{
 		TypeMeta: metav1.TypeMeta{
@@ -83,15 +83,15 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 	}
 
 	manData, err := yaml.Marshal(man)
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	gomega.ExpectWithOffset(1, err).ToNot(gomega.HaveOccurred())
 
-	ExpectWithOffset(1, os.WriteFile(filepath.Join(dir, "manifest.yaml"), manData, 0o644)).To(Succeed())
+	gomega.ExpectWithOffset(1, os.WriteFile(filepath.Join(dir, "manifest.yaml"), manData, 0o644)).To(gomega.Succeed())
 
 	if cfg.LockData != nil {
 		lockData, err := yaml.Marshal(cfg.LockData)
-		ExpectWithOffset(1, err).ToNot(HaveOccurred())
+		gomega.ExpectWithOffset(1, err).ToNot(gomega.HaveOccurred())
 
-		ExpectWithOffset(1, os.WriteFile(filepath.Join(dir, "manifest.lock.yaml"), lockData, 0o644)).To(Succeed())
+		gomega.ExpectWithOffset(1, os.WriteFile(filepath.Join(dir, "manifest.lock.yaml"), lockData, 0o644)).To(gomega.Succeed())
 	}
 }
 
@@ -107,7 +107,7 @@ func (c *generatePackageConfig) Option(opts ...generatePackageOption) {
 }
 
 type generatePackageOption interface {
-	ConfigureGeneratePackage(*generatePackageConfig)
+	ConfigureGeneratePackage(cfg *generatePackageConfig)
 }
 
 type withImages []manifestsv1alpha1.PackageManifestImage

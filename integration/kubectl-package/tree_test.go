@@ -5,23 +5,23 @@ package kubectlpackage
 import (
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 )
 
-var _ = DescribeTable("tree subcommand",
+var _ = ginkgo.DescribeTable("tree subcommand",
 	testSubCommand("tree"),
-	Entry("given no path",
+	ginkgo.Entry("given no path",
 		subCommandTestCase{
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given an invalid path",
+	ginkgo.Entry("given an invalid path",
 		subCommandTestCase{
 			Args:             []string{"dne"},
 			ExpectedExitCode: 1,
 		},
 	),
-	Entry("given the path of a valid package",
+	ginkgo.Entry("given the path of a valid package",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("valid_without_config")},
 			ExpectedExitCode: 0,
@@ -33,7 +33,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("given the path of an invalid package",
+	ginkgo.Entry("given the path of an invalid package",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("invalid_bad_manifest")},
 			ExpectedExitCode: 1,
@@ -42,7 +42,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--cluster' flag",
+	ginkgo.Entry("using '--cluster' flag",
 		subCommandTestCase{
 			Args: []string{
 				"--cluster",
@@ -58,7 +58,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("given a path of a valid package with configuration, no tests and no required properties",
+	ginkgo.Entry("given a path of a valid package with configuration, no tests and no required properties",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("valid_with_config_no_tests_no_required_properties")},
 			ExpectedExitCode: 0,
@@ -71,7 +71,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--config-testcase' flag",
+	ginkgo.Entry("using '--config-testcase' flag",
 		subCommandTestCase{
 			Args: []string{
 				"--config-testcase", "cluster-scope",
@@ -88,7 +88,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--config-path' flag with invalid path",
+	ginkgo.Entry("using '--config-path' flag with invalid path",
 		subCommandTestCase{
 			Args: []string{
 				"--config-path", "dne",
@@ -100,7 +100,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--config-path' flag with bad config file",
+	ginkgo.Entry("using '--config-path' flag with bad config file",
 		subCommandTestCase{
 			Args: []string{
 				"--config-path", filepath.Join(sourcePathFixture("valid_with_config"), "manifest.yaml"),
@@ -112,7 +112,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--config-path' flag with valid config file",
+	ginkgo.Entry("using '--config-path' flag with valid config file",
 		subCommandTestCase{
 			Args: []string{
 				"--config-path", filepath.Join(sourcePathFixture("valid_with_config"), ".config.yaml"),
@@ -128,7 +128,7 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
-	Entry("using '--config-path' flag with '--config-testcase' flag",
+	ginkgo.Entry("using '--config-path' flag with '--config-testcase' flag",
 		subCommandTestCase{
 			Args: []string{
 				"--config-path", filepath.Join(sourcePathFixture("valid_with_config"), ".config.yaml"),

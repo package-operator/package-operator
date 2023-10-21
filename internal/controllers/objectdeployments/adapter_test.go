@@ -3,7 +3,6 @@ package objectdeployments
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -118,7 +117,7 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		objects, err := testCase.objectSet.GetObjects()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		resObjectIDs := make([]string, len(objects))
 		for i := range objects {
 			receivedObj := objects[i]
@@ -171,7 +170,7 @@ func cmTemplate(name string, namespace string, t require.TestingT) client.Object
 		},
 	}
 	GVK, err := apiutil.GVKForObject(cm, testScheme)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cm.SetGroupVersionKind(GVK)
 	return cm
 }
@@ -188,7 +187,7 @@ func secretTemplate(name string, t require.TestingT) client.Object {
 		},
 	}
 	GVK, err := apiutil.GVKForObject(secret, testScheme)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	secret.SetGroupVersionKind(GVK)
 	return secret
 }
@@ -221,7 +220,7 @@ func deploymentTemplate(deploymentName string, t require.TestingT) client.Object
 	}
 
 	GVK, err := apiutil.GVKForObject(obj, testScheme)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	obj.SetGroupVersionKind(GVK)
 	return obj
 }

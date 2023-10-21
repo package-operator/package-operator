@@ -268,7 +268,7 @@ func TestPackage(t *testing.T) {
 			sets, err := pkg.ObjectSets(context.Background())
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.Expected.NumObjectSets, len(sets))
+			assert.Len(t, sets, tc.Expected.NumObjectSets)
 		})
 	}
 }
@@ -410,7 +410,7 @@ func TestObjectDeployment(t *testing.T) {
 			sets, err := dep.ObjectSets(context.Background())
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.Expected.NumObjectSets, len(sets))
+			assert.Len(t, sets, tc.Expected.NumObjectSets)
 		})
 	}
 }

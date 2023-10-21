@@ -84,9 +84,9 @@ func TestBootstrapperBootstrap(t *testing.T) {
 	assert.True(t, initCalled)
 	assert.True(t, fixCalled)
 
-	assert.Equal(t, os.Getenv("HTTP_PROXY"), "httpxxx")
-	assert.Equal(t, os.Getenv("HTTPS_PROXY"), "httpsxxx")
-	assert.Equal(t, os.Getenv("NO_PROXY"), "noxxx")
+	assert.Equal(t, "httpxxx", os.Getenv("HTTP_PROXY"))
+	assert.Equal(t, "httpsxxx", os.Getenv("HTTPS_PROXY"))
+	assert.Equal(t, "noxxx", os.Getenv("NO_PROXY"))
 }
 
 func TestBootstrapper_bootstrap(t *testing.T) {
