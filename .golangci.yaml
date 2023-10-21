@@ -29,6 +29,7 @@ linters:
   #- nonamedreturns   # Named return good return.
   #- rowserrcheck     # No SQL here.
   #- sqlclosecheck    # No SQL here.
+  #- tagliatelle      # Reports issues that are not right for us.
   #- testpackage      # Could be nice in the future.
   #- unparam          # Not that useful/false positives.
   #- varnamelen       # Not that useful/false positives.
@@ -86,7 +87,6 @@ linters:
   - staticcheck
   - stylecheck
   - tagalign
-  - tagliatelle
   - tenv
   - testableexamples
   - thelper

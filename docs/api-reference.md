@@ -1376,7 +1376,7 @@ Used in:
 
 ### PackageManifestImage
 
-PackageManifestImage specifies an image tag to be resolved
+PackageManifestImage specifies an image tag to be resolved.
 
 | Field | Description |
 | ----- | ----------- |

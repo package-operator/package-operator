@@ -88,7 +88,7 @@ type PackageManifestPhase struct {
 	Class string `json:"class,omitempty"`
 }
 
-// PackageManifestImage specifies an image tag to be resolved
+// PackageManifestImage specifies an image tag to be resolved.
 type PackageManifestImage struct {
 	// Image name to be use to reference it in the templates
 	Name string `json:"name"`
