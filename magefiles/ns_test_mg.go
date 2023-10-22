@@ -54,9 +54,10 @@ func (Test) ValidateGitClean() {
 
 // Runs unittests.
 func (Test) Unit() {
-	testCmd := fmt.Sprintf("set -o pipefail; go test -coverprofile=%s -race -test.v", locations.UnitTestCoverageReport())
-	testCmd += " ./internal/... ./cmd/... ./apis/... ./pkg/..."
-	testCmd += "| tee " + locations.UnitTestStdOut()
+	testCmd := fmt.Sprintf(
+		"set -o pipefail; go test -coverprofile=%s -race -test.v ./... ./pkg/... ./apis/... | tee %s",
+		locations.UnitTestCoverageReport(), locations.UnitTestStdOut(),
+	)
 
 	// cgo needed to enable race detector -race
 	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
@@ -119,9 +120,7 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 
 	// count=1 will force a new run, instead of using the cache
 	args := []string{
-		"test", "-v",
-		"-failfast", "-count=1", "-timeout=20m",
-		"-coverpkg=./apis/...,./cmd/...,./internal/...",
+		"test", "-v", "-failfast", "-count=1", "-timeout=20m", "-coverpkg=./...,./apis/...,./pkg/...", "--tags=integration",
 		fmt.Sprintf("-coverprofile=%s", locations.PKOIntegrationTestCoverageReport()),
 	}
 	if len(filter) > 0 {
@@ -158,11 +157,7 @@ func (Test) kubectlPackageIntegration() {
 		"GOCOVERDIR": tmp,
 	}
 
-	args := []string{
-		"test", "-v", "-failfast",
-		"-count=1", "-timeout=5m",
-		"./integration/kubectl-package/...",
-	}
+	args := []string{"test", "-v", "-failfast", "-count=1", "-timeout=5m", "--tags=integration", "./integration/kubectl-package/..."}
 	_, isCI := os.LookupEnv("CI")
 	if isCI {
 		// test output in json format
