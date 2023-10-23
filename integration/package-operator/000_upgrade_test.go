@@ -3,16 +3,15 @@
 package packageoperator
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/mt-sre/devkube/devcluster"
+	"github.com/mt-sre/devkube/devos"
 	"github.com/stretchr/testify/require"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -24,11 +23,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,39 +45,38 @@ func TestUpgrade(t *testing.T) {
 			Namespace: PackageOperatorNamespace,
 		},
 	}
+	cluster := devcluster.Cluster{Cli: Client}
 
 	log.Info("Installing latest released PKO", "job", LatestSelfBootstrapJobURL)
-	require.NoError(t, createAndWaitFromHTTP(ctx, []string{LatestSelfBootstrapJobURL}))
+	objs, err := devos.UnstructuredFromHTTP(ctx, http.DefaultClient, LatestSelfBootstrapJobURL)
+	require.NoError(t, err)
+	err = cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...)
+	require.NoError(t, err)
 	assertInstallDone(ctx, t, pkg)
 	log.Info("Latest released PKO is now available")
 
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
-	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
+	objs, err = devos.UnstructuredFromFiles(nil, filepath.Join("..", "..", "config", "self-bootstrap-job.yaml"))
+	require.NoError(t, err)
+	err = cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...)
+	require.NoError(t, err)
 	assertInstallDone(ctx, t, pkg)
 }
 
 func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.ClusterPackage) {
 	t.Helper()
+
+	poller := Poller
+	poller.MaxWaitDuration = UpgradeTestWaitTimeout
+
 	jobList := &batchv1.JobList{}
-	require.NoError(t, Client.List(
-		ctx, jobList,
-		client.InNamespace(PackageOperatorNamespace),
-	))
+	require.NoError(t, Client.List(ctx, jobList, client.InNamespace(PackageOperatorNamespace)))
 	for i := range jobList.Items {
-		require.NoError(t,
-			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
-				func(obj client.Object) (done bool, err error) { return false, nil },
-				dev.WithTimeout(UpgradeTestWaitTimeout)))
+		require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, &jobList.Items[i])))
 	}
 
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg,
-			corev1alpha1.PackageProgressing, metav1.ConditionFalse,
-			dev.WithTimeout(UpgradeTestWaitTimeout)))
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg,
-			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
-			dev.WithTimeout(UpgradeTestWaitTimeout)))
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, pkg, CheckClusterPackageNotProgressing)))
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, pkg, CheckClusterPackageAvailable)))
 }
 
 func deleteExistingPKO(ctx context.Context) error {
@@ -130,18 +125,14 @@ func deleteExistingPKO(ctx context.Context) error {
 		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
 	}
 
-	if err := Waiter.WaitToBeGone(ctx, packageOperatorPackage,
-		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
-	); err != nil {
+	poller := Poller
+	poller.MaxWaitDuration = UpgradeTestWaitTimeout
+
+	if err := poller.Wait(ctx, Checker.CheckGone(Client, packageOperatorPackage)); err != nil {
 		return err
 	}
 
-	if err := Waiter.WaitToBeGone(ctx,
-		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
-		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
-	); err != nil {
+	if err := poller.Wait(ctx, Checker.CheckGone(Client, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}})); err != nil {
 		return err
 	}
 
@@ -167,84 +158,6 @@ func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) erro
 			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !apimachineryerrors.IsNotFound(err) {
 			return fmt.Errorf("releasing finalizers on stuck object %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 		}
-	}
-	return nil
-}
-
-func createAndWaitFromFiles(ctx context.Context, files []string) error {
-	var objects []unstructured.Unstructured
-	for _, file := range files {
-		objs, err := dev.LoadKubernetesObjectsFromFile(file)
-		if err != nil {
-			return fmt.Errorf("loading objects from file %q: %w", file, err)
-		}
-
-		objects = append(objects, objs...)
-	}
-
-	for i := range objects {
-		if err := createAndWaitForReadiness(ctx, &objects[i]); err != nil {
-			return fmt.Errorf("creating object: %w", err)
-		}
-	}
-	return nil
-}
-
-func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
-	var client http.Client
-	var objects []unstructured.Unstructured
-	for _, url := range urls {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return fmt.Errorf("creating request: %w", err)
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("getting %q: %w", url, err)
-		}
-		defer resp.Body.Close()
-
-		var content bytes.Buffer
-		if _, err := io.Copy(&content, resp.Body); err != nil {
-			return fmt.Errorf("reading response %q: %w", url, err)
-		}
-
-		objs, err := dev.LoadKubernetesObjectsFromBytes(content.Bytes())
-		if err != nil {
-			return fmt.Errorf("loading objects from %q: %w", url, err)
-		}
-
-		objects = append(objects, objs...)
-	}
-
-	for i := range objects {
-		if err := createAndWaitForReadiness(ctx, &objects[i]); err != nil {
-			return fmt.Errorf("creating object: %w", err)
-		}
-	}
-	return nil
-}
-
-// Creates the given objects and waits for them to be considered ready.
-func createAndWaitForReadiness(
-	ctx context.Context, object client.Object,
-) error {
-	if err := Client.Create(ctx, object); err != nil &&
-		!apimachineryerrors.IsAlreadyExists(err) {
-		return fmt.Errorf("creating object: %w", err)
-	}
-
-	if err := Waiter.WaitForReadiness(ctx, object); err != nil {
-		var unknownTypeErr *dev.UnknownTypeError
-		if errors.As(err, &unknownTypeErr) {
-			// A lot of types don't require waiting for readiness,
-			// so we should not error in cases when object types
-			// are not registered for the generic wait method.
-			return nil
-		}
-
-		return fmt.Errorf("waiting for object: %w", err)
 	}
 	return nil
 }

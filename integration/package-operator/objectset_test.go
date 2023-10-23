@@ -6,14 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -133,25 +132,23 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 
 	// Wait for false status to be reported.
 	// Phase-1 is expected to fail because of the availabilityProbe.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetUnavailable)))
 	availableCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 	require.NotNil(t, availableCond, "Available condition is expected to be reported")
 	assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
 	// expect cm-4 to be reported under "ControllerOf"
-	expectedControllerOf := []corev1alpha1.ControlledObjectReference{
-		{
-			Kind:      "ConfigMap",
-			Name:      cm4.Name,
-			Namespace: namespace,
-		},
-	}
-	assert.NoError(t, Waiter.WaitForObject(ctx, objectSet,
-		"Waiting for .status.controllerOf to be updated",
-		func(obj client.Object) (done bool, err error) {
-			return reflect.DeepEqual(objectSet.Status.ControllerOf, expectedControllerOf), nil
-		}))
+	expectedControllerOf := []corev1alpha1.ControlledObjectReference{{
+		Kind:      "ConfigMap",
+		Name:      cm4.Name,
+		Namespace: namespace,
+	}}
+	assert.NoError(t, Poller.Wait(
+		ctx, Checker.CheckObj(Client, objectSet,
+			func(_ client.Object) (bool, error) {
+				return slices.Equal(objectSet.Status.ControllerOf, expectedControllerOf), nil
+			},
+		)))
 
 	// expect Succeeded condition to be not present
 	succeededCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
@@ -176,8 +173,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 			client.RawPatch(types.MergePatchType, []byte(`{"metadata":{"annotations":{"name":"cm-4"}}}`))))
 
 	// Expect ObjectSet to become Available.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetAvailable)))
 
 	// expect Succeeded condition to be True
 	isSucceeded := meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetSucceeded)
@@ -215,37 +211,46 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Paused"}}`))))
 
 	// ObjectSet is Pausing...
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetPaused, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetPaused)))
 
 	// should be reconciled to "banana":"bread", if reconciler would not be paused.
-	require.NoError(t, Client.Patch(ctx, currentCM4,
-		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
+	require.NoError(t, Client.Patch(ctx, currentCM4, client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
+
+	poller := Poller
+	poller.MaxWaitDuration = 5 * time.Second
 
 	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
-	require.True(t, wait.Interrupted(Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
-		cm := obj.(*corev1.ConfigMap)
-		return cm.Data["banana"] == "bread", nil
-	}, dev.WithTimeout(5*time.Second))))
+	require.ErrorIs(t,
+		poller.Wait(
+			ctx, Checker.CheckObj(Client, currentCM4,
+				func(_ client.Object) (bool, error) {
+					return currentCM4.Data["banana"] == "bread", err
+				},
+			)),
+		devtime.DeadlineExceededErr,
+	)
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Active"}}`))))
 
 	// ObjectSet is Unpausing...
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, objectSet, "to not report Paused anymore", func(obj client.Object) (done bool, err error) {
-			os := obj.(*corev1alpha1.ObjectSet)
-			pausedCond := meta.FindStatusCondition(os.Status.Conditions, corev1alpha1.ObjectSetPaused)
-			return pausedCond == nil, nil
-		}))
+	require.NoError(t, poller.Wait(
+		ctx, Checker.CheckObj(Client, objectSet,
+			func(_ client.Object) (bool, error) {
+				pausedCond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetPaused)
+				return pausedCond == nil, err
+			}),
+	))
 
 	// Wait 10s for the object to be reconciled, which should now happen!
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
-			cm := obj.(*corev1.ConfigMap)
-			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(10*time.Second)))
+	poller.MaxWaitDuration = 10 * time.Second
+	require.NoError(t, poller.Wait(
+		ctx, Checker.CheckObj(Client, currentCM4,
+			func(_ client.Object) (bool, error) {
+				return currentCM4.Data["banana"] == "bread", err
+			}),
+	))
 
 	// ---------------------------
 	// Test phased teardown logic.
@@ -261,9 +266,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Archived"}}`))))
 
 	// ObjectSet is Archiving...
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionFalse))
-
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetUnarchived)))
 	// expect cm-5 to be gone already.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
 		Name: cm5.Name, Namespace: objectSet.Namespace,
@@ -275,8 +278,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 			client.RawPatch(types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers/0" }]`))))
 
 	// ObjectSet is now Archived.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetArchived)))
 
 	// expect cm-4 to be also gone.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
@@ -420,6 +422,33 @@ func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectS
 	}, nil
 }
 
+var (
+	CheckPackageAvailable               = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+	CheckPackageUnavailable             = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageAvailable, metav1.ConditionFalse)
+	CheckPackageUnpacked                = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageUnpacked, metav1.ConditionTrue)
+	CheckPackagePacked                  = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageUnpacked, metav1.ConditionFalse)
+	CheckClusterPackageUnpacked         = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageUnpacked, metav1.ConditionTrue)
+	CheckClusterPackagePacked           = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageUnpacked, metav1.ConditionFalse)
+	CheckClusterPackageAvailable        = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+	CheckClusterPackageUnavailable      = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageAvailable, metav1.ConditionFalse)
+	CheckPackageProgressing             = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageProgressing, metav1.ConditionTrue)
+	CheckPackageNotProgressing          = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageProgressing, metav1.ConditionFalse)
+	CheckClusterPackageProgressing      = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageProgressing, metav1.ConditionTrue)
+	CheckClusterPackageNotProgressing   = Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageProgressing, metav1.ConditionFalse)
+	CheckObjectSetAvailable             = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+	CheckObjectSetUnavailable           = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse)
+	CheckObjectSetArchived              = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
+	CheckObjectSetUnarchived            = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetArchived, metav1.ConditionFalse)
+	CheckObjectSetPaused                = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetPaused, metav1.ConditionTrue)
+	CheckObjectSetUnpaused              = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetPaused, metav1.ConditionFalse)
+	CheckObjectSetInTransition          = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue)
+	CheckObjectSetNotInTransition       = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectSetInTransition, metav1.ConditionFalse)
+	CheckObjectDeploymentAvailable      = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+	CheckObjectDeploymentUnavailable    = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionFalse)
+	CheckObjectDeploymentProgressing    = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectDeploymentProgressing, metav1.ConditionTrue)
+	CheckObjectDeploymentNotProgressing = Checker.ObjCheckStatusConditionIs(corev1alpha1.ObjectDeploymentProgressing, metav1.ConditionFalse)
+)
+
 func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	t.Helper()
 
@@ -459,8 +488,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	cleanupOnSuccess(ctx, t, objectSetRev1)
 
 	// Expect ObjectSet Rev1 to become Available.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSetRev1, CheckObjectSetAvailable)))
 
 	// expect cm-1 to be present.
 	currentCM1 := &corev1.ConfigMap{}
@@ -493,8 +521,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	cleanupOnSuccess(ctx, t, objectSetRev2)
 
 	// Expect ObjectSet Rev2 report not Available, due to failing probes on cm-1.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSetRev2, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSetRev2, CheckObjectSetUnavailable)))
 	availableCond := meta.FindStatusCondition(objectSetRev2.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 	require.NotNil(t, availableCond, "Available condition is expected to be reported")
 	assert.Equal(t, "ProbeFailure", availableCond.Reason)
@@ -511,8 +538,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	}, currentCM3))
 
 	// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSetRev1, CheckObjectSetInTransition)))
 
 	// expect cm-1 to still be present and now controlled by Rev2.
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
@@ -544,11 +570,12 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 			Namespace: currentCM1.Namespace,
 		},
 	}
-	assert.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
-		"Waiting for .status.controllerOf to be updated",
-		func(obj client.Object) (done bool, err error) {
-			return reflect.DeepEqual(objectSetRev2.Status.ControllerOf, expectedControllerOf), nil
-		}))
+	assert.NoError(t, Poller.Wait(
+		ctx, Checker.CheckObj(Client, objectSetRev2,
+			func(_ client.Object) (bool, error) {
+				return slices.Equal(objectSetRev2.Status.ControllerOf, expectedControllerOf), err
+			}),
+	))
 	require.Equal(t, expectedControllerOf, objectSetRev2.Status.ControllerOf)
 
 	// Patch cm-1 to pass probe.
@@ -557,14 +584,11 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 			client.RawPatch(types.MergePatchType, []byte(`{"metadata":{"annotations":{"name":"cm-1"}}}`))))
 
 	// Expect ObjectSet Rev2 to become Available.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSetRev2, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSetRev2, CheckObjectSetAvailable)))
 
 	// Archive ObjectSet Rev1
-	require.NoError(t, Client.Patch(ctx, objectSetRev1,
-		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Archived"}}`))))
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
+	require.NoError(t, Client.Patch(ctx, objectSetRev1, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"lifecycleState":"Archived"}}`))))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSetRev1, CheckObjectSetArchived)))
 
 	// expect cm-2 to be gone.
 	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
@@ -650,7 +674,7 @@ func objectSetPhaseTestHelper(ctx context.Context, t *testing.T, objectSet *core
 
 	// delete objectSetPhase with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSetPhase, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil }))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckGone(Client, objectSetPhase)))
 
 	// expect cm to still be there
 	currentCM := &corev1.ConfigMap{}
@@ -682,8 +706,7 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 	require.NoError(t, Client.Create(ctx, objectSet))
 
 	// Expect ObjectSet to become Available.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, objectSet, CheckObjectSetAvailable)))
 
 	// expect cm to be present.
 	currentCM := &corev1.ConfigMap{}
@@ -702,7 +725,7 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 
 	// delete objectSet with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSet, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSet, func(obj client.Object) (done bool, err error) { return false, nil }))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckGone(Client, objectSet)))
 
 	// expect objectSet not to be present anymore
 	currentObjectSet := &corev1alpha1.ObjectSet{}
@@ -750,7 +773,7 @@ func cleanupOnSuccess(ctx context.Context, t *testing.T, obj client.Object) {
 		if !t.Failed() {
 			// Make sure objects are completely gone before closing the test.
 			_ = Client.Delete(ctx, obj, client.PropagationPolicy(metav1.DeletePropagationForeground))
-			_ = Waiter.WaitToBeGone(ctx, obj, func(obj client.Object) (done bool, err error) { return false, nil })
+			_ = Poller.Wait(ctx, Checker.CheckGone(Client, obj))
 		}
 	})
 }

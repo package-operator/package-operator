@@ -4,13 +4,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"github.com/mt-sre/devkube/dev"
 )
 
 type Build mg.Namespace
@@ -77,21 +78,11 @@ func (Build) Images() {
 	mg.Deps(deps...)
 }
 
-func newImagePushInfo(imageName string) *dev.ImagePushInfo {
-	return &dev.ImagePushInfo{
-		ImageTag:   locations.ImageURL(imageName, false),
-		CacheDir:   locations.ImageCache(imageName),
-		Runtime:    locations.ContainerRuntime(),
-		DigestFile: locations.DigestFile(imageName),
-	}
-}
-
 // Builds and pushes only the given container image to the default registry.
-func (Build) PushImage(imageName string) {
+func (Build) PushImage(ctx context.Context, imageName string) {
+	mg.Deps(mg.F(Build.Image, imageName))
 	if pushToDevRegistry {
-		mg.Deps(
-			mg.F(Dev.loadImage, imageName),
-		)
+		mg.Deps(mg.F(Dev.loadImage, imageName))
 		return
 	}
 
@@ -106,8 +97,7 @@ func (Build) PushImage(imageName string) {
 		panic(fmt.Sprintf(fmt.Sprintf("image is not configured to be pushed: %s", imageName)))
 	}
 
-	pushInfo := newImagePushInfo(imageName)
-	must(dev.PushImage(pushInfo, mg.F(Build.Image, imageName)))
+	must(locations.ContainerRuntime(ctx).PushImage(ctx, locations.ImageURL(imageName, false)))
 }
 
 // Builds and pushes all container images to the default registry.
@@ -127,16 +117,16 @@ func (Build) PushImages() {
 }
 
 // Builds the given container image, building binaries as prerequisite as required.
-func (b Build) Image(name string) {
+func (b Build) Image(ctx context.Context, name string) {
 	_, isPkg := packageImages[name]
 	_, isCmd := commandImages[name]
 	switch {
 	case isPkg && isCmd:
 		panic("ambiguous image name")
 	case isPkg:
-		b.buildPackageImage(name)
+		b.buildPackageImage(ctx, name)
 	case isCmd:
-		b.buildCmdImage(name)
+		b.buildCmdImage(ctx, name)
 	default:
 		panic(fmt.Sprintf("unknown image: %s", name))
 	}
@@ -163,19 +153,9 @@ func (Build) populateCacheCmd(cmd, imageName string) {
 	must(sh.Copy(filepath.Join(imageCacheDir, "passwd"), filepath.Join("config", "images", "passwd")))
 }
 
-func newImageBuildInfo(imageName, containerFile, contextDir string) *dev.ImageBuildInfo {
-	return &dev.ImageBuildInfo{
-		ImageTag:      locations.ImageURL(imageName, false),
-		CacheDir:      locations.ImageCache(imageName),
-		ContainerFile: containerFile,
-		ContextDir:    contextDir,
-		Runtime:       locations.ContainerRuntime(),
-	}
-}
-
 // generic image build function, when the image just relies on
 // a static binary build from cmd/*
-func (b Build) buildCmdImage(imageName string) {
+func (b Build) buildCmdImage(ctx context.Context, imageName string) {
 	opts, ok := commandImages[imageName]
 	if !ok {
 		panic(fmt.Sprintf("unknown cmd image: %s", imageName))
@@ -185,13 +165,13 @@ func (b Build) buildCmdImage(imageName string) {
 		cmd = opts.BinaryName
 	}
 
-	deps := []any{
+	mg.Deps(
 		mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, imageName),
 		mg.F(Build.populateCacheCmd, cmd, imageName),
-	}
-	buildInfo := newImageBuildInfo(imageName, "Containerfile", ".")
-	must(dev.BuildImage(buildInfo, deps))
+	)
+
+	must(locations.ContainerRuntime(ctx).BuildImage(ctx, locations.ImageURL(imageName, false), false, ".", "Containerfile"))
 }
 
 func (Build) populateCachePkg(imageName, sourcePath string) {
@@ -206,19 +186,18 @@ func mustFilepathAbs(p string) string {
 	return o
 }
 
-func newPackageBuildInfo(imageName string) *dev.PackageBuildInfo {
+func newPackageBuildInfo(imageName string) *PackageBuildInfo {
 	imageCacheDir := locations.ImageCache(imageName)
-	return &dev.PackageBuildInfo{
+	return &PackageBuildInfo{
 		ImageTag:       locations.ImageURL(imageName, false),
 		CacheDir:       imageCacheDir,
 		SourcePath:     imageCacheDir,
 		OutputPath:     imageCacheDir + ".tar",
-		Runtime:        locations.ContainerRuntime(),
 		ExecutablePath: mustFilepathAbs(locations.binaryDst(cliCmdName, nativeArch)),
 	}
 }
 
-func (b Build) buildPackageImage(name string) {
+func (b Build) buildPackageImage(ctx context.Context, name string) {
 	opts, ok := packageImages[name]
 	if !ok {
 		panic(fmt.Sprintf("unknown package: %s", name))
@@ -234,6 +213,63 @@ func (b Build) buildPackageImage(name string) {
 	// populating the cache dir must come LAST, or we might miss generated files.
 	predeps = append(predeps, mg.F(Build.populateCachePkg, name, opts.SourcePath))
 
+	mg.Deps(predeps...)
+
 	buildInfo := newPackageBuildInfo(name)
-	must(dev.BuildPackage(buildInfo, predeps))
+	must(BuildPackage(ctx, buildInfo, predeps))
+}
+
+type PackageBuildInfo struct {
+	ImageTag string
+	CacheDir string
+	// source directory
+	SourcePath string
+	// destination: .tar file path
+	OutputPath string
+	// will default to "kubectl-package"
+	ExecutablePath string
+	// if set to `true`, built package won't be loaded into the runtime
+	NoRunTimeLoad bool
+	// package will be pushed directly using the PKO CLI and not the runtime
+	Push bool
+}
+
+// BuildPackage builds a package image using the package operator CLI,
+// requires `kubectl-package` command to be available on the system
+func BuildPackage(ctx context.Context, buildInfo *PackageBuildInfo, deps []interface{}) error {
+	if len(deps) > 0 {
+		mg.SerialDeps(deps...)
+	}
+
+	executable := "kubectl-package"
+	if len(buildInfo.ExecutablePath) != 0 {
+		executable = buildInfo.ExecutablePath
+	}
+
+	buildArgs := []string{
+		executable,
+		"build", "--tag", buildInfo.ImageTag,
+		"--output", buildInfo.OutputPath,
+	}
+	if buildInfo.Push {
+		buildArgs = append(buildArgs, "--push")
+	}
+	buildArgs = append(buildArgs, buildInfo.SourcePath)
+
+	commands := [][]string{buildArgs}
+	if !buildInfo.NoRunTimeLoad {
+		commands = append(commands, []string{
+			"podman", "load", "--input", buildInfo.OutputPath,
+		})
+	}
+
+	for _, args := range commands {
+		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+		cmd.Dir = buildInfo.CacheDir
+
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -16,7 +16,8 @@ import (
 func init() {
 	// Use a local directory to get around permission errors in OpenShift CI.
 	os.Setenv("GOLANGCI_LINT_CACHE", filepath.Join(locations.Cache(), "golangci-lint"))
-	os.Setenv("PATH", locations.Deps().Bin()+":"+locations.bin+":"+os.Getenv("PATH"))
+	os.Setenv("PATH", locations.BuildBin()+":"+locations.DependencyBin()+":"+os.Getenv("PATH"))
+	os.Setenv("GOBIN", locations.DependencyBin())
 
 	// Extra dependencies must be specified here to avoid a circular dependency.
 	packageImages[pkoPackageName].ExtraDeps = []any{Generate.PackageOperatorPackage}
@@ -35,13 +36,12 @@ const (
 	remotePhasePackageName       = "remote-phase-package"
 	defaultPKOLatestBootstrapJob = "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
 
-	controllerGenVersion = "0.13.0"
-	conversionGenVersion = "0.28.3"
-	golangciLintVersion  = "1.54.2"
-	craneVersion         = "0.16.1"
-	kindVersion          = "0.20.0"
-	k8sDocGenVersion     = "0.6.2"
-	helmVersion          = "3.12.3"
+	controllerGenVersion = "v0.13.0"
+	conversionGenVersion = "v0.28.3"
+	golangciLintVersion  = "v1.54.2"
+	kindVersion          = "v0.20.0"
+	k8sDocGenVersion     = "v0.6.2"
+	helmVersion          = "v3.12.3"
 )
 
 // Types for target configuration.

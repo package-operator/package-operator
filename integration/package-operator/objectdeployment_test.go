@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcheck"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,10 +34,10 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		deploymentRevision           int
 		probe                        []corev1alpha1.ObjectSetProbe
 		phases                       []corev1alpha1.ObjectSetTemplatePhase
-		expectedRevisionAvailability metav1.ConditionStatus // Objectset for the current deployment revision availability status
+		expectedRevisionAvailability devcheck.ObjCheck // Objectset for the current deployment revision availability status
 		expectedObjectSetCount       int
 		expectedHashCollisionCount   int
-		expectedDeploymentConditions map[string]metav1.ConditionStatus
+		expectedDeploymentConditions []devcheck.ObjCheck
 		expectedArchivedRevisions    []string
 	}{
 		{
@@ -61,12 +61,10 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					},
 				},
 			},
-			expectedRevisionAvailability: metav1.ConditionTrue,
+			expectedRevisionAvailability: CheckObjectSetAvailable,
 			expectedObjectSetCount:       1,
 			expectedHashCollisionCount:   0,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable: metav1.ConditionTrue,
-			},
+			expectedDeploymentConditions: []devcheck.ObjCheck{CheckObjectDeploymentAvailable},
 		},
 		{
 			deploymentRevision: 2,
@@ -89,16 +87,16 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					},
 				},
 			},
-			expectedRevisionAvailability: metav1.ConditionFalse,
+			expectedRevisionAvailability: CheckObjectSetUnavailable,
 			expectedObjectSetCount:       2,
 			expectedHashCollisionCount:   1,
 			// We handover cm1 and cm2 and then modify them to fail the probes.(Both in this revision and
 			// the previous.)
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
+			expectedDeploymentConditions: []devcheck.ObjCheck{
 				// Now the previous revision which was earlier available also fails.
 				// Thus making the deployment unavailable :(
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionFalse,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+				CheckObjectDeploymentUnavailable,
+				CheckObjectDeploymentProgressing,
 			},
 		},
 	}
@@ -136,16 +134,8 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		cleanupOnSuccess(ctx, t, concernedDeployment)
 
 		// Assert that all the expected conditions are reported
-		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx,
-					concernedDeployment,
-					expectedCond,
-					expectedStatus,
-				),
-			)
-			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, cond.Status == expectedStatus)
+		for _, check := range testCase.expectedDeploymentConditions {
+			require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, concernedDeployment, check)))
 		}
 
 		// ObjectSet for the current deployment revision should be present
@@ -161,16 +151,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		)
 
 		// Assert that the ObjectSet for the current revision has the expected availability status
-		require.NoError(t,
-			Waiter.WaitForCondition(ctx,
-				currentObjectSet,
-				corev1alpha1.ObjectSetAvailable,
-				testCase.expectedRevisionAvailability,
-			),
-		)
+		require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, currentObjectSet, testCase.expectedRevisionAvailability)))
 		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -204,13 +187,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			currObjectSet := currObjectSet
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
-				require.NoError(t,
-					Waiter.WaitForCondition(ctx,
-						&currObjectSet,
-						corev1alpha1.ObjectSetArchived,
-						metav1.ConditionTrue,
-					),
-				)
+				require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, &currObjectSet, CheckObjectSetArchived)))
 				archivedCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
 				require.NotNil(t, archivedCond, "Archived condition is expected to be reported")
 				require.True(t, archivedCond.Status == metav1.ConditionTrue)
@@ -260,11 +237,11 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 	cleanupOnSuccess(ctx, t, concernedDeployment)
 
 	for _, tc := range []struct {
-		ActualObjects      []client.Object
-		AvailabilityStatus metav1.ConditionStatus
+		ActualObjects []client.Object
+		Check         devcheck.ObjCheck
 	}{
 		{
-			AvailabilityStatus: metav1.ConditionFalse,
+			Check: CheckObjectDeploymentUnavailable,
 		},
 		{
 			ActualObjects: []client.Object{
@@ -278,7 +255,7 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 					},
 				},
 			},
-			AvailabilityStatus: metav1.ConditionFalse,
+			Check: CheckObjectDeploymentUnavailable,
 		},
 		{
 			ActualObjects: []client.Object{
@@ -292,7 +269,7 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 					},
 				},
 			},
-			AvailabilityStatus: metav1.ConditionTrue,
+			Check: CheckObjectDeploymentAvailable,
 		},
 	} {
 		for _, obj := range tc.ActualObjects {
@@ -302,17 +279,12 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.NoError(t, Waiter.WaitForObject(ctx, obj, "creating", func(_ client.Object) (bool, error) { return true, nil }))
+			require.NoError(t, Poller.Wait(ctx, Checker.CheckThere(Client, obj)))
 		}
 
-		require.NoError(t,
-			Waiter.WaitForCondition(ctx,
-				concernedDeployment,
-				corev1alpha1.ObjectDeploymentAvailable,
-				tc.AvailabilityStatus,
-				dev.WithTimeout(2*time.Minute),
-			),
-		)
+		poller := Poller
+		poller.MaxWaitDuration = 2 * time.Minute
+		require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, concernedDeployment, tc.Check)))
 	}
 }
 
@@ -323,9 +295,9 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		revision                     string
 		phases                       []corev1alpha1.ObjectSetTemplatePhase
 		probes                       []corev1alpha1.ObjectSetProbe
-		expectedRevisionAvailability metav1.ConditionStatus // Objectset for the current deployment revision availability status
+		expectedRevisionAvailability devcheck.ObjCheck // Objectset for the current deployment revision availability status
 		expectedObjectSetCount       int
-		expectedDeploymentConditions map[string]metav1.ConditionStatus
+		expectedDeploymentConditions []devcheck.ObjCheck
 		expectedArchivedRevisions    []string
 		expectedAvailableRevision    string
 	}{
@@ -350,12 +322,10 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionFalse,
+			expectedRevisionAvailability: CheckObjectSetUnavailable,
 			expectedObjectSetCount:       1,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable: metav1.ConditionFalse,
-			},
-			expectedAvailableRevision: "",
+			expectedDeploymentConditions: []devcheck.ObjCheck{CheckObjectDeploymentUnavailable},
+			expectedAvailableRevision:    "",
 		},
 		{
 			revision: "2",
@@ -378,11 +348,11 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionTrue,
+			expectedRevisionAvailability: CheckObjectSetAvailable,
 			expectedObjectSetCount:       2,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
+			expectedDeploymentConditions: []devcheck.ObjCheck{
+				CheckObjectDeploymentAvailable,
+				CheckObjectDeploymentNotProgressing,
 			},
 			expectedArchivedRevisions: []string{"1"},
 			expectedAvailableRevision: "2",
@@ -408,11 +378,11 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionFalse,
+			expectedRevisionAvailability: CheckObjectSetUnavailable,
 			expectedObjectSetCount:       3,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+			expectedDeploymentConditions: []devcheck.ObjCheck{
+				CheckObjectDeploymentAvailable,
+				CheckObjectDeploymentProgressing,
 			},
 			// Even though revision 2's actively reconciled objects are all diff
 			// from this revision's objects, we cant archive revision 2 as its still available
@@ -444,11 +414,11 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionFalse,
+			expectedRevisionAvailability: CheckObjectSetUnavailable,
 			expectedObjectSetCount:       4,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+			expectedDeploymentConditions: []devcheck.ObjCheck{
+				CheckObjectDeploymentAvailable,
+				CheckObjectDeploymentNotProgressing,
 			},
 			// Revision 3 can be archived as it doesnt actively reconcile any objects present in this revision
 			expectedArchivedRevisions: []string{"1", "3"},
@@ -478,11 +448,11 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionFalse,
+			expectedRevisionAvailability: CheckObjectSetUnavailable,
 			expectedObjectSetCount:       5,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionTrue,
+			expectedDeploymentConditions: []devcheck.ObjCheck{
+				CheckObjectDeploymentAvailable,
+				CheckObjectDeploymentNotProgressing,
 			},
 			// Revision 4 cant be archived as it actively reconciles secret which is in this revision
 			expectedArchivedRevisions: []string{"1", "3"},
@@ -512,11 +482,11 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 				},
 			},
 			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
-			expectedRevisionAvailability: metav1.ConditionTrue,
+			expectedRevisionAvailability: CheckObjectSetAvailable,
 			expectedObjectSetCount:       6,
-			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
-				corev1alpha1.ObjectDeploymentAvailable:   metav1.ConditionTrue,
-				corev1alpha1.ObjectDeploymentProgressing: metav1.ConditionFalse,
+			expectedDeploymentConditions: []devcheck.ObjCheck{
+				CheckObjectDeploymentAvailable,
+				CheckObjectDeploymentNotProgressing,
 			},
 			// Revision 6 is available we can archive everything else
 			expectedArchivedRevisions: []string{"1", "2", "3", "4", "5"},
@@ -540,16 +510,8 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 
 		cleanupOnSuccess(ctx, t, concernedDeployment)
 		// Assert that all the expected conditions are reported
-		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx,
-					concernedDeployment,
-					expectedCond,
-					expectedStatus,
-				),
-			)
-			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.True(t, cond.Status == expectedStatus)
+		for _, check := range testCase.expectedDeploymentConditions {
+			require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, concernedDeployment, check)))
 		}
 
 		// ObjectSet for the current deployment revision should be present
@@ -565,16 +527,9 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		)
 
 		// Assert that the ObjectSet for the current revision has the expected availability status
-		require.NoError(t,
-			Waiter.WaitForCondition(ctx,
-				currentObjectSet,
-				corev1alpha1.ObjectSetAvailable,
-				testCase.expectedRevisionAvailability,
-			),
-		)
+		require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, currentObjectSet, testCase.expectedRevisionAvailability)))
 		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.True(t, availableCond.Status == testCase.expectedRevisionAvailability)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -607,13 +562,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 			currObjectSet := item
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, fmt.Sprint(currObjectSetRevision)) {
-				require.NoError(t,
-					Waiter.WaitForCondition(ctx,
-						&currObjectSet,
-						corev1alpha1.ObjectSetArchived,
-						metav1.ConditionTrue,
-					),
-				)
+				require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, &currObjectSet, CheckObjectSetArchived)))
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
 				require.True(t, availableCond.Status == metav1.ConditionTrue)

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,21 +12,20 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/mt-sre/devkube/dev"
-	"github.com/mt-sre/devkube/magedeps"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
+	"github.com/mt-sre/devkube/devcr"
 )
 
+const devClusterName = "package-operator"
+
+var join = filepath.Join
+
 type Locations struct {
-	lock             *sync.Mutex
-	devEnvironment   *dev.Environment
-	containerRuntime string
-	cache            string
-	bin              string
-	imageOrg         string
+	lock     *sync.Mutex
+	cache    string
+	bin      string
+	imageOrg string
+	cr       devcr.ContainerRuntime
 }
 
 func newLocations() Locations {
@@ -65,46 +65,35 @@ func newLocations() Locations {
 		bin: filepath.Join(filepath.Dir(absCache), "bin"),
 	}
 
-	must(os.MkdirAll(string(l.Deps()), 0o755))
 	must(os.MkdirAll(l.unitTestCache(), 0o755))
-	must(os.MkdirAll(l.IntegrationTestCache(), 0o755))
+	must(os.MkdirAll(l.IntTestCache(), 0o755))
 
 	return l
 }
 
+func (l Locations) DependencyBin() string          { return join(l.Cache(), "bin") }
+func (l Locations) BuildBin() string               { return l.bin }
 func (l Locations) Cache() string                  { return l.cache }
 func (l Locations) APISubmodule() string           { return "apis" }
-func (l Locations) ClusterDeploymentCache() string { return filepath.Join(l.Cache(), "deploy") }
-func (l Locations) unitTestCache() string          { return filepath.Join(l.Cache(), "unit") }
-func (l Locations) UnitTestCoverageReport() string {
-	return filepath.Join(l.unitTestCache(), "cov.out")
+func (l Locations) KindCache() string              { return join(l.Cache(), "kind") }
+func (l Locations) ClusterDeploymentCache() string { return join(l.Cache(), "deploy") }
+func (l Locations) unitTestCache() string          { return join(l.Cache(), "unit") }
+func (l Locations) UnitTestCovReport() string      { return join(l.unitTestCache(), "cov.out") }
+func (l Locations) UnitTestExecReport() string     { return join(l.unitTestCache(), "exec.json") }
+func (l Locations) UnitTestStdOut() string         { return join(l.unitTestCache(), "out.txt") }
+func (l Locations) IntTestCache() string           { return join(l.Cache(), "integration") }
+func (l Locations) APIReference() string           { return join("docs", "api-reference.md") }
+func (l Locations) NativeCliBinary() string        { return l.binaryDst(cliCmdName, nativeArch) }
+func (l Locations) IntegrationTestLogs() string    { return join(l.Cache(), "dev-env-logs") }
+func (l Locations) DigestFile(img string) string   { return join(l.ImageCache(img), img+".digest") }
+func (l Locations) PKOIntTestCovReport() string    { return join(l.IntTestCache(), "pko-cov.out") }
+func (l Locations) PKOIntTestExecReport() string   { return join(l.IntTestCache(), "pko-exec.json") }
+func (l Locations) ImageCache(img string) string   { return join(l.Cache(), "image", img) }
+func (l Locations) PluginIntTestCovReport() string {
+	return join(l.IntTestCache(), "kubectl-package-cov.out")
 }
-func (l Locations) UnitTestExecReport() string   { return filepath.Join(l.unitTestCache(), "exec.json") }
-func (l Locations) UnitTestStdOut() string       { return filepath.Join(l.unitTestCache(), "out.txt") }
-func (l Locations) IntegrationTestCache() string { return filepath.Join(l.Cache(), "integration") }
-func (l Locations) PKOIntegrationTestCoverageReport() string {
-	return filepath.Join(l.IntegrationTestCache(), "pko-cov.out")
-}
-func (l Locations) PKOIntegrationTestExecReport() string {
-	return filepath.Join(l.IntegrationTestCache(), "pko-exec.json")
-}
-func (l Locations) PluginIntegrationTestCoverageReport() string {
-	return filepath.Join(l.IntegrationTestCache(), "kubectl-package-cov.out")
-}
-func (l Locations) PluginIntegrationTestExecReport() string {
-	return filepath.Join(l.IntegrationTestCache(), "kubectl-package-exec.json")
-}
-func (l Locations) IntegrationTestLogs() string { return filepath.Join(l.Cache(), "dev-env-logs") }
-func (l Locations) ImageCache(imageName string) string {
-	return filepath.Join(l.Cache(), "image", imageName)
-}
-func (l Locations) DigestFile(imgName string) string {
-	return filepath.Join(l.ImageCache(imgName), imgName+".digest")
-}
-func (l Locations) APIReference() string    { return filepath.Join("docs", "api-reference.md") }
-func (l Locations) NativeCliBinary() string { return l.binaryDst(cliCmdName, nativeArch) }
-func (l Locations) Deps() magedeps.DependencyDirectory {
-	return magedeps.DependencyDirectory(filepath.Join(l.Cache(), "deps"))
+func (l Locations) PluginIntTestExecReport() string {
+	return join(l.IntTestCache(), "kubectl-package-exec.json")
 }
 func (l Locations) binaryDst(name string, arch archTarget) string {
 	if arch == nativeArch {
@@ -141,98 +130,25 @@ func (l Locations) LocalImageURL(name string) string {
 	return strings.Replace(url, imageRegistry, "localhost:5001", 1)
 }
 
-func (l *Locations) ContainerRuntime() string {
+func (l *Locations) ContainerRuntime(ctx context.Context) devcr.ContainerRuntime {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	if len(l.containerRuntime) == 0 {
-		l.containerRuntime = os.Getenv("CONTAINER_RUNTIME")
-		if len(l.containerRuntime) == 0 || l.containerRuntime == "auto" {
-			cr, err := dev.DetectContainerRuntime()
-			if err != nil {
-				panic(err)
-			}
-			l.containerRuntime = string(cr)
-			logger.Info("detected container-runtime", "container-runtime", l.containerRuntime)
+	if l.cr == nil {
+
+		switch os.Getenv("CONTAINER_RUNTIME") {
+		case "podman":
+			l.cr = devcr.Podman{}
+		case "docker":
+			l.cr = devcr.Docker{}
+		case "":
+			cr, err := devcr.Detect(ctx, nil)
+			must(err)
+			l.cr = cr
+		default:
+			panic("unknown container runtime")
 		}
 	}
 
-	return l.containerRuntime
-}
-
-func (l *Locations) DevEnv() *dev.Environment {
-	containerRuntime := l.ContainerRuntime()
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	var clusterInitializers []dev.ClusterInitializer
-	if _, isCI := os.LookupEnv("CI"); !isCI {
-		// don't install the monitoring stack in CI to speed up tests.
-		clusterInitializers = dev.WithClusterInitializers{
-			dev.ClusterHelmInstall{
-				RepoName:    "prometheus-community",
-				RepoURL:     "https://prometheus-community.github.io/helm-charts",
-				PackageName: "kube-prometheus-stack",
-				ReleaseName: "prometheus",
-				Namespace:   "monitoring",
-				SetVars: []string{
-					"grafana.enabled=true",
-					"kubeStateMetrics.enabled=false",
-					"nodeExporter.enabled=false",
-				},
-			},
-			dev.ClusterLoadObjectsFromFiles{
-				"config/service-monitor.yaml",
-			},
-		}
-	}
-
-	if l.devEnvironment == nil {
-		l.devEnvironment = dev.NewEnvironment(
-			clusterName,
-			filepath.Join(l.Cache(), "dev-env"),
-			dev.WithClusterOptions([]dev.ClusterOption{
-				dev.WithWaitOptions([]dev.WaitOption{dev.WithTimeout(2 * time.Minute)}),
-				dev.WithSchemeBuilder{corev1alpha1.AddToScheme},
-			}),
-			dev.WithContainerRuntime(containerRuntime),
-			dev.WithClusterInitializers(
-				append(clusterInitializers, dev.ClusterLoadObjectsFromFiles{
-					"config/local-registry.yaml",
-				}),
-			),
-			dev.WithKindClusterConfig(kindv1alpha4.Cluster{
-				ContainerdConfigPatches: []string{
-					// Replace `imageRegistry` with our local dev-registry.
-					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
-	endpoint = ["http://localhost:31320"]`, imageRegistry),
-				},
-				Nodes: []kindv1alpha4.Node{
-					{
-						Role: kindv1alpha4.ControlPlaneRole,
-						ExtraPortMappings: []kindv1alpha4.PortMapping{
-							// Open port to enable connectivity with local registry.
-							{
-								ContainerPort: 5001,
-								HostPort:      5001,
-								ListenAddress: "127.0.0.1",
-								Protocol:      "TCP",
-							},
-						},
-					},
-				},
-			}),
-		)
-	}
-
-	return l.devEnvironment
-}
-
-// DevEnvNoInit returns the dev environment if DevelopmentEnvironment was
-// already called, nil if not. This is used in case the env is optional.
-func (l *Locations) DevEnvNoInit() *dev.Environment {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	return l.devEnvironment
+	return l.cr
 }

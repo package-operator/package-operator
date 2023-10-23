@@ -8,7 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcheck"
+	"github.com/mt-sre/devkube/devtime"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -33,7 +34,8 @@ var (
 	// Scheme used by created clients.
 	Scheme = runtime.NewScheme()
 
-	Waiter *dev.Waiter
+	Poller  = devtime.Poller{MaxWaitDuration: defaultWaitTimeout}
+	Checker = devcheck.RealChecker{}
 
 	// PackageOperatorNamespace is the namespace that the Package Operator is running in.
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
@@ -73,8 +75,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	Waiter = dev.NewWaiter(Client, Scheme, dev.WithTimeout(defaultWaitTimeout), dev.WithInterval(defaultWaitInterval))
 }
 
 func initClients(_ context.Context) error {

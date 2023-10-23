@@ -5,6 +5,7 @@ package main
 // This file can't be named ns_test.go because go then thinks this is test code.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/mt-sre/devkube/devkind"
 )
 
 type Test mg.Namespace
@@ -56,7 +58,7 @@ func (Test) ValidateGitClean() {
 func (Test) Unit() {
 	testCmd := fmt.Sprintf(
 		"set -o pipefail; go test -coverprofile=%s -race -test.v ./... ./pkg/... ./apis/... | tee %s",
-		locations.UnitTestCoverageReport(), locations.UnitTestStdOut(),
+		locations.UnitTestCovReport(), locations.UnitTestStdOut(),
 	)
 
 	// cgo needed to enable race detector -race
@@ -121,7 +123,7 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	// count=1 will force a new run, instead of using the cache
 	args := []string{
 		"test", "-v", "-failfast", "-count=1", "-timeout=20m", "-coverpkg=./...,./apis/...,./pkg/...", "--tags=integration",
-		fmt.Sprintf("-coverprofile=%s", locations.PKOIntegrationTestCoverageReport()),
+		fmt.Sprintf("-coverprofile=%s", locations.PKOIntTestCovReport()),
 	}
 	if len(filter) > 0 {
 		args = append(args, "-run", filter)
@@ -130,14 +132,17 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 
 	testErr := sh.Run("go", args...)
 
-	devEnv := locations.DevEnvNoInit()
-
-	// always export logs
-	if devEnv != nil {
-		args := []string{"export", "logs", locations.IntegrationTestLogs(), "--name", clusterName}
-		if err := devEnv.RunKindCommand(ctx, os.Stdout, os.Stderr, args...); err != nil {
-			logger.Error(err, "exporting logs")
+	kind := devkind.Kind{Provider: locations.ContainerRuntime(ctx).KindProvider()}
+	cluster, err := kind.GetKindCluster(devClusterName)
+	if err != nil {
+		nodes, err := cluster.ListNodes()
+		must(err)
+		buf := bytes.Buffer{}
+		for _, node := range nodes {
+			must(node.SerialLogs(&buf))
 		}
+
+		must(os.WriteFile(locations.IntegrationTestLogs(), buf.Bytes(), 0o600))
 	}
 
 	if testErr != nil {
@@ -161,7 +166,7 @@ func (Test) kubectlPackageIntegration() {
 	_, isCI := os.LookupEnv("CI")
 	if isCI {
 		// test output in json format
-		args = append(args, "-json", " > "+locations.PluginIntegrationTestExecReport())
+		args = append(args, "-json", " > "+locations.PluginIntTestExecReport())
 	}
 
 	if err := sh.RunWith(env, "go", args...); err != nil {
@@ -171,7 +176,7 @@ func (Test) kubectlPackageIntegration() {
 	covArgs := []string{
 		"tool", "covdata", "textfmt",
 		"-i", tmp,
-		"-o", locations.PluginIntegrationTestCoverageReport(),
+		"-o", locations.PluginIntTestCovReport(),
 	}
 	if err := sh.Run("go", covArgs...); err != nil {
 		panic(err)

@@ -8,24 +8,19 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/mt-sre/devkube/dev"
-	appsv1 "k8s.io/api/apps/v1"
-
-	"sigs.k8s.io/yaml"
-
-	"github.com/stretchr/testify/assert"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"sigs.k8s.io/yaml"
 )
 
 var defaultNamespace = "default"
@@ -163,10 +158,7 @@ spec:
 	pkg.Name = "test-stub"
 	pkg.Namespace = defaultNamespace
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckGone(Client, pkg)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]any{}
@@ -182,11 +174,7 @@ spec:
 	err = Client.Patch(ctx, &cm1, client.RawPatch(types.MergePatchType, []byte(patch)))
 	require.NoError(t, err)
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to get to second generation", func(obj client.Object) (done bool, err error) {
-			waitPkg := obj.(*corev1alpha1.Package)
-			return waitPkg.GetGeneration() == 2, nil
-		}))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, pkg, func(_ client.Object) (bool, error) { return pkg.GetGeneration() == 2, nil })))
 
 	// check that config value was updated
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
@@ -202,10 +190,7 @@ spec:
 	clusterPkg := &corev1alpha1.ClusterPackage{}
 	clusterPkg.Name = "cluster-test-stub"
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckThere(Client, clusterPkg)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
 	clusterPackageConfig := map[string]any{}
@@ -222,10 +207,7 @@ spec:
 	deployment.Name = "nginx-deployment"
 	deployment.Namespace = defaultNamespace
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckThere(Client, deployment)))
 
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment))
 	envVar := deployment.Spec.Template.Spec.Containers[0].Env[0]
@@ -336,10 +318,7 @@ spec:
 	pkg.Name = packageName
 	pkg.Namespace = defaultNamespace
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckThere(Client, pkg)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]any{}
@@ -416,10 +395,7 @@ data:
 	cm.Name = cmName
 	cm.Namespace = defaultNamespace
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, cm, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckThere(Client, cm)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(cm), cm))
 	assert.Equal(t, "", cm.Data["test"])
@@ -427,9 +403,10 @@ data:
 	require.NoError(t, Client.Create(ctx, &secret))
 	defer cleanupOnSuccess(ctx, t, &secret)
 
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, cm, "to be updated", func(obj client.Object) (done bool, err error) {
-			upatedCM := obj.(*corev1.ConfigMap)
-			return upatedCM.Data["test"] == secretValue, nil
-		}, dev.WithTimeout(60*time.Second)))
+	poller := Poller
+	poller.MaxWaitDuration = 1 * time.Minute
+
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, cm, func(_ client.Object) (success bool, err error) {
+		return cm.Data["test"] == secretValue, nil
+	})))
 }

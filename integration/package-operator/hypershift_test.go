@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -81,9 +80,11 @@ func TestHyperShift(t *testing.T) {
 			Namespace: ns.Name,
 		},
 	}
+
+	poller := Poller
+	poller.MaxWaitDuration = 100 * time.Second
 	// longer timeout because PKO is restarting to enable HyperShift integration and needs a few seconds for leader election.
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, dev.WithTimeout(100*time.Second)))
+	require.NoError(t, poller.Wait(ctx, Checker.CheckObj(Client, pkg, CheckPackageAvailable)))
 
 	// Test ObjectSetPhase integration
 	t.Run("ObjectSetSetupPauseTeardown", func(t *testing.T) {
@@ -108,7 +109,6 @@ func installHyperShift(ctx context.Context, t *testing.T) {
 	hostedClusterCRD := &unstructured.Unstructured{}
 	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
 	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
-	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
-
+	require.NoError(t, Poller.Wait(ctx, Checker.CheckObj(Client, hostedClusterCRD, Checker.ObjCheckStatusConditionIs("Established", metav1.ConditionTrue))))
 	require.NoError(t, initClients(ctx))
 }

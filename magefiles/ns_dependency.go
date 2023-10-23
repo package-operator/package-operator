@@ -4,10 +4,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/magefile/mage/mg"
+	"github.com/magefile/mage/sh"
 )
 
 type Dependency mg.Namespace
@@ -20,62 +20,36 @@ func (d Dependency) All() {
 		Dependency.GolangciLint,
 		Dependency.Kind,
 		Dependency.Docgen,
-		Dependency.Crane,
 		Dependency.Helm,
 	)
 }
 
+func install(target string) {
+	sh.RunV(mg.GoCmd(), "install", target)
+}
+
 // Ensure controller-gen - kubebuilder code and manifest generator.
-func (d Dependency) ControllerGen() error {
-	url := "sigs.k8s.io/controller-tools/cmd/controller-gen"
-	return locations.Deps().GoInstall("controller-gen", url, controllerGenVersion)
+func (d Dependency) ControllerGen() {
+	install(fmt.Sprintf("sigs.k8s.io/controller-tools/cmd/controller-gen@%s", controllerGenVersion))
 }
 
-func (d Dependency) ConversionGen() error {
-	url := "k8s.io/code-generator/cmd/conversion-gen"
-	return locations.Deps().GoInstall("conversion-gen", url, conversionGenVersion)
+func (d Dependency) ConversionGen() {
+	install(fmt.Sprintf("k8s.io/code-generator/cmd/conversion-gen@%s", conversionGenVersion))
 }
 
-func (d Dependency) GolangciLint() error {
-	url := "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	return locations.Deps().GoInstall("golangci-lint", url, golangciLintVersion)
+func (d Dependency) GolangciLint() {
+	install(fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangciLintVersion))
 }
 
-func (d Dependency) Crane() error {
-	url := "github.com/google/go-containerregistry/cmd/crane"
-	return locations.Deps().GoInstall("crane", url, craneVersion)
-}
-
-func (d Dependency) Docgen() error {
-	url := "github.com/thetechnick/k8s-docgen"
-	return locations.Deps().GoInstall("k8s-docgen", url, k8sDocGenVersion)
+func (d Dependency) Docgen() {
+	install(fmt.Sprintf("github.com/thetechnick/k8s-docgen@%s", k8sDocGenVersion))
 }
 
 // Ensure Kind dependency - Kubernetes in Docker (or Podman)
-func (d Dependency) Kind() error {
-	url := "sigs.k8s.io/kind"
-	return locations.Deps().GoInstall("kind", url, kindVersion)
+func (d Dependency) Kind() {
+	install(fmt.Sprintf("sigs.k8s.io/kind@%s", kindVersion))
 }
 
-func (d Dependency) Helm() error {
-	url := "helm.sh/helm/v3/cmd/helm"
-	return locations.Deps().GoInstall("helm", url, helmVersion)
-}
-
-// Creates an empty development environment via kind.
-func (d Dev) Setup(ctx context.Context) {
-	mg.SerialDeps(Dev.init)
-
-	if err := locations.DevEnv().Init(ctx); err != nil {
-		panic(fmt.Errorf("initializing dev environment: %w", err))
-	}
-}
-
-// Tears the whole kind development environment down.
-func (d Dev) Teardown(ctx context.Context) {
-	mg.SerialDeps(Dev.init)
-
-	if err := locations.DevEnv().Destroy(ctx); err != nil {
-		panic(fmt.Errorf("tearing down dev environment: %w", err))
-	}
+func (d Dependency) Helm() {
+	install(fmt.Sprintf("helm.sh/helm/v3/cmd/helm@%s", helmVersion))
 }

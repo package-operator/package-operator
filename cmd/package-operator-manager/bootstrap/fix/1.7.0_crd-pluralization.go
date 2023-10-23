@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcheck"
+	"github.com/mt-sre/devkube/devtime"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,8 @@ var (
 	pkoClusterObjectSetLabelSelector = fmt.Sprintf("%s=package-operator", manifestsv1alpha1.PackageLabel)
 	deletionWaitTimeout              = time.Minute
 	deletionWaitInterval             = time.Second
+	poller                           = devtime.Poller{MaxWaitDuration: deletionWaitTimeout, PollInterval: deletionWaitInterval}
+	checker                          = devcheck.RealChecker{}
 )
 
 // Organize references to CRD names together.
@@ -131,15 +134,7 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(ctx cont
 			return err
 		}
 
-		waiter := dev.NewWaiter(fc.Client, fc.Client.Scheme(),
-			dev.WithInterval(deletionWaitInterval),
-			dev.WithTimeout(deletionWaitTimeout))
-		if err := waiter.WaitToBeGone(ctx,
-			&cos,
-			func(obj client.Object) (done bool, err error) {
-				return false, nil
-			},
-		); err != nil {
+		if err := poller.Wait(ctx, checker.CheckGone(fc.Client, &cos)); err != nil {
 			return err
 		}
 	}
@@ -164,10 +159,7 @@ func (f CRDPluralizationFix) ensureCRDGone(ctx context.Context, fc Context, name
 	}
 
 	// wait for object to be fully deleted
-	waiter := dev.NewWaiter(fc.Client, fc.Client.Scheme(),
-		dev.WithInterval(deletionWaitInterval),
-		dev.WithTimeout(deletionWaitTimeout))
-	return waiter.WaitToBeGone(ctx, crd, func(obj client.Object) (done bool, err error) { return false, nil })
+	return poller.Wait(ctx, checker.CheckGone(fc.Client, crd))
 }
 
 // Checks if at least one of the given CRD pairs exists in the apiserver.

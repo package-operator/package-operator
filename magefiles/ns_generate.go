@@ -15,7 +15,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devos"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"sigs.k8s.io/yaml"
@@ -211,15 +211,8 @@ func (Generate) SelfBootstrapJob() {
 }
 
 func includeInPackageOperatorPackage(file string, outDir string) {
-	fileContent, err := os.ReadFile(file)
-	if err != nil {
-		panic(err)
-	}
-
-	objs, err := dev.LoadKubernetesObjectsFromBytes(fileContent)
-	if err != nil {
-		panic(err)
-	}
+	objs, err := devos.UnstructuredFromFiles(devos.RealFS{}, file)
+	must(err)
 	for _, obj := range objs {
 		if len(obj.Object) == 0 {
 			continue

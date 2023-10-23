@@ -10,9 +10,12 @@ import (
 	"path/filepath"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/magefile/mage/mg"
-	"github.com/magefile/mage/sh"
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcluster"
+	"github.com/mt-sre/devkube/devhelm"
+	"github.com/mt-sre/devkube/devkind"
+	"github.com/mt-sre/devkube/devos"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 )
 
 type Dev mg.Namespace
@@ -58,66 +61,65 @@ func (d Dev) Load() {
 func (d Dev) Deploy(ctx context.Context) {
 	mg.SerialDeps(Dev.Load)
 
-	defer func() {
-		os.Setenv("KUBECONFIG", locations.devEnvironment.Cluster.Kubeconfig())
+	kind := devkind.Kind{Provider: locations.ContainerRuntime(ctx).KindProvider()}
+	cluster, err := kind.GetKindCluster(devClusterName)
 
-		args := []string{"export", "logs", locations.IntegrationTestLogs(), "--name", clusterName}
-		if err := locations.DevEnvNoInit().RunKindCommand(ctx, os.Stdout, os.Stderr, args...); err != nil {
-			logger.Error(err, "exporting logs")
+	defer func() {
+		os.Setenv("KUBECONFIG", filepath.Join(locations.KindCache(), devClusterName))
+
+		if err != nil {
+			nodes, err := cluster.ListNodes()
+			must(err)
+			buf := bytes.Buffer{}
+			for _, node := range nodes {
+				must(node.SerialLogs(&buf))
+			}
+
+			must(os.WriteFile(locations.IntegrationTestLogs(), buf.Bytes(), 0o600))
 		}
 	}()
 
-	cluster := locations.DevEnv().Cluster
-
-	must(cluster.CreateAndWaitFromFiles(
-		ctx, []string{filepath.Join("config", "self-bootstrap-job.yaml")}))
+	objs, err := devos.UnstructuredFromFiles(nil, filepath.Join("config", "self-bootstrap-job.yaml"))
+	must(err)
+	must(cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...))
 
 	ctx = logr.NewContext(ctx, logger)
 	// Bootstrap job is cleaning itself up after completion, so we can't wait for Condition Completed=True.
 	// See self-bootstrap-job .spec.ttlSecondsAfterFinished: 0
-	must(cluster.Waiter.WaitToBeGone(ctx, &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "package-operator-bootstrap",
-			Namespace: "package-operator-system",
-		},
-	}, func(obj client.Object) (done bool, err error) { return }))
+	boostrapJob := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "package-operator-bootstrap", Namespace: "package-operator-system"}}
+	must(cluster.Poller.Wait(ctx, cluster.Checker.CheckGone(cluster.Cli, boostrapJob)))
 
-	must(cluster.Waiter.WaitForCondition(ctx, &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "package-operator",
-		},
-	}, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
+	obj := &corev1alpha1.ClusterPackage{ObjectMeta: metav1.ObjectMeta{Name: "package-operator"}}
+	packageAvailableCheck := cluster.Checker.ObjCheckStatusConditionIs(corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+	must(cluster.Poller.Wait(ctx, cluster.Checker.CheckObj(cluster.Cli, obj, packageAvailableCheck)))
 
-	d.deployTargetKubeConfig(ctx, cluster)
+	d.deployTargetKubeConfig(ctx, cluster.Cluster)
 }
 
 // deploy the Package Operator Manager from local files.
-func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster *dev.Cluster) {
-	packageOperatorDeployment := templatePackageOperatorManager(cluster.Scheme)
+func (d Dev) deployPackageOperatorManager(ctx context.Context, cluster devcluster.Cluster) {
+	packageOperatorDeployment := templatePackageOperatorManager(cluster.Cli.Scheme())
 
 	ctx = logr.NewContext(ctx, logger)
 
-	// Deploy
-	if err := cluster.CreateAndWaitFromFolders(ctx, []string{filepath.Join("config", "static-deployment")}); err != nil {
-		panic(fmt.Errorf("deploy package-operator-manager dependencies: %w", err))
-	}
-	_ = cluster.CtrlClient.Delete(ctx, packageOperatorDeployment)
-	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorDeployment); err != nil {
-		panic(fmt.Errorf("deploy package-operator-manager: %w", err))
-	}
+	objs, err := devos.UnstructuredFromFolder(nil, filepath.Join("config", "static-deployment"))
+	must(err)
+
+	must(cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...))
+
+	_ = cluster.Cli.Delete(ctx, packageOperatorDeployment)
+
+	must(cluster.CreateAndAwaitReadiness(ctx, packageOperatorDeployment))
 }
 
 // Package Operator Webhook server from local files.
-func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Cluster) {
-	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join("config", "deploy", "webhook", "deployment.yaml.tpl"))
-	if err != nil {
-		panic(fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err))
-	}
+func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster devcluster.Cluster) {
+	objs, err := devos.UnstructuredFromFiles(nil, filepath.Join("config", "deploy", "webhook", "deployment.yaml.tpl"))
+	must(err)
 
 	// Replace image
 	packageOperatorWebhookDeployment := &appsv1.Deployment{}
-	if err := cluster.Scheme.Convert(
-		&objs[0], packageOperatorWebhookDeployment, nil); err != nil {
+	if err := cluster.Cli.Scheme().Convert(&objs[0], packageOperatorWebhookDeployment, nil); err != nil {
 		panic(fmt.Errorf("converting to Deployment: %w", err))
 	}
 	packageOperatorWebhookImage := os.Getenv("PACKAGE_OPERATOR_WEBHOOK_IMAGE")
@@ -135,24 +137,22 @@ func (d Dev) deployPackageOperatorWebhook(ctx context.Context, cluster *dev.Clus
 
 	ctx = logr.NewContext(ctx, logger)
 
-	// Deploy
-	if err := cluster.CreateAndWaitFromFiles(ctx, []string{
+	objs, err = devos.UnstructuredFromFiles(nil,
 		filepath.Join("config", "deploy", "webhook", "00-tls-secret.yaml"),
 		filepath.Join("config", "deploy", "webhook", "service.yaml.tpl"),
 		filepath.Join("config", "deploy", "webhook", "objectsetvalidatingwebhookconfig.yaml"),
 		filepath.Join("config", "deploy", "webhook", "objectsetphasevalidatingwebhookconfig.yaml"),
 		filepath.Join("config", "deploy", "webhook", "clusterobjectsetvalidatingwebhookconfig.yaml"),
 		filepath.Join("config", "deploy", "webhook", "clusterobjectsetphasevalidatingwebhookconfig.yaml"),
-	}); err != nil {
-		panic(fmt.Errorf("deploy package-operator-webhook dependencies: %w", err))
-	}
-	_ = cluster.CtrlClient.Delete(ctx, packageOperatorWebhookDeployment)
-	if err := cluster.CreateAndWaitForReadiness(ctx, packageOperatorWebhookDeployment); err != nil {
-		panic(fmt.Errorf("deploy package-operator-webhook: %w", err))
-	}
+	)
+	must(err)
+	must(cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...))
+
+	_ = cluster.Cli.Delete(ctx, packageOperatorWebhookDeployment)
+	must(cluster.CreateAndAwaitReadiness(ctx, packageOperatorWebhookDeployment))
 }
 
-func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
+func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster devcluster.Cluster) {
 	ctx = logr.NewContext(ctx, logger)
 
 	var err error
@@ -160,13 +160,12 @@ func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
 	targetKubeconfigPath := os.Getenv("TARGET_KUBECONFIG_PATH")
 	var kubeconfigBytes []byte
 	if len(targetKubeconfigPath) == 0 {
-		kubeconfigBuf := new(bytes.Buffer)
-		args := []string{"get", "kubeconfig", "--name", clusterName, "--internal"}
-		err = locations.DevEnv().RunKindCommand(ctx, kubeconfigBuf, os.Stderr, args...)
-		if err != nil {
-			panic(fmt.Errorf("exporting internal kubeconfig: %w", err))
-		}
-		kubeconfigBytes = kubeconfigBuf.Bytes()
+		kind := devkind.Kind{Provider: locations.ContainerRuntime(ctx).KindProvider()}
+		cluster, err := kind.GetKindCluster(devClusterName)
+		must(err)
+		kubeconfig, err := cluster.Kubeconfig(true)
+		must(err)
+		kubeconfigBytes = []byte(kubeconfig)
 		old := []byte("package-operator-dev-control-plane:6443")
 		new := []byte("kubernetes.default")
 		kubeconfigBytes = bytes.Replace(kubeconfigBytes, old, new, -1) // use in-cluster DNS
@@ -189,22 +188,20 @@ func (d Dev) deployTargetKubeConfig(ctx context.Context, cluster *dev.Cluster) {
 	}
 
 	// Deploy the secret with the new kubeconfig
-	_ = cluster.CtrlClient.Delete(ctx, secret)
-	if err := cluster.CtrlClient.Create(ctx, secret); err != nil {
+	_ = cluster.Cli.Delete(ctx, secret)
+	if err := cluster.Cli.Create(ctx, secret); err != nil {
 		panic(fmt.Errorf("deploy kubeconfig secret: %w", err))
 	}
 }
 
 // Remote phase manager from local files.
-func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster) {
-	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join("config", "remote-phase-static-deployment", "deployment.yaml.tpl"))
-	if err != nil {
-		panic(fmt.Errorf("loading package-operator-webhook deployment.yaml.tpl: %w", err))
-	}
+func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster devcluster.Cluster) {
+	objs, err := devos.UnstructuredFromFiles(nil, filepath.Join("config", "remote-phase-static-deployment", "deployment.yaml.tpl"))
+	must(err)
 
 	// Insert new image in remote-phase-manager deployment manifest
 	remotePhaseManagerDeployment := &appsv1.Deployment{}
-	if err := cluster.Scheme.Convert(&objs[0], remotePhaseManagerDeployment, nil); err != nil {
+	if err := cluster.Cli.Scheme().Convert(&objs[0], remotePhaseManagerDeployment, nil); err != nil {
 		panic(fmt.Errorf("converting to Deployment: %w", err))
 	}
 	packageOperatorWebhookImage := os.Getenv("REMOTE_PHASE_MANAGER_IMAGE")
@@ -224,48 +221,40 @@ func (d Dev) deployRemotePhaseManager(ctx context.Context, cluster *dev.Cluster)
 
 	// Beware: CreateAndWaitFromFolders doesn't update anything
 	// Create the service accounts and related dependencies
-	err = cluster.CreateAndWaitFromFolders(ctx, []string{filepath.Join("config", "remote-phase-static-deployment")})
-	if err != nil {
-		panic(fmt.Errorf("deploy remote-phase-manager dependencies: %w", err))
-	}
+	objs, err = devos.UnstructuredFromFolder(nil, filepath.Join("config", "remote-phase-static-deployment"))
+	must(err)
+	must(cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...))
 
 	// Deploy the remote phase manager deployment
-	_ = cluster.CtrlClient.Delete(ctx, remotePhaseManagerDeployment)
-	if err := cluster.CreateAndWaitForReadiness(ctx, remotePhaseManagerDeployment); err != nil {
-		panic(fmt.Errorf("deploy remote-phase-manager: %w", err))
-	}
+	_ = cluster.Cli.Delete(ctx, remotePhaseManagerDeployment)
+	must(cluster.CreateAndAwaitReadiness(ctx, remotePhaseManagerDeployment))
 }
 
 // Setup local dev environment with the package operator installed and run the integration test suite.
 func (d Dev) Integration(ctx context.Context) {
 	mg.SerialDeps(Dev.Deploy)
 
-	os.Setenv("KUBECONFIG", locations.DevEnv().Cluster.Kubeconfig())
+	os.Setenv("KUBECONFIG", filepath.Join(locations.KindCache(), devClusterName))
 
 	mg.SerialCtxDeps(ctx, mg.F(Test.Integration, "package-operator"))
 }
 
-func (d Dev) loadImage(image string) error {
+func (d Dev) loadImage(image string) {
 	mg.Deps(mg.F(Build.Image, image))
-
-	return sh.Run(
-		"crane", "push",
-		locations.ImageCache(image)+".tar",
-		locations.LocalImageURL(image),
-	)
+	img, err := crane.Load(locations.ImageCache(image) + ".tar")
+	must(err)
+	must(crane.Push(img, locations.LocalImageURL(image)))
 }
 
 func (d Dev) init() {
-	mg.Deps(Dependency.Kind, Dependency.Crane, Dependency.Helm)
+	mg.Deps(Dependency.Kind, Dependency.Helm)
 }
 
 func templatePackageOperatorManager(scheme *k8sruntime.Scheme) (deploy *appsv1.Deployment) {
-	objs, err := dev.LoadKubernetesObjectsFromFile(filepath.Join("config", "static-deployment", "deployment.yaml.tpl"))
-	if err != nil {
-		panic(fmt.Errorf("loading package-operator-manager deployment.yaml.tpl: %w", err))
-	}
+	objs, err := devos.UnstructuredFromFiles(nil, filepath.Join("config", "static-deployment", "deployment.yaml.tpl"))
+	must(err)
 
-	return patchPackageOperatorManager(scheme, &objs[0])
+	return patchPackageOperatorManager(scheme, objs[0])
 }
 
 func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Unstructured) (deploy *appsv1.Deployment) {
@@ -313,4 +302,70 @@ func patchPackageOperatorManager(scheme *k8sruntime.Scheme, obj *unstructured.Un
 	}
 
 	return packageOperatorDeployment
+}
+
+// Creates an empty development environment via kind.
+func (d Dev) Setup(ctx context.Context) {
+	mg.SerialDeps(Dev.init)
+
+	containerRuntime := locations.ContainerRuntime(ctx)
+	kind := devkind.Kind{Provider: containerRuntime.KindProvider()}
+
+	cluster, err := kind.CreateOrRecreateKindCluster(
+		devClusterName,
+		filepath.Join(locations.KindCache(), devClusterName, "kubeconfig"),
+		kindv1alpha4.Cluster{
+			ContainerdConfigPatches: []string{
+				// Replace `imageRegistry` with our local dev-registry.
+				fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]\nendpoint = ["http://localhost:31320"]`, imageRegistry),
+			},
+			Nodes: []kindv1alpha4.Node{
+				{
+					Role: kindv1alpha4.ControlPlaneRole,
+					ExtraPortMappings: []kindv1alpha4.PortMapping{
+						// Open port to enable connectivity with local registry.
+						{
+							ContainerPort: 5001,
+							HostPort:      5001,
+							ListenAddress: "127.0.0.1",
+							Protocol:      "TCP",
+						},
+					},
+				},
+			},
+		},
+	)
+	must(err)
+	must(corev1alpha1.AddToScheme(cluster.Cli.Scheme()))
+
+	if _, isCI := os.LookupEnv("CI"); !isCI {
+		helm := devhelm.RealHelm{}
+		// don't install the monitoring stack in CI to speed up tests.
+		helm.RepoAdd(ctx, "prometheus-community", "https://prometheus-community.github.io/helm-charts")
+		must(helm.Install(ctx,
+			"prometheus",
+			"prometheus-community/kube-prometheus-stack",
+			devhelm.InstallWithNamespace("monitoring"),
+			devhelm.InstallWithSet("grafana.enabled=true,kubeStateMetrics.enabled=false,nodeExporter.enabled=false"),
+		))
+
+		objs, err := devos.UnstructuredFromFiles(nil, "config/service-monitor.yaml")
+		must(err)
+		err = cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...)
+		must(err)
+	}
+
+	objs, err := devos.UnstructuredFromFiles(nil, "config/local-registry.yaml")
+	must(err)
+	err = cluster.CreateAndAwaitReadiness(ctx, devos.ObjectsFromUnstructured(objs)...)
+	must(err)
+}
+
+// Tears the whole kind development environment down.
+func (d Dev) Teardown(ctx context.Context) {
+	mg.SerialDeps(Dev.init)
+
+	containerRuntime := locations.ContainerRuntime(ctx)
+	kind := devkind.Kind{Provider: containerRuntime.KindProvider()}
+	must(kind.DeleteKindClusterByName(devClusterName, filepath.Join(locations.KindCache(), devClusterName)))
 }

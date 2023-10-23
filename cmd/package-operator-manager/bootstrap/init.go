@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcheck"
+	"github.com/mt-sre/devkube/devtime"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +29,8 @@ const (
 	packageOperatorDeploymentDeletionCheckInterval = 2 * time.Second
 	packageOperatorDeploymentDeletionTimeout       = 2 * time.Minute
 )
+
+var checker = devcheck.RealChecker{}
 
 // Initializes PKO on the cluster by installing CRDs and
 // ensuring a package-operator ClusterPackage is present.
@@ -202,11 +205,9 @@ func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
 		return err
 	}
 
-	// wait for object to be fully deleted
-	waiter := dev.NewWaiter(init.client, init.scheme,
-		dev.WithInterval(packageOperatorDeploymentDeletionCheckInterval),
-		dev.WithTimeout(packageOperatorDeploymentDeletionTimeout))
-	return waiter.WaitToBeGone(ctx, deployment, func(obj client.Object) (done bool, err error) { return false, nil })
+	poller := devtime.Poller{PollInterval: packageOperatorDeploymentDeletionCheckInterval, MaxWaitDuration: packageOperatorDeploymentDeletionTimeout}
+
+	return poller.Wait(ctx, checker.CheckGone(init.client, deployment))
 }
 
 func (init *initializer) config() *runtime.RawExtension {

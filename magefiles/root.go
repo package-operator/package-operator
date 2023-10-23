@@ -7,7 +7,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/mt-sre/devkube/dev"
+	"github.com/mt-sre/devkube/devcluster"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func Deploy(ctx context.Context) {
@@ -15,10 +17,15 @@ func Deploy(ctx context.Context) {
 		panic("VERSION environment variable not set, please set an explicit version to deploy")
 	}
 
-	cluster, err := dev.NewCluster(locations.ClusterDeploymentCache(), dev.WithKubeconfigPath(os.Getenv("KUBECONFIG")))
-	if err != nil {
-		panic(err)
-	}
+	kubeconfig, err := os.ReadFile(os.Getenv("KUBECONFIG"))
+	cfg, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
+	must(err)
+	restCfg, err := cfg.ClientConfig()
+	must(err)
+	cli, err := client.New(restCfg, client.Options{})
+	must(err)
+
+	cluster := devcluster.Cluster{Cli: cli}
 
 	var d Dev
 	d.deployPackageOperatorManager(ctx, cluster)

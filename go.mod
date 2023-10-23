@@ -3,6 +3,7 @@ module package-operator.run
 go 1.21.4
 
 replace (
+	github.com/mt-sre/devkube => ../devkube
 	package-operator.run/apis => ./apis
 	package-operator.run/pkg => ./pkg
 )
@@ -16,9 +17,9 @@ require (
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.1
-	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.29.0
-	github.com/openshift/api v0.0.0-20231102215821-c90b4c82852e
+	github.com/onsi/ginkgo/v2 v2.13.1
+	github.com/onsi/gomega v1.30.0
+	github.com/openshift/api v0.0.0-20231111020126-d7cd9fe8a9bc
 	github.com/prometheus/client_golang v1.17.0
 	github.com/pterm/pterm v0.12.70
 	github.com/spf13/cobra v1.8.0
@@ -81,7 +82,7 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
+	github.com/google/pprof v0.0.0-20231101202521-4ca4178f5c7a // indirect
 	github.com/google/safetext v0.0.0-20230106111101-7156a760e523 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
