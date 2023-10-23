@@ -10,7 +10,9 @@ import (
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
-func manifestFromFiles(ctx context.Context, scheme *runtime.Scheme, files packagetypes.Files) (*manifests.PackageManifest, error) {
+func manifestFromFiles(
+	ctx context.Context, scheme *runtime.Scheme, files packagetypes.Files,
+) (*manifests.PackageManifest, error) {
 	if bothExtensions(files, packagetypes.PackageManifestFilename) {
 		return nil, packagetypes.ViolationError{
 			Reason: packagetypes.ViolationReasonPackageManifestDuplicated,

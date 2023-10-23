@@ -12,7 +12,9 @@ import (
 )
 
 // Renders a ObjectSetTemplateSpec from a PackageInstance to use with ObjectSet and ObjectDeployment APIs.
-func RenderObjectSetTemplateSpec(pkgInstance *packagetypes.PackageInstance) (templateSpec corev1alpha1.ObjectSetTemplateSpec) {
+func RenderObjectSetTemplateSpec(
+	pkgInstance *packagetypes.PackageInstance,
+) (templateSpec corev1alpha1.ObjectSetTemplateSpec) {
 	collector := newPhaseCollector(pkgInstance.Manifest.Spec.Phases...)
 	collector.AddObjects(pkgInstance.Objects...)
 
@@ -56,7 +58,8 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 			// This is important!
 			// When submitted to the API server empty maps will be dropped.
 			// Semantic equality checking is considering a nil map not equal to an empty map.
-			// And if semantic equality checking fails, hash collision checks will always find a hash collision if the ObjectSlice already exists.
+			// And if semantic equality checking fails, hash collision checks will always
+			// find a hash collision if the ObjectSlice already exists.
 			annotations = nil
 		}
 

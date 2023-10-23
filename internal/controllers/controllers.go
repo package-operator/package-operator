@@ -176,7 +176,9 @@ func DeleteMappedConditions(_ context.Context, conditions *[]metav1.Condition) {
 
 // AddDynamicCacheLabel ensures that the given object is labeled
 // for recognition by the dynamic cache.
-func AddDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+func AddDynamicCacheLabel(
+	ctx context.Context, w client.Writer, obj *unstructured.Unstructured,
+) (*unstructured.Unstructured, error) {
 	updated := obj.DeepCopy()
 
 	labels := updated.GetLabels()
@@ -194,7 +196,9 @@ func AddDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructure
 	return updated, nil
 }
 
-func RemoveDynamicCacheLabel(ctx context.Context, w client.Writer, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+func RemoveDynamicCacheLabel(
+	ctx context.Context, w client.Writer, obj *unstructured.Unstructured,
+) (*unstructured.Unstructured, error) {
 	updated := obj.DeepCopy()
 
 	labels := updated.GetLabels()

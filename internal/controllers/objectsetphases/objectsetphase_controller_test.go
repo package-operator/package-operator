@@ -63,7 +63,9 @@ func (c *objectSetPhaseReconcilerMock) Teardown(
 	return args.Bool(0), args.Error(1)
 }
 
-func newControllerAndMocks() (*GenericObjectSetPhaseController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhaseReconcilerMock) {
+func newControllerAndMocks() (
+	*GenericObjectSetPhaseController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhaseReconcilerMock,
+) {
 	dc := &dynamicCacheMock{}
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()

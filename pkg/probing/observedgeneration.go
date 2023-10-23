@@ -2,9 +2,9 @@ package probing
 
 import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-// ObservedGenerationProbe wraps the given Prober and ensures that .status.observedGeneration is equal to .metadata.generation,
-// before running the given probe. If the probed object does not contain the .status.observedGeneration field,
-// the given prober is executed directly.
+// ObservedGenerationProbe wraps the given Prober and ensures that .status.observedGeneration is equal to
+// .metadata.generation, before running the given probe. If the probed object does not contain the
+// .status.observedGeneration field, the given prober is executed directly.
 type ObservedGenerationProbe struct {
 	Prober
 }

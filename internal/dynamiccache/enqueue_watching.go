@@ -38,7 +38,8 @@ func NewEnqueueWatchingObjects(watcherRefGetter ownerRefGetter,
 		scheme:           scheme,
 	}
 	if err := e.parseWatcherTypeGroupKind(scheme); err != nil {
-		// This (passing a type that is not in the scheme) HAS to be a programmer error and can't be recovered at runtime anyways.
+		// This (passing a type that is not in the scheme) HAS
+		// to be a programmer error and can't be recovered at runtime anyways.
 		panic(err)
 	}
 	return e

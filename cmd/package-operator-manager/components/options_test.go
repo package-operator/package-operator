@@ -10,8 +10,16 @@ import (
 
 //nolint:paralleltest
 func TestProvideOptions(t *testing.T) {
-	t.Setenv("PKO_SUB_COMPONENT_TOLERATIONS", `[{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"},{"effect":"NoSchedule","key":"hypershift.openshift.io/hosted-control-plane"}]`)
-	t.Setenv("PKO_SUB_COMPONENT_AFFINITY", `{ "nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [ { "matchExpressions": [ { "key": "node-role.kubernetes.io/infra", "operator": "Exists" } ] }, { "matchExpressions": [ { "key": "hypershift.openshift.io/hosted-control-plane", "operator": "Exists" } ] } ] } } }`)
+	t.Setenv("PKO_SUB_COMPONENT_TOLERATIONS",
+		`[{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"},`+
+			`{"effect":"NoSchedule","key":"hypershift.openshift.io/hosted-control-plane"}]`,
+	)
+	t.Setenv("PKO_SUB_COMPONENT_AFFINITY",
+		`{ "nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [ `+
+			`{ "matchExpressions": [ { "key": "node-role.kubernetes.io/infra", "operator": "Exists" } ] }, `+
+			`{ "matchExpressions": [ { "key": "hypershift.openshift.io/hosted-control-plane", "operator": "Exists" }`+
+			` ] } ] } } }`,
+	)
 	opts, err := ProvideOptions()
 	require.NoError(t, err)
 

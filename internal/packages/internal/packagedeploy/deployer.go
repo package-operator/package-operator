@@ -78,8 +78,13 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 		newObjectDeployment: adapters.NewClusterObjectDeployment,
 		structuralLoader:    packagestructure.DefaultStructuralLoader,
 
-		deploymentReconciler: newDeploymentReconciler(scheme, c, adapters.NewClusterObjectDeployment, adapters.NewClusterObjectSlice,
-			adapters.NewClusterObjectSliceList, newGenericClusterObjectSetList,
+		deploymentReconciler: newDeploymentReconciler(
+			scheme,
+			c,
+			adapters.NewClusterObjectDeployment,
+			adapters.NewClusterObjectSlice,
+			adapters.NewClusterObjectSliceList,
+			newGenericClusterObjectSetList,
 		),
 		packageValidators: append(
 			packagevalidation.DefaultPackageValidators,
@@ -88,8 +93,9 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 	}
 }
 
-// ImageWithDigest replaces the tag/digest part of the given reference with the digest specified by digest.
-// It does not sanitize the reference and expands well known registries.
+// ImageWithDigest replaces the tag/digest part of the given reference
+// with the digest specified by digest. It does not sanitize the
+// reference and expands well known registries.
 func ImageWithDigest(reference string, digest string) (string, error) {
 	// Parse reference into something we can use.
 	ref, err := name.ParseReference(reference)
@@ -97,7 +103,8 @@ func ImageWithDigest(reference string, digest string) (string, error) {
 		return "", fmt.Errorf("parse image reference: %w", err)
 	}
 
-	// Create a new digest reference from the context of the parsed reference with the parameter digest and return the string.
+	// Create a new digest reference from the context of the parsed reference
+	// with the parameter digest and return the string.
 	return ref.Context().Digest(digest).String(), nil
 }
 

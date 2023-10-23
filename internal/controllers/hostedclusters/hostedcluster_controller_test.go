@@ -37,7 +37,9 @@ func TestHostedClusterController_noop(t *testing.T) {
 	mockClient := testutil.NewClient()
 
 	image := "image321"
-	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil)
+	controller := NewHostedClusterController(
+		mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil,
+	)
 	hcName := "testing123"
 	now := metav1.Now()
 	hc := &hypershiftv1beta1.HostedCluster{
@@ -98,7 +100,9 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
+	c := NewHostedClusterController(
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+	)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
@@ -119,7 +123,9 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
+	c := NewHostedClusterController(
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+	)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
@@ -148,7 +154,9 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 	t.Parallel()
 
 	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil)
+	c := NewHostedClusterController(
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+	)
 
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).

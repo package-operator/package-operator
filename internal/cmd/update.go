@@ -65,7 +65,9 @@ type UpdateOption interface {
 	ConfigureUpdate(*UpdateConfig)
 }
 
-func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) (data []byte, err error) {
+func (u *Update) GenerateLockData(
+	ctx context.Context, srcPath string, opts ...GenerateLockDataOption,
+) (data []byte, err error) {
 	var cfg GenerateLockDataConfig
 
 	cfg.Option(opts...)
@@ -116,7 +118,9 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 
 var ErrLockDataUnchanged = errors.New("lock data unchanged")
 
-func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img manifests.PackageManifestImage) (manifests.PackageManifestLockImage, error) {
+func (u *Update) lockImageFromManifestImage(
+	cfg GenerateLockDataConfig, img manifests.PackageManifestImage,
+) (manifests.PackageManifestLockImage, error) {
 	overriddenImage, err := utils.ImageURLWithOverrideFromEnv(img.Image)
 	if err != nil {
 		return manifests.PackageManifestLockImage{}, fmt.Errorf("resolving image URL: %w", err)

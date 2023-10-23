@@ -52,7 +52,8 @@ func (h *hypershift) Start(ctx context.Context) error {
 		case err == nil:
 			h.log.Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
-		case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
+			discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 			continue
 		default:
 			return fmt.Errorf("hypershiftv1beta1 probing: %w", err)

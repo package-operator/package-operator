@@ -15,7 +15,9 @@ import (
 )
 
 type Updater interface {
-	GenerateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) (data []byte, err error)
+	GenerateLockData(
+		ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption,
+	) (data []byte, err error)
 }
 
 func NewCmd(updater Updater) *cobra.Command {

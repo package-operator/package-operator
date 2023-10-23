@@ -9,11 +9,11 @@ import (
 	"package-operator.run/internal/utils"
 )
 
-type hashReconciler struct {
-	client client.Client
-}
+type hashReconciler struct{ client client.Client }
 
-func (h *hashReconciler) Reconcile(_ context.Context, objectSetDeployment objectDeploymentAccessor) (ctrl.Result, error) {
+func (h *hashReconciler) Reconcile(
+	_ context.Context, objectSetDeployment objectDeploymentAccessor,
+) (ctrl.Result, error) {
 	objectSetTemplate := objectSetDeployment.GetObjectSetTemplate()
 	templateHash := utils.ComputeFNV32Hash(objectSetTemplate, objectSetDeployment.GetStatusCollisionCount())
 	objectSetDeployment.SetStatusTemplateHash(templateHash)

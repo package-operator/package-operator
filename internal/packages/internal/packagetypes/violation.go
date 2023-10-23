@@ -14,7 +14,7 @@ type ViolationError struct {
 	Path      string          // Path shows which file path in the package is responsible for this error.
 	Component string          // Component indicates which component the error is associated with
 	Index     *int            // Index is the index of the YAML document within Path.
-	Subject   string          // Complete subject that produced the error, may be the whole yaml file, a single document, etc.
+	Subject   string          // Complete subject producing the error, may be the whole yaml file, a single document, etc.
 }
 
 func (v ViolationError) Error() string {
@@ -63,7 +63,7 @@ const (
 	ViolationReasonPackageManifestLockInvalid    ViolationReason = "PackageManifestLock invalid"
 	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
 	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"
-	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation"
+	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation" //nolint: lll
 	ViolationReasonMissingGVK                    ViolationReason = "GroupVersionKind not set"
 	ViolationReasonDuplicateObject               ViolationReason = "Duplicate Object"
 	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"
@@ -74,7 +74,7 @@ const (
 	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
 	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
-	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
+	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files" //nolint: lll
 	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
 )
 

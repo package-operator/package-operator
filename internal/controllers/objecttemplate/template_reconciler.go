@@ -194,12 +194,15 @@ func (r *templateReconciler) getSourceObject(
 		}
 		sourceObj = updatedSourceObj
 	} else if err != nil {
-		return nil, false, fmt.Errorf("getting source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
+		err := fmt.Errorf("getting source object %s in namespace %s: %w", objectKey.Name, objectKey.Namespace, err)
+		return nil, false, err
 	}
 	return sourceObj, true, nil
 }
 
-func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha1.ObjectTemplateSource, key client.ObjectKey, obj client.Object) (found bool, err error) {
+func (r *templateReconciler) lookupUncached(
+	ctx context.Context, src corev1alpha1.ObjectTemplateSource, key client.ObjectKey, obj client.Object,
+) (found bool, err error) {
 	if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
 		if src.Optional {
 			// just skip this one if it's optional.
@@ -207,7 +210,8 @@ func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha
 		}
 		return false, &SourceError{Source: obj, Err: err}
 	} else if err != nil {
-		return false, fmt.Errorf("getting source object %s in namespace %s from uncachedClient: %w", key.Name, key.Namespace, err)
+		err := fmt.Errorf("getting source object %s in namespace %s from uncachedClient: %w", key.Name, key.Namespace, err)
+		return false, err
 	}
 	return true, nil
 }
@@ -318,7 +322,9 @@ func (r *templateReconciler) getEnvironment() (map[string]any, error) {
 	return env, nil
 }
 
-func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured) error {
+func updateStatusConditionsFromOwnedObject(
+	_ context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured,
+) error {
 	statusObservedGeneration, ok, err := unstructured.NestedInt64(existingObj.Object, "status", "observedGeneration")
 	if err != nil {
 		return fmt.Errorf("getting status observedGeneration: %w", err)
@@ -415,7 +421,8 @@ func RelaxedJSONPathExpression(pathExpression string) (string, error) {
 	}
 	submatches := jsonRegexp.FindStringSubmatch(pathExpression)
 	if submatches == nil {
-		return "", fmt.Errorf("unexpected path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
+		err := fmt.Errorf("path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
+		return "", err
 	}
 	if len(submatches) != 3 {
 		return "", fmt.Errorf("unexpected submatch list: %v", submatches)

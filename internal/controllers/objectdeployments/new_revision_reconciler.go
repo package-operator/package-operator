@@ -67,8 +67,9 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		controllerRef != nil &&
 		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
 		equality.Semantic.DeepEqual(newObjectSet.GetTemplateSpec(), conflictingObjectSet.GetTemplateSpec()) {
-		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the desired new ObjectSet.
-		// So no conflict :) This case can happen if the local cache is a little bit slow to record the ObjectSet Create event.
+		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the
+		// desired new ObjectSet. So no conflict :) This case can happen if the local cache is a little bit slow to
+		// record the ObjectSet Create event.
 		log.Info("Slow cache, no collision")
 		return ctrl.Result{}, nil
 	}

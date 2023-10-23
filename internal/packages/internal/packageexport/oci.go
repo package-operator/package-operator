@@ -16,9 +16,15 @@ import (
 
 // Exports the package as OCI (Open Container Image).
 func ToOCI(pkg *packagetypes.RawPackage) (containerregistrypkgv1.Image, error) {
-	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on our target architecture.
-	// We will drop this after refactoring our in-cluster package loading process to make it architecture agnostic.
-	configFile := &containerregistrypkgv1.ConfigFile{Architecture: "amd64", OS: "linux", Config: containerregistrypkgv1.Config{}, RootFS: containerregistrypkgv1.RootFS{Type: "layers"}}
+	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on
+	// our target architecture. We will drop this after refactoring our in-cluster
+	// package loading process to make it architecture agnostic.
+	configFile := &containerregistrypkgv1.ConfigFile{
+		Architecture: "amd64",
+		OS:           "linux",
+		Config:       containerregistrypkgv1.Config{},
+		RootFS:       containerregistrypkgv1.RootFS{Type: "layers"},
+	}
 	image, err := mutate.ConfigFile(empty.Image, configFile)
 	if err != nil {
 		return nil, err

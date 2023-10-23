@@ -223,10 +223,12 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
 
 	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
-	require.True(t, wait.Interrupted(Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
-		cm := obj.(*corev1.ConfigMap)
-		return cm.Data["banana"] == "bread", nil
-	}, dev.WithTimeout(5*time.Second))))
+	err = Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state",
+		func(obj client.Object) (done bool, err error) {
+			cm := obj.(*corev1.ConfigMap)
+			return cm.Data["banana"] == "bread", nil
+		}, dev.WithTimeout(5*time.Second))
+	require.True(t, wait.Interrupted(err))
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
@@ -241,20 +243,24 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		}))
 
 	// Wait 10s for the object to be reconciled, which should now happen!
-	require.NoError(t,
-		Waiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state", func(obj client.Object) (done bool, err error) {
+	err = Waiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state",
+		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(10*time.Second)))
+		}, dev.WithTimeout(10*time.Second))
+	require.NoError(t, err)
 
 	// ---------------------------
 	// Test phased teardown logic.
 	// ---------------------------
 
 	// Patch cm-4 with extra finalizer, so it can't be deleted till we say so.
-	require.NoError(t,
-		Client.Patch(ctx, currentCM4,
-			client.RawPatch(types.StrategicMergePatchType, []byte(`{"metadata":{"finalizers":["package-operator.run/test-blocker"]}}`))))
+	err = Client.Patch(ctx, currentCM4,
+		client.RawPatch(types.StrategicMergePatchType,
+			[]byte(`{"metadata":{"finalizers":["package-operator.run/test-blocker"]}}`),
+		),
+	)
+	require.NoError(t, err)
 
 	// Archive ObjectSet to start teardown.
 	require.NoError(t, Client.Patch(ctx, objectSet,
@@ -354,7 +360,9 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (
 	}, nil
 }
 
-func defaultObjectSetRev2(cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet, namespace, class string) (*corev1alpha1.ObjectSet, error) {
+func defaultObjectSetRev2(
+	cm1, cm3 *corev1.ConfigMap, rev1 *corev1alpha1.ObjectSet, namespace, class string,
+) (*corev1alpha1.ObjectSet, error) {
 	cm1Obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(cm1)
 	if err != nil {
 		return nil, err
@@ -638,7 +646,9 @@ func objectsSetPhaseKey(objectSet *corev1alpha1.ObjectSet) client.ObjectKey {
 	}
 }
 
-func objectSetPhaseTestHelper(ctx context.Context, t *testing.T, objectSet *corev1alpha1.ObjectSet, cm *corev1.ConfigMap) {
+func objectSetPhaseTestHelper(
+	ctx context.Context, t *testing.T, objectSet *corev1alpha1.ObjectSet, cm *corev1.ConfigMap,
+) {
 	t.Helper()
 
 	require.NotNil(t, objectSet)
@@ -650,7 +660,8 @@ func objectSetPhaseTestHelper(ctx context.Context, t *testing.T, objectSet *core
 
 	// delete objectSetPhase with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSetPhase, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil }))
+	err := Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil })
+	require.NoError(t, err)
 
 	// expect cm to still be there
 	currentCM := &corev1.ConfigMap{}
@@ -702,7 +713,8 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 
 	// delete objectSet with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSet, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	require.NoError(t, Waiter.WaitToBeGone(ctx, objectSet, func(obj client.Object) (done bool, err error) { return false, nil }))
+	err = Waiter.WaitToBeGone(ctx, objectSet, func(obj client.Object) (done bool, err error) { return false, nil })
+	require.NoError(t, err)
 
 	// expect objectSet not to be present anymore
 	currentObjectSet := &corev1alpha1.ObjectSet{}

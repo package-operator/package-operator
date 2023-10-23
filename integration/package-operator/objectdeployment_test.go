@@ -32,10 +32,11 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	testCases := []struct {
-		deploymentRevision           int
-		probe                        []corev1alpha1.ObjectSetProbe
-		phases                       []corev1alpha1.ObjectSetTemplatePhase
-		expectedRevisionAvailability metav1.ConditionStatus // Objectset for the current deployment revision availability status
+		deploymentRevision int
+		probe              []corev1alpha1.ObjectSetProbe
+		phases             []corev1alpha1.ObjectSetTemplatePhase
+		// Objectset for the current deployment revision availability status.
+		expectedRevisionAvailability metav1.ConditionStatus
 		expectedObjectSetCount       int
 		expectedHashCollisionCount   int
 		expectedDeploymentConditions map[string]metav1.ConditionStatus
@@ -303,7 +304,8 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.NoError(t, Waiter.WaitForObject(ctx, obj, "creating", func(_ client.Object) (bool, error) { return true, nil }))
+			err = Waiter.WaitForObject(ctx, obj, "creating", func(_ client.Object) (bool, error) { return true, nil })
+			require.NoError(t, err)
 		}
 
 		require.NoError(t,
@@ -321,10 +323,11 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
-		revision                     string
-		phases                       []corev1alpha1.ObjectSetTemplatePhase
-		probes                       []corev1alpha1.ObjectSetProbe
-		expectedRevisionAvailability metav1.ConditionStatus // Objectset for the current deployment revision availability status
+		revision string
+		phases   []corev1alpha1.ObjectSetTemplatePhase
+		probes   []corev1alpha1.ObjectSetProbe
+		// Objectset for the current deployment revision availability status.
+		expectedRevisionAvailability metav1.ConditionStatus
 		expectedObjectSetCount       int
 		expectedDeploymentConditions map[string]metav1.ConditionStatus
 		expectedArchivedRevisions    []string

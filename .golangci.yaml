@@ -23,7 +23,6 @@ linters:
   #- interfacebloat   # WE do bloaty interfaces.
   #- inamedparam      # Not that useful.
   #- ireturn          # Not that useful/false positives.
-  #- lll              # Could be nice in the future.
   #- musttag          # Dislikes our deps.
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
@@ -69,6 +68,7 @@ linters:
   - grouper
   - importas
   - ineffassign
+  - lll
   - loggercheck
   - maintidx
   - makezero

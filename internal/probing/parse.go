@@ -35,7 +35,9 @@ func Parse(ctx context.Context, packageProbes []corev1alpha1.ObjectSetProbe) (pr
 
 // ParseSelector reads a corev1alpha1.ProbeSelector and wraps a Prober,
 // only executing the Prober when the selector criteria match.
-func ParseSelector(_ context.Context, selector corev1alpha1.ProbeSelector, probe probing.Prober) (probing.Prober, error) {
+func ParseSelector(
+	_ context.Context, selector corev1alpha1.ProbeSelector, probe probing.Prober,
+) (probing.Prober, error) {
 	if selector.Kind != nil {
 		probe = &probing.GroupKindSelector{
 			Prober: probe,

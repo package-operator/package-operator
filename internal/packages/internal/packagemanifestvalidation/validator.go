@@ -94,15 +94,21 @@ func (v *specStandardValidatorV3) validate(schema *apiextensions.JSONSchemaProps
 	}
 
 	if schema.Type == "null" {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("type"), "type cannot be set to null, use nullable as an alternative"))
+		allErrs = append(allErrs,
+			field.Forbidden(fldPath.Child("type"), "type cannot be set to null, use nullable as an alternative"),
+		)
 	}
 
 	if schema.Items != nil && len(schema.Items.JSONSchemas) != 0 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("items"), "items must be a schema object and not an array"))
+		allErrs = append(allErrs,
+			field.Forbidden(fldPath.Child("items"), "items must be a schema object and not an array"),
+		)
 	}
 
 	if v.isInsideResourceMeta && schema.XEmbeddedResource {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("x-kubernetes-embedded-resource"), "must not be used inside of resource meta"))
+		allErrs = append(allErrs,
+			field.Forbidden(fldPath.Child("x-kubernetes-embedded-resource"), "must not be used inside of resource meta"),
+		)
 	}
 
 	return allErrs

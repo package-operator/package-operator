@@ -10,7 +10,9 @@ func ProvideScheme() (*runtime.Scheme, error) {
 	return internalcmd.NewScheme()
 }
 
-func ProvideKubeClientFactory(cfgFactory internalcmd.RestConfigFactory, scheme *runtime.Scheme) internalcmd.KubeClientFactory {
+func ProvideKubeClientFactory(
+	cfgFactory internalcmd.RestConfigFactory, scheme *runtime.Scheme,
+) internalcmd.KubeClientFactory {
 	return internalcmd.NewDefaultKubeClientFactory(scheme, cfgFactory)
 }
 

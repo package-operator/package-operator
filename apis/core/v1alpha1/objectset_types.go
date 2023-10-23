@@ -6,8 +6,9 @@ import (
 
 // ObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 //
-// ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
-// This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+// ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and
+// being itself mostly immutable. This object type is able to suspend/pause reconciliation of
+// specific objects to facilitate the transition between revisions.
 //
 // Archived ObjectSets may stay on the cluster, to store information about previous revisions.
 //

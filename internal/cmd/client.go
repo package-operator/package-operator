@@ -68,11 +68,11 @@ func (c *GetPackageConfig) Option(opts ...GetPackageOption) {
 	}
 }
 
-type GetPackageOption interface {
-	ConfigureGetPackage(*GetPackageConfig)
-}
+type GetPackageOption interface{ ConfigureGetPackage(*GetPackageConfig) }
 
-func (c *Client) GetObjectDeployment(ctx context.Context, name string, opts ...GetObjectDeploymentOption) (*ObjectDeployment, error) {
+func (c *Client) GetObjectDeployment(
+	ctx context.Context, name string, opts ...GetObjectDeploymentOption,
+) (*ObjectDeployment, error) {
 	var cfg GetObjectDeploymentConfig
 
 	cfg.Option(opts...)

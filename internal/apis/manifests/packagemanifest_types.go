@@ -42,12 +42,14 @@ const (
 	PackageManifestScopeNamespaced PackageManifestScope = "Namespaced"
 )
 
-// PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
+// PackageManifestSpec represents the spec of the packagemanifest containing
+// the details about phases and availability probes.
 type PackageManifestSpec struct {
 	// Scopes declare the available installation scopes for the package.
 	// Either Cluster, Namespaced, or both.
 	Scopes []PackageManifestScope
-	// Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment.
+	// Phases correspond to the references to the phases which are going to
+	// be the part of the ObjectDeployment/ClusterObjectDeployment.
 	Phases []PackageManifestPhase
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
@@ -58,7 +60,8 @@ type PackageManifestSpec struct {
 	Config PackageManifestSpecConfig
 	// List of images to be resolved
 	Images []PackageManifestImage
-	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
+	// Configuration for multi-component packages. If this field is not set it
+	// is assumed that the containing package is a single-component package.
 	// +optional
 	Components *PackageManifestComponentsConfig
 }
@@ -107,6 +110,7 @@ type PackageManifestTestKubeconform struct {
 	KubernetesVersion string
 	// OpenAPI schema locations for kubeconform
 	// defaults to:
+	//nolint:lll
 	// - https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json
 	// - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
 	SchemaLocations []string

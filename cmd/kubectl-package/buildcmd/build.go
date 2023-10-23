@@ -24,7 +24,8 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 	const (
 		buildUse   = "build source_path [--tag tag]... [--output output_path] [--push]"
 		buildShort = "build an PKO package image using manifests at the given path"
-		buildLong  = "builds and optionally pushes an OCI image in the Package Operator package format from the specified build context directory."
+		buildLong  = "builds and optionally pushes an OCI image in the Package Operator" +
+			" package format from the specified build context directory."
 	)
 
 	cmd := &cobra.Command{

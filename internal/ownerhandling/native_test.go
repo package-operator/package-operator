@@ -202,5 +202,7 @@ func TestOwnerStrategyNative_OwnerPatch(t *testing.T) {
 	patch, err := s.OwnerPatch(obj)
 	require.NoError(t, err)
 
-	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/revision":"3"},"ownerReferences":[{"apiVersion":"v1","kind":"ConfigMap","name":"cm","uid":"asdfjkl","controller":true,"blockOwnerDeletion":true}]}}`, string(patch))
+	expected := `{"metadata":{"annotations":{"package-operator.run/revision":"3"},"ownerReferences":` +
+		`[{"apiVersion":"v1","kind":"ConfigMap","name":"cm","uid":"asdfjkl","controller":true,"blockOwnerDeletion":true}]}}`
+	assert.Equal(t, expected, string(patch))
 }

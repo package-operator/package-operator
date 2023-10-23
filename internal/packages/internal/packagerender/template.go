@@ -69,8 +69,10 @@ func templateContext(tmplCtx packagetypes.PackageRenderContext) (map[string]any,
 
 func workaroundnovalue(actualCtx map[string]any) {
 	// The go templating engine substitutes missing values in map with "<no value>".
-	// For our case we would like to raise an error in case of missing values, which can be done by setting the templater option missingkey=error...
-	// except that it is ignored if the map is of type map[string]any for some reason ʕ •ᴥ•ʔ. See https://github.com/golang/go/issues/24963.
+	// For our case we would like to raise an error in case of missing values, which
+	// can be done by setting the templater option missingkey=error... except that
+	// it is ignored if the map is of type map[string]any for some reason
+	// ʕ •ᴥ•ʔ. See https://github.com/golang/go/issues/24963.
 	// Circumventing this by defaulting annotations and labels maps in metadata.
 
 	metadata := actualCtx["package"].(map[string]any)["metadata"].(map[string]any)

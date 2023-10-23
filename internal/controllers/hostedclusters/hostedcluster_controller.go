@@ -94,7 +94,8 @@ func (c *HostedClusterController) Reconcile(
 	}
 
 	existingPkg := &corev1alpha1.Package{}
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(desiredPkg), existingPkg); err != nil && errors.IsNotFound(err) {
+	err = c.client.Get(ctx, client.ObjectKeyFromObject(desiredPkg), existingPkg)
+	if err != nil && errors.IsNotFound(err) {
 		if err := c.client.Create(ctx, desiredPkg); err != nil {
 			return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
 		}
@@ -144,8 +145,7 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 	return pkg, nil
 }
 
-// From
-// https://github.com/openshift/hypershift/blob/9c3e998b0b37bedce07163a197e0bf30339e627e/hypershift-operator/controllers/manifests/manifests.go#L13
+// From https://github.com/openshift/hypershift/blob/v0.1.13/hypershift-operator/controllers/manifests/manifests.go#L16
 func hostedClusterNamespace(cluster *v1beta1.HostedCluster) string {
 	return fmt.Sprintf("%s-%s", cluster.Namespace, strings.ReplaceAll(cluster.Name, ".", "-"))
 }

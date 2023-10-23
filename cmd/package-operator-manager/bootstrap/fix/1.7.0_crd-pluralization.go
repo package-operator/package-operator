@@ -19,18 +19,28 @@ import (
 
 /*
 This fix cleans up the singular version of two pluralized CRDs.
-* An upgrade [1] to the controller-runtime dependency also upgraded the code generators that generate our CustomResourceDefinition manifests from the apis package. This upgrade fixed a pluralization library used in the generators, which in turn 'fixed' the `plural` names of the CRDs `ClusterObjectSlices` and `ObjectSlices` and appended a missing 's' to both names.
+* An upgrade [1] to the controller-runtime dependency also upgraded the code generators that generate our
+* CustomResourceDefinition manifests from the apis package. This upgrade fixed a pluralization library used
+* in the generators, which in turn 'fixed' the `plural` names of the CRDs `ClusterObjectSlices` and
+* `ObjectSlices` and appended a missing 's' to both names.
 * - `objectslice` -> `objectslices`
 * - `clusterobjectslice` -> `clusterobjectslices`
 *
-* Upgrading from an existing PKO installation with the old (singular) CRDs in place to a new version with the new (pluralized) CRDs results in a broken state because the old singular CRDs must be removed from the apiserver for the new pluralized CRDs to become ready. PKO can't handle this situation when it tries to upgrade itself and the ClusterObjectSet for PKO's new version will never be able to adopt all PKO resources, thus stalling the upgrade, leaving the old PKO version running indefinitely.
+* Upgrading from an existing PKO installation with the old (singular) CRDs in place to a new version with
+* the new (pluralized) CRDs results in a broken state because the old singular CRDs must be removed from the
+* apiserver for the new pluralized CRDs to become ready. PKO can't handle this situation when it tries to
+* upgrade itself and the ClusterObjectSet for PKO's new version will never be able to adopt all PKO resources,
+* thus stalling the upgrade, leaving the old PKO version running indefinitely.
 * Luckily the old singular CRDs can just be deleted because PKO is not using this api yet.
 *
 * Rough overview of the steps this fix takes to rectify the upgrade:
 * - Needs package-operator-manager to be stopped (which the take-over bootstrap procedure already handles).
-* - Remove all ClusterObjectSets under the package-operator ClusterPackage with propagation policy set to `Orphan`, thus leaving all children objects intact. This is really important to avoid the loss of every installed package in the cluster.
+* - Remove all ClusterObjectSets under the package-operator ClusterPackage with propagation policy set to
+*   `Orphan`, thus leaving all children objects intact. This is really important to avoid the loss of every
+*   installed package in the cluster.
 * - Remove the singular CRDs.
-* - Continue with the bootstrap process which will recreate a ClusterObjectSet, adopt all PKO resources and spin up a fresh PKO deployment which then takes over.
+* - Continue with the bootstrap process which will recreate a ClusterObjectSet, adopt all PKO resources
+*   and spin up a fresh PKO deployment which then takes over.
 
 * [1] https://github.com/package-operator/package-operator/commit/928fbace122d35d4d5002d740d7d6ca14248f315
 */
@@ -68,18 +78,21 @@ var (
 func (f CRDPluralizationFix) Check(ctx context.Context, fc Context) (bool, error) {
 	// Assert cluster conditions that make fix applicable.
 	// This one is easy: when either of (cluster)objectslice(s) CRDs exist in singularized and pluralized form.
-	// The fix itself has to make sure to remove this condition as late as possible from the cluster to avoid getting stuck in an "errored fix state" which this check does not detect.
+	// The fix itself has to make sure to remove this condition as late as possible from the cluster to avoid
+	// getting stuck in an "errored fix state" which this check does not detect.
 
 	return f.atleastOneCRDPairExists(ctx, fc, crdPairs)
 }
 
 func (f CRDPluralizationFix) Run(ctx context.Context, fc Context) error {
-	// ensure ORPHANING deletion of package-operator ClusterObjectSets (the ones that are created under the package-operator Package)
+	// ensure ORPHANING deletion of package-operator ClusterObjectSets
+	// (the ones that are created under the package-operator Package)
 	if err := f.ensureClusterObjectSetsGoneWithOrphansLeft(ctx, fc, pkoClusterObjectSetLabelSelector); err != nil {
 		return err
 	}
 
-	// remove singular CRDs - this step happens last, to keep the fix condition open until after the actual fix has happened
+	// remove singular CRDs - this step happens last, to keep the fix
+	// condition open until after the actual fix has happened
 	for _, crd := range crdsToBeRemoved {
 		if err := f.ensureCRDGone(ctx, fc, crd); err != nil {
 			return err
@@ -97,15 +110,17 @@ func mustParseLabelSelector(selector string) labels.Selector {
 	return labelSelector
 }
 
-func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(ctx context.Context, fc Context, labelSelectorString string) error {
+func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(
+	ctx context.Context, fc Context, labelSelectorString string,
+) error {
 	// build pkoLabelSelector to match PKO ClusterObjectSets
 	pkoLabelSelector := client.MatchingLabelsSelector{
 		Selector: mustParseLabelSelector(labelSelectorString),
 	}
 
-	// delete all PKO ClusterObjectSets by labelSelector
-	// the `Orphan` PropagationPolicy is important here!
-	// We don't want kube to clean up all child objects (because that would include ALL PKO CRDs and this would in turn include all installed objects!)
+	// delete all PKO ClusterObjectSets by labelSelector the `Orphan` PropagationPolicy is important here!
+	// We don't want kube to clean up all child objects (because that would include ALL PKO CRDs and this
+	// would in turn include all installed objects!)
 	if err := fc.Client.DeleteAllOf(
 		ctx,
 		&corev1alpha1.ClusterObjectSet{},

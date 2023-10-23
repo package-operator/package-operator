@@ -81,5 +81,7 @@ var (
 	// PackageManifestGroupKind is the kubernetes schema group kind of a PackageManifest.
 	PackageManifestGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifest"}
 	// PackageManifestLockGroupKind is the kubernetes schema group kind of a PackageManifestLock.
-	PackageManifestLockGroupKind = schema.GroupKind{Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifestLock"}
+	PackageManifestLockGroupKind = schema.GroupKind{
+		Group: manifestsv1alpha1.GroupVersion.Group, Kind: "PackageManifestLock",
+	}
 )

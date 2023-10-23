@@ -76,8 +76,10 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 
 	// If ObjectSet is namespace-scoped check if that namespace is already in the process of being deleted.
 	// If so, remove finalizers from the Phase object to let it go immediately.
-	// This is  hypershift-specific behavior because Phases live in the same namespace as the guest cluster apiserver pods and ACM just kills the full namespace to uninstall a guest cluster.
-	// TODO(erdii): I think we should probably just patch-remove all of OUR finalizers so we can't accidentally wipe finalizers of other owners.
+	// This is  hypershift-specific behavior because Phases live in the same namespace as the guest cluster apiserver
+	// pods and ACM just kills the full namespace to uninstall a guest cluster.
+	// TODO(erdii): I think we should probably just patch-remove all of OUR finalizers so we can't accidentally wipe
+	// finalizers of other owners.
 	if len(objectSet.ClientObject().GetNamespace()) != 0 {
 		ns := corev1.Namespace{}
 

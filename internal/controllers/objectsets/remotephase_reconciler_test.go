@@ -300,7 +300,8 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,
@@ -357,7 +358,8 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,

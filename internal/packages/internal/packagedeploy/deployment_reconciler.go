@@ -141,7 +141,9 @@ func (r *DeploymentReconciler) Reconcile(
 }
 
 // GarbageCollect Slices that are no longer referenced.
-func (r *DeploymentReconciler) sliceGarbageCollection(ctx context.Context, deploy adapters.ObjectDeploymentAccessor) error {
+func (r *DeploymentReconciler) sliceGarbageCollection(
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
+) error {
 	objectSets, err := r.listObjectSetsForDeployment(ctx, deploy)
 	if err != nil {
 		return fmt.Errorf("listing Deployments ObjectSets for GC evaluation: %w", err)
@@ -214,7 +216,8 @@ func (r *DeploymentReconciler) listObjectSetsForDeployment(
 }
 
 func (r *DeploymentReconciler) chunkPhase(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, phase *corev1alpha1.ObjectSetTemplatePhase, chunker objectChunker,
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
+	phase *corev1alpha1.ObjectSetTemplatePhase, chunker objectChunker,
 ) error {
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -274,7 +277,8 @@ func (r *DeploymentReconciler) reconcileSlice(
 func (e sliceCollisionError) Error() string { return "ObjectSlice collision with " + e.key.String() }
 
 func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
-	ctx context.Context, deploy adapters.ObjectDeploymentAccessor, slice adapters.ObjectSliceAccessor, collisionCount int32,
+	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
+	slice adapters.ObjectSliceAccessor, collisionCount int32,
 ) error {
 	hash := utils.ComputeFNV32Hash(slice.GetObjects(), &collisionCount)
 	name := deploy.ClientObject().GetName() + "-" + hash

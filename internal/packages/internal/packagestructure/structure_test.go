@@ -163,7 +163,10 @@ func TestStructuralLoader_Load(t *testing.T) {
 	t.Run("components-enabled/invalid-files-in-components-dir", func(t *testing.T) {
 		t.Parallel()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
-		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/invalid-files-in-components-dir")
+		rawPkg, err := packageimport.FromFolder(
+			ctx,
+			"testdata/multi-component/components-enabled/invalid-files-in-components-dir",
+		)
 		require.NoError(t, err)
 
 		_, err = sl.Load(ctx, rawPkg)

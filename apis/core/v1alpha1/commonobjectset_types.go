@@ -48,9 +48,12 @@ type ObjectSetTemplateSpec struct {
 type ObjectSetTemplatePhase struct {
 	// Name of the reconcile phase. Must be unique within a ObjectSet.
 	Name string `json:"name"`
-	// If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.
-	// If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.
-	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
+	// If non empty, the ObjectSet controller will delegate phase reconciliation
+	// to another controller, by creating an ObjectSetPhase object. If set to the
+	// string "default" the built-in Package Operator ObjectSetPhase controller
+	// will reconcile the object in the same way the ObjectSet would. If set to
+	// any other string, an out-of-tree controller needs to be present to handle
+	// ObjectSetPhase objects.
 	Class string `json:"class,omitempty"`
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects,omitempty"`
@@ -126,6 +129,7 @@ type ConditionMapping struct {
 	// Source condition type.
 	SourceType string `json:"sourceType"`
 	// Destination condition type to report into Package Operator APIs.
+	//nolint:lll
 	// +kubebuilder:validation:Pattern=`[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]`
 	DestinationType string `json:"destinationType"`
 }

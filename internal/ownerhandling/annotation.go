@@ -68,7 +68,8 @@ func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 		ownerStrategy: s,
 	}
 	if err := a.parseOwnerTypeGroupKind(s.scheme); err != nil {
-		// This (passing a type that is not in the scheme) HAS to be a programmer error and can't be recovered at runtime anyways.
+		// This (passing a type that is not in the scheme) HAS to be a
+		// programmer error and can't be recovered at runtime anyways.
 		panic(err)
 	}
 	return a
@@ -307,14 +308,18 @@ type AnnotationEnqueueRequestForOwner struct {
 }
 
 // Create implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Create(
+	_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface,
+) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Update implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Update(
+	_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface,
+) {
 	for _, req := range e.getOwnerReconcileRequest(evt.ObjectOld) {
 		q.Add(req)
 	}
@@ -324,14 +329,18 @@ func (e *AnnotationEnqueueRequestForOwner) Update(_ context.Context, evt event.U
 }
 
 // Delete implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Delete(
+	_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface,
+) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}
 }
 
 // Generic implements EventHandler.
-func (e *AnnotationEnqueueRequestForOwner) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *AnnotationEnqueueRequestForOwner) Generic(
+	_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface,
+) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
 	}

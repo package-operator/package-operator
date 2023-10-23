@@ -87,7 +87,8 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 	ctx, cancel := context.WithCancel(ctx)
 	go b.cancelWhenPackageAvailable(ctx, cancel)
 
-	// TODO(jgwosdz): investigate if it would make sense to stop using envvars and instead go through a central configuration facility (like opts?)
+	// TODO(jgwosdz): investigate if it would make sense to stop using envvars and instead go
+	// through a central configuration facility (like opts?)
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
 	// CRDs, Namespace, ServiceAccount and ClusterRoleBinding.

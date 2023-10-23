@@ -45,7 +45,9 @@ func (m *OwnerStrategyMock) SetControllerReference(owner, obj metav1.Object) err
 	return args.Error(0)
 }
 
-func (m *OwnerStrategyMock) EnqueueRequestForOwner(ownerType client.Object, mapper meta.RESTMapper, isController bool) handler.EventHandler {
+func (m *OwnerStrategyMock) EnqueueRequestForOwner(
+	ownerType client.Object, mapper meta.RESTMapper, isController bool,
+) handler.EventHandler {
 	args := m.Called(ownerType, mapper, isController)
 	return args.Get(0).(handler.EventHandler)
 }

@@ -37,7 +37,8 @@ func newFixer(c client.Client, log logr.Logger, pkoNamespace string) *fixer {
 	}
 }
 
-// fix iterates through all registered fixes/runCheckers, runs their checks to determine if the fix has to be executed and if so, it executes the fix.
+// fix iterates through all registered fixes/runCheckers, runs their checks to determine if
+// the fix has to be executed and if so, it executes the fix.
 func (f *fixer) fix(ctx context.Context) error {
 	for _, fixRunChecker := range f.fixes {
 		fixName := reflect.TypeOf(fixRunChecker).String()

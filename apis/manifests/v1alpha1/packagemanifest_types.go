@@ -52,12 +52,14 @@ const (
 	PackageManifestScopeNamespaced PackageManifestScope = "Namespaced"
 )
 
-// PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
+// PackageManifestSpec represents the spec of the packagemanifest containing the
+// details about phases and availability probes.
 type PackageManifestSpec struct {
 	// Scopes declare the available installation scopes for the package.
 	// Either Cluster, Namespaced, or both.
 	Scopes []PackageManifestScope `json:"scopes"`
-	// Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment.
+	// Phases correspond to the references to the phases which are going to be the
+	// part of the ObjectDeployment/ClusterObjectDeployment.
 	Phases []PackageManifestPhase `json:"phases"`
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
@@ -68,7 +70,8 @@ type PackageManifestSpec struct {
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
 	// List of images to be resolved
 	Images []PackageManifestImage `json:"images"`
-	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
+	// Configuration for multi-component packages. If this field is not set it is assumed
+	// that the containing package is a single-component package.
 	// +optional
 	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
 }
@@ -119,6 +122,7 @@ type PackageManifestTestCaseTemplate struct {
 type PackageManifestTestKubeconform struct {
 	// Kubernetes version to use schemas from.
 	KubernetesVersion string `json:"kubernetesVersion"`
+	//nolint:lll
 	// OpenAPI schema locations for kubeconform
 	// defaults to:
 	// - https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json

@@ -56,7 +56,8 @@ func TestUpgrade(t *testing.T) {
 	log.Info("Latest released PKO is now available")
 
 	log.Info("Apply self-bootstrap-job.yaml built from sources")
-	require.NoError(t, createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")}))
+	err := createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")})
+	require.NoError(t, err)
 	assertInstallDone(ctx, t, pkg)
 }
 
@@ -163,8 +164,8 @@ func nukeObject(ctx context.Context, obj client.Object) error {
 func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) error {
 	if len(obj.GetFinalizers()) > 0 {
 		obj.SetFinalizers([]string{})
-		if err := Client.Patch(ctx, obj,
-			client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`))); err != nil && !apimachineryerrors.IsNotFound(err) {
+		err := Client.Patch(ctx, obj, client.RawPatch(client.Merge.Type(), []byte(`{"metadata": {"finalizers": null}}`)))
+		if err != nil && !apimachineryerrors.IsNotFound(err) {
 			return fmt.Errorf("releasing finalizers on stuck object %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 		}
 	}

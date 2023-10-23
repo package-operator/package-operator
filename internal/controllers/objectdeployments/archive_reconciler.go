@@ -220,7 +220,9 @@ func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
 	return
 }
 
-func (a *archiveReconciler) garbageCollectRevisions(ctx context.Context, previousObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor) error {
+func (a *archiveReconciler) garbageCollectRevisions(
+	ctx context.Context, previousObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+) error {
 	revisionLimit := defaultRevisionLimit
 	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()
 	if deploymentRevisionLimit != nil {

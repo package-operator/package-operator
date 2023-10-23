@@ -18,7 +18,8 @@ func NewCmd(validator Validator) *cobra.Command {
 	const (
 		validateUse   = "validate [--pull] target"
 		validateShort = "validate a package."
-		validateLong  = "validate a package. Target may be a source directory, a package in a tar[.gz] or a fully qualified tag if --pull is set."
+		validateLong  = "validate a package. Target may be a source directory, " +
+			"a package in a tar[.gz] or a fully qualified tag if --pull is set."
 	)
 
 	cmd := &cobra.Command{

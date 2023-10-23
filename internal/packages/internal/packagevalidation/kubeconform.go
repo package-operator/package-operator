@@ -23,8 +23,10 @@ func (nv *noopKubeconformValidator) Validate(_ string, _ io.ReadCloser) []valida
 }
 
 const (
-	defaultKubeSchemaLocation = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json"
-	defaultCRDSSchemaLocation = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+	defaultKubeSchemaLocation = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/" +
+		"master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json"
+	defaultCRDSSchemaLocation = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/" +
+		"{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
 )
 
 func defaultKubeconformSchemaLocations(

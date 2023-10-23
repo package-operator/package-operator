@@ -94,8 +94,9 @@ status:
 
 ClusterObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 
-ClusterObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
-This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+ClusterObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and
+being itself mostly immutable. This object type is able to suspend/pause reconciliation of specific
+objects to facilitate the transition between revisions.
 
 Archived ClusterObjectSets may stay on the cluster, to store information about previous revisions.
 
@@ -170,8 +171,9 @@ status:
 
 ### ClusterObjectSetPhase
 
-ClusterObjectSetPhase is an internal API, allowing a ClusterObjectSet to delegate a single phase to another custom controller.
-ClusterObjectSets will create subordinate ClusterObjectSetPhases when `.class` is set within the phase specification.
+ClusterObjectSetPhase is an internal API, allowing a ClusterObjectSet to delegate a
+single phase to another custom controller. ClusterObjectSets will create subordinate
+ClusterObjectSetPhases when `.class` is set within the phase specification.
 
 
 **Example**
@@ -422,8 +424,9 @@ status:
 
 ObjectSet reconciles a collection of objects through ordered phases and aggregates their status.
 
-ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and being itself mostly immutable.
-This object type is able to suspend/pause reconciliation of specific objects to facilitate the transition between revisions.
+ObjectSets behave similarly to Kubernetes ReplicaSets, by managing a collection of objects and
+being itself mostly immutable. This object type is able to suspend/pause reconciliation of
+specific objects to facilitate the transition between revisions.
 
 Archived ObjectSets may stay on the cluster, to store information about previous revisions.
 
@@ -971,7 +974,7 @@ ObjectSetTemplatePhase configures the reconcile phase of ObjectSets.
 | Field | Description |
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of the reconcile phase. Must be unique within a ObjectSet. |
-| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation to another controller, by creating an ObjectSetPhase object.<br>If set to the string "default" the built-in Package Operator ObjectSetPhase controller will reconcile the object in the same way the ObjectSet would.<br>If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects. |
+| `class` <br>string | If non empty, the ObjectSet controller will delegate phase reconciliation<br>to another controller, by creating an ObjectSetPhase object. If set to the<br>string "default" the built-in Package Operator ObjectSetPhase controller<br>will reconcile the object in the same way the ObjectSet would. If set to<br>any other string, an out-of-tree controller needs to be present to handle<br>ObjectSetPhase objects. |
 | `objects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | Objects belonging to this phase. |
 | `externalObjects` <br><a href="#objectsetobject">[]ObjectSetObject</a> | ExternalObjects observed, but not reconciled by this phase. |
 | `slices` <br>[]string | References to ObjectSlices containing objects for this phase. |
@@ -1081,7 +1084,7 @@ PackageSpec specifies a package.
 
 | Field | Description |
 | ----- | ----------- |
-| `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package. |
+| `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render<br>the ObjectDeployment for propagating the installation of the package. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
 | `component` <br>string | Desired component to deploy from multi-component packages. |
 
@@ -1280,7 +1283,7 @@ test:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#packagemanifestspec">PackageManifestSpec</a> | PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes. |
+| `spec` <br><a href="#packagemanifestspec">PackageManifestSpec</a> | PackageManifestSpec represents the spec of the packagemanifest containing the<br>details about phases and availability probes. |
 | `test` <br><a href="#packagemanifesttest">PackageManifestTest</a> | PackageManifestTest configures test cases. |
 
 
@@ -1432,16 +1435,17 @@ Used in:
 
 ### PackageManifestSpec
 
-PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
+PackageManifestSpec represents the spec of the packagemanifest containing the
+details about phases and availability probes.
 
 | Field | Description |
 | ----- | ----------- |
 | `scopes` <b>required</b><br><a href="#packagemanifestscope">[]PackageManifestScope</a> | Scopes declare the available installation scopes for the package.<br>Either Cluster, Namespaced, or both. |
-| `phases` <b>required</b><br><a href="#packagemanifestphase">[]PackageManifestPhase</a> | Phases correspond to the references to the phases which are going to be the part of the ObjectDeployment/ClusterObjectDeployment. |
+| `phases` <b>required</b><br><a href="#packagemanifestphase">[]PackageManifestPhase</a> | Phases correspond to the references to the phases which are going to be the<br>part of the ObjectDeployment/ClusterObjectDeployment. |
 | `availabilityProbes` <br>[]corev1alpha1.ObjectSetProbe | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
-| `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
+| `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
 
 
 Used in:

@@ -27,11 +27,13 @@ const (
 		" with Package Operator using the given Package Operator Package Image"
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
-	registryHostOverrides = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
-	packageHashModifier   = "An additional value used for the generation of a package's unpackedHash."
-
-	subComponentAffinityFlagDescription    = "Pod affinity settings used in PKO deployed subcomponents, like remote-phase-manager."
-	subComponentTolerationsFlagDescription = "Pod tolerations settings used in PKO deployed subcomponents, like remote-phase-manager."
+	registryHostOverrides = "List of registry host overrides to change during image pulling. " +
+		"e.g. quay.io=localhost:123,<original-host>=<new-host>"
+	packageHashModifier             = "An additional value used for the generation of a package's unpackedHash."
+	subCmpntAffinityFlagDescription = "Pod affinity settings used in PKO deployed subcomponents, " +
+		"like remote-phase-manager."
+	subCmpntTolerationsFlagDescription = "Pod tolerations settings used in PKO deployed subcomponents, " +
+		"like remote-phase-manager."
 )
 
 type Options struct {
@@ -102,12 +104,12 @@ func ProvideOptions() (opts Options, err error) {
 	flag.StringVar(
 		&subComponentAffinityJSON, "sub-component-affinity",
 		os.Getenv("PKO_SUB_COMPONENT_AFFINITY"),
-		subComponentAffinityFlagDescription,
+		subCmpntAffinityFlagDescription,
 	)
 	flag.StringVar(
 		&subComponentTolerationsJSON, "sub-component-tolerations",
 		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
-		subComponentAffinityFlagDescription,
+		subCmpntAffinityFlagDescription,
 	)
 	if len(subComponentAffinityJSON) > 0 {
 		if err := json.Unmarshal([]byte(subComponentAffinityJSON), &opts.SubComponentAffinity); err != nil {
