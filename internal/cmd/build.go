@@ -11,10 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/packages/packageexport"
-	"package-operator.run/internal/packages/packagestructure"
-	"package-operator.run/internal/packages/packagetypes"
-	"package-operator.run/internal/packages/packagevalidation"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/utils"
 )
 
@@ -82,7 +79,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	b.cfg.Log.Info("creating image")
 
-	pkg, err := packagestructure.DefaultStructuralLoader.Load(ctx, rawPkg)
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
@@ -91,10 +88,10 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	}
 
 	validators := append(
-		packagevalidation.PackageValidatorList{
-			packagevalidation.NewTemplateTestValidator(filepath.Join(srcPath, ".test-fixtures")),
+		packages.PackageValidatorList{
+			packages.NewTemplateTestValidator(filepath.Join(srcPath, ".test-fixtures")),
 		},
-		packagevalidation.DefaultPackageValidators...,
+		packages.DefaultPackageValidators...,
 	)
 	if err := validators.ValidatePackage(ctx, pkg); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
@@ -103,7 +100,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	if cfg.OutputPath != "" {
 		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
-		if err := packageexport.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
+		if err := packages.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
 			return fmt.Errorf("exporting package to file: %w", err)
 		}
 	}
@@ -115,7 +112,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 			craneOpts = append(craneOpts, crane.Insecure)
 		}
 
-		if err := packageexport.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...); err != nil {
+		if err := packages.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...); err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
 		}
 	}
@@ -123,7 +120,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	return nil
 }
 
-func (b *Build) ValidatePackage(_ context.Context, pkg *packagetypes.Package) error {
+func (b *Build) ValidatePackage(_ context.Context, pkg *packages.Package) error {
 	if pkg.ManifestLock == nil {
 		if len(pkg.Manifest.Spec.Images) > 0 {
 			return err(`manifest.lock.yaml is missing (try running "kubectl package update")`)

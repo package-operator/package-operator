@@ -17,7 +17,7 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
@@ -59,14 +59,14 @@ func newUnpackReconciler(
 }
 
 type imagePuller interface {
-	Pull(ctx context.Context, image string) (*packagetypes.RawPackage, error)
+	Pull(ctx context.Context, image string) (*packages.RawPackage, error)
 }
 
 type packageDeployer interface {
 	Deploy(
 		ctx context.Context,
 		apiPkg adapters.GenericPackageAccessor,
-		rawPkg *packagetypes.RawPackage,
+		rawPkg *packages.RawPackage,
 		env manifests.PackageEnvironment,
 	) error
 }

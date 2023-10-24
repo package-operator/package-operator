@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 )
 
 func TestValidatePackageConfig(t *testing.T) {
@@ -65,7 +65,7 @@ func TestValidate_ValidatePackage(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		Options   []ValidatePackageOption
-		PulledPkg *packagetypes.RawPackage
+		PulledPkg *packages.RawPackage
 		Assertion require.ErrorAssertionFunc
 	}{
 		"valid path": {
@@ -84,8 +84,8 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			Options: []ValidatePackageOption{
 				WithRemoteReference("test"),
 			},
-			PulledPkg: &packagetypes.RawPackage{
-				Files: packagetypes.Files{
+			PulledPkg: &packages.RawPackage{
+				Files: packages.Files{
 					"manifest.yaml": _manifest,
 				},
 			},
@@ -95,8 +95,8 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			Options: []ValidatePackageOption{
 				WithRemoteReference("test"),
 			},
-			PulledPkg: &packagetypes.RawPackage{
-				Files: packagetypes.Files{
+			PulledPkg: &packages.RawPackage{
+				Files: packages.Files{
 					"garbage.trash": []byte{12, 34, 56, 78},
 				},
 			},
@@ -133,13 +133,13 @@ type pullerMock struct {
 	mock.Mock
 }
 
-func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error) {
+func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error) {
 	actualArgs := []any{ctx, ref}
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)
 	}
 
 	args := m.Called(actualArgs...)
-	rawPkg, _ := args.Get(0).(*packagetypes.RawPackage)
+	rawPkg, _ := args.Get(0).(*packages.RawPackage)
 	return rawPkg, args.Error(1)
 }

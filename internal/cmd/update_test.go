@@ -13,7 +13,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 )
 
 func TestUpdate(t *testing.T) {
@@ -27,7 +27,7 @@ func TestUpdate(t *testing.T) {
 	now := v1.Now()
 
 	for name, tc := range map[string]struct {
-		Package       *packagetypes.Package
+		Package       *packages.Package
 		ImageToDigest map[string]string
 		Expected      expected
 	}{
@@ -171,9 +171,9 @@ type packageLoaderMock struct {
 	mock.Mock
 }
 
-func (m *packageLoaderMock) LoadPackage(ctx context.Context, path string) (*packagetypes.Package, error) {
+func (m *packageLoaderMock) LoadPackage(ctx context.Context, path string) (*packages.Package, error) {
 	args := m.Called(ctx, path)
-	pkg, _ := args.Get(0).(*packagetypes.Package)
+	pkg, _ := args.Get(0).(*packages.Package)
 	return pkg, args.Error(1)
 }
 
@@ -192,11 +192,11 @@ const (
 	testOtherDigest = "56789"
 )
 
-var testPkgNoLockFile = packagetypes.Package{
+var testPkgNoLockFile = packages.Package{
 	Manifest: testManifest,
 }
 
-var testPkgDifferentLockFile1 = packagetypes.Package{
+var testPkgDifferentLockFile1 = packages.Package{
 	Manifest: testManifest,
 	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
 		Images: []manifests.PackageManifestLockImage{
@@ -205,7 +205,7 @@ var testPkgDifferentLockFile1 = packagetypes.Package{
 	}},
 }
 
-var testPkgDifferentLockFile2 = packagetypes.Package{
+var testPkgDifferentLockFile2 = packages.Package{
 	Manifest: testManifest,
 	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
 		Images: []manifests.PackageManifestLockImage{
@@ -215,7 +215,7 @@ var testPkgDifferentLockFile2 = packagetypes.Package{
 	}},
 }
 
-var testPkgSameLockFile = packagetypes.Package{
+var testPkgSameLockFile = packages.Package{
 	Manifest: testManifest,
 	ManifestLock: &manifests.PackageManifestLock{Spec: manifests.PackageManifestLockSpec{
 		Images: []manifests.PackageManifestLockImage{

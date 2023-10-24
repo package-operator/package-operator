@@ -1,9 +1,9 @@
 package packages
 
 import (
-	"package-operator.run/internal/packages/packagemanifestvalidation"
-	"package-operator.run/internal/packages/packagetypes"
-	"package-operator.run/internal/packages/packagevalidation"
+	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
+	"package-operator.run/internal/packages/internal/packagetypes"
+	"package-operator.run/internal/packages/internal/packagevalidation"
 )
 
 type (

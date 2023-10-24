@@ -1,6 +1,6 @@
 package packages
 
-import "package-operator.run/internal/packages/packageimport"
+import "package-operator.run/internal/packages/internal/packageimport"
 
 var (
 	// Import a RawPackage from the given folder path.

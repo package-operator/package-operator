@@ -1,6 +1,6 @@
 package packages
 
-import "package-operator.run/internal/packages/packageexport"
+import "package-operator.run/internal/packages/internal/packageexport"
 
 var (
 	// Exports the package as OCI (Open Container Image).

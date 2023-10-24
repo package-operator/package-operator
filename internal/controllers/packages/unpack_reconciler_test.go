@@ -14,7 +14,7 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 )
 
 func TestUnpackReconciler(t *testing.T) {
@@ -26,7 +26,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	const image = "test123:latest"
 
-	rawPkg := &packagetypes.RawPackage{}
+	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything).
 		Return(rawPkg, nil)
@@ -91,7 +91,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	const image = "test123:latest"
 
-	rawPkg := &packagetypes.RawPackage{}
+	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything).
 		Return(rawPkg, errTest)
@@ -120,9 +120,9 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, image string,
-) (*packagetypes.RawPackage, error) {
+) (*packages.RawPackage, error) {
 	args := m.Called(ctx, image)
-	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)
+	return args.Get(0).(*packages.RawPackage), args.Error(1)
 }
 
 type packageDeployerMock struct {
@@ -132,7 +132,7 @@ type packageDeployerMock struct {
 func (m *packageDeployerMock) Deploy(
 	ctx context.Context,
 	apiPkg adapters.GenericPackageAccessor,
-	rawPkg *packagetypes.RawPackage,
+	rawPkg *packages.RawPackage,
 	env manifests.PackageEnvironment,
 ) error {
 	args := m.Called(ctx, apiPkg, rawPkg, env)

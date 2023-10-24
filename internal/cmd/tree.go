@@ -17,12 +17,7 @@ import (
 	"package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packagemanifestvalidation"
-	"package-operator.run/internal/packages/packagerender"
-	"package-operator.run/internal/packages/packagestructure"
-	"package-operator.run/internal/packages/packagetypes"
-	"package-operator.run/internal/packages/packagevalidation"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/utils"
 )
 
@@ -70,14 +65,14 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 
 	t.cfg.Log.Info("loading source from disk", "path", srcPath)
 
-	rawPkg, err := packageimport.FromFolder(ctx, srcPath)
+	rawPkg, err := packages.FromFolder(ctx, srcPath)
 	if err != nil {
 		return "", fmt.Errorf("loading package contents from folder: %w", err)
 	}
 
 	// TODO: show all components in the tree
 
-	pkg, err := packagestructure.DefaultStructuralLoader.LoadComponent(ctx, rawPkg, "")
+	pkg, err := packages.DefaultStructuralLoader.LoadComponent(ctx, rawPkg, "")
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
@@ -88,7 +83,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("getting config: %w", err)
 	}
 
-	validationErrors, err := packagemanifestvalidation.AdmitPackageConfiguration(
+	validationErrors, err := packages.AdmitPackageConfiguration(
 		ctx, tmplCfg, pkg.Manifest, field.NewPath("spec", "config"))
 	if err != nil {
 		return "", fmt.Errorf("validate Package configuration: %w", err)
@@ -108,10 +103,10 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		pkgPrefix = "ClusterPackage"
 	}
 
-	pkgInstance, err := packagerender.RenderPackageInstance(ctx, pkg, tmplCtx, append(
-		packagevalidation.DefaultPackageValidators,
-		packagevalidation.PackageScopeValidator(scope),
-	), packagevalidation.DefaultObjectValidators)
+	pkgInstance, err := packages.RenderPackageInstance(ctx, pkg, tmplCtx, append(
+		packages.DefaultPackageValidators,
+		packages.PackageScopeValidator(scope),
+	), packages.DefaultObjectValidators)
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
@@ -124,14 +119,14 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 				Namespace: tmplCtx.Package.Namespace,
 			},
 		),
-		packagerender.RenderObjectSetTemplateSpec(pkgInstance),
+		packages.RenderObjectSetTemplateSpec(pkgInstance),
 	)
 
 	return pkgTree.Print(), nil
 }
 
-func (t *Tree) getTemplateContext(pkg *packagetypes.Package, cfg RenderPackageConfig) packagetypes.PackageRenderContext {
-	templateContext := packagetypes.PackageRenderContext{
+func (t *Tree) getTemplateContext(pkg *packages.Package, cfg RenderPackageConfig) packages.PackageRenderContext {
+	templateContext := packages.PackageRenderContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
 				Name:      "name",
@@ -147,14 +142,14 @@ func (t *Tree) getTemplateContext(pkg *packagetypes.Package, cfg RenderPackageCo
 				continue
 			}
 
-			templateContext = packagetypes.PackageRenderContext{
+			templateContext = packages.PackageRenderContext{
 				Package: test.Context.Package,
 			}
 		}
 	case len(pkg.Manifest.Test.Template) > 0:
 		test := pkg.Manifest.Test.Template[0]
 
-		templateContext = packagetypes.PackageRenderContext{
+		templateContext = packages.PackageRenderContext{
 			Package: test.Context.Package,
 		}
 	}
@@ -162,7 +157,7 @@ func (t *Tree) getTemplateContext(pkg *packagetypes.Package, cfg RenderPackageCo
 	return templateContext
 }
 
-func (t *Tree) getConfig(pkg *packagetypes.Package, cfg RenderPackageConfig) (map[string]any, error) {
+func (t *Tree) getConfig(pkg *packages.Package, cfg RenderPackageConfig) (map[string]any, error) {
 	config := map[string]any{}
 
 	switch {

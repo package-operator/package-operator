@@ -11,11 +11,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packagerender"
-	"package-operator.run/internal/packages/packagestructure"
-	"package-operator.run/internal/packages/packagetypes"
-	"package-operator.run/internal/packages/packagevalidation"
+	"package-operator.run/internal/packages"
 )
 
 func NewValidate(scheme *runtime.Scheme, opts ...ValidateOption) *Validate {
@@ -51,7 +47,7 @@ func (c *ValidateConfig) Default() {
 		c.Log = logr.Discard()
 	}
 	if c.Pull == nil {
-		c.Pull = packageimport.FromRegistry
+		c.Pull = packages.FromRegistry
 	}
 }
 
@@ -59,7 +55,7 @@ type ValidateOption interface {
 	ConfigureValidate(*ValidateConfig)
 }
 
-type PullFn func(ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
+type PullFn func(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error)
 
 func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageOption) error {
 	var cfg ValidatePackageConfig
@@ -70,8 +66,8 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 	}
 
 	var (
-		rawPkg     *packagetypes.RawPackage
-		validators = packagevalidation.DefaultPackageValidators
+		rawPkg     *packages.RawPackage
+		validators = packages.DefaultPackageValidators
 	)
 
 	if cfg.Path != "" {
@@ -82,7 +78,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 			return fmt.Errorf("getting package from path: %w", err)
 		}
 
-		validators = append(validators, packagevalidation.NewTemplateTestValidator(filepath.Join(cfg.Path, ".test-fixtures")))
+		validators = append(validators, packages.NewTemplateTestValidator(filepath.Join(cfg.Path, ".test-fixtures")))
 	} else {
 		var err error
 
@@ -92,7 +88,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		}
 	}
 
-	pkg, err := packagestructure.DefaultStructuralLoader.Load(ctx, rawPkg)
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
 		return err
 	}
@@ -101,9 +97,9 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
-	if _, err := packagerender.RenderObjects(
-		ctx, pkg, packagetypes.PackageRenderContext{},
-		packagevalidation.DefaultObjectValidators,
+	if _, err := packages.RenderObjects(
+		ctx, pkg, packages.PackageRenderContext{},
+		packages.DefaultObjectValidators,
 	); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
@@ -111,15 +107,15 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 	return nil
 }
 
-func getPackageFromPath(ctx context.Context, path string) (*packagetypes.RawPackage, error) {
-	rawPkg, err := packageimport.FromFolder(ctx, path)
+func getPackageFromPath(ctx context.Context, path string) (*packages.RawPackage, error) {
+	rawPkg, err := packages.FromFolder(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("importing package from folder: %w", err)
 	}
 	return rawPkg, nil
 }
 
-func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (*packagetypes.RawPackage, error) {
+func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (*packages.RawPackage, error) {
 	ref, err := name.ParseReference(cfg.RemoteReference)
 	if err != nil {
 		return nil, fmt.Errorf("parsing remote reference: %w", err)

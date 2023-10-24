@@ -1,7 +1,7 @@
 package packages
 
 import (
-	"package-operator.run/internal/packages/packagedeploy"
+	"package-operator.run/internal/packages/internal/packagedeploy"
 )
 
 // PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.

@@ -11,9 +11,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packagestructure"
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/utils"
 )
 
@@ -89,7 +87,7 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 
 	manifestLock := &manifests.PackageManifestLock{
 		TypeMeta: v1.TypeMeta{
-			Kind:       packagetypes.PackageManifestLockGroupKind.Kind,
+			Kind:       packages.PackageManifestLockGroupKind.Kind,
 			APIVersion: manifests.GroupVersion.String(),
 		},
 		ObjectMeta: v1.ObjectMeta{
@@ -103,7 +101,7 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 	if pkg.ManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
 		return nil, ErrLockDataUnchanged
 	}
-	v1alpha1ManifestLock, err := packagestructure.ToV1Alpha1ManifestLock(manifestLock)
+	v1alpha1ManifestLock, err := packages.ToV1Alpha1ManifestLock(manifestLock)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +174,7 @@ type GenerateLockDataOption interface {
 }
 
 type PackageLoader interface {
-	LoadPackage(ctx context.Context, path string) (*packagetypes.Package, error)
+	LoadPackage(ctx context.Context, path string) (*packages.Package, error)
 }
 
 func NewDefaultPackageLoader(scheme *runtime.Scheme) *DefaultPackageLoader {
@@ -189,15 +187,15 @@ type DefaultPackageLoader struct {
 	scheme *runtime.Scheme
 }
 
-func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packagetypes.Package, error) {
-	var rawPkg *packagetypes.RawPackage
+func (l *DefaultPackageLoader) LoadPackage(ctx context.Context, path string) (*packages.Package, error) {
+	var rawPkg *packages.RawPackage
 
-	rawPkg, err := packageimport.FromFolder(ctx, path)
+	rawPkg, err := packages.FromFolder(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := packagestructure.DefaultStructuralLoader.Load(ctx, rawPkg)
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
 		return nil, err
 	}

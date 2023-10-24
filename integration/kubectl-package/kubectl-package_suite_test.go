@@ -24,8 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/packages/packageexport"
-	"package-operator.run/internal/packages/packageimport"
+	"package-operator.run/internal/packages"
 )
 
 func TestKubectlPackage(t *testing.T) {
@@ -124,14 +123,14 @@ func projectRoot() (string, error) {
 
 func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) error {
 	for _, info := range infos {
-		rawPkg, err := packageimport.FromFS(ctx, os.DirFS(info.Path))
+		rawPkg, err := packages.FromFS(ctx, os.DirFS(info.Path))
 		if err != nil {
 			return fmt.Errorf("importing package from directory: %w", err)
 		}
 
 		tags := []string{info.Ref}
 
-		if err := packageexport.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure); err != nil {
+		if err := packages.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure); err != nil {
 			return fmt.Errorf("pushing package image: %w", err)
 		}
 	}

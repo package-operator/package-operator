@@ -1,7 +1,7 @@
 package packages
 
 import (
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
 type (

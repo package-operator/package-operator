@@ -1,6 +1,6 @@
 package packages
 
-import "package-operator.run/internal/packages/packagerender"
+import "package-operator.run/internal/packages/internal/packagerender"
 
 var (
 	// Runs a go-template transformer on all .gotmpl files.

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/packages/packagetypes"
+	"package-operator.run/internal/packages"
 )
 
 func TestPreBuildValidation(t *testing.T) {
@@ -19,7 +19,7 @@ func TestPreBuildValidation(t *testing.T) {
 	)
 
 	for name, tc := range map[string]struct {
-		Package             *packagetypes.Package
+		Package             *packages.Package
 		RetrieveDigestError bool
 		ImageToDigest       map[string]string
 		ExpectError         string
@@ -102,7 +102,7 @@ type LockImageTestData struct {
 	Digest string
 }
 
-func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestData) *packagetypes.Package {
+func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestData) *packages.Package {
 	imgManifest := make([]manifests.PackageManifestImage, 0, len(manifestImages))
 	for key, value := range manifestImages {
 		imgManifest = append(imgManifest, manifests.PackageManifestImage{
@@ -128,7 +128,7 @@ func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestDa
 		}
 	}
 
-	return &packagetypes.Package{
+	return &packages.Package{
 		Manifest: &manifests.PackageManifest{
 			Spec: manifests.PackageManifestSpec{
 				Images: imgManifest,
