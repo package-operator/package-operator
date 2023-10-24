@@ -24,6 +24,8 @@ func (Test) GolangCILint() {
 	// Generate.All ensures code generators are re-triggered.
 	mg.Deps(Generate.All, Dependency.GolangciLint)
 	must(sh.RunV("golangci-lint", "run", "./...", "--deadline=15m"))
+	must(sh.RunV("golangci-lint", "run", "./apis/...", "--deadline=15m"))
+	must(sh.RunV("golangci-lint", "run", "./pkg/...", "--deadline=15m"))
 }
 
 func (Test) GolangCILintFix() {

@@ -10,12 +10,12 @@ import (
 	"k8s.io/apiserver/pkg/cel/library"
 )
 
-type celProbe struct {
+type CELProbe struct {
 	Program cel.Program
 	Message string
 }
 
-var _ Prober = (*celProbe)(nil)
+var _ Prober = (*CELProbe)(nil)
 
 var ErrCELInvalidEvaluationType = errors.New(
 	"cel expression must evaluate to a bool")
@@ -23,7 +23,7 @@ var ErrCELInvalidEvaluationType = errors.New(
 // Creates a new CEL (Common Expression Language) Probe.
 // A CEL probe runs a CEL expression against the target object that needs to evaluate to a bool.
 func NewCELProbe(rule, message string) (
-	*celProbe, error,
+	*CELProbe, error,
 ) {
 	env, err := cel.NewEnv(
 		cel.Variable("self", cel.DynType),
@@ -53,13 +53,13 @@ func NewCELProbe(rule, message string) (
 		return nil, fmt.Errorf("CEL program failed: %w", err)
 	}
 
-	return &celProbe{
+	return &CELProbe{
 		Program: prgm,
 		Message: message,
 	}, nil
 }
 
-func (p *celProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (p *CELProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	val, _, err := p.Program.Eval(map[string]any{
 		"self": obj.Object,
 	})

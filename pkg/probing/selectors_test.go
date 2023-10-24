@@ -36,6 +36,8 @@ func TestKindSelector(t *testing.T) {
 	})
 
 	t.Run("no match", func(t *testing.T) {
+		t.Parallel()
+
 		prober := &proberMock{}
 		prober.
 			On("Probe", mock.Anything).
@@ -78,6 +80,8 @@ func TestLabelSelector(t *testing.T) {
 	})
 
 	t.Run("no match", func(t *testing.T) {
+		t.Parallel()
+
 		prober := &proberMock{}
 		prober.
 			On("Probe", mock.Anything).
