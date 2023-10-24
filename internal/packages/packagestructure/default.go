@@ -19,4 +19,5 @@ func init() {
 	}
 }
 
+// DefaultStructuralLoader instance with the scheme pre-loaded.
 var DefaultStructuralLoader = NewStructuralLoader(scheme)

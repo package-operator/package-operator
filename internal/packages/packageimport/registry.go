@@ -39,6 +39,7 @@ type response struct {
 type pullImageFn func(
 	ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
 
+// Creates a new registry instance to de-duplicate parallel container image pulls.
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,

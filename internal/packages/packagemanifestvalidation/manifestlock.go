@@ -9,6 +9,7 @@ import (
 	"package-operator.run/internal/apis/manifests"
 )
 
+// Validates the PackageManifestLock.
 func ValidatePackageManifestLock(_ context.Context, obj *manifests.PackageManifestLock) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 

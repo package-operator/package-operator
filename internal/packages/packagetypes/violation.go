@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
-
-// ViolationReason describes in short how something violates violating sanitation checks.
-type ViolationReason string
 
 // ViolationError describes the reason why and which part of a package is violating sanitation checks.
 type ViolationError struct {
@@ -19,33 +16,6 @@ type ViolationError struct {
 	Index     *int            // Index is the index of the YAML document within Path.
 	Subject   string          // Complete subject that produced the error, may be the whole yaml file, a single document, etc.
 }
-
-// Predefined reasons for package violations.
-const (
-	ViolationReasonPackageManifestNotFound       ViolationReason = "PackageManifest not found"
-	ViolationReasonPackageManifestUnknownGVK     ViolationReason = "PackageManifest unknown GVK"
-	ViolationReasonPackageManifestConversion     ViolationReason = "PackageManifest conversion"
-	ViolationReasonPackageManifestInvalid        ViolationReason = "PackageManifest invalid"
-	ViolationReasonPackageManifestDuplicated     ViolationReason = "PackageManifest present multiple times"
-	ViolationReasonPackageManifestLockUnknownGVK ViolationReason = "PackageManifestLock unknown GVK"
-	ViolationReasonPackageManifestLockConversion ViolationReason = "PackageManifestLock conversion"
-	ViolationReasonPackageManifestLockInvalid    ViolationReason = "PackageManifestLock invalid"
-	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
-	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"
-	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifestsv1alpha1.PackagePhaseAnnotation + " Annotation"
-	ViolationReasonMissingGVK                    ViolationReason = "GroupVersionKind not set"
-	ViolationReasonDuplicateObject               ViolationReason = "Duplicate Object"
-	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"
-	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
-	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
-	ViolationReasonComponentsNotEnabled          ViolationReason = "Components not enabled"
-	ViolationReasonComponentNotFound             ViolationReason = "Component not found"
-	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
-	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
-	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
-	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
-	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
-)
 
 func (v ViolationError) Error() string {
 	// Set reason to unknown if it is not set.
@@ -79,6 +49,36 @@ func (v ViolationError) Error() string {
 
 	return msg
 }
+
+// ViolationReason describes in short how something violates violating sanitation checks.
+type ViolationReason string
+
+// Predefined reasons for package violations.
+const (
+	ViolationReasonPackageManifestNotFound       ViolationReason = "PackageManifest not found"
+	ViolationReasonPackageManifestUnknownGVK     ViolationReason = "PackageManifest unknown GVK"
+	ViolationReasonPackageManifestConversion     ViolationReason = "PackageManifest conversion"
+	ViolationReasonPackageManifestInvalid        ViolationReason = "PackageManifest invalid"
+	ViolationReasonPackageManifestDuplicated     ViolationReason = "PackageManifest present multiple times"
+	ViolationReasonPackageManifestLockUnknownGVK ViolationReason = "PackageManifestLock unknown GVK"
+	ViolationReasonPackageManifestLockConversion ViolationReason = "PackageManifestLock conversion"
+	ViolationReasonPackageManifestLockInvalid    ViolationReason = "PackageManifestLock invalid"
+	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
+	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"
+	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation"
+	ViolationReasonMissingGVK                    ViolationReason = "GroupVersionKind not set"
+	ViolationReasonDuplicateObject               ViolationReason = "Duplicate Object"
+	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"
+	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
+	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
+	ViolationReasonComponentsNotEnabled          ViolationReason = "Components not enabled"
+	ViolationReasonComponentNotFound             ViolationReason = "Component not found"
+	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
+	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
+	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
+	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
+	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
+)
 
 // ErrManifestNotFound indicates that a package manifest was not found at any expected location.
 var ErrManifestNotFound = ViolationError{

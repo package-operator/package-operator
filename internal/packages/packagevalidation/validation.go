@@ -10,6 +10,7 @@ import (
 	"package-operator.run/internal/packages/packagetypes"
 )
 
+// DefaultPackageValidators is a list of package validators that should be executed as a minimum standard.
 var DefaultPackageValidators = PackageValidatorList{
 	&PackageManifestValidator{},
 }
@@ -45,6 +46,7 @@ func (v *PackageManifestValidator) ValidatePackage(ctx context.Context, pkg *pac
 	return errList.ToAggregate()
 }
 
+// Validates a Package is able to be installed in the given scope.
 type PackageScopeValidator manifests.PackageManifestScope
 
 func (scope PackageScopeValidator) ValidatePackage(_ context.Context, pkg *packagetypes.Package) error {

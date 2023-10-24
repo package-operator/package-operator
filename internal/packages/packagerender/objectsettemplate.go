@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// Renders a ObjectSetTemplateSpec from a PackageInstance to use with ObjectSet and ObjectDeployment APIs.
 func RenderObjectSetTemplateSpec(pkgInstance *packagetypes.PackageInstance) (templateSpec corev1alpha1.ObjectSetTemplateSpec) {
 	collector := newPhaseCollector(pkgInstance.Manifest.Spec.Phases...)
 	collector.AddObjects(pkgInstance.Objects...)
@@ -60,7 +61,7 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 		}
 
 		// Any error should have been detected by the validation stage.
-		conditionMapping, err := ParseConditionMapAnnotation(&objs[i])
+		conditionMapping, err := parseConditionMapAnnotation(&objs[i])
 		if err != nil {
 			panic(err)
 		}

@@ -15,6 +15,7 @@ import (
 	"package-operator.run/internal/packages/packagetypes"
 )
 
+// DefaultObjectValidators is a list of object validators that should be executed as a minimum standard.
 var DefaultObjectValidators = ObjectValidatorList{
 	&ObjectDuplicateValidator{}, &ObjectGVKValidator{},
 	&ObjectLabelsValidator{}, &ObjectPhaseAnnotationValidator{},
@@ -37,18 +38,23 @@ func (l ObjectValidatorList) ValidateObjects(
 	return errors.Join(errs...)
 }
 
-type ValidateEachObjectFn func(ctx context.Context, path string, index int, obj unstructured.Unstructured) error
+// Function given to ValidateEachObject to validate individual objects in a package.
+type ValidateEachObjectFn func(
+	ctx context.Context, path string, index int,
+	obj unstructured.Unstructured, manifest *manifests.PackageManifest,
+) error
 
+// ValidateEachObject iterates over each object in a package and runs the given validation function.
 func ValidateEachObject(
 	ctx context.Context,
-	_ *manifests.PackageManifest,
+	manifest *manifests.PackageManifest,
 	objects map[string][]unstructured.Unstructured,
 	validate ValidateEachObjectFn,
 ) error {
 	var errs []error
 	for path, objects := range objects {
 		for i, object := range objects {
-			if err := validate(ctx, path, i, object); err != nil {
+			if err := validate(ctx, path, i, object, manifest); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -69,7 +75,10 @@ func (v *ObjectPhaseAnnotationValidator) ValidateObjects(
 	return ValidateEachObject(ctx, manifest, objects, v.validate)
 }
 
-func (*ObjectPhaseAnnotationValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectPhaseAnnotationValidator) validate(
+	_ context.Context, path string, index int,
+	obj unstructured.Unstructured, _ *manifests.PackageManifest,
+) error {
 	if obj.GetAnnotations() == nil ||
 		len(obj.GetAnnotations()[manifests.PackagePhaseAnnotation]) == 0 {
 		return packagetypes.ViolationError{
@@ -130,7 +139,10 @@ func (v *ObjectGVKValidator) ValidateObjects(
 	return ValidateEachObject(ctx, manifest, objects, v.validate)
 }
 
-func (*ObjectGVKValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectGVKValidator) validate(
+	_ context.Context, path string, index int,
+	obj unstructured.Unstructured, _ *manifests.PackageManifest,
+) error {
 	gvk := obj.GroupVersionKind()
 	// Don't validate Group, because an empty group is valid and indicates the kube core API group.
 	if len(gvk.Version) == 0 || len(gvk.Kind) == 0 {
@@ -156,7 +168,10 @@ func (v *ObjectLabelsValidator) ValidateObjects(
 	return ValidateEachObject(ctx, manifest, objects, v.validate)
 }
 
-func (*ObjectLabelsValidator) validate(_ context.Context, path string, index int, obj unstructured.Unstructured) error {
+func (*ObjectLabelsValidator) validate(
+	_ context.Context, path string, index int,
+	obj unstructured.Unstructured, _ *manifests.PackageManifest,
+) error {
 	errList := validation.ValidateLabels(
 		obj.GetLabels(), field.NewPath("metadata").Child("labels"))
 	if len(errList) > 0 {

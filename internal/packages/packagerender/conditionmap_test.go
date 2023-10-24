@@ -11,7 +11,7 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-func TestParseConditionMap(t *testing.T) {
+func Test_parseConditionMap(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -53,7 +53,7 @@ func TestParseConditionMap(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			mappings, err := ParseConditionMapAnnotation(test.object)
+			mappings, err := parseConditionMapAnnotation(test.object)
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedMappings, mappings)
@@ -100,7 +100,7 @@ func TestParseConditionMap_error(t *testing.T) {
 				},
 			}
 
-			_, err := ParseConditionMapAnnotation(obj)
+			_, err := parseConditionMapAnnotation(obj)
 			require.EqualError(t, err, test.err)
 		})
 	}

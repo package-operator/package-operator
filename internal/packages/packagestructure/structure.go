@@ -10,10 +10,12 @@ import (
 	"package-operator.run/internal/packages/packagetypes"
 )
 
+// StructuralLoader parses the raw package structure to produce something usable.
 type StructuralLoader struct {
 	scheme *runtime.Scheme
 }
 
+// Creates a new StructuralLoaderInstance.
 func NewStructuralLoader(scheme *runtime.Scheme) *StructuralLoader {
 	return &StructuralLoader{
 		scheme: scheme,

@@ -6,14 +6,17 @@ import (
 	"package-operator.run/internal/packages/packagetypes"
 )
 
+// Turns a Package and PackageRenderContext into a PackageInstance.
 func RenderPackageInstance(
 	ctx context.Context, pkg *packagetypes.Package,
 	tmplCtx packagetypes.PackageRenderContext,
 	pkgValidator packagetypes.PackageValidator,
 	objValidator packagetypes.ObjectValidator,
 ) (*packagetypes.PackageInstance, error) {
-	if err := pkgValidator.ValidatePackage(ctx, pkg); err != nil {
-		return nil, err
+	if pkgValidator != nil {
+		if err := pkgValidator.ValidatePackage(ctx, pkg); err != nil {
+			return nil, err
+		}
 	}
 	if err := RenderTemplates(ctx, pkg, tmplCtx); err != nil {
 		return nil, err

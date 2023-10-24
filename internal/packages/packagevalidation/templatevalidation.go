@@ -24,6 +24,7 @@ type TemplateTestValidator struct {
 	fixturesFolderPath string
 }
 
+// Creates a new TemplateTestValidator instance.
 func NewTemplateTestValidator(
 	fixturesFolderPath string,
 ) *TemplateTestValidator {

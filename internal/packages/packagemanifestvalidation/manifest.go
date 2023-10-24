@@ -13,6 +13,7 @@ import (
 	"package-operator.run/internal/apis/manifests"
 )
 
+// Validates the PackageManifest.
 func ValidatePackageManifest(ctx context.Context, obj *manifests.PackageManifest) (field.ErrorList, error) {
 	allErrs := field.ErrorList{}
 

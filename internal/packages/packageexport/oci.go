@@ -14,6 +14,7 @@ import (
 	"package-operator.run/internal/packages/packagetypes"
 )
 
+// Exports the package as OCI (Open Container Image).
 func ToOCI(pkg *packagetypes.RawPackage) (v1.Image, error) {
 	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on our target architecture.
 	// We will drop this after refactoring our in-cluster package loading process to make it architecture agnostic.
@@ -46,6 +47,7 @@ func ToOCI(pkg *packagetypes.RawPackage) (v1.Image, error) {
 	return image, nil
 }
 
+// Exports the given package to an OCI tar under the given name and tags.
 func ToOCIFile(dst string, tags []string, pkg *packagetypes.RawPackage) error {
 	image, err := ToOCI(pkg)
 	if err != nil {
@@ -63,6 +65,7 @@ func ToOCIFile(dst string, tags []string, pkg *packagetypes.RawPackage) error {
 	return nil
 }
 
+// Exports the given package by pushing it to an OCI registry.
 func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.RawPackage, opts ...crane.Option) error {
 	image, err := ToOCI(pkg)
 	if err != nil {

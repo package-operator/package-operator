@@ -10,16 +10,16 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
-type ConditionMapParseError struct {
+type conditionMapParseError struct {
 	Message    string
 	LineNumber int
 }
 
-func (e ConditionMapParseError) Error() string {
+func (e conditionMapParseError) Error() string {
 	return e.Message + fmt.Sprintf(" in line %d", e.LineNumber)
 }
 
-func ParseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1.ConditionMapping, error) {
+func parseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1.ConditionMapping, error) {
 	conditionMapAnnotation, ok := obj.GetAnnotations()[manifestsv1alpha1.PackageConditionMapAnnotation]
 	if !ok {
 		return nil, nil
@@ -31,19 +31,19 @@ func ParseConditionMapAnnotation(obj *unstructured.Unstructured) ([]corev1alpha1
 		line := i + 1
 		parts := strings.SplitN(rawMapping, "=>", 2)
 		if len(parts) != 2 {
-			return nil, ConditionMapParseError{
+			return nil, conditionMapParseError{
 				Message:    fmt.Sprintf("expected 2 part mapping got %d", len(parts)),
 				LineNumber: line,
 			}
 		}
 		if len(parts[0]) == 0 {
-			return nil, ConditionMapParseError{
+			return nil, conditionMapParseError{
 				Message:    "sourceType can't be empty",
 				LineNumber: line,
 			}
 		}
 		if len(parts[1]) == 0 {
-			return nil, ConditionMapParseError{
+			return nil, conditionMapParseError{
 				Message:    "destinationType can't be empty",
 				LineNumber: line,
 			}
