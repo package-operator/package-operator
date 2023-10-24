@@ -197,11 +197,13 @@ func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
 	return data, err
 }
 
+const staticImage = "registry.package-operator.run/static-image"
+
 // generateStaticImages generates a static set of images to be used for tests and other purposes.
 func generateStaticImages(manifest *manifests.PackageManifest) map[string]string {
 	images := map[string]string{}
 	for _, v := range manifest.Spec.Images {
-		images[v.Name] = "registry.package-operator.run/static-image"
+		images[v.Name] = staticImage
 	}
 	return images
 }

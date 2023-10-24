@@ -54,7 +54,7 @@ func (scope PackageScopeValidator) ValidatePackage(_ context.Context, pkg *packa
 		// Package does not support installation in this scope.
 		return packagetypes.ViolationError{
 			Reason: packagetypes.ViolationReasonUnsupportedScope,
-			Path:   packagetypes.PackageManifestFilename,
+			Path:   packagetypes.PackageManifestFilename + ".yaml",
 		}
 	}
 
