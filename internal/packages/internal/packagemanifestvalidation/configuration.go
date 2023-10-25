@@ -23,7 +23,7 @@ func ValidatePackageConfiguration(
 	return validatePackageConfigurationBySchema(ctx, mc.OpenAPIV3Schema, configuration, fldPath)
 }
 
-// Validates and Defaults configuration against the PackageManifests OpenAPISchema so it's ready to be used.
+// Prunes, Defaults and Validates configuration against the PackageManifests OpenAPISchema so it's ready to be used.
 func AdmitPackageConfiguration(
 	ctx context.Context, configuration map[string]interface{},
 	manifest *manifests.PackageManifest, fldPath *field.Path,

@@ -29,8 +29,8 @@ func (l *StructuralLoader) Load(
 	return l.load(ctx, rawPkg.Files, "")
 }
 
-// Load a Sub-Component Package directly,
-// ignoring the root-package and any other sub component.
+// Load a Sub-Component Package directly ignoring the root-package and any other sub component.
+// Empty componentName represents just the root Package, excluding all individual components.
 func (l *StructuralLoader) LoadComponent(
 	ctx context.Context, rawPkg *packagetypes.RawPackage, componentName string,
 ) (*packagetypes.Package, error) {
