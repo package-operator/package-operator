@@ -53,6 +53,11 @@ func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, c
 	pkg := &packagetypes.Package{}
 
 	// PackageManifest
+	if bothExtensions(files, packagetypes.PackageManifestFilename) {
+		return nil, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonPackageManifestDuplicated,
+		}
+	}
 	var err error
 	manifestBytes, manifestPath, manifestFound := getFile(files, packagetypes.PackageManifestFilename)
 	if !manifestFound {
@@ -67,6 +72,11 @@ func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, c
 	}
 
 	// PackageManifestLock
+	if bothExtensions(files, packagetypes.PackageManifestLockFilename) {
+		return nil, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonPackageManifestLockDuplicated,
+		}
+	}
 	if manifestLockBytes, manifestLockPath, manifestLockFound := getFile(
 		files, packagetypes.PackageManifestLockFilename); manifestLockFound {
 		pkg.ManifestLock, err = manifestLockFromFile(ctx, l.scheme, manifestLockPath, manifestLockBytes)
@@ -107,6 +117,12 @@ func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, c
 		}
 
 		parts := strings.SplitN(path, string(filepath.Separator), 3)
+		if len(parts) == 2 {
+			return nil, packagetypes.ViolationError{
+				Reason: packagetypes.ViolationReasonInvalidFileInComponentsDir,
+				Path:   path,
+			}
+		}
 		if len(parts) < 3 {
 			return nil, packagetypes.ViolationError{
 				Reason: packagetypes.ViolationReasonInvalidComponentPath,
@@ -166,9 +182,20 @@ func componentFiles(files packagetypes.Files, componentName string) (packagetype
 	return out, nil
 }
 
+var yamlFileExtensions = []string{"yaml", "yml"}
+
+func bothExtensions(files packagetypes.Files, basename string) bool {
+	for _, ext := range yamlFileExtensions {
+		path := basename + "." + ext
+		if _, ok := files[path]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func getFile(files packagetypes.Files, basename string) (content []byte, path string, ok bool) {
-	fileExtensions := []string{"yaml", "yml"}
-	for _, ext := range fileExtensions {
+	for _, ext := range yamlFileExtensions {
 		path = basename + "." + ext
 		content, ok = files[path]
 		if ok {

@@ -17,10 +17,21 @@ func TestFromFS(t *testing.T) {
 	t.Parallel()
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	validEntries := packagetypes.Files{"manifest.yaml": {5, 6}, "manifest.yml": {7, 8}, "subdir/somethingelse": {9, 10}}
+	allEntries := packagetypes.Files{
+		"manifest.yaml":        {5, 6},
+		"manifest.yml":         {7, 8},
+		"test/.dotdot":         {7, 8},
+		"test/.dotdot/.dot":    {7, 8},
+		"subdir/somethingelse": {9, 10},
+	}
+	validEntries := packagetypes.Files{
+		"manifest.yaml":        {5, 6},
+		"manifest.yml":         {7, 8},
+		"subdir/somethingelse": {9, 10},
+	}
 
 	memFS := fstest.MapFS{}
-	for k, v := range validEntries {
+	for k, v := range allEntries {
 		memFS[k] = &fstest.MapFile{Data: v}
 	}
 

@@ -31,7 +31,7 @@ func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 		case entry.Name() == ".":
 			// continue at root
 
-		case strings.HasPrefix(path, "."):
+		case strings.HasPrefix(entry.Name(), "."):
 			verboseLog.Info("skipping file in source", "path", path)
 			if entry.IsDir() {
 				return filepath.SkipDir
