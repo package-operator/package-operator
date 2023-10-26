@@ -13,23 +13,20 @@ import (
 
 // Flags.
 const (
-	metricsAddrFlagDescription    = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription      = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription      = "The namespace the operator is deployed into."
-	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
-		"Enabling this will ensure there is only one active controller manager."
-	probeAddrFlagDescription   = "The address the probe endpoint binds to."
-	versionFlagDescription     = "print version information and exit."
-	copyToFlagDescription      = "(internal) copy this binary to a new location"
-	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
-		" to load a package mounted at /package"
-	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
-		" with Package Operator using the given Package Operator Package Image"
+	copyToFlagDescription                  = "(internal) copy this binary to a new location"
+	loadPackageFlagDescription             = "(internal) runs the package-loader sub-component to load a package mounted at /package"
+	selfBootstrapFlagDescription           = "(internal) bootstraps Package Operator with Package Operator using the given Package Operator Package Image"
+	selfTeardownFlagDescription            = "(internal) tears down Package Operator and remove all managed resources"
+	metricsAddrFlagDescription             = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription               = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription               = "The namespace the operator is deployed into."
+	leaderElectionFlagDescription          = "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager."
+	probeAddrFlagDescription               = "The address the probe endpoint binds to."
+	versionFlagDescription                 = "print version information and exit."
+	registryHostOverrides                  = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
+	packageHashModifier                    = "An additional value used for the generation of a package's unpackedHash."
 	remotePhasePackageImageFlagDescription = "Image pointing to a package operator remote phase package. " +
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
-	registryHostOverrides = "List of registry host overrides to change during image pulling. e.g. quay.io=localhost:123,<original-host>=<new-host>"
-	packageHashModifier   = "An additional value used for the generation of a package's unpackedHash."
-
 	subComponentAffinityFlagDescription    = "Pod affinity settings used in PKO deployed subcomponents, like remote-phase-manager."
 	subComponentTolerationsFlagDescription = "Pod tolerations settings used in PKO deployed subcomponents, like remote-phase-manager."
 )
@@ -47,6 +44,7 @@ type Options struct {
 	// sub commands
 	SelfBootstrap       string
 	SelfBootstrapConfig string
+	SelfTeardown        bool
 	PrintVersion        io.Writer
 	CopyTo              string
 
@@ -70,6 +68,7 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.Namespace, "namespace",
 		os.Getenv("PKO_NAMESPACE"),
 		namespaceFlagDescription)
+	flag.BoolVar(&opts.SelfTeardown, "self-teardown", false, selfTeardownFlagDescription)
 	flag.BoolVar(
 		&opts.EnableLeaderElection, "enable-leader-election",
 		true,
