@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -117,7 +117,7 @@ func TestPackageDeployer_Load(t *testing.T) {
 		mock.AnythingOfType("*v1alpha1.Package"),
 		mock.Anything).
 		Once().
-		Return(apierrors.NewConflict(schema.GroupResource{}, "", nil))
+		Return(apimachineryerrors.NewConflict(schema.GroupResource{}, "", nil))
 
 	pkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{

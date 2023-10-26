@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	"package-operator.run/internal/controllers"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/dynamiccache"
@@ -71,15 +71,15 @@ func ProvideLogger() logr.Logger {
 }
 
 func ProvideScheme() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
 	schemeBuilder := runtime.SchemeBuilder{
-		clientgoscheme.AddToScheme,
-		pkoapis.AddToScheme,
+		scheme.AddToScheme,
+		apis.AddToScheme,
 		hypershiftv1beta1.AddToScheme,
 		apiextensionsv1.AddToScheme,
 		apiextensions.AddToScheme,
 		configv1.AddToScheme,
 	}
+	scheme := runtime.NewScheme()
 	if err := schemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, err
 	}

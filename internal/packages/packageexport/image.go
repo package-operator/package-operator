@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
@@ -14,10 +14,10 @@ import (
 	"package-operator.run/internal/packages/packagecontent"
 )
 
-func Image(files packagecontent.Files) (v1.Image, error) {
+func Image(files packagecontent.Files) (containerregistrypkgv1.Image, error) {
 	// Hardcoded to linux/amd64 or kubernetes will refuse to pull the image on our target architecture.
 	// We will drop this after refactoring our in-cluster package loading process to make it architecture agnostic.
-	configFile := &v1.ConfigFile{Architecture: "amd64", OS: "linux", Config: v1.Config{}, RootFS: v1.RootFS{Type: "layers"}}
+	configFile := &containerregistrypkgv1.ConfigFile{Architecture: "amd64", OS: "linux", Config: containerregistrypkgv1.Config{}, RootFS: containerregistrypkgv1.RootFS{Type: "layers"}}
 	image, err := mutate.ConfigFile(empty.Image, configFile)
 	if err != nil {
 		return nil, err

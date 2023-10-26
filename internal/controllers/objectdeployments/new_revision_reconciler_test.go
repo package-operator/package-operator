@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -158,11 +158,11 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				clientMock.On("Create",
 					mock.Anything,
 					mock.Anything,
-					[]ctrlclient.CreateOption(nil),
+					[]client.CreateOption(nil),
 				).Return(errors.NewAlreadyExists(schema.GroupResource{}, testCase.conflictObject.Name))
 				clientMock.On("Get",
 					mock.Anything,
-					ctrlclient.ObjectKey{
+					client.ObjectKey{
 						Name:      testCase.conflictObject.Name,
 						Namespace: testCase.conflictObject.Namespace,
 					},
@@ -177,7 +177,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				clientMock.On("Create",
 					mock.Anything,
 					mock.Anything,
-					[]ctrlclient.CreateOption(nil),
+					[]client.CreateOption(nil),
 				).Return(nil)
 			}
 
@@ -223,7 +223,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 
 					return true
 				}),
-				[]ctrlclient.CreateOption(nil),
+				[]client.CreateOption(nil),
 			)
 		})
 	}

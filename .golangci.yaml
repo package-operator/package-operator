@@ -117,3 +117,39 @@ linters-settings:
     - G306 # Poor file permissions used when writing to a new file.
     - G601 # Taking address of loop variable - not relevant anymore.
     - G602 # Should reports out of bound access but is broken.
+  importas:
+    no-unaliased: false
+    no-extra-aliases: true
+    alias:
+    - pkg: k8s\.io\/api\/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: k8s\.io\/apimachinery\/pkg\/([^\/]+)
+      alias: $1
+    - pkg: k8s\.io\/apimachinery\/pkg\/apis\/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: package-operator\.run\/apis
+      alias: apis
+    - pkg: package-operator\.run\/apis\/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: k8s\.io\/apiextensions-apiserver\/pkg\/apis\/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: github\.com\/openshift\/api\/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: package-operator.run/internal/controllers/hostedclusters/([^\/]+)\/([^\/]+)
+      alias: $1$2
+    - pkg: k8s\.io\/apimachinery\/pkg\/api\/([^\/]+)
+      alias: apimachinery$1
+    - pkg: sigs\.k8s\.io\/controller-runtime
+      alias: ctrl
+    - pkg: package-operator\.run\/internal\/cmd
+      alias: internalcmd
+    - pkg: package-operator\.run\/internal\/probing
+      alias: internalprobing
+    - pkg: github\.com\/google\/go-containerregistry\/pkg\/v1
+      alias: containerregistrypkgv1
+    - pkg: k8s\.io\/utils\/clock\/testing
+      alias: clocktesting
+    - pkg: k8s\.io\/apiserver\/pkg\/cel
+      alias: apiservercel
+    - pkg: k8s\.io\/apiserver\/pkg\/apis\/cel
+      alias: apiserverapiscel

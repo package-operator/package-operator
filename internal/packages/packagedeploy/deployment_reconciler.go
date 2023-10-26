@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,7 +75,7 @@ func (r *DeploymentReconciler) Reconcile(
 	// Get existing ObjectDeployment
 	actualDeploy := r.newObjectDeployment(r.scheme)
 	err := r.client.Get(ctx, client.ObjectKeyFromObject(desiredDeploy.ClientObject()), actualDeploy.ClientObject())
-	if apierrors.IsNotFound(err) {
+	if apimachineryerrors.IsNotFound(err) {
 		// Pre-Create the ObjectDeployment without phases,
 		// so we can create Slices with an OwnerRef to the Deployment.
 		desiredDeploy.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
@@ -118,7 +118,7 @@ func (r *DeploymentReconciler) Reconcile(
 			return nil
 		}
 
-		if apierrors.IsConflict(err) {
+		if apimachineryerrors.IsConflict(err) {
 			// Get latest version of the ObjectDeployment to resolve conflict.
 			if err := r.client.Get(
 				ctx,
@@ -290,7 +290,7 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	if err == nil {
 		return nil
 	}
-	if err != nil && !apierrors.IsAlreadyExists(err) {
+	if err != nil && !apimachineryerrors.IsAlreadyExists(err) {
 		return fmt.Errorf("creating new ObjectSlice: %w", err)
 	}
 

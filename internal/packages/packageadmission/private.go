@@ -8,10 +8,10 @@ import (
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
-	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
-	structuraldefaulting "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
-	apiservervalidation "k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -19,7 +19,7 @@ import (
 	apiservercel "k8s.io/apiserver/pkg/cel"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
-	kopenapivalidation "k8s.io/kube-openapi/pkg/validation/validate"
+	"k8s.io/kube-openapi/pkg/validation/validate"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -83,7 +83,7 @@ func validateCustomResourceDefinitionValidation(ctx context.Context, customResou
 	}
 	schema := customResourceValidation.OpenAPIV3Schema
 	if schema == nil {
-		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
+		if _, _, err := validation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, "", fmt.Sprintf("error building validator: %v", err)))
 		}
 		return allErrs
@@ -136,7 +136,7 @@ func validateCustomResourceDefinitionValidation(ctx context.Context, customResou
 
 	// if validation passed otherwise, make sure we can actually construct a schema validator from this custom resource validation.
 	if len(allErrs) == 0 {
-		if _, _, err := apiservervalidation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
+		if _, _, err := validation.NewSchemaValidator(customResourceValidation.OpenAPIV3Schema); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, "", fmt.Sprintf("error building validator: %v", err)))
 		}
 	}
@@ -169,20 +169,20 @@ func statusSubresource(schema *apiextensions.JSONSchemaProps, fldPath *field.Pat
 	return nil
 }
 
-func requirestructuralSchema(ctx context.Context, schema *apiextensions.JSONSchemaProps, opts validationOptions, fldPath *field.Path) (*apiextensionsvalidation.CELSchemaContext, field.ErrorList, field.ErrorList) {
-	ss, err := structuralschema.NewStructural(schema)
+func requirestructuralSchema(ctx context.Context, ourSchema *apiextensions.JSONSchemaProps, opts validationOptions, fldPath *field.Path) (*apiextensionsvalidation.CELSchemaContext, field.ErrorList, field.ErrorList) {
+	ss, err := schema.NewStructural(ourSchema)
 	if err != nil {
 		// These validation errors overlap with  OpenAPISchema validation errors so we keep track of them
 		// separately and only show them if OpenAPISchema validation does not report any errors.
 		return nil, field.ErrorList{field.Invalid(fldPath.Child("openAPIV3Schema"), "", err.Error())}, nil
 	}
 
-	validationErrors := structuralschema.ValidateStructural(fldPath.Child("openAPIV3Schema"), ss)
+	validationErrors := schema.ValidateStructural(fldPath.Child("openAPIV3Schema"), ss)
 	if len(validationErrors) > 0 {
 		return nil, nil, validationErrors
 	}
 
-	validationErrors, err = structuraldefaulting.ValidateDefaults(ctx, fldPath.Child("openAPIV3Schema"), ss, true, opts.requirePrunedDefaults)
+	validationErrors, err = defaulting.ValidateDefaults(ctx, fldPath.Child("openAPIV3Schema"), ss, true, opts.requirePrunedDefaults)
 	if err != nil {
 		// this should never happen
 		return nil, nil, field.ErrorList{field.Invalid(fldPath.Child("openAPIV3Schema"), "", err.Error())}
@@ -193,7 +193,7 @@ func requirestructuralSchema(ctx context.Context, schema *apiextensions.JSONSche
 
 	// Only initialize CEL rule validation context if the structural schemas are valid.
 	// A nil CELSchemaContext indicates that no CEL validation should be attempted.
-	return apiextensionsvalidation.RootCELContext(schema), nil, nil
+	return apiextensionsvalidation.RootCELContext(ourSchema), nil, nil
 }
 
 // validateCustomResourceDefinitionOpenAPISchema statically validates.
@@ -539,10 +539,10 @@ func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensio
 	}
 
 	openapiSchema := &spec.Schema{}
-	if err := apiservervalidation.ConvertJSONSchemaProps(schema, openapiSchema); err != nil {
+	if err := validation.ConvertJSONSchemaProps(schema, openapiSchema); err != nil {
 		return nil, err
 	}
 
-	v := kopenapivalidation.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
-	return apiservervalidation.ValidateCustomResource(fldPath, config, v), nil
+	v := validate.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
+	return validation.ValidateCustomResource(fldPath, config, v), nil
 }

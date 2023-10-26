@@ -11,14 +11,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
 	"package-operator.run/internal/packages"
 	"package-operator.run/internal/packages/packagecontent"
 )
 
-func Image(ctx context.Context, image v1.Image) (m packagecontent.Files, err error) {
+func Image(ctx context.Context, image containerregistrypkgv1.Image) (m packagecontent.Files, err error) {
 	files := packagecontent.Files{}
 	reader := mutate.Extract(image)
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)

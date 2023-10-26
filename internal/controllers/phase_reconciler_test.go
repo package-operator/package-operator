@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -61,7 +61,7 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 
 	dynamicCache.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	preflightChecker.
 		On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -109,7 +109,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 
 		uncachedClient.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 		preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -174,7 +174,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 
 		testClient.
 			On("Delete", mock.Anything, mock.Anything, mock.Anything).
-			Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 		ctx := context.Background()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
@@ -425,7 +425,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 
 		testClient.
 			On("Update", mock.Anything, mock.Anything, mock.Anything).
-			Return(errors.NewConflict(schema.GroupResource{}, "test", nil))
+			Return(apimachineryerrors.NewConflict(schema.GroupResource{}, "test", nil))
 
 		ctx := context.Background()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
@@ -459,7 +459,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 
 	dynamicCacheMock.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(errors.NewNotFound(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 	testClient.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
@@ -1380,7 +1380,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 
 			switch {
 			case tc.ObservedObject == nil:
-				clientCall.Return(errors.NewNotFound(schema.GroupResource{}, ""))
+				clientCall.Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 			case !hasDynamicCacheLabel(*tc.ObservedObject):
 				clientCall.Run(func(args mock.Arguments) {
 					obj := args.Get(2).(*unstructured.Unstructured)
@@ -1424,7 +1424,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 					mock.Anything)
 
 			if tc.ObservedObject == nil || !hasDynamicCacheLabel(*tc.ObservedObject) {
-				cacheCall.Return(errors.NewNotFound(schema.GroupResource{}, ""))
+				cacheCall.Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 			} else {
 				cacheCall.Run(func(args mock.Arguments) {
 					obj := args.Get(2).(*unstructured.Unstructured)
@@ -1538,7 +1538,7 @@ func (m *preflightCheckerMock) Check(
 	return args.Get(0).([]preflight.Violation), args.Error(1)
 }
 
-var errTest = goerrors.New("xxx")
+var errTest = errors.New("xxx")
 
 func TestIsAdoptionRefusedError(t *testing.T) {
 	t.Parallel()

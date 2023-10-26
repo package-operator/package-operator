@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,7 +50,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
 				).Once().Return(
-					k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				c.On("Create",
 					mock.Anything,
@@ -75,11 +75,11 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
 				).Once().Return(
-					k8serrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+					apimachineryerrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
 
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.False(t, needsBootstrap)
-				require.True(t, k8serrors.IsInternalError(err))
+				require.True(t, apimachineryerrors.IsInternalError(err))
 				c.AssertExpectations(t)
 			},
 		},
@@ -93,17 +93,17 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.IsType(client.ObjectKey{}),
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
-				).Once().Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+				).Once().Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				c.On("Create",
 					mock.Anything,
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
 				).Once().Return(
-					k8serrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+					apimachineryerrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
 
 				_, err := i.ensureUpdatedPKO(ctx)
-				require.True(t, k8serrors.IsInternalError(err))
+				require.True(t, apimachineryerrors.IsInternalError(err))
 				c.AssertExpectations(t)
 			},
 		},
@@ -242,7 +242,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.Anything,
 					mock.IsType(&appsv1.Deployment{}),
 					mock.Anything,
-				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+				).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				c.On("Patch",
 					mock.Anything,
@@ -350,7 +350,7 @@ func Test_initializer_ensureDeploymentGone(t *testing.T) {
 					mock.Anything,
 					mock.IsType(&appsv1.Deployment{}),
 					mock.Anything,
-				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+				).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				err := i.ensurePKODeploymentGone(ctx)
 				require.NoError(t, err)
@@ -373,7 +373,7 @@ func Test_initializer_ensureDeploymentGone(t *testing.T) {
 					mock.IsType(client.ObjectKey{}),
 					mock.IsType(&appsv1.Deployment{}),
 					mock.Anything,
-				).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+				).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 				err := i.ensurePKODeploymentGone(ctx)
 				require.NoError(t, err)
@@ -412,7 +412,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 
 	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Once().
-		Return(k8serrors.NewAlreadyExists(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewAlreadyExists(schema.GroupResource{}, ""))
 	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 

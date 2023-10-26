@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 func NewClient(client client.Client) *Client {
@@ -143,7 +143,7 @@ func (p *Package) ObjectSets(ctx context.Context) (ObjectSetList, error) {
 	opts := []findObjectSetsOption{
 		withSelector{
 			Selector: labels.SelectorFromSet(labels.Set{
-				manv1alpha1.PackageInstanceLabel: p.Name(),
+				manifestsv1alpha1.PackageInstanceLabel: p.Name(),
 			}),
 		},
 	}

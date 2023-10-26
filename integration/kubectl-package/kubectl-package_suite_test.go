@@ -23,7 +23,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages/packageexport"
 	"package-operator.run/internal/packages/packageimport"
 )
@@ -147,19 +147,19 @@ type packageImageBuildInfo struct {
 func generateAllPackages(rootDir, registry string) {
 	generatePackage(
 		filepath.Join(rootDir, "valid_package"),
-		withImages([]manv1alpha1.PackageManifestImage{
+		withImages([]manifestsv1alpha1.PackageManifestImage{
 			{
 				Name:  path.Join(registry, "valid-package-fixture"),
 				Image: path.Join(registry, "valid-package-fixture"),
 			},
 		}),
-		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+		withLockData{LockData: &manifestsv1alpha1.PackageManifestLock{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "manifests.package-operator.run/v1alpha1",
 				Kind:       "PackageManifestLock",
 			},
-			Spec: manv1alpha1.PackageManifestLockSpec{
-				Images: []manv1alpha1.PackageManifestLockImage{
+			Spec: manifestsv1alpha1.PackageManifestLockSpec{
+				Images: []manifestsv1alpha1.PackageManifestLockImage{
 					{
 						Name:   path.Join(registry, "valid-package-fixture"),
 						Image:  path.Join(registry, "valid-package-fixture"),
@@ -171,19 +171,19 @@ func generateAllPackages(rootDir, registry string) {
 	)
 	generatePackage(
 		filepath.Join(rootDir, "valid_package_invalid_lockfile_unresolvable_images"),
-		withImages([]manv1alpha1.PackageManifestImage{
+		withImages([]manifestsv1alpha1.PackageManifestImage{
 			{
 				Name:  path.Join(registry, "dne"),
 				Image: path.Join(registry, "dne"),
 			},
 		}),
-		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+		withLockData{LockData: &manifestsv1alpha1.PackageManifestLock{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "manifests.package-operator.run/v1alpha1",
 				Kind:       "PackageManifestLock",
 			},
-			Spec: manv1alpha1.PackageManifestLockSpec{
-				Images: []manv1alpha1.PackageManifestLockImage{
+			Spec: manifestsv1alpha1.PackageManifestLockSpec{
+				Images: []manifestsv1alpha1.PackageManifestLockImage{
 					{
 						Name:   path.Join(registry, "dne"),
 						Image:  path.Join(registry, "dne"),
@@ -195,19 +195,19 @@ func generateAllPackages(rootDir, registry string) {
 	)
 	generatePackage(
 		filepath.Join(rootDir, "valid_package_valid_lockfile"),
-		withImages([]manv1alpha1.PackageManifestImage{
+		withImages([]manifestsv1alpha1.PackageManifestImage{
 			{
 				Name:  path.Join(registry, "valid-package-fixture"),
 				Image: path.Join(registry, "valid-package-fixture"),
 			},
 		}),
-		withLockData{LockData: &manv1alpha1.PackageManifestLock{
+		withLockData{LockData: &manifestsv1alpha1.PackageManifestLock{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "manifests.package-operator.run/v1alpha1",
 				Kind:       "PackageManifestLock",
 			},
-			Spec: manv1alpha1.PackageManifestLockSpec{
-				Images: []manv1alpha1.PackageManifestLockImage{
+			Spec: manifestsv1alpha1.PackageManifestLockSpec{
+				Images: []manifestsv1alpha1.PackageManifestLockImage{
 					{
 						Name:   path.Join(registry, "valid-package-fixture"),
 						Image:  path.Join(registry, "valid-package-fixture"),

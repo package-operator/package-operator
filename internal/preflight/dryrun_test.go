@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -69,7 +69,7 @@ func TestDryRunViolations(t *testing.T) {
 
 			c.
 				On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-				Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: reason}})
+				Return(&apimachineryerrors.StatusError{ErrStatus: metav1.Status{Reason: reason}})
 
 			obj := &unstructured.Unstructured{}
 			obj.SetName("test")
@@ -95,7 +95,7 @@ func TestDryRun_alreadyExists(t *testing.T) {
 		Run(func(args mock.Arguments) {
 			objCalled = args.Get(1).(*unstructured.Unstructured)
 		}).
-		Return(k8serrors.NewAlreadyExists(schema.GroupResource{}, ""))
+		Return(apimachineryerrors.NewAlreadyExists(schema.GroupResource{}, ""))
 	c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	obj := &unstructured.Unstructured{}
@@ -118,10 +118,10 @@ func TestDryRun_notFround(t *testing.T) {
 
 	c.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
+		Return(&apimachineryerrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
 	c.
 		On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(&k8serrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
+		Return(&apimachineryerrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}})
 
 	obj := &unstructured.Unstructured{}
 	obj.SetName("test")
@@ -139,7 +139,7 @@ func TestDryRun_emptyreason(t *testing.T) {
 
 	c := testutil.NewClient()
 
-	e := &k8serrors.StatusError{
+	e := &apimachineryerrors.StatusError{
 		ErrStatus: metav1.Status{Reason: "", Message: "cheese, also failed to create typed patch object, also more cheese"},
 	}
 	c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(e)

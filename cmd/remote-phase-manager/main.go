@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/controllers/objectsetphases"
 	"package-operator.run/internal/dynamiccache"
@@ -77,16 +77,16 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	scheme := runtime.NewScheme()
+	ourScheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+	if err := scheme.AddToScheme(ourScheme); err != nil {
 		panic(err)
 	}
-	if err := pkoapis.AddToScheme(scheme); err != nil {
+	if err := apis.AddToScheme(ourScheme); err != nil {
 		panic(err)
 	}
 
-	if err := run(setupLog, scheme, opts); err != nil {
+	if err := run(setupLog, ourScheme, opts); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}

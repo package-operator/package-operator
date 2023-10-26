@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"package-operator.run/internal/packages/packagecontent"
 )
@@ -15,7 +15,7 @@ func File(dst string, tags []string, files packagecontent.Files) error {
 		return err
 	}
 
-	m := map[string]v1.Image{}
+	m := map[string]containerregistrypkgv1.Image{}
 	for _, tag := range tags {
 		m[tag] = image
 	}

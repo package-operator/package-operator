@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 
 	"github.com/go-logr/logr"
@@ -52,7 +52,7 @@ func (h *hypershift) Start(ctx context.Context) error {
 		case err == nil:
 			h.log.Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
-		case meta.IsNoMatchError(err) || k8serrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 			continue
 		default:
 			return fmt.Errorf("hypershiftv1beta1 probing: %w", err)

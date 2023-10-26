@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/mt-sre/devkube/dev"
-	v1apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -149,14 +149,14 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(ctx cont
 
 // Ensures that the CRD `name` is deleted and waits for the object to be fully gone.
 func (f CRDPluralizationFix) ensureCRDGone(ctx context.Context, fc Context, name string) error {
-	crd := &v1apiextensions.CustomResourceDefinition{
+	crd := &apiextensionsv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 	}
 
 	err := fc.Client.Delete(ctx, crd)
-	if k8serrors.IsNotFound(err) {
+	if apimachineryerrors.IsNotFound(err) {
 		// object is already gone
 		return nil
 	} else if err != nil {
@@ -206,12 +206,12 @@ func (f CRDPluralizationFix) crdPairExists(ctx context.Context, fc Context, crdP
 }
 
 func (f CRDPluralizationFix) crdExists(ctx context.Context, c client.Client, name string) (bool, error) {
-	crd := &v1apiextensions.CustomResourceDefinition{}
+	crd := &apiextensionsv1.CustomResourceDefinition{}
 	err := c.Get(ctx, client.ObjectKey{
 		Name: name,
 	}, crd)
 
-	if k8serrors.IsNotFound(err) {
+	if apimachineryerrors.IsNotFound(err) {
 		return false, nil
 	}
 

@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"reflect"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachinerymeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,7 +47,7 @@ type CacheReader struct {
 	groupVersionKind schema.GroupVersionKind
 
 	// scopeName is the scope of the resource (namespaced or cluster-scoped).
-	scopeName apimeta.RESTScopeName
+	scopeName apimachinerymeta.RESTScopeName
 
 	// disableDeepCopy indicates not to deep copy objects during get or list objects.
 	// Be very careful with this, when enabled you must DeepCopy any object before mutating it,
@@ -57,7 +57,7 @@ type CacheReader struct {
 
 // Get checks the indexer for the object and writes a copy of it if found.
 func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Object, _ ...client.GetOption) error {
-	if c.scopeName == apimeta.RESTScopeNameRoot {
+	if c.scopeName == apimachinerymeta.RESTScopeNameRoot {
 		key.Namespace = ""
 	}
 	storeKey := objectKeyToStoreKey(key)
@@ -71,7 +71,7 @@ func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Ob
 	// Not found, return an error
 	if !exists {
 		// Resource gets transformed into Kind in the error anyway, so this is fine
-		return apierrors.NewNotFound(schema.GroupResource{
+		return apimachineryerrors.NewNotFound(schema.GroupResource{
 			Group:    c.groupVersionKind.Group,
 			Resource: c.groupVersionKind.Kind,
 		}, key.Name)
@@ -150,7 +150,7 @@ func (c *CacheReader) List(_ context.Context, out client.ObjectList, opts ...cli
 		if !isObj {
 			return fmt.Errorf("cache contained %T, which is not an Object", obj)
 		}
-		meta, err := apimeta.Accessor(obj)
+		meta, err := apimachinerymeta.Accessor(obj)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func (c *CacheReader) List(_ context.Context, out client.ObjectList, opts ...cli
 		}
 		runtimeObjs = append(runtimeObjs, outObj)
 	}
-	return apimeta.SetList(out, runtimeObjs)
+	return apimachinerymeta.SetList(out, runtimeObjs)
 }
 
 // objectKeyToStorageKey converts an object key to store key.

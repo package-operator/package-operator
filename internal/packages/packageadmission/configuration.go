@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	extschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,7 +47,7 @@ func AdmitPackageConfiguration(
 		return nil, err
 	}
 
-	s, err := extschema.NewStructural(nonVersionedSchema)
+	s, err := schema.NewStructural(nonVersionedSchema)
 	if err != nil {
 		return nil, err
 	}

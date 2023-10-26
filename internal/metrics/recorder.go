@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -97,7 +97,7 @@ func NewRecorder() *Recorder {
 
 // Register metrics into ctrl registry.
 func (r *Recorder) Register() {
-	ctrlmetrics.Registry.MustRegister(
+	metrics.Registry.MustRegister(
 		r.dynamicCacheInformers, r.dynamicCacheObjects,
 		r.packageAvailability, r.packageCreated, r.packageLoadDuration, r.packageRevision,
 

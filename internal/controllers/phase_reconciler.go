@@ -3,14 +3,14 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -201,7 +201,7 @@ func (r *PhaseReconciler) ReconcilePhase(
 	for i, phaseObject := range phase.Objects {
 		desiredObj := &desiredObjects[i]
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, desiredObj, previous)
-		if errors.IsNotFound(err) {
+		if apimachineryerrors.IsNotFound(err) {
 			// Don't error, just observe.
 			rec.RecordMissingObject(desiredObj)
 			continue
@@ -250,8 +250,8 @@ func (r *PhaseReconciler) observeExternalObject(
 		observed = obj.DeepCopy()
 	)
 
-	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+	if err := r.dynamicCache.Get(ctx, key, observed); apimachineryerrors.IsNotFound(err) {
+		if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
 			return nil, NewExternalResourceNotFoundError(obj)
 		} else if err != nil {
 			return nil, fmt.Errorf("retrieving external object: %w", err)
@@ -345,7 +345,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	currentObj := desiredObj.DeepCopy()
 	err = r.uncachedClient.Get(
 		ctx, client.ObjectKeyFromObject(desiredObj), currentObj)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && apimachineryerrors.IsNotFound(err) {
 		// No matter who the owner of this object is,
 		// it's already gone.
 		return true, nil
@@ -376,7 +376,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		"name", currentObj.GetName())
 
 	err = r.writer.Delete(ctx, currentObj)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && apimachineryerrors.IsNotFound(err) {
 		return true, nil
 	}
 	if err != nil {
@@ -409,8 +409,8 @@ func (r *PhaseReconciler) teardownExternalObject(
 		key      = client.ObjectKeyFromObject(obj)
 		observed = obj.DeepCopy()
 	)
-	if err := r.dynamicCache.Get(ctx, key, observed); errors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+	if err := r.dynamicCache.Get(ctx, key, observed); apimachineryerrors.IsNotFound(err) {
+		if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
 			// external object does not exist therefore no action is needed
 			return true, nil
 		} else if err != nil {
@@ -564,12 +564,12 @@ func (r *PhaseReconciler) desiredObject(
 // Returns true if the underlying error is because adoption has been refused.
 func IsAdoptionRefusedError(err error) bool {
 	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
-	if goerrors.As(err, &prevRevisionError) {
+	if errors.As(err, &prevRevisionError) {
 		return true
 	}
 
 	var revCollisionError *RevisionCollisionError
-	return goerrors.As(err, &revCollisionError)
+	return errors.As(err, &revCollisionError)
 }
 
 // updateStatusError(ctx context.Context, objectSet genericObjectSet,
@@ -587,7 +587,7 @@ func UpdateObjectSetOrPhaseStatusFromError(
 	reconcileErr error, updateStatus func(ctx context.Context) error,
 ) (res ctrl.Result, err error) {
 	var preflightError *preflight.Error
-	if goerrors.As(reconcileErr, &preflightError) {
+	if errors.As(reconcileErr, &preflightError) {
 		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
@@ -651,10 +651,10 @@ func (r *PhaseReconciler) reconcileObject(
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
 	err = r.dynamicCache.Get(ctx, objKey, currentObj)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !apimachineryerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
 	}
-	if errors.IsNotFound(err) {
+	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
 		// just create it using server-side apply!
 		err := r.writer.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(FieldOwner))

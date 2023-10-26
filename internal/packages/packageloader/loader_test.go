@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
@@ -31,7 +31,7 @@ var testScheme = runtime.NewScheme()
 
 func init() {
 	builder := runtime.SchemeBuilder{
-		pkoapis.AddToScheme,
+		apis.AddToScheme,
 		apiextensions.AddToScheme,
 		apiextensionsv1.AddToScheme,
 	}

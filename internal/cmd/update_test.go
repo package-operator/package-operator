@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/packages/packagecontent"
@@ -24,7 +24,7 @@ func TestUpdate(t *testing.T) {
 		Error    error
 	}
 
-	now := v1.Now()
+	now := metav1.Now()
 
 	for name, tc := range map[string]struct {
 		Package       *packagecontent.Package
@@ -181,10 +181,10 @@ type clockMock struct {
 	mock.Mock
 }
 
-func (m *clockMock) Now() v1.Time {
+func (m *clockMock) Now() metav1.Time {
 	args := m.Called()
 
-	return args.Get(0).(v1.Time)
+	return args.Get(0).(metav1.Time)
 }
 
 const (

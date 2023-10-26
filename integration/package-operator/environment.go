@@ -11,12 +11,12 @@ import (
 	"github.com/mt-sre/devkube/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	pkoapis "package-operator.run/apis"
+	apis "package-operator.run/apis"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
@@ -80,8 +80,8 @@ func init() {
 func initClients(_ context.Context) error {
 	// Client/Scheme setup.
 	AddToSchemes := runtime.SchemeBuilder{
-		clientgoscheme.AddToScheme,
-		pkoapis.AddToScheme,
+		scheme.AddToScheme,
+		apis.AddToScheme,
 		hypershiftv1beta1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {

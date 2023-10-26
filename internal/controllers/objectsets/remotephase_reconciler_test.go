@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -65,7 +65,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 			mockPrepare: func(_ *testing.T, _ *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
 				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
@@ -94,7 +94,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 					Return(nil)
 				clientMock.
 					On("Delete", mock.Anything, mock.Anything, mock.Anything).
-					Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 			},
 			cleanupDone: true,
 			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
@@ -300,7 +300,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,
@@ -357,7 +357,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 			require.Empty(t, out.ObjectMeta.Finalizers)
 		}).Return(nil)
 
-	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(k8serrors.NewNotFound(schema.GroupResource{}, ""))
+	c.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 	r := &objectSetRemotePhaseReconciler{
 		client:            c,

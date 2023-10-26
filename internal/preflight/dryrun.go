@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	k8serrs "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,11 +33,11 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 	dst := obj.DeepCopyObject().(*unstructured.Unstructured)
 	err = p.client.Patch(ctx, dst, patch, client.FieldOwner("package-operator"), client.ForceOwnership, client.DryRunAll)
 
-	if k8serrs.IsNotFound(err) {
+	if apimachineryerrors.IsNotFound(err) {
 		err = p.client.Create(ctx, obj.DeepCopyObject().(client.Object), client.DryRunAll)
 	}
 
-	var apiErr k8serrs.APIStatus
+	var apiErr apimachineryerrors.APIStatus
 
 	switch {
 	case err == nil:

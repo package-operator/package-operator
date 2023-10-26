@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -293,7 +293,7 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(ctx context.Context, 
 			Name:      phaseRef.Name,
 			Namespace: objectSet.ClientObject().GetNamespace(),
 		}, phase.ClientObject())
-		if k8serrors.IsNotFound(err) {
+		if apimachineryerrors.IsNotFound(err) {
 			// Phase object is not yet in cache, or was deleted by someone else.
 			// -> we have to wait, but we don't want to raise an error in logs.
 			return false, true, nil

@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 func TestClient_GetPackage(t *testing.T) {
@@ -180,7 +180,7 @@ func TestPackage(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-object-set",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "cluster-package",
+							manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
 						},
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
@@ -226,7 +226,7 @@ func TestPackage(t *testing.T) {
 						Name:      "object-set",
 						Namespace: "package-namespace",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "package",
+							manifestsv1alpha1.PackageInstanceLabel: "package",
 						},
 					},
 					Status: corev1alpha1.ObjectSetStatus{
@@ -307,7 +307,7 @@ func TestObjectDeployment(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster-object-deployment",
 					Labels: map[string]string{
-						manv1alpha1.PackageInstanceLabel: "cluster-package",
+						manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
 					},
 				},
 				Status: corev1alpha1.ClusterObjectDeploymentStatus{
@@ -319,7 +319,7 @@ func TestObjectDeployment(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster-object-set",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "cluster-package",
+							manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
 						},
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
@@ -355,7 +355,7 @@ func TestObjectDeployment(t *testing.T) {
 					Name:      "object-deployment",
 					Namespace: "object-deployment-namespace",
 					Labels: map[string]string{
-						manv1alpha1.PackageInstanceLabel: "package",
+						manifestsv1alpha1.PackageInstanceLabel: "package",
 					},
 				},
 				Status: corev1alpha1.ObjectDeploymentStatus{
@@ -368,7 +368,7 @@ func TestObjectDeployment(t *testing.T) {
 						Name:      "object-set",
 						Namespace: "object-deployment-namespace",
 						Labels: map[string]string{
-							manv1alpha1.PackageInstanceLabel: "package",
+							manifestsv1alpha1.PackageInstanceLabel: "package",
 						},
 					},
 					Status: corev1alpha1.ObjectSetStatus{
