@@ -17,7 +17,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.28.1
+	github.com/onsi/gomega v1.29.0
 	github.com/openshift/api v0.0.0-20231003083825-c3f7566f6ef6
 	github.com/prometheus/client_golang v1.17.0
 	github.com/pterm/pterm v0.12.66
@@ -40,7 +40,7 @@ require (
 	package-operator.run/pkg v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/kind v0.20.0
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
