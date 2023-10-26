@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{.package.metadata.name}}"
+  labels:
+    app.kubernetes.io/instance: "{{.package.metadata.name}}"
+    app.kubernetes.io/name: test-webapp
+    app.kubernetes.io/component: frontend
+  annotations:
+    package-operator.run/phase: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: "{{.package.metadata.name}}"
+      app.kubernetes.io/name: test-webapp
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: "{{.package.metadata.name}}"
+        app.kubernetes.io/name: test-webapp
+        app.kubernetes.io/component: frontend
+    spec:
+      shareProcessNamespace: true
+      containers:
+        - name: frontend
+          image: test-webapp/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: "{{.package.metadata.name}}-config"

@@ -2,6 +2,7 @@ package packages
 
 import (
 	"fmt"
+	"strings"
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
@@ -16,6 +17,7 @@ type ViolationError struct {
 	Path      string          // Path shows which file path in the package is responsible for this error.
 	Component string          // Component indicates which component the error is associated with
 	Index     *int            // Index is the index of the YAML document within Path.
+	Subject   string          // Complete subject that produced the error, may be the whole yaml file, a single document, etc.
 }
 
 // Predefined reasons for package violations.
@@ -42,6 +44,7 @@ const (
 	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
 	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
 	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
+	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
 )
 
 func (v ViolationError) Error() string {
@@ -68,6 +71,10 @@ func (v ViolationError) Error() string {
 	// Attach details to message if set.
 	if v.Details != "" {
 		msg += ": " + v.Details
+	}
+
+	if v.Subject != "" {
+		msg += "\n" + strings.TrimSpace(v.Subject)
 	}
 
 	return msg

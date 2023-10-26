@@ -1,0 +1,9 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: "{{.package.metadata.name}}-backend"
+  annotations:
+      package-operator.run/phase: deploy-backend
+spec:
+  image: my-multi-package-image:latest
+  component: backend

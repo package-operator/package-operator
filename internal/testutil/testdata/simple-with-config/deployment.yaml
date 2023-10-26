@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-webapp-frontend
+  labels:
+    app.kubernetes.io/name: test-webapp
+    app.kubernetes.io/component: frontend
+  annotations:
+    package-operator.run/phase: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: test-webapp
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: test-webapp
+        app.kubernetes.io/component: frontend
+    spec:
+      shareProcessNamespace: true
+      containers:
+        - name: frontend
+          image: test-webapp/frontend:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: frontend-config

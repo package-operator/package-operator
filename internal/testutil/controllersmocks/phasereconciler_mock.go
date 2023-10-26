@@ -8,7 +8,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/probing"
+	"package-operator.run/pkg/probing"
 )
 
 type PhaseReconcilerMock struct {

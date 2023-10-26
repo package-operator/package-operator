@@ -41,8 +41,6 @@ const (
 	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.2"
 	helmVersion          = "3.12.3"
-
-	coverProfilingMinGoVersion = "1.20.0"
 )
 
 // Types for target configuration.

@@ -6,16 +6,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"golang.org/x/mod/semver"
 )
 
 type Test mg.Namespace
@@ -28,6 +24,8 @@ func (Test) GolangCILint() {
 	// Generate.All ensures code generators are re-triggered.
 	mg.Deps(Generate.All, Dependency.GolangciLint)
 	must(sh.RunV("golangci-lint", "run", "./...", "--deadline=15m"))
+	must(sh.RunV("golangci-lint", "run", "./apis/...", "--deadline=15m"))
+	must(sh.RunV("golangci-lint", "run", "./pkg/...", "--deadline=15m"))
 }
 
 func (Test) GolangCILintFix() {
@@ -71,11 +69,11 @@ func (Test) unit(failfast bool) {
 	}
 
 	testCmd := fmt.Sprintf(
-		`set -o pipefail; go test %s -coverprofile="%s" -race -test.v ./internal/... ./cmd/... ./apis/... | tee "%s"`,
+		`set -o pipefail; go test %s -coverprofile="%s" -race -test.v ./... ./pkg/... ./apis/... | tee "%s"`,
 		failfastFlag,
 		locations.UnitTestCoverageReport(),
 		locations.UnitTestStdOut(),
-	)
+  )
 
 	// cgo needed to enable race detector -race
 	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
@@ -138,9 +136,7 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 
 	// count=1 will force a new run, instead of using the cache
 	args := []string{
-		"test", "-v",
-		"-failfast", "-count=1", "-timeout=20m",
-		"-coverpkg=./apis/...,./cmd/...,./internal/...",
+		"test", "-v", "-failfast", "-count=1", "-timeout=20m", "-coverpkg=./...,./apis/...,./pkg/...", "--tags=integration",
 		fmt.Sprintf("-coverprofile=%s", locations.PKOIntegrationTestCoverageReport()),
 	}
 	if len(filter) > 0 {
@@ -177,11 +173,7 @@ func (Test) kubectlPackageIntegration() {
 		"GOCOVERDIR": tmp,
 	}
 
-	args := []string{
-		"test", "-v", "-failfast",
-		"-count=1", "-timeout=5m",
-		"./integration/kubectl-package/...",
-	}
+	args := []string{"test", "-v", "-failfast", "-count=1", "-timeout=5m", "--tags=integration", "./integration/kubectl-package/..."}
 	_, isCI := os.LookupEnv("CI")
 	if isCI {
 		// test output in json format
@@ -192,29 +184,12 @@ func (Test) kubectlPackageIntegration() {
 		panic(err)
 	}
 
-	goVersion, err := getGoVersion()
-	must(err)
-
-	if semver.Compare("v"+goVersion, "v"+coverProfilingMinGoVersion) >= 0 {
-		covArgs := []string{
-			"tool", "covdata", "textfmt",
-			"-i", tmp,
-			"-o", locations.PluginIntegrationTestCoverageReport(),
-		}
-		if err := sh.Run("go", covArgs...); err != nil {
-			panic(err)
-		}
+	covArgs := []string{
+		"tool", "covdata", "textfmt",
+		"-i", tmp,
+		"-o", locations.PluginIntegrationTestCoverageReport(),
 	}
-}
-
-var errRegexpMatchNotFound = errors.New("no match found for regexp")
-
-func getGoVersion() (string, error) {
-	goVersion := runtime.Version()
-	r := regexp.MustCompile(`\d(?:\.\d+){2}`)
-	parsedVersion := r.FindString(goVersion)
-	if parsedVersion == "" {
-		return parsedVersion, errRegexpMatchNotFound
+	if err := sh.Run("go", covArgs...); err != nil {
+		panic(err)
 	}
-	return parsedVersion, nil
 }

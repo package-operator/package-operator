@@ -2,8 +2,13 @@ package packageloader_test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
+
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -25,7 +30,12 @@ import (
 var testScheme = runtime.NewScheme()
 
 func init() {
-	if err := pkoapis.AddToScheme(testScheme); err != nil {
+	builder := runtime.SchemeBuilder{
+		pkoapis.AddToScheme,
+		apiextensions.AddToScheme,
+		apiextensionsv1.AddToScheme,
+	}
+	if err := builder.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
 }
@@ -33,11 +43,14 @@ func init() {
 func TestLoader(t *testing.T) {
 	t.Parallel()
 
+	foobarValue := "planeplane123"
+
 	transformer, err := packageloader.NewTemplateTransformer(
 		packageloader.PackageFileTemplateContext{
 			Package: manifestsv1alpha1.TemplateContextPackage{
 				TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
 			},
+			Config: map[string]interface{}{"foobar": foobarValue},
 		},
 	)
 	require.NoError(t, err)
@@ -68,6 +81,18 @@ func TestLoader(t *testing.T) {
 			Scopes:             []manifestsv1alpha1.PackageManifestScope{manifestsv1alpha1.PackageManifestScopeNamespaced},
 			Phases:             []manifestsv1alpha1.PackageManifestPhase{{Name: "pre-requisites"}, {Name: "main-stuff"}, {Name: "empty"}},
 			AvailabilityProbes: expectedProbes,
+			Config: manifestsv1alpha1.PackageManifestSpecConfig{
+				OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"foobar": {
+							Description: "some string of some sort",
+							Type:        "string",
+							Default:     &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf("\"%s\"", foobarValue))},
+						},
+					},
+					Type: "object",
+				},
+			},
 		},
 	}, pc.PackageManifest)
 
@@ -109,10 +134,12 @@ func TestLoader(t *testing.T) {
 							"metadata": map[string]interface{}{
 								"name": "controller-manager", "namespace": "test123-ns",
 								"annotations": map[string]interface{}{
-									"other-test-helper": "other-test-helper",
-									"test-helper":       "test-helper",
-									"include-test":      "\nKEY1: VAL1\nKEY2: VAL2",
-									"fileGet":           "lorem ipsum...\n",
+									"other-test-helper":  "other-test-helper",
+									"test-helper":        "test-helper",
+									"foobar-from-config": foobarValue,
+									"include-test":       "\nKEY1: VAL1\nKEY2: VAL2",
+									"fileGet":            "lorem ipsum...\n",
+									"certificate-key":    "-----BEGIN CERTIFICATE-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDBj08sp5++4anG\n-----END CERTIFICATE-----\n",
 								},
 							},
 							"spec": map[string]interface{}{"replicas": int64(1)},
@@ -425,4 +452,66 @@ func TestPackageScopeValidator(t *testing.T) {
 		},
 	})
 	require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
+}
+
+func TestLoaderOnMultiComponentPackageWithConfig(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		Directory   string
+		Component   string
+		ObjectNames []string
+		Config      map[string]interface{}
+	}{
+		"simple": {
+			Directory:   "simple-with-config",
+			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
+		},
+		"multi/root": {
+			Directory:   "multi-with-config",
+			Component:   "",
+			ObjectNames: []string{"backend-package.yaml", "frontend-package.yaml"},
+		},
+		"multi/backend": {
+			Directory:   "multi-with-config",
+			Component:   "backend",
+			ObjectNames: []string{"deployment.yaml", "service.yaml"},
+		},
+		"multi/frontend": {
+			Directory:   "multi-with-config",
+			Component:   "frontend",
+			ObjectNames: []string{"configmap.yaml", "deployment.yaml", "service.yaml"},
+			Config:      map[string]interface{}{"apiBaseUrl": "http://localhost:12345"},
+		},
+	} {
+		tc := tc
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			transformer, err := packageloader.NewTemplateTransformer(
+				packageloader.PackageFileTemplateContext{
+					Package: manifestsv1alpha1.TemplateContextPackage{
+						TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{Namespace: "test123-ns"},
+					},
+					Config: tc.Config,
+				},
+			)
+			require.NoError(t, err)
+
+			l := packageloader.New(testScheme, packageloader.WithDefaults, packageloader.WithFilesTransformers(transformer), packageloader.WithComponent(tc.Component))
+
+			ctx := logr.NewContext(context.Background(), testr.New(t))
+			files, err := packageimport.Folder(ctx, filepath.Join("..", "..", "testutil", "testdata", tc.Directory))
+			require.NoError(t, err)
+
+			pkg, err := l.FromFiles(ctx, files)
+			require.NoError(t, err)
+
+			for _, obj := range tc.ObjectNames {
+				require.Contains(t, pkg.Objects, obj)
+			}
+		})
+	}
 }

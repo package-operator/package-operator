@@ -1,0 +1,11 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: "{{.package.metadata.name}}-frontend"
+  annotations:
+      package-operator.run/phase: deploy-frontend
+spec:
+  image: my-multi-package-image:latest
+  component: frontend
+  config:
+    apiBaseUrl: http://localhost:28282

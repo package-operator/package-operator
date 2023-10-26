@@ -18,7 +18,8 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/internal/probing"
+	internalprobing "package-operator.run/internal/probing"
+	"package-operator.run/pkg/probing"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
@@ -189,7 +190,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
 	}
 
-	probe, err := probing.Parse(
+	probe, err := internalprobing.Parse(
 		ctx, objectSet.GetAvailabilityProbes())
 	if err != nil {
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)

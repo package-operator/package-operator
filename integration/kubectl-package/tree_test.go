@@ -58,6 +58,19 @@ var _ = DescribeTable("tree subcommand",
 			},
 		},
 	),
+	Entry("given a path of a valid package with configuration, no tests and no required properties",
+		subCommandTestCase{
+			Args:             []string{sourcePathFixture("valid_with_config_no_tests_no_required_properties")},
+			ExpectedExitCode: 0,
+			ExpectedOutput: []string{
+				"test-stub",
+				"Package namespace/name",
+				"└── Phase deploy",
+				`\s+└── apps/v1, Kind=Deployment /test-stub-name`,
+				`\s+└── apps/v1, Kind=Deployment external-name/test-external-name \(EXTERNAL\)`,
+			},
+		},
+	),
 	Entry("using '--config-testcase' flag",
 		subCommandTestCase{
 			Args: []string{

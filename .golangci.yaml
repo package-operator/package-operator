@@ -27,11 +27,15 @@ linters:
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
+  #- rowserrcheck     # No SQL here.
+  #- sqlclosecheck    # No SQL here.
+  #- tagliatelle      # Reports issues that are not right for us.
   #- testpackage      # Could be nice in the future.
   #- unparam          # Not that useful/false positives.
   #- varnamelen       # Not that useful/false positives.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
+  #- zerologlint      # No zerolog here.
   enable:
   - asasalint
   - asciicheck
@@ -57,11 +61,8 @@ linters:
   - gofumpt
   - goheader
   - goimports
-  - ginkgolinter
-  - gomodguard
-  - goprintffuncname
-  - gosec
-  - gosimple
+  - rowserrcheck
+  - gosmopolitan
   - govet
   - grouper
   - importas
@@ -69,6 +70,7 @@ linters:
   - loggercheck
   - maintidx
   - makezero
+  - mirror
   - misspell
   - nestif
   - nilerr
@@ -82,11 +84,9 @@ linters:
   - promlinter
   - reassign
   - revive
-  - rowserrcheck
   - staticcheck
   - stylecheck
-  - sqlclosecheck
-  - tagliatelle
+  - tagalign
   - tenv
   - testableexamples
   - thelper

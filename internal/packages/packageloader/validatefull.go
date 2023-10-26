@@ -43,10 +43,23 @@ func (v TemplateTestValidator) ValidatePackageAndFiles(
 ) error {
 	log := logr.FromContextOrDiscard(ctx).V(1)
 
+	kcV, err := kubeconformValidatorFromManifest(pkg.PackageManifest)
+	if err != nil {
+		return err
+	}
+
 	for _, templateTestCase := range pkg.PackageManifest.Test.Template {
 		log.Info("running template test case", "name", templateTestCase.Name)
-		if err := v.runTestCase(ctx, fileMap, pkg.PackageManifest, templateTestCase); err != nil {
+		if err := v.runTestCase(ctx, fileMap, pkg.PackageManifest, templateTestCase, kcV); err != nil {
 			return err
+		}
+	}
+
+	for path, file := range fileMap {
+		if verrs, err := runKubeconformForFile(path, file, kcV); err != nil {
+			return err
+		} else if len(verrs) > 0 {
+			return errors.Join(verrs...)
 		}
 	}
 
@@ -57,6 +70,7 @@ func (v TemplateTestValidator) runTestCase(
 	ctx context.Context, fileMap packagecontent.Files,
 	manifest *manifestsv1alpha1.PackageManifest,
 	testCase manifestsv1alpha1.PackageManifestTestCaseTemplate,
+	kcV kubeconformValidator,
 ) error {
 	log := logr.FromContextOrDiscard(ctx)
 	fileMap = maps.Clone(fileMap)
@@ -120,6 +134,12 @@ func (v TemplateTestValidator) runTestCase(
 			continue
 		}
 		path := packages.StripTemplateSuffix(relPath)
+
+		verrs, err := runKubeconformForFile(path, fileMap[path], kcV)
+		if err != nil {
+			return err
+		}
+		violations = append(violations, verrs...)
 
 		fixtureFilePath := filepath.Join(testFixturePath, path)
 		actualFilePath := filepath.Join(actualPath, path)

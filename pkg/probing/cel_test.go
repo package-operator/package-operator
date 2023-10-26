@@ -8,10 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func Test_newCELProbe(t *testing.T) {
+func Test_NewCELProbe(t *testing.T) {
 	t.Parallel()
 
-	_, err := newCELProbe(`self.test`, "")
+	_, err := NewCELProbe(`self.test`, "")
 	require.ErrorIs(t, err, ErrCELInvalidEvaluationType)
 }
 
@@ -113,7 +113,7 @@ func Test_celProbe(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := newCELProbe(test.rule, test.message)
+			p, err := NewCELProbe(test.rule, test.message)
 			require.NoError(t, err)
 
 			success, outMsg := p.Probe(test.obj)

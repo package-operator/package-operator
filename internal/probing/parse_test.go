@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/pkg/probing"
 )
 
 func TestParse(t *testing.T) {
@@ -29,12 +30,12 @@ func TestParse(t *testing.T) {
 
 	p, err := Parse(ctx, osp)
 	require.NoError(t, err)
-	require.IsType(t, list{}, p)
+	require.IsType(t, probing.And{}, p)
 
 	if assert.Len(t, p, 1) {
-		list := p.(list)
-		require.IsType(t, &kindSelector{}, list[0])
-		ks := list[0].(*kindSelector)
+		list := p.(probing.And)
+		require.IsType(t, &probing.GroupKindSelector{}, list[0])
+		ks := list[0].(*probing.GroupKindSelector)
 		assert.Equal(t, kind, ks.Kind)
 		assert.Equal(t, group, ks.Group)
 	}
@@ -55,10 +56,10 @@ func TestParseSelector(t *testing.T) {
 		},
 	}, nil)
 	require.NoError(t, err)
-	require.IsType(t, &selectorSelector{}, p)
+	require.IsType(t, &probing.LabelSelector{}, p)
 
-	ss := p.(*selectorSelector)
-	require.IsType(t, &kindSelector{}, ss.Prober)
+	ss := p.(*probing.LabelSelector)
+	require.IsType(t, &probing.GroupKindSelector{}, ss.Prober)
 }
 
 func TestParseProbes(t *testing.T) {
@@ -88,19 +89,19 @@ func TestParseProbes(t *testing.T) {
 	})
 	require.NoError(t, err)
 	// everything should be wrapped
-	require.IsType(t, &statusObservedGenerationProbe{}, p)
+	require.IsType(t, &probing.ObservedGenerationProbe{}, p)
 
-	ogProbe := p.(*statusObservedGenerationProbe)
+	ogProbe := p.(*probing.ObservedGenerationProbe)
 	nested := ogProbe.Prober
-	require.IsType(t, list{}, nested)
+	require.IsType(t, probing.And{}, nested)
 
 	if assert.Len(t, nested, 3) {
-		nestedList := nested.(list)
-		assert.Equal(t, &fieldsEqualProbe{
+		nestedList := nested.(probing.And)
+		assert.Equal(t, &probing.FieldsEqualProbe{
 			FieldA: "asdf",
 			FieldB: "jkl;",
 		}, nestedList[0])
-		assert.Equal(t, &conditionProbe{
+		assert.Equal(t, &probing.ConditionProbe{
 			Type:   "asdf",
 			Status: "asdf",
 		}, nestedList[1])
