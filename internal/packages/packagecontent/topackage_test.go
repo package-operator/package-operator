@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	apis "package-operator.run/apis"
+	"package-operator.run/apis"
 	"package-operator.run/internal/packages"
 	"package-operator.run/internal/packages/packagecontent"
 	"package-operator.run/internal/packages/packageimport"
