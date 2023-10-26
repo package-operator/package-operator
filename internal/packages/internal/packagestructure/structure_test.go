@@ -95,7 +95,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 		assert.Len(t, pkg.Components, 0)
 	})
 
-	t.Run("components-enabled", func(t *testing.T) {
+	t.Run("components-enabled/valid", func(t *testing.T) {
 		t.Parallel()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
@@ -130,6 +130,19 @@ func TestStructuralLoader_Load(t *testing.T) {
 		require.EqualError(t, err, packagetypes.ViolationError{
 			Reason:    packagetypes.ViolationReasonNestedMultiComponentPkg,
 			Component: "backend",
+		}.Error())
+	})
+
+	t.Run("components-enabled/invalid-files-in-components-dir", func(t *testing.T) {
+		t.Parallel()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/invalid-files-in-components-dir")
+		require.NoError(t, err)
+
+		_, err = sl.Load(ctx, rawPkg)
+		require.EqualError(t, err, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonInvalidFileInComponentsDir,
+			Path:   "components/foobar",
 		}.Error())
 	})
 
