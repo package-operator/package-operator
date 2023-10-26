@@ -146,6 +146,18 @@ func TestStructuralLoader_Load(t *testing.T) {
 		}.Error())
 	})
 
+	t.Run("duplicated-manifest", func(t *testing.T) {
+		t.Parallel()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		rawPkg, err := packageimport.FromFolder(ctx, "testdata/duplicated-manifest")
+		require.NoError(t, err)
+
+		_, err = sl.Load(ctx, rawPkg)
+		require.EqualError(t, err, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonPackageManifestDuplicated,
+		}.Error())
+	})
+
 	t.Run("missing-manifest", func(t *testing.T) {
 		t.Parallel()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
