@@ -16,10 +16,8 @@ import (
 
 	"package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/packages/packageadmission"
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/utils"
 )
 
@@ -67,18 +65,14 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 
 	t.cfg.Log.Info("loading source from disk", "path", srcPath)
 
-	files, err := packageimport.Folder(ctx, srcPath)
+	rawPkg, err := packages.FromFolder(ctx, srcPath)
 	if err != nil {
 		return "", fmt.Errorf("loading package contents from folder: %w", err)
 	}
 
 	// TODO: show all components in the tree
-	filesByComponent, err := packagecontent.SplitFilesByComponent(ctx, t.scheme, files, cfg.Component)
-	if err != nil {
-		return "", fmt.Errorf("parsing package contents: %w", err)
-	}
 
-	pkg, err := packagecontent.PackageFromFiles(ctx, t.scheme, filesByComponent[cfg.Component])
+	pkg, err := packages.DefaultStructuralLoader.LoadComponent(ctx, rawPkg, "")
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
@@ -89,8 +83,8 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("getting config: %w", err)
 	}
 
-	validationErrors, err := packageadmission.AdmitPackageConfiguration(
-		ctx, t.scheme, tmplCfg, pkg.PackageManifest, field.NewPath("spec", "config"))
+	validationErrors, err := packages.AdmitPackageConfiguration(
+		ctx, tmplCfg, pkg.Manifest, field.NewPath("spec", "config"))
 	if err != nil {
 		return "", fmt.Errorf("validate Package configuration: %w", err)
 	}
@@ -99,7 +93,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 	}
 
 	tmplCtx.Config = tmplCfg
-	tmplCtx.Images = utils.GenerateStaticImages(pkg.PackageManifest)
+	tmplCtx.Images = utils.GenerateStaticImages(pkg.Manifest)
 
 	pkgPrefix := "Package"
 	scope := manifestsv1alpha1.PackageManifestScopeNamespaced
@@ -109,39 +103,32 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		pkgPrefix = "ClusterPackage"
 	}
 
-	tt, err := packageloader.NewTemplateTransformer(tmplCtx)
-	if err != nil {
-		return "", err
-	}
-
-	l := packageloader.New(t.scheme, packageloader.WithDefaults,
-		packageloader.WithValidators(packageloader.PackageScopeValidator(scope)),
-		packageloader.WithFilesTransformers(tt),
-	)
-
-	packageContent, err := l.FromFiles(ctx, files)
+	pkgInstance, err := packages.RenderPackageInstance(ctx, pkg, tmplCtx, append(
+		packages.DefaultPackageValidators,
+		packages.PackageScopeValidator(scope),
+	), packages.DefaultObjectValidators)
 	if err != nil {
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
 
 	pkgTree := newTreeFromSpec(
 		fmt.Sprintf("%s\n%s %s",
-			packageContent.PackageManifest.Name,
+			pkgInstance.Manifest.Name,
 			pkgPrefix, client.ObjectKey{
 				Name:      tmplCtx.Package.Name,
 				Namespace: tmplCtx.Package.Namespace,
 			},
 		),
-		packagecontent.TemplateSpecFromPackage(packageContent),
+		packages.RenderObjectSetTemplateSpec(pkgInstance),
 	)
 
 	return pkgTree.Print(), nil
 }
 
-func (t *Tree) getTemplateContext(pkg *packagecontent.Package, cfg RenderPackageConfig) packageloader.PackageFileTemplateContext {
-	templateContext := packageloader.PackageFileTemplateContext{
-		Package: manifestsv1alpha1.TemplateContextPackage{
-			TemplateContextObjectMeta: manifestsv1alpha1.TemplateContextObjectMeta{
+func (t *Tree) getTemplateContext(pkg *packages.Package, cfg RenderPackageConfig) packages.PackageRenderContext {
+	templateContext := packages.PackageRenderContext{
+		Package: manifests.TemplateContextPackage{
+			TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
 				Name:      "name",
 				Namespace: "namespace",
 			},
@@ -150,19 +137,19 @@ func (t *Tree) getTemplateContext(pkg *packagecontent.Package, cfg RenderPackage
 
 	switch {
 	case cfg.ConfigTestcase != "":
-		for _, test := range pkg.PackageManifest.Test.Template {
+		for _, test := range pkg.Manifest.Test.Template {
 			if test.Name != cfg.ConfigTestcase {
 				continue
 			}
 
-			templateContext = packageloader.PackageFileTemplateContext{
+			templateContext = packages.PackageRenderContext{
 				Package: test.Context.Package,
 			}
 		}
-	case len(pkg.PackageManifest.Test.Template) > 0:
-		test := pkg.PackageManifest.Test.Template[0]
+	case len(pkg.Manifest.Test.Template) > 0:
+		test := pkg.Manifest.Test.Template[0]
 
-		templateContext = packageloader.PackageFileTemplateContext{
+		templateContext = packages.PackageRenderContext{
 			Package: test.Context.Package,
 		}
 	}
@@ -170,7 +157,7 @@ func (t *Tree) getTemplateContext(pkg *packagecontent.Package, cfg RenderPackage
 	return templateContext
 }
 
-func (t *Tree) getConfig(pkg *packagecontent.Package, cfg RenderPackageConfig) (map[string]any, error) {
+func (t *Tree) getConfig(pkg *packages.Package, cfg RenderPackageConfig) (map[string]any, error) {
 	config := map[string]any{}
 
 	switch {
@@ -183,7 +170,7 @@ func (t *Tree) getConfig(pkg *packagecontent.Package, cfg RenderPackageConfig) (
 			return nil, fmt.Errorf("unmarshal config from file %s: %w", cfg.ConfigPath, err)
 		}
 	case cfg.ConfigTestcase != "":
-		for _, test := range pkg.PackageManifest.Test.Template {
+		for _, test := range pkg.Manifest.Test.Template {
 			if test.Name != cfg.ConfigTestcase {
 				continue
 			}
@@ -199,8 +186,8 @@ func (t *Tree) getConfig(pkg *packagecontent.Package, cfg RenderPackageConfig) (
 		if config == nil {
 			return nil, fmt.Errorf("%w: test template with name %s not found", ErrInvalidArgs, cfg.ConfigTestcase)
 		}
-	case len(pkg.PackageManifest.Test.Template) > 0:
-		testCtxCfg := pkg.PackageManifest.Test.Template[0].Context.Config
+	case len(pkg.Manifest.Test.Template) > 0:
+		testCtxCfg := pkg.Manifest.Test.Template[0].Context.Config
 		if testCtxCfg == nil {
 			return config, nil
 		}

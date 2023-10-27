@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
 
 var _ manager.Runnable = (*Manager)(nil)
@@ -30,7 +30,7 @@ const (
 )
 
 type Sinker interface {
-	SetEnvironment(env *manifestsv1alpha1.PackageEnvironment)
+	SetEnvironment(env *manifests.PackageEnvironment)
 }
 
 type serverVersionDiscoverer interface {
@@ -104,9 +104,9 @@ func (m *Manager) do(ctx context.Context) error {
 }
 
 func (m *Manager) probe(ctx context.Context) (
-	env *manifestsv1alpha1.PackageEnvironment, err error,
+	env *manifests.PackageEnvironment, err error,
 ) {
-	env = &manifestsv1alpha1.PackageEnvironment{}
+	env = &manifests.PackageEnvironment{}
 
 	kubeEnv, err := m.kubernetesEnvironment(ctx)
 	if err != nil {
@@ -134,7 +134,7 @@ func (m *Manager) probe(ctx context.Context) (
 }
 
 func (m *Manager) kubernetesEnvironment(_ context.Context) (
-	kubeEnv manifestsv1alpha1.PackageEnvironmentKubernetes, err error,
+	kubeEnv manifests.PackageEnvironmentKubernetes, err error,
 ) {
 	serverVersion, err := m.discoveryClient.ServerVersion()
 	if err != nil {
@@ -145,7 +145,7 @@ func (m *Manager) kubernetesEnvironment(_ context.Context) (
 }
 
 func (m *Manager) openShiftEnvironment(ctx context.Context) (
-	openShiftEnv *manifestsv1alpha1.PackageEnvironmentOpenShift, isOpenShift bool, err error,
+	openShiftEnv *manifests.PackageEnvironmentOpenShift, isOpenShift bool, err error,
 ) {
 	clusterVersion := &configv1.ClusterVersion{}
 	err = m.client.Get(ctx, client.ObjectKey{
@@ -169,13 +169,13 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 		}
 	}
 
-	return &manifestsv1alpha1.PackageEnvironmentOpenShift{
+	return &manifests.PackageEnvironmentOpenShift{
 		Version: openShiftVersion,
 	}, true, nil
 }
 
 func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
-	openShiftEnv *manifestsv1alpha1.PackageEnvironmentProxy, hasProxy bool, err error,
+	openShiftEnv *manifests.PackageEnvironmentProxy, hasProxy bool, err error,
 ) {
 	proxy := &configv1.Proxy{}
 	err = m.client.Get(ctx, client.ObjectKey{
@@ -200,7 +200,7 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 		return nil, false, nil
 	}
 
-	return &manifestsv1alpha1.PackageEnvironmentProxy{
+	return &manifests.PackageEnvironmentProxy{
 		HTTPProxy:  httpProxy,
 		HTTPSProxy: httpsProxy,
 		NoProxy:    noProxy,
@@ -210,17 +210,17 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 var _ Sinker = (*Sink)(nil)
 
 type Sink struct {
-	env  *manifestsv1alpha1.PackageEnvironment
+	env  *manifests.PackageEnvironment
 	lock sync.RWMutex
 }
 
-func (s *Sink) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
+func (s *Sink) SetEnvironment(env *manifests.PackageEnvironment) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.env = env.DeepCopy()
 }
 
-func (s *Sink) GetEnvironment() *manifestsv1alpha1.PackageEnvironment {
+func (s *Sink) GetEnvironment() *manifests.PackageEnvironment {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	return s.env.DeepCopy()

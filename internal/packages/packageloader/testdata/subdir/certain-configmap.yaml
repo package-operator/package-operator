@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: some-configmap
-  annotations:
-    package-operator.run/phase: pre-requisites
-data:
-  foo: bar
-  hello: world

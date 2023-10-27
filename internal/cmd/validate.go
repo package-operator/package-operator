@@ -7,12 +7,11 @@ import (
 	"path/filepath"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"package-operator.run/internal/packages/packagecontent"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/packages"
 )
 
 func NewValidate(scheme *runtime.Scheme, opts ...ValidateOption) *Validate {
@@ -33,8 +32,8 @@ type Validate struct {
 }
 
 type ValidateConfig struct {
-	Log    logr.Logger
-	Puller Puller
+	Log  logr.Logger
+	Pull PullFn
 }
 
 func (c *ValidateConfig) Option(opts ...ValidateOption) {
@@ -47,8 +46,8 @@ func (c *ValidateConfig) Default() {
 	if c.Log.GetSink() == nil {
 		c.Log = logr.Discard()
 	}
-	if c.Puller == nil {
-		c.Puller = packageimport.NewPuller()
+	if c.Pull == nil {
+		c.Pull = packages.FromRegistry
 	}
 }
 
@@ -56,9 +55,7 @@ type ValidateOption interface {
 	ConfigureValidate(*ValidateConfig)
 }
 
-type Puller interface {
-	Pull(ctx context.Context, ref string, opts ...packageimport.PullOption) (packagecontent.Files, error)
-}
+type PullFn func(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error)
 
 func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageOption) error {
 	var cfg ValidatePackageConfig
@@ -69,61 +66,72 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 	}
 
 	var (
-		filemap   packagecontent.Files
-		extraOpts []packageloader.Option
+		rawPkg     *packages.RawPackage
+		validators = packages.DefaultPackageValidators
 	)
 
 	if cfg.Path != "" {
 		var err error
 
-		filemap, extraOpts, err = getPackageFromPath(ctx, v.scheme, cfg.Path)
+		rawPkg, err = getPackageFromPath(ctx, cfg.Path)
 		if err != nil {
 			return fmt.Errorf("getting package from path: %w", err)
 		}
+
+		validators = append(validators, packages.NewTemplateTestValidator(filepath.Join(cfg.Path, ".test-fixtures")))
 	} else {
 		var err error
 
-		filemap, err = v.getPackageFromRemoteRef(ctx, cfg)
+		rawPkg, err = v.getPackageFromRemoteRef(ctx, cfg)
 		if err != nil {
 			return fmt.Errorf("getting package from remote reference: %w", err)
 		}
 	}
 
-	extraOpts = append(extraOpts, packageloader.WithDefaults)
-	if _, err := packageloader.New(v.scheme, extraOpts...).FromFiles(ctx, filemap); err != nil {
+	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
+	if err != nil {
+		return err
+	}
+
+	if err := validators.ValidatePackage(ctx, pkg); err != nil {
+		return fmt.Errorf("loading package from files: %w", err)
+	}
+
+	if _, err := packages.RenderObjects(
+		ctx, pkg, packages.PackageRenderContext{},
+		packages.DefaultObjectValidators,
+	); err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
 	return nil
 }
 
-func getPackageFromPath(ctx context.Context, scheme *runtime.Scheme, path string) (packagecontent.Files, []packageloader.Option, error) {
-	filemap, err := packageimport.Folder(ctx, path)
+func getPackageFromPath(ctx context.Context, path string) (*packages.RawPackage, error) {
+	rawPkg, err := packages.FromFolder(ctx, path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("importing package from folder: %w", err)
+		return nil, fmt.Errorf("importing package from folder: %w", err)
 	}
-
-	ttv := packageloader.NewTemplateTestValidator(scheme, filepath.Join(path, ".test-fixtures"))
-
-	return filemap, []packageloader.Option{packageloader.WithPackageAndFilesValidators(ttv)}, nil
+	return rawPkg, nil
 }
 
-func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (packagecontent.Files, error) {
+func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (*packages.RawPackage, error) {
 	ref, err := name.ParseReference(cfg.RemoteReference)
 	if err != nil {
 		return nil, fmt.Errorf("parsing remote reference: %w", err)
 	}
 
-	pullOpts := []packageimport.PullOption{
-		packageimport.WithInsecure(cfg.Insecure),
+	var opts []crane.Option
+	if cfg.Insecure {
+		opts = append(opts, crane.Insecure)
 	}
 
-	filemap, err := v.cfg.Puller.Pull(ctx, ref.String(), pullOpts...)
+	rawPkg, err := v.cfg.Pull(ctx, ref.String(), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("importing package from image: %w", err)
 	}
 
-	return filemap, nil
+	return rawPkg, nil
 }
 
 type ValidatePackageConfig struct {

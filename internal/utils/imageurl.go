@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 
-	"package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 )
 
 func ImageURLWithOverrideFromEnv(img string) (string, error) {
@@ -53,7 +53,7 @@ func ImageURLWithOverride(img string, override string) (string, error) {
 }
 
 // GenerateStaticImages generates a static set of images to be used for tests and other purposes.
-func GenerateStaticImages(manifest *v1alpha1.PackageManifest) map[string]string {
+func GenerateStaticImages(manifest *manifests.PackageManifest) map[string]string {
 	images := map[string]string{}
 	for _, v := range manifest.Spec.Images {
 		images[v.Name] = "registry.package-operator.run/static-image"

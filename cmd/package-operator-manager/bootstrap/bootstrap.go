@@ -14,8 +14,7 @@ import (
 	"package-operator.run/cmd/package-operator-manager/components"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
-	"package-operator.run/internal/packages/packageimport"
-	"package-operator.run/internal/packages/packageloader"
+	"package-operator.run/internal/packages"
 )
 
 const packageOperatorDeploymentName = "package-operator-manager"
@@ -36,12 +35,12 @@ type Bootstrapper struct {
 func NewBootstrapper(
 	scheme *runtime.Scheme, log logr.Logger,
 	uncachedClient components.UncachedClient,
-	registry *packageimport.Registry,
+	registry *packages.Registry,
 	opts components.Options,
 ) (*Bootstrapper, error) {
 	c := uncachedClient
 	init := newInitializer(
-		c, scheme, packageloader.New(scheme, packageloader.WithDefaults),
+		c, scheme, &packageObjectLoad{},
 		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig,
 	)
 	fixer := newFixer(c, log, opts.Namespace)

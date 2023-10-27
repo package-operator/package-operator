@@ -11,10 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/packages/packagecontent"
+	"package-operator.run/internal/packages"
 )
 
 func TestUnpackReconciler(t *testing.T) {
@@ -26,12 +26,12 @@ func TestUnpackReconciler(t *testing.T) {
 
 	const image = "test123:latest"
 
-	f := packagecontent.Files{}
+	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything).
-		Return(f, nil)
+		Return(rawPkg, nil)
 	pd.
-		On("Load", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	pkg := &adapters.GenericPackage{
@@ -42,8 +42,8 @@ func TestUnpackReconciler(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	ur.SetEnvironment(&manifestsv1alpha1.PackageEnvironment{
-		Kubernetes: manifestsv1alpha1.PackageEnvironmentKubernetes{
+	ur.SetEnvironment(&manifests.PackageEnvironment{
+		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v11111",
 		},
 	})
@@ -91,10 +91,10 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	const image = "test123:latest"
 
-	f := packagecontent.Files{}
+	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything).
-		Return(f, errTest)
+		Return(rawPkg, errTest)
 
 	pkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{
@@ -120,19 +120,21 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, image string,
-) (packagecontent.Files, error) {
+) (*packages.RawPackage, error) {
 	args := m.Called(ctx, image)
-	return args.Get(0).(packagecontent.Files), args.Error(1)
+	return args.Get(0).(*packages.RawPackage), args.Error(1)
 }
 
 type packageDeployerMock struct {
 	mock.Mock
 }
 
-func (m *packageDeployerMock) Load(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
-	files packagecontent.Files, env manifestsv1alpha1.PackageEnvironment,
+func (m *packageDeployerMock) Deploy(
+	ctx context.Context,
+	apiPkg adapters.GenericPackageAccessor,
+	rawPkg *packages.RawPackage,
+	env manifests.PackageEnvironment,
 ) error {
-	args := m.Called(ctx, pkg, files, env)
+	args := m.Called(ctx, apiPkg, rawPkg, env)
 	return args.Error(0)
 }

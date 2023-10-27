@@ -20,7 +20,6 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/controllers/objectdeployments"
-	"package-operator.run/internal/packages/packagecontent"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 type initializer struct {
 	client    client.Client
 	scheme    *runtime.Scheme
-	loader    packageLoader
+	loader    packageObjectLoader
 	pullImage bootstrapperPullImageFn
 
 	// config
@@ -48,7 +47,7 @@ type initializer struct {
 func newInitializer(
 	client client.Client,
 	scheme *runtime.Scheme,
-	loader packageLoader,
+	loader packageObjectLoader,
 	pullImage bootstrapperPullImageFn,
 
 	// config
@@ -223,19 +222,18 @@ func (init *initializer) config() *runtime.RawExtension {
 func (init *initializer) crdsFromPackage(ctx context.Context) (
 	crds []unstructured.Unstructured, err error,
 ) {
-	files, err := init.pullImage(ctx, init.selfBootstrapImage)
+	rawPkg, err := init.pullImage(ctx, init.selfBootstrapImage)
 	if err != nil {
 		return nil, err
 	}
 
-	packgeContent, err := init.loader.FromFiles(ctx, files)
+	objs, err := init.loader.FromPkg(ctx, rawPkg)
 	if err != nil {
 		return nil, err
 	}
 
 	// Install CRDs or the manager won't start.
-	templateSpec := packagecontent.TemplateSpecFromPackage(packgeContent)
-	return crdsFromTemplateSpec(templateSpec), nil
+	return crdsFromObjects(objs), nil
 }
 
 // ensure all CRDs are installed on the cluster.
@@ -267,17 +265,14 @@ var crdGK = schema.GroupKind{
 	Kind:  "CustomResourceDefinition",
 }
 
-func crdsFromTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) []unstructured.Unstructured {
-	var crds []unstructured.Unstructured
-	for _, phase := range templateSpec.Phases {
-		for _, obj := range phase.Objects {
-			gk := obj.Object.GetObjectKind().GroupVersionKind().GroupKind()
-			if gk != crdGK {
-				continue
-			}
-
-			crds = append(crds, obj.Object)
+func crdsFromObjects(objs []unstructured.Unstructured) (crds []unstructured.Unstructured) {
+	for _, obj := range objs {
+		gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
+		if gk != crdGK {
+			continue
 		}
+
+		crds = append(crds, obj)
 	}
 	return crds
 }

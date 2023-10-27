@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/environment"
@@ -148,7 +148,7 @@ func (c *GenericObjectTemplateController) updateStatus(ctx context.Context, obje
 	return nil
 }
 
-func (c *GenericObjectTemplateController) SetEnvironment(env *manifestsv1alpha1.PackageEnvironment) {
+func (c *GenericObjectTemplateController) SetEnvironment(env *manifests.PackageEnvironment) {
 	c.templateReconciler.SetEnvironment(env)
 }
 

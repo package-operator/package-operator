@@ -108,10 +108,10 @@ func (w WithPackageLoader) ConfigureUpdate(c *UpdateConfig) {
 	c.Loader = w.Loader
 }
 
-type WithPuller struct{ Puller Puller }
+type WithPuller struct{ Pull PullFn }
 
 func (w WithPuller) ConfigureValidate(c *ValidateConfig) {
-	c.Puller = w.Puller
+	c.Pull = w.Pull
 }
 
 type WithPath string
