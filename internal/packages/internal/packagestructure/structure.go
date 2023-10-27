@@ -34,52 +34,44 @@ func (l *StructuralLoader) Load(
 func (l *StructuralLoader) LoadComponent(
 	ctx context.Context, rawPkg *packagetypes.RawPackage, componentName string,
 ) (*packagetypes.Package, error) {
-	pkg, err := l.load(ctx, rawPkg.Files, "")
+	rootManifest, err := manifestFromFiles(ctx, l.scheme, rawPkg.Files)
 	if err != nil {
 		return nil, err
 	}
-
-	if pkg.Manifest.Spec.Components == nil {
+	if rootManifest.Spec.Components == nil {
 		if len(componentName) == 0 {
-			return pkg, nil
+			return l.Load(ctx, rawPkg)
 		}
 		return nil, packagetypes.ViolationError{
 			Reason: packagetypes.ViolationReasonComponentsNotEnabled,
 		}
 	}
 
+	var cFiles packagetypes.Files
 	if len(componentName) == 0 {
-		pkg.Components = nil
-		return pkg, nil
+		cFiles, err = rootFiles(rawPkg.Files)
+	} else {
+		cFiles, err = componentFiles(rawPkg.Files, componentName)
 	}
 
-	for _, componentPkg := range pkg.Components {
-		if componentPkg.Manifest.Name == componentName {
-			return &componentPkg, nil
+	if err != nil {
+		return nil, err
+	}
+	if len(cFiles) == 0 {
+		return nil, packagetypes.ViolationError{
+			Reason:    packagetypes.ViolationReasonComponentNotFound,
+			Component: componentName,
 		}
 	}
-
-	return nil, packagetypes.ViolationError{
-		Reason:    packagetypes.ViolationReasonComponentNotFound,
-		Component: componentName,
-	}
+	return l.load(ctx, cFiles, componentName)
 }
 
 func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, componentName string) (*packagetypes.Package, error) {
 	pkg := &packagetypes.Package{}
 
 	// PackageManifest
-	if bothExtensions(files, packagetypes.PackageManifestFilename) {
-		return nil, packagetypes.ViolationError{
-			Reason: packagetypes.ViolationReasonPackageManifestDuplicated,
-		}
-	}
 	var err error
-	manifestBytes, manifestPath, manifestFound := getFile(files, packagetypes.PackageManifestFilename)
-	if !manifestFound {
-		return nil, packagetypes.ErrManifestNotFound
-	}
-	pkg.Manifest, err = manifestFromFile(ctx, l.scheme, manifestPath, manifestBytes)
+	pkg.Manifest, err = manifestFromFiles(ctx, l.scheme, files)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +160,34 @@ func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, c
 		pkg.Components = append(pkg.Components, *subPkg)
 	}
 	return pkg, nil
+}
+
+func rootFiles(files packagetypes.Files) (packagetypes.Files, error) {
+	out := packagetypes.Files{}
+	componentPathPrefix := packagetypes.ComponentsFolder + "/"
+	for path, file := range files {
+		if strings.HasPrefix(path, componentPathPrefix) {
+			// non-component file
+			continue
+		}
+		out[path] = file
+	}
+	return out, nil
+}
+
+func componentFiles(files packagetypes.Files, componentName string) (packagetypes.Files, error) {
+	out := packagetypes.Files{}
+	for path, file := range files {
+		relPath, err := filepath.Rel(filepath.Join(packagetypes.ComponentsFolder, componentName), path)
+		if err != nil {
+			return nil, err
+		}
+		if strings.HasPrefix(relPath, "../") {
+			continue
+		}
+		out[relPath] = file
+	}
+	return out, nil
 }
 
 var yamlFileExtensions = []string{"yaml", "yml"}

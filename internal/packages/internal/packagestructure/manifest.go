@@ -14,6 +14,19 @@ import (
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
+func manifestFromFiles(ctx context.Context, scheme *runtime.Scheme, files packagetypes.Files) (*manifests.PackageManifest, error) {
+	if bothExtensions(files, packagetypes.PackageManifestFilename) {
+		return nil, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonPackageManifestDuplicated,
+		}
+	}
+	manifestBytes, manifestPath, manifestFound := getFile(files, packagetypes.PackageManifestFilename)
+	if !manifestFound {
+		return nil, packagetypes.ErrManifestNotFound
+	}
+	return manifestFromFile(ctx, scheme, manifestPath, manifestBytes)
+}
+
 func manifestFromFile(
 	_ context.Context, scheme *runtime.Scheme,
 	path string, manifestBytes []byte,
