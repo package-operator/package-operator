@@ -11,7 +11,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/davecgh/go-spew v1.1.1
 	github.com/disiqueira/gotree v1.0.0
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.16.1
 	github.com/magefile/mage v1.15.0
