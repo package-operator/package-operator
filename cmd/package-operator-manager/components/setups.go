@@ -54,8 +54,8 @@ type AllControllers struct {
 	ClusterObjectTemplate ClusterObjectTemplateController
 }
 
-func (ac AllControllers) List() []interface{} {
-	return []interface{}{
+func (ac AllControllers) List() []any {
+	return []any{
 		ac.ObjectSet, ac.ClusterObjectSet,
 		ac.ObjectSetPhase, ac.ClusterObjectSetPhase,
 		ac.ObjectDeployment, ac.ClusterObjectDeployment,
@@ -118,8 +118,8 @@ type BootstrapControllers struct {
 	ClusterObjectSet        ClusterObjectSetController
 }
 
-func (bc BootstrapControllers) List() []interface{} {
-	return []interface{}{
+func (bc BootstrapControllers) List() []any {
+	return []any{
 		bc.ClusterObjectSet, bc.ClusterObjectDeployment, bc.ClusterPackage,
 	}
 }

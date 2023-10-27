@@ -17,7 +17,7 @@ type Build mg.Namespace
 
 // Build all PKO binaries for the architecture of this machine.
 func (Build) Binaries() {
-	targets := []interface{}{mg.F(Build.Binary, "mage", "", "")}
+	targets := []any{mg.F(Build.Binary, "mage", "", "")}
 	for name := range commands {
 		targets = append(targets, mg.F(Build.Binary, name, nativeArch.OS, nativeArch.Arch))
 	}
@@ -26,7 +26,7 @@ func (Build) Binaries() {
 }
 
 func (Build) ReleaseBinaries() {
-	targets := []interface{}{}
+	targets := []any{}
 	for name, cmd := range commands {
 		for _, arch := range cmd.ReleaseArchitectures {
 			targets = append(targets, mg.F(Build.Binary, name, arch.OS, arch.Arch))
@@ -67,7 +67,7 @@ func (Build) Binary(cmd string, goos, goarch string) {
 
 // Builds all PKO container images.
 func (Build) Images() {
-	deps := []interface{}{}
+	deps := []any{}
 	for k := range commandImages {
 		deps = append(deps, mg.F(Build.Image, k))
 	}
@@ -112,7 +112,7 @@ func (Build) PushImage(imageName string) {
 
 // Builds and pushes all container images to the default registry.
 func (Build) PushImages() {
-	deps := []interface{}{Generate.SelfBootstrapJob}
+	deps := []any{Generate.SelfBootstrapJob}
 	for k, opts := range commandImages {
 		if opts.Push {
 			deps = append(deps, mg.F(Build.PushImage, k))
@@ -185,7 +185,7 @@ func (b Build) buildCmdImage(imageName string) {
 		cmd = opts.BinaryName
 	}
 
-	deps := []interface{}{
+	deps := []any{
 		mg.F(Build.Binary, cmd, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, imageName),
 		mg.F(Build.populateCacheCmd, cmd, imageName),
@@ -224,7 +224,7 @@ func (b Build) buildPackageImage(name string) {
 		panic(fmt.Sprintf("unknown package: %s", name))
 	}
 
-	predeps := []interface{}{
+	predeps := []any{
 		mg.F(Build.Binary, cliCmdName, linuxAMD64Arch.OS, linuxAMD64Arch.Arch),
 		mg.F(Build.cleanImageCacheDir, name),
 	}

@@ -526,13 +526,13 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
+				"annotations": map[string]any{
 					corev1alpha1.ObjectSetRevisionAnnotation: "3",
 				},
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
+				"ownerReferences": []any{
+					map[string]any{
 						"apiVersion": "",
 						"kind":       "",
 						"name":       "",
@@ -568,20 +568,20 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
-			Object: map[string]interface{}{"kind": "test"},
+			Object: map[string]any{"kind": "test"},
 		},
 	}
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"kind": "test",
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
+			"metadata": map[string]any{
+				"annotations": map[string]any{
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
-				"labels": map[string]interface{}{
+				"labels": map[string]any{
 					DynamicCacheLabel:                      "True",
 					manifestsv1alpha1.PackageLabel:         "pkg-label",
 					manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
@@ -612,20 +612,20 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
-			Object: map[string]interface{}{"kind": "test"},
+			Object: map[string]any{"kind": "test"},
 		},
 	}
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
 	require.NoError(t, err)
 
 	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"kind": "test",
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
+			"metadata": map[string]any{
+				"annotations": map[string]any{
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
-				"labels": map[string]interface{}{
+				"labels": map[string]any{
 					DynamicCacheLabel: "True",
 				},
 				"namespace": "my-owner-ns",
@@ -642,7 +642,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		mockPrepare   func(*ownerStrategyMock, *phaseObjectOwnerMock)
 		object        client.Object
 		previous      []PreviousObjectSet
-		errorAs       interface{}
+		errorAs       any
 		needsAdoption bool
 	}{
 		{
@@ -654,7 +654,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				owner *phaseObjectOwnerMock,
 			) {
 				ownerObj := &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
 				osm.
@@ -671,9 +671,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					&unstructured.Unstructured{}),
 			},
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
 							corev1alpha1.ObjectSetRevisionAnnotation: "15",
 						},
 					},
@@ -690,7 +690,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				owner *phaseObjectOwnerMock,
 			) {
 				ownerObj := &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
 				osm.
@@ -698,7 +698,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					Return(true)
 			},
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{},
+				Object: map[string]any{},
 			},
 			needsAdoption: false,
 		},
@@ -710,7 +710,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				owner *phaseObjectOwnerMock,
 			) {
 				ownerObj := &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
 				osm.
@@ -727,9 +727,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					&unstructured.Unstructured{}),
 			},
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
 							corev1alpha1.ObjectSetRevisionAnnotation: "100",
 						},
 					},
@@ -748,7 +748,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.Anything, mock.Anything).
 					Return(false)
 				ownerObj := &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
 				owner.On("GetRevision").Return(int64(1))
@@ -758,7 +758,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					&unstructured.Unstructured{}),
 			},
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{},
+				Object: map[string]any{},
 			},
 			errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
 			needsAdoption: false,
@@ -787,9 +787,9 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					&corev1.ConfigMap{}),
 			},
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
 							corev1alpha1.ObjectSetRevisionAnnotation: "100",
 						},
 					},
@@ -916,19 +916,19 @@ func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
 
 	// no need to patch anything, all objects are the same
 	desiredObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					"my-cool-label": "hans",
 				},
 			},
 		},
 	}
 	currentObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
 				"resourceVersion": "123",
-				"labels": map[string]interface{}{
+				"labels": map[string]any{
 					"banana": "hans",
 				},
 			},
@@ -967,27 +967,27 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		Return(nil)
 
 	desiredObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					"my-cool-label": "hans",
 				},
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"key": "val",
 			},
 		},
 	}
 	currentObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
 				"resourceVersion": "123",
-				"labels": map[string]interface{}{
+				"labels": map[string]any{
 					"banana":        "hans", // we don't care about extra labels
 					"my-cool-label": "hans",
 				},
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"key": "something else",
 			},
 		},
@@ -1023,8 +1023,8 @@ func Test_defaultPatcher_fixFieldManagers(t *testing.T) {
 		Return(nil)
 
 	currentObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
 				"name": "test",
 			},
 		},
@@ -1057,8 +1057,8 @@ func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
 		Return(errTest)
 
 	currentObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
 				"name": "test",
 			},
 		},
@@ -1087,8 +1087,8 @@ func Test_defaultPatcher_fixFieldManagers_nowork(t *testing.T) {
 	ctx := context.Background()
 
 	currentObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{"name": "test"},
+		Object: map[string]any{
+			"metadata": map[string]any{"name": "test"},
 		},
 	}
 	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{{
@@ -1152,19 +1152,19 @@ func Test_mapConditions(t *testing.T) {
 		{
 			name: "no condition observedGeneration",
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(9),
 					},
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":    "Available",
 								"status":  "True",
 								"reason":  reason,
 								"message": message,
 							},
-							map[string]interface{}{
+							map[string]any{
 								"type":   "Other Condition",
 								"status": "True",
 							},
@@ -1177,13 +1177,13 @@ func Test_mapConditions(t *testing.T) {
 		{
 			name: "observedGeneration outdated",
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(9),
 					},
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"observedGeneration": 8,
 								"type":               "Available",
 								"status":             "True",
@@ -1206,8 +1206,8 @@ func Test_mapConditions(t *testing.T) {
 			ctx := context.Background()
 			owner := &phaseObjectOwnerMock{}
 			ownerObj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
 				},
@@ -1234,7 +1234,7 @@ func Test_mapConditions(t *testing.T) {
 	}
 }
 
-func TestPhaseReconciler_observeExternalObject(t *testing.T) {
+func TestPhaseReconciler_observeExternalObject(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -1246,8 +1246,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		"external object does not exist": {
 			ExternalObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name": "external",
 						},
 					},
@@ -1258,8 +1258,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		"cached external object exists/owner namespace": {
 			OwnerObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "owner",
 							"namespace": "owner-ns",
 						},
@@ -1268,8 +1268,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ExternalObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name": "external",
 						},
 					},
@@ -1277,11 +1277,11 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ObservedObject: &corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "external",
 							"namespace": "owner-ns",
-							"labels": map[string]interface{}{
+							"labels": map[string]any{
 								DynamicCacheLabel: "True",
 							},
 						},
@@ -1292,8 +1292,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		"uncached external object exists/owner namespace": {
 			OwnerObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "owner",
 							"namespace": "owner-ns",
 						},
@@ -1302,8 +1302,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ExternalObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name": "external",
 						},
 					},
@@ -1311,8 +1311,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ObservedObject: &corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "external",
 							"namespace": "owner-ns",
 						},
@@ -1323,8 +1323,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 		"uncached external object exists/external namespace": {
 			OwnerObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "owner",
 							"namespace": "owner-ns",
 						},
@@ -1333,8 +1333,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ExternalObject: corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "external",
 							"namespace": "external-ns",
 						},
@@ -1343,8 +1343,8 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 			},
 			ObservedObject: &corev1alpha1.ObjectSetObject{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"name":      "external",
 							"namespace": "external-ns",
 						},

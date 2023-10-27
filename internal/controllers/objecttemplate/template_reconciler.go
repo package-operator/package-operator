@@ -64,7 +64,7 @@ func (r *templateReconciler) Reconcile(
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
 	}()
 
-	sourcesConfig := map[string]interface{}{}
+	sourcesConfig := map[string]any{}
 	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig)
 	if err != nil {
 		return res, fmt.Errorf("retrieving values from sources: %w", err)
@@ -74,7 +74,7 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{},
+		Object: map[string]any{},
 	}
 	if err := r.templateObject(ctx, sourcesConfig, objectTemplate, obj); err != nil {
 		return res, err
@@ -125,7 +125,7 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 
 func (r *templateReconciler) getValuesFromSources(
 	ctx context.Context, objectTemplate genericObjectTemplate,
-	sourcesConfig map[string]interface{},
+	sourcesConfig map[string]any,
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 	for _, src := range objectTemplate.GetSources() {
@@ -214,7 +214,7 @@ func (r *templateReconciler) lookupUncached(ctx context.Context, src corev1alpha
 
 func copySourceItems(
 	src []corev1alpha1.ObjectTemplateSourceItem,
-	sourceObj *unstructured.Unstructured, sourcesConfig map[string]interface{},
+	sourceObj *unstructured.Unstructured, sourcesConfig map[string]any,
 ) error {
 	for _, item := range src {
 		if err := copySourceItem(item, sourceObj, sourcesConfig); err != nil {
@@ -227,7 +227,7 @@ func copySourceItems(
 func copySourceItem(
 	item corev1alpha1.ObjectTemplateSourceItem,
 	sourceObj *unstructured.Unstructured,
-	sourcesConfig map[string]interface{},
+	sourcesConfig map[string]any,
 ) error {
 	jpString, err := RelaxedJSONPathExpression(item.Key)
 	if err != nil {
@@ -244,11 +244,11 @@ func copySourceItem(
 	if err := jp.Execute(&buf, sourceObj.Object); err != nil {
 		return err
 	}
-	var value interface{}
+	var value any
 	if err := json.Unmarshal(buf.Bytes(), &value); err != nil {
 		return err
 	}
-	if vslice, ok := value.([]interface{}); ok && len(vslice) == 1 {
+	if vslice, ok := value.([]any); ok && len(vslice) == 1 {
 		value = vslice[0]
 	}
 
@@ -264,7 +264,7 @@ func copySourceItem(
 }
 
 func (r *templateReconciler) templateObject(
-	ctx context.Context, sourcesConfig map[string]interface{},
+	ctx context.Context, sourcesConfig map[string]any,
 	objectTemplate genericObjectTemplate, object client.Object,
 ) error {
 	env, err := r.getEnvironment()
@@ -304,8 +304,8 @@ func (r *templateReconciler) templateObject(
 	return nil
 }
 
-func (r *templateReconciler) getEnvironment() (map[string]interface{}, error) {
-	env := map[string]interface{}{}
+func (r *templateReconciler) getEnvironment() (map[string]any, error) {
+	env := map[string]any{}
 	packageEnvironment, err := json.Marshal(r.GetEnvironment())
 	if err != nil {
 		return env, fmt.Errorf("marshaling: %w", err)
@@ -339,7 +339,7 @@ func updateStatusConditionsFromOwnedObject(_ context.Context, objectTemplate gen
 		return nil
 	}
 	for _, cond := range objectConds {
-		condMap, ok := cond.(map[string]interface{})
+		condMap, ok := cond.(map[string]any)
 		if !ok {
 			return apimachineryerrors.NewBadRequest("malformed condition")
 		}

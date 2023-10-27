@@ -19,7 +19,7 @@ func TestValidatePackageConfiguration(t *testing.T) {
 	tests := []struct {
 		name                  string
 		packageManifestConfig *manifests.PackageManifestSpecConfig
-		config                map[string]interface{}
+		config                map[string]any
 		expectedErrors        []string
 	}{
 		{
@@ -35,7 +35,7 @@ func TestValidatePackageConfiguration(t *testing.T) {
 					Required: []string{"test", "banana"},
 				},
 			},
-			config: map[string]interface{}{"test": float64(42)},
+			config: map[string]any{"test": float64(42)},
 			expectedErrors: []string{
 				`test: Invalid value: "number": test in body must be of type string: "number"`,
 				"banana: Required value",
@@ -137,8 +137,8 @@ func TestAdmitPackageConfiguration_Prune(t *testing.T) {
 
 	ctx := context.Background()
 
-	inputCfg := map[string]interface{}{"chicken": "🐔", "banana": "🍌"}
-	expectedOutputConfig := map[string]interface{}{"chicken": "🐔"}
+	inputCfg := map[string]any{"chicken": "🐔", "banana": "🍌"}
+	expectedOutputConfig := map[string]any{"chicken": "🐔"}
 	chicken := apiextensions.JSON(`🐔`)
 	man := &manifests.PackageManifest{
 		Spec: manifests.PackageManifestSpec{
@@ -162,8 +162,8 @@ func TestAdmitPackageConfiguration_Default(t *testing.T) {
 
 	ctx := context.Background()
 
-	inputCfg := map[string]interface{}{"banana": "🍌"}
-	expectedOutputConfig := map[string]interface{}{"chicken": "🐔"}
+	inputCfg := map[string]any{"banana": "🍌"}
+	expectedOutputConfig := map[string]any{"chicken": "🐔"}
 	chicken := apiextensions.JSON(`🐔`)
 	man := &manifests.PackageManifest{
 		Spec: manifests.PackageManifestSpec{
@@ -187,8 +187,8 @@ func TestAdmitPackageConfigurationTemplating_Default(t *testing.T) {
 
 	ctx := context.Background()
 
-	inputCfg := map[string]interface{}{"banana": "🍌"}
-	expectedOutputConfig := map[string]interface{}{"chicken": "🐔"}
+	inputCfg := map[string]any{"banana": "🍌"}
+	expectedOutputConfig := map[string]any{"chicken": "🐔"}
 	chicken := apiextensions.JSON(`🐔`)
 	man := &manifests.PackageManifest{
 		Spec: manifests.PackageManifestSpec{

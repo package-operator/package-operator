@@ -24,7 +24,7 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 
 	rawConditions, exist, err := unstructured.NestedFieldNoCopy(
 		obj.Object, "status", "conditions")
-	conditions, ok := rawConditions.([]interface{})
+	conditions, ok := rawConditions.([]any)
 	if err != nil || !exist {
 		return false, "missing .status.conditions"
 	}
@@ -33,7 +33,7 @@ func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, m
 	}
 
 	for _, condI := range conditions {
-		cond, ok := condI.(map[string]interface{})
+		cond, ok := condI.(map[string]any)
 		if !ok {
 			// no idea what this is supposed to be
 			return false, "malformed"

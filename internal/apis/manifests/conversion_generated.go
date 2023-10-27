@@ -23,192 +23,192 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*PackageEnvironment)(nil), (*v1alpha1.PackageEnvironment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageEnvironment)(nil), (*v1alpha1.PackageEnvironment)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageEnvironment_To_v1alpha1_PackageEnvironment(a.(*PackageEnvironment), b.(*v1alpha1.PackageEnvironment), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironment)(nil), (*PackageEnvironment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironment)(nil), (*PackageEnvironment)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageEnvironment_To_manifests_PackageEnvironment(a.(*v1alpha1.PackageEnvironment), b.(*PackageEnvironment), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentKubernetes)(nil), (*v1alpha1.PackageEnvironmentKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentKubernetes)(nil), (*v1alpha1.PackageEnvironmentKubernetes)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageEnvironmentKubernetes_To_v1alpha1_PackageEnvironmentKubernetes(a.(*PackageEnvironmentKubernetes), b.(*v1alpha1.PackageEnvironmentKubernetes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentKubernetes)(nil), (*PackageEnvironmentKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentKubernetes)(nil), (*PackageEnvironmentKubernetes)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageEnvironmentKubernetes_To_manifests_PackageEnvironmentKubernetes(a.(*v1alpha1.PackageEnvironmentKubernetes), b.(*PackageEnvironmentKubernetes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentOpenShift)(nil), (*v1alpha1.PackageEnvironmentOpenShift)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentOpenShift)(nil), (*v1alpha1.PackageEnvironmentOpenShift)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageEnvironmentOpenShift_To_v1alpha1_PackageEnvironmentOpenShift(a.(*PackageEnvironmentOpenShift), b.(*v1alpha1.PackageEnvironmentOpenShift), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentOpenShift)(nil), (*PackageEnvironmentOpenShift)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentOpenShift)(nil), (*PackageEnvironmentOpenShift)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageEnvironmentOpenShift_To_manifests_PackageEnvironmentOpenShift(a.(*v1alpha1.PackageEnvironmentOpenShift), b.(*PackageEnvironmentOpenShift), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentProxy)(nil), (*v1alpha1.PackageEnvironmentProxy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageEnvironmentProxy)(nil), (*v1alpha1.PackageEnvironmentProxy)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageEnvironmentProxy_To_v1alpha1_PackageEnvironmentProxy(a.(*PackageEnvironmentProxy), b.(*v1alpha1.PackageEnvironmentProxy), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentProxy)(nil), (*PackageEnvironmentProxy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageEnvironmentProxy)(nil), (*PackageEnvironmentProxy)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageEnvironmentProxy_To_manifests_PackageEnvironmentProxy(a.(*v1alpha1.PackageEnvironmentProxy), b.(*PackageEnvironmentProxy), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifest)(nil), (*v1alpha1.PackageManifest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifest)(nil), (*v1alpha1.PackageManifest)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifest_To_v1alpha1_PackageManifest(a.(*PackageManifest), b.(*v1alpha1.PackageManifest), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifest)(nil), (*PackageManifest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifest)(nil), (*PackageManifest)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifest_To_manifests_PackageManifest(a.(*v1alpha1.PackageManifest), b.(*PackageManifest), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestComponentsConfig)(nil), (*v1alpha1.PackageManifestComponentsConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestComponentsConfig)(nil), (*v1alpha1.PackageManifestComponentsConfig)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestComponentsConfig_To_v1alpha1_PackageManifestComponentsConfig(a.(*PackageManifestComponentsConfig), b.(*v1alpha1.PackageManifestComponentsConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestComponentsConfig)(nil), (*PackageManifestComponentsConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestComponentsConfig)(nil), (*PackageManifestComponentsConfig)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestComponentsConfig_To_manifests_PackageManifestComponentsConfig(a.(*v1alpha1.PackageManifestComponentsConfig), b.(*PackageManifestComponentsConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestImage)(nil), (*v1alpha1.PackageManifestImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestImage)(nil), (*v1alpha1.PackageManifestImage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestImage_To_v1alpha1_PackageManifestImage(a.(*PackageManifestImage), b.(*v1alpha1.PackageManifestImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestImage)(nil), (*PackageManifestImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestImage)(nil), (*PackageManifestImage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestImage_To_manifests_PackageManifestImage(a.(*v1alpha1.PackageManifestImage), b.(*PackageManifestImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestLock)(nil), (*v1alpha1.PackageManifestLock)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestLock)(nil), (*v1alpha1.PackageManifestLock)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestLock_To_v1alpha1_PackageManifestLock(a.(*PackageManifestLock), b.(*v1alpha1.PackageManifestLock), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLock)(nil), (*PackageManifestLock)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLock)(nil), (*PackageManifestLock)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestLock_To_manifests_PackageManifestLock(a.(*v1alpha1.PackageManifestLock), b.(*PackageManifestLock), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestLockImage)(nil), (*v1alpha1.PackageManifestLockImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestLockImage)(nil), (*v1alpha1.PackageManifestLockImage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestLockImage_To_v1alpha1_PackageManifestLockImage(a.(*PackageManifestLockImage), b.(*v1alpha1.PackageManifestLockImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLockImage)(nil), (*PackageManifestLockImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLockImage)(nil), (*PackageManifestLockImage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestLockImage_To_manifests_PackageManifestLockImage(a.(*v1alpha1.PackageManifestLockImage), b.(*PackageManifestLockImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestLockSpec)(nil), (*v1alpha1.PackageManifestLockSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestLockSpec)(nil), (*v1alpha1.PackageManifestLockSpec)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestLockSpec_To_v1alpha1_PackageManifestLockSpec(a.(*PackageManifestLockSpec), b.(*v1alpha1.PackageManifestLockSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLockSpec)(nil), (*PackageManifestLockSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLockSpec)(nil), (*PackageManifestLockSpec)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestLockSpec_To_manifests_PackageManifestLockSpec(a.(*v1alpha1.PackageManifestLockSpec), b.(*PackageManifestLockSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestPhase)(nil), (*v1alpha1.PackageManifestPhase)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestPhase)(nil), (*v1alpha1.PackageManifestPhase)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestPhase_To_v1alpha1_PackageManifestPhase(a.(*PackageManifestPhase), b.(*v1alpha1.PackageManifestPhase), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestPhase)(nil), (*PackageManifestPhase)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestPhase)(nil), (*PackageManifestPhase)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestPhase_To_manifests_PackageManifestPhase(a.(*v1alpha1.PackageManifestPhase), b.(*PackageManifestPhase), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestSpec)(nil), (*v1alpha1.PackageManifestSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestSpec)(nil), (*v1alpha1.PackageManifestSpec)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestSpec_To_v1alpha1_PackageManifestSpec(a.(*PackageManifestSpec), b.(*v1alpha1.PackageManifestSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestSpec)(nil), (*PackageManifestSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestSpec)(nil), (*PackageManifestSpec)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestSpec_To_manifests_PackageManifestSpec(a.(*v1alpha1.PackageManifestSpec), b.(*PackageManifestSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestSpecConfig)(nil), (*v1alpha1.PackageManifestSpecConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestSpecConfig)(nil), (*v1alpha1.PackageManifestSpecConfig)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestSpecConfig_To_v1alpha1_PackageManifestSpecConfig(a.(*PackageManifestSpecConfig), b.(*v1alpha1.PackageManifestSpecConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestSpecConfig)(nil), (*PackageManifestSpecConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestSpecConfig)(nil), (*PackageManifestSpecConfig)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestSpecConfig_To_manifests_PackageManifestSpecConfig(a.(*v1alpha1.PackageManifestSpecConfig), b.(*PackageManifestSpecConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestTest)(nil), (*v1alpha1.PackageManifestTest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestTest)(nil), (*v1alpha1.PackageManifestTest)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestTest_To_v1alpha1_PackageManifestTest(a.(*PackageManifestTest), b.(*v1alpha1.PackageManifestTest), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTest)(nil), (*PackageManifestTest)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTest)(nil), (*PackageManifestTest)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestTest_To_manifests_PackageManifestTest(a.(*v1alpha1.PackageManifestTest), b.(*PackageManifestTest), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestTestCaseTemplate)(nil), (*v1alpha1.PackageManifestTestCaseTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestTestCaseTemplate)(nil), (*v1alpha1.PackageManifestTestCaseTemplate)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestTestCaseTemplate_To_v1alpha1_PackageManifestTestCaseTemplate(a.(*PackageManifestTestCaseTemplate), b.(*v1alpha1.PackageManifestTestCaseTemplate), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTestCaseTemplate)(nil), (*PackageManifestTestCaseTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTestCaseTemplate)(nil), (*PackageManifestTestCaseTemplate)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestTestCaseTemplate_To_manifests_PackageManifestTestCaseTemplate(a.(*v1alpha1.PackageManifestTestCaseTemplate), b.(*PackageManifestTestCaseTemplate), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestTestKubeconform)(nil), (*v1alpha1.PackageManifestTestKubeconform)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*PackageManifestTestKubeconform)(nil), (*v1alpha1.PackageManifestTestKubeconform)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestTestKubeconform_To_v1alpha1_PackageManifestTestKubeconform(a.(*PackageManifestTestKubeconform), b.(*v1alpha1.PackageManifestTestKubeconform), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTestKubeconform)(nil), (*PackageManifestTestKubeconform)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestTestKubeconform)(nil), (*PackageManifestTestKubeconform)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestTestKubeconform_To_manifests_PackageManifestTestKubeconform(a.(*v1alpha1.PackageManifestTestKubeconform), b.(*PackageManifestTestKubeconform), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*TemplateContext)(nil), (*v1alpha1.TemplateContext)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*TemplateContext)(nil), (*v1alpha1.TemplateContext)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_TemplateContext_To_v1alpha1_TemplateContext(a.(*TemplateContext), b.(*v1alpha1.TemplateContext), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContext)(nil), (*TemplateContext)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContext)(nil), (*TemplateContext)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_TemplateContext_To_manifests_TemplateContext(a.(*v1alpha1.TemplateContext), b.(*TemplateContext), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*TemplateContextObjectMeta)(nil), (*v1alpha1.TemplateContextObjectMeta)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*TemplateContextObjectMeta)(nil), (*v1alpha1.TemplateContextObjectMeta)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_TemplateContextObjectMeta_To_v1alpha1_TemplateContextObjectMeta(a.(*TemplateContextObjectMeta), b.(*v1alpha1.TemplateContextObjectMeta), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContextObjectMeta)(nil), (*TemplateContextObjectMeta)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContextObjectMeta)(nil), (*TemplateContextObjectMeta)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_TemplateContextObjectMeta_To_manifests_TemplateContextObjectMeta(a.(*v1alpha1.TemplateContextObjectMeta), b.(*TemplateContextObjectMeta), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*TemplateContextPackage)(nil), (*v1alpha1.TemplateContextPackage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*TemplateContextPackage)(nil), (*v1alpha1.TemplateContextPackage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_manifests_TemplateContextPackage_To_v1alpha1_TemplateContextPackage(a.(*TemplateContextPackage), b.(*v1alpha1.TemplateContextPackage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContextPackage)(nil), (*TemplateContextPackage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContextPackage)(nil), (*TemplateContextPackage)(nil), func(a, b any, scope conversion.Scope) error {
 		return Convert_v1alpha1_TemplateContextPackage_To_manifests_TemplateContextPackage(a.(*v1alpha1.TemplateContextPackage), b.(*TemplateContextPackage), scope)
 	}); err != nil {
 		return err

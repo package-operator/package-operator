@@ -217,7 +217,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				t,
 				"Create",
 				mock.Anything,
-				mock.MatchedBy(func(item interface{}) bool {
+				mock.MatchedBy(func(item any) bool {
 					obj := item.(*corev1alpha1.ObjectSet)
 					requireObject(t, obj, testCase.deploymentHash, testCase.prevRevisions)
 

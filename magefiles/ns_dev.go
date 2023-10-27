@@ -37,7 +37,7 @@ func (d Dev) Load() {
 		"remote-phase-manager", "test-stub", "test-stub-package",
 		remotePhasePackageName, pkoPackageName,
 	}
-	deps := make([]interface{}, len(images))
+	deps := make([]any, len(images))
 	for i := range images {
 		deps[i] = mg.F(Build.PushImage, images[i])
 	}

@@ -169,7 +169,7 @@ spec:
 		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
-	packageConfig := map[string]interface{}{}
+	packageConfig := map[string]any{}
 
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
@@ -190,7 +190,7 @@ spec:
 
 	// check that config value was updated
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
-	packageConfig2 := map[string]interface{}{}
+	packageConfig2 := map[string]any{}
 
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig2))
 	assert.Equal(t, cm1PatchedValue, packageConfig2[cm1Destination])
@@ -208,7 +208,7 @@ spec:
 		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
-	clusterPackageConfig := map[string]interface{}{}
+	clusterPackageConfig := map[string]any{}
 	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
 	assert.Equal(t, cm1PatchedValue, clusterPackageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
@@ -342,7 +342,7 @@ spec:
 		}, dev.WithTimeout(20*time.Second)))
 
 	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
-	packageConfig := map[string]interface{}{}
+	packageConfig := map[string]any{}
 
 	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, secretValue, packageConfig[secretDestination])

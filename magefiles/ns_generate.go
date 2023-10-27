@@ -233,7 +233,7 @@ func includeInPackageOperatorPackage(file string, outDir string) {
 
 		var (
 			subfolder    string
-			objToMarshal interface{}
+			objToMarshal any
 		)
 		switch gk {
 		case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:

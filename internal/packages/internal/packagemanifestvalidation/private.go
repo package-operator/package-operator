@@ -213,7 +213,7 @@ func validateCustomResourceDefinitionOpenAPISchema(schema *apiextensions.JSONSch
 	//
 	// In other words:
 	// - properties are for structs,
-	// - additionalProperties are for map[string]interface{}
+	// - additionalProperties are for map[string]any
 	//
 	// Note: when patternProperties is added to OpenAPI some day, this will have to be
 	//       restricted like additionalProperties.
@@ -527,7 +527,7 @@ func validatePackageManifestConfig(ctx context.Context, config *manifests.Packag
 	return allErrs
 }
 
-func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensions.JSONSchemaProps, config map[string]interface{}, fldPath *field.Path) (field.ErrorList, error) {
+func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensions.JSONSchemaProps, config map[string]any, fldPath *field.Path) (field.ErrorList, error) {
 	if schema == nil {
 		return nil, nil
 	}

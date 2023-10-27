@@ -29,8 +29,8 @@ func Test_celProbe(t *testing.T) {
 			rule:    `self.metadata.name == "hans"`,
 			message: "aaaaaah!",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"name": "hans",
 					},
 				},
@@ -42,8 +42,8 @@ func Test_celProbe(t *testing.T) {
 			rule:    `self.metadata.name == "hans"`,
 			message: "aaaaaah!",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"name": "nothans",
 					},
 				},
@@ -55,14 +55,14 @@ func Test_celProbe(t *testing.T) {
 			rule:    `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
 			message: "aaaaaah!",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"test": []interface{}{"1", "2", "3"},
-						"ingress": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"test": []any{"1", "2", "3"},
+						"ingress": []any{
+							map[string]any{
 								"host": "hostname.xxx.xxx",
-								"conditions": []interface{}{
-									map[string]interface{}{
+								"conditions": []any{
+									map[string]any{
 										"type":   "Ready",
 										"status": "True",
 									},
@@ -79,23 +79,23 @@ func Test_celProbe(t *testing.T) {
 			rule:    `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
 			message: "aaaaaah!",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"test": []interface{}{"1", "2", "3"},
-						"ingress": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"test": []any{"1", "2", "3"},
+						"ingress": []any{
+							map[string]any{
 								"host": "hostname.xxx.xxx",
-								"conditions": []interface{}{
-									map[string]interface{}{
+								"conditions": []any{
+									map[string]any{
 										"type":   "Ready",
 										"status": "True",
 									},
 								},
 							},
-							map[string]interface{}{
+							map[string]any{
 								"host": "otherhost.xxx.xxx",
-								"conditions": []interface{}{
-									map[string]interface{}{
+								"conditions": []any{
+									map[string]any{
 										"type":   "Ready",
 										"status": "False",
 									},

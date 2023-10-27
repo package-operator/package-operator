@@ -232,7 +232,7 @@ func SprigFuncs(t *template.Template) template.FuncMap {
 	// Use this helper function if you need to modify the resulting output via e.g. | indent.
 	// Example:
 	// {{- define "test-helper" -}}{{.}}{{- end -}}{{- include "test-helper" . | upper -}}
-	allowedFuncs["include"] = func(name string, data interface{}) (string, error) {
+	allowedFuncs["include"] = func(name string, data any) (string, error) {
 		var buf strings.Builder
 		if v, ok := includedNames[name]; ok {
 			if v > recursionDepth {
@@ -252,10 +252,10 @@ func SprigFuncs(t *template.Template) template.FuncMap {
 	return allowedFuncs
 }
 
-func base64decodeMap(data map[string]interface{}) (
-	map[string]interface{}, error,
+func base64decodeMap(data map[string]any) (
+	map[string]any, error,
 ) {
-	decodedData := map[string]interface{}{}
+	decodedData := map[string]any{}
 	for k, vi := range data {
 		v, ok := vi.(string)
 		if !ok {
@@ -273,7 +273,7 @@ func base64decodeMap(data map[string]interface{}) (
 	return decodedData, nil
 }
 
-func toYAML(v interface{}) (string, error) {
+func toYAML(v any) (string, error) {
 	data, err := yaml.Marshal(v)
 	if err != nil {
 		return "", err
@@ -283,7 +283,7 @@ func toYAML(v interface{}) (string, error) {
 
 var ErrInvalidType = errors.New("invalid type")
 
-func fromYAML(y interface{}) (out interface{}, err error) {
+func fromYAML(y any) (out any, err error) {
 	var b []byte
 	switch v := y.(type) {
 	case string:

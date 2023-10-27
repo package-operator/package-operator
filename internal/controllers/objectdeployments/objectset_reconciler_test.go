@@ -154,14 +154,14 @@ func Test_ObjectSetReconciler(t *testing.T) {
 				t,
 				"Reconcile",
 				mock.Anything,
-				mock.MatchedBy(func(item interface{}) bool {
+				mock.MatchedBy(func(item any) bool {
 					if len(testCase.expectedCurrentRevision) == 0 {
 						return item == nil
 					}
 					obj := item.(*GenericObjectSet)
 					return obj.Name == testCase.expectedCurrentRevision
 				}),
-				mock.MatchedBy(func(obj interface{}) bool {
+				mock.MatchedBy(func(obj any) bool {
 					objs := obj.([]genericObjectSet)
 					if len(objs) != len(testCase.expectedPrevRevisions) {
 						return false

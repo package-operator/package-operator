@@ -48,9 +48,9 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 	if len(annotations[ownerStrategyAnnotationKey]) == 0 {
 		return nil, nil
 	}
-	patchMetadata := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
+	patchMetadata := map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
 				ownerStrategyAnnotationKey:               annotations[ownerStrategyAnnotationKey],
 				corev1alpha1.ObjectSetRevisionAnnotation: annotations[corev1alpha1.ObjectSetRevisionAnnotation],
 			},

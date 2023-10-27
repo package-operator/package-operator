@@ -115,7 +115,7 @@ func (l *PackageDeployer) Deploy(
 
 	// prepare package render/template context
 	tmplCtx := apiPkg.TemplateContext()
-	configuration := map[string]interface{}{}
+	configuration := map[string]any{}
 	if tmplCtx.Config != nil {
 		if err := json.Unmarshal(tmplCtx.Config.Raw, &configuration); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)

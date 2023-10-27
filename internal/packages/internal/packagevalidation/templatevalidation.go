@@ -69,7 +69,7 @@ func (v TemplateTestValidator) runTestCase(
 	log := logr.FromContextOrDiscard(ctx)
 	pkg = pkg.DeepCopy()
 
-	configuration := map[string]interface{}{}
+	configuration := map[string]any{}
 	if testCase.Context.Config != nil {
 		if err := json.Unmarshal(testCase.Context.Config.Raw, &configuration); err != nil {
 			return err

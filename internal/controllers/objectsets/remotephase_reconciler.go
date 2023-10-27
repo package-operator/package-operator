@@ -145,11 +145,11 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	// Pause/Unpause
 	if currentObjectSetPhase.IsPaused() != desiredObjectSetPhase.IsPaused() {
 		current := currentObjectSetPhase.ClientObject()
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
+		patch := map[string]any{
+			"metadata": map[string]any{
 				"resourceVersion": current.GetResourceVersion(),
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"paused": desiredObjectSetPhase.IsPaused(),
 			},
 		}

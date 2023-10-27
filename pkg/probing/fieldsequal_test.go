@@ -23,8 +23,8 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "simple succeeds",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
 						"fieldA": "test",
 						"fieldB": "test",
 					},
@@ -35,8 +35,8 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "simple not equal",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
 						"fieldA": "test",
 						"fieldB": "not test",
 					},
@@ -48,12 +48,12 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "complex succeeds",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
-						"fieldA": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
+						"fieldA": map[string]any{
 							"fk": "fv",
 						},
-						"fieldB": map[string]interface{}{
+						"fieldB": map[string]any{
 							"fk": "fv",
 						},
 					},
@@ -64,12 +64,12 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "simple not equal",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
-						"fieldA": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
+						"fieldA": map[string]any{
 							"fk": "fv",
 						},
-						"fieldB": map[string]interface{}{
+						"fieldB": map[string]any{
 							"fk": "something else",
 						},
 					},
@@ -81,12 +81,12 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "int not equal",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
-						"fieldA": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
+						"fieldA": map[string]any{
 							"fk": 1.0,
 						},
-						"fieldB": map[string]interface{}{
+						"fieldB": map[string]any{
 							"fk": 2.0,
 						},
 					},
@@ -98,8 +98,8 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "fieldA missing",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
 						"fieldB": "test",
 					},
 				},
@@ -110,8 +110,8 @@ func TestFieldsEqual(t *testing.T) {
 		{
 			name: "fieldB missing",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"spec": map[string]interface{}{
+				Object: map[string]any{
+					"spec": map[string]any{
 						"fieldA": "test",
 					},
 				},

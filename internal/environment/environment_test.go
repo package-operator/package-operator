@@ -35,7 +35,7 @@ func TestImplementsSinker(t *testing.T) {
 	type somethingElse struct{}
 
 	s := &testSink{}
-	res := ImplementsSinker([]interface{}{s, &somethingElse{}})
+	res := ImplementsSinker([]any{s, &somethingElse{}})
 	assert.Equal(t, []Sinker{s}, res)
 }
 

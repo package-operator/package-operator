@@ -62,7 +62,7 @@ func TestPackageDeployer_Deploy(t *testing.T) {
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	obj1 := unstructured.Unstructured{Object: map[string]interface{}{}}
+	obj1 := unstructured.Unstructured{Object: map[string]any{}}
 	obj1.SetAnnotations(map[string]string{
 		manifests.PackagePhaseAnnotation: "phase-1",
 	})
@@ -141,7 +141,7 @@ func TestPackageDeployer_Deploy_Error(t *testing.T) {
 		On("LoadComponent", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errExample)
 
-	obj1 := unstructured.Unstructured{Object: map[string]interface{}{}}
+	obj1 := unstructured.Unstructured{Object: map[string]any{}}
 	obj1.SetAnnotations(map[string]string{
 		manifests.PackagePhaseAnnotation: "phase-1",
 	})

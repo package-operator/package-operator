@@ -44,7 +44,7 @@ type PackageInstance struct {
 // PackageRenderContext contains all data that is needed to render a Package into a PackageInstance.
 type PackageRenderContext struct {
 	Package     manifests.TemplateContextPackage `json:"package"`
-	Config      map[string]interface{}           `json:"config"`
+	Config      map[string]any                   `json:"config"`
 	Images      map[string]string                `json:"images"`
 	Environment manifests.PackageEnvironment     `json:"environment"`
 }

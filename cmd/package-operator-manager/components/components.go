@@ -34,7 +34,7 @@ import (
 // Returns a new pre-configured DI container.
 func NewComponents() (*dig.Container, error) {
 	container := dig.New()
-	providers := []interface{}{
+	providers := []any{
 		ProvideScheme, ProvideRestConfig, ProvideManager,
 		ProvideMetricsRecorder, ProvideDynamicCache,
 		ProvideUncachedClient, ProvideOptions, ProvideLogger,

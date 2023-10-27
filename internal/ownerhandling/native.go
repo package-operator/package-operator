@@ -33,9 +33,9 @@ func NewNative(scheme *runtime.Scheme) *OwnerStrategyNative {
 
 func (s *OwnerStrategyNative) OwnerPatch(owner metav1.Object) ([]byte, error) {
 	annotations := owner.GetAnnotations()
-	patchMetadata := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
+	patchMetadata := map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
 				corev1alpha1.ObjectSetRevisionAnnotation: annotations[corev1alpha1.ObjectSetRevisionAnnotation],
 			},
 			"ownerReferences": owner.GetOwnerReferences(),

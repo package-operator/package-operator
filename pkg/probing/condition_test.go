@@ -23,22 +23,22 @@ func TestCondition(t *testing.T) {
 		{
 			name: "succeeds",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Banana",
 								"status":             "True",
 								"observedGeneration": int64(1), // up to date
 							},
-							map[string]interface{}{
+							map[string]any{
 								"type":               "Available",
 								"status":             "False",
 								"observedGeneration": int64(1), // up to date
 							},
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -49,17 +49,17 @@ func TestCondition(t *testing.T) {
 		{
 			name: "outdated",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Available",
 								"status":             "False",
 								"observedGeneration": int64(1), // up to date
 							},
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(42),
 					},
 				},
@@ -70,17 +70,17 @@ func TestCondition(t *testing.T) {
 		{
 			name: "wrong status",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Available",
 								"status":             "Unknown",
 								"observedGeneration": int64(1), // up to date
 							},
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -91,17 +91,17 @@ func TestCondition(t *testing.T) {
 		{
 			name: "not reported",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Banana",
 								"status":             "True",
 								"observedGeneration": int64(1), // up to date
 							},
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -112,13 +112,13 @@ func TestCondition(t *testing.T) {
 		{
 			name: "malformed condition type int",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
 							42, 56,
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -129,13 +129,13 @@ func TestCondition(t *testing.T) {
 		{
 			name: "malformed condition type string",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
+						"conditions": []any{
 							"42", "56",
 						},
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -146,11 +146,11 @@ func TestCondition(t *testing.T) {
 		{
 			name: "malformed conditions array",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{
 						"conditions": 42,
 					},
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -161,9 +161,9 @@ func TestCondition(t *testing.T) {
 		{
 			name: "missing conditions",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"status": map[string]interface{}{},
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"status": map[string]any{},
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
@@ -174,8 +174,8 @@ func TestCondition(t *testing.T) {
 		{
 			name: "missing status",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(1),
 					},
 				},
