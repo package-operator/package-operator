@@ -17,6 +17,18 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 	t.Parallel()
 	sl := NewStructuralLoader(scheme)
 
+	t.Run("components-disabled", func(t *testing.T) {
+		t.Parallel()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-disabled")
+		require.NoError(t, err)
+
+		_, err = sl.LoadComponent(ctx, rawPkg, "frontend")
+		require.EqualError(t, err, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonComponentsNotEnabled,
+		}.Error())
+	})
+
 	t.Run("root", func(t *testing.T) {
 		t.Parallel()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -49,6 +61,21 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 			assert.NotEmpty(t, pkg.Files["Deployment.yaml"])
 		}
 		assert.Len(t, pkg.Components, 0)
+	})
+
+	t.Run("non-existing-subcomponent", func(t *testing.T) {
+		t.Parallel()
+		ctx := logr.NewContext(context.Background(), testr.New(t))
+		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
+		require.NoError(t, err)
+
+		nonExistingComponent := "foobar"
+
+		_, err = sl.LoadComponent(ctx, rawPkg, nonExistingComponent)
+		require.EqualError(t, err, packagetypes.ViolationError{
+			Reason:    packagetypes.ViolationReasonComponentNotFound,
+			Component: nonExistingComponent,
+		}.Error())
 	})
 }
 

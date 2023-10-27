@@ -34,19 +34,35 @@ func (l *StructuralLoader) Load(
 func (l *StructuralLoader) LoadComponent(
 	ctx context.Context, rawPkg *packagetypes.RawPackage, componentName string,
 ) (*packagetypes.Package, error) {
-	var (
-		cFiles packagetypes.Files
-		err    error
-	)
-	if len(componentName) == 0 {
-		cFiles, err = rootFiles(rawPkg.Files)
-	} else {
-		cFiles, err = componentFiles(rawPkg.Files, componentName)
-	}
+	pkg, err := l.load(ctx, rawPkg.Files, "")
 	if err != nil {
 		return nil, err
 	}
-	return l.load(ctx, cFiles, componentName)
+
+	if pkg.Manifest.Spec.Components == nil {
+		if len(componentName) == 0 {
+			return pkg, nil
+		}
+		return nil, packagetypes.ViolationError{
+			Reason: packagetypes.ViolationReasonComponentsNotEnabled,
+		}
+	}
+
+	if len(componentName) == 0 {
+		pkg.Components = nil
+		return pkg, nil
+	}
+
+	for _, componentPkg := range pkg.Components {
+		if componentPkg.Manifest.Name == componentName {
+			return &componentPkg, nil
+		}
+	}
+
+	return nil, packagetypes.ViolationError{
+		Reason:    packagetypes.ViolationReasonComponentNotFound,
+		Component: componentName,
+	}
 }
 
 func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, componentName string) (*packagetypes.Package, error) {
@@ -152,34 +168,6 @@ func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, c
 		pkg.Components = append(pkg.Components, *subPkg)
 	}
 	return pkg, nil
-}
-
-func rootFiles(files packagetypes.Files) (packagetypes.Files, error) {
-	out := packagetypes.Files{}
-	componentPathPrefix := packagetypes.ComponentsFolder + "/"
-	for path, file := range files {
-		if strings.HasPrefix(path, componentPathPrefix) {
-			// non-component file
-			continue
-		}
-		out[path] = file
-	}
-	return out, nil
-}
-
-func componentFiles(files packagetypes.Files, componentName string) (packagetypes.Files, error) {
-	out := packagetypes.Files{}
-	for path, file := range files {
-		relPath, err := filepath.Rel(filepath.Join(packagetypes.ComponentsFolder, componentName), path)
-		if err != nil {
-			return nil, err
-		}
-		if strings.HasPrefix(relPath, "../") {
-			continue
-		}
-		out[relPath] = file
-	}
-	return out, nil
 }
 
 var yamlFileExtensions = []string{"yaml", "yml"}
