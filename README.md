@@ -13,6 +13,7 @@
 	</a>
 	<img src="https://img.shields.io/github/license/package-operator/package-operator?style=flat-square"/>
 	<img src="https://img.shields.io/github/go-mod/go-version/package-operator/package-operator?style=flat-square"/>
+	<img src="https://img.shields.io/codecov/c/gh/package-operator/package-operator?style=flat-square"/>
 </p>
 
 ---
