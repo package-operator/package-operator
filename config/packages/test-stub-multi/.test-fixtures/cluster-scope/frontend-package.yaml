@@ -1,0 +1,12 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: "test1-frontend"
+  annotations:
+    package-operator.run/phase: deploy-frontend
+spec:
+  image: whale1
+  component: frontend
+  config:
+    namespace: "test1"
+    testStubImage: dolphin1

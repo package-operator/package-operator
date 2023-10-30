@@ -1,0 +1,18 @@
+apiVersion: package-operator.run/v1alpha1
+{{- if eq .package.metadata.namespace ""}}
+kind: ClusterPackage
+{{- else }}
+kind: Package
+{{- end}}
+metadata:
+  name: "{{.package.metadata.name}}-frontend"
+  annotations:
+    package-operator.run/phase: deploy-frontend
+spec:
+  image: {{ .config.testStubMultiPackageImage }}
+  component: frontend
+  config:
+{{- if eq .package.metadata.namespace ""}}
+    namespace: "{{.package.metadata.name}}"
+{{- end}}
+    testStubImage: {{ .config.testStubImage }}

@@ -1,0 +1,11 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: "test-frontend"
+  annotations:
+    package-operator.run/phase: deploy-frontend
+spec:
+  image: whale
+  component: frontend
+  config:
+    testStubImage: dolphin
