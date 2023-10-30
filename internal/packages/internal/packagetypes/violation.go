@@ -56,12 +56,9 @@ type ViolationReason string
 // Predefined reasons for package violations.
 const (
 	ViolationReasonPackageManifestNotFound       ViolationReason = "PackageManifest not found"
-	ViolationReasonPackageManifestUnknownGVK     ViolationReason = "PackageManifest unknown GVK"
-	ViolationReasonPackageManifestConversion     ViolationReason = "PackageManifest conversion"
+	ViolationReasonUnknownGVK                    ViolationReason = "unknown GVK"
 	ViolationReasonPackageManifestInvalid        ViolationReason = "PackageManifest invalid"
 	ViolationReasonPackageManifestDuplicated     ViolationReason = "PackageManifest present multiple times"
-	ViolationReasonPackageManifestLockUnknownGVK ViolationReason = "PackageManifestLock unknown GVK"
-	ViolationReasonPackageManifestLockConversion ViolationReason = "PackageManifestLock conversion"
 	ViolationReasonPackageManifestLockInvalid    ViolationReason = "PackageManifestLock invalid"
 	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
 	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"

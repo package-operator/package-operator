@@ -15,13 +15,10 @@ var (
 	// ErrManifestNotFound indicates that a package manifest was not found at any expected location.
 	ErrManifestNotFound = packagetypes.ErrManifestNotFound
 
+	ViolationReasonUnknownGVK                    = packagetypes.ViolationReasonUnknownGVK
 	ViolationReasonPackageManifestNotFound       = packagetypes.ViolationReasonPackageManifestNotFound
-	ViolationReasonPackageManifestUnknownGVK     = packagetypes.ViolationReasonPackageManifestUnknownGVK
-	ViolationReasonPackageManifestConversion     = packagetypes.ViolationReasonPackageManifestConversion
 	ViolationReasonPackageManifestInvalid        = packagetypes.ViolationReasonPackageManifestInvalid
 	ViolationReasonPackageManifestDuplicated     = packagetypes.ViolationReasonPackageManifestDuplicated
-	ViolationReasonPackageManifestLockUnknownGVK = packagetypes.ViolationReasonPackageManifestLockUnknownGVK
-	ViolationReasonPackageManifestLockConversion = packagetypes.ViolationReasonPackageManifestLockConversion
 	ViolationReasonPackageManifestLockInvalid    = packagetypes.ViolationReasonPackageManifestLockInvalid
 	ViolationReasonPackageManifestLockDuplicated = packagetypes.ViolationReasonPackageManifestLockDuplicated
 	ViolationReasonInvalidYAML                   = packagetypes.ViolationReasonInvalidYAML
