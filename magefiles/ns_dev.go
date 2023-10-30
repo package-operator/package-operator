@@ -34,7 +34,7 @@ func (d Dev) Load() {
 	mg.SerialDeps(Dev.Setup)
 	images := []string{
 		"package-operator-manager", "package-operator-webhook",
-		"remote-phase-manager", "test-stub", "test-stub-package",
+		"remote-phase-manager", "test-stub", "test-stub-package", "test-stub-multi-package",
 		remotePhasePackageName, pkoPackageName,
 	}
 	deps := make([]any, len(images))
