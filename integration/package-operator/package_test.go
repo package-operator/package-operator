@@ -163,6 +163,30 @@ func TestPackage_success(t *testing.T) {
 	}
 }
 
+func TestPackage_nonExistent(t *testing.T) {
+	pkg := &corev1alpha1.Package{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-existent",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.PackageSpec{
+			Image: "quay.io/package-operator/non-existent:v123",
+		},
+	}
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	require.NoError(t, Client.Create(ctx, pkg))
+	cleanupOnSuccess(ctx, t, pkg)
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+
+	existingPackage := &corev1alpha1.Package{}
+	err := Client.Get(ctx, client.ObjectKey{Name: "non-existent", Namespace: "default"}, existingPackage)
+	require.NoError(t, err)
+	require.Equal(t, "ImagePullBackOff", existingPackage.Status.Conditions[0].Reason)
+}
+
 // assert len but print json output.
 func assertLenWithJSON[T interface{}](t *testing.T, obj []T, l int) {
 	t.Helper()
