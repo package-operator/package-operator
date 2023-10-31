@@ -29,7 +29,7 @@ func TestPackage_success(t *testing.T) {
 		postCheck        func(ctx context.Context, t *testing.T)
 	}{
 		{
-			name: "namespaced",
+			name: "simple/namespaced",
 			pkg: &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "success",
@@ -62,7 +62,7 @@ func TestPackage_success(t *testing.T) {
 			},
 		},
 		{
-			name: "cluster",
+			name: "simple/cluster",
 			pkg: &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "success",
@@ -77,7 +77,7 @@ func TestPackage_success(t *testing.T) {
 			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
 		},
 		{
-			name: "namespaced with slices",
+			name: "simple/namespaced with slices",
 			pkg: &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "success-slices",
@@ -105,7 +105,7 @@ func TestPackage_success(t *testing.T) {
 			},
 		},
 		{
-			name: "cluster with slices",
+			name: "simple/cluster with slices",
 			pkg: &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "success-slices",
@@ -132,6 +132,59 @@ func TestPackage_success(t *testing.T) {
 				assertLenWithJSON(t, sliceList.Items, 2)
 			},
 		},
+		{
+			name: "multi/namespaced",
+			pkg: &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "success-multi",
+					Namespace: "default",
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestMultiPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`, SuccessTestMultiPackageImage, TestStubImage)),
+					},
+				},
+			},
+			objectDeployment: &corev1alpha1.ObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				// test if the dependent packages exist
+				pkgBE := &corev1alpha1.Package{}
+				err := Client.Get(ctx, client.ObjectKey{Name: "success-multi-backend", Namespace: "default"}, pkgBE)
+				require.NoError(t, err)
+				pkgFE := &corev1alpha1.Package{}
+				err = Client.Get(ctx, client.ObjectKey{Name: "success-multi-frontend", Namespace: "default"}, pkgFE)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "multi/cluster",
+			pkg: &corev1alpha1.ClusterPackage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "success-multi",
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestMultiPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`, SuccessTestMultiPackageImage, TestStubImage)),
+					},
+				},
+			},
+			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				// test if the dependent packages exist
+				pkgBE := &corev1alpha1.ClusterPackage{}
+				err := Client.Get(ctx, client.ObjectKey{Name: "success-multi-backend", Namespace: "success-multi"}, pkgBE)
+				require.NoError(t, err)
+				pkgFE := &corev1alpha1.ClusterPackage{}
+				err = Client.Get(ctx, client.ObjectKey{Name: "success-multi-frontend", Namespace: "success-multi"}, pkgFE)
+				require.NoError(t, err)
+			},
+		},
 	}
 
 	for i := range tests {
@@ -145,12 +198,11 @@ func TestPackage_success(t *testing.T) {
 
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue))
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
-
 			// Condition Mapping from Deployment
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, test.pkg, "my-prefix/Progressing", metav1.ConditionTrue))
+			require.NoError(t,
+				Waiter.WaitForCondition(ctx, test.pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
 
 			require.NoError(t, Client.Get(ctx, client.ObjectKey{
 				Name: test.pkg.GetName(), Namespace: test.pkg.GetNamespace(),
