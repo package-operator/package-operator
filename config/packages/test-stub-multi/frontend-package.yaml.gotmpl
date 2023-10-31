@@ -8,6 +8,8 @@ metadata:
   name: "{{.package.metadata.name}}-frontend"
   annotations:
     package-operator.run/phase: deploy-frontend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
 spec:
   image: {{ .config.testStubMultiPackageImage }}
   component: frontend

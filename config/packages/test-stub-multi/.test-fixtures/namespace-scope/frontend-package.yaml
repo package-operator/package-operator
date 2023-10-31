@@ -4,6 +4,8 @@ metadata:
   name: "test-frontend"
   annotations:
     package-operator.run/phase: deploy-frontend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
 spec:
   image: whale
   component: frontend
