@@ -1,6 +1,6 @@
 module package-operator.run
 
-go 1.21
+go 1.21.3
 
 replace (
 	package-operator.run/apis => ./apis
