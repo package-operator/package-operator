@@ -1,0 +1,13 @@
+apiVersion: package-operator.run/v1alpha1
+kind: Package
+metadata:
+  name: "test-frontend"
+  annotations:
+    package-operator.run/phase: deploy-frontend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+spec:
+  image: beluga
+  component: frontend
+  config:
+    testStubImage: seal

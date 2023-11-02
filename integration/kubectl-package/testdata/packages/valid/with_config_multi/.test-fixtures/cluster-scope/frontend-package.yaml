@@ -1,0 +1,14 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: "test1-frontend"
+  annotations:
+    package-operator.run/phase: deploy-frontend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+spec:
+  image: beluga1
+  component: frontend
+  config:
+    namespace: "test1"
+    testStubImage: seal1

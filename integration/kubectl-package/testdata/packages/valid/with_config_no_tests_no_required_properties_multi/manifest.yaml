@@ -26,29 +26,9 @@ spec:
         testStubMultiPackageImage:
           description: TestStubMultiPackageImage provides the multi package image to use for the inner Packages.
           type: string
+          default: beluga
         testStubImage:
           description: TestStubImage provides the container image to use for the Deployment.
           type: string
-      required:
-        - testStubMultiPackageImage
-        - testStubImage
+          default: seal
       type: object
-test:
-  template:
-    - name: namespace-scope
-      context:
-        config:
-          testStubMultiPackageImage: whale
-          testStubImage: dolphin
-        package:
-          metadata:
-            name: test
-            namespace: test-ns
-    - name: cluster-scope
-      context:
-        config:
-          testStubMultiPackageImage: whale1
-          testStubImage: dolphin1
-        package:
-          metadata:
-            name: test1

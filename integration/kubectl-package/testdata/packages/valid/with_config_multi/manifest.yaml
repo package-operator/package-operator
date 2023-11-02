@@ -38,8 +38,8 @@ test:
     - name: namespace-scope
       context:
         config:
-          testStubMultiPackageImage: whale
-          testStubImage: dolphin
+          testStubMultiPackageImage: beluga
+          testStubImage: seal
         package:
           metadata:
             name: test
@@ -47,8 +47,8 @@ test:
     - name: cluster-scope
       context:
         config:
-          testStubMultiPackageImage: whale1
-          testStubImage: dolphin1
+          testStubMultiPackageImage: beluga1
+          testStubImage: seal1
         package:
           metadata:
             name: test1
