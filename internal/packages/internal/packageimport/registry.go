@@ -111,9 +111,13 @@ func (r *Registry) handleResponse(image string, res response) {
 	defer r.inFlightLock.Unlock()
 
 	for _, recv := range r.inFlight[image] {
-		recv <- response{
+		var rawPkg *packagetypes.RawPackage
+		if res.RawPackage != nil {
 			// DeepCopy to ensure clients can work concurrently on the returned files map.
-			RawPackage: res.RawPackage.DeepCopy(),
+			rawPkg = res.RawPackage.DeepCopy()
+		}
+		recv <- response{
+			RawPackage: rawPkg,
 			Err:        res.Err,
 		}
 	}
