@@ -36,13 +36,13 @@ func Test_manifestFromFile(t *testing.T) {
 		{
 			name:      "invalid GK",
 			yamlBytes: []byte(manifestUnknownGK),
-			reason:    packagetypes.ViolationReasonPackageManifestUnknownGVK,
+			reason:    packagetypes.ViolationReasonUnknownGVK,
 			details:   "GroupKind must be PackageManifest.manifests.package-operator.run, is: Bread.banana",
 		},
 		{
 			name:      "invalid version",
 			yamlBytes: []byte(manifestUnknownVersion),
-			reason:    packagetypes.ViolationReasonPackageManifestUnknownGVK,
+			reason:    packagetypes.ViolationReasonUnknownGVK,
 			details:   "unknown version v500, supported versions: v1alpha1",
 		},
 	}
@@ -89,13 +89,13 @@ func Test_manifestLockFromFile(t *testing.T) {
 		{
 			name:      "invalid GK",
 			yamlBytes: []byte(manifestLockUnknownGK),
-			reason:    packagetypes.ViolationReasonPackageManifestLockUnknownGVK,
+			reason:    packagetypes.ViolationReasonUnknownGVK,
 			details:   "GroupKind must be PackageManifestLock.manifests.package-operator.run, is: Bread.banana",
 		},
 		{
 			name:      "invalid version",
 			yamlBytes: []byte(manifestLockUnknownVersion),
-			reason:    packagetypes.ViolationReasonPackageManifestLockUnknownGVK,
+			reason:    packagetypes.ViolationReasonUnknownGVK,
 			details:   "unknown version v500, supported versions: v1alpha1",
 		},
 	}
