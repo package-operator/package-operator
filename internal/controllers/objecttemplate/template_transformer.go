@@ -9,12 +9,12 @@ import (
 )
 
 type TemplateContext struct {
-	Config      map[string]interface{} `json:"config"`
-	Environment map[string]interface{} `json:"environment"`
+	Config      map[string]any `json:"config"`
+	Environment map[string]any `json:"environment"`
 }
 
 type TemplateTransformer struct {
-	tctx map[string]interface{}
+	tctx map[string]any
 }
 
 func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, error) {
@@ -23,7 +23,7 @@ func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, erro
 		return nil, err
 	}
 
-	actualCtx := map[string]interface{}{}
+	actualCtx := map[string]any{}
 	if err := json.Unmarshal(p, &actualCtx); err != nil {
 		return nil, err
 	}

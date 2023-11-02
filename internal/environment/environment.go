@@ -37,7 +37,7 @@ type serverVersionDiscoverer interface {
 	ServerVersion() (*version.Info, error)
 }
 
-func ImplementsSinker(i []interface{}) []Sinker {
+func ImplementsSinker(i []any) []Sinker {
 	var envSinks []Sinker
 	for _, c := range i {
 		envSink, ok := c.(Sinker)

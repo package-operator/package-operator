@@ -27,8 +27,8 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 
 	object1 := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{
+			Object: map[string]any{
+				"metadata": map[string]any{
 					"name": "o-1",
 				},
 			},
@@ -37,8 +37,8 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 
 	object2 := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"metadata": map[string]interface{}{
+			Object: map[string]any{
+				"metadata": map[string]any{
 					"name": "o-2",
 				},
 			},

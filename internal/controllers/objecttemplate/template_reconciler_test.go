@@ -97,66 +97,66 @@ func Test_copySourceItems(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name     string
-		object   map[string]interface{}
+		object   map[string]any
 		source   string
 		dest     string
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name: "string stays string",
-			object: map[string]interface{}{
-				"data": map[string]interface{}{
+			object: map[string]any{
+				"data": map[string]any{
 					"something": "123",
 				},
 			},
 			source: ".data.something",
 			dest:   ".banana",
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"banana": "123",
 			},
 		},
 		{
 			name: "number stays number",
-			object: map[string]interface{}{
-				"data": map[string]interface{}{
+			object: map[string]any{
+				"data": map[string]any{
 					"something": 123,
 				},
 			},
 			source: ".data.something",
 			dest:   ".banana",
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"banana": float64(123), // json numbers are floats
 			},
 		},
 		{
 			name: "supports dots",
-			object: map[string]interface{}{
-				"data": map[string]interface{}{
+			object: map[string]any{
+				"data": map[string]any{
 					"some.thing": "123",
 				},
 			},
 			source: `.data['some\.thing']`,
 			dest:   ".banana",
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"banana": "123",
 			},
 		},
 		{
 			name: "multiple results",
-			object: map[string]interface{}{
-				"data": []interface{}{
-					map[string]interface{}{
+			object: map[string]any{
+				"data": []any{
+					map[string]any{
 						"name": "123",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"name": "456",
 					},
 				},
 			},
 			source: ".data..name",
 			dest:   ".banana",
-			expected: map[string]interface{}{
-				"banana": []interface{}{"123", "456"},
+			expected: map[string]any{
+				"banana": []any{"123", "456"},
 			},
 		},
 	}
@@ -169,7 +169,7 @@ func Test_copySourceItems(t *testing.T) {
 			sourceObj := &unstructured.Unstructured{
 				Object: test.object,
 			}
-			sourcesConfig := map[string]interface{}{}
+			sourcesConfig := map[string]any{}
 			items := []corev1alpha1.ObjectTemplateSourceItem{
 				{Key: test.source, Destination: test.dest},
 			}
@@ -184,9 +184,9 @@ func Test_copySourceItems(t *testing.T) {
 func Test_copySourceItems_notfound(t *testing.T) {
 	t.Parallel()
 	sourceObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{},
+		Object: map[string]any{},
 	}
-	sourcesConfig := map[string]interface{}{}
+	sourcesConfig := map[string]any{}
 	items := []corev1alpha1.ObjectTemplateSourceItem{
 		{Key: ".data.something", Destination: ".banana"},
 	}
@@ -198,13 +198,13 @@ func Test_copySourceItems_notfound(t *testing.T) {
 func Test_copySourceItems_nonJSONPath_destination(t *testing.T) {
 	t.Parallel()
 	sourceObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"data": map[string]interface{}{
+		Object: map[string]any{
+			"data": map[string]any{
 				"something": "123",
 			},
 		},
 	}
-	sourcesConfig := map[string]interface{}{}
+	sourcesConfig := map[string]any{}
 	items := []corev1alpha1.ObjectTemplateSourceItem{
 		{Key: ".data.something", Destination: "banana"},
 	}
@@ -251,7 +251,7 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 			}
 
 			pkg := &corev1alpha1.Package{}
-			sourcesConfig := map[string]interface{}{
+			sourcesConfig := map[string]any{
 				"Database":      "asdf",
 				"username1":     "user",
 				"auth_password": "hunter2",
@@ -263,7 +263,7 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 			require.NoError(t, err)
 
 			for key, value := range sourcesConfig {
-				config := map[string]interface{}{}
+				config := map[string]any{}
 				require.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &config))
 				assert.Equal(t, value, config[key])
 			}
@@ -287,13 +287,13 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 		{
 			name: "conditions reported",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
-					"status": map[string]interface{}{
-						"conditions": []interface{}{
-							map[string]interface{}{
+					"status": map[string]any{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Available",
 								"status":             "True",
 								"observedGeneration": int64(4),
@@ -301,7 +301,7 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 								"message":            "",
 							},
 							// outdated
-							map[string]interface{}{
+							map[string]any{
 								"type":               "Test",
 								"status":             "True",
 								"observedGeneration": int64(2),
@@ -322,14 +322,14 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 		{
 			name: "status outdated",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
-					"status": map[string]interface{}{
+					"status": map[string]any{
 						"observedGeneration": int64(2),
-						"conditions": []interface{}{
-							map[string]interface{}{
+						"conditions": []any{
+							map[string]any{
 								"type":               "Available",
 								"status":             "True",
 								"observedGeneration": int64(4),

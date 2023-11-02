@@ -164,7 +164,7 @@ func TestPackage_success(t *testing.T) {
 }
 
 // assert len but print json output.
-func assertLenWithJSON[T interface{}](t *testing.T, obj []T, l int) {
+func assertLenWithJSON[T any](t *testing.T, obj []T, l int) {
 	t.Helper()
 	if len(obj) == l {
 		return

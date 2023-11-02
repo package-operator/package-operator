@@ -127,13 +127,13 @@ func Test_include_recursionError(t *testing.T) {
 
 func Test_base64decodeMap(t *testing.T) {
 	t.Parallel()
-	d := map[string]interface{}{
+	d := map[string]any{
 		"test": "YWJjZGVm",
 	}
 	out, err := base64decodeMap(d)
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]interface{}{
+	assert.Equal(t, map[string]any{
 		"test": "abcdef",
 	}, out)
 }
@@ -157,7 +157,7 @@ func Test_fromYAML(t *testing.T) {
 
 		y, err := fromYAML(`t: "2"`)
 		require.NoError(t, err)
-		assert.Equal(t, map[string]interface{}{
+		assert.Equal(t, map[string]any{
 			"t": "2",
 		}, y)
 	})
@@ -167,7 +167,7 @@ func Test_fromYAML(t *testing.T) {
 
 		y, err := fromYAML([]byte(`t: "2"`))
 		require.NoError(t, err)
-		assert.Equal(t, map[string]interface{}{
+		assert.Equal(t, map[string]any{
 			"t": "2",
 		}, y)
 	})
@@ -175,7 +175,7 @@ func Test_fromYAML(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := fromYAML(map[string]interface{}{})
+		_, err := fromYAML(map[string]any{})
 		require.ErrorIs(t, err, ErrInvalidType)
 	})
 }

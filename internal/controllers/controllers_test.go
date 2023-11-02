@@ -256,9 +256,9 @@ func TestRemoveDynamicCacheLabel(t *testing.T) {
 	expectedLabels := map[string]string{}
 
 	object := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		Object: map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					DynamicCacheLabel: "True",
 				},
 			},

@@ -84,7 +84,7 @@ func ValidatePackageManifest(ctx context.Context, obj *manifests.PackageManifest
 		}
 
 		if len(configErrors) == 0 {
-			configuration := map[string]interface{}{}
+			configuration := map[string]any{}
 			if template.Context.Config != nil {
 				if err := json.Unmarshal(template.Context.Config.Raw, &configuration); err != nil {
 					return nil, fmt.Errorf("unmarshal config at test %s: %w", template.Name, err)

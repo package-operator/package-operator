@@ -125,7 +125,7 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 		},
 	}
 
-	config := map[string]interface{}{}
+	config := map[string]any{}
 	if c.remotePhaseAffinity != nil {
 		config["affinity"] = c.remotePhaseAffinity
 	}

@@ -223,8 +223,8 @@ func indexByField(indexer cache.SharedIndexInformer, field string, extractor cli
 	return indexer.AddIndexers(cache.Indexers{FieldIndexName(field): indexFuncForExtractor(extractor)})
 }
 
-func indexFuncForExtractor(extractor client.IndexerFunc) func(objRaw interface{}) ([]string, error) {
-	return func(objRaw interface{}) ([]string, error) {
+func indexFuncForExtractor(extractor client.IndexerFunc) func(objRaw any) ([]string, error) {
+	return func(objRaw any) ([]string, error) {
 		// TODO(directxman12): check if this is the correct type?
 		obj, isObj := objRaw.(client.Object)
 		if !isObj {

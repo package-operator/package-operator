@@ -106,7 +106,7 @@ func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Ob
 
 // List lists items out of the indexer and writes them to out.
 func (c *CacheReader) List(_ context.Context, out client.ObjectList, opts ...client.ListOption) error {
-	var objs []interface{}
+	var objs []any
 	var err error
 
 	listOpts := client.ListOptions{}

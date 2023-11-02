@@ -10,7 +10,7 @@ type RateLimitingQueue struct {
 	mock.Mock
 }
 
-func (q *RateLimitingQueue) Add(item interface{}) {
+func (q *RateLimitingQueue) Add(item any) {
 	q.Called(item)
 }
 
@@ -19,12 +19,12 @@ func (q *RateLimitingQueue) Len() int {
 	return args.Int(0)
 }
 
-func (q *RateLimitingQueue) Get() (item interface{}, shutdown bool) {
+func (q *RateLimitingQueue) Get() (item any, shutdown bool) {
 	args := q.Called()
 	return args.Get(0), args.Bool(1)
 }
 
-func (q *RateLimitingQueue) Done(item interface{}) {
+func (q *RateLimitingQueue) Done(item any) {
 	q.Called(item)
 }
 
@@ -41,19 +41,19 @@ func (q *RateLimitingQueue) ShuttingDown() bool {
 	return args.Bool(0)
 }
 
-func (q *RateLimitingQueue) AddAfter(item interface{}, duration time.Duration) {
+func (q *RateLimitingQueue) AddAfter(item any, duration time.Duration) {
 	q.Called(item, duration)
 }
 
-func (q *RateLimitingQueue) AddRateLimited(item interface{}) {
+func (q *RateLimitingQueue) AddRateLimited(item any) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) Forget(item interface{}) {
+func (q *RateLimitingQueue) Forget(item any) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) NumRequeues(item interface{}) int {
+func (q *RateLimitingQueue) NumRequeues(item any) int {
 	args := q.Called(item)
 	return args.Int(0)
 }

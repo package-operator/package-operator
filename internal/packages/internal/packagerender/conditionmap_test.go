@@ -22,9 +22,9 @@ func Test_parseConditionMap(t *testing.T) {
 		{
 			name: "success",
 			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
 							manifestsv1alpha1.PackageConditionMapAnnotation: "Available => my-prefix/Available\nSomethingElse => my-prefix/SomethingElse",
 						},
 					},
@@ -91,9 +91,9 @@ func TestParseConditionMap_error(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
+						"annotations": map[string]any{
 							manifestsv1alpha1.PackageConditionMapAnnotation: test.annotation,
 						},
 					},

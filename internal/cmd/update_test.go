@@ -156,7 +156,7 @@ type digestResolverMock struct {
 }
 
 func (m *digestResolverMock) ResolveDigest(ref string, opts ...ResolveDigestOption) (string, error) {
-	actualArgs := []interface{}{ref}
+	actualArgs := []any{ref}
 
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)

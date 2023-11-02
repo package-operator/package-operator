@@ -53,13 +53,13 @@ func RenderTemplates(_ context.Context, pkg *packagetypes.Package, tmplCtx packa
 	return nil
 }
 
-func templateContext(tmplCtx packagetypes.PackageRenderContext) (map[string]interface{}, error) {
+func templateContext(tmplCtx packagetypes.PackageRenderContext) (map[string]any, error) {
 	p, err := json.Marshal(tmplCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	actualCtx := map[string]interface{}{}
+	actualCtx := map[string]any{}
 	if err := json.Unmarshal(p, &actualCtx); err != nil {
 		return nil, err
 	}
@@ -67,13 +67,13 @@ func templateContext(tmplCtx packagetypes.PackageRenderContext) (map[string]inte
 	return actualCtx, nil
 }
 
-func workaroundnovalue(actualCtx map[string]interface{}) {
+func workaroundnovalue(actualCtx map[string]any) {
 	// The go templating engine substitutes missing values in map with "<no value>".
 	// For our case we would like to raise an error in case of missing values, which can be done by setting the templater option missingkey=error...
-	// except that it is ignored if the map is of type map[string]interface{} for some reason ʕ •ᴥ•ʔ. See https://github.com/golang/go/issues/24963.
+	// except that it is ignored if the map is of type map[string]any for some reason ʕ •ᴥ•ʔ. See https://github.com/golang/go/issues/24963.
 	// Circumventing this by defaulting annotations and labels maps in metadata.
 
-	metadata := actualCtx["package"].(map[string]interface{})["metadata"].(map[string]interface{})
+	metadata := actualCtx["package"].(map[string]any)["metadata"].(map[string]any)
 	if metadata["annotations"] == nil {
 		metadata["annotations"] = map[string]string{}
 	}

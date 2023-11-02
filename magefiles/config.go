@@ -19,8 +19,8 @@ func init() {
 	os.Setenv("PATH", locations.Deps().Bin()+":"+locations.bin+":"+os.Getenv("PATH"))
 
 	// Extra dependencies must be specified here to avoid a circular dependency.
-	packageImages[pkoPackageName].ExtraDeps = []interface{}{Generate.PackageOperatorPackage}
-	packageImages[remotePhasePackageName].ExtraDeps = []interface{}{Generate.RemotePhasePackage}
+	packageImages[pkoPackageName].ExtraDeps = []any{Generate.PackageOperatorPackage}
+	packageImages[remotePhasePackageName].ExtraDeps = []any{Generate.RemotePhasePackage}
 
 	ctrl.SetLogger(logger)
 }
@@ -54,7 +54,7 @@ type (
 		BinaryName string
 	}
 	PackageImage struct {
-		ExtraDeps  []interface{}
+		ExtraDeps  []any
 		Push       bool
 		SourcePath string
 	}

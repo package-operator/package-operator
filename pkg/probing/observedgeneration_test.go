@@ -26,11 +26,11 @@ func TestStatusObservedGeneration(t *testing.T) {
 		{
 			name: "outdated",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
-					"status": map[string]interface{}{
+					"status": map[string]any{
 						"observedGeneration": int64(2),
 					},
 				},
@@ -41,11 +41,11 @@ func TestStatusObservedGeneration(t *testing.T) {
 		{
 			name: "up-to-date",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
-					"status": map[string]interface{}{
+					"status": map[string]any{
 						"observedGeneration": int64(4),
 					},
 				},
@@ -56,11 +56,11 @@ func TestStatusObservedGeneration(t *testing.T) {
 		{
 			name: "not reported",
 			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
+				Object: map[string]any{
+					"metadata": map[string]any{
 						"generation": int64(4),
 					},
-					"status": map[string]interface{}{},
+					"status": map[string]any{},
 				},
 			},
 			succeeds: true,

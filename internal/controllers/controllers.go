@@ -41,8 +41,8 @@ func EnsureFinalizer(
 	}
 
 	controllerutil.AddFinalizer(obj, finalizer)
-	patch := map[string]interface{}{
-		"metadata": map[string]interface{}{
+	patch := map[string]any{
+		"metadata": map[string]any{
 			"resourceVersion": obj.GetResourceVersion(),
 			"finalizers":      obj.GetFinalizers(),
 		},
@@ -69,8 +69,8 @@ func RemoveFinalizer(
 
 	controllerutil.RemoveFinalizer(obj, finalizer)
 
-	patch := map[string]interface{}{
-		"metadata": map[string]interface{}{
+	patch := map[string]any{
+		"metadata": map[string]any{
 			"resourceVersion": obj.GetResourceVersion(),
 			"finalizers":      obj.GetFinalizers(),
 		},

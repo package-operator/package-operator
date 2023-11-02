@@ -14,7 +14,7 @@ import (
 // Validates configuration against the PackageManifests OpenAPISchema.
 func ValidatePackageConfiguration(
 	ctx context.Context, mc *manifests.PackageManifestSpecConfig,
-	configuration map[string]interface{}, fldPath *field.Path,
+	configuration map[string]any, fldPath *field.Path,
 ) (field.ErrorList, error) {
 	if mc.OpenAPIV3Schema == nil {
 		return nil, nil
@@ -25,7 +25,7 @@ func ValidatePackageConfiguration(
 
 // Prunes, Defaults and Validates configuration against the PackageManifests OpenAPISchema so it's ready to be used.
 func AdmitPackageConfiguration(
-	ctx context.Context, configuration map[string]interface{},
+	ctx context.Context, configuration map[string]any,
 	manifest *manifests.PackageManifest, fldPath *field.Path,
 ) (field.ErrorList, error) {
 	if manifest.Spec.Config.OpenAPIV3Schema == nil {
