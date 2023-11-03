@@ -113,7 +113,7 @@ func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) 
 
 func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", locations.ImageURL("test-stub-package", false))
-	os.Setenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE", locations.ImageURL("test-stub-package-multi", false))
+	os.Setenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE", locations.ImageURL("test-stub-multi-package", false))
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
 	if len(os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")) == 0 {
 		os.Setenv("PKO_TEST_LATEST_BOOTSTRAP_JOB", defaultPKOLatestBootstrapJob)
