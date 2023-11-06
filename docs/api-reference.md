@@ -1241,6 +1241,12 @@ spec:
   components: PackageManifestComponentsConfig
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
+  constraints:
+  - platform:
+    - Kubernetes
+    platformVersion:
+      name: Kubernetes
+      range: '>=1.20.x'
   images:
   - image: sit
     name: dolor
@@ -1374,6 +1380,20 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageManifestConstraint
+
+PackageManifestConstraint configures environment constraints to block package installation.
+
+| Field | Description |
+| ----- | ----------- |
+| `platformVersion` <br><a href="#packagemanifestplatformversionconstraint">PackageManifestPlatformVersionConstraint</a> | PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.<br>This constraint is ignored when running on a different platform.<br>e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.<br>Use the Platform constraint to enforce running on a specific platform. |
+| `platform` <br><a href="#platformname">[]PlatformName</a> | Valid platforms that support this package. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestImage
 
 PackageManifestImage specifies an image tag to be resolved.
@@ -1430,6 +1450,23 @@ Used in:
 * [PackageManifestSpec](#packagemanifestspec)
 
 
+### PackageManifestPlatformVersionConstraint
+
+PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.
+This constraint is ignored when running on a different platform.
+e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.
+Use the Platform constraint to enforce running on a specific platform.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br><a href="#platformname">PlatformName</a> | Name of the platform this constraint should apply to. |
+| `range` <b>required</b><br>string | Semantic Versioning 2.0.0 version range. |
+
+
+Used in:
+* [PackageManifestConstraint](#packagemanifestconstraint)
+
+
 ### PackageManifestSpec
 
 PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
@@ -1442,6 +1479,7 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
+| `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints limit what environments a package can be installed into.<br>e.g. can only be installed on OpenShift. |
 
 
 Used in:
