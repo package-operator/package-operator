@@ -1,6 +1,6 @@
 module package-operator.run/apis
 
-go 1.21.3
+go 1.21.4
 
 require k8s.io/apimachinery v0.28.3
 
