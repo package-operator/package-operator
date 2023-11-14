@@ -130,7 +130,6 @@ type PackageManifestUniqueInScopeConstraint struct{}
 type PackageManifestComponentsConfig struct{}
 
 type PackageManifestSpecConfig struct {
-	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
 	OpenAPIV3Schema *apiextensions.JSONSchemaProps
 }
 

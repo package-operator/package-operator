@@ -28,8 +28,9 @@ type Generate mg.Namespace
 func (Generate) All() { mg.SerialDeps(Generate.code, Generate.docs, Generate.installYamlFile) }
 
 func (Generate) code() {
-	mg.Deps(Dependency.ControllerGen)
+	mg.Deps(Dependency.ControllerGen, Dependency.ConversionGen)
 
+	// CRD generator
 	args := []string{"crd:crdVersions=v1,generateEmbeddedObjectMeta=true", "paths=./core/...", "output:crd:artifacts:config=../config/crds"}
 	manifestsCmd := exec.Command("controller-gen", args...)
 	manifestsCmd.Dir = locations.APISubmodule()
@@ -39,7 +40,27 @@ func (Generate) code() {
 		panic(fmt.Errorf("generating kubernetes manifests: %w", err))
 	}
 
-	// code gen
+	// conversion generator
+	conversionCmd := exec.Command(
+		"conversion-gen", "--input-dirs", "./internal/apis/manifests",
+		"--extra-peer-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
+		"--output-file-base=zz_generated.conversion",
+		"-h", "/dev/null")
+	if err := conversionCmd.Run(); err != nil {
+		panic(fmt.Errorf("generating conversion methods: %w", err))
+	}
+	// conversion-gen expects the SchemeBuilder to be called "localSchemeBuilder"
+	conversionFilePath := "./internal/apis/manifests/zz_generated.conversion.go"
+	conversionFile, err := os.ReadFile(conversionFilePath)
+	if err != nil {
+		panic(fmt.Errorf("reading zz_generated.conversion.go file: %w", err))
+	}
+	conversionFile = bytes.Replace(conversionFile, []byte(`localSchemeBuilder`), []byte(`SchemeBuilder`), 1)
+	if err := os.WriteFile(conversionFilePath, conversionFile, os.ModePerm); err != nil {
+		panic(fmt.Errorf("writing zz_generated.conversion.go file: %w", err))
+	}
+
+	// deep copy generator
 	apiCodeCmd := exec.Command("controller-gen", "object", "paths=./...")
 	apiCodeCmd.Dir = locations.APISubmodule()
 	if err := apiCodeCmd.Run(); err != nil {

@@ -233,6 +233,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*v1.JSONSchemaProps)(nil), (*apiextensions.JSONSchemaProps)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(a.(*v1.JSONSchemaProps), b.(*apiextensions.JSONSchemaProps), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -574,9 +579,11 @@ func Convert_v1alpha1_PackageManifestSpec_To_manifests_PackageManifestSpec(in *v
 
 func autoConvert_manifests_PackageManifestSpecConfig_To_v1alpha1_PackageManifestSpecConfig(in *PackageManifestSpecConfig, out *v1alpha1.PackageManifestSpecConfig, s conversion.Scope) error {
 	if in.OpenAPIV3Schema != nil {
-		in := in.OpenAPIV3Schema
-		out.OpenAPIV3Schema = new(v1.JSONSchemaProps)
-		return v1.Convert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(in, out.OpenAPIV3Schema, s)
+		in, out := &in.OpenAPIV3Schema, &out.OpenAPIV3Schema
+		*out = new(v1.JSONSchemaProps)
+		if err := v1.Convert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(*in, *out, s); err != nil {
+			return err
+		}
 	} else {
 		out.OpenAPIV3Schema = nil
 	}
@@ -590,9 +597,11 @@ func Convert_manifests_PackageManifestSpecConfig_To_v1alpha1_PackageManifestSpec
 
 func autoConvert_v1alpha1_PackageManifestSpecConfig_To_manifests_PackageManifestSpecConfig(in *v1alpha1.PackageManifestSpecConfig, out *PackageManifestSpecConfig, s conversion.Scope) error {
 	if in.OpenAPIV3Schema != nil {
-		in := in.OpenAPIV3Schema
-		out.OpenAPIV3Schema = new(apiextensions.JSONSchemaProps)
-		return v1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in, out.OpenAPIV3Schema, s)
+		in, out := &in.OpenAPIV3Schema, &out.OpenAPIV3Schema
+		*out = new(apiextensions.JSONSchemaProps)
+		if err := Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(*in, *out, s); err != nil {
+			return err
+		}
 	} else {
 		out.OpenAPIV3Schema = nil
 	}
