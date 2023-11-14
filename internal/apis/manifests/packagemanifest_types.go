@@ -61,6 +61,30 @@ type PackageManifestSpec struct {
 	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
 	// +optional
 	Components *PackageManifestComponentsConfig
+	// Constraints for installing this package in a cluster.
+	// +optional
+	Constraints []PackageManifestConstraint
+}
+
+type PackageManifestConstraint struct {
+	// Constrains this package to specific version of the platform.
+	PlatformVersion *PackageManifestPlatformVersionConstraint
+	// Valid platforms that support this package.
+	Platform []PlatformName
+}
+
+type PlatformName string
+
+const (
+	Kubernetes PlatformName = "Kubernetes"
+	OpenShift  PlatformName = "OpenShift"
+)
+
+type PackageManifestPlatformVersionConstraint struct {
+	// Name of the platform this constraint should apply to.
+	Name PlatformName
+	// Semantic Versioning 2.0.0 version range.
+	Range string
 }
 
 type PackageManifestComponentsConfig struct{}
