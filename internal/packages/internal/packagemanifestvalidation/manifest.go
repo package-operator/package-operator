@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/strings/slices"
@@ -68,6 +69,25 @@ func ValidatePackageManifest(ctx context.Context, obj *manifests.PackageManifest
 		if len(image.Image) < 1 {
 			allErrs = append(allErrs,
 				field.Invalid(specImages.Index(i).Child("image"), image.Image, "must be non empty"))
+		}
+	}
+
+	// Constraints
+	for i, constraint := range obj.Spec.Constraints {
+		cpath := field.NewPath("spec").Child("constraints").Index(i)
+		if constraint.PlatformVersion != nil {
+			cpath = cpath.Child("platformVersion")
+			if len(constraint.PlatformVersion.Name) == 0 {
+				allErrs = append(allErrs,
+					field.Required(cpath.Child("name"), ""))
+			}
+			if len(constraint.PlatformVersion.Range) == 0 {
+				allErrs = append(allErrs,
+					field.Required(cpath.Child("range"), ""))
+			} else if _, cerr := semver.NewConstraint(constraint.PlatformVersion.Range); cerr != nil {
+				allErrs = append(allErrs,
+					field.Invalid(cpath.Child("range"), constraint.PlatformVersion.Range, "improper constraint"))
+			}
 		}
 	}
 

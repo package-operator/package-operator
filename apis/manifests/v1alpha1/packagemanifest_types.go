@@ -70,6 +70,46 @@ type PackageManifestSpec struct {
 	// Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package.
 	// +optional
 	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
+	// Constraints limit what environments a package can be installed into.
+	// e.g. can only be installed on OpenShift.
+	// +optional
+	Constraints []PackageManifestConstraint `json:"constraints,omitempty"`
+}
+
+// PackageManifestConstraint configures environment constraints to block package installation.
+type PackageManifestConstraint struct {
+	// PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.
+	// This constraint is ignored when running on a different platform.
+	// e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.
+	// Use the Platform constraint to enforce running on a specific platform.
+	PlatformVersion *PackageManifestPlatformVersionConstraint `json:"platformVersion,omitempty"`
+	// Valid platforms that support this package.
+	// +example=[Kubernetes]
+	Platform []PlatformName `json:"platform,omitempty"`
+}
+
+// PlatformName holds the name of a specific platform flavor name.
+// e.g. Kubernetes, OpenShift.
+type PlatformName string
+
+const (
+	// Plain Kubernetes.
+	Kubernetes PlatformName = "Kubernetes"
+	// Red Hat OpenShift.
+	OpenShift PlatformName = "OpenShift"
+)
+
+// PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.
+// This constraint is ignored when running on a different platform.
+// e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.
+// Use the Platform constraint to enforce running on a specific platform.
+type PackageManifestPlatformVersionConstraint struct {
+	// Name of the platform this constraint should apply to.
+	// +example=Kubernetes
+	Name PlatformName `json:"name"`
+	// Semantic Versioning 2.0.0 version range.
+	// +example=>=1.20.x
+	Range string `json:"range"`
 }
 
 type PackageManifestComponentsConfig struct{}
