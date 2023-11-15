@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gbytes"
-	. "github.com/onsi/gomega/gexec"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/types"
 )
 
@@ -33,15 +33,15 @@ func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 			tc.Timeout = 1 * time.Second
 		}
 
-		session, err := Start(cmd, GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, tc.Timeout.String()).Should(Exit(tc.ExpectedExitCode))
+		session, err := gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		gomega.Eventually(session, tc.Timeout.String()).Should(gexec.Exit(tc.ExpectedExitCode))
 
 		for _, line := range tc.ExpectedOutput {
-			Expect(session.Out).To(Say(line))
+			gomega.Expect(session.Out).To(gbytes.Say(line))
 		}
 		for _, line := range tc.ExpectedErrorOutput {
-			Expect(session.Err).To(Say(line))
+			gomega.Expect(session.Err).To(gbytes.Say(line))
 		}
 
 		if tc.AdditionalValidations != nil {
@@ -76,9 +76,9 @@ func substitutePlaceholders(args ...string) []string {
 }
 
 func ExistOnRegistry() types.GomegaMatcher {
-	return WithTransform(func(ref string) error {
+	return gomega.WithTransform(func(ref string) error {
 		_, err := crane.Head(ref, crane.Insecure)
 
 		return err
-	}, Succeed())
+	}, gomega.Succeed())
 }

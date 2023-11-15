@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr/testr"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -52,8 +51,7 @@ func Test_fixer_stops_at_error(t *testing.T) {
 	})
 
 	err := fixer.fix(context.Background())
-	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest)
+	require.ErrorIs(t, err, errTest)
 }
 
 func newTestFixer(t *testing.T, runCheckers []runChecker) *fixer {

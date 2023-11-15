@@ -3,7 +3,7 @@ package objectdeployments
 import (
 	"context"
 	"errors"
-	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -499,7 +499,7 @@ func makeObjectSetMock(
 	mock.On("GetRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{
-		"important_for_mock_to_not_confuse_calls": fmt.Sprint(revision),
+		"important_for_mock_to_not_confuse_calls": strconv.Itoa(revision),
 		// Use revision as the hash in tests
 		ObjectSetHashAnnotation: hash,
 	})

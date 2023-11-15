@@ -43,7 +43,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 		if assert.Len(t, pkg.Files, 1) {
 			assert.NotEmpty(t, pkg.Files["ConfigMap.yaml"])
 		}
-		assert.Len(t, pkg.Components, 0)
+		assert.Empty(t, pkg.Components)
 	})
 
 	t.Run("subcomponent", func(t *testing.T) {
@@ -60,7 +60,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 		if assert.Len(t, pkg.Files, 1) {
 			assert.NotEmpty(t, pkg.Files["Deployment.yaml"])
 		}
-		assert.Len(t, pkg.Components, 0)
+		assert.Empty(t, pkg.Components)
 	})
 
 	t.Run("non-existing-subcomponent", func(t *testing.T) {
@@ -99,7 +99,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 			assert.NotEmpty(t, pkg.Files["Containerfile"])
 			assert.NotEmpty(t, pkg.Files["some-statefulset.yaml"])
 		}
-		assert.Len(t, pkg.Components, 0)
+		assert.Empty(t, pkg.Components)
 	})
 
 	t.Run("components-disabled", func(t *testing.T) {
@@ -119,7 +119,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 			assert.NotEmpty(t, pkg.Files["components/backend/Deployment.yaml"])
 			assert.NotEmpty(t, pkg.Files["components/frontend/Deployment.yaml"])
 		}
-		assert.Len(t, pkg.Components, 0)
+		assert.Empty(t, pkg.Components)
 	})
 
 	t.Run("components-enabled/valid", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 		for _, comp := range pkg.Components {
 			assert.NotNil(t, comp.Manifest, "Manifest must exist")
-			assert.Len(t, comp.Components, 0)
+			assert.Empty(t, comp.Components)
 			if assert.Len(t, comp.Files, 1) {
 				assert.NotEmpty(t, comp.Files["Deployment.yaml"])
 			}

@@ -18,8 +18,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/registry"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,8 +28,8 @@ import (
 )
 
 func TestKubectlPackage(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "kubectl-package Suite")
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "kubectl-package Suite")
 }
 
 var (
@@ -42,40 +42,40 @@ var (
 
 const outputPath = "output"
 
-var _ = BeforeSuite(func() {
+var _ = ginkgo.BeforeSuite(func() {
 	var err error
 
-	_tempDir = GinkgoT().TempDir()
+	_tempDir = ginkgo.GinkgoT().TempDir()
 
 	_root, err = projectRoot()
-	Expect(err).ToNot(
-		HaveOccurred(),
+	gomega.Expect(err).ToNot(
+		gomega.HaveOccurred(),
 		"Looking up project root.",
 	)
 
 	_pluginPath, err = buildPluginBinary()
-	Expect(err).ToNot(
-		HaveOccurred(),
+	gomega.Expect(err).ToNot(
+		gomega.HaveOccurred(),
 		"Unable to build plug-in binary.",
 	)
 
-	DeferCleanup(gexec.CleanupBuildArtifacts)
+	ginkgo.DeferCleanup(gexec.CleanupBuildArtifacts)
 
-	Expect(os.Mkdir(outputPath, 0o755)).Error().ToNot(HaveOccurred())
+	gomega.Expect(os.Mkdir(outputPath, 0o755)).Error().ToNot(gomega.HaveOccurred())
 
-	DeferCleanup(func() error {
+	ginkgo.DeferCleanup(func() error {
 		return os.RemoveAll(outputPath)
 	})
 
 	srv, err := registry.TLS("example.com")
-	Expect(err).ToNot(HaveOccurred())
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-	DeferCleanup(srv.Close)
+	ginkgo.DeferCleanup(srv.Close)
 
 	_registryDomain = strings.TrimPrefix(srv.URL, "https://")
 	_registryClient = srv.Client()
 
-	Expect(loadPackageImages(
+	gomega.Expect(loadPackageImages(
 		context.Background(),
 		packageImageBuildInfo{
 			Path: sourcePathFixture("valid_without_config"),
@@ -85,7 +85,7 @@ var _ = BeforeSuite(func() {
 			Path: sourcePathFixture("invalid_bad_manifest"),
 			Ref:  path.Join(_registryDomain, "invalid-package-fixture"),
 		},
-	)).To(Succeed())
+	)).To(gomega.Succeed())
 
 	generateAllPackages(_tempDir, _registryDomain)
 })

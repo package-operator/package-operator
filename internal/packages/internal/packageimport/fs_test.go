@@ -36,7 +36,7 @@ func TestFromFS(t *testing.T) {
 	}
 
 	rawPkg, err := FromFS(ctx, memFS)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, validEntries, rawPkg.Files)
 }
 
@@ -45,7 +45,7 @@ func TestFromFolder(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	rawPkg, err := FromFolder(ctx, "testdata/fs")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	assert.Len(t, rawPkg.Files, 2)
 	assert.Equal(t, "xxx\n", string(rawPkg.Files["my-stuff.txt"]))
 	assert.Equal(t, "test: test\n", string(rawPkg.Files["file1.yaml"]))

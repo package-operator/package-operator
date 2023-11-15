@@ -4,9 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"hash"
 	"hash/fnv"
+	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -27,7 +27,7 @@ func ComputeFNV32Hash(obj any, collisionCount *int32) string {
 		hasher.Write(collisionCountBytes)
 	}
 
-	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
+	return rand.SafeEncodeString(strconv.FormatUint(uint64(hasher.Sum32()), 10))
 }
 
 // ComputeHash returns a sha236 hash value calculated from pod template and

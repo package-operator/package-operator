@@ -147,7 +147,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 			Namespace: namespace,
 		},
 	}
-	assert.NoError(t, Waiter.WaitForObject(ctx, objectSet,
+	require.NoError(t, Waiter.WaitForObject(ctx, objectSet,
 		"Waiting for .status.controllerOf to be updated",
 		func(obj client.Object) (done bool, err error) {
 			return reflect.DeepEqual(objectSet.Status.ControllerOf, expectedControllerOf), nil
@@ -284,7 +284,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	}, currentCM4), `configmaps "cm-4" not found`)
 
 	// expect no "ControllerOf" left
-	require.Len(t, objectSet.Status.ControllerOf, 0)
+	require.Empty(t, objectSet.Status.ControllerOf)
 }
 
 // Simple Setup, Pause and Teardown test.
@@ -544,7 +544,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 			Namespace: currentCM1.Namespace,
 		},
 	}
-	assert.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
+	require.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
 		"Waiting for .status.controllerOf to be updated",
 		func(obj client.Object) (done bool, err error) {
 			return reflect.DeepEqual(objectSetRev2.Status.ControllerOf, expectedControllerOf), nil

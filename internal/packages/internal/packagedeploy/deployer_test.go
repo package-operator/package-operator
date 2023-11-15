@@ -161,13 +161,14 @@ func TestPackageDeployer_Deploy_Error(t *testing.T) {
 	packageInvalid := meta.FindStatusCondition(apiPkg.Status.Conditions, corev1alpha1.PackageInvalid)
 	if assert.NotNil(t, packageInvalid) {
 		assert.Equal(t, metav1.ConditionTrue, packageInvalid.Status)
-		assert.Equal(t, packageInvalid.Reason, "LoadError")
-		assert.Equal(t, packageInvalid.Message, "example error")
+		assert.Equal(t, "LoadError", packageInvalid.Reason)
+		assert.Equal(t, "example error", packageInvalid.Message)
 	}
 }
 
 func TestImageWithDigestOk(t *testing.T) {
 	t.Parallel()
+	//nolint:goconst
 	tests := []struct {
 		image  string
 		digest string

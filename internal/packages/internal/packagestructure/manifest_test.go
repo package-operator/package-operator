@@ -56,7 +56,7 @@ func Test_manifestFromFile(t *testing.T) {
 			m, err := manifestFromFile(ctx, scheme, path, test.yamlBytes)
 			assert.Nil(t, m)
 			var verr packagetypes.ViolationError
-			if assert.ErrorAs(t, err, &verr) {
+			if assert.ErrorAs(t, err, &verr) { //nolint:testifylint
 				assert.Equal(t, test.reason, verr.Reason)
 				assert.Equal(t, test.details, verr.Details)
 				assert.Equal(t, path, verr.Path)
@@ -109,7 +109,7 @@ func Test_manifestLockFromFile(t *testing.T) {
 			m, err := manifestLockFromFile(ctx, scheme, path, test.yamlBytes)
 			assert.Nil(t, m)
 			var verr packagetypes.ViolationError
-			if assert.ErrorAs(t, err, &verr) {
+			if assert.ErrorAs(t, err, &verr) { //nolint:testifylint
 				assert.Equal(t, test.reason, verr.Reason)
 				assert.Equal(t, test.details, verr.Details)
 				assert.Equal(t, path, verr.Path)

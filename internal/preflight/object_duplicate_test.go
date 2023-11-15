@@ -28,6 +28,6 @@ func TestObjectDuplicate(t *testing.T) {
 	ctx := context.Background()
 	v, err := od.Check(ctx, phases)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(v))
+	assert.Len(t, v, 1)
 	assert.Equal(t, "Phase \"phase2\", Hans test-ns/test: Duplicate Object", v[0].String())
 }

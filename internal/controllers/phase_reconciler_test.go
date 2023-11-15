@@ -1613,7 +1613,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		ctx := context.Background()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest, um.Update)
 
-		assert.EqualError(t, err, errTest.Error())
+		require.EqualError(t, err, errTest.Error())
 		assert.True(t, res.IsZero())
 		assert.Empty(t, objectSet.GetConditions())
 	})
@@ -1630,7 +1630,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		ctx := context.Background()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{}, um.Update)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
 		if assert.NotEmpty(t, objectSet.GetConditions()) {
 			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
@@ -1652,7 +1652,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		ctx := context.Background()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &ObjectNotOwnedByPreviousRevisionError{}, um.Update)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
 		if assert.NotEmpty(t, objectSet.GetConditions()) {
 			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)

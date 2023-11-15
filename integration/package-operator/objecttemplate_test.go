@@ -164,14 +164,18 @@ spec:
 	pkg.Namespace = defaultNamespace
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+		Waiter.WaitForObject(
+			ctx, pkg, "to be created",
+			func(obj client.Object) (done bool, err error) {
+				return true, nil
+			}, dev.WithTimeout(20*time.Second),
+		),
+	)
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]any{}
 
-	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
+	require.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, cm1Value, packageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, packageConfig[cm2Destination])
 	assert.Equal(t, kubernetesValue, packageConfig[kubernetesKey])
@@ -183,16 +187,20 @@ spec:
 	require.NoError(t, err)
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to get to second generation", func(obj client.Object) (done bool, err error) {
-			waitPkg := obj.(*corev1alpha1.Package)
-			return waitPkg.GetGeneration() == 2, nil
-		}))
+		Waiter.WaitForObject(
+			ctx, pkg, "to get to second generation",
+			func(obj client.Object) (done bool, err error) {
+				waitPkg := obj.(*corev1alpha1.Package)
+				return waitPkg.GetGeneration() == 2, nil
+			},
+		),
+	)
 
 	// check that config value was updated
-	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig2 := map[string]any{}
 
-	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig2))
+	require.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig2))
 	assert.Equal(t, cm1PatchedValue, packageConfig2[cm1Destination])
 
 	// Test ClusterPackage
@@ -203,13 +211,16 @@ spec:
 	clusterPkg.Name = "cluster-test-stub"
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, clusterPkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+		Waiter.WaitForObject(
+			ctx, clusterPkg, "to be created",
+			func(obj client.Object) (done bool, err error) { return true, nil },
+			dev.WithTimeout(20*time.Second),
+		),
+	)
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(clusterPkg), clusterPkg))
 	clusterPackageConfig := map[string]any{}
-	assert.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
+	require.NoError(t, yaml.Unmarshal(clusterPkg.Spec.Config.Raw, &clusterPackageConfig))
 	assert.Equal(t, cm1PatchedValue, clusterPackageConfig[cm1Destination])
 	assert.Equal(t, cm2Value, clusterPackageConfig[cm2Destination])
 	assert.Equal(t, kubernetesValue, packageConfig[kubernetesKey])
@@ -337,14 +348,17 @@ spec:
 	pkg.Namespace = defaultNamespace
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, pkg, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+		Waiter.WaitForObject(
+			ctx, pkg, "to be created",
+			func(obj client.Object) (done bool, err error) { return true, nil },
+			dev.WithTimeout(20*time.Second),
+		),
+	)
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg))
 	packageConfig := map[string]any{}
 
-	assert.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
+	require.NoError(t, yaml.Unmarshal(pkg.Spec.Config.Raw, &packageConfig))
 	assert.Equal(t, secretValue, packageConfig[secretDestination])
 }
 
@@ -417,19 +431,27 @@ data:
 	cm.Namespace = defaultNamespace
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, cm, "to be created", func(obj client.Object) (done bool, err error) {
-			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+		Waiter.WaitForObject(
+			ctx, cm, "to be created",
+			func(obj client.Object) (done bool, err error) { return true, nil },
+			dev.WithTimeout(20*time.Second),
+		),
+	)
 
-	assert.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(cm), cm))
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(cm), cm))
 	assert.Equal(t, "", cm.Data["test"])
 
 	require.NoError(t, Client.Create(ctx, &secret))
 	defer cleanupOnSuccess(ctx, t, &secret)
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, cm, "to be updated", func(obj client.Object) (done bool, err error) {
-			upatedCM := obj.(*corev1.ConfigMap)
-			return upatedCM.Data["test"] == secretValue, nil
-		}, dev.WithTimeout(60*time.Second)))
+		Waiter.WaitForObject(
+			ctx, cm, "to be updated",
+			func(obj client.Object) (done bool, err error) {
+				upatedCM := obj.(*corev1.ConfigMap)
+				return upatedCM.Data["test"] == secretValue, nil
+			},
+			dev.WithTimeout(60*time.Second),
+		),
+	)
 }

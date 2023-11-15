@@ -106,15 +106,15 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 			execve := func(argv0 string, args []string, env []string) error {
 				execveCalled = true
 
-				assert.Equal(t, argv0, expectedExecutablePath)
-				assert.Equal(t, reflect.DeepEqual(args, os.Args), true)
+				assert.Equal(t, expectedExecutablePath, argv0)
+				assert.True(t, reflect.DeepEqual(args, os.Args))
 
 				envMap, err := parseEnvSlice(env)
 				require.NoError(t, err)
 
 				// assert that proxy envvars would be passed to execve
 				for expectedKey, expectedValue := range expectedEnv {
-					assert.Equal(t, envMap[expectedKey], expectedValue,
+					assert.Equal(t, expectedValue, envMap[expectedKey],
 						"proxy envvars should be equal",
 						"actual", envMap[expectedKey],
 						"expected", expectedValue)
@@ -128,7 +128,7 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 				err = restartPKOWithEnvvarsIfNeeded(log, execve, mockedGetenv, mockedExecutable, apiEnv)
 			})
 			require.NoError(t, err)
-			assert.Equal(t, execveCalled, true)
+			assert.True(t, execveCalled)
 		})
 	}
 }
@@ -166,7 +166,7 @@ func TestProxyVarsDifferentFrom(t *testing.T) {
 
 	for i := range tcases {
 		tc := tcases[i]
-		assert.Equal(t, pv.differentFrom(tc.proxy), tc.expected)
+		assert.Equal(t, tc.expected, pv.differentFrom(tc.proxy))
 	}
 }
 
@@ -206,7 +206,7 @@ func TestProxyVarsMergeTo(t *testing.T) {
 	for i := range tcases {
 		tc := tcases[i]
 
-		assert.Equal(t, reflect.DeepEqual(pv.mergeTo(tc.env), tc.expected), true)
+		assert.True(t, reflect.DeepEqual(pv.mergeTo(tc.env), tc.expected))
 	}
 }
 
@@ -272,7 +272,7 @@ func TestHelperParseEnvSlice(t *testing.T) {
 			require.NoError(t, err)
 		}
 		for expectedKey, expectedValue := range tc.expected {
-			assert.Equal(t, actual[expectedKey], expectedValue,
+			assert.Equal(t, expectedValue, actual[expectedKey],
 				"actual[expectedKey] and expectedValue should be equal",
 				"actual", actual[expectedKey],
 				"expected", expectedValue)

@@ -59,7 +59,7 @@ func TestHostedClusterController_noop(t *testing.T) {
 	res, err := controller.Reconcile(ctx, ctrl.Request{
 		NamespacedName: client.ObjectKeyFromObject(hc),
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, res.IsZero())
 }
 
@@ -109,7 +109,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 		Return(nil)
 
 	res, err := c.Reconcile(context.Background(), ctrl.Request{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, res)
 
 	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
@@ -138,7 +138,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 		Return(nil)
 
 	res, err := c.Reconcile(context.Background(), ctrl.Request{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, res)
 
 	clientMock.AssertCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
@@ -179,7 +179,7 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 		Return(nil)
 
 	res, err := c.Reconcile(context.Background(), ctrl.Request{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, res)
 
 	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)

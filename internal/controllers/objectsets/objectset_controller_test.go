@@ -132,7 +132,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 
 			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
 			assert.Empty(t, res)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			if test.getObjectSetPhaseError != nil || test.condition.Type == corev1alpha1.ObjectSetArchived {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
@@ -231,7 +231,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 			arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
 			assert.Equal(t, test.arePausedExpected, arePaused)
 			assert.False(t, unknown)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -246,7 +246,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
 	assert.False(t, arePaused)
 	assert.True(t, unknown)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(t *testing.T) {
@@ -319,14 +319,14 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 			}
 			objectSet.Status.Conditions = test.startingConditions
 			err := controller.reportPausedCondition(context.Background(), objectSet)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			conds := *objectSet.GetConditions()
 			if test.pausedConditionStatus != "" {
 				assert.Len(t, conds, 1)
 				assert.Equal(t, corev1alpha1.ObjectSetPaused, conds[0].Type)
 				assert.Equal(t, test.pausedConditionStatus, conds[0].Status)
 			} else {
-				assert.Len(t, conds, 0)
+				assert.Empty(t, conds)
 			}
 		})
 	}
@@ -393,7 +393,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			}
 
 			err := controller.handleDeletionAndArchival(context.Background(), objectSet)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			conds := *objectSet.GetConditions()
 
 			if test.teardownDone {
@@ -404,10 +404,10 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 
 			if test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
 				assert.Len(t, conds, 1)
-				assert.Equal(t, conds[0].Type, corev1alpha1.ObjectSetArchived)
+				assert.Equal(t, corev1alpha1.ObjectSetArchived, conds[0].Type)
 				assert.Equal(t, conds[0].Status, test.archivedConditionStatus)
 			} else {
-				assert.Len(t, conds, 0)
+				assert.Empty(t, conds)
 			}
 		})
 	}
@@ -431,7 +431,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)
 			})
-		assert.EqualError(t, err, "explosion")
+		require.EqualError(t, err, "explosion")
 	})
 
 	t.Run("reports preflight error", func(t *testing.T) {

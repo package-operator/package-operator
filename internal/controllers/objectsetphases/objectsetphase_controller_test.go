@@ -159,7 +159,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 
 			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
 			assert.Empty(t, res)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			if test.getObjectSetPhaseError != nil || test.class != "default" {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
@@ -219,7 +219,7 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 					}},
 				},
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if test.teardownDone {
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
 			} else {
@@ -268,10 +268,10 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			conds := *p.GetConditions()
 			if test.phasePaused {
 				assert.Len(t, conds, 1)
-				assert.Equal(t, conds[0].Type, corev1alpha1.ObjectSetPhasePaused)
-				assert.Equal(t, conds[0].Status, metav1.ConditionTrue)
+				assert.Equal(t, corev1alpha1.ObjectSetPhasePaused, conds[0].Type)
+				assert.Equal(t, metav1.ConditionTrue, conds[0].Status)
 			} else {
-				assert.Len(t, conds, 0)
+				assert.Empty(t, conds)
 			}
 		})
 	}

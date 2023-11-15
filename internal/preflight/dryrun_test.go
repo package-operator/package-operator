@@ -40,7 +40,7 @@ func TestDryRun(t *testing.T) {
 	dr := preflight.NewDryRun(c)
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.Error(t, err)
-	assert.Len(t, v, 0)
+	assert.Empty(t, v)
 	// MUST create an internal DeepCopy or the DryRun hook may have changed the object.
 	assert.NotSame(t, objCalled, obj)
 }
@@ -106,7 +106,7 @@ func TestDryRun_alreadyExists(t *testing.T) {
 	dr := preflight.NewDryRun(c)
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.NoError(t, err)
-	assert.Len(t, v, 0)
+	assert.Empty(t, v)
 	// MUST create an internal DeepCopy or the DryRun hook may have changed the object.
 	assert.NotSame(t, objCalled, obj)
 }

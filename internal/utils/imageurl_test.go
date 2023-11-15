@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:paralleltest // testing can't set env vars on parallel tests.
@@ -11,7 +12,7 @@ func TestImageURLWithOverride(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		img := "quay.io/something/else:tag"
 		r, err := ImageURLWithOverrideFromEnv(img)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, img, r)
 	})
 
@@ -45,7 +46,7 @@ func TestImageURLWithOverride(t *testing.T) {
 		t.Run("ok/"+test.image, func(t *testing.T) {
 			t.Setenv("PKO_REPOSITORY_HOST", regHost)
 			out, err := ImageURLWithOverrideFromEnv(test.image)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, test.expOut, out)
 		})
 	}
@@ -53,12 +54,12 @@ func TestImageURLWithOverride(t *testing.T) {
 	t.Run("errorImg", func(t *testing.T) {
 		t.Setenv("PKO_REPOSITORY_HOST", regHost)
 		i, err := ImageURLWithOverrideFromEnv("")
-		assert.Error(t, err, i)
+		require.Error(t, err, i)
 	})
 
 	t.Run("errorOverride", func(t *testing.T) {
 		t.Setenv("PKO_REPOSITORY_HOST", "https://ʕ˵•ᴥ •˵ʔ")
 		i, err := ImageURLWithOverrideFromEnv("")
-		assert.Error(t, err, i)
+		require.Error(t, err, i)
 	})
 }
