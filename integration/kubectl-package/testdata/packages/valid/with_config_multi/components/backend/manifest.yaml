@@ -1,0 +1,65 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: test-stub-multi-backend
+spec:
+  scopes:
+    - Cluster
+    - Namespaced
+  phases:
+    - name: namespace
+    - name: deploy
+  availabilityProbes:
+    - probes:
+        - condition:
+            type: Available
+            status: "True"
+        - fieldsEqual:
+            fieldA: .status.updatedReplicas
+            fieldB: .status.replicas
+      selector:
+        kind:
+          group: apps
+          kind: Deployment
+  config:
+    openAPIV3Schema:
+      properties:
+        namespace:
+          description: Destination namespace (used only in Cluster scope)
+          type: string
+          default: default
+        testStubImage:
+          description: TestStubImage provides the container image to use for the Deployment.
+          type: string
+      required:
+        - testStubImage
+      type: object
+test:
+  template:
+    - name: namespace-scope
+      context:
+        config:
+          testStubImage: rooster
+        package:
+          metadata:
+            name: test
+            namespace: test-ns
+        environment:
+          kubernetes:
+            version: v1.27.0
+    - name: cluster-scope
+      context:
+        config:
+          testStubImage: rooster-two
+        package:
+          metadata:
+            name: test
+        environment:
+          kubernetes:
+            version: v1.27.0
+          openShift:
+            version: v4.13.0
+          proxy:
+            httpProxy: xxx
+            httpsProxy: xxx
+            noProxy: xxxxx

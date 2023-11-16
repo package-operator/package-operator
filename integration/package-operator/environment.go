@@ -42,6 +42,9 @@ var (
 	TestStubImage string
 	// SuccessTestPackageImage points to an image to use to test Package installation.
 	SuccessTestPackageImage string
+	// SuccessTestPackageImage points to an image to use to test multi-component Package installation.
+	SuccessTestMultiPackageImage string
+
 	FailureTestPackageImage = "localhost/does-not-exist"
 
 	LatestSelfBootstrapJobURL string
@@ -51,6 +54,10 @@ func init() {
 	SuccessTestPackageImage = os.Getenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE")
 	if len(SuccessTestPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_PACKAGE_IMAGE not set!")
+	}
+	SuccessTestMultiPackageImage = os.Getenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE")
+	if len(SuccessTestMultiPackageImage) == 0 {
+		panic("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE not set!")
 	}
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
 	if len(TestStubImage) == 0 {

@@ -7,6 +7,7 @@ metadata:
     app: test-stub
     instance: "test"
   annotations:
+    defaulted: test123
     package-operator.run/phase: deploy
 spec:
   replicas: 2
@@ -19,8 +20,9 @@ spec:
       labels:
         app: test-stub
         instance: "test"
+        image: 'chicken'
     spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: ''
+        image: 'registry.package-operator.run/static-image'

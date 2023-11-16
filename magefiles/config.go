@@ -74,9 +74,10 @@ var (
 	// Note that you can't reference the Generate mage target in ExtraDeps
 	// since that would result in a circular dependency. They must be added via init() for now.
 	packageImages = map[string]*PackageImage{
-		pkoPackageName:         {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
-		remotePhasePackageName: {Push: true, SourcePath: filepath.Join("config", "packages", "remote-phase")},
-		"test-stub-package":    {SourcePath: filepath.Join("config", "packages", "test-stub")},
+		pkoPackageName:            {Push: true, SourcePath: filepath.Join("config", "packages", "package-operator")},
+		remotePhasePackageName:    {Push: true, SourcePath: filepath.Join("config", "packages", "remote-phase")},
+		"test-stub-package":       {SourcePath: filepath.Join("config", "packages", "test-stub")},
+		"test-stub-multi-package": {SourcePath: filepath.Join("config", "packages", "test-stub-multi")},
 	}
 
 	// commandImages defines what commands under ./cmd shall be packaged into images.

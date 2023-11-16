@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "test"
+  labels:
+    app.kubernetes.io/name: test-stub-multi
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: "test"
+  annotations:
+    test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"}}"
+    package-operator.run/phase: deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: test-stub-multi
+      app.kubernetes.io/component: frontend
+      app.kubernetes.io/instance: "test"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: test-stub-multi
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/instance: "test"
+    spec:
+      containers:
+      - name: frontend
+        image: 'rooster'

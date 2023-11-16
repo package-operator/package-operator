@@ -1,0 +1,14 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ClusterPackage
+metadata:
+  name: "test1-backend"
+  annotations:
+    package-operator.run/phase: deploy-backend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+spec:
+  image: beluga1
+  component: backend
+  config:
+    namespace: "test1"
+    testStubImage: seal1

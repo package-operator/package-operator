@@ -1,0 +1,54 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: test-stub-multi
+spec:
+  components: {}
+  scopes:
+    - Cluster
+    - Namespaced
+  phases:
+    - name: namespace
+    - name: deploy-backend
+    - name: deploy-frontend
+  availabilityProbes:
+    - probes:
+        - condition:
+            type: Available
+            status: "True"
+      selector:
+        kind:
+          group: package-operator.run
+          kind: Package
+  config:
+    openAPIV3Schema:
+      properties:
+        testStubMultiPackageImage:
+          description: TestStubMultiPackageImage provides the multi package image to use for the inner Packages.
+          type: string
+        testStubImage:
+          description: TestStubImage provides the container image to use for the Deployment.
+          type: string
+      required:
+        - testStubMultiPackageImage
+        - testStubImage
+      type: object
+test:
+  template:
+    - name: namespace-scope
+      context:
+        config:
+          testStubMultiPackageImage: whale
+          testStubImage: dolphin
+        package:
+          metadata:
+            name: test
+            namespace: test-ns
+    - name: cluster-scope
+      context:
+        config:
+          testStubMultiPackageImage: whale1
+          testStubImage: dolphin1
+        package:
+          metadata:
+            name: test1
