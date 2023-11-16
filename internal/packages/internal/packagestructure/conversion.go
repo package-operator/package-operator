@@ -14,7 +14,7 @@ import (
 )
 
 type manifestConstraint interface {
-	manifests.PackageManifest | manifests.PackageManifestLock
+	manifests.PackageManifest | manifests.PackageManifestLock | manifests.RepositoryEntry
 }
 
 func ManifestFromFile[T manifestConstraint, PT interface {

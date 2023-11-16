@@ -46,3 +46,20 @@ func ToV1Alpha1ManifestLock(in *manifests.PackageManifestLock) (*manifestsv1alph
 	out.SetGroupVersionKind(manifestsv1alpha1.GroupVersion.WithKind("PackageManifestLock"))
 	return out, nil
 }
+
+func RepositoryEntryFromFile(
+	ctx context.Context, scheme *runtime.Scheme,
+	path string, manifestBytes []byte,
+) (*manifests.RepositoryEntry, error) {
+	return ManifestFromFile[manifests.RepositoryEntry](ctx, scheme, path, manifestBytes)
+}
+
+// Converts the internal version of an RepositoryEntry into it's v1alpha1 representation.
+func ToV1Alpha1RepositoryEntry(in *manifests.RepositoryEntry) (*manifestsv1alpha1.RepositoryEntry, error) {
+	out := &manifestsv1alpha1.RepositoryEntry{}
+	if err := scheme.Convert(in, out, nil); err != nil {
+		return nil, err
+	}
+	out.SetGroupVersionKind(manifestsv1alpha1.GroupVersion.WithKind("RepositoryEntry"))
+	return out, nil
+}
