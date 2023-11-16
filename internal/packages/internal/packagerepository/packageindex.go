@@ -3,11 +3,11 @@ package packagerepository
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"golang.org/x/exp/slices"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"

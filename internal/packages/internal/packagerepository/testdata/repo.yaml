@@ -1,0 +1,12 @@
+---
+apiVersion: manifests.package-operator.run/v1alpha1
+data:
+  digest: "12345"
+  image: quay.io/xxx
+  versions:
+  - v1.2.4
+  - v1.2.3
+kind: RepositoryEntry
+metadata:
+  creationTimestamp: null
+  name: pkg

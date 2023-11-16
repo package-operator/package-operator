@@ -72,11 +72,11 @@ func assertEmpty(t *testing.T, pi *packageIndex) {
 
 	assert.True(t, pi.IsEmpty(), "Is empty")
 	_, err := pi.GetLatestEntry()
-	assert.EqualError(t, err, `package "pkg" not found`)
+	require.EqualError(t, err, `package "pkg" not found`)
 	_, err = pi.GetVersion("v1.2.3")
-	assert.EqualError(t, err, `package "pkg" version "v1.2.3" not found`)
+	require.EqualError(t, err, `package "pkg" version "v1.2.3" not found`)
 	_, err = pi.GetDigest("123")
-	assert.EqualError(t, err, `package "pkg" digest "123" not found`)
-	assert.Len(t, pi.ListVersions(), 0)
-	assert.Len(t, pi.ListEntries(), 0)
+	require.EqualError(t, err, `package "pkg" digest "123" not found`)
+	assert.Empty(t, pi.ListVersions())
+	assert.Empty(t, pi.ListEntries())
 }

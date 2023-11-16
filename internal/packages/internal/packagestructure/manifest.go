@@ -48,8 +48,7 @@ func ToV1Alpha1ManifestLock(in *manifests.PackageManifestLock) (*manifestsv1alph
 }
 
 func RepositoryEntryFromFile(
-	ctx context.Context, scheme *runtime.Scheme,
-	path string, manifestBytes []byte,
+	ctx context.Context, path string, manifestBytes []byte,
 ) (*manifests.RepositoryEntry, error) {
 	return ManifestFromFile[manifests.RepositoryEntry](ctx, scheme, path, manifestBytes)
 }
