@@ -712,9 +712,7 @@ func (p *defaultPatcher) Patch(
 	// deepCopy of currentObj, already updated for owner handling
 	updatedObj *unstructured.Unstructured,
 ) error {
-	// Ensure desired labels, annotations and owners are present
-	desiredObj.SetLabels(mergeKeysFrom(updatedObj.GetLabels(), desiredObj.GetLabels()))
-	desiredObj.SetAnnotations(mergeKeysFrom(updatedObj.GetAnnotations(), desiredObj.GetAnnotations()))
+	// Ensure owners are present
 	desiredObj.SetOwnerReferences(updatedObj.GetOwnerReferences())
 
 	patch := desiredObj.DeepCopy()
