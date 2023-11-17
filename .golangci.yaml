@@ -6,7 +6,6 @@ linters:
   #- containedctx     # Context.Context within a struct a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
   #- contextcheck     # Not that useful/false positives.
   #- cyclop           # Cyclo complexity already calculated by other linters.
-  #- depguard         # We do not restrict imports.
   #- dogsled          # Could be nice in the future.
   #- dupl             # Could be nice in the future.
   #- exhaustive       # Not that useful/false positives.
@@ -43,6 +42,7 @@ linters:
   - bidichk
   - bodyclose
   - decorder
+  - depguard
   - dupword
   - durationcheck
   - errcheck
@@ -116,6 +116,14 @@ issues:
 run:
   skip-files: [ "zz_generated.deepcopy.go$" ]
 linters-settings:
+  depguard:
+    rules:
+      main:
+        deny:
+        - pkg: "golang.org/x/exp/slices"
+          desc: use slices from stdlib
+        - pkg: "golang.org/x/exp/maps"
+          desc: use maps from stdlib
   goimports:
     local-prefixes: package-operator.run
   gosec:
