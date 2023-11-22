@@ -1220,6 +1220,7 @@ containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
 * [PackageManifestLock](#packagemanifestlock)
+* [Repository](#repository)
 * [RepositoryEntry](#repositoryentry)
 
 
@@ -1333,6 +1334,28 @@ spec:
 | `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> |  |
 
 
+### Repository
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: Repository
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+
+
 ### RepositoryEntry
 
 
@@ -1352,6 +1375,7 @@ data:
     uniqueInScope: PackageManifestUniqueInScopeConstraint
   digest: dolor
   image: ipsum
+  name: amet
   versions:
   - sit
 kind: RepositoryEntry
@@ -1664,6 +1688,7 @@ Used in:
 | `digest` <b>required</b><br>string | Image digest uniquely identifying this image. |
 | `versions` <b>required</b><br>[]string | Semver V2 versions that are assigned to the package. |
 | `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints of the package. |
+| `name` <br>string | Name of the package. |
 
 
 Used in:

@@ -2,33 +2,47 @@ package packagerepository
 
 import "fmt"
 
-type NotFoundError struct {
+type RepositoryNotFoundError struct {
+	Name string
+}
+
+func (e *RepositoryNotFoundError) Error() string {
+	return fmt.Sprintf("repository %q not found", e.Name)
+}
+
+func newRepositoryNotFoundError(name string) *RepositoryNotFoundError {
+	return &RepositoryNotFoundError{
+		Name: name,
+	}
+}
+
+type PackageNotFoundError struct {
 	Name    string
 	Version string
 	Digest  string
 }
 
-func newPackageNotFoundError(name string) *NotFoundError {
-	return &NotFoundError{
+func newPackageNotFoundError(name string) *PackageNotFoundError {
+	return &PackageNotFoundError{
 		Name: name,
 	}
 }
 
-func newPackageVersionNotFoundError(name, version string) *NotFoundError {
-	return &NotFoundError{
+func newPackageVersionNotFoundError(name, version string) *PackageNotFoundError {
+	return &PackageNotFoundError{
 		Name:    name,
 		Version: version,
 	}
 }
 
-func newPackageDigestNotFoundError(name, digest string) *NotFoundError {
-	return &NotFoundError{
+func newPackageDigestNotFoundError(name, digest string) *PackageNotFoundError {
+	return &PackageNotFoundError{
 		Name:   name,
 		Digest: digest,
 	}
 }
 
-func (e *NotFoundError) Error() string {
+func (e *PackageNotFoundError) Error() string {
 	msg := fmt.Sprintf("package %q", e.Name)
 	switch {
 	case len(e.Version) > 0:

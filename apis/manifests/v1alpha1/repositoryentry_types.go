@@ -20,6 +20,8 @@ type RepositoryEntryData struct {
 	Versions []string `json:"versions"`
 	// Constraints of the package.
 	Constraints []PackageManifestConstraint `json:"constraints,omitempty"`
+	// Name of the package.
+	Name string `json:"name,omitempty"`
 }
 
 func init() { register(&RepositoryEntry{}) }

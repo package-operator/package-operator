@@ -28,6 +28,10 @@ func ValidateRepositoryEntry(_ context.Context, obj *manifests.RepositoryEntry) 
 		allErrs = append(allErrs,
 			field.Required(dataPath.Child("versions"), ""))
 	}
+	if len(obj.Data.Name) == 0 {
+		allErrs = append(allErrs,
+			field.Required(dataPath.Child("name"), ""))
+	}
 
 	// Constraints
 	allErrs = append(allErrs, validateConstraints(

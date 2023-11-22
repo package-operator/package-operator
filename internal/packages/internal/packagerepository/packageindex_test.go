@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
 )
@@ -15,10 +14,8 @@ func Test_packageIndex(t *testing.T) {
 	t.Parallel()
 	const pkgName = "pkg"
 	entry1 := &manifests.RepositoryEntry{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "pkg",
-		},
 		Data: manifests.RepositoryEntryData{
+			Name:   pkgName,
 			Image:  "quay.io/package-operator/xxx",
 			Digest: "12345",
 			Versions: []string{
@@ -32,7 +29,7 @@ func Test_packageIndex(t *testing.T) {
 	assert.Equal(t, pkgName, pi.GetName())
 
 	// Index empty
-	assertEmpty(t, pi)
+	assertEmptyPackageIndex(t, pi)
 
 	// Add something
 	ctx := context.Background()
@@ -64,10 +61,10 @@ func Test_packageIndex(t *testing.T) {
 
 	// Remove it again
 	require.NoError(t, pi.Remove(ctx, entry1))
-	assertEmpty(t, pi)
+	assertEmptyPackageIndex(t, pi)
 }
 
-func assertEmpty(t *testing.T, pi *packageIndex) {
+func assertEmptyPackageIndex(t *testing.T, pi *packageIndex) {
 	t.Helper()
 
 	assert.True(t, pi.IsEmpty(), "Is empty")

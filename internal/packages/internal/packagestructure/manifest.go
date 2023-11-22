@@ -47,6 +47,22 @@ func ToV1Alpha1ManifestLock(in *manifests.PackageManifestLock) (*manifestsv1alph
 	return out, nil
 }
 
+func RepositoryFromFile(
+	ctx context.Context, path string, manifestBytes []byte,
+) (*manifests.Repository, error) {
+	return ManifestFromFile[manifests.Repository](ctx, scheme, path, manifestBytes)
+}
+
+// Converts the internal version of an Repository into it's v1alpha1 representation.
+func ToV1Alpha1Repository(in *manifests.Repository) (*manifestsv1alpha1.Repository, error) {
+	out := &manifestsv1alpha1.Repository{}
+	if err := scheme.Convert(in, out, nil); err != nil {
+		return nil, err
+	}
+	out.SetGroupVersionKind(manifestsv1alpha1.GroupVersion.WithKind("Repository"))
+	return out, nil
+}
+
 func RepositoryEntryFromFile(
 	ctx context.Context, path string, manifestBytes []byte,
 ) (*manifests.RepositoryEntry, error) {

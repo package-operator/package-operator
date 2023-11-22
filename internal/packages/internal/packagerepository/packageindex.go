@@ -13,6 +13,7 @@ import (
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 )
 
+// PackageIndex keeps and maintains an index of versions and digests for a single package name.
 type packageIndex struct {
 	// name of the package
 	name string
@@ -84,14 +85,15 @@ func (pi *packageIndex) ListEntries() []manifests.RepositoryEntry {
 }
 
 func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntry) error {
+	entry.Name = fmt.Sprintf("%s.%s", entry.Data.Name, entry.Data.Digest)
 	if errs, err := packagemanifestvalidation.ValidateRepositoryEntry(ctx, entry); err != nil {
 		return err
 	} else if len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 
-	if pi.name != entry.Name {
-		panic(fmt.Sprintf("package index for package named %s, got: %s", pi.name, entry.Name))
+	if pi.name != entry.Data.Name {
+		panic(fmt.Sprintf("package index for package named %s, got: %s", pi.name, entry.Data.Name))
 	}
 
 	var entryOrderedVersions semver.Collection
