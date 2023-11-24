@@ -110,7 +110,19 @@ type PackageManifestConstraint struct {
 	Platform []PlatformName
 	// Constraints this package to be only installed once in the Cluster or once in the same Namespace.
 	UniqueInScope *PackageManifestUniqueInScopeConstraint
+	// Requires a ClusterPackage to be installed in a specific version range in order to install this Package.
+	ClusterPackage *PackageManifestClusterPackageConstraint
 }
+
+type PackageManifestClusterPackageConstraint struct {
+	// Package FQDN <package-name>.<repository name>
+	// +example=my-pkg.my-repo
+	Package string
+	// Semantic Versioning 2.0.0 version range.
+	// +example=>=1.1
+	Range string
+}
+
 type PlatformName string
 
 const (

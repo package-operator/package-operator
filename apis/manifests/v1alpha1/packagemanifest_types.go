@@ -119,6 +119,17 @@ type PackageManifestConstraint struct {
 	Platform []PlatformName `json:"platform,omitempty"`
 	// Constraints this package to be only installed once in the Cluster or once in the same Namespace.
 	UniqueInScope *PackageManifestUniqueInScopeConstraint `json:"uniqueInScope,omitempty"`
+	// Requires a ClusterPackage to be installed in a specific version range in order to install this Package.
+	ClusterPackage *PackageManifestClusterPackageConstraint `json:"clusterPackage,omitempty"`
+}
+
+type PackageManifestClusterPackageConstraint struct {
+	// Package FQDN <package-name>.<repository name>
+	// +example=my-pkg.my-repo
+	Package string `json:"package"`
+	// Semantic Versioning 2.0.0 version range.
+	// +example=>=1.1
+	Range string `json:"range"`
 }
 
 // PlatformName holds the name of a specific platform flavor name.

@@ -1242,7 +1242,10 @@ spec:
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   constraints:
-  - platform:
+  - clusterPackage:
+      package: my-pkg.my-repo
+      range: '>=1.1'
+    platform:
     - Kubernetes
     platformVersion:
       name: Kubernetes
@@ -1394,6 +1397,20 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageManifestClusterPackageConstraint
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `package` <b>required</b><br>string | Package FQDN <package-name>.<repository name> |
+| `range` <b>required</b><br>string | Semantic Versioning 2.0.0 version range. |
+
+
+Used in:
+* [PackageManifestConstraint](#packagemanifestconstraint)
+
+
 ### PackageManifestConstraint
 
 PackageManifestConstraint configures environment constraints to block package installation.
@@ -1403,6 +1420,7 @@ PackageManifestConstraint configures environment constraints to block package in
 | `platformVersion` <br><a href="#packagemanifestplatformversionconstraint">PackageManifestPlatformVersionConstraint</a> | PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.<br>This constraint is ignored when running on a different platform.<br>e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.<br>Use the Platform constraint to enforce running on a specific platform. |
 | `platform` <br><a href="#platformname">[]PlatformName</a> | Valid platforms that support this package. |
 | `uniqueInScope` <br><a href="#packagemanifestuniqueinscopeconstraint">PackageManifestUniqueInScopeConstraint</a> | Constraints this package to be only installed once in the Cluster or once in the same Namespace. |
+| `clusterPackage` <br><a href="#packagemanifestclusterpackageconstraint">PackageManifestClusterPackageConstraint</a> | Requires a ClusterPackage to be installed in a specific version range in order to install this Package. |
 
 
 Used in:
