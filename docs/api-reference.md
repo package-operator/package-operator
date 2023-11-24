@@ -1247,12 +1247,21 @@ spec:
     platformVersion:
       name: Kubernetes
       range: '>=1.20.x'
+    uniqueInScope: PackageManifestUniqueInScopeConstraint
+  dependencies:
+  - image:
+      name: my-pkg
+      package: my-pkg.my-repo
+      range: '>=2.1'
   images:
   - image: sit
     name: dolor
   phases:
   - class: ipsum
     name: lorem
+  repositories:
+  - file: ../myrepo.yaml
+    image: quay.io/package-operator/my-repo:latest
   scopes:
   - PackageManifestScope
 test:
@@ -1304,10 +1313,15 @@ metadata:
   name: example
   namespace: default
 spec:
+  dependencies:
+  - image:
+      name: my-pkg
+      package: my-pkg.my-repo
+      range: '>=2.1'
   images:
-  - digest: sit
-    image: dolor
-    name: ipsum
+  - digest: sha256:00e48c32b3cdcf9e2c66467f2beb0ef33b43b54e2b56415db4ee431512c406ea
+    image: quay.io/package-operator/remote-phase-package
+    name: my-pkg
 
 ```
 
@@ -1388,10 +1402,40 @@ PackageManifestConstraint configures environment constraints to block package in
 | ----- | ----------- |
 | `platformVersion` <br><a href="#packagemanifestplatformversionconstraint">PackageManifestPlatformVersionConstraint</a> | PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.<br>This constraint is ignored when running on a different platform.<br>e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.<br>Use the Platform constraint to enforce running on a specific platform. |
 | `platform` <br><a href="#platformname">[]PlatformName</a> | Valid platforms that support this package. |
+| `uniqueInScope` <br><a href="#packagemanifestuniqueinscopeconstraint">PackageManifestUniqueInScopeConstraint</a> | Constraints this package to be only installed once in the Cluster or once in the same Namespace. |
 
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestDependency
+
+Uses a solver to find the latest version package image.
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <br><a href="#packagemanifestdependencyimage">PackageManifestDependencyImage</a> | Resolves the dependency as a image url and digest and commits it to the PackageManifestLock. |
+
+
+Used in:
+* [PackageManifestLockSpec](#packagemanifestlockspec)
+* [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestDependencyImage
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name for the dependency. |
+| `package` <b>required</b><br>string | Package FQDN <package-name>.<repository name> |
+| `range` <b>required</b><br>string | Semantic Versioning 2.0.0 version range. |
+
+
+Used in:
+* [PackageManifestDependency](#packagemanifestdependency)
 
 
 ### PackageManifestImage
@@ -1406,6 +1450,21 @@ PackageManifestImage specifies an image tag to be resolved.
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestLockDependency
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Image name to be use to reference it in the templates |
+| `image` <b>required</b><br>string | Image identifier (REPOSITORY[:TAG]) |
+| `digest` <b>required</b><br>string | Image digest |
+| `version` <b>required</b><br>string | Version of the dependency that has been chosen. |
+
+
+Used in:
 
 
 ### PackageManifestLockImage
@@ -1430,6 +1489,7 @@ Used in:
 | Field | Description |
 | ----- | ----------- |
 | `images` <b>required</b><br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | List of resolved images |
+| `dependencies` <br><a href="#packagemanifestdependency">[]PackageManifestDependency</a> | List of resolved dependency images. |
 
 
 Used in:
@@ -1467,6 +1527,20 @@ Used in:
 * [PackageManifestConstraint](#packagemanifestconstraint)
 
 
+### PackageManifestRepository
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `file` <br>string | References a file in the filesystem to load. |
+| `image` <br>string | References an image in a container image registry. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestSpec
 
 PackageManifestSpec represents the spec of the packagemanifest containing the details about phases and availability probes.
@@ -1480,6 +1554,8 @@ PackageManifestSpec represents the spec of the packagemanifest containing the de
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed that the containing package is a single-component package. |
 | `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints limit what environments a package can be installed into.<br>e.g. can only be installed on OpenShift. |
+| `repositories` <br><a href="#packagemanifestrepository">[]PackageManifestRepository</a> | Repository references that are used to validate constraints and resolve dependencies. |
+| `dependencies` <br><a href="#packagemanifestdependency">[]PackageManifestDependency</a> | Dependency references to resolve and use within this package. |
 
 
 Used in:
