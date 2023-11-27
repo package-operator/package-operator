@@ -32,4 +32,6 @@ var (
 	PackageManifestGroupKind = packagetypes.PackageManifestGroupKind
 	// PackageManifestLockGroupKind is the kubernetes schema group kind of a PackageManifestLock.
 	PackageManifestLockGroupKind = packagetypes.PackageManifestLockGroupKind
+	// Returns a list managed and external objects the package needs permissions for.
+	Permissions = packagetypes.Permissions
 )
