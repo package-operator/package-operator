@@ -34,17 +34,39 @@ func NewRepositoryIndex(meta metav1.ObjectMeta) *RepositoryIndex {
 	return ri
 }
 
-func LoadRepositoryFromFile(ctx context.Context, path string) (*RepositoryIndex, error) {
+func LoadRepositoryFromFile(ctx context.Context, path string) (idx *RepositoryIndex, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if cErr := file.Close(); cErr != nil && err == nil {
+			err = cErr
+		}
+	}()
 	ri, err := LoadRepository(ctx, file)
 	if err != nil {
 		return nil, err
 	}
 	return ri, nil
+}
+
+func SaveRepositoryToFile(ctx context.Context, path string, idx *RepositoryIndex) (err error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cErr := file.Close(); cErr != nil && err == nil {
+			err = cErr
+		}
+	}()
+
+	if err := idx.Export(ctx, file); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoadRepository(ctx context.Context, r io.Reader) (*RepositoryIndex, error) {
