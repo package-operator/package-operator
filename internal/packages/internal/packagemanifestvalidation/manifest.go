@@ -73,23 +73,8 @@ func ValidatePackageManifest(ctx context.Context, obj *manifests.PackageManifest
 	}
 
 	// Constraints
-	for i, constraint := range obj.Spec.Constraints {
-		cpath := field.NewPath("spec").Child("constraints").Index(i)
-		if constraint.PlatformVersion != nil {
-			cpath = cpath.Child("platformVersion")
-			if len(constraint.PlatformVersion.Name) == 0 {
-				allErrs = append(allErrs,
-					field.Required(cpath.Child("name"), ""))
-			}
-			if len(constraint.PlatformVersion.Range) == 0 {
-				allErrs = append(allErrs,
-					field.Required(cpath.Child("range"), ""))
-			} else if _, cerr := semver.NewConstraint(constraint.PlatformVersion.Range); cerr != nil {
-				allErrs = append(allErrs,
-					field.Invalid(cpath.Child("range"), constraint.PlatformVersion.Range, "improper constraint"))
-			}
-		}
-	}
+	allErrs = append(allErrs, validateConstraints(
+		field.NewPath("spec").Child("constraints"), obj.Spec.Constraints)...)
 
 	configErrors := validatePackageManifestConfig(ctx, &obj.Spec.Config, spec.Child("config"))
 	allErrs = append(allErrs, configErrors...)
@@ -127,4 +112,27 @@ func ValidatePackageManifest(ctx context.Context, obj *manifests.PackageManifest
 	}
 
 	return allErrs, nil
+}
+
+func validateConstraints(path *field.Path, constraints []manifests.PackageManifestConstraint) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i, constraint := range constraints {
+		cpath := path.Index(i)
+		if constraint.PlatformVersion != nil {
+			cpath = cpath.Child("platformVersion")
+			if len(constraint.PlatformVersion.Name) == 0 {
+				allErrs = append(allErrs,
+					field.Required(cpath.Child("name"), ""))
+			}
+			if len(constraint.PlatformVersion.Range) == 0 {
+				allErrs = append(allErrs,
+					field.Required(cpath.Child("range"), ""))
+			} else if _, cerr := semver.NewConstraint(constraint.PlatformVersion.Range); cerr != nil {
+				allErrs = append(allErrs,
+					field.Invalid(cpath.Child("range"), constraint.PlatformVersion.Range, "improper constraint"))
+			}
+		}
+	}
+
+	return allErrs
 }
