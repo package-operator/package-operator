@@ -98,6 +98,9 @@ func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntr
 
 	var entryOrderedVersions semver.Collection
 	for _, v := range entry.Data.Versions {
+		if !strings.HasPrefix(v, "v") {
+			v = "v" + v
+		}
 		if _, ok := pi.versions[v]; ok {
 			return newPackageVersionAlreadyExistsError(pi.name, v)
 		}
