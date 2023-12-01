@@ -1220,6 +1220,8 @@ containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
 * [PackageManifestLock](#packagemanifestlock)
+* [Repository](#repository)
+* [RepositoryEntry](#repositoryentry)
 
 
 ### PackageManifest
@@ -1332,6 +1334,64 @@ spec:
 | `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> |  |
 
 
+### Repository
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: Repository
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+
+
+### RepositoryEntry
+
+
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+data:
+  constraints:
+  - platform:
+    - Kubernetes
+    platformVersion:
+      name: Kubernetes
+      range: '>=1.20.x'
+    uniqueInScope: PackageManifestUniqueInScopeConstraint
+  digest: dolor
+  image: ipsum
+  name: amet
+  versions:
+  - sit
+kind: RepositoryEntry
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `data` <b>required</b><br><a href="#repositoryentrydata">RepositoryEntryData</a> |  |
+
+
 
 
 ---
@@ -1407,6 +1467,7 @@ PackageManifestConstraint configures environment constraints to block package in
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
+* [RepositoryEntryData](#repositoryentrydata)
 
 
 ### PackageManifestDependency
@@ -1615,6 +1676,23 @@ Used in:
 
 Used in:
 * [PackageManifestTest](#packagemanifesttest)
+
+
+### RepositoryEntryData
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <b>required</b><br>string | OCI host/repository and name.<br>e.g. quay.io/xxx/xxx |
+| `digest` <b>required</b><br>string | Image digest uniquely identifying this image. |
+| `versions` <b>required</b><br>[]string | Semver V2 versions that are assigned to the package. |
+| `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints of the package. |
+| `name` <br>string | Name of the package. |
+
+
+Used in:
+* [RepositoryEntry](#repositoryentry)
 
 
 ### TemplateContext

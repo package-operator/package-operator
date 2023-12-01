@@ -93,6 +93,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestDependency)(nil), (*v1alpha1.PackageManifestDependency)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestDependency_To_v1alpha1_PackageManifestDependency(a.(*PackageManifestDependency), b.(*v1alpha1.PackageManifestDependency), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestDependency)(nil), (*PackageManifestDependency)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestDependency_To_manifests_PackageManifestDependency(a.(*v1alpha1.PackageManifestDependency), b.(*PackageManifestDependency), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestDependencyImage)(nil), (*v1alpha1.PackageManifestDependencyImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestDependencyImage_To_v1alpha1_PackageManifestDependencyImage(a.(*PackageManifestDependencyImage), b.(*v1alpha1.PackageManifestDependencyImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestDependencyImage)(nil), (*PackageManifestDependencyImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestDependencyImage_To_manifests_PackageManifestDependencyImage(a.(*v1alpha1.PackageManifestDependencyImage), b.(*PackageManifestDependencyImage), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*PackageManifestImage)(nil), (*v1alpha1.PackageManifestImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestImage_To_v1alpha1_PackageManifestImage(a.(*PackageManifestImage), b.(*v1alpha1.PackageManifestImage), scope)
 	}); err != nil {
@@ -110,6 +130,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLock)(nil), (*PackageManifestLock)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestLock_To_manifests_PackageManifestLock(a.(*v1alpha1.PackageManifestLock), b.(*PackageManifestLock), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestLockDependency)(nil), (*v1alpha1.PackageManifestLockDependency)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestLockDependency_To_v1alpha1_PackageManifestLockDependency(a.(*PackageManifestLockDependency), b.(*v1alpha1.PackageManifestLockDependency), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestLockDependency)(nil), (*PackageManifestLockDependency)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestLockDependency_To_manifests_PackageManifestLockDependency(a.(*v1alpha1.PackageManifestLockDependency), b.(*PackageManifestLockDependency), scope)
 	}); err != nil {
 		return err
 	}
@@ -150,6 +180,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestPlatformVersionConstraint)(nil), (*PackageManifestPlatformVersionConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestPlatformVersionConstraint_To_manifests_PackageManifestPlatformVersionConstraint(a.(*v1alpha1.PackageManifestPlatformVersionConstraint), b.(*PackageManifestPlatformVersionConstraint), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestRepository)(nil), (*v1alpha1.PackageManifestRepository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestRepository_To_v1alpha1_PackageManifestRepository(a.(*PackageManifestRepository), b.(*v1alpha1.PackageManifestRepository), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestRepository)(nil), (*PackageManifestRepository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestRepository_To_manifests_PackageManifestRepository(a.(*v1alpha1.PackageManifestRepository), b.(*PackageManifestRepository), scope)
 	}); err != nil {
 		return err
 	}
@@ -203,6 +243,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestUniqueInScopeConstraint)(nil), (*v1alpha1.PackageManifestUniqueInScopeConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestUniqueInScopeConstraint_To_v1alpha1_PackageManifestUniqueInScopeConstraint(a.(*PackageManifestUniqueInScopeConstraint), b.(*v1alpha1.PackageManifestUniqueInScopeConstraint), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestUniqueInScopeConstraint)(nil), (*PackageManifestUniqueInScopeConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestUniqueInScopeConstraint_To_manifests_PackageManifestUniqueInScopeConstraint(a.(*v1alpha1.PackageManifestUniqueInScopeConstraint), b.(*PackageManifestUniqueInScopeConstraint), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*Repository)(nil), (*v1alpha1.Repository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_Repository_To_v1alpha1_Repository(a.(*Repository), b.(*v1alpha1.Repository), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.Repository)(nil), (*Repository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Repository_To_manifests_Repository(a.(*v1alpha1.Repository), b.(*Repository), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RepositoryEntry)(nil), (*v1alpha1.RepositoryEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_RepositoryEntry_To_v1alpha1_RepositoryEntry(a.(*RepositoryEntry), b.(*v1alpha1.RepositoryEntry), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.RepositoryEntry)(nil), (*RepositoryEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RepositoryEntry_To_manifests_RepositoryEntry(a.(*v1alpha1.RepositoryEntry), b.(*RepositoryEntry), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RepositoryEntryData)(nil), (*v1alpha1.RepositoryEntryData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData(a.(*RepositoryEntryData), b.(*v1alpha1.RepositoryEntryData), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.RepositoryEntryData)(nil), (*RepositoryEntryData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData(a.(*v1alpha1.RepositoryEntryData), b.(*RepositoryEntryData), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*TemplateContext)(nil), (*v1alpha1.TemplateContext)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_manifests_TemplateContext_To_v1alpha1_TemplateContext(a.(*TemplateContext), b.(*v1alpha1.TemplateContext), scope)
 	}); err != nil {
@@ -230,6 +310,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1alpha1.TemplateContextPackage)(nil), (*TemplateContextPackage)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_TemplateContextPackage_To_manifests_TemplateContextPackage(a.(*v1alpha1.TemplateContextPackage), b.(*TemplateContextPackage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1.JSONSchemaProps)(nil), (*apiextensions.JSONSchemaProps)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(a.(*v1.JSONSchemaProps), b.(*apiextensions.JSONSchemaProps), scope)
 	}); err != nil {
 		return err
 	}
@@ -381,6 +466,7 @@ func Convert_v1alpha1_PackageManifestComponentsConfig_To_manifests_PackageManife
 func autoConvert_manifests_PackageManifestConstraint_To_v1alpha1_PackageManifestConstraint(in *PackageManifestConstraint, out *v1alpha1.PackageManifestConstraint, s conversion.Scope) error {
 	out.PlatformVersion = (*v1alpha1.PackageManifestPlatformVersionConstraint)(unsafe.Pointer(in.PlatformVersion))
 	out.Platform = *(*[]v1alpha1.PlatformName)(unsafe.Pointer(&in.Platform))
+	out.UniqueInScope = (*v1alpha1.PackageManifestUniqueInScopeConstraint)(unsafe.Pointer(in.UniqueInScope))
 	return nil
 }
 
@@ -392,12 +478,57 @@ func Convert_manifests_PackageManifestConstraint_To_v1alpha1_PackageManifestCons
 func autoConvert_v1alpha1_PackageManifestConstraint_To_manifests_PackageManifestConstraint(in *v1alpha1.PackageManifestConstraint, out *PackageManifestConstraint, s conversion.Scope) error {
 	out.PlatformVersion = (*PackageManifestPlatformVersionConstraint)(unsafe.Pointer(in.PlatformVersion))
 	out.Platform = *(*[]PlatformName)(unsafe.Pointer(&in.Platform))
+	out.UniqueInScope = (*PackageManifestUniqueInScopeConstraint)(unsafe.Pointer(in.UniqueInScope))
 	return nil
 }
 
 // Convert_v1alpha1_PackageManifestConstraint_To_manifests_PackageManifestConstraint is an autogenerated conversion function.
 func Convert_v1alpha1_PackageManifestConstraint_To_manifests_PackageManifestConstraint(in *v1alpha1.PackageManifestConstraint, out *PackageManifestConstraint, s conversion.Scope) error {
 	return autoConvert_v1alpha1_PackageManifestConstraint_To_manifests_PackageManifestConstraint(in, out, s)
+}
+
+func autoConvert_manifests_PackageManifestDependency_To_v1alpha1_PackageManifestDependency(in *PackageManifestDependency, out *v1alpha1.PackageManifestDependency, s conversion.Scope) error {
+	out.Image = (*v1alpha1.PackageManifestDependencyImage)(unsafe.Pointer(in.Image))
+	return nil
+}
+
+// Convert_manifests_PackageManifestDependency_To_v1alpha1_PackageManifestDependency is an autogenerated conversion function.
+func Convert_manifests_PackageManifestDependency_To_v1alpha1_PackageManifestDependency(in *PackageManifestDependency, out *v1alpha1.PackageManifestDependency, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestDependency_To_v1alpha1_PackageManifestDependency(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestDependency_To_manifests_PackageManifestDependency(in *v1alpha1.PackageManifestDependency, out *PackageManifestDependency, s conversion.Scope) error {
+	out.Image = (*PackageManifestDependencyImage)(unsafe.Pointer(in.Image))
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestDependency_To_manifests_PackageManifestDependency is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestDependency_To_manifests_PackageManifestDependency(in *v1alpha1.PackageManifestDependency, out *PackageManifestDependency, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestDependency_To_manifests_PackageManifestDependency(in, out, s)
+}
+
+func autoConvert_manifests_PackageManifestDependencyImage_To_v1alpha1_PackageManifestDependencyImage(in *PackageManifestDependencyImage, out *v1alpha1.PackageManifestDependencyImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Package = in.Package
+	out.Range = in.Range
+	return nil
+}
+
+// Convert_manifests_PackageManifestDependencyImage_To_v1alpha1_PackageManifestDependencyImage is an autogenerated conversion function.
+func Convert_manifests_PackageManifestDependencyImage_To_v1alpha1_PackageManifestDependencyImage(in *PackageManifestDependencyImage, out *v1alpha1.PackageManifestDependencyImage, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestDependencyImage_To_v1alpha1_PackageManifestDependencyImage(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestDependencyImage_To_manifests_PackageManifestDependencyImage(in *v1alpha1.PackageManifestDependencyImage, out *PackageManifestDependencyImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Package = in.Package
+	out.Range = in.Range
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestDependencyImage_To_manifests_PackageManifestDependencyImage is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestDependencyImage_To_manifests_PackageManifestDependencyImage(in *v1alpha1.PackageManifestDependencyImage, out *PackageManifestDependencyImage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestDependencyImage_To_manifests_PackageManifestDependencyImage(in, out, s)
 }
 
 func autoConvert_manifests_PackageManifestImage_To_v1alpha1_PackageManifestImage(in *PackageManifestImage, out *v1alpha1.PackageManifestImage, s conversion.Scope) error {
@@ -448,6 +579,32 @@ func Convert_v1alpha1_PackageManifestLock_To_manifests_PackageManifestLock(in *v
 	return autoConvert_v1alpha1_PackageManifestLock_To_manifests_PackageManifestLock(in, out, s)
 }
 
+func autoConvert_manifests_PackageManifestLockDependency_To_v1alpha1_PackageManifestLockDependency(in *PackageManifestLockDependency, out *v1alpha1.PackageManifestLockDependency, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Image = in.Image
+	out.Digest = in.Digest
+	out.Version = in.Version
+	return nil
+}
+
+// Convert_manifests_PackageManifestLockDependency_To_v1alpha1_PackageManifestLockDependency is an autogenerated conversion function.
+func Convert_manifests_PackageManifestLockDependency_To_v1alpha1_PackageManifestLockDependency(in *PackageManifestLockDependency, out *v1alpha1.PackageManifestLockDependency, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestLockDependency_To_v1alpha1_PackageManifestLockDependency(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestLockDependency_To_manifests_PackageManifestLockDependency(in *v1alpha1.PackageManifestLockDependency, out *PackageManifestLockDependency, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Image = in.Image
+	out.Digest = in.Digest
+	out.Version = in.Version
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestLockDependency_To_manifests_PackageManifestLockDependency is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestLockDependency_To_manifests_PackageManifestLockDependency(in *v1alpha1.PackageManifestLockDependency, out *PackageManifestLockDependency, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestLockDependency_To_manifests_PackageManifestLockDependency(in, out, s)
+}
+
 func autoConvert_manifests_PackageManifestLockImage_To_v1alpha1_PackageManifestLockImage(in *PackageManifestLockImage, out *v1alpha1.PackageManifestLockImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Image = in.Image
@@ -474,6 +631,7 @@ func Convert_v1alpha1_PackageManifestLockImage_To_manifests_PackageManifestLockI
 
 func autoConvert_manifests_PackageManifestLockSpec_To_v1alpha1_PackageManifestLockSpec(in *PackageManifestLockSpec, out *v1alpha1.PackageManifestLockSpec, s conversion.Scope) error {
 	out.Images = *(*[]v1alpha1.PackageManifestLockImage)(unsafe.Pointer(&in.Images))
+	out.Dependencies = *(*[]v1alpha1.PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 
@@ -484,6 +642,7 @@ func Convert_manifests_PackageManifestLockSpec_To_v1alpha1_PackageManifestLockSp
 
 func autoConvert_v1alpha1_PackageManifestLockSpec_To_manifests_PackageManifestLockSpec(in *v1alpha1.PackageManifestLockSpec, out *PackageManifestLockSpec, s conversion.Scope) error {
 	out.Images = *(*[]PackageManifestLockImage)(unsafe.Pointer(&in.Images))
+	out.Dependencies = *(*[]PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 
@@ -536,6 +695,28 @@ func Convert_v1alpha1_PackageManifestPlatformVersionConstraint_To_manifests_Pack
 	return autoConvert_v1alpha1_PackageManifestPlatformVersionConstraint_To_manifests_PackageManifestPlatformVersionConstraint(in, out, s)
 }
 
+func autoConvert_manifests_PackageManifestRepository_To_v1alpha1_PackageManifestRepository(in *PackageManifestRepository, out *v1alpha1.PackageManifestRepository, s conversion.Scope) error {
+	out.File = in.File
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_manifests_PackageManifestRepository_To_v1alpha1_PackageManifestRepository is an autogenerated conversion function.
+func Convert_manifests_PackageManifestRepository_To_v1alpha1_PackageManifestRepository(in *PackageManifestRepository, out *v1alpha1.PackageManifestRepository, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestRepository_To_v1alpha1_PackageManifestRepository(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestRepository_To_manifests_PackageManifestRepository(in *v1alpha1.PackageManifestRepository, out *PackageManifestRepository, s conversion.Scope) error {
+	out.File = in.File
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestRepository_To_manifests_PackageManifestRepository is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestRepository_To_manifests_PackageManifestRepository(in *v1alpha1.PackageManifestRepository, out *PackageManifestRepository, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestRepository_To_manifests_PackageManifestRepository(in, out, s)
+}
+
 func autoConvert_manifests_PackageManifestSpec_To_v1alpha1_PackageManifestSpec(in *PackageManifestSpec, out *v1alpha1.PackageManifestSpec, s conversion.Scope) error {
 	out.Scopes = *(*[]v1alpha1.PackageManifestScope)(unsafe.Pointer(&in.Scopes))
 	out.Phases = *(*[]v1alpha1.PackageManifestPhase)(unsafe.Pointer(&in.Phases))
@@ -546,6 +727,8 @@ func autoConvert_manifests_PackageManifestSpec_To_v1alpha1_PackageManifestSpec(i
 	out.Images = *(*[]v1alpha1.PackageManifestImage)(unsafe.Pointer(&in.Images))
 	out.Components = (*v1alpha1.PackageManifestComponentsConfig)(unsafe.Pointer(in.Components))
 	out.Constraints = *(*[]v1alpha1.PackageManifestConstraint)(unsafe.Pointer(&in.Constraints))
+	out.Repositories = *(*[]v1alpha1.PackageManifestRepository)(unsafe.Pointer(&in.Repositories))
+	out.Dependencies = *(*[]v1alpha1.PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 
@@ -564,6 +747,8 @@ func autoConvert_v1alpha1_PackageManifestSpec_To_manifests_PackageManifestSpec(i
 	out.Images = *(*[]PackageManifestImage)(unsafe.Pointer(&in.Images))
 	out.Components = (*PackageManifestComponentsConfig)(unsafe.Pointer(in.Components))
 	out.Constraints = *(*[]PackageManifestConstraint)(unsafe.Pointer(&in.Constraints))
+	out.Repositories = *(*[]PackageManifestRepository)(unsafe.Pointer(&in.Repositories))
+	out.Dependencies = *(*[]PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 
@@ -574,9 +759,11 @@ func Convert_v1alpha1_PackageManifestSpec_To_manifests_PackageManifestSpec(in *v
 
 func autoConvert_manifests_PackageManifestSpecConfig_To_v1alpha1_PackageManifestSpecConfig(in *PackageManifestSpecConfig, out *v1alpha1.PackageManifestSpecConfig, s conversion.Scope) error {
 	if in.OpenAPIV3Schema != nil {
-		in := in.OpenAPIV3Schema
-		out.OpenAPIV3Schema = new(v1.JSONSchemaProps)
-		return v1.Convert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(in, out.OpenAPIV3Schema, s)
+		in, out := &in.OpenAPIV3Schema, &out.OpenAPIV3Schema
+		*out = new(v1.JSONSchemaProps)
+		if err := v1.Convert_apiextensions_JSONSchemaProps_To_v1_JSONSchemaProps(*in, *out, s); err != nil {
+			return err
+		}
 	} else {
 		out.OpenAPIV3Schema = nil
 	}
@@ -590,9 +777,11 @@ func Convert_manifests_PackageManifestSpecConfig_To_v1alpha1_PackageManifestSpec
 
 func autoConvert_v1alpha1_PackageManifestSpecConfig_To_manifests_PackageManifestSpecConfig(in *v1alpha1.PackageManifestSpecConfig, out *PackageManifestSpecConfig, s conversion.Scope) error {
 	if in.OpenAPIV3Schema != nil {
-		in := in.OpenAPIV3Schema
-		out.OpenAPIV3Schema = new(apiextensions.JSONSchemaProps)
-		return v1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(in, out.OpenAPIV3Schema, s)
+		in, out := &in.OpenAPIV3Schema, &out.OpenAPIV3Schema
+		*out = new(apiextensions.JSONSchemaProps)
+		if err := Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(*in, *out, s); err != nil {
+			return err
+		}
 	} else {
 		out.OpenAPIV3Schema = nil
 	}
@@ -672,6 +861,98 @@ func autoConvert_v1alpha1_PackageManifestTestKubeconform_To_manifests_PackageMan
 // Convert_v1alpha1_PackageManifestTestKubeconform_To_manifests_PackageManifestTestKubeconform is an autogenerated conversion function.
 func Convert_v1alpha1_PackageManifestTestKubeconform_To_manifests_PackageManifestTestKubeconform(in *v1alpha1.PackageManifestTestKubeconform, out *PackageManifestTestKubeconform, s conversion.Scope) error {
 	return autoConvert_v1alpha1_PackageManifestTestKubeconform_To_manifests_PackageManifestTestKubeconform(in, out, s)
+}
+
+func autoConvert_manifests_PackageManifestUniqueInScopeConstraint_To_v1alpha1_PackageManifestUniqueInScopeConstraint(in *PackageManifestUniqueInScopeConstraint, out *v1alpha1.PackageManifestUniqueInScopeConstraint, s conversion.Scope) error {
+	return nil
+}
+
+// Convert_manifests_PackageManifestUniqueInScopeConstraint_To_v1alpha1_PackageManifestUniqueInScopeConstraint is an autogenerated conversion function.
+func Convert_manifests_PackageManifestUniqueInScopeConstraint_To_v1alpha1_PackageManifestUniqueInScopeConstraint(in *PackageManifestUniqueInScopeConstraint, out *v1alpha1.PackageManifestUniqueInScopeConstraint, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestUniqueInScopeConstraint_To_v1alpha1_PackageManifestUniqueInScopeConstraint(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestUniqueInScopeConstraint_To_manifests_PackageManifestUniqueInScopeConstraint(in *v1alpha1.PackageManifestUniqueInScopeConstraint, out *PackageManifestUniqueInScopeConstraint, s conversion.Scope) error {
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestUniqueInScopeConstraint_To_manifests_PackageManifestUniqueInScopeConstraint is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestUniqueInScopeConstraint_To_manifests_PackageManifestUniqueInScopeConstraint(in *v1alpha1.PackageManifestUniqueInScopeConstraint, out *PackageManifestUniqueInScopeConstraint, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestUniqueInScopeConstraint_To_manifests_PackageManifestUniqueInScopeConstraint(in, out, s)
+}
+
+func autoConvert_manifests_Repository_To_v1alpha1_Repository(in *Repository, out *v1alpha1.Repository, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	return nil
+}
+
+// Convert_manifests_Repository_To_v1alpha1_Repository is an autogenerated conversion function.
+func Convert_manifests_Repository_To_v1alpha1_Repository(in *Repository, out *v1alpha1.Repository, s conversion.Scope) error {
+	return autoConvert_manifests_Repository_To_v1alpha1_Repository(in, out, s)
+}
+
+func autoConvert_v1alpha1_Repository_To_manifests_Repository(in *v1alpha1.Repository, out *Repository, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	return nil
+}
+
+// Convert_v1alpha1_Repository_To_manifests_Repository is an autogenerated conversion function.
+func Convert_v1alpha1_Repository_To_manifests_Repository(in *v1alpha1.Repository, out *Repository, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Repository_To_manifests_Repository(in, out, s)
+}
+
+func autoConvert_manifests_RepositoryEntry_To_v1alpha1_RepositoryEntry(in *RepositoryEntry, out *v1alpha1.RepositoryEntry, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData(&in.Data, &out.Data, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_manifests_RepositoryEntry_To_v1alpha1_RepositoryEntry is an autogenerated conversion function.
+func Convert_manifests_RepositoryEntry_To_v1alpha1_RepositoryEntry(in *RepositoryEntry, out *v1alpha1.RepositoryEntry, s conversion.Scope) error {
+	return autoConvert_manifests_RepositoryEntry_To_v1alpha1_RepositoryEntry(in, out, s)
+}
+
+func autoConvert_v1alpha1_RepositoryEntry_To_manifests_RepositoryEntry(in *v1alpha1.RepositoryEntry, out *RepositoryEntry, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData(&in.Data, &out.Data, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_RepositoryEntry_To_manifests_RepositoryEntry is an autogenerated conversion function.
+func Convert_v1alpha1_RepositoryEntry_To_manifests_RepositoryEntry(in *v1alpha1.RepositoryEntry, out *RepositoryEntry, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RepositoryEntry_To_manifests_RepositoryEntry(in, out, s)
+}
+
+func autoConvert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData(in *RepositoryEntryData, out *v1alpha1.RepositoryEntryData, s conversion.Scope) error {
+	out.Image = in.Image
+	out.Digest = in.Digest
+	out.Versions = *(*[]string)(unsafe.Pointer(&in.Versions))
+	out.Constraints = *(*[]v1alpha1.PackageManifestConstraint)(unsafe.Pointer(&in.Constraints))
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData is an autogenerated conversion function.
+func Convert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData(in *RepositoryEntryData, out *v1alpha1.RepositoryEntryData, s conversion.Scope) error {
+	return autoConvert_manifests_RepositoryEntryData_To_v1alpha1_RepositoryEntryData(in, out, s)
+}
+
+func autoConvert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData(in *v1alpha1.RepositoryEntryData, out *RepositoryEntryData, s conversion.Scope) error {
+	out.Image = in.Image
+	out.Digest = in.Digest
+	out.Versions = *(*[]string)(unsafe.Pointer(&in.Versions))
+	out.Constraints = *(*[]PackageManifestConstraint)(unsafe.Pointer(&in.Constraints))
+	out.Name = in.Name
+	return nil
+}
+
+// Convert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData is an autogenerated conversion function.
+func Convert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData(in *v1alpha1.RepositoryEntryData, out *RepositoryEntryData, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RepositoryEntryData_To_manifests_RepositoryEntryData(in, out, s)
 }
 
 func autoConvert_manifests_TemplateContext_To_v1alpha1_TemplateContext(in *TemplateContext, out *v1alpha1.TemplateContext, s conversion.Scope) error {
