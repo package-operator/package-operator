@@ -20,6 +20,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/openshift/api v0.0.0-20231113191037-5e6069c685ad
+	github.com/operator-framework/deppy v0.1.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/pterm/pterm v0.12.71
 	github.com/spf13/cobra v1.8.0
@@ -28,6 +29,7 @@ require (
 	github.com/yannh/kubeconform v0.6.4
 	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.26.0
+	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/sys v0.15.0
 	k8s.io/api v0.28.4
 	k8s.io/apiextensions-apiserver v0.28.4
@@ -68,6 +70,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/go-air/gini v1.0.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
@@ -130,7 +133,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
