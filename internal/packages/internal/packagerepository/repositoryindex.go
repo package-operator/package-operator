@@ -1,18 +1,26 @@
 package packagerepository
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/crane"
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagestructure"
 )
+
+const filePathInRepo = "repository/repository.yaml"
 
 // RepositoryIndex ties multiple PackageIndex objects together to represent a whole repository.
 type RepositoryIndex struct {
@@ -32,6 +40,55 @@ func NewRepositoryIndex(meta metav1.ObjectMeta) *RepositoryIndex {
 		ObjectMeta: meta,
 	}
 	return ri
+}
+
+func SaveRepositoryToOCI(ctx context.Context, idx *RepositoryIndex) (containerregistrypkgv1.Image, error) {
+	buf := &bytes.Buffer{}
+	if err := idx.Export(ctx, buf); err != nil {
+		return nil, err
+	}
+
+	layer, err := crane.Layer(map[string][]byte{filePathInRepo: buf.Bytes()})
+	if err != nil {
+		return nil, fmt.Errorf("create image layer: %w", err)
+	}
+
+	image, err := mutate.AppendLayers(empty.Image, layer)
+	if err != nil {
+		return nil, fmt.Errorf("add layer to image: %w", err)
+	}
+
+	image, err = mutate.Canonical(image)
+	if err != nil {
+		return nil, fmt.Errorf("make image canonical: %w", err)
+	}
+
+	return image, nil
+}
+
+func LoadRepositoryFromOCI(ctx context.Context, img containerregistrypkgv1.Image) (idx *RepositoryIndex, err error) {
+	reader := mutate.Extract(img)
+
+	defer func() {
+		if cErr := reader.Close(); err == nil && cErr != nil {
+			err = cErr
+		}
+	}()
+
+	tarReader := tar.NewReader(reader)
+
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil {
+			return nil, fmt.Errorf("read from image tar: %w", err)
+		}
+
+		if hdr.Name != filePathInRepo {
+			continue
+		}
+
+		return LoadRepository(ctx, tarReader)
+	}
 }
 
 func LoadRepositoryFromFile(ctx context.Context, path string) (idx *RepositoryIndex, err error) {
@@ -113,6 +170,15 @@ func (ri *RepositoryIndex) ListEntries(pkgName string) []manifests.RepositoryEnt
 		return nil
 	}
 	return pi.ListEntries()
+}
+
+func (ri *RepositoryIndex) ListAllEntries() []manifests.RepositoryEntry {
+	entires := []manifests.RepositoryEntry{}
+	for _, pkgIdx := range ri.packageIndexes {
+		entires = append(entires, pkgIdx.ListEntries()...)
+	}
+
+	return entires
 }
 
 func (ri *RepositoryIndex) Metadata() *manifests.Repository {

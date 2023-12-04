@@ -16,7 +16,7 @@ type PackageManifestLockSpec struct {
 	// List of resolved images
 	Images []PackageManifestLockImage `json:"images"`
 	// List of resolved dependency images.
-	Dependencies []PackageManifestDependency `json:"dependencies,omitempty"`
+	Dependencies []PackageManifestLockDependency `json:"dependencies,omitempty"`
 }
 
 // PackageManifestLockImage contains information about a resolved image.

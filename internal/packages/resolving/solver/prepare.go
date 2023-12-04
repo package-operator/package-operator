@@ -1,12 +1,10 @@
 package solver
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/operator-framework/deppy/pkg/deppy"
 	"github.com/operator-framework/deppy/pkg/deppy/constraint"
-	"github.com/operator-framework/deppy/pkg/deppy/input"
 )
 
 // countFunc counts the amount of elements in s for which the func f returns true.
@@ -19,10 +17,6 @@ func countFunc[S ~[]E, E any](s S, f func(E) bool) (count int) {
 
 	return
 }
-
-type vars []deppy.Variable
-
-func (v vars) GetVariables(context.Context) ([]deppy.Variable, error) { return v, nil }
 
 func fillIdentifiersAndLinks[IM InstallationData, SM ScopeData, CM CandidateData](installation *Installation[IM, SM, CM]) {
 	installation.solverIdentifier = "installation"
@@ -52,15 +46,14 @@ func ensureNonDuplicates[IM InstallationData, SM ScopeData, CM CandidateData](in
 				return installation.Scopes[scopeIdx].Candidates[candidateIdx].solverIdentifier == c.solverIdentifier
 			})
 			if count != 1 {
-				panic(fmt.Errorf("%w: scope %s: candidate %s defined multiple times", ErrDatastructure, installation.Scopes[scopeIdx].solverIdentifier, installation.Scopes[scopeIdx].Candidates[candidateIdx].solverIdentifier))
+				panic(fmt.Errorf("%w: scope %s: candidate %s defined %d times", ErrDatastructure, installation.Scopes[scopeIdx].solverIdentifier, installation.Scopes[scopeIdx].Candidates[candidateIdx].solverIdentifier, count))
 			}
 		}
 	}
 }
 
 func generateConstraints[IM InstallationData, SM ScopeData, CM CandidateData](installation *Installation[IM, SM, CM]) {
-	// Installation is mandatory (we want to solve something, don't we?).
-	installation.solverConstraints = append(installation.solverConstraints, constraint.Mandatory())
+	installation.solverConstraints = []deppy.Constraint{constraint.Mandatory()}
 
 	// Constraints for the installation.
 	for _, constrainer := range installation.Constrainers {
@@ -68,8 +61,7 @@ func generateConstraints[IM InstallationData, SM ScopeData, CM CandidateData](in
 	}
 
 	for scopeIdx := range installation.Scopes {
-		// Installation requires all scopes to be solved. // TODO: make this optional in case someone wants either or?
-		installation.solverConstraints = append(installation.solverConstraints, constraint.Dependency(installation.Scopes[scopeIdx].Identifier()))
+		installation.Scopes[scopeIdx].solverConstraints = []deppy.Constraint{constraint.Mandatory()}
 
 		for _, constrainer := range installation.Scopes[scopeIdx].Constrainers {
 			installation.Scopes[scopeIdx].solverConstraints = append(installation.Scopes[scopeIdx].solverConstraints,
@@ -87,19 +79,18 @@ func generateConstraints[IM InstallationData, SM ScopeData, CM CandidateData](in
 	}
 }
 
-// Prepare the give [Installation] for use by the solver and returns a [input.VariableSource] for it.
-func Prepare[IM InstallationData, SM ScopeData, CM CandidateData](installation *Installation[IM, SM, CM]) input.VariableSource {
+// Prepare the give [Installation] for use by the solver and the set of [deppy.Variable] for it.
+func Prepare[IM InstallationData, SM ScopeData, CM CandidateData](installation *Installation[IM, SM, CM]) []deppy.Variable {
 	fillIdentifiersAndLinks(installation)
 	ensureNonDuplicates(installation)
 	generateConstraints(installation)
 
-	vars := vars{*installation}
+	vars := []deppy.Variable{}
 	for scopeIdx := range installation.Scopes {
 		vars = append(vars, installation.Scopes[scopeIdx])
 		for candidateIdx := range installation.Scopes[scopeIdx].Candidates {
 			vars = append(vars, installation.Scopes[scopeIdx].Candidates[candidateIdx])
 		}
 	}
-
 	return vars
 }

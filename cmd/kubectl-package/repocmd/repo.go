@@ -4,8 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const filePathInRepo = "repository/repository.yaml"
-
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "repository",

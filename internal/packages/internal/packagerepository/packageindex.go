@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
+	"pkg.package-operator.run/semver"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
@@ -18,7 +17,7 @@ type packageIndex struct {
 	// name of the package
 	name string
 
-	orderedVersions semver.Collection
+	orderedVersions semver.VersionList
 	versions        map[string]struct{}
 	versionToDigest map[string]string
 	digestToEntry   map[string]manifests.RepositoryEntry
@@ -96,7 +95,7 @@ func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntr
 		panic(fmt.Sprintf("package index for package named %s, got: %s", pi.name, entry.Data.Name))
 	}
 
-	var entryOrderedVersions semver.Collection
+	var entryOrderedVersions semver.VersionList
 	for _, v := range entry.Data.Versions {
 		if !strings.HasPrefix(v, "v") {
 			v = "v" + v
@@ -105,7 +104,7 @@ func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntr
 			return newPackageVersionAlreadyExistsError(pi.name, v)
 		}
 
-		sv, err := semver.StrictNewVersion(strings.TrimPrefix(v, "v"))
+		sv, err := semver.NewVersion(strings.TrimPrefix(v, "v"))
 		if err != nil {
 			return err
 		}
@@ -114,10 +113,8 @@ func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntr
 		pi.orderedVersions = append(pi.orderedVersions, sv)
 		pi.versionToDigest[v] = entry.Data.Digest
 	}
-	sort.Sort(pi.orderedVersions)
-	slices.Reverse(pi.orderedVersions)
-	sort.Sort(entryOrderedVersions)
-	slices.Reverse(entryOrderedVersions)
+	slices.SortFunc(pi.orderedVersions, func(a, b semver.Version) int { return b.Compare(a) })
+	slices.SortFunc(entryOrderedVersions, func(a, b semver.Version) int { return b.Compare(a) })
 
 	entry.Data.Versions = nil
 	for _, sv := range entryOrderedVersions {
@@ -129,7 +126,7 @@ func (pi *packageIndex) Add(ctx context.Context, entry *manifests.RepositoryEntr
 
 func (pi *packageIndex) Remove(_ context.Context, entry *manifests.RepositoryEntry) error {
 	var (
-		orderedVersions  semver.Collection
+		orderedVersions  semver.VersionList
 		versionsToRemove = map[string]struct{}{}
 	)
 	entry, err := pi.GetDigest(entry.Data.Digest)
@@ -152,6 +149,6 @@ func (pi *packageIndex) Remove(_ context.Context, entry *manifests.RepositoryEnt
 	return nil
 }
 
-func versionToString(sv *semver.Version) string {
+func versionToString(sv semver.Version) string {
 	return "v" + sv.String()
 }

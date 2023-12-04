@@ -1,7 +1,6 @@
 package solver
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -12,12 +11,9 @@ import (
 // Solve the given [Installation] and return a list of [Candidate] that need to be installed.
 // Calls [Prepare] on the given Installation before solving.
 // If the Installation does not have required packages no candidates and no error is returned.
-func Solve[IM InstallationData, SM ScopeData, CM CandidateData](ctx context.Context, installation Installation[IM, SM, CM]) ([]Candidate[IM, SM, CM], error) {
-	// Make sure the Installation is sane.
-	variableSource := Prepare(&installation)
-
+func Solve[IM InstallationData, SM ScopeData, CM CandidateData](installation Installation[IM, SM, CM]) ([]Candidate[IM, SM, CM], error) {
 	// Run solver.
-	solution, err := solver.NewDeppySolver(variableSource).Solve(ctx)
+	solution, err := solver.NewDeppySolver().Solve(Prepare(&installation))
 	if err != nil {
 		return nil, err
 	}

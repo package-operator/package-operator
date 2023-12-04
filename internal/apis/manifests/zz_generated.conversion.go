@@ -631,7 +631,7 @@ func Convert_v1alpha1_PackageManifestLockImage_To_manifests_PackageManifestLockI
 
 func autoConvert_manifests_PackageManifestLockSpec_To_v1alpha1_PackageManifestLockSpec(in *PackageManifestLockSpec, out *v1alpha1.PackageManifestLockSpec, s conversion.Scope) error {
 	out.Images = *(*[]v1alpha1.PackageManifestLockImage)(unsafe.Pointer(&in.Images))
-	out.Dependencies = *(*[]v1alpha1.PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
+	out.Dependencies = *(*[]v1alpha1.PackageManifestLockDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 
@@ -642,7 +642,7 @@ func Convert_manifests_PackageManifestLockSpec_To_v1alpha1_PackageManifestLockSp
 
 func autoConvert_v1alpha1_PackageManifestLockSpec_To_manifests_PackageManifestLockSpec(in *v1alpha1.PackageManifestLockSpec, out *PackageManifestLockSpec, s conversion.Scope) error {
 	out.Images = *(*[]PackageManifestLockImage)(unsafe.Pointer(&in.Images))
-	out.Dependencies = *(*[]PackageManifestDependency)(unsafe.Pointer(&in.Dependencies))
+	out.Dependencies = *(*[]PackageManifestLockDependency)(unsafe.Pointer(&in.Dependencies))
 	return nil
 }
 

@@ -3,10 +3,10 @@ package repocmd
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
+	"pkg.package-operator.run/semver"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages"
@@ -31,7 +31,7 @@ func newAddCmd() *cobra.Command {
 
 		versionsStrs := args[2:]
 		for _, v := range versionsStrs {
-			if _, err := semver.StrictNewVersion(v); err != nil {
+			if _, err := semver.NewVersion(v); err != nil {
 				return fmt.Errorf("version: %w", err)
 			}
 		}

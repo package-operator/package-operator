@@ -11,18 +11,18 @@ import (
 func TestInstallationPrepareAllEmpty(t *testing.T) {
 	t.Parallel()
 
-	inst := &solver.Installation[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{}
+	inst := &solver.Installation[struct{}, solver.MockScopeData, solver.MockCandidateData]{}
 	solver.Prepare(inst)
 }
 
 func TestPrepareCandidateSet(t *testing.T) {
 	t.Parallel()
 
-	inst := &solver.Installation[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
-		Scopes: []solver.Scope[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+	inst := &solver.Installation[struct{}, solver.MockScopeData, solver.MockCandidateData]{
+		Scopes: []solver.Scope[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 			{
 				Data: solver.MockScopeData{ID: "scope"},
-				Candidates: []solver.Candidate[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+				Candidates: []solver.Candidate[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 					{Data: solver.MockCandidateData{ID: "yes@3.0.0"}},
 				},
 			},
@@ -38,10 +38,10 @@ func TestPrepareCandidateSet(t *testing.T) {
 func TestPrepareCandidateDuplicateVersion(t *testing.T) {
 	t.Parallel()
 
-	inst := &solver.Installation[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
-		Scopes: []solver.Scope[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+	inst := &solver.Installation[struct{}, solver.MockScopeData, solver.MockCandidateData]{
+		Scopes: []solver.Scope[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 			{
-				Candidates: []solver.Candidate[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+				Candidates: []solver.Candidate[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 					{Data: solver.MockCandidateData{ID: "yes@1.0.0"}},
 					{Data: solver.MockCandidateData{ID: "yes@1.0.0"}},
 				},
@@ -51,17 +51,17 @@ func TestPrepareCandidateDuplicateVersion(t *testing.T) {
 
 	require.Panics(t, func() { solver.Prepare(inst) })
 
-	inst = &solver.Installation[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
-		Scopes: []solver.Scope[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+	inst = &solver.Installation[struct{}, solver.MockScopeData, solver.MockCandidateData]{
+		Scopes: []solver.Scope[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 			{
 				Data: solver.MockScopeData{ID: "scopeA"},
-				Candidates: []solver.Candidate[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+				Candidates: []solver.Candidate[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 					{Data: solver.MockCandidateData{ID: "yes@1.0.0"}},
 				},
 			},
 			{
 				Data: solver.MockScopeData{ID: "scopeB"},
-				Candidates: []solver.Candidate[solver.MockInstallationData, solver.MockScopeData, solver.MockCandidateData]{
+				Candidates: []solver.Candidate[struct{}, solver.MockScopeData, solver.MockCandidateData]{
 					{Data: solver.MockCandidateData{ID: "yes@1.0.0"}},
 				},
 			},

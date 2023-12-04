@@ -268,10 +268,8 @@ func (in *PackageManifestLockSpec) DeepCopyInto(out *PackageManifestLockSpec) {
 	}
 	if in.Dependencies != nil {
 		in, out := &in.Dependencies, &out.Dependencies
-		*out = make([]PackageManifestDependency, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		*out = make([]PackageManifestLockDependency, len(*in))
+		copy(*out, *in)
 	}
 }
 

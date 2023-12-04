@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
@@ -73,6 +74,21 @@ func (mri *MultiRepositoryIndex) ListEntries(repoName, pkgName string) []Entry {
 	return outEntries
 }
 
+func (mri *MultiRepositoryIndex) ListAllEntries() []Entry {
+	entries := []Entry{}
+	for repoName, repoIdx := range mri.repos {
+		for _, baseEntry := range repoIdx.ListAllEntries() {
+			nonMagicalBaseEntry := baseEntry
+			entries = append(entries, Entry{
+				RepositoryEntry: &nonMagicalBaseEntry,
+				RepositoryName:  repoName,
+			})
+		}
+	}
+
+	return entries
+}
+
 func (mri *MultiRepositoryIndex) GetLatestEntry(repoName, pkgName string) (Entry, error) {
 	repo, exists := mri.repos[repoName]
 	if !exists {
@@ -132,6 +148,15 @@ func (mri *MultiRepositoryIndex) GetRepository(repoName string) (*RepositoryInde
 		return nil, newRepositoryNotFoundError(repoName)
 	}
 	return repo, nil
+}
+
+func (mri *MultiRepositoryIndex) LoadRepositoryFromOCI(ctx context.Context, img containerregistrypkgv1.Image) error {
+	repo, err := LoadRepositoryFromOCI(ctx, img)
+	if err != nil {
+		return err
+	}
+	mri.repos[repo.Metadata().Name] = repo
+	return nil
 }
 
 func (mri *MultiRepositoryIndex) LoadRepositoryFromFile(ctx context.Context, fileName string) error {

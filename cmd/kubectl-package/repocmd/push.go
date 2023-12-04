@@ -1,12 +1,9 @@
 package repocmd
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/spf13/cobra"
 
 	internalcmd "package-operator.run/internal/cmd"
@@ -38,24 +35,9 @@ func newPushCmd() *cobra.Command {
 			return fmt.Errorf("read from file: %w", err)
 		}
 
-		buf := &bytes.Buffer{}
-		if err := idx.Export(ctx, buf); err != nil {
+		image, err := packages.SaveRepositoryToOCI(ctx, idx)
+		if err != nil {
 			return err
-		}
-
-		layer, err := crane.Layer(map[string][]byte{filePathInRepo: buf.Bytes()})
-		if err != nil {
-			return fmt.Errorf("create image layer: %w", err)
-		}
-
-		image, err := mutate.AppendLayers(empty.Image, layer)
-		if err != nil {
-			return fmt.Errorf("add layer to image: %w", err)
-		}
-
-		image, err = mutate.Canonical(image)
-		if err != nil {
-			return fmt.Errorf("make image canonical: %w", err)
 		}
 
 		if err := crane.Push(image, tag); err != nil {

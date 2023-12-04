@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +13,7 @@ import (
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages"
+	"package-operator.run/internal/packages/resolving/resolvebuild"
 	"package-operator.run/internal/utils"
 )
 
@@ -85,6 +87,12 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		lockImages[i] = lockImg
 	}
 
+	r := resolvebuild.Resolver{}
+	lcks, err := r.ResolveBuild(ctx, pkg.Manifest)
+	if err != nil {
+		return nil, err
+	}
+
 	manifestLock := &manifests.PackageManifestLock{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       packages.PackageManifestLockGroupKind.Kind,
@@ -94,7 +102,8 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 			CreationTimestamp: u.cfg.Clock.Now(),
 		},
 		Spec: manifests.PackageManifestLockSpec{
-			Images: lockImages,
+			Images:       lockImages,
+			Dependencies: lcks,
 		},
 	}
 
@@ -135,28 +144,7 @@ func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img mani
 }
 
 func lockSpecsAreEqual(spec manifests.PackageManifestLockSpec, other manifests.PackageManifestLockSpec) bool {
-	thisImages := map[string]manifests.PackageManifestLockImage{}
-	for _, image := range spec.Images {
-		thisImages[image.Name] = image
-	}
-
-	otherImages := map[string]manifests.PackageManifestLockImage{}
-	for _, image := range other.Images {
-		otherImages[image.Name] = image
-	}
-
-	if len(thisImages) != len(otherImages) {
-		return false
-	}
-
-	for name, image := range thisImages {
-		otherImage, exists := otherImages[name]
-		if !exists || otherImage != image {
-			return false
-		}
-	}
-
-	return true
+	return reflect.DeepEqual(spec, other)
 }
 
 type GenerateLockDataConfig struct {

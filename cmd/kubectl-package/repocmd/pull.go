@@ -1,20 +1,14 @@
 package repocmd
 
 import (
-	"archive/tar"
-	"errors"
 	"fmt"
-	"io"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/spf13/cobra"
 
 	internalcmd "package-operator.run/internal/cmd"
 	"package-operator.run/internal/packages"
 )
-
-var ErrInvalidImage = errors.New("image does not contain repository")
 
 func newPullCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -41,38 +35,16 @@ func newPullCmd() *cobra.Command {
 			return fmt.Errorf("pull repository image: %w", err)
 		}
 
-		reader := mutate.Extract(image)
-
-		defer func() {
-			if cErr := reader.Close(); err == nil && cErr != nil {
-				err = cErr
-			}
-		}()
-		tarReader := tar.NewReader(reader)
-
-		for {
-			hdr, err := tarReader.Next()
-			switch {
-			case err == nil:
-			case errors.Is(err, io.EOF):
-				return ErrInvalidImage
-			default:
-				return fmt.Errorf("read from image tar: %w", err)
-			}
-
-			if hdr.Name != filePathInRepo {
-				continue
-			}
-
-			idx, err := packages.LoadRepository(ctx, tarReader)
-			if err != nil {
-				return err
-			}
-
-			if err := packages.SaveRepositoryToFile(ctx, filePath, idx); err != nil {
-				return fmt.Errorf("write to file: %w", err)
-			}
+		idx, err := packages.LoadRepositoryFromOCI(ctx, image)
+		if err != nil {
+			return err
 		}
+
+		if err := packages.SaveRepositoryToFile(ctx, filePath, idx); err != nil {
+			return fmt.Errorf("write to file: %w", err)
+		}
+
+		return nil
 	}
 
 	return cmd

@@ -9,8 +9,6 @@ var ErrDatastructure = errors.New("installation data structure is invalid")
 
 type InstallationData any
 
-type MockInstallationData struct{}
-
 // InstallationConstrainer is used to generate constraints for an [Installation].
 type InstallationConstrainer[IM InstallationData, SM ScopeData, CM CandidateData] func(i InstallationAccessor[IM, SM, CM]) []Constraint
 

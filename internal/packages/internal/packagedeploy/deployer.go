@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"pkg.package-operator.run/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -243,17 +243,20 @@ func validateConstraints(apiPkg adapters.GenericPackageAccessor, manifest *manif
 				return err
 			}
 			pv := constraint.PlatformVersion
-			var version *semver.Version
+			var version semver.Version
+			ok := true
 			switch {
 			case pv.Name == manifests.Kubernetes:
 				version, err = semver.NewVersion(env.Kubernetes.Version)
 			case pv.Name == manifests.OpenShift && env.OpenShift != nil:
 				version, err = semver.NewVersion(env.OpenShift.Version)
+			default:
+				ok = false
 			}
 			if err != nil {
 				return err
 			}
-			if version == nil {
+			if !ok {
 				continue
 			}
 			if !rangeConstraint.Check(version) {

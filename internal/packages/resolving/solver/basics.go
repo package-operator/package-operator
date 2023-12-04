@@ -1,7 +1,6 @@
 package solver
 
 import (
-	"github.com/Masterminds/semver/v3"
 	"github.com/operator-framework/deppy/pkg/deppy"
 )
 
@@ -10,10 +9,6 @@ type (
 	Constraint = deppy.Constraint
 	// Identifier uniquely identifies a solver variable.
 	Identifier = deppy.Identifier
-	// Version denoted the version of something.
-	Version = semver.Version
-	// VersionRange restricts what [Version] something supports.
-	VersionRange = semver.Constraints
 )
 
 // variable is a thing that the solver handles.
