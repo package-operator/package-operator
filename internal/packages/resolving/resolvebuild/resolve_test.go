@@ -85,7 +85,7 @@ func TestResolvePlatform(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "bigpkg"},
 		Spec: manifests.PackageManifestSpec{
 			Constraints: []manifests.PackageManifestConstraint{
-				{PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{Name: "platform", Range: ">=3"}},
+				{PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{Name: "platform", Range: ">=4.12.x"}},
 			},
 			Repositories: []manifests.PackageManifestRepository{},
 			Dependencies: []manifests.PackageManifestDependency{
@@ -109,7 +109,7 @@ func TestResolvePlatform(t *testing.T) {
 				Versions: []string{"3.0.0", "2.0.0", "1.0.0"},
 				Constraints: []manifests.PackageManifestConstraint{{
 					UniqueInScope:   &manifests.PackageManifestUniqueInScopeConstraint{},
-					PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{Name: "platform", Range: ">=2"},
+					PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{Name: "platform", Range: ">=4.11.x"},
 				}},
 			},
 		},

@@ -13,8 +13,8 @@ import (
 
 var ErrRepositoryInconsistent = errors.New("package repository inconsistent")
 
-func depdendOnConstrained(fqdn string, verConst semver.Constraint) solver.ScopeConstrainer[struct{}, scopeData, candidateData] {
-	return func(s solver.ScopeAccessor[struct{}, scopeData, candidateData]) []solver.Constraint {
+func dependOnConstrained(fqdn string, verConst semver.Constraint) solver.ScopeConstrainer[struct{}, scopeData, candidateData] {
+	return func(s solver.ScopeAccessor[struct{}, scopeData, candidateData]) []deppy.Constraint {
 		// Get solver variable IDs for all packages that fit the version constraint.
 		selectIDs := []deppy.Identifier{}
 		discardedVersions := []string{}
@@ -37,25 +37,25 @@ func depdendOnConstrained(fqdn string, verConst semver.Constraint) solver.ScopeC
 		switch {
 		case len(selectIDs) != 0:
 			// There are candidates.
-			return []solver.Constraint{constraint.Dependency(selectIDs...)}
+			return []deppy.Constraint{constraint.Dependency(selectIDs...)}
 		case len(discardedVersions) != 0:
 			// There are candidates for the package reference that were discarded by the version constraint.
 			formatter := func(_ deppy.Constraint, subject deppy.Identifier) string {
 				return fmt.Sprintf("%s requires package %s with version constraint %s but no available version out of %v satisfies this", subject, fqdn, verConst, discardedVersions)
 			}
-			return []solver.Constraint{constraint.NewUserFriendlyConstraint(constraint.Prohibited(), formatter)}
+			return []deppy.Constraint{constraint.NewUserFriendlyConstraint(constraint.Prohibited(), formatter)}
 		default:
 			// There is no canidate for the package reference.
-			formatter := func(_ solver.Constraint, subject deppy.Identifier) string {
+			formatter := func(_ deppy.Constraint, subject deppy.Identifier) string {
 				return fmt.Sprintf("%s requires package %s which has no candidates", subject, fqdn)
 			}
-			return []solver.Constraint{constraint.NewUserFriendlyConstraint(constraint.Dependency(), formatter)}
+			return []deppy.Constraint{constraint.NewUserFriendlyConstraint(constraint.Dependency(), formatter)}
 		}
 	}
 }
 
-func depdendOUncConstrained(fqdn string) solver.ScopeConstrainer[struct{}, scopeData, candidateData] {
-	return func(s solver.ScopeAccessor[struct{}, scopeData, candidateData]) []solver.Constraint {
+func dependOnUnconstrained(fqdn string) solver.ScopeConstrainer[struct{}, scopeData, candidateData] {
+	return func(s solver.ScopeAccessor[struct{}, scopeData, candidateData]) []deppy.Constraint {
 		// Get solver variable IDs for all packages that fit the version constraint.
 		selectIDs := []deppy.Identifier{}
 		for _, candidate := range s.ScopeCandidateAccessors() {
@@ -72,19 +72,19 @@ func depdendOUncConstrained(fqdn string) solver.ScopeConstrainer[struct{}, scope
 		switch {
 		case len(selectIDs) != 0:
 			// There are candidates.
-			return []solver.Constraint{constraint.Dependency(selectIDs...)}
+			return []deppy.Constraint{constraint.Dependency(selectIDs...)}
 		default:
 			// There is no canidate for the package reference.
-			formatter := func(_ solver.Constraint, subject deppy.Identifier) string {
+			formatter := func(_ deppy.Constraint, subject deppy.Identifier) string {
 				return fmt.Sprintf("%s requires package %s which has no candidates", subject, fqdn)
 			}
-			return []solver.Constraint{constraint.NewUserFriendlyConstraint(constraint.Dependency(), formatter)}
+			return []deppy.Constraint{constraint.NewUserFriendlyConstraint(constraint.Dependency(), formatter)}
 		}
 	}
 }
 
-func uniqueInScope(us solver.CandidateAccessor[struct{}, scopeData, candidateData]) []solver.Constraint {
-	constraints := []solver.Constraint{}
+func uniqueInScope(us solver.CandidateAccessor[struct{}, scopeData, candidateData]) []deppy.Constraint {
+	constraints := []deppy.Constraint{}
 
 	ourReference := us.CandidateData().fqdn
 	ourVersion := us.CandidateData().version
@@ -107,17 +107,23 @@ func uniqueInScope(us solver.CandidateAccessor[struct{}, scopeData, candidateDat
 	return constraints
 }
 
-func platformMatches(us solver.CandidateAccessor[struct{}, scopeData, candidateData]) []solver.Constraint {
+func platformMatches(us solver.CandidateAccessor[struct{}, scopeData, candidateData]) []deppy.Constraint {
 	scopePlatforms := us.CandidateScopeAccessor().ScopeData().platforms
 	ourPlatforms := us.CandidateData().platforms
 
 	for scopeName, scopeConstraint := range scopePlatforms {
 		ourPlatform, oursOK := ourPlatforms[scopeName]
-		if !oursOK || !ourPlatform.Contains(scopeConstraint) {
+		switch {
+		case !oursOK:
 			formatter := func(_ deppy.Constraint, subject deppy.Identifier) string {
-				return fmt.Sprintf("%q requires platform %q within range %q but scope needs at least range %q ", subject, scopeName, ourPlatform.String(), scopeConstraint)
+				return fmt.Sprintf("support for platform %q is required but %s does not support it", scopeName, subject)
 			}
-			return []solver.Constraint{constraint.NewUserFriendlyConstraint(constraint.Prohibited(), formatter)}
+			return []deppy.Constraint{constraint.NewUserFriendlyConstraint(constraint.Prohibited(), formatter)}
+		case !ourPlatform.Contains(scopeConstraint):
+			formatter := func(_ deppy.Constraint, subject deppy.Identifier) string {
+				return fmt.Sprintf("support for platform %q within range %q is required but %s supports only %q ", subject, scopeName, ourPlatform.String(), scopeConstraint)
+			}
+			return []deppy.Constraint{constraint.NewUserFriendlyConstraint(constraint.Prohibited(), formatter)}
 		}
 	}
 

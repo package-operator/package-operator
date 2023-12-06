@@ -13,7 +13,7 @@ import (
 // If the Installation does not have required packages no candidates and no error is returned.
 func Solve[IM InstallationData, SM ScopeData, CM CandidateData](installation Installation[IM, SM, CM]) ([]Candidate[IM, SM, CM], error) {
 	// Run solver.
-	solution, err := solver.NewDeppySolver().Solve(Prepare(&installation))
+	solution, err := solver.NewDeppySolver().Solve(InstallationAsVariables(installation))
 	if err != nil {
 		return nil, err
 	}

@@ -32,9 +32,9 @@ func (r *Resolver) addScope(ctx context.Context, pkg *manifests.PackageManifest)
 			if err != nil {
 				return err
 			}
-			scope.Constrainers = append(scope.Constrainers, depdendOnConstrained(dep.Image.Package, rng))
+			scope.Constrainers = append(scope.Constrainers, dependOnConstrained(dep.Image.Package, rng))
 		} else {
-			scope.Constrainers = append(scope.Constrainers, depdendOUncConstrained(dep.Image.Package))
+			scope.Constrainers = append(scope.Constrainers, dependOnUnconstrained(dep.Image.Package))
 		}
 	}
 

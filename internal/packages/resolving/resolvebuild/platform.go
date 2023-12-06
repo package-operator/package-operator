@@ -31,10 +31,8 @@ func platformsFromConstraints(constraints []manifests.PackageManifestConstraint)
 	slices.Sort(knownPlatformTypes)
 	knownPlatformTypes = slices.Compact(knownPlatformTypes)
 
-	rangeWild, err := semver.NewConstraint("x-x")
-	if err != nil {
-		panic(err)
-	}
+	rangeWild := semver.MustNewConstraint("x-x")
+
 	allowedPlatformVersions := map[string]semver.Constraint{}
 	for _, knownPlatformType := range knownPlatformTypes {
 		knownPlatformTypeInAllAllowSets := true

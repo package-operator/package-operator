@@ -89,8 +89,11 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 
 	r := resolvebuild.Resolver{}
 	lcks, err := r.ResolveBuild(ctx, pkg.Manifest)
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
+	case len(lcks) == 0:
+		lcks = nil
 	}
 
 	manifestLock := &manifests.PackageManifestLock{
@@ -107,8 +110,10 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		},
 	}
 
-	if pkg.ManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
-		return nil, ErrLockDataUnchanged
+	if pkg.ManifestLock != nil {
+		if reflect.DeepEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
+			return nil, ErrLockDataUnchanged
+		}
 	}
 	v1alpha1ManifestLock, err := packages.ToV1Alpha1ManifestLock(manifestLock)
 	if err != nil {
@@ -141,10 +146,6 @@ func (u *Update) lockImageFromManifestImage(cfg GenerateLockDataConfig, img mani
 		Image:  img.Image,
 		Digest: digest,
 	}, nil
-}
-
-func lockSpecsAreEqual(spec manifests.PackageManifestLockSpec, other manifests.PackageManifestLockSpec) bool {
-	return reflect.DeepEqual(spec, other)
 }
 
 type GenerateLockDataConfig struct {

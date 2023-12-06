@@ -2,6 +2,9 @@ package solver
 
 import (
 	"errors"
+
+	"github.com/operator-framework/deppy/pkg/deppy"
+	"github.com/operator-framework/deppy/pkg/deppy/constraint"
 )
 
 // ErrDatastructure indicates that the overall data structure of an [Installation] is invalid.
@@ -10,7 +13,7 @@ var ErrDatastructure = errors.New("installation data structure is invalid")
 type InstallationData any
 
 // InstallationConstrainer is used to generate constraints for an [Installation].
-type InstallationConstrainer[IM InstallationData, SM ScopeData, CM CandidateData] func(i InstallationAccessor[IM, SM, CM]) []Constraint
+type InstallationConstrainer[IM InstallationData, SM ScopeData, CM CandidateData] func(i InstallationAccessor[IM, SM, CM]) []deppy.Constraint
 
 // InstallationAccessor is used to access a [Installation] read only.
 type InstallationAccessor[IM InstallationData, SM ScopeData, CM CandidateData] interface {
@@ -43,4 +46,12 @@ func (i Installation[IM, SM, CM]) InstallationScopes() []ScopeAccessor[IM, SM, C
 	}
 
 	return res
+}
+
+func (i *Installation[IM, SM, CM]) generateConstraints() {
+	i.solverConstraints = []deppy.Constraint{constraint.Mandatory()}
+
+	for _, constrainer := range i.Constrainers {
+		i.solverConstraints = append(i.solverConstraints, constrainer(*i)...)
+	}
 }

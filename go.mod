@@ -20,7 +20,7 @@ require (
 	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
-	github.com/openshift/api v0.0.0-20231205165935-74f9448ac210
+	github.com/openshift/api v0.0.0-20231206170337-f356bd9e2ff6
 	github.com/operator-framework/deppy v0.2.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/pterm/pterm v0.12.71
@@ -36,11 +36,11 @@ require (
 	k8s.io/apimachinery v0.28.4
 	k8s.io/apiserver v0.28.4
 	k8s.io/client-go v0.28.4
-	k8s.io/kube-openapi v0.0.0-20231129212854-f0671cc7e66a
+	k8s.io/kube-openapi v0.0.0-20231206194836-bf4651e18aa8
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	package-operator.run/apis v1.9.2
 	package-operator.run/pkg v1.9.2
-	pkg.package-operator.run/semver v0.0.0-20231206184202-0299a752c02b
+	pkg.package-operator.run/semver v0.0.0-20231207113055-fbee8f0c246e
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.4.0

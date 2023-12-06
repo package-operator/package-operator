@@ -1,20 +1,25 @@
 package solver
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/operator-framework/deppy/pkg/deppy"
+	"github.com/operator-framework/deppy/pkg/deppy/constraint"
+)
 
 // ScopeConstrainer is used to generate constraints for a [Scope].
-type ScopeConstrainer[IM InstallationData, SM ScopeData, CM CandidateData] func(s ScopeAccessor[IM, SM, CM]) []Constraint
+type ScopeConstrainer[IM InstallationData, SM ScopeData, CM CandidateData] func(s ScopeAccessor[IM, SM, CM]) []deppy.Constraint
 
 type ScopeData interface {
-	ScopeIdentifier() Identifier
+	ScopeIdentifier() deppy.Identifier
 }
 
 type MockScopeData struct {
 	ID string
 }
 
-func (s MockScopeData) ScopeIdentifier() Identifier {
-	return Identifier(fmt.Sprintf("scope:%s", s.ID))
+func (s MockScopeData) ScopeIdentifier() deppy.Identifier {
+	return deppy.Identifier(fmt.Sprintf("scope:%s", s.ID))
 }
 
 // ScopeAccessor is used to generate constraints for an [Scope].
@@ -57,4 +62,12 @@ func (s Scope[IM, SM, CM]) ScopeCandidateAccessors() []CandidateAccessor[IM, SM,
 
 func (s Scope[IM, SM, CM]) ScopeInstallationAccessor() InstallationAccessor[IM, SM, CM] {
 	return s.installation
+}
+
+func (s *Scope[IM, SM, CM]) generateConstraints() {
+	s.solverConstraints = []deppy.Constraint{constraint.Mandatory()}
+
+	for _, constrainer := range s.Constrainers {
+		s.solverConstraints = append(s.solverConstraints, constrainer(s)...)
+	}
 }
