@@ -57,7 +57,13 @@ func RenderObjects(
 		paths[i] = path
 		i++
 	}
-	sort.Sort(pathsAscending(paths))
+	// sorts a list of file paths ascending.
+	// e.g. a, a/b, a/b/c, b, b/x, bat.
+	sort.Slice(paths, func(i, j int) bool {
+		p1 := strings.ReplaceAll(paths[i], "/", "\x00")
+		p2 := strings.ReplaceAll(paths[j], "/", "\x00")
+		return p1 < p2
+	})
 
 	var objects []unstructured.Unstructured
 	for _, path := range paths {
@@ -65,24 +71,6 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 	return objects, nil
-}
-
-// sorts a list of file paths ascending.
-// e.g. a, a/b, a/b/c, b, b/x, bat.
-type pathsAscending []string
-
-func (s pathsAscending) Len() int {
-	return len(s)
-}
-
-func (s pathsAscending) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s pathsAscending) Less(i, j int) bool {
-	s1 := strings.ReplaceAll(s[i], "/", "\x00")
-	s2 := strings.ReplaceAll(s[j], "/", "\x00")
-	return s1 < s2
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
