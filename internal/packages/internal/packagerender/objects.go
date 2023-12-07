@@ -5,6 +5,7 @@ import (
 	"context"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,6 +26,7 @@ func RenderObjects(
 	[]unstructured.Unstructured, error,
 ) {
 	pathObjectMap := map[string][]unstructured.Unstructured{}
+
 	for path, content := range pkg.Files {
 		switch {
 		case strings.HasPrefix(filepath.Base(path), "_"):
@@ -47,8 +49,25 @@ func RenderObjects(
 			return nil, err
 		}
 	}
+
+	// sort paths to have a deterministic output.
+	paths := make([]string, len(pathObjectMap))
+	var i int
+	for path := range pathObjectMap {
+		paths[i] = path
+		i++
+	}
+	// sorts a list of file paths ascending.
+	// e.g. a, a/b, a/b/c, b, b/x, bat.
+	sort.Slice(paths, func(i, j int) bool {
+		p1 := strings.ReplaceAll(paths[i], "/", "\x00")
+		p2 := strings.ReplaceAll(paths[j], "/", "\x00")
+		return p1 < p2
+	})
+
 	var objects []unstructured.Unstructured
-	for _, objs := range pathObjectMap {
+	for _, path := range paths {
+		objs := pathObjectMap[path]
 		objects = append(objects, objs...)
 	}
 	return objects, nil

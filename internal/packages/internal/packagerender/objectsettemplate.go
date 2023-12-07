@@ -111,11 +111,6 @@ func (c phaseCollector) Collect() []corev1alpha1.ObjectSetTemplatePhase {
 			continue
 		}
 
-		// sort objects by name to ensure we are getting deterministic output.
-		sort.Slice(entry.Phase.Objects, func(i, j int) bool {
-			return entry.Phase.Objects[i].Object.GetName() < entry.Phase.Objects[j].Object.GetName()
-		})
-
 		entries = append(entries, entry)
 	}
 
