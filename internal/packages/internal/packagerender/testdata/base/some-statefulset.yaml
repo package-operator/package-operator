@@ -5,3 +5,17 @@ metadata:
   annotations:
     package-operator.run/phase: main-stuff
 spec: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: t4
+  annotations:
+    package-operator.run/phase: main-stuff
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: abc
+  annotations:
+    package-operator.run/phase: main-stuff
