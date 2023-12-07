@@ -1,4 +1,4 @@
-package resolvebuild
+package packageresolving
 
 import (
 	"fmt"
@@ -9,7 +9,10 @@ import (
 	"pkg.package-operator.run/semver"
 )
 
+// platformsFromConstraints parses a set of PackageManifestConstraints. It returns a map which has platform names as keys
+// and for each platform name a constrains the defines which version of this platform are supported.
 func platformsFromConstraints(constraints []manifests.PackageManifestConstraint) (map[string]semver.Constraint, error) {
+	// Each PackageManifest constraint is parsed into a slice of platform names that it supports.
 	platformTypeAllowSets := [][]string{}
 	for idx, c := range constraints {
 		var constraintPlatformTypes []string
@@ -24,6 +27,7 @@ func platformsFromConstraints(constraints []manifests.PackageManifestConstraint)
 		}
 	}
 
+	// flatten platformTypeAllowSets into a set of unique platform names that are known.
 	knownPlatformTypes := []string{}
 	for _, a := range platformTypeAllowSets {
 		knownPlatformTypes = append(knownPlatformTypes, a...)
@@ -31,9 +35,11 @@ func platformsFromConstraints(constraints []manifests.PackageManifestConstraint)
 	slices.Sort(knownPlatformTypes)
 	knownPlatformTypes = slices.Compact(knownPlatformTypes)
 
-	rangeWild := semver.MustNewConstraint("x-x")
-
+	// This is the returned result
 	allowedPlatformVersions := map[string]semver.Constraint{}
+
+	// all platforms that are known here get allowed in any version.
+	rangeWild := semver.MustNewConstraint("x-x")
 	for _, knownPlatformType := range knownPlatformTypes {
 		knownPlatformTypeInAllAllowSets := true
 		for _, platformTypeAllowSet := range platformTypeAllowSets {
@@ -46,6 +52,7 @@ func platformsFromConstraints(constraints []manifests.PackageManifestConstraint)
 		}
 	}
 
+	// If a constraint specifies a version constraint we replace the wild allow with the specific version.
 	for idx, c := range constraints {
 		if c.PlatformVersion != nil {
 			name := string(c.PlatformVersion.Name)

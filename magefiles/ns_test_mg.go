@@ -62,9 +62,8 @@ func (Test) Unit() {
 	)
 
 	// cgo needed to enable race detector -race
-	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
+	must(sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd))
 	must(sh.RunV("bash", "-c", "set -o pipefail; cat "+locations.UnitTestStdOut()+" | go tool test2json > "+locations.UnitTestExecReport()))
-	must(testErr)
 }
 
 // Runs the given integration suite(s) as given by the first

@@ -13,7 +13,6 @@ import (
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages"
-	"package-operator.run/internal/packages/resolving/resolvebuild"
 	"package-operator.run/internal/utils"
 )
 
@@ -87,13 +86,19 @@ func (u *Update) GenerateLockData(ctx context.Context, srcPath string, opts ...G
 		lockImages[i] = lockImg
 	}
 
-	r := resolvebuild.Resolver{}
-	lcks, err := r.ResolveBuild(ctx, pkg.Manifest)
+	r := packages.BuildResolver{}
+	lckPtr, err := r.AddManifest(ctx, pkg.Manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	var lcks []manifests.PackageManifestLockDependency
+	err = r.Solve()
 	switch {
 	case err != nil:
 		return nil, err
-	case len(lcks) == 0:
-		lcks = nil
+	case len(*lckPtr) != 0:
+		lcks = *lckPtr
 	}
 
 	manifestLock := &manifests.PackageManifestLock{

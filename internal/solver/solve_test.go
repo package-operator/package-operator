@@ -7,7 +7,7 @@ import (
 	"github.com/operator-framework/deppy/pkg/deppy/constraint"
 	"github.com/stretchr/testify/require"
 
-	"package-operator.run/internal/packages/resolving/solver"
+	"package-operator.run/internal/solver"
 )
 
 func TestSolveSuccess(t *testing.T) {
