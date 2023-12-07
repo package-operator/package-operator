@@ -64,12 +64,12 @@ func (Generate) code() {
 	apiCodeCmd := exec.Command("controller-gen", "object", "paths=./...")
 	apiCodeCmd.Dir = locations.APISubmodule()
 	if err := apiCodeCmd.Run(); err != nil {
-		panic(fmt.Errorf("generating deep copy methods: %w", err))
+		panic(fmt.Errorf("generating /api deep copy methods: %w", err))
 	}
 
-	codeCmd := exec.Command("controller-gen", "object", "paths=./internal/...")
+	codeCmd := exec.Command("controller-gen", "object", "paths=./internal/apis/...")
 	if err := codeCmd.Run(); err != nil {
-		panic(fmt.Errorf("generating deep copy methods: %w", err))
+		panic(fmt.Errorf("generating /internal deep copy methods: %w", err))
 	}
 
 	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))

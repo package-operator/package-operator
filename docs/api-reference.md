@@ -1316,10 +1316,10 @@ metadata:
   namespace: default
 spec:
   dependencies:
-  - image:
-      name: my-pkg
-      package: my-pkg.my-repo
-      range: '>=2.1'
+  - digest: sha256:00e48c32b3cdcf9e2c66467f2beb0ef33b43b54e2b56415db4ee431512c406ea
+    image: quay.io/package-operator/remote-phase-package
+    name: my-pkg
+    version: v1.12.3
   images:
   - digest: sha256:00e48c32b3cdcf9e2c66467f2beb0ef33b43b54e2b56415db4ee431512c406ea
     image: quay.io/package-operator/remote-phase-package
@@ -1480,7 +1480,6 @@ Uses a solver to find the latest version package image.
 
 
 Used in:
-* [PackageManifestLockSpec](#packagemanifestlockspec)
 * [PackageManifestSpec](#packagemanifestspec)
 
 
@@ -1526,6 +1525,7 @@ Used in:
 
 
 Used in:
+* [PackageManifestLockSpec](#packagemanifestlockspec)
 
 
 ### PackageManifestLockImage
@@ -1550,7 +1550,7 @@ Used in:
 | Field | Description |
 | ----- | ----------- |
 | `images` <b>required</b><br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | List of resolved images |
-| `dependencies` <br><a href="#packagemanifestdependency">[]PackageManifestDependency</a> | List of resolved dependency images. |
+| `dependencies` <br><a href="#packagemanifestlockdependency">[]PackageManifestLockDependency</a> | List of resolved dependency images. |
 
 
 Used in:
