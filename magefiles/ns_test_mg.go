@@ -55,7 +55,7 @@ func (Test) ValidateGitClean() {
 // Runs unittests.
 func (Test) Unit() {
 	testCmd := fmt.Sprintf(
-		"set -o pipefail; go test -coverprofile=%s -race -test.v ./... ./pkg/... ./apis/... | tee %s",
+		"set -o pipefail; go test -json -coverprofile=%s -race -test.v ./... ./pkg/... ./apis/... | tee %s | gotestfmt",
 		locations.UnitTestCoverageReport(), locations.UnitTestStdOut(),
 	)
 

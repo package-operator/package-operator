@@ -23,7 +23,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '>=1.21.4'
+        go-version: '>=1.21.5'
 
     - uses: actions/cache@v3
       with:
@@ -34,6 +34,9 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+
+    - name: Set up gotestfmt
+      uses: gotesttools/gotestfmt-action@v2
 
     - name: Lint
       run: ./mage test:lint
@@ -65,7 +68,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '>=1.21.4'
+        go-version: '>=1.21.5'
 
     - uses: actions/cache@v3
       with:
