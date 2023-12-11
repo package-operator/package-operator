@@ -42,6 +42,7 @@ const (
 	kindVersion          = "0.20.0"
 	k8sDocGenVersion     = "0.6.2"
 	helmVersion          = "3.12.3"
+	testFMTVersion       = "2.5.0"
 )
 
 // Types for target configuration.

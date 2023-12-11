@@ -22,7 +22,13 @@ func (d Dependency) All() {
 		Dependency.Docgen,
 		Dependency.Crane,
 		Dependency.Helm,
+		Dependency.GoTestFMT,
 	)
+}
+
+func (d Dependency) GoTestFMT() error {
+	url := "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt"
+	return locations.Deps().GoInstall("gotestfmt", url, testFMTVersion)
 }
 
 // Ensure controller-gen - kubebuilder code and manifest generator.
