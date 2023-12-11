@@ -54,6 +54,8 @@ func (Test) ValidateGitClean() {
 
 // Runs unittests.
 func (Test) Unit() {
+	mg.Deps(Dependency.GoTestFMT)
+
 	testCmd := fmt.Sprintf(
 		"set -o pipefail; go test -json -coverprofile=%s -race -test.v ./... ./pkg/... ./apis/... | tee %s | gotestfmt",
 		locations.UnitTestCoverageReport(), locations.UnitTestStdOut(),
@@ -112,6 +114,8 @@ func (t Test) PackageOperatorIntegrationRun(ctx context.Context, filter string) 
 }
 
 func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
+	mg.Deps(Dependency.GoTestFMT)
+
 	os.Setenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE", locations.ImageURL("test-stub-package", false))
 	os.Setenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE", locations.ImageURL("test-stub-multi-package", false))
 	os.Setenv("PKO_TEST_STUB_IMAGE", locations.ImageURL("test-stub", false))
@@ -119,17 +123,17 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 		os.Setenv("PKO_TEST_LATEST_BOOTSTRAP_JOB", defaultPKOLatestBootstrapJob)
 	}
 
-	// count=1 will force a new run, instead of using the cache
-	args := []string{
-		"test", "-v", "-failfast", "-count=1", "-timeout=20m", "-coverpkg=./...,./apis/...,./pkg/...", "--tags=integration",
-		fmt.Sprintf("-coverprofile=%s", locations.PKOIntegrationTestCoverageReport()),
-	}
+	f := ""
 	if len(filter) > 0 {
-		args = append(args, "-run", filter)
+		f = "-run " + filter
 	}
-	args = append(args, "./integration/package-operator/...")
 
-	testErr := sh.Run("go", args...)
+	testCmd := fmt.Sprintf(
+		"set -o pipefail; go test -failfast -timeout=20m -count=1 -json -coverpkg=./...,./apis/...,./pkg/... --tags=integration -coverprofile=%s %s -race -test.v ./integration/package-operator/... | gotestfmt",
+		locations.PKOIntegrationTestCoverageReport(), f,
+	)
+
+	testErr := sh.RunWithV(map[string]string{"CGO_ENABLED": "1"}, "bash", "-c", testCmd)
 
 	devEnv := locations.DevEnvNoInit()
 
@@ -147,6 +151,8 @@ func (Test) packageOperatorIntegration(ctx context.Context, filter string) {
 }
 
 func (Test) kubectlPackageIntegration() {
+	mg.Deps(Dependency.GoTestFMT)
+
 	tmp, err := os.MkdirTemp("", "kubectl-package-integration-cov-*")
 	if err != nil {
 		panic(err)
@@ -154,20 +160,12 @@ func (Test) kubectlPackageIntegration() {
 
 	defer os.RemoveAll(tmp)
 
-	env := map[string]string{
-		"GOCOVERDIR": tmp,
-	}
+	testCmd := fmt.Sprintf(
+		"set -o pipefail; go test -json -failfast -count=1 -timeout=5m --tags=integration -coverprofile=%s -race -test.v ./integration/kubectl-package/... | tee %s | gotestfmt",
+		locations.PluginIntegrationTestExecReport(), locations.UnitTestStdOut(),
+	)
 
-	args := []string{"test", "-v", "-failfast", "-count=1", "-timeout=5m", "--tags=integration", "./integration/kubectl-package/..."}
-	_, isCI := os.LookupEnv("CI")
-	if isCI {
-		// test output in json format
-		args = append(args, "-json", " > "+locations.PluginIntegrationTestExecReport())
-	}
-
-	if err := sh.RunWith(env, "go", args...); err != nil {
-		panic(err)
-	}
+	must(sh.RunWithV(map[string]string{"GOCOVERDIR": tmp, "CGO_ENABLED": "1"}, "bash", "-c", testCmd))
 
 	covArgs := []string{
 		"tool", "covdata", "textfmt",
