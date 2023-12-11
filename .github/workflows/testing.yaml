@@ -35,9 +35,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Set up gotestfmt
-      uses: gotesttools/gotestfmt-action@v2
-
     - name: Lint
       run: ./mage test:lint
 
