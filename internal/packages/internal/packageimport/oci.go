@@ -58,6 +58,10 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 		files[path] = data
 	}
 
+	if len(files) == 0 {
+		return nil, packagetypes.ErrEmptyPackage
+	}
+
 	return &packagetypes.RawPackage{
 		Files: files,
 	}, nil

@@ -55,6 +55,7 @@ type ViolationReason string
 
 // Predefined reasons for package violations.
 const (
+	ViolationReasonEmptyPackage                  ViolationReason = "Package image contains no files. Might be corrupted."
 	ViolationReasonPackageManifestNotFound       ViolationReason = "PackageManifest not found"
 	ViolationReasonUnknownGVK                    ViolationReason = "unknown GVK"
 	ViolationReasonPackageManifestInvalid        ViolationReason = "PackageManifest invalid"
@@ -76,6 +77,10 @@ const (
 	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files"
 	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
 )
+
+var ErrEmptyPackage = ViolationError{
+	Reason: ViolationReasonEmptyPackage,
+}
 
 // ErrManifestNotFound indicates that a package manifest was not found at any expected location.
 var ErrManifestNotFound = ViolationError{
