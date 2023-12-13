@@ -18,14 +18,8 @@ import (
 
 func TestFromOCI(t *testing.T) {
 	t.Parallel()
-	configFile := &containerregistrypkgv1.ConfigFile{
-		Config: containerregistrypkgv1.Config{},
-		RootFS: containerregistrypkgv1.RootFS{Type: "layers"},
-	}
-	image, err := mutate.ConfigFile(empty.Image, configFile)
-	require.NoError(t, err)
 
-	layer, err := crane.Layer(map[string][]byte{
+	image := buildImage(t, map[string][]byte{
 		packagetypes.OCIPathPrefix + "/file.yaml": []byte(`test: test`),
 
 		// hidden files that need to be dropped
@@ -34,13 +28,6 @@ func TestFromOCI(t *testing.T) {
 		packagetypes.OCIPathPrefix + "/.test-fixtures/.something.yml": {11, 12},
 		packagetypes.OCIPathPrefix + "/bla/.xxx/something.yml":        {11, 12},
 	})
-	require.NoError(t, err)
-
-	image, err = mutate.AppendLayers(image, layer)
-	require.NoError(t, err)
-
-	image, err = mutate.Canonical(image)
-	require.NoError(t, err)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	rawPkg, err := FromOCI(ctx, image)
@@ -49,4 +36,36 @@ func TestFromOCI(t *testing.T) {
 	assert.Equal(t, packagetypes.Files{
 		"file.yaml": []byte(`test: test`),
 	}, rawPkg.Files)
+}
+
+func TestFromOCI_EmptyImage(t *testing.T) {
+	t.Parallel()
+
+	image := buildImage(t, map[string][]byte{})
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	_, err := FromOCI(ctx, image)
+	require.EqualError(t, err, packagetypes.ErrEmptyPackage.Error())
+}
+
+func buildImage(t *testing.T, layerData map[string][]byte) containerregistrypkgv1.Image {
+	t.Helper()
+
+	configFile := &containerregistrypkgv1.ConfigFile{
+		Config: containerregistrypkgv1.Config{},
+		RootFS: containerregistrypkgv1.RootFS{Type: "layers"},
+	}
+	image, err := mutate.ConfigFile(empty.Image, configFile)
+	require.NoError(t, err)
+
+	layer, err := crane.Layer(layerData)
+	require.NoError(t, err)
+
+	image, err = mutate.AppendLayers(image, layer)
+	require.NoError(t, err)
+
+	image, err = mutate.Canonical(image)
+	require.NoError(t, err)
+
+	return image
 }
