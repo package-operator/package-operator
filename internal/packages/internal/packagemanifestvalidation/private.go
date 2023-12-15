@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
@@ -487,7 +488,7 @@ func validateSchemaStuffWithXPrefixedName(schema *apiextensions.JSONSchemaProps,
 					allErrs.CELErrors = append(allErrs.CELErrors, field.Invalid(fldPath.Child("x-kubernetes-validations").Index(i).Child("rule"), schema.XValidations[i], cr.Error.Detail))
 				}
 			}
-			if cr.TransitionRule {
+			if cr.UsesOldSelf {
 				if uncorrelatablePath := ssv.forbidOldSelfValidations(); uncorrelatablePath != nil {
 					allErrs.CELErrors = append(allErrs.CELErrors, field.Invalid(fldPath.Child("x-kubernetes-validations").Index(i).Child("rule"), schema.XValidations[i].Rule, fmt.Sprintf("oldSelf cannot be used on the uncorrelatable portion of the schema within %v", uncorrelatablePath)))
 				}
@@ -527,7 +528,7 @@ func validatePackageManifestConfig(ctx context.Context, config *manifests.Packag
 	return allErrs
 }
 
-func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensions.JSONSchemaProps, config map[string]any, fldPath *field.Path) (field.ErrorList, error) {
+func validatePackageConfigurationBySchema(ctx context.Context, schema *apiextensions.JSONSchemaProps, config map[string]any, fldPath *field.Path) (field.ErrorList, error) {
 	if schema == nil {
 		return nil, nil
 	}
@@ -537,6 +538,22 @@ func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensio
 		return nil, err
 	}
 
+	log := logr.FromContextOrDiscard(ctx).WithName("validatePackageConfigurationBySchema")
+
 	v := validate.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
-	return validation.ValidateCustomResource(fldPath, config, v), nil
+	return validation.ValidateCustomResource(fldPath, config, validatorAdapter{log, v}), nil
+}
+
+// TODO: Remove this as soon as kube-openapi updates and supports ValidationOption.
+type validatorAdapter struct {
+	log logr.Logger
+	v   *validate.SchemaValidator
+}
+
+func (v validatorAdapter) Validate(data any, opts ...validation.ValidationOption) *validate.Result {
+	for _, opt := range opts {
+		v.log.Info("kube-openapi does not support option of apiextensions-apiserver", "option", opt)
+	}
+
+	return v.v.Validate(data)
 }
