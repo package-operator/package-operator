@@ -3,10 +3,10 @@ module package-operator.run/pkg
 go 1.21
 
 require (
-	github.com/google/cel-go v0.16.1
+	github.com/google/cel-go v0.17.7
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apimachinery v0.29.0
-	k8s.io/apiserver v0.28.4
+	k8s.io/apiserver v0.29.0
 )
 
 require (
