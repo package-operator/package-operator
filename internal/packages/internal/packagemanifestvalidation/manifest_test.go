@@ -28,6 +28,27 @@ func TestValidatePackageManifest(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid constraints",
+			packageManifest: &manifests.PackageManifest{
+				Spec: manifests.PackageManifestSpec{
+					Constraints: []manifests.PackageManifestConstraint{
+						{
+							PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{
+								Name:  "OpenShift",
+								Range: "banana",
+							},
+						},
+					},
+				},
+			},
+			expectedErrors: []string{
+				"metadata.name: Required value",
+				"spec.scopes: Required value",
+				"spec.phases: Required value",
+				`spec.constraints[0].platformVersion.range: Invalid value: "banana": improper constraint`,
+			},
+		},
+		{
 			name: "duplicated phase",
 			packageManifest: &manifests.PackageManifest{
 				Spec: manifests.PackageManifestSpec{
