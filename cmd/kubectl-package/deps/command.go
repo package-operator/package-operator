@@ -9,6 +9,7 @@ import (
 
 	"package-operator.run/cmd/kubectl-package/buildcmd"
 	clustertreecmd "package-operator.run/cmd/kubectl-package/clustertreecmd"
+	"package-operator.run/cmd/kubectl-package/repocmd"
 	"package-operator.run/cmd/kubectl-package/rolloutcmd"
 	"package-operator.run/cmd/kubectl-package/rootcmd"
 	"package-operator.run/cmd/kubectl-package/treecmd"
@@ -128,6 +129,12 @@ func (f *defaultBuilderFactory) Builder() buildcmd.Builder {
 func ProvideVersionCmd() RootSubCommandResult {
 	return RootSubCommandResult{
 		SubCommand: versioncmd.NewCmd(),
+	}
+}
+
+func ProvideRepoCmd() RootSubCommandResult {
+	return RootSubCommandResult{
+		SubCommand: repocmd.NewCmd(),
 	}
 }
 

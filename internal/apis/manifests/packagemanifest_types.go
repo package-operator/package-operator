@@ -68,6 +68,14 @@ type PackageManifestSpec struct {
 	// Used to conditionally render objects based on CEL expressions.
 	// +optional
 	Filters PackageManifestFilter
+	// Constraints limit what environments a package can be installed into.
+	// e.g. can only be installed on OpenShift.
+	// +optional
+	Constraints []PackageManifestConstraint
+	// Repository references that are used to validate constraints and resolve dependencies.
+	Repositories []PackageManifestRepository
+	// Dependency references to resolve and use within this package.
+	Dependencies []PackageManifestDependency
 }
 
 // PackageManifestFilter is used to conditionally render objects based on CEL expressions.
@@ -105,6 +113,62 @@ type PackageManifestPath struct {
 	// Has access to the full template context and named conditions.
 	Expression string `json:"expression"`
 }
+
+type PackageManifestRepository struct {
+	// References a file in the filesystem to load.
+	// +example=../myrepo.yaml
+	File string
+	// References an image in a container image registry.
+	// +example=quay.io/package-operator/my-repo:latest
+	Image string
+}
+
+// Uses a solver to find the latest version package image.
+type PackageManifestDependency struct {
+	// Resolves the dependency as a image url and digest and commits it to the PackageManifestLock.
+	Image *PackageManifestDependencyImage
+}
+
+type PackageManifestDependencyImage struct {
+	// Name for the dependency.
+	// +example=my-pkg
+	Name string
+	// Package FQDN <package-name>.<repository name>
+	// +example=my-pkg.my-repo
+	Package string
+	// Semantic Versioning 2.0.0 version range.
+	// +example=>=2.1
+	Range string
+}
+
+// PackageManifestConstraint configures environment constraints to block package installation.
+type PackageManifestConstraint struct {
+	// PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.
+	// This constraint is ignored when running on a different platform.
+	// e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.
+	// Use the Platform constraint to enforce running on a specific platform.
+	PlatformVersion *PackageManifestPlatformVersionConstraint
+	// Valid platforms that support this package.
+	// +example=[Kubernetes]
+	Platform []PlatformName
+	// Constraints this package to be only installed once in the Cluster or once in the same Namespace.
+	UniqueInScope *PackageManifestUniqueInScopeConstraint
+}
+type PlatformName string
+
+const (
+	Kubernetes PlatformName = "Kubernetes"
+	OpenShift  PlatformName = "OpenShift"
+)
+
+type PackageManifestPlatformVersionConstraint struct {
+	// Name of the platform this constraint should apply to.
+	Name PlatformName
+	// Semantic Versioning 2.0.0 version range.
+	Range string
+}
+
+type PackageManifestUniqueInScopeConstraint struct{}
 
 type PackageManifestComponentsConfig struct{}
 

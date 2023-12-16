@@ -20,7 +20,8 @@ require (
 	github.com/google/go-containerregistry v0.20.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
+	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
+	github.com/operator-framework/deppy v0.3.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.1
@@ -35,8 +36,8 @@ require (
 	k8s.io/apimachinery v0.30.2
 	k8s.io/apiserver v0.30.2
 	k8s.io/client-go v0.30.2
-	k8s.io/kube-openapi v0.0.0-20240423202451-8948a665c108
-	k8s.io/utils v0.0.0-20240423183400-0849a56e8f22
+	k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a
+	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	package-operator.run/apis v1.11.0
 	package-operator.run/pkg v1.11.0
 	pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e
@@ -44,6 +45,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
+	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
 	sigs.k8s.io/controller-runtime v0.18.4
 	sigs.k8s.io/kind v0.23.0
 	sigs.k8s.io/yaml v1.4.0
@@ -55,7 +57,7 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.1 // indirect
+	github.com/Masterminds/semver/v3 v3.2.1 //indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -73,6 +75,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/go-air/gini v1.0.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -135,7 +138,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
+	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
