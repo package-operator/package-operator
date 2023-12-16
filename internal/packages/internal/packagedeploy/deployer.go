@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"pkg.package-operator.run/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -120,6 +122,12 @@ func (l *PackageDeployer) Deploy(
 		return nil
 	}
 
+	// Check constraints
+	if err := validateConstraints(apiPkg, pkg.Manifest, env); err != nil {
+		setInvalidConditionBasedOnLoadError(apiPkg, err)
+		return nil
+	}
+
 	// prepare package render/template context
 	tmplCtx := apiPkg.TemplateContext()
 	configuration := map[string]any{}
@@ -225,4 +233,70 @@ func setInvalidConditionBasedOnLoadError(pkg adapters.GenericPackageAccessor, er
 		Message:            err.Error(),
 		ObservedGeneration: pkg.ClientObject().GetGeneration(),
 	})
+}
+
+func validateConstraints(
+	apiPkg adapters.GenericPackageAccessor, manifest *manifests.PackageManifest, env manifests.PackageEnvironment,
+) error {
+	var messages []string
+	for _, constraint := range manifest.Spec.Constraints {
+		if len(constraint.Platform) > 0 {
+			if msg, success := platformConstraintMet(constraint.Platform, env); !success {
+				messages = append(messages, msg)
+			}
+		}
+
+		if constraint.PlatformVersion != nil {
+			rangeConstraint, err := semver.NewConstraint(constraint.PlatformVersion.Range)
+			if err != nil {
+				return err
+			}
+			pv := constraint.PlatformVersion
+			var version semver.Version
+			ok := true
+			switch {
+			case pv.Name == manifests.Kubernetes:
+				version, err = semver.NewVersion(env.Kubernetes.Version)
+			case pv.Name == manifests.OpenShift && env.OpenShift != nil:
+				version, err = semver.NewVersion(env.OpenShift.Version)
+			default:
+				ok = false
+			}
+			if err != nil {
+				return err
+			}
+			if !ok {
+				continue
+			}
+			if !rangeConstraint.Check(version) {
+				messages = append(messages, fmt.Sprintf(
+					"%s %s does not meet constraint %s", string(pv.Name), version.String(), pv.Range),
+				)
+			}
+		}
+	}
+
+	if len(messages) > 0 {
+		meta.SetStatusCondition(apiPkg.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.PackageInvalid,
+			Status:             metav1.ConditionTrue,
+			Reason:             "ConstraintsFailed",
+			Message:            "Constraints not met: " + strings.Join(messages, ", "),
+			ObservedGeneration: apiPkg.ClientObject().GetGeneration(),
+		})
+	}
+
+	return nil
+}
+
+func platformConstraintMet(
+	pns []manifests.PlatformName, env manifests.PackageEnvironment,
+) (message string, success bool) {
+	for _, pn := range pns {
+		if pn == manifests.OpenShift && env.OpenShift == nil {
+			// Constrained to OpenShift platform, but OpenShift not detected.
+			return "OpenShift platform", false
+		}
+	}
+	return "", true
 }
