@@ -122,3 +122,21 @@ func TestToV1Alpha1ManifestLock(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, lock)
 }
+
+func TestToV1Alpha1Repository(t *testing.T) {
+	t.Parallel()
+
+	repo := &manifests.Repository{}
+	alphaRepo, err := ToV1Alpha1Repository(repo)
+	require.NoError(t, err)
+	assert.NotNil(t, alphaRepo)
+}
+
+func TestToV1Alpha1RepositoryEntry(t *testing.T) {
+	t.Parallel()
+
+	repoEntry := &manifests.RepositoryEntry{}
+	alphaRepoEntry, err := ToV1Alpha1RepositoryEntry(repoEntry)
+	require.NoError(t, err)
+	assert.NotNil(t, alphaRepoEntry)
+}
