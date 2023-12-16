@@ -3,13 +3,19 @@ package packagedeploy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"pkg.package-operator.run/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -25,9 +31,13 @@ import (
 	"package-operator.run/internal/packages/internal/packagevalidation"
 )
 
+var ErrNonExisting = errors.New("unable to validate non existing package")
+
 // PackageDeployer loads package contents from file, wraps it into an ObjectDeployment and deploys it.
 type PackageDeployer struct {
-	client client.Client
+	client         client.Client
+	uncachedClient client.Client
+
 	scheme *runtime.Scheme
 
 	newObjectDeployment adapters.ObjectDeploymentFactory
@@ -49,9 +59,11 @@ type (
 )
 
 // Returns a new namespace-scoped loader for the Package API.
-func NewPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeployer {
+func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *runtime.Scheme) *PackageDeployer {
 	return &PackageDeployer{
-		client: c,
+		client:         c,
+		uncachedClient: uncachedClient,
+
 		scheme: scheme,
 
 		newObjectDeployment: adapters.NewObjectDeployment,
@@ -116,6 +128,12 @@ func (l *PackageDeployer) Deploy(
 ) error {
 	pkg, err := l.structuralLoader.LoadComponent(ctx, rawPkg, apiPkg.GetComponent())
 	if err != nil {
+		setInvalidConditionBasedOnLoadError(apiPkg, err)
+		return nil
+	}
+
+	// Check constraints
+	if err := validateConstraints(ctx, l.uncachedClient, apiPkg, pkg.Manifest, env); err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
 		return nil
 	}
@@ -225,4 +243,138 @@ func setInvalidConditionBasedOnLoadError(pkg adapters.GenericPackageAccessor, er
 		Message:            err.Error(),
 		ObservedGeneration: pkg.ClientObject().GetGeneration(),
 	})
+}
+
+var uniqueLock = sync.Mutex{}
+
+func validateUnique(
+	ctx context.Context, uncachedClient client.Client,
+	apiPkg adapters.GenericPackageAccessor, manifest *manifests.PackageManifest,
+) ([]string, error) {
+	hasUnique := false
+	for _, c := range manifest.Spec.Constraints {
+		if c.UniqueInScope != nil {
+			hasUnique = true
+			break
+		}
+	}
+	if !hasUnique {
+		return nil, nil
+	}
+
+	uniqueLock.Lock()
+	defer uniqueLock.Unlock()
+
+	s := labels.NewSelector()
+	req, err := labels.NewRequirement(manifests.PackageLabel, selection.Equals, []string{manifest.Name})
+	if err != nil {
+		return nil, fmt.Errorf("create package label selector for validate unique constraint: %w", err)
+	}
+	s.Add(*req)
+
+	var l int
+
+	if apiPkg.ClientObject().GetNamespace() == "" {
+		dst := &corev1alpha1.ClusterPackageList{}
+
+		if err := uncachedClient.List(ctx, dst, &client.ListOptions{LabelSelector: s}); err != nil {
+			return nil, fmt.Errorf("list clusterpackage for validate unique constraint: %w", err)
+		}
+
+		l = len(dst.Items)
+	} else {
+		dst := &corev1alpha1.PackageList{}
+
+		if err := uncachedClient.List(ctx, dst, &client.ListOptions{LabelSelector: s}); err != nil {
+			return nil, fmt.Errorf("list package for validate unique constraint: %w", err)
+		}
+
+		l = len(dst.Items)
+	}
+
+	switch l {
+	case 0:
+		return nil, ErrNonExisting
+	case 1:
+		return nil, nil
+	default:
+		return []string{
+			"package has unique constraint set but another package in the same namespace uses the same manifest",
+		}, nil
+	}
+}
+
+func validateConstraints(
+	ctx context.Context,
+	uncachedClient client.Client,
+	apiPkg adapters.GenericPackageAccessor, manifest *manifests.PackageManifest, env manifests.PackageEnvironment,
+) error {
+	var messages []string
+	for _, constraint := range manifest.Spec.Constraints {
+		if len(constraint.Platform) > 0 {
+			if msg, success := platformConstraintMet(constraint.Platform, env); !success {
+				messages = append(messages, msg)
+			}
+		}
+
+		if constraint.PlatformVersion != nil {
+			rangeConstraint, err := semver.NewConstraint(constraint.PlatformVersion.Range)
+			if err != nil {
+				return err
+			}
+			pv := constraint.PlatformVersion
+			var version semver.Version
+			ok := true
+			switch {
+			case pv.Name == manifests.Kubernetes:
+				version, err = semver.NewVersion(env.Kubernetes.Version)
+			case pv.Name == manifests.OpenShift && env.OpenShift != nil:
+				version, err = semver.NewVersion(env.OpenShift.Version)
+			default:
+				ok = false
+			}
+			if err != nil {
+				return err
+			}
+			if !ok {
+				continue
+			}
+			if !rangeConstraint.Check(version) {
+				messages = append(messages, fmt.Sprintf(
+					"%s %s does not meet constraint %s", string(pv.Name), version.String(), pv.Range),
+				)
+			}
+		}
+	}
+
+	extra, err := validateUnique(ctx, uncachedClient, apiPkg, manifest)
+	if err != nil {
+		return err
+	}
+
+	messages = append(messages, extra...)
+
+	if len(messages) > 0 {
+		meta.SetStatusCondition(apiPkg.GetConditions(), metav1.Condition{
+			Type:               corev1alpha1.PackageInvalid,
+			Status:             metav1.ConditionTrue,
+			Reason:             "ConstraintsFailed",
+			Message:            "Constraints not met: " + strings.Join(messages, ", "),
+			ObservedGeneration: apiPkg.ClientObject().GetGeneration(),
+		})
+	}
+
+	return nil
+}
+
+func platformConstraintMet(
+	pns []manifests.PlatformName, env manifests.PackageEnvironment,
+) (message string, success bool) {
+	for _, pn := range pns {
+		if pn == manifests.OpenShift && env.OpenShift == nil {
+			// Constrained to OpenShift platform, but OpenShift not detected.
+			return "OpenShift platform", false
+		}
+	}
+	return "", true
 }
