@@ -212,6 +212,116 @@ func TestImageWithDigestError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func Test_validateConstraints(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		apiPkg      *adapters.GenericPackage
+		manifest    *manifests.PackageManifest
+		env         manifests.PackageEnvironment
+		condMessage string
+	}{
+		{
+			name: "Kubernetes constraint not met",
+			apiPkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test", Namespace: "test",
+					},
+				},
+			},
+			manifest: &manifests.PackageManifest{
+				Spec: manifests.PackageManifestSpec{
+					Constraints: []manifests.PackageManifestConstraint{
+						{
+							PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{
+								Name:  "Kubernetes",
+								Range: ">=1.20.x",
+							},
+						},
+					},
+				},
+			},
+			env: manifests.PackageEnvironment{
+				Kubernetes: manifests.PackageEnvironmentKubernetes{
+					Version: "1.19.2",
+				},
+			},
+			condMessage: "Constraints not met: Kubernetes 1.19.2 does not meet constraint >=1.20.x",
+		},
+		{
+			name: "OpenShift constraint not met",
+			apiPkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test", Namespace: "test",
+					},
+				},
+			},
+			manifest: &manifests.PackageManifest{
+				Spec: manifests.PackageManifestSpec{
+					Constraints: []manifests.PackageManifestConstraint{
+						{
+							PlatformVersion: &manifests.PackageManifestPlatformVersionConstraint{
+								Name:  "OpenShift",
+								Range: ">=4.12.x",
+							},
+						},
+					},
+				},
+			},
+			env: manifests.PackageEnvironment{
+				Kubernetes: manifests.PackageEnvironmentKubernetes{
+					Version: "1.19.2",
+				},
+				OpenShift: &manifests.PackageEnvironmentOpenShift{
+					Version: "4.10.2",
+				},
+			},
+			condMessage: "Constraints not met: OpenShift 4.10.2 does not meet constraint >=4.12.x",
+		},
+		{
+			name: "Not OpenShift",
+			apiPkg: &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test", Namespace: "test",
+					},
+				},
+			},
+			manifest: &manifests.PackageManifest{
+				Spec: manifests.PackageManifestSpec{
+					Constraints: []manifests.PackageManifestConstraint{
+						{
+							Platform: []manifests.PlatformName{
+								manifests.OpenShift,
+							},
+						},
+					},
+				},
+			},
+			env: manifests.PackageEnvironment{
+				Kubernetes: manifests.PackageEnvironmentKubernetes{
+					Version: "1.19.2",
+				},
+			},
+			condMessage: "Constraints not met: OpenShift platform",
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateConstraints(test.apiPkg, test.manifest, test.env)
+			require.NoError(t, err)
+
+			invalidCond := meta.FindStatusCondition(*test.apiPkg.GetConditions(), corev1alpha1.PackageInvalid)
+			assert.Equal(t, "ConstraintsFailed", invalidCond.Reason)
+			assert.Equal(t, test.condMessage, invalidCond.Message)
+		})
+	}
+}
+
 type deploymentReconcilerMock struct {
 	mock.Mock
 }
