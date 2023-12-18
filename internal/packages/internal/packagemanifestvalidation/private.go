@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
@@ -528,7 +527,7 @@ func validatePackageManifestConfig(ctx context.Context, config *manifests.Packag
 	return allErrs
 }
 
-func validatePackageConfigurationBySchema(ctx context.Context, schema *apiextensions.JSONSchemaProps, config map[string]any, fldPath *field.Path) (field.ErrorList, error) {
+func validatePackageConfigurationBySchema(_ context.Context, schema *apiextensions.JSONSchemaProps, config map[string]any, fldPath *field.Path) (field.ErrorList, error) {
 	if schema == nil {
 		return nil, nil
 	}
@@ -538,21 +537,18 @@ func validatePackageConfigurationBySchema(ctx context.Context, schema *apiextens
 		return nil, err
 	}
 
-	log := logr.FromContextOrDiscard(ctx).WithName("validatePackageConfigurationBySchema")
-
 	v := validate.NewSchemaValidator(openapiSchema, nil, "", strfmt.Default)
-	return validation.ValidateCustomResource(fldPath, config, validatorAdapter{log, v}), nil
+	return validation.ValidateCustomResource(fldPath, config, validatorAdapter{v}), nil
 }
 
 // TODO: Remove this as soon as kube-openapi updates and supports ValidationOption.
 type validatorAdapter struct {
-	log logr.Logger
-	v   *validate.SchemaValidator
+	v *validate.SchemaValidator
 }
 
 func (v validatorAdapter) Validate(data any, opts ...validation.ValidationOption) *validate.Result {
-	for _, opt := range opts {
-		v.log.Info("kube-openapi does not support option of apiextensions-apiserver", "option", opt)
+	if len(opts) != 0 {
+		panic("got options from apiextensions-apiserver but kube-openapi does not support them")
 	}
 
 	return v.v.Validate(data)
