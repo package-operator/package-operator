@@ -86,10 +86,10 @@ func NewMultiClusterObjectSetPhaseController(
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
-		preflight.List{
-			preflight.NewAPIExistence(targetRESTMapper),
+		preflight.NewAPIExistence(
+			targetRESTMapper,
 			preflight.NewDryRun(targetWriter),
-		},
+		),
 	)
 }
 
@@ -108,10 +108,10 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
-		preflight.List{
-			preflight.NewAPIExistence(targetRESTMapper),
-			preflight.NewDryRun(targetWriter),
-		},
+		preflight.NewAPIExistence(
+			targetRESTMapper,
+			preflight.List{preflight.NewDryRun(targetWriter)},
+		),
 	)
 }
 
@@ -129,11 +129,13 @@ func NewSameClusterObjectSetPhaseController(
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
-		preflight.List{
-			preflight.NewAPIExistence(restMapper),
-			preflight.NewNamespaceEscalation(restMapper),
-			preflight.NewDryRun(client),
-		},
+		preflight.NewAPIExistence(
+			restMapper,
+			preflight.List{
+				preflight.NewNamespaceEscalation(restMapper),
+				preflight.NewDryRun(client),
+			},
+		),
 	)
 }
 
@@ -151,10 +153,10 @@ func NewSameClusterClusterObjectSetPhaseController(
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
-		preflight.List{
-			preflight.NewAPIExistence(restMapper),
+		preflight.NewAPIExistence(
+			restMapper,
 			preflight.NewDryRun(client),
-		},
+		),
 	)
 }
 

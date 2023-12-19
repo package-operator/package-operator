@@ -89,11 +89,15 @@ func newGenericObjectTemplateController(
 		client:            client,
 		uncachedClient:    uncachedClient,
 		dynamicCache:      dynamicCache,
-		templateReconciler: newTemplateReconciler(scheme, client, uncachedClient, dynamicCache, preflight.List{
-			preflight.NewAPIExistence(restMapper),
-			preflight.NewEmptyNamespaceNoDefault(restMapper),
-			preflight.NewNamespaceEscalation(restMapper),
-		}),
+		templateReconciler: newTemplateReconciler(scheme, client, uncachedClient, dynamicCache,
+			preflight.NewAPIExistence(
+				restMapper,
+				preflight.List{
+					preflight.NewEmptyNamespaceNoDefault(restMapper),
+					preflight.NewNamespaceEscalation(restMapper),
+				},
+			),
+		),
 	}
 	controller.reconciler = []reconciler{controller.templateReconciler}
 	return controller
