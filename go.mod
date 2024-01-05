@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.30.0
 	github.com/openshift/api v0.0.0-20231213232254-1029f2d5339f
 	github.com/prometheus/client_golang v1.18.0
-	github.com/pterm/pterm v0.12.73
+	github.com/pterm/pterm v0.12.74
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
