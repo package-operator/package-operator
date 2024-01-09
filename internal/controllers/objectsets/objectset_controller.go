@@ -118,11 +118,12 @@ func newGenericObjectSetController(
 			dynamicCache,
 			uncachedClient,
 			ownerhandling.NewNative(scheme),
-			preflight.List{
-				preflight.NewAPIExistence(restMapper),
-				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewDryRun(client),
-			},
+			preflight.NewAPIExistence(restMapper,
+				preflight.List{
+					preflight.NewNamespaceEscalation(restMapper),
+					preflight.NewDryRun(client),
+				},
+			),
 		),
 		newObjectSetRemotePhaseReconciler(
 			client, uncachedClient, scheme, newObjectSetPhase),
