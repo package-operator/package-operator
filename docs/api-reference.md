@@ -1254,13 +1254,21 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: tempor
+    kubernetesVersion: dolor
     schemaLocations:
-    - lorem
+    - sit
   template:
   - context:
       config: runtime.RawExtension
       environment:
+        hyperShift:
+          hostedCluster:
+            hostedClusterNamespace: ipsum
+            metadata:
+              annotations: map[string]string
+              labels: map[string]string
+              name: tempor
+              namespace: lorem
         kubernetes:
           version: elitr
         openShift:
@@ -1302,9 +1310,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: sit
-    image: dolor
-    name: ipsum
+  - digest: sadipscing
+    image: consetetur
+    name: amet
 
 ```
 
@@ -1325,13 +1333,45 @@ PackageEnvironment information.
 
 | Field | Description |
 | ----- | ----------- |
-| `kubernetes` <b>required</b><br><a href="#packageenvironmentkubernetes">PackageEnvironmentKubernetes</a> | Kubernetes environment information. |
-| `openShift` <br><a href="#packageenvironmentopenshift">PackageEnvironmentOpenShift</a> | OpenShift environment information. |
-| `proxy` <br><a href="#packageenvironmentproxy">PackageEnvironmentProxy</a> | Proxy configuration. |
+| `kubernetes` <b>required</b><br><a href="#packageenvironmentkubernetes">PackageEnvironmentKubernetes</a> | Kubernetes environment information. This section is always set. |
+| `openShift` <br><a href="#packageenvironmentopenshift">PackageEnvironmentOpenShift</a> | OpenShift environment information. This section is only set when OpenShift is detected. |
+| `proxy` <br><a href="#packageenvironmentproxy">PackageEnvironmentProxy</a> | Proxy configuration. Only available on OpenShift when the cluster-wide Proxy is enabled.<br>https://docs.openshift.com/container-platform/latest/networking/enable-cluster-wide-proxy.html |
+| `hyperShift` <b>required</b><br><a href="#packageenvironmenthypershift">PackageEnvironmentHyperShift</a> | HyperShift specific information. Only available when installed alongside HyperShift.<br>https://github.com/openshift/hypershift |
 
 
 Used in:
 * [TemplateContext](#templatecontext)
+
+
+### PackageEnvironmentHyperShift
+
+PackageEnvironmentHyperShift contains HyperShift specific information.
+Only available when installed alongside HyperShift.
+https://github.com/openshift/hypershift
+
+| Field | Description |
+| ----- | ----------- |
+| `hostedCluster` <b>required</b><br><a href="#packageenvironmenthypershifthostedcluster">PackageEnvironmentHyperShiftHostedCluster</a> | Contains HyperShift HostedCluster specific information.<br>This information is only available when installed alongside HyperShift within a HostedCluster Namespace.<br>https://github.com/openshift/hypershift |
+
+
+Used in:
+* [PackageEnvironment](#packageenvironment)
+
+
+### PackageEnvironmentHyperShiftHostedCluster
+
+PackageEnvironmentHyperShiftHostedCluster contains HyperShift HostedCluster specific information.
+This information is only available when installed alongside HyperShift within a HostedCluster Namespace.
+https://github.com/openshift/hypershift
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <b>required</b><br><a href="#templatecontextobjectmeta">TemplateContextObjectMeta</a> | TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates. |
+| `hostedClusterNamespace` <b>required</b><br>string | Namespace of HostedCluster components belonging to this HostedCluster object. |
+
+
+Used in:
+* [PackageEnvironmentHyperShift](#packageenvironmenthypershift)
 
 
 ### PackageEnvironmentKubernetes
@@ -1535,6 +1575,7 @@ TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta f
 
 
 Used in:
+* [PackageEnvironmentHyperShiftHostedCluster](#packageenvironmenthypershifthostedcluster)
 * [TemplateContextPackage](#templatecontextpackage)
 
 

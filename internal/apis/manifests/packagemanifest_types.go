@@ -128,12 +128,16 @@ type TemplateContext struct {
 
 // PackageEnvironment information.
 type PackageEnvironment struct {
-	// Kubernetes environment information.
+	// Kubernetes environment information. This section is always set.
 	Kubernetes PackageEnvironmentKubernetes `json:"kubernetes"`
-	// OpenShift environment information.
+	// OpenShift environment information. This section is only set when OpenShift is detected.
 	OpenShift *PackageEnvironmentOpenShift `json:"openShift,omitempty"`
-	// Proxy configuration.
+	// Proxy configuration. Only available on OpenShift when the cluster-wide Proxy is enabled.
+	// https://docs.openshift.com/container-platform/latest/networking/enable-cluster-wide-proxy.html
 	Proxy *PackageEnvironmentProxy `json:"proxy,omitempty"`
+	// HyperShift specific information. Only available when installed alongside HyperShift.
+	// https://github.com/openshift/hypershift
+	HyperShift *PackageEnvironmentHyperShift `json:"hyperShift"`
 }
 
 type PackageEnvironmentKubernetes struct {
@@ -156,6 +160,24 @@ type PackageEnvironmentProxy struct {
 	HTTPSProxy string `json:"httpsProxy,omitempty"`
 	// NO_PROXY
 	NoProxy string `json:"noProxy,omitempty"`
+}
+
+// PackageEnvironmentHyperShift contains HyperShift specific information.
+// Only available when installed alongside HyperShift.
+// https://github.com/openshift/hypershift
+type PackageEnvironmentHyperShift struct {
+	// Contains HyperShift HostedCluster specific information.
+	// This information is only available when installed alongside HyperShift within a HostedCluster Namespace.
+	// https://github.com/openshift/hypershift
+	HostedCluster *PackageEnvironmentHyperShiftHostedCluster `json:"hostedCluster"`
+}
+
+// PackageEnvironmentHyperShiftHostedCluster contains HyperShift HostedCluster specific information.
+// This information is only available when installed alongside HyperShift within a HostedCluster Namespace.
+// https://github.com/openshift/hypershift
+type PackageEnvironmentHyperShiftHostedCluster struct {
+	TemplateContextObjectMeta `json:"metadata"`
+	HostedClusterNamespace    string `json:"hostedClusterNamespace"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.
