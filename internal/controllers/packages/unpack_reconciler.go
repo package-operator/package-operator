@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -22,7 +23,7 @@ import (
 
 // Loads/unpack and templates packages into an ObjectDeployment.
 type unpackReconciler struct {
-	environment.Sink
+	*environment.Sink
 
 	imagePuller         imagePuller
 	packageDeployer     packageDeployer
@@ -38,6 +39,7 @@ type packageLoadRecorder interface {
 }
 
 func newUnpackReconciler(
+	c client.Client,
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	packageLoadRecorder packageLoadRecorder,
@@ -50,6 +52,8 @@ func newUnpackReconciler(
 	cfg.Default()
 
 	return &unpackReconciler{
+		Sink: environment.NewSink(c),
+
 		imagePuller:         imagePuller,
 		packageDeployer:     packageDeployer,
 		packageLoadRecorder: packageLoadRecorder,
@@ -105,7 +109,8 @@ func (r *unpackReconciler) Reconcile(
 		}, nil
 	}
 
-	if err := r.packageDeployer.Deploy(ctx, pkg, rawPkg, *r.GetEnvironment()); err != nil {
+	env, err := r.GetEnvironment(ctx, pkg.ClientObject().GetNamespace())
+	if err := r.packageDeployer.Deploy(ctx, pkg, rawPkg, *env); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
 

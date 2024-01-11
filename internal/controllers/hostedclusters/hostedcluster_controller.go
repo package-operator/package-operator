@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -119,7 +118,7 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "remote-phase",
-			Namespace: hostedClusterNamespace(cluster),
+			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image: c.remotePhasePackageImage,
@@ -143,11 +142,6 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 	}
 
 	return pkg, nil
-}
-
-// From https://github.com/openshift/hypershift/blob/v0.1.13/hypershift-operator/controllers/manifests/manifests.go#L16
-func hostedClusterNamespace(cluster *v1beta1.HostedCluster) string {
-	return fmt.Sprintf("%s-%s", cluster.Namespace, strings.ReplaceAll(cluster.Name, ".", "-"))
 }
 
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {

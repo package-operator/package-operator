@@ -151,7 +151,7 @@ type PackageEnvironment struct {
 	Proxy *PackageEnvironmentProxy `json:"proxy,omitempty"`
 	// HyperShift specific information. Only available when installed alongside HyperShift.
 	// https://github.com/openshift/hypershift
-	HyperShift *PackageEnvironmentHyperShift `json:"hyperShift"`
+	HyperShift *PackageEnvironmentHyperShift `json:"hyperShift,omitempty"`
 }
 
 // PackageEnvironmentKubernetes configures kubernetes environments.

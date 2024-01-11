@@ -11,8 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
+
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/testutil/restmappermock"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/testutil"
@@ -41,6 +45,7 @@ func TestImplementsSinker(t *testing.T) {
 
 func TestManager_Init_Kubernetes(t *testing.T) {
 	t.Parallel()
+	rm := &restmappermock.RestMapperMock{}
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -57,8 +62,11 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 			mock.AnythingOfType("*v1.ClusterVersion"), mock.Anything,
 		).
 		Return(&meta.NoKindMatchError{})
+	rm.
+		On("RESTMapping", mock.Anything, mock.Anything).
+		Return(&meta.RESTMapping{}, nil)
 
-	mgr := NewManager(c, dc)
+	mgr := NewManager(c, dc, rm)
 
 	ctx := context.Background()
 	err := mgr.Init(ctx, []Sinker{sink})
@@ -69,11 +77,13 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v1.2.3",
 		},
+		HyperShift: &manifests.PackageEnvironmentHyperShift{},
 	}, env)
 }
 
 func TestManager_Init_OpenShift(t *testing.T) {
 	t.Parallel()
+	rm := &restmappermock.RestMapperMock{}
 	c := testutil.NewClient()
 	dc := &discoveryClientMock{}
 	sink := &testSink{}
@@ -119,8 +129,11 @@ func TestManager_Init_OpenShift(t *testing.T) {
 			}
 		}).
 		Return(nil)
+	rm.
+		On("RESTMapping", mock.Anything, mock.Anything).
+		Return(&meta.RESTMapping{}, nil)
 
-	mgr := NewManager(c, dc)
+	mgr := NewManager(c, dc, rm)
 
 	ctx := context.Background()
 	err := mgr.Init(ctx, []Sinker{sink})
@@ -134,6 +147,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 		OpenShift: &manifests.PackageEnvironmentOpenShift{
 			Version: "v123",
 		},
+		HyperShift: &manifests.PackageEnvironmentHyperShift{},
 		Proxy: &manifests.PackageEnvironmentProxy{
 			HTTPProxy:  "httpxxx",
 			HTTPSProxy: "httpsxxx",
@@ -154,7 +168,7 @@ func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
 		Return(&meta.NoKindMatchError{})
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil)
+	mgr := NewManager(c, nil, nil)
 	openShiftEnv, isOpenShift, err := mgr.openShiftEnvironment(ctx)
 	require.NoError(t, err)
 	assert.False(t, isOpenShift)
@@ -173,7 +187,7 @@ func TestManager_openShiftEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil)
+	mgr := NewManager(c, nil, nil)
 	_, _, err := mgr.openShiftEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
 }
@@ -209,7 +223,7 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 				Return(test.err)
 
 			ctx := context.Background()
-			mgr := NewManager(c, nil)
+			mgr := NewManager(c, nil, nil)
 			proxyEnv, hasProxy, err := mgr.openShiftProxyEnvironment(ctx)
 			require.NoError(t, err)
 			assert.False(t, hasProxy)
@@ -220,7 +234,6 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 
 func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
 	t.Parallel()
-
 	c := testutil.NewClient()
 
 	c.
@@ -231,8 +244,39 @@ func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil)
+	mgr := NewManager(c, nil, nil)
 	_, _, err := mgr.openShiftProxyEnvironment(ctx)
+	require.ErrorIs(t, err, errExample)
+}
+
+func TestManager_hyperShiftEnvironment_handledErrors(t *testing.T) {
+	t.Parallel()
+	rm := &restmappermock.RestMapperMock{}
+
+	rm.
+		On(
+			"RESTMapping", mock.Anything, mock.Anything,
+		).
+		Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{})
+
+	mgr := NewManager(nil, nil, rm)
+	_, ok, err := mgr.hyperShiftEnvironment()
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func TestManager_hyperShiftEnvironment_error(t *testing.T) {
+	t.Parallel()
+	rm := &restmappermock.RestMapperMock{}
+
+	rm.
+		On(
+			"RESTMapping", mock.Anything, mock.Anything,
+		).
+		Return(&meta.RESTMapping{}, errExample)
+
+	mgr := NewManager(nil, nil, rm)
+	_, _, err := mgr.hyperShiftEnvironment()
 	require.ErrorIs(t, err, errExample)
 }
 
@@ -247,14 +291,79 @@ func (c *discoveryClientMock) ServerVersion() (*version.Info, error) {
 
 func TestSink(t *testing.T) {
 	t.Parallel()
+	t.Run("Kubernetes", func(t *testing.T) {
+		t.Parallel()
+		s := NewSink(nil)
+		env := &manifests.PackageEnvironment{
+			Kubernetes: manifests.PackageEnvironmentKubernetes{
+				Version: "v12345",
+			},
+		}
+		ctx := context.Background()
 
-	s := &Sink{}
-	env := &manifests.PackageEnvironment{
-		Kubernetes: manifests.PackageEnvironmentKubernetes{
-			Version: "v12345",
-		},
-	}
-	s.SetEnvironment(env)
-	gotEnv := s.GetEnvironment()
-	assert.Equal(t, env, gotEnv)
+		s.SetEnvironment(env)
+		gotEnv, err := s.GetEnvironment(ctx, "")
+		require.NoError(t, err)
+		assert.Equal(t, env, gotEnv)
+	})
+
+	t.Run("OpenShift", func(t *testing.T) {
+		t.Parallel()
+
+		hc := hypershiftv1beta1.HostedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ban.ana",
+				Namespace: "clusters",
+				Labels: map[string]string{
+					"test": "test",
+				},
+				Annotations: map[string]string{
+					"test": "test",
+				},
+			},
+		}
+		c := testutil.NewClient()
+		c.
+			On(
+				"List", mock.Anything,
+				mock.AnythingOfType("*v1beta1.HostedClusterList"),
+				mock.Anything,
+			).
+			Run(func(args mock.Arguments) {
+				list := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+				*list = hypershiftv1beta1.HostedClusterList{
+					Items: []hypershiftv1beta1.HostedCluster{hc},
+				}
+			}).
+			Return(nil)
+
+		s := NewSink(c)
+		env := &manifests.PackageEnvironment{
+			Kubernetes: manifests.PackageEnvironmentKubernetes{
+				Version: "v12345",
+			},
+			HyperShift: &manifests.PackageEnvironmentHyperShift{},
+		}
+		ctx := context.Background()
+
+		s.SetEnvironment(env)
+		gotEnv, err := s.GetEnvironment(ctx, "clusters-ban-ana")
+		require.NoError(t, err)
+		assert.Equal(t, &manifests.PackageEnvironment{
+			Kubernetes: manifests.PackageEnvironmentKubernetes{
+				Version: "v12345",
+			},
+			HyperShift: &manifests.PackageEnvironmentHyperShift{
+				HostedCluster: &manifests.PackageEnvironmentHyperShiftHostedCluster{
+					TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
+						Name:        hc.Name,
+						Namespace:   hc.Namespace,
+						Labels:      hc.Labels,
+						Annotations: hc.Annotations,
+					},
+					HostedClusterNamespace: "clusters-ban-ana",
+				},
+			},
+		}, gotEnv)
+	})
 }

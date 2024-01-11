@@ -1336,7 +1336,7 @@ PackageEnvironment information.
 | `kubernetes` <b>required</b><br><a href="#packageenvironmentkubernetes">PackageEnvironmentKubernetes</a> | Kubernetes environment information. This section is always set. |
 | `openShift` <br><a href="#packageenvironmentopenshift">PackageEnvironmentOpenShift</a> | OpenShift environment information. This section is only set when OpenShift is detected. |
 | `proxy` <br><a href="#packageenvironmentproxy">PackageEnvironmentProxy</a> | Proxy configuration. Only available on OpenShift when the cluster-wide Proxy is enabled.<br>https://docs.openshift.com/container-platform/latest/networking/enable-cluster-wide-proxy.html |
-| `hyperShift` <b>required</b><br><a href="#packageenvironmenthypershift">PackageEnvironmentHyperShift</a> | HyperShift specific information. Only available when installed alongside HyperShift.<br>https://github.com/openshift/hypershift |
+| `hyperShift` <br><a href="#packageenvironmenthypershift">PackageEnvironmentHyperShift</a> | HyperShift specific information. Only available when installed alongside HyperShift.<br>https://github.com/openshift/hypershift |
 
 
 Used in:

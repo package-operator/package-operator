@@ -18,7 +18,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/dynamiccachemocks"
@@ -233,8 +235,10 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			r := &templateReconciler{
+				Sink:             environment.NewSink(nil),
 				preflightChecker: preflight.List{},
 			}
+			r.Sink.SetEnvironment(&manifests.PackageEnvironment{})
 
 			template, err := os.ReadFile(filepath.Join("testdata", test.packageFile))
 			require.NoError(t, err)
@@ -442,6 +446,8 @@ func newControllerAndMocks(t *testing.T) (
 	dc := &dynamiccachemocks.DynamicCacheMock{}
 
 	r := &templateReconciler{
+		Sink: environment.NewSink(c),
+
 		client:           c,
 		uncachedClient:   uncachedC,
 		scheme:           scheme,

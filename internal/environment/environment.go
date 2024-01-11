@@ -12,13 +12,15 @@ import (
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
-	apimachinerymeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"package-operator.run/internal/apis/manifests"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 var _ manager.Runnable = (*Manager)(nil)
@@ -37,6 +39,10 @@ type serverVersionDiscoverer interface {
 	ServerVersion() (*version.Info, error)
 }
 
+type restMapper interface {
+	RESTMapping(gk schema.GroupKind, versions ...string) (*meta.RESTMapping, error)
+}
+
 func ImplementsSinker(i []any) []Sinker {
 	var envSinks []Sinker
 	for _, c := range i {
@@ -51,6 +57,7 @@ func ImplementsSinker(i []any) []Sinker {
 type Manager struct {
 	client          client.Client
 	discoveryClient serverVersionDiscoverer
+	restMapper      restMapper
 
 	sinks []Sinker
 }
@@ -58,10 +65,12 @@ type Manager struct {
 func NewManager(
 	client client.Client,
 	discoveryClient serverVersionDiscoverer,
+	restMapper restMapper,
 ) *Manager {
 	return &Manager{
 		client:          client,
 		discoveryClient: discoveryClient,
+		restMapper:      restMapper,
 	}
 }
 
@@ -97,9 +106,10 @@ func (m *Manager) do(ctx context.Context) error {
 	}
 	log.Info("detected environment", "environment", env)
 
-	for _, s := range m.sinks {
-		s.SetEnvironment(env)
+	for _, sink := range m.sinks {
+		sink.SetEnvironment(env)
 	}
+
 	return nil
 }
 
@@ -107,7 +117,6 @@ func (m *Manager) probe(ctx context.Context) (
 	env *manifests.PackageEnvironment, err error,
 ) {
 	env = &manifests.PackageEnvironment{}
-
 	kubeEnv, err := m.kubernetesEnvironment(ctx)
 	if err != nil {
 		return env, fmt.Errorf("getting k8s env: %w", err)
@@ -130,7 +139,14 @@ func (m *Manager) probe(ctx context.Context) (
 			env.Proxy = proxy
 		}
 	}
-	return
+
+	hyperShiftEnv, _, err := m.hyperShiftEnvironment()
+	if err != nil {
+		return env, fmt.Errorf("getting HyperShift env: %w", err)
+	}
+	env.HyperShift = hyperShiftEnv
+
+	return env, nil
 }
 
 func (m *Manager) kubernetesEnvironment(_ context.Context) (
@@ -153,7 +169,8 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	}, clusterVersion)
 
 	switch {
-	case apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
+	case meta.IsNoMatchError(err) ||
+		apimachineryerrors.IsNotFound(err) ||
 		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		// API not registered in cluster
 		return nil, false, nil
@@ -182,7 +199,7 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	err = m.client.Get(ctx, client.ObjectKey{
 		Name: openShiftProxyName,
 	}, proxy)
-	if apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) {
+	if meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) {
 		// API not registered in cluster or no proxy config.
 		return nil, false, nil
 	}
@@ -208,11 +225,41 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 	}, true, nil
 }
 
+var hostedClusterGVK = hypershiftv1beta1.GroupVersion.
+	WithKind("HostedCluster")
+
+func (m *Manager) hyperShiftEnvironment() (
+	hyperShift *manifests.PackageEnvironmentHyperShift, isHyperShift bool, err error,
+) {
+	// Probe for HyperShift API
+	_, err = m.restMapper.
+		RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
+	switch {
+	case err == nil:
+		// HyperShift HostedCluster API is present on the cluster.
+		return &manifests.PackageEnvironmentHyperShift{}, true, nil
+
+	case meta.IsNoMatchError(err) ||
+		apimachineryerrors.IsNotFound(err) ||
+		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		// HyperShift HostedCluster API is NOT present on the cluster.
+		return nil, false, nil
+	}
+
+	// Error probing.
+	return nil, false, fmt.Errorf("hypershiftv1beta1 probing: %w", err)
+}
+
 var _ Sinker = (*Sink)(nil)
 
 type Sink struct {
-	env  *manifests.PackageEnvironment
-	lock sync.RWMutex
+	client client.Client
+	env    *manifests.PackageEnvironment
+	lock   sync.RWMutex
+}
+
+func NewSink(c client.Client) *Sink {
+	return &Sink{client: c}
 }
 
 func (s *Sink) SetEnvironment(env *manifests.PackageEnvironment) {
@@ -221,8 +268,38 @@ func (s *Sink) SetEnvironment(env *manifests.PackageEnvironment) {
 	s.env = env.DeepCopy()
 }
 
-func (s *Sink) GetEnvironment() *manifests.PackageEnvironment {
+func (s *Sink) GetEnvironment(ctx context.Context, namespace string) (*manifests.PackageEnvironment, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.env.DeepCopy()
+	env := s.env.DeepCopy()
+
+	if len(namespace) == 0 || env.HyperShift == nil {
+		return env, nil
+	}
+
+	// Lookup HostedCluster
+	hostedClusterList := &hypershiftv1beta1.HostedClusterList{}
+	if err := s.client.List(ctx, hostedClusterList); err != nil {
+		return nil, fmt.Errorf("listing HostedClusters: %w", err)
+	}
+	for _, hc := range hostedClusterList.Items {
+		hcNamespace := hypershiftv1beta1.HostedClusterNamespace(hc)
+		if hcNamespace != namespace {
+			continue
+		}
+
+		env.HyperShift.HostedCluster = &manifests.PackageEnvironmentHyperShiftHostedCluster{
+			TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
+				Name:        hc.Name,
+				Namespace:   hc.Namespace,
+				Labels:      hc.Labels,
+				Annotations: hc.Annotations,
+			},
+			HostedClusterNamespace: hcNamespace,
+		}
+		return env, nil
+	}
+
+	// No HostedCluster found for this namespace.
+	return env, nil
 }
