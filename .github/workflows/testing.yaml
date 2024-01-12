@@ -36,10 +36,10 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Lint
-      run: ./mage test:lint
+      run: go run ./cmd/build Lint:Check
 
     - name: Unit
-      run: ./mage test:unit
+      run: go run ./cmd/build Test:Unit
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

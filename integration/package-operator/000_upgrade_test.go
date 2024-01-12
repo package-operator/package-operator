@@ -55,8 +55,8 @@ func TestUpgrade(t *testing.T) {
 	assertInstallDone(ctx, t, pkg)
 	log.Info("Latest released PKO is now available")
 
-	log.Info("Apply self-bootstrap-job.yaml built from sources")
-	err := createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job.yaml")})
+	log.Info("Apply self-bootstrap-job-local.yaml built from sources")
+	err := createAndWaitFromFiles(ctx, []string{filepath.Join("..", "..", "config", "self-bootstrap-job-local.yaml")})
 	require.NoError(t, err)
 	assertInstallDone(ctx, t, pkg)
 }

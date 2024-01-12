@@ -26,11 +26,8 @@ func TestBuildOutput(t *testing.T) {
 	require.NoError(t, err)
 	packagePath := filepath.Join(wd, "testdata")
 
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
@@ -52,11 +49,8 @@ func TestBuildOutput(t *testing.T) {
 func TestBuildEmptySource(t *testing.T) {
 	t.Parallel()
 
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
@@ -71,11 +65,8 @@ func TestBuildEmptySource(t *testing.T) {
 func TestBuildNoSource(t *testing.T) {
 	t.Parallel()
 
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
@@ -88,12 +79,8 @@ func TestBuildNoSource(t *testing.T) {
 
 func TestBuildPushWOTags(t *testing.T) {
 	t.Parallel()
-
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
@@ -108,11 +95,8 @@ func TestBuildPushWOTags(t *testing.T) {
 func TestBuildOutputWOTags(t *testing.T) {
 	t.Parallel()
 
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}
@@ -127,11 +111,8 @@ func TestBuildOutputWOTags(t *testing.T) {
 func TestBuildInvalidTag(t *testing.T) {
 	t.Parallel()
 
-	scheme, err := internalcmd.NewScheme()
-	require.NoError(t, err)
-
 	factory := &builderFactoryMock{}
-	factory.On("Builder").Return(internalcmd.NewBuild(scheme))
+	factory.On("Builder").Return(internalcmd.NewBuild())
 
 	cmd := NewCmd(factory)
 	stdout := &bytes.Buffer{}

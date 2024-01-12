@@ -1,10 +1,17 @@
 module package-operator.run
 
-go 1.21
+go 1.21.1
+
+toolchain go1.21.5
 
 replace (
 	package-operator.run/apis => ./apis
 	package-operator.run/pkg => ./pkg
+	pkg.package-operator.run/cardboard => ../cardboard
+	pkg.package-operator.run/cardboard/kubeutils => ../cardboard/kubeutils
+	pkg.package-operator.run/cardboard/modules/kind => ../cardboard/modules/kind
+	pkg.package-operator.run/cardboard/modules/kubeclients => ../cardboard/modules/kubeclients
+	pkg.package-operator.run/cardboard/modules/oci => ../cardboard/modules/oci
 )
 
 require (
@@ -37,6 +44,9 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.3
 	package-operator.run/pkg v1.9.3
+	pkg.package-operator.run/cardboard v0.0.0
+	pkg.package-operator.run/cardboard/modules/kind v0.0.0-00010101000000-000000000000
+	pkg.package-operator.run/cardboard/modules/oci v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.4.0
@@ -119,6 +129,7 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.1 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
+	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.48.0 // indirect
 	go.opentelemetry.io/otel v1.23.1 // indirect
@@ -149,6 +160,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.29.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
+	pkg.package-operator.run/cardboard/kubeutils v0.0.0-00010101000000-000000000000 // indirect
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

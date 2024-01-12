@@ -16,7 +16,6 @@ func TestDefaultBuilderFactory(t *testing.T) {
 	logFactoryMock.On("Logger").Return(logr.Discard())
 
 	factory := &defaultBuilderFactory{
-		scheme:     runtime.NewScheme(),
 		logFactory: logFactoryMock,
 	}
 

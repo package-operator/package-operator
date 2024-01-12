@@ -100,21 +100,18 @@ func ProvideBuildCmd(builderFactory buildcmd.BuilderFactory) RootSubCommandResul
 	}
 }
 
-func ProvideBuilderFactory(scheme *runtime.Scheme, f LogFactory) buildcmd.BuilderFactory {
+func ProvideBuilderFactory(f LogFactory) buildcmd.BuilderFactory {
 	return &defaultBuilderFactory{
-		scheme:     scheme,
 		logFactory: f,
 	}
 }
 
 type defaultBuilderFactory struct {
-	scheme     *runtime.Scheme
 	logFactory LogFactory
 }
 
 func (f *defaultBuilderFactory) Builder() buildcmd.Builder {
 	return internalcmd.NewBuild(
-		f.scheme,
 		internalcmd.WithLog{
 			Log: f.logFactory.Logger(),
 		},

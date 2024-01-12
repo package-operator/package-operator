@@ -44,9 +44,8 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Build & Push images
-      run: ./mage build:pushImages
+      run: go run ./cmd/build Image:PushAllToOfficial
       env:
-        USE_DIGESTS: "true"
         VERSION: ${{github.ref_name}}
         QUAY_USER: ${{ secrets.QUAY_USER }}
         QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
@@ -59,7 +58,7 @@ jobs:
           config/self-bootstrap-job.yaml
 
     - name: Build release binaries
-      run: ./mage build:releaseBinaries
+      run: go run . Binary:Compile
 
     - name: Release
       uses: softprops/action-gh-release@v1

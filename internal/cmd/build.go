@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/internal/packages"
 )
@@ -20,21 +19,19 @@ func (u BuildValidationError) Error() string {
 	return u.Msg
 }
 
-func NewBuild(scheme *runtime.Scheme, opts ...BuildOption) *Build {
+func NewBuild(opts ...BuildOption) *Build {
 	var cfg BuildConfig
 
 	cfg.Option(opts...)
 	cfg.Default()
 
 	return &Build{
-		cfg:    cfg,
-		scheme: scheme,
+		cfg: cfg,
 	}
 }
 
 type Build struct {
-	cfg    BuildConfig
-	scheme *runtime.Scheme
+	cfg BuildConfig
 }
 
 type BuildConfig struct {
