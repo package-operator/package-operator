@@ -37,7 +37,7 @@ require (
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	package-operator.run/apis v1.9.3
 	package-operator.run/pkg v1.9.3
-	sigs.k8s.io/controller-runtime v0.16.3
+	sigs.k8s.io/controller-runtime v0.17.0
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.4.0
 )
