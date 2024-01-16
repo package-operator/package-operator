@@ -1,4 +1,4 @@
-/* #nosec */
+//go:build integration
 
 package kubectlpackage
 
