@@ -8,4 +8,5 @@ const (
 	ObjectSetPhasePaused = "Paused"
 )
 
+// ObjectSetPhaseClassLabel is the label key for the phase class.
 const ObjectSetPhaseClassLabel = "package-operator.run/phase-class"

@@ -38,6 +38,7 @@ const (
 	PackageInvalid = "Invalid"
 )
 
+// PackageStatusPhase defines a status phase of a package.
 type PackageStatusPhase string
 
 // Well-known Package Phases for printing a Status in kubectl,
@@ -51,7 +52,7 @@ const (
 	PackagePhaseInvalid     PackageStatusPhase = "Invalid"
 )
 
-// Package specification.
+// PackageSpec specifies a package.
 type PackageSpec struct {
 	// the image containing the contents of the package
 	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.

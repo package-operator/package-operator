@@ -203,11 +203,16 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 		if err != nil {
 			return fmt.Errorf("getting %q: %w", url, err)
 		}
-		defer resp.Body.Close()
 
 		var content bytes.Buffer
-		if _, err := io.Copy(&content, resp.Body); err != nil {
+
+		_, err = io.Copy(&content, resp.Body)
+		cErr := resp.Body.Close()
+		switch {
+		case err != nil:
 			return fmt.Errorf("reading response %q: %w", url, err)
+		case cErr != nil:
+			return fmt.Errorf("reading response %q: %w", url, cErr)
 		}
 
 		objs, err := dev.LoadKubernetesObjectsFromBytes(content.Bytes())

@@ -20,7 +20,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ObjectTemplates contain a go template of a Kubernetes manifest.
+        description: ObjectTemplate contain a go template of a Kubernetes manifest.
           This manifest is then templated with the sources provided in the .Spec.Sources.
           The sources can only come from objects within the same nampespace as the
           ObjectTemplate.
@@ -43,11 +43,14 @@ spec:
               sources:
                 description: Objects in which configuration parameters are fetched
                 items:
+                  description: ObjectTemplateSource defines a source for a template.
                   properties:
                     apiVersion:
                       type: string
                     items:
                       items:
+                        description: ObjectTemplateSourceItem defines a source item
+                          for an object template.
                         properties:
                           destination:
                             description: JSONPath to destination in which to store

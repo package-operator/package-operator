@@ -1,3 +1,4 @@
+// Package apis contains all API schema definitons used by package operator.
 package apis
 
 import (

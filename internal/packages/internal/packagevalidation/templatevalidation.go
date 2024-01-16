@@ -65,7 +65,7 @@ func (v TemplateTestValidator) runTestCase(
 	ctx context.Context, pkg *packagetypes.Package,
 	testCase manifests.PackageManifestTestCaseTemplate,
 	kcV kubeconformValidator,
-) error {
+) (rErr error) {
 	log := logr.FromContextOrDiscard(ctx)
 	pkg = pkg.DeepCopy()
 
@@ -104,12 +104,15 @@ func (v TemplateTestValidator) runTestCase(
 		return renderTemplateFiles(testFixturePath, pkg.Files)
 	}
 
-	actualPath, err := os.MkdirTemp(
-		os.TempDir(), "pko-test-"+testCase.Name+"-")
+	actualPath, err := os.MkdirTemp(os.TempDir(), "pko-test-"+testCase.Name+"-")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(actualPath)
+	defer func() {
+		if cErr := os.RemoveAll(actualPath); rErr == nil && cErr != nil {
+			rErr = cErr
+		}
+	}()
 
 	if err := renderTemplateFiles(actualPath, pkg.Files); err != nil {
 		return err

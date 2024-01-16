@@ -11,6 +11,7 @@ type ObjectTemplateSpec struct {
 	Sources []ObjectTemplateSource `json:"sources"`
 }
 
+// ObjectTemplateSource defines a source for a template.
 type ObjectTemplateSource struct {
 	APIVersion string                     `json:"apiVersion"`
 	Kind       string                     `json:"kind"`
@@ -23,6 +24,7 @@ type ObjectTemplateSource struct {
 	Optional bool `json:"optional,omitempty"`
 }
 
+// ObjectTemplateSourceItem defines a source item for an object template.
 type ObjectTemplateSourceItem struct {
 	// JSONPath to value in source object.
 	Key string `json:"key"`
@@ -46,6 +48,7 @@ const (
 	ObjectTemplateInvalid = "package-operator.run/Invalid"
 )
 
+// ObjectTemplateStatusPhase defines the status phase of an object template.
 type ObjectTemplateStatusPhase string
 
 // Well-known ObjectTemplates Phases for printing a Status in kubectl,

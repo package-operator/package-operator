@@ -36,7 +36,7 @@ func newPPROFServer(pprofAddr string) *pprofServer {
 func (s *pprofServer) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
-		s.server.Close()
+		_ = s.server.Close()
 	}()
 	return s.server.ListenAndServe()
 }

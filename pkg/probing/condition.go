@@ -13,6 +13,7 @@ type ConditionProbe struct {
 
 var _ Prober = (*ConditionProbe)(nil)
 
+// Probe executes the probe.
 func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	defer func() {
 		if success {

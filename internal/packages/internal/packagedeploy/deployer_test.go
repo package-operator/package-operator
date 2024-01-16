@@ -168,7 +168,7 @@ func TestPackageDeployer_Deploy_Error(t *testing.T) {
 
 func TestImageWithDigestOk(t *testing.T) {
 	t.Parallel()
-	//nolint:goconst
+	//nolint: goconst // Better to read that way.
 	tests := []struct {
 		image  string
 		digest string

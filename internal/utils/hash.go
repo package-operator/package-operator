@@ -59,5 +59,7 @@ func DeepHashObject(hasher hash.Hash, objectToWrite any) {
 		DisableMethods: true,
 		SpewKeys:       true,
 	}
-	printer.Fprintf(hasher, "%#v", objectToWrite)
+	if _, err := printer.Fprintf(hasher, "%#v", objectToWrite); err != nil {
+		panic(err)
+	}
 }

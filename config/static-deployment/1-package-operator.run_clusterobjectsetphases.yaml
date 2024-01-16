@@ -57,12 +57,13 @@ spec:
                     probes:
                       description: Probe configuration parameters.
                       items:
-                        description: Defines probe parameters. Only one can be filled.
+                        description: Probe defines probe parameters. Only one can
+                          be filled.
                         properties:
                           cel:
-                            description: 'Uses Common Expression Language (CEL) to
-                              probe an object. CEL rules have to evaluate to a boolean
-                              to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
+                            description: 'ProbeCELSpec uses Common Expression Language
+                              (CEL) to probe an object. CEL rules have to evaluate
+                              to a boolean to be valid. See: https://kubernetes.io/docs/reference/using-api/cel
                               https://github.com/google/cel-go'
                             properties:
                               message:
@@ -77,8 +78,8 @@ spec:
                             - rule
                             type: object
                           condition:
-                            description: Checks whether or not the object reports
-                              a condition with given type and status.
+                            description: ProbeConditionSpec checks whether or not
+                              the object reports a condition with given type and status.
                             properties:
                               status:
                                 default: "True"
@@ -92,7 +93,8 @@ spec:
                             - type
                             type: object
                           fieldsEqual:
-                            description: Compares two fields specified by JSON Paths.
+                            description: ProbeFieldsEqualSpec compares two fields
+                              specified by JSON Paths.
                             properties:
                               fieldA:
                                 description: First field for comparison.
@@ -182,12 +184,14 @@ spec:
                 description: ExternalObjects observed, but not reconciled by this
                   phase.
                 items:
-                  description: An object that is part of the phase of an ObjectSet.
+                  description: ObjectSetObject is an object that is part of the phase
+                    of an ObjectSet.
                   properties:
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
                       items:
+                        description: ConditionMapping maps one condition type to another.
                         properties:
                           destinationType:
                             description: Destination condition type to report into
@@ -213,12 +217,14 @@ spec:
               objects:
                 description: Objects belonging to this phase.
                 items:
-                  description: An object that is part of the phase of an ObjectSet.
+                  description: ObjectSetObject is an object that is part of the phase
+                    of an ObjectSet.
                   properties:
                     conditionMappings:
                       description: Maps conditions from this object into the Package
                         Operator APIs.
                       items:
+                        description: ConditionMapping maps one condition type to another.
                         properties:
                           destinationType:
                             description: Destination condition type to report into
@@ -250,7 +256,8 @@ spec:
                 description: Previous revisions of the ClusterObjectSet to adopt objects
                   from.
                 items:
-                  description: References a previous revision of an ObjectSet or ClusterObjectSet.
+                  description: PreviousRevisionReference references a previous revision
+                    of an ObjectSet or ClusterObjectSet.
                   properties:
                     name:
                       description: Name of a previous revision.
@@ -345,7 +352,8 @@ spec:
               controllerOf:
                 description: References all objects controlled by this instance.
                 items:
-                  description: References an object controlled by this ObjectSet/ObjectSetPhase.
+                  description: ControlledObjectReference an object controlled by this
+                    ObjectSet/ObjectSetPhase.
                   properties:
                     group:
                       description: Object Group.

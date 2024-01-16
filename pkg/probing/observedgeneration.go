@@ -11,6 +11,7 @@ type ObservedGenerationProbe struct {
 
 var _ Prober = (*ObservedGenerationProbe)(nil)
 
+// Probe executes the probe.
 func (cg *ObservedGenerationProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
 	if observedGeneration, ok, err := unstructured.NestedInt64(
 		obj.Object, "status", "observedGeneration",

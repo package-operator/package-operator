@@ -42,11 +42,14 @@ spec:
               sources:
                 description: Objects in which configuration parameters are fetched
                 items:
+                  description: ObjectTemplateSource defines a source for a template.
                   properties:
                     apiVersion:
                       type: string
                     items:
                       items:
+                        description: ObjectTemplateSourceItem defines a source item
+                          for an object template.
                         properties:
                           destination:
                             description: JSONPath to destination in which to store
