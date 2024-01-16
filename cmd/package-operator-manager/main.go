@@ -196,7 +196,8 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 				"unable to create controller for HostedCluster: %w", err)
 		}
 
-	case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+	case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
+		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
 		if err := pkoMgr.mgr.Add(
 			newHypershift(

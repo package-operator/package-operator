@@ -19,23 +19,25 @@ type objectDeploymentStatusReconciler struct {
 	newObjectDeployment adapters.ObjectDeploymentFactory
 }
 
-func (r *objectDeploymentStatusReconciler) Reconcile(ctx context.Context, packageObj adapters.GenericPackageAccessor) (ctrl.Result, error) {
+func (r *objectDeploymentStatusReconciler) Reconcile(
+	ctx context.Context, packageObj adapters.GenericPackageAccessor,
+) (ctrl.Result, error) {
 	objDep := r.newObjectDeployment(r.scheme)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(packageObj.ClientObject()), objDep.ClientObject()); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	objDepAvailableCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
-	if objDepAvailableCondition != nil && objDepAvailableCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
-		packageAvailableCond := objDepAvailableCondition.DeepCopy()
+	objDepAvailableCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
+	if objDepAvailableCond != nil && objDepAvailableCond.ObservedGeneration == objDep.ClientObject().GetGeneration() {
+		packageAvailableCond := objDepAvailableCond.DeepCopy()
 		packageAvailableCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageAvailableCond)
 	}
 
-	objDepProgressingCondition := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
-	if objDepProgressingCondition != nil && objDepProgressingCondition.ObservedGeneration == objDep.ClientObject().GetGeneration() {
-		packageProgressingCond := objDepProgressingCondition.DeepCopy()
+	objDepProgressingCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
+	if objDepProgressingCond != nil && objDepProgressingCond.ObservedGeneration == objDep.ClientObject().GetGeneration() {
+		packageProgressingCond := objDepProgressingCond.DeepCopy()
 		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)

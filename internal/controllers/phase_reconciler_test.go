@@ -1005,8 +1005,7 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		patch, err := patches[0].Data(updatedObj)
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			`{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch))
+		assert.Equal(t, `{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch)) //nolint: lll
 	}
 }
 

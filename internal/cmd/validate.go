@@ -115,7 +115,9 @@ func getPackageFromPath(ctx context.Context, path string) (*packages.RawPackage,
 	return rawPkg, nil
 }
 
-func (v *Validate) getPackageFromRemoteRef(ctx context.Context, cfg ValidatePackageConfig) (*packages.RawPackage, error) {
+func (v *Validate) getPackageFromRemoteRef(
+	ctx context.Context, cfg ValidatePackageConfig,
+) (*packages.RawPackage, error) {
 	ref, err := name.ParseReference(cfg.RemoteReference)
 	if err != nil {
 		return nil, fmt.Errorf("parsing remote reference: %w", err)

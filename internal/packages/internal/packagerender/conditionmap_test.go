@@ -25,7 +25,8 @@ func Test_parseConditionMap(t *testing.T) {
 				Object: map[string]any{
 					"metadata": map[string]any{
 						"annotations": map[string]any{
-							manifestsv1alpha1.PackageConditionMapAnnotation: "Available => my-prefix/Available\nSomethingElse => my-prefix/SomethingElse",
+							manifestsv1alpha1.PackageConditionMapAnnotation: "Available => my-prefix/Available\nSomethingElse " +
+								"=> my-prefix/SomethingElse",
 						},
 					},
 				},

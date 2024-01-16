@@ -58,7 +58,8 @@ var _ = ginkgo.DescribeTable("validate subcommand",
 			ExpectedExitCode: 0,
 		},
 	),
-	ginkgo.Entry("given the path of a valid multi component package with configuration, no tests and no required properties",
+	ginkgo.Entry(
+		"given the path of a valid multi component package with configuration, no tests and no required properties",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("valid_with_config_no_tests_no_required_properties_multi")},
 			ExpectedExitCode: 0,

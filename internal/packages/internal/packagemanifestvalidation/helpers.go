@@ -25,7 +25,11 @@ var (
 	openapiV3Types = sets.NewString("string", "number", "integer", "boolean", openapiV3TypeArray, OpenapiV3TypeObject)
 	// unbounded uses nil to represent an unbounded cardinality value.
 	unbounded                 *uint64
-	allowedFieldsAtRootSchema = []string{"Description", "Type", "Format", "Title", "Maximum", "ExclusiveMaximum", "Minimum", "ExclusiveMinimum", "MaxLength", "MinLength", "Pattern", "MaxItems", "MinItems", "UniqueItems", "MultipleOf", "Required", "Items", "Properties", "ExternalDocs", "Example", "XPreserveUnknownFields", "XValidations"}
+	allowedFieldsAtRootSchema = []string{
+		"Description", "Type", "Format", "Title", "Maximum", "ExclusiveMaximum", "Minimum",
+		"ExclusiveMinimum", "MaxLength", "MinLength", "Pattern", "MaxItems", "MinItems", "UniqueItems",
+		"MultipleOf", "Required", "Items", "Properties", "ExternalDocs", "Example", "XPreserveUnknownFields", "XValidations",
+	}
 
 	newlineMatcher = regexp.MustCompile(`[\n\r]+`) // valid newline chars in CEL grammar
 )
@@ -64,7 +68,11 @@ func getCostErrorMessage(costName string, expressionCost, costLimit uint64) stri
 		factor = fmt.Sprintf("%.1fx", exceedFactor)
 	}
 
-	return fmt.Sprintf("%s exceeds budget by factor of %s (try simplifying the rule, or adding maxItems, maxProperties, and maxLength where arrays, maps, and strings are declared)", costName, factor)
+	return fmt.Sprintf(
+		"%s exceeds budget by factor of %s (try simplifying the rule, or adding maxItems, "+
+			"maxProperties, and maxLength where arrays, maps, and strings are declared)",
+		costName, factor,
+	)
 }
 
 func hasNewlines(s string) bool {
@@ -86,7 +94,10 @@ func validateMapListKeysMapSet(schema *apiextensions.JSONSchemaProps, fldPath *f
 
 	// set and map list items cannot be nullable
 	if schema.Items.Schema.Nullable {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("items").Child("nullable"), "cannot be nullable when x-kubernetes-list-type is "+*schema.XListType))
+		allErrs = append(allErrs,
+			field.Forbidden(fldPath.Child("items").Child("nullable"),
+				"cannot be nullable when x-kubernetes-list-type is "+*schema.XListType),
+		)
 	}
 
 	switch *schema.XListType {
@@ -100,16 +111,27 @@ func validateMapListKeysMapSet(schema *apiextensions.JSONSchemaProps, fldPath *f
 		for _, k := range schema.XListMapKeys {
 			obj, ok := schema.Items.Schema.Properties[k]
 			if !ok {
-				// we validate that all XListMapKeys are existing properties in ValidateCustomResourceDefinitionOpenAPISchema, so skipping here is ok
+				// we validate that all XListMapKeys are existing properties in
+				// ValidateCustomResourceDefinitionOpenAPISchema, so skipping here is ok.
 				continue
 			}
 
 			if !isRequired[k] && obj.Default == nil {
-				allErrs = append(allErrs, field.Required(fldPath.Child("items").Child("properties").Key(k).Child("default"), "this property is in x-kubernetes-list-map-keys, so it must have a default or be a required property"))
+				allErrs = append(allErrs,
+					field.Required(
+						fldPath.Child("items").Child("properties").Key(k).Child("default"),
+						"this property is in x-kubernetes-list-map-keys, so it must have a default or be a required property",
+					),
+				)
 			}
 
 			if obj.Nullable {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("items").Child("properties").Key(k).Child("nullable"), "this property is in x-kubernetes-list-map-keys, so it cannot be nullable"))
+				allErrs = append(allErrs,
+					field.Forbidden(
+						fldPath.Child("items").Child("properties").Key(k).Child("nullable"),
+						"this property is in x-kubernetes-list-map-keys, so it cannot be nullable",
+					),
+				)
 			}
 		}
 	case xListTypeSet:

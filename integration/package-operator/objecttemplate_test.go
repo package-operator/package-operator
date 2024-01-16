@@ -243,7 +243,9 @@ spec:
 	assert.Equal(t, cm1PatchedValue, envVar.Value)
 }
 
-func createCMAndObjectTemplateSource(cmKey, cmDestination, cmValue, cmName string) (corev1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
+func createCMAndObjectTemplateSource(
+	cmKey, cmDestination, cmValue, cmName string,
+) (corev1.ConfigMap, corev1alpha1.ObjectTemplateSource) {
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -318,7 +320,9 @@ spec:
   image: %s
   config:
     testStubImage: %s
-    %s: {{ b64dec .config.%s }}`, packageName, SuccessTestPackageImage, TestStubImage, secretDestination, secretDestination)
+    %s: {{ b64dec .config.%s }}`,
+		packageName, SuccessTestPackageImage, TestStubImage, secretDestination, secretDestination,
+	)
 
 	objectTemplateName := "object-template-password"
 	objectTemplate := corev1alpha1.ObjectTemplate{

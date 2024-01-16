@@ -38,8 +38,8 @@ func isPKOClusterPackageAvailable(ctx context.Context, c client.Client) (bool, e
 		return false, err
 	}
 
-	availableCond := meta.FindStatusCondition(clusterPackage.Status.Conditions, corev1alpha1.PackageAvailable)
-	return availableCond.ObservedGeneration == clusterPackage.Generation && availableCond.Status == metav1.ConditionTrue, nil
+	availCond := meta.FindStatusCondition(clusterPackage.Status.Conditions, corev1alpha1.PackageAvailable)
+	return availCond.ObservedGeneration == clusterPackage.Generation && availCond.Status == metav1.ConditionTrue, nil
 }
 
 func isPKODeploymentAvailable(ctx context.Context, c client.Client, pkoNamespace string) (bool, error) {

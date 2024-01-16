@@ -20,15 +20,19 @@ type objectSetReconciler struct {
 }
 
 type objectSetSubReconciler interface {
-	Reconcile(ctx context.Context,
-		currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor) (ctrl.Result, error)
+	Reconcile(
+		ctx context.Context, currentObjectSet genericObjectSet,
+		prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+	) (ctrl.Result, error)
 }
 
 type listObjectSetsForDeploymentFn func(
 	ctx context.Context, objectDeployment objectDeploymentAccessor,
 ) ([]genericObjectSet, error)
 
-func (o *objectSetReconciler) Reconcile(ctx context.Context, objectDeployment objectDeploymentAccessor) (ctrl.Result, error) {
+func (o *objectSetReconciler) Reconcile(
+	ctx context.Context, objectDeployment objectDeploymentAccessor,
+) (ctrl.Result, error) {
 	objectSets, err := o.listObjectSetsForDeployment(ctx, objectDeployment)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("listing objectsets under deployment errored: %w", err)
@@ -166,7 +170,9 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	)
 
 	if !currentObjectSet.IsAvailable() {
-		objectDeployment.SetStatusConditions(conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
+		objectDeployment.SetStatusConditions(
+			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
+		)
 
 		return
 	}
@@ -221,7 +227,9 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 	return false, ""
 }
 
-func newAvailableCondition(status metav1.ConditionStatus, reason availableReason, msg string, generation int64) metav1.Condition {
+func newAvailableCondition(
+	status metav1.ConditionStatus, reason availableReason, msg string, generation int64,
+) metav1.Condition {
 	return metav1.Condition{
 		Type:               corev1alpha1.ObjectDeploymentAvailable,
 		Status:             status,
@@ -242,7 +250,9 @@ const (
 	availableReasonObjectSetUnready availableReason = "ObjectSetUnready"
 )
 
-func newProgressingCondition(status metav1.ConditionStatus, reason progressingReason, msg string, generation int64) metav1.Condition {
+func newProgressingCondition(
+	status metav1.ConditionStatus, reason progressingReason, msg string, generation int64,
+) metav1.Condition {
 	return metav1.Condition{
 		Type:               corev1alpha1.ObjectDeploymentProgressing,
 		Status:             status,

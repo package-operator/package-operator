@@ -18,7 +18,9 @@ import (
 
 type sub struct{ mock.Mock }
 
-func (s *sub) Check(ctx context.Context, owner client.Object, obj client.Object) (violations []preflight.Violation, err error) {
+func (s *sub) Check(
+	ctx context.Context, owner client.Object, obj client.Object,
+) (violations []preflight.Violation, err error) {
 	ret := s.Called(ctx, owner, obj)
 
 	return ret.Get(0).([]preflight.Violation), ret.Error(1)
@@ -64,7 +66,9 @@ func TestAPIExistenceNotExists(t *testing.T) {
 
 	checkVios := []preflight.Violation{{Position: "kind /", Error: "/3, Kind=kind not registered on the api server."}}
 
-	m.On("RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"}).Once().Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{})
+	m.On(
+		"RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"},
+	).Once().Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{})
 	violations, err := preflight.NewAPIExistence(m, s).Check(ctx, owner, obj)
 
 	require.NoError(t, err)
@@ -82,7 +86,9 @@ func TestAPIExistenceErr(t *testing.T) {
 
 	checkErr := fmt.Errorf("smth") //nolint: goerr113
 
-	m.On("RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"}).Once().Return(&meta.RESTMapping{}, checkErr)
+	m.On(
+		"RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"},
+	).Once().Return(&meta.RESTMapping{}, checkErr)
 
 	violations, err := preflight.NewAPIExistence(m, s).Check(ctx, owner, obj)
 

@@ -21,17 +21,19 @@ func sourcePathFixture(name string) string {
 	)
 
 	return map[string]string{
-		"valid_without_config":                                    filepath.Join(validPackages, "without_config"),
-		"valid_without_config_multi":                              filepath.Join(validPackages, "without_config_multi"),
-		"valid_with_config":                                       filepath.Join(validPackages, "with_config"),
-		"valid_with_config_multi":                                 filepath.Join(validPackages, "with_config_multi"),
-		"valid_with_config_no_tests_no_required_properties":       filepath.Join(validPackages, "with_config_no_tests_no_required_properties"),
-		"valid_with_config_no_tests_no_required_properties_multi": filepath.Join(validPackages, "with_config_no_tests_no_required_properties_multi"),
-		"invalid_bad_manifest":                                    filepath.Join(invalidPackages, "bad_manifest"),
-		"invalid_invalid_resource_label":                          filepath.Join(invalidPackages, "invalid_resource_label"),
-		"invalid_missing_lock_file":                               filepath.Join(invalidPackages, "missing_lock_file"),
-		"invalid_missing_phase_annotation":                        filepath.Join(invalidPackages, "missing_phase_annotation"),
-		"invalid_missing_resource_gvk":                            filepath.Join(invalidPackages, "missing_resource_gvk"),
+		"valid_without_config":       filepath.Join(validPackages, "without_config"),
+		"valid_without_config_multi": filepath.Join(validPackages, "without_config_multi"),
+		"valid_with_config":          filepath.Join(validPackages, "with_config"),
+		"valid_with_config_multi":    filepath.Join(validPackages, "with_config_multi"),
+		"valid_with_config_no_tests_no_required_properties": filepath.Join(validPackages,
+			"with_config_no_tests_no_required_properties"),
+		"valid_with_config_no_tests_no_required_properties_multi": filepath.Join(validPackages,
+			"with_config_no_tests_no_required_properties_multi"),
+		"invalid_bad_manifest":             filepath.Join(invalidPackages, "bad_manifest"),
+		"invalid_invalid_resource_label":   filepath.Join(invalidPackages, "invalid_resource_label"),
+		"invalid_missing_lock_file":        filepath.Join(invalidPackages, "missing_lock_file"),
+		"invalid_missing_phase_annotation": filepath.Join(invalidPackages, "missing_phase_annotation"),
+		"invalid_missing_resource_gvk":     filepath.Join(invalidPackages, "missing_resource_gvk"),
 	}[name]
 }
 
@@ -94,7 +96,8 @@ func generatePackage(dir string, opts ...generatePackageOption) {
 		lockData, err := yaml.Marshal(cfg.LockData)
 		gomega.ExpectWithOffset(1, err).ToNot(gomega.HaveOccurred())
 
-		gomega.ExpectWithOffset(1, os.WriteFile(filepath.Join(dir, "manifest.lock.yaml"), lockData, 0o644)).To(gomega.Succeed())
+		act := os.WriteFile(filepath.Join(dir, "manifest.lock.yaml"), lockData, 0o644)
+		gomega.ExpectWithOffset(1, act).To(gomega.Succeed())
 	}
 }
 

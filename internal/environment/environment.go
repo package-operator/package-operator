@@ -153,7 +153,8 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	}, clusterVersion)
 
 	switch {
-	case apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) || discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+	case apimachinerymeta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
+		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
 		// API not registered in cluster
 		return nil, false, nil
 	case err != nil:

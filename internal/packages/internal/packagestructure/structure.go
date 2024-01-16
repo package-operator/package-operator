@@ -66,7 +66,9 @@ func (l *StructuralLoader) LoadComponent(
 	return l.load(ctx, cFiles, componentName)
 }
 
-func (l *StructuralLoader) load(ctx context.Context, files packagetypes.Files, componentName string) (*packagetypes.Package, error) {
+func (l *StructuralLoader) load(
+	ctx context.Context, files packagetypes.Files, componentName string,
+) (*packagetypes.Package, error) {
 	pkg := &packagetypes.Package{}
 
 	// PackageManifest

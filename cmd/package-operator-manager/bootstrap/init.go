@@ -29,9 +29,9 @@ const (
 	packageOperatorDeploymentDeletionTimeout       = 2 * time.Minute
 )
 
-// Initializes PKO on the cluster by installing CRDs and
-// ensuring a package-operator ClusterPackage is present.
-// Will shut down PKO prior to bootstrapping if the ClusterPackage was updated to ensure that new "non-buggy" PKO code will handle the migration.
+// Initializes PKO on the cluster by installing CRDs and ensuring a package-operator ClusterPackage is present.
+// Will shut down PKO prior to bootstrapping if the ClusterPackage was updated to ensure that new "non-buggy"
+// PKO code will handle the migration.
 type initializer struct {
 	client    client.Client
 	scheme    *runtime.Scheme
@@ -93,7 +93,9 @@ func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {
 	}
 }
 
-// ensureUpdatedPKO compares new and old PKO ClusterPackages, looks at PKO availability, it handles eventual PKO shutdown, update of the PKO ClusterPackage and decides if bootstrap should be executed or not.
+// ensureUpdatedPKO compares new and old PKO ClusterPackages, looks at PKO availability,
+// it handles eventual PKO shutdown, update of the PKO ClusterPackage and decides if
+// bootstrap should be executed or not.
 func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 	bootstrapClusterPackage := init.newPKOClusterPackage()
 

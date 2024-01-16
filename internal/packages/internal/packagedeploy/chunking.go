@@ -18,7 +18,8 @@ type (
 type (
 	chunkingStrategy string
 
-	// objectChunker implements how to offload objects within a phase into multiple ObjectSlices to reduce load on etcd and the api server.
+	// objectChunker implements how to offload objects within a phase
+	// into multiple ObjectSlices to reduce load on etcd and the api server.
 	objectChunker interface {
 		Chunk(ctx context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error)
 	}
@@ -48,11 +49,15 @@ func determineChunkingStrategyForPackage(pkg adapters.GenericPackageAccessor) ob
 	}
 }
 
-func (c *NoOpChunker) Chunk(context.Context, *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
+func (c *NoOpChunker) Chunk(
+	context.Context, *corev1alpha1.ObjectSetTemplatePhase,
+) ([][]corev1alpha1.ObjectSetObject, error) {
 	return nil, nil
 }
 
-func (c *EachObjectChunker) Chunk(_ context.Context, phase *corev1alpha1.ObjectSetTemplatePhase) ([][]corev1alpha1.ObjectSetObject, error) {
+func (c *EachObjectChunker) Chunk(
+	_ context.Context, phase *corev1alpha1.ObjectSetTemplatePhase,
+) ([][]corev1alpha1.ObjectSetObject, error) {
 	out := make([][]corev1alpha1.ObjectSetObject, len(phase.Objects))
 	for i, obj := range phase.Objects {
 		out[i] = []corev1alpha1.ObjectSetObject{obj}

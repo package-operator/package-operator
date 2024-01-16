@@ -253,7 +253,9 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	return res, c.updateStatus(ctx, objectSetPhase)
 }
 
-func (c *GenericObjectSetPhaseController) reportPausedCondition(_ context.Context, objectSetPhase genericObjectSetPhase) {
+func (c *GenericObjectSetPhaseController) reportPausedCondition(
+	_ context.Context, objectSetPhase genericObjectSetPhase,
+) {
 	if objectSetPhase.IsPaused() {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPhasePaused,
@@ -307,6 +309,8 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
-		WatchesRawSource(c.dynamicCache.Source(), c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false)).
-		Complete(c)
+		WatchesRawSource(
+			c.dynamicCache.Source(),
+			c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
+		).Complete(c)
 }

@@ -144,7 +144,9 @@ func (c *GenericObjectTemplateController) Reconcile(
 	return res, c.updateStatus(ctx, objectTemplate)
 }
 
-func (c *GenericObjectTemplateController) updateStatus(ctx context.Context, objectTemplate genericObjectTemplate) error {
+func (c *GenericObjectTemplateController) updateStatus(
+	ctx context.Context, objectTemplate genericObjectTemplate,
+) error {
 	objectTemplate.UpdatePhase()
 	if err := c.client.Status().Update(ctx, objectTemplate.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectTemplate status: %w", err)

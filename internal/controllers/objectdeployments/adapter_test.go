@@ -97,7 +97,12 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 			},
 				nil,
 			),
-			expectedObjectIDs: []string{"/ConfigMap/namespace1/cm1", "/ConfigMap/namespace2/cm2", "apps/Deployment/default/deployment1", "/Secret/default/secret1"},
+			expectedObjectIDs: []string{
+				"/ConfigMap/namespace1/cm1",
+				"/ConfigMap/namespace2/cm2",
+				"apps/Deployment/default/deployment1",
+				"/Secret/default/secret1",
+			},
 		},
 		{
 			objectSet: genObjectSet("test-2", "default-1", map[string][]client.Object{
@@ -112,7 +117,12 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 			},
 				nil,
 			),
-			expectedObjectIDs: []string{"/ConfigMap/default-1/cm1", "/ConfigMap/default-1/cm2", "apps/Deployment/default-1/deployment1", "/Secret/default-1/secret1"},
+			expectedObjectIDs: []string{
+				"/ConfigMap/default-1/cm1",
+				"/ConfigMap/default-1/cm2",
+				"apps/Deployment/default-1/deployment1",
+				"/Secret/default-1/secret1",
+			},
 		},
 	}
 	for _, testCase := range testCases {

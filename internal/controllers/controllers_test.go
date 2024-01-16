@@ -44,7 +44,10 @@ func TestEnsureFinalizer(t *testing.T) {
 	if assert.NotNil(t, patch) {
 		j, err := patch.Data(obj)
 		require.NoError(t, err)
-		assert.Equal(t, `{"metadata":{"finalizers":["already-present","test-finalizer"],"resourceVersion":"xxx-123"}}`, string(j))
+		assert.Equal(t,
+			`{"metadata":{"finalizers":["already-present","test-finalizer"],"resourceVersion":"xxx-123"}}`,
+			string(j),
+		)
 	}
 }
 

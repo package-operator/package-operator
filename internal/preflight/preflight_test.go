@@ -105,14 +105,18 @@ func TestPreflightListOk(t *testing.T) {
 	var called1, called2 bool
 
 	list := PhasesCheckerList{
-		phasesCheckerFn(func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
-			called1 = true
-			return
-		}),
-		phasesCheckerFn(func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
-			called2 = true
-			return
-		}),
+		phasesCheckerFn(
+			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+				called1 = true
+				return
+			},
+		),
+		phasesCheckerFn(
+			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+				called2 = true
+				return
+			},
+		),
 	}
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{
@@ -133,18 +137,24 @@ func TestPreflightListWithError(t *testing.T) {
 	var called1, called2, called3 bool
 
 	list := PhasesCheckerList{
-		phasesCheckerFn(func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
-			called1 = true
-			return
-		}),
-		phasesCheckerFn(func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
-			called2 = true
-			return violations, errChecker
-		}),
-		phasesCheckerFn(func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
-			called3 = true
-			return
-		}),
+		phasesCheckerFn(
+			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+				called1 = true
+				return
+			},
+		),
+		phasesCheckerFn(
+			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+				called2 = true
+				return violations, errChecker
+			},
+		),
+		phasesCheckerFn(
+			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+				called3 = true
+				return
+			},
+		),
 	}
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{

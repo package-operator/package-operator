@@ -22,8 +22,8 @@ type PackageStatus struct {
 // Package condition types.
 const (
 	// A Packages "Available" condition tracks the availability of the underlying ObjectDeployment objects.
-	// When the Package is reporting "Available" = True, it's expected that whatever the Package installs is up and operational.
-	// Package "Availability" may change multiple times during it's lifecycle.
+	// When the Package is reporting "Available" = True, it's expected that whatever the Package installs
+	// is up and operational. Package "Availability" may change multiple times during it's lifecycle.
 	PackageAvailable = "Available"
 	// Progressing indicates that a new release is being rolled out.
 	PackageProgressing = "Progressing"
@@ -55,7 +55,8 @@ const (
 // PackageSpec specifies a package.
 type PackageSpec struct {
 	// the image containing the contents of the package
-	// this image will be unpacked by the package-loader to render the ObjectDeployment for propagating the installation of the package.
+	// this image will be unpacked by the package-loader to render
+	// the ObjectDeployment for propagating the installation of the package.
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
 	// Package configuration parameters.

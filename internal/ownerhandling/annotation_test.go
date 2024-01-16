@@ -511,7 +511,10 @@ func TestOwnerStrategyAnnotation_OwnerPatch(t *testing.T) {
 	patch, err := s.OwnerPatch(obj)
 	require.NoError(t, err)
 
-	assert.Equal(t, `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",\"controller\":true}]","package-operator.run/revision":"3"}}}`, string(patch))
+	expected := `{"metadata":{"annotations":{"package-operator.run/owners":"[{\"apiVersion\":\"v1\",` +
+		`\"kind\":\"ConfigMap\",\"name\":\"cm\",\"namespace\":\"testns\",\"uid\":\"asdfjkl\",` +
+		`\"controller\":true}]","package-operator.run/revision":"3"}}}`
+	assert.Equal(t, expected, string(patch))
 }
 
 func TestOwnerStrategyAnnotation_EnqueueRequestForOwner(t *testing.T) {

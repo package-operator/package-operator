@@ -286,7 +286,9 @@ func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, 
 	return nil
 }
 
-func (c *GenericObjectSetController) areRemotePhasesPaused(ctx context.Context, objectSet genericObjectSet) (arePaused, unknown bool, err error) {
+func (c *GenericObjectSetController) areRemotePhasesPaused(
+	ctx context.Context, objectSet genericObjectSet,
+) (arePaused, unknown bool, err error) {
 	var pausedPhases int
 	for _, phaseRef := range objectSet.GetRemotePhases() {
 		phase := c.newObjectSetPhase(c.scheme)

@@ -49,7 +49,9 @@ func (c *CtrlClient) Status() client.StatusWriter {
 
 // Reader interface
 
-func (c *CtrlClient) Get(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+func (c *CtrlClient) Get(
+	ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption,
+) error {
 	args := c.Called(ctx, key, obj, opts)
 	return args.Error(0)
 }
@@ -76,7 +78,9 @@ func (c *CtrlClient) Update(ctx context.Context, obj client.Object, opts ...clie
 	return args.Error(0)
 }
 
-func (c *CtrlClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func (c *CtrlClient) Patch(
+	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption,
+) error {
 	args := c.Called(ctx, obj, patch, opts)
 	return args.Error(0)
 }
@@ -116,7 +120,9 @@ func (c *CtrlStatusClient) Patch(
 	return args.Error(0)
 }
 
-func (c *CtrlStatusClient) Create(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+func (c *CtrlStatusClient) Create(
+	ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption,
+) error {
 	args := c.Called(ctx, obj, subResource, opts)
 	return args.Error(0)
 }
