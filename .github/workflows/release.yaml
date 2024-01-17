@@ -34,7 +34,7 @@ jobs:
     - name: Delete non-semver tags
       run: 'git tag -d $(git tag -l | grep -v "^v")'
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: |
           ~/.cache/go-build
