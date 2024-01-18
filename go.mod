@@ -17,7 +17,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.14.0
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/gomega v1.31.0
 	github.com/openshift/api v0.0.0-20231213232254-1029f2d5339f
 	github.com/prometheus/client_golang v1.18.0
 	github.com/pterm/pterm v0.12.74
