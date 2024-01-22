@@ -20,7 +20,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apiextensions-apiserver v0.29.1
 	k8s.io/klog/v2 v2.120.1 // indirect
-	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
+	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
