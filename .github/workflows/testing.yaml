@@ -77,7 +77,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Kubectl Package Suite
+    - name: Integration tests
       run: ./do Test:Integration
 
     - name: Archive cluster logs
