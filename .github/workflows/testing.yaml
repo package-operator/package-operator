@@ -79,8 +79,6 @@ jobs:
 
     - name: Kubectl Package Suite
       run: ./do Test:Integration
-      env:
-        CONTAINER_RUNTIME: docker
 
     - name: Archive cluster logs
       uses: actions/upload-artifact@v4
