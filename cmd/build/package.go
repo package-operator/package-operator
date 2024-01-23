@@ -25,7 +25,6 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		if err := (Generate{}).packageOperatorPackageFiles(ctx); err != nil {
 			return err
 		}
-	default:
 	}
 
 	path := fmt.Sprintf("./config/packages/%s/container.oci.tar", name)

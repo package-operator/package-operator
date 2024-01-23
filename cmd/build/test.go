@@ -40,20 +40,36 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 	}
 
 	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushImage, "package-operator-manager", "localhost:5001"),
-		run.Fn2(pushImage, "package-operator-webhook", "localhost:5001"),
-		run.Fn2(pushImage, "remote-phase-manager", "localhost:5001"),
-		run.Fn2(pushImage, "test-stub", "localhost:5001"),
-		run.Fn2(pushPackage, "package-operator", "localhost:5001"),
-		run.Fn2(pushPackage, "remote-phase", "localhost:5001"),
-		run.Fn2(pushPackage, "test-stub", "localhost:5001"),
-		run.Fn2(pushPackage, "test-stub-multi", "localhost:5001"),
+		run.Fn2(pushImage, "package-operator-manager", "localhost:5001/package-operator"),
+		run.Fn2(pushImage, "package-operator-webhook", "localhost:5001/package-operator"),
+		run.Fn2(pushImage, "remote-phase-manager", "localhost:5001/package-operator"),
+		run.Fn2(pushImage, "test-stub", "localhost:5001/package-operator"),
 	)
 	if err != nil {
 		return err
 	}
 
+	if err := os.Setenv("PKO_REPOSITORY_HOST", "localhost:5001"); err != nil {
+		return err
+	}
+
+	err = mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushPackage, "remote-phase", "localhost:5001/package-operator"),
+		run.Fn2(pushPackage, "test-stub", "localhost:5001/package-operator"),
+		run.Fn2(pushPackage, "test-stub-multi", "localhost:5001/package-operator"),
+	)
 	if err != nil {
+		return err
+	}
+
+	err = mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushPackage, "package-operator", "localhost:5001/package-operator"),
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := os.Unsetenv("PKO_REPOSITORY_HOST"); err != nil {
 		return err
 	}
 
@@ -114,12 +130,12 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
 	}
 
-	packageRegistry := "dev-registry.dev-registry.svc.cluster.local:5001"
+	packageRegistry := "dev-registry.dev-registry.svc.cluster.local:5001/package-operator"
 	env := sh.WithEnvironment{
 		"CGO_ENABLED":                          "1",
 		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(packageRegistry, "test-stub-package", appVersion),
 		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(packageRegistry, "test-stub-multi-package", appVersion),
-		"PKO_TEST_STUB_IMAGE":                  imageURL("localhost:5001", "test-stub", appVersion),
+		"PKO_TEST_STUB_IMAGE":                  imageURL("localhost:5001/package-operator", "test-stub", appVersion),
 		"PKO_TEST_LATEST_BOOTSTRAP_JOB":        os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB"),
 		"KUBECONFIG":                           kubeconfigPath,
 	}

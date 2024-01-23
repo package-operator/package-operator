@@ -67,18 +67,21 @@ func newInitializer(
 	}
 }
 
-func (init *initializer) Init(ctx context.Context) (
-	needsBootstrap bool, err error,
-) {
+func (init *initializer) Init(ctx context.Context) (needsBootstrap bool, err error) {
 	crds, err := init.crdsFromPackage(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("crdsFromPackage: %w", err)
 	}
 	if err := init.ensureCRDs(ctx, crds); err != nil {
-		return false, err
+		return false, fmt.Errorf("ensureCRDs: %w", err)
 	}
 
-	return init.ensureUpdatedPKO(ctx)
+	needsBootstrap, err = init.ensureUpdatedPKO(ctx)
+	if err != nil {
+		return needsBootstrap, fmt.Errorf("ensureUpdatedPKO: %w", err)
+	}
+
+	return needsBootstrap, nil
 }
 
 func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {

@@ -106,8 +106,6 @@ func version() (string, error) {
 		return "", fmt.Errorf("git describe: %w", err)
 	}
 
-	version = strings.Split(version, "-")[0]
-
 	// Depending on what process was used the last tag my either be a version for
 	// the main module (eg `v1.6.6`) or a version for a submodule (eg `apis/v1.6.6`).
 	return path.Base(strings.TrimSpace(version)), nil

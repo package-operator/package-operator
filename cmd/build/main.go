@@ -41,7 +41,7 @@ func main() {
 		ContainerdConfigPatches: []string{
 			// Replace `imageRegistry` with our local dev-registry.
 			fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
-endpoint = ["http://localhost:31320"]`, "quay.io/package-operator"),
+endpoint = ["http://localhost:31320"]`, "quay.io"),
 		},
 		Nodes: []kindv1alpha4.Node{
 			{
@@ -80,6 +80,7 @@ endpoint = ["http://localhost:31320"]`, "quay.io/package-operator"),
 		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.55.0"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
 		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.12.3"),
+		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.16.1"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {

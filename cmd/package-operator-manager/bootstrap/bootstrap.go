@@ -74,15 +74,17 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 
 	needsBootstrap, err := b.init(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("init: %w", err)
 	}
 
 	if err := b.fix(ctx); err != nil {
-		return err
+		return fmt.Errorf("fix: %w", err)
 	}
 
 	if needsBootstrap {
-		return b.bootstrap(ctx, runManager)
+		if err := b.bootstrap(ctx, runManager); err != nil {
+			return fmt.Errorf("bootstrap: %w", err)
+		}
 	}
 
 	return nil

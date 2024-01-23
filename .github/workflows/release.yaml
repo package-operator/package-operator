@@ -45,7 +45,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Release the things
-      run: ./do Release:All
+      run: ./do CI:Release
       env:
         VERSION: ${{github.ref_name}}
         QUAY_USER: ${{ secrets.QUAY_USER }}
