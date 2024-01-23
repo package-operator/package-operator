@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -27,7 +28,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 	default:
 	}
 
-	path := ".cache/packages/" + name + ".tar"
+	path := fmt.Sprintf("./config/packages/%s/container.oci.tar", name)
 	err := cmd.NewBuild().BuildFromSource(ctx,
 		"./config/packages/"+name,
 		cmd.WithOutputPath(path),
@@ -41,7 +42,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
-	imgPath, err := filepath.Abs("./config/packages/")
+	imgPath, err := filepath.Abs("./config/packages/" + name)
 	if err != nil {
 		return err
 	}
@@ -49,7 +50,11 @@ func pushPackage(ctx context.Context, name, registry string) error {
 	if err := buildPackage(ctx, name, registry); err != nil {
 		return err
 	}
-	o := oci.NewOCI(name+"-package", imgPath, oci.WithTags{appVersion}, oci.WithRegistries{registry})
+	o := oci.NewOCI(name+"-package", imgPath,
+		oci.WithTags{appVersion},
+		oci.WithRegistries{registry},
+		oci.WithCranePush{},
+	)
 
 	if err := o.Push(); err != nil {
 		return err

@@ -41,6 +41,8 @@ func buildImage(ctx context.Context, name, registry string) error {
 		oci.WithContainerFile("Containerfile"),
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},
+		// push via crane, because podman does not support HTTP pushes for local dev.
+		oci.WithCranePush{},
 	)
 
 	if err := shr.Copy(buildDir+"/passwd", "config/images/passwd"); err != nil {
@@ -62,7 +64,7 @@ func buildImage(ctx context.Context, name, registry string) error {
 }
 
 func pushImage(ctx context.Context, name, registry string) error {
-	imgPath, err := filepath.Abs("./config/images/")
+	imgPath, err := filepath.Abs(".cache/images/" + name)
 	if err != nil {
 		return err
 	}
@@ -73,6 +75,8 @@ func pushImage(ctx context.Context, name, registry string) error {
 	o := oci.NewOCI(name, imgPath,
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},
+		// push via crane, because podman does not support HTTP pushes for local dev.
+		oci.WithCranePush{},
 	)
 
 	if err := o.Push(); err != nil {

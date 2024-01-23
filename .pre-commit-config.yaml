@@ -26,7 +26,7 @@ repos:
   hooks:
   - id: lint
     name: lint
-    entry: go run ./cmd/build Lint:PreCommit
+    entry: ./do CI:PreCommit
     language: system
     exclude: ".*"
     always_run: true

@@ -17,44 +17,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// internal struct to namespace all test related functions.
 type Test struct{}
 
-func (t Test) Integration(ctx context.Context, args []string) error {
-	f := ""
-	if len(args) > 2 {
-		return fmt.Errorf("only optional argument filter allowed") //nolint:goerr113
-	} else if len(args) == 1 {
-		if args[0] == "" {
-			return fmt.Errorf("filter may not be empty") //nolint:goerr113
-		}
-		f = "-run " + args[0]
+func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter string) error {
+	var f string
+	if len(filter) > 0 {
+		f = "-run " + filter
+	}
+
+	if err := mgr.SerialDeps(ctx, self, cluster); err != nil {
+		return err
 	}
 
 	if err := os.MkdirAll(".cache/integration", 0o755); err != nil {
 		return err
 	}
 
-	if err := cluster.Destroy(ctx); err != nil {
-		return err
-	}
-
-	if err := cluster.Create(ctx); err != nil {
-		return err
-	}
 	cl, err := cluster.Clients()
 	if err != nil {
 		return err
 	}
 
-	if err := corev1alpha1.AddToScheme(cl.CtrlClient.Scheme()); err != nil {
-		return err
-	}
-
-	if err := cl.CreateAndWaitFromFiles(ctx, []string{"config/local-registry.yaml"}); err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, run.Meth1(t, t.Integration, args),
+	err = mgr.ParallelDeps(ctx, self,
 		run.Fn2(pushImage, "package-operator-manager", "localhost:5001"),
 		run.Fn2(pushImage, "package-operator-webhook", "localhost:5001"),
 		run.Fn2(pushImage, "remote-phase-manager", "localhost:5001"),
@@ -164,14 +149,11 @@ func (t Test) Integration(ctx context.Context, args []string) error {
 	}
 }
 
-// Run unittests, first argument is passed as -run="" filter.
-func (t Test) Unit(_ context.Context, args []string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("test:unit only supports a single argument") //nolint:goerr113
-	}
+// Run unittests, the filter argument is passed via -run="".
+func (t Test) Unit(_ context.Context, filter string) error {
 	gotestArgs := []string{"-coverprofile=cover.txt", "-race", "-json"}
-	if len(args) == 1 {
-		gotestArgs = append(gotestArgs, "-run="+args[0])
+	if len(filter) > 0 {
+		gotestArgs = append(gotestArgs, "-run="+filter)
 	}
 
 	argStr := strings.Join(gotestArgs, " ")

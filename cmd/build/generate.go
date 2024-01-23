@@ -21,18 +21,24 @@ import (
 	"package-operator.run/internal/cmd"
 )
 
+// internal struct to namespace all code-gen functions.
 type Generate struct{}
 
-func (g Generate) All(ctx context.Context, _ []string) error { return g.all(ctx) }
-
-func (g Generate) all(ctx context.Context) error {
-	if err := mgr.SerialDeps(ctx, run.Meth(g, g.all), run.Meth(g, g.code)); err != nil {
+// runs all code generators.
+func (g Generate) All(ctx context.Context) error {
+	self := run.Meth(g, g.All)
+	if err := mgr.SerialDeps(
+		ctx, self,
+		run.Meth(g, g.code),
+	); err != nil {
 		return err
 	}
 
-	return mgr.ParallelDeps(ctx, run.Meth(g, g.all),
-		run.Meth(g, g.docs), run.Meth(g, g.docs),
-		run.Meth(g, g.docs), run.Meth(g, g.installYamlFile),
+	// installYamlFile has to come after code generation.
+	return mgr.ParallelDeps(
+		ctx, self,
+		run.Meth(g, g.docs),
+		run.Meth(g, g.installYamlFile),
 		run.Meth(g, g.selfBootstrapJob),
 		run.Meth(g, g.selfBootstrapJobLocal),
 	)
@@ -207,7 +213,7 @@ func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	remotePhaseURL := imageURL("quay.io/package-operator", "remote-phase-package", appVersion)
 	mngrURL := imageURL("quay.io/package-operator", "package-operator-manager", appVersion)
 
-	if err := filepath.WalkDir("config/static-deployment", includeInPackageOperatorPackage); err != nil {
+	if err := filepath.WalkDir("config/static-deployment", g.includeInPackageOperatorPackage); err != nil {
 		return err
 	}
 
@@ -275,7 +281,7 @@ func (Generate) remotePhaseFiles(ctx context.Context) error {
 	return err
 }
 
-func includeInPackageOperatorPackage(path string, d fs.DirEntry, err error) error {
+func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, err error) error {
 	if err != nil {
 		return err
 	}

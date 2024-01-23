@@ -46,6 +46,7 @@ require (
 	package-operator.run/pkg v1.9.3
 	pkg.package-operator.run/cardboard v0.0.0
 	pkg.package-operator.run/cardboard/modules/kind v0.0.0-00010101000000-000000000000
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-00010101000000-000000000000
 	pkg.package-operator.run/cardboard/modules/oci v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/kind v0.20.0
@@ -161,7 +162,6 @@ require (
 	k8s.io/component-base v0.29.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	pkg.package-operator.run/cardboard/kubeutils v0.0.0-00010101000000-000000000000 // indirect
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

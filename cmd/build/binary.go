@@ -10,8 +10,10 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
+// compiles code in /cmd/<cmd> for the given OS and ARCH.
+// Binaries will be put in /bin/<cmd>_<os>_<arch>.
 func compile(ctx context.Context, cmd string, goos, goarch string) error {
-	if err := (Generate{}).all(ctx); err != nil {
+	if err := (Generate{}).All(ctx); err != nil {
 		return err
 	}
 
@@ -45,6 +47,7 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 	return nil
 }
 
+// compiles all binaries of the project for all relevant architectures.
 func compileAll(ctx context.Context) error {
 	if err := compile(ctx, "package-operator-manager", "linux", "amd64"); err != nil {
 		return err

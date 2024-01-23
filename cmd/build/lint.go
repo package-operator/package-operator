@@ -7,18 +7,11 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
+// internal struct to namespace all lint related functions.
 type Lint struct{}
 
-func (l Lint) Fix(_ context.Context, _ []string) error   { return l.glciFix() }
-func (l Lint) Check(_ context.Context, _ []string) error { return l.glciCheck() }
-
-func (l Lint) PreCommit(ctx context.Context, args []string) error {
-	return mgr.ParallelDeps(ctx, run.Meth1(l, l.PreCommit, args),
-		run.Meth(Generate{}, Generate{}.all),
-		run.Meth(l, l.glciFix),
-		run.Meth(l, l.goModTidyAll),
-	)
-}
+func (l Lint) Fix() error   { return l.glciFix() }
+func (l Lint) Check() error { return l.glciCheck() }
 
 // TODO make that more nice.
 func (l Lint) goModTidy(workdir string) error {
