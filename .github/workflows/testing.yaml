@@ -28,7 +28,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: |
-          ~/.cache/package-operator
+          .cache
           ~/.cache/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -36,10 +36,10 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Lint
-      run: go run ./cmd/build Lint:Check
+      run: ./do Lint:Check
 
     - name: Unit
-      run: go run ./cmd/build Test:Unit
+      run: ./do Test:Unit
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
@@ -70,7 +70,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: |
-          ~/.cache/package-operator
+          .cache
           ~/.cache/go-build
           ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -78,12 +78,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Kubectl Package Suite
-      run: ./mage test:integration kubectl-package
-      env:
-        CONTAINER_RUNTIME: docker
-
-    - name: Package Operator Suite
-      run: ./mage test:integration package-operator-local
+      run: ./do Test:Integration
       env:
         CONTAINER_RUNTIME: docker
 
