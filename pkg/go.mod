@@ -3,7 +3,7 @@ module package-operator.run/pkg
 go 1.21
 
 require (
-	github.com/google/cel-go v0.17.7
+	github.com/google/cel-go v0.19.0
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apimachinery v0.29.1
 	k8s.io/apiserver v0.29.1
@@ -12,7 +12,7 @@ require (
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
