@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mt-sre/devkube/dev"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/yaml"
@@ -295,7 +295,7 @@ func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, er
 		return err
 	}
 
-	objs, err := dev.LoadKubernetesObjectsFromBytes(fileContent)
+	objs, err := kubemanifests.LoadKubernetesObjectsFromBytes(fileContent)
 	if err != nil {
 		return err
 	}

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mt-sre/devkube/dev"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -146,9 +146,9 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(
 			return err
 		}
 
-		waiter := dev.NewWaiter(fc.Client, fc.Client.Scheme(),
-			dev.WithInterval(deletionWaitInterval),
-			dev.WithTimeout(deletionWaitTimeout))
+		waiter := wait.NewWaiter(fc.Client, fc.Client.Scheme(),
+			wait.WithInterval(deletionWaitInterval),
+			wait.WithTimeout(deletionWaitTimeout))
 		if err := waiter.WaitToBeGone(ctx,
 			&cos,
 			func(obj client.Object) (done bool, err error) {
@@ -179,9 +179,9 @@ func (f CRDPluralizationFix) ensureCRDGone(ctx context.Context, fc Context, name
 	}
 
 	// wait for object to be fully deleted
-	waiter := dev.NewWaiter(fc.Client, fc.Client.Scheme(),
-		dev.WithInterval(deletionWaitInterval),
-		dev.WithTimeout(deletionWaitTimeout))
+	waiter := wait.NewWaiter(fc.Client, fc.Client.Scheme(),
+		wait.WithInterval(deletionWaitInterval),
+		wait.WithTimeout(deletionWaitTimeout))
 	return waiter.WaitToBeGone(ctx, crd, func(obj client.Object) (done bool, err error) { return false, nil })
 }
 

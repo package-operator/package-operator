@@ -13,23 +13,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-
-	"github.com/go-logr/logr"
-	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
-
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -72,17 +67,17 @@ func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.Clus
 		require.NoError(t,
 			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
 				func(obj client.Object) (done bool, err error) { return false, nil },
-				dev.WithTimeout(UpgradeTestWaitTimeout)))
+				wait.WithTimeout(UpgradeTestWaitTimeout)))
 	}
 
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg,
 			corev1alpha1.PackageProgressing, metav1.ConditionFalse,
-			dev.WithTimeout(UpgradeTestWaitTimeout)))
+			wait.WithTimeout(UpgradeTestWaitTimeout)))
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg,
 			corev1alpha1.PackageAvailable, metav1.ConditionTrue,
-			dev.WithTimeout(UpgradeTestWaitTimeout)))
+			wait.WithTimeout(UpgradeTestWaitTimeout)))
 }
 
 func deleteExistingPKO(ctx context.Context) error {
@@ -133,7 +128,7 @@ func deleteExistingPKO(ctx context.Context) error {
 
 	if err := Waiter.WaitToBeGone(ctx, packageOperatorPackage,
 		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
+		wait.WithTimeout(UpgradeTestWaitTimeout),
 	); err != nil {
 		return err
 	}
@@ -141,7 +136,7 @@ func deleteExistingPKO(ctx context.Context) error {
 	if err := Waiter.WaitToBeGone(ctx,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
 		func(obj client.Object) (done bool, err error) { return false, nil },
-		dev.WithTimeout(UpgradeTestWaitTimeout),
+		wait.WithTimeout(UpgradeTestWaitTimeout),
 	); err != nil {
 		return err
 	}
@@ -175,7 +170,7 @@ func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) erro
 func createAndWaitFromFiles(ctx context.Context, files []string) error {
 	var objects []unstructured.Unstructured
 	for _, file := range files {
-		objs, err := dev.LoadKubernetesObjectsFromFile(file)
+		objs, err := wait.LoadKubernetesObjectsFromFile(file)
 		if err != nil {
 			return fmt.Errorf("loading objects from file %q: %w", file, err)
 		}
@@ -216,7 +211,7 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 			return fmt.Errorf("reading response %q: %w", url, cErr)
 		}
 
-		objs, err := dev.LoadKubernetesObjectsFromBytes(content.Bytes())
+		objs, err := wait.LoadKubernetesObjectsFromBytes(content.Bytes())
 		if err != nil {
 			return fmt.Errorf("loading objects from %q: %w", url, err)
 		}
@@ -242,7 +237,7 @@ func createAndWaitForReadiness(
 	}
 
 	if err := Waiter.WaitForReadiness(ctx, object); err != nil {
-		var unknownTypeErr *dev.UnknownTypeError
+		var unknownTypeErr *wait.UnknownTypeError
 		if errors.As(err, &unknownTypeErr) {
 			// A lot of types don't require waiting for readiness,
 			// so we should not error in cases when object types

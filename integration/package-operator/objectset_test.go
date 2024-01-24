@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -227,7 +226,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second))
+		}, wait.WithTimeout(5*time.Second))
 	require.True(t, wait.Interrupted(err))
 
 	// Unpause ObjectSet.
@@ -247,7 +246,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(10*time.Second))
+		}, wait.WithTimeout(10*time.Second))
 	require.NoError(t, err)
 
 	// ---------------------------

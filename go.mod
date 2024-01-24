@@ -1,17 +1,10 @@
 module package-operator.run
 
-go 1.21.1
-
-toolchain go1.21.5
+go 1.21
 
 replace (
 	package-operator.run/apis => ./apis
 	package-operator.run/pkg => ./pkg
-	pkg.package-operator.run/cardboard => ../cardboard
-	pkg.package-operator.run/cardboard/kubeutils => ../cardboard/kubeutils
-	pkg.package-operator.run/cardboard/modules/kind => ../cardboard/modules/kind
-	pkg.package-operator.run/cardboard/modules/kubeclients => ../cardboard/modules/kubeclients
-	pkg.package-operator.run/cardboard/modules/oci => ../cardboard/modules/oci
 )
 
 require (
@@ -21,11 +14,9 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-containerregistry v0.19.0
-	github.com/magefile/mage v1.15.0
-	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
-	github.com/openshift/api v0.0.0-20240122155700-948df9da0f90
+	github.com/openshift/api v0.0.0-20240124164020-e2ce40831f2e
 	github.com/prometheus/client_golang v1.18.0
 	github.com/pterm/pterm v0.12.78
 	github.com/spf13/cobra v1.8.0
@@ -44,10 +35,11 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.3
 	package-operator.run/pkg v1.9.3
-	pkg.package-operator.run/cardboard v0.0.0
-	pkg.package-operator.run/cardboard/modules/kind v0.0.0-00010101000000-000000000000
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-00010101000000-000000000000
-	pkg.package-operator.run/cardboard/modules/oci v0.0.0-00010101000000-000000000000
+	pkg.package-operator.run/cardboard v0.0.0-20240124195054-047aa9c57798
+	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240124195054-047aa9c57798
+	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240124195054-047aa9c57798
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240124195054-047aa9c57798
+	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240124195054-047aa9c57798
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.4.0
@@ -152,8 +144,8 @@ require (
 	golang.org/x/tools v0.17.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240122161410-6c6643bf1457 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240122161410-6c6643bf1457 // indirect
 	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -161,7 +153,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.29.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	pkg.package-operator.run/cardboard/kubeutils v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/mt-sre/devkube/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,7 +33,7 @@ var (
 	// Scheme used by created clients.
 	Scheme = runtime.NewScheme()
 
-	Waiter *dev.Waiter
+	Waiter *wait.Waiter
 
 	// PackageOperatorNamespace is the namespace that the Package Operator is running in.
 	// Needs to be auto-discovered, because OpenShift CI is installing the Operator in a non deterministic namespace.
@@ -81,7 +81,7 @@ func init() {
 		panic(err)
 	}
 
-	Waiter = dev.NewWaiter(Client, Scheme, dev.WithTimeout(defaultWaitTimeout), dev.WithInterval(defaultWaitInterval))
+	Waiter = wait.NewWaiter(Client, Scheme, wait.WithTimeout(defaultWaitTimeout), wait.WithInterval(defaultWaitInterval))
 }
 
 func initClients(_ context.Context) error {

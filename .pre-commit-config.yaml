@@ -2,7 +2,6 @@ exclude: |
   (?x)(
     (^vendor/)|
     (^.vscode/)|
-    (mage_output_file.go)|
     (.deepcopy.go$)
   )
 repos:
