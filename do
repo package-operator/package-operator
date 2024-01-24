@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-go run ./cmd/build $@
+go run ./cmd/build "$@"
