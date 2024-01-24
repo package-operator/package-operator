@@ -44,7 +44,7 @@ jobs:
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
       with:
-        files: ./.cache/unit/cov.out,./.cache/integration/pko-cov.out
+        files: ./.cache/unit/cover.txt
         token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Archive cluster logs
@@ -79,6 +79,8 @@ jobs:
 
     - name: Integration tests
       run: ./do CI:Integration
+      env:
+        CARDBOARD_CONTAINER_RUNTIME: docker
 
     - name: Archive cluster logs
       uses: actions/upload-artifact@v4

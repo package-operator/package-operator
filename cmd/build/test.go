@@ -167,7 +167,11 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 
 // Run unittests, the filter argument is passed via -run="".
 func (t Test) Unit(_ context.Context, filter string) error {
-	gotestArgs := []string{"-coverprofile=cover.txt", "-race", "-json"}
+	if err := os.MkdirAll(".cache/unit", 0o755); err != nil {
+		return err
+	}
+
+	gotestArgs := []string{"-coverprofile=.cache/unit/cover.txt", "-race", "-json"}
 	if len(filter) > 0 {
 		gotestArgs = append(gotestArgs, "-run="+filter)
 	}
@@ -178,6 +182,6 @@ func (t Test) Unit(_ context.Context, filter string) error {
 		sh.WithEnvironment{"CGO_ENABLED": "1"},
 	).Bash(
 		"set -euo pipefail",
-		fmt.Sprintf("go test %s ./... 2>&1 | tee gotest.log | gotestfmt --hide=empty-packages", argStr),
+		fmt.Sprintf("go test %s ./... 2>&1 | tee .cache/unit/gotest.log | gotestfmt --hide=empty-packages", argStr),
 	)
 }

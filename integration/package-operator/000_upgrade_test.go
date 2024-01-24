@@ -21,6 +21,8 @@ import (
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -170,7 +172,7 @@ func removeAllFinalizersForDeletion(ctx context.Context, obj client.Object) erro
 func createAndWaitFromFiles(ctx context.Context, files []string) error {
 	var objects []unstructured.Unstructured
 	for _, file := range files {
-		objs, err := wait.LoadKubernetesObjectsFromFile(file)
+		objs, err := kubemanifests.LoadKubernetesObjectsFromFile(file)
 		if err != nil {
 			return fmt.Errorf("loading objects from file %q: %w", file, err)
 		}
@@ -211,7 +213,7 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 			return fmt.Errorf("reading response %q: %w", url, cErr)
 		}
 
-		objs, err := wait.LoadKubernetesObjectsFromBytes(content.Bytes())
+		objs, err := kubemanifests.LoadKubernetesObjectsFromBytes(content.Bytes())
 		if err != nil {
 			return fmt.Errorf("loading objects from %q: %w", url, err)
 		}

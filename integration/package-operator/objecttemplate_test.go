@@ -164,7 +164,7 @@ spec:
 			ctx, pkg, "to be created",
 			func(obj client.Object) (done bool, err error) {
 				return true, nil
-			}, time.WithTimeout(20*time.Second),
+			}, wait.WithTimeout(20*time.Second),
 		),
 	)
 

@@ -35,11 +35,11 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.3
 	package-operator.run/pkg v1.9.3
-	pkg.package-operator.run/cardboard v0.0.0-20240124195054-047aa9c57798
-	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240124195054-047aa9c57798
-	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240124195054-047aa9c57798
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240124195054-047aa9c57798
-	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240124195054-047aa9c57798
+	pkg.package-operator.run/cardboard v0.0.0-20240125103143-1eece6aa79ab
+	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240125103143-1eece6aa79ab
+	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240125103143-1eece6aa79ab
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240125103143-1eece6aa79ab
+	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240125103143-1eece6aa79ab
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/kind v0.20.0
 	sigs.k8s.io/yaml v1.4.0

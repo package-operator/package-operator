@@ -291,10 +291,10 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 					Return(testErr)
 
 				fix := &CRDPluralizationFix{}
-				require.ErrorIs(t, fix.ensureClusterObjectSetsGoneWithOrphansLeft(ctx, Context{
-					Client: c,
-					Log:    log,
-				}, labelSelectorString), context.DeadlineExceeded)
+				require.ErrorContains(t,
+					fix.ensureClusterObjectSetsGoneWithOrphansLeft(ctx, Context{Client: c, Log: log}, labelSelectorString),
+					"timeout waiting 10ms for package-operator.run/v1alpha1, Kind=ClusterObjectSet /cos to be gone",
+				)
 			},
 		},
 	}
@@ -413,10 +413,10 @@ func TestEnsureCRDGone(t *testing.T) {
 					Return(errTest)
 
 				fix := &CRDPluralizationFix{}
-				require.ErrorIs(t, fix.ensureCRDGone(ctx, Context{
-					Client: c,
-					Log:    log,
-				}, "foo"), context.DeadlineExceeded)
+				require.ErrorContains(t,
+					fix.ensureCRDGone(ctx, Context{Client: c, Log: log}, "foo"),
+					"timeout waiting 10ms for apiextensions.k8s.io/v1, Kind=CustomResourceDefinition /foo to be gone",
+				)
 			},
 		},
 	}
