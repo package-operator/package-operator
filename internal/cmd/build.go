@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -88,7 +87,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 			&packages.LockfileDigestLookupValidator{
 				CraneOptions: craneOpts,
 			},
-			packages.NewTemplateTestValidator(filepath.Join(srcPath, ".test-fixtures")),
+			packages.NewTemplateTestValidator(srcPath),
 		},
 		packages.DefaultPackageValidators...,
 	)

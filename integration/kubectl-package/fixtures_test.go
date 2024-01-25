@@ -36,6 +36,7 @@ func sourcePathFixture(name string) string {
 		"invalid_missing_lock_file":        filepath.Join(invalidPackages, "missing_lock_file"),
 		"invalid_missing_phase_annotation": filepath.Join(invalidPackages, "missing_phase_annotation"),
 		"invalid_missing_resource_gvk":     filepath.Join(invalidPackages, "missing_resource_gvk"),
+		"invalid_multi_broken_component":   filepath.Join(invalidPackages, "multi_broken_component"),
 	}[name]
 }
 
