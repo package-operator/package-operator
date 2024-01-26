@@ -56,7 +56,7 @@ spec:
         - name: PKO_IMAGE
           value: {{ index .images "package-operator-manager" }}
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
-          value: {{ index .images "remote-phase-package" }}
+          value: {{ index .images "package-operator-manager" }}
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "proxy" }}
 {{- if hasKey .environment.proxy "httpProxy" }}
