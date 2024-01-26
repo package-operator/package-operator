@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-unit:
+  lint-unit-int:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -41,57 +41,27 @@ jobs:
     - name: Unit
       run: ./do CI:Unit
 
+    - name: Integration tests
+      run: ./do CI:Integration
+      env:
+        CARDBOARD_CONTAINER_RUNTIME: docker
+
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
       with:
-        files: ./.cache/unit/cover.txt
+        files: .cache/unit/cover.txt,.cache/integration/cover.txt
         token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Archive cluster logs
+    - name: Archive unit test results
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: unit-test-results
         path: .cache/unit
 
-  integration:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '>=1.21.6'
-
-    - uses: actions/cache@v4
-      with:
-        path: |
-          .cache
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Integration tests
-      run: ./do CI:Integration
-      env:
-        CARDBOARD_CONTAINER_RUNTIME: docker
-
-    - name: Archive cluster logs
+    - name: Archive integration test results
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: integration-test-results
         path: .cache/integration
-
-    - name: Archive cluster logs
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: cluster-logs
-        path: .cache/dev-env-logs

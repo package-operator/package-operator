@@ -147,13 +147,13 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 
 	tArgs := []string{
 		"go", "test",
-		"-tags=integration", "-coverprofile=.cache/integration/pko-cov.out",
+		"-tags=integration", "-coverprofile=.cache/integration/cover.txt",
 		f, "-race", "-test.v", "-failfast", "-timeout=20m", "-count=1", "-json",
 		"-coverpkg=./...,./apis/...,./pkg/...", "./integration/...", "|", "gotestfmt",
 	}
 
 	err = shr.New(env).Bash(strings.Join(tArgs, " "))
-	eErr := cluster.ExportLogs(".cache/dev-env-logs")
+	eErr := cluster.ExportLogs(".cache/integration/logs")
 
 	switch {
 	case err != nil:
