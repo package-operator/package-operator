@@ -24,6 +24,7 @@ spec:
       kind:
         group: apiextensions.k8s.io
         kind: CustomResourceDefinition
+  components: {}
   config:
     openAPIV3Schema:
       properties:
