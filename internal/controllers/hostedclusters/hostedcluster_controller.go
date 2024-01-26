@@ -121,7 +121,8 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
-			Image: c.remotePhasePackageImage,
+			Image:     c.remotePhasePackageImage,
+			Component: "remote-phase",
 		},
 	}
 
