@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    package-operator.run/phase: deploy
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  name: package-operator-hosted-cluster-manager
+  namespace: {{ .config.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: package-operator-hosted-cluster-manager
+    spec:
+{{- if hasKey .config "affinity" }}
+      affinity: {{ toJson .config.affinity }}
+{{- end}}
+{{- if hasKey .config "tolerations" }}
+      tolerations: {{ toJson .config.tolerations }}
+{{- end}}
+      containers:
+      - args:
+        - --enable-leader-election
+        ports:
+        - name: metrics
+          containerPort: 8080
+        env:
+        - name: KUBECONFIG
+          value: /data/kubeconfig
+{{- if hasKey .config "registryHostOverrides" }}
+        - name: PKO_REGISTRY_HOST_OVERRIDES
+          value: {{ .config.registryHostOverrides }}
+{{- end}}
+{{- if hasKey .config "packageHashModifier" }}
+        - name: PKO_PACKAGE_HASH_MODIFIER
+          value: {{ .config.packageHashModifier | quote }}
+{{- end}}
+{{- if hasKey .config "affinity" }}
+        - name: PKO_SUB_COMPONENT_AFFINITY
+          value: {{ toJson .config.affinity | quote }}
+{{- end}}
+{{- if hasKey .config "tolerations" }}
+        - name: PKO_SUB_COMPONENT_TOLERATIONS
+          value: {{ toJson .config.tolerations | quote }}
+{{- end}}
+        - name: PKO_NAMESPACE
+          value: {{ .config.hostedClusterNamespace }}
+        - name: PKO_IMAGE
+          value: {{ index .images "package-operator-manager" }}
+        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+          value: {{ index .images "package-operator-manager" }}
+{{- if hasKey . "environment" }}
+{{- if hasKey .environment "proxy" }}
+{{- if hasKey .environment.proxy "httpProxy" }}
+        - name: HTTP_PROXY
+          value: {{ .environment.proxy.httpProxy | quote }}
+{{- end}}
+{{- if hasKey .environment.proxy "httpsProxy" }}
+        - name: HTTPS_PROXY
+          value: {{ .environment.proxy.httpsProxy | quote }}
+{{- end}}
+{{- if hasKey .environment.proxy "noProxy" }}
+        - name: NO_PROXY
+          value: {{ .environment.proxy.noProxy | quote }}
+{{- end}}
+{{- end}}
+{{- end}}
+        image: {{ index .images "package-operator-manager" }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /data
+          name: kubeconfig
+          readOnly: true
+{{- if hasKey . "environment" }}
+{{- if hasKey .environment "openShift" }}
+        - mountPath: /etc/pki/ca-trust/extracted/pem
+          name: trusted-ca-bundle
+          readOnly: true
+{{- end }}
+{{- end }}
+{{- if hasKey .config "resources" }}
+        resources: {{ toJson .config.resources }}
+{{- else}}
+        # default resources
+        resources:
+          limits:
+            cpu: 200m
+            memory: 400Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi
+{{- end}}
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: service-network-admin-kubeconfig
+          optional: false
+{{- if hasKey . "environment" }}
+{{- if hasKey .environment "openShift" }}
+      - configMap:
+          defaultMode: 420
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+          name: trusted-ca-bundle
+          optional: true
+        name: trusted-ca-bundle
+{{- end}}
+{{- end}}
+status: {}

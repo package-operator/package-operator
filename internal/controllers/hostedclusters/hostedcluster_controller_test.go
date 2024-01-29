@@ -79,7 +79,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: hcName},
 	}
 
-	pkg, err := controller.desiredPackage(hc)
+	pkg, err := controller.desiredPackage(hc, "remote-phase")
 	require.NoError(t, err)
 	assert.Equal(t, "remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)
