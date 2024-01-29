@@ -15,14 +15,16 @@ import (
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/packages"
+	"package-operator.run/internal/testutil"
 )
 
 func TestUnpackReconciler(t *testing.T) {
 	t.Parallel()
+	c := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -59,10 +61,11 @@ func TestUnpackReconciler(t *testing.T) {
 
 func TestUnpackReconciler_noop(t *testing.T) {
 	t.Parallel()
+	c := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -84,10 +87,11 @@ var errTest = errors.New("test error")
 
 func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	t.Parallel()
+	c := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 

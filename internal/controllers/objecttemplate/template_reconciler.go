@@ -33,7 +33,7 @@ import (
 var defaultMissingResourceRetryInterval = 30 * time.Second
 
 type templateReconciler struct {
-	environment.Sink
+	*environment.Sink
 	scheme           *runtime.Scheme
 	client           client.Writer
 	uncachedClient   client.Reader
@@ -43,12 +43,14 @@ type templateReconciler struct {
 
 func newTemplateReconciler(
 	scheme *runtime.Scheme,
-	client client.Writer,
+	client client.Client,
 	uncachedClient client.Reader,
 	dynamicCache dynamicCache,
 	preflightChecker preflightChecker,
 ) *templateReconciler {
 	return &templateReconciler{
+		Sink: environment.NewSink(client),
+
 		scheme:           scheme,
 		client:           client,
 		uncachedClient:   uncachedClient,
@@ -271,7 +273,7 @@ func (r *templateReconciler) templateObject(
 	ctx context.Context, sourcesConfig map[string]any,
 	objectTemplate genericObjectTemplate, object client.Object,
 ) error {
-	env, err := r.getEnvironment()
+	env, err := r.getEnvironment(ctx, objectTemplate.ClientObject().GetNamespace())
 	if err != nil {
 		return fmt.Errorf("getting environment: %w", err)
 	}
@@ -308,18 +310,23 @@ func (r *templateReconciler) templateObject(
 	return nil
 }
 
-func (r *templateReconciler) getEnvironment() (map[string]any, error) {
-	env := map[string]any{}
-	packageEnvironment, err := json.Marshal(r.GetEnvironment())
+func (r *templateReconciler) getEnvironment(ctx context.Context, namespace string) (map[string]any, error) {
+	env, err := r.GetEnvironment(ctx, namespace)
 	if err != nil {
-		return env, fmt.Errorf("marshaling: %w", err)
+		return nil, fmt.Errorf("get environment: %w", err)
 	}
 
-	err = json.Unmarshal(packageEnvironment, &env)
+	envData := map[string]any{}
+	packageEnvironment, err := json.Marshal(env)
 	if err != nil {
-		return env, fmt.Errorf("unmarshaling: %w", err)
+		return envData, fmt.Errorf("marshaling: %w", err)
 	}
-	return env, nil
+
+	err = json.Unmarshal(packageEnvironment, &envData)
+	if err != nil {
+		return envData, fmt.Errorf("unmarshaling: %w", err)
+	}
+	return envData, nil
 }
 
 func updateStatusConditionsFromOwnedObject(

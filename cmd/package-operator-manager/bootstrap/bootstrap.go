@@ -20,7 +20,7 @@ import (
 const packageOperatorDeploymentName = "package-operator-manager"
 
 type Bootstrapper struct {
-	environment.Sink
+	*environment.Sink
 
 	client client.Client
 	log    logr.Logger
@@ -46,6 +46,8 @@ func NewBootstrapper(
 	fixer := newFixer(c, log, opts.Namespace)
 
 	return &Bootstrapper{
+		Sink: environment.NewSink(uncachedClient),
+
 		log:    log.WithName("bootstrapper"),
 		client: c,
 		init:   init.Init,
@@ -59,7 +61,11 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 	ctx = logr.NewContext(ctx, b.log)
 	log := b.log
 
-	if err := proxy.RestartPKOWithEnvvarsIfNeeded(log, b.GetEnvironment()); err != nil {
+	env, err := b.GetEnvironment(ctx, "")
+	if err != nil {
+		return fmt.Errorf("get environment: %w", err)
+	}
+	if err := proxy.RestartPKOWithEnvvarsIfNeeded(log, env); err != nil {
 		return err
 	}
 

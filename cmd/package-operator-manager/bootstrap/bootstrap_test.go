@@ -16,6 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/environment"
 	"package-operator.run/internal/testutil"
 )
 
@@ -28,6 +29,8 @@ func TestBootstrapperBootstrap(t *testing.T) {
 	var initCalled bool
 	var fixCalled bool
 	b := &Bootstrapper{
+		Sink: environment.NewSink(c),
+
 		log:    testr.New(t),
 		client: c,
 		init: func(ctx context.Context) (
