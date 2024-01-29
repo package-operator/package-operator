@@ -84,7 +84,7 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	desiredPkg, err := c.desiredPackage(hostedCluster)
+	desiredPkg, err := c.desiredPackage(hostedCluster, "remote-phase")
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
 	}
@@ -111,18 +111,47 @@ func (c *HostedClusterController) Reconcile(
 		}
 	}
 
+	desiredHostedClusterPkg, err := c.desiredPackage(hostedCluster, "hosted-cluster")
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
+	}
+	if err = c.ownerStrategy.SetControllerReference(hostedCluster, desiredHostedClusterPkg); err != nil {
+		return ctrl.Result{}, fmt.Errorf("setting controller reference: %w", err)
+	}
+
+	existingHostedClusterPkg := &corev1alpha1.Package{}
+	err = c.client.Get(ctx, client.ObjectKeyFromObject(desiredHostedClusterPkg), existingHostedClusterPkg)
+	if err != nil && errors.IsNotFound(err) {
+		if err := c.client.Create(ctx, desiredHostedClusterPkg); err != nil {
+			return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
+		}
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		return ctrl.Result{}, fmt.Errorf("getting Package: %w", err)
+	}
+
+	if existingHostedClusterPkg.Spec.Image != desiredHostedClusterPkg.Spec.Image {
+		// update Job
+		existingHostedClusterPkg.Spec.Image = desiredHostedClusterPkg.Spec.Image
+		if err := c.client.Update(ctx, existingHostedClusterPkg); err != nil {
+			return ctrl.Result{}, fmt.Errorf("deleting outdated Package: %w", err)
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 
-func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster) (*corev1alpha1.Package, error) {
+func (c *HostedClusterController) desiredPackage(
+	cluster *v1beta1.HostedCluster, component string,
+) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "remote-phase",
+			Name:      component,
 			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image:     c.remotePhasePackageImage,
-			Component: "remote-phase",
+			Component: component,
 		},
 	}
 
@@ -132,6 +161,10 @@ func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster)
 	}
 	if c.remotePhaseTolerations != nil {
 		config["tolerations"] = c.remotePhaseTolerations
+	}
+	if component == "hosted-cluster" {
+		config["namespace"] = fmt.Sprintf("default-%s", cluster.Name)
+		config["hostedClusterNamespace"] = "foobar-disco-dance"
 	}
 	if len(config) > 0 {
 		configJSON, err := json.Marshal(config)

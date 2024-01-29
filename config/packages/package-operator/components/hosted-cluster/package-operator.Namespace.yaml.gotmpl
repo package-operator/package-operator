@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    package-operator.run/phase: namespace
+  name: {{ .config.hostedClusterNamespace }}
+  labels:
+    pod-security.kubernetes.io/enforce: 'baseline'
+    pod-security.kubernetes.io/audit: 'baseline'
+    pod-security.kubernetes.io/warn: 'baseline'
