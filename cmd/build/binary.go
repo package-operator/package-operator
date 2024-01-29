@@ -7,13 +7,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 )
 
 // compiles code in /cmd/<cmd> for the given OS and ARCH.
 // Binaries will be put in /bin/<cmd>_<os>_<arch>.
 func compile(ctx context.Context, cmd string, goos, goarch string) error {
-	if err := (Generate{}).All(ctx); err != nil {
+	err := mgr.SerialDeps(ctx,
+		run.Fn3(compile, cmd, goos, goarch),
+		run.Meth(&Generate{}, (&Generate{}).All),
+	)
+	if err != nil {
 		return err
 	}
 
@@ -37,7 +42,7 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 		"-X", fmt.Sprintf("'package-operator.run/internal/version.version=%s'", appVersion),
 	}
 
-	err := shr.New(env).Run(
+	err = shr.New(env).Run(
 		"go", "build", "--ldflags", strings.Join(ldflags, " "), "--trimpath", "--mod=readonly", "-o", dst, "./cmd/"+cmd,
 	)
 	if err != nil {
@@ -49,24 +54,13 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 
 // compiles all binaries of the project for all relevant architectures.
 func compileAll(ctx context.Context) error {
-	if err := compile(ctx, "package-operator-manager", "linux", "amd64"); err != nil {
-		return err
-	}
-	if err := compile(ctx, "remote-phase-manager", "linux", "amd64"); err != nil {
-		return err
-	}
-	if err := compile(ctx, "remote-phase-manager", "linux", "amd64"); err != nil {
-		return err
-	}
-	if err := compile(ctx, "kubectl-package", "linux", "amd64"); err != nil {
-		return err
-	}
-	if err := compile(ctx, "kubectl-package", "darwin", "amd64"); err != nil {
-		return err
-	}
-	if err := compile(ctx, "kubectl-package", "darwin", "arm64"); err != nil {
-		return err
-	}
-
-	return nil
+	return mgr.SerialDeps(ctx,
+		run.Fn(compileAll),
+		run.Fn3(compile, "package-operator-manager", "linux", "amd64"),
+		run.Fn3(compile, "remote-phase-manager", "linux", "amd64"),
+		run.Fn3(compile, "package-operator-webhook", "linux", "amd64"),
+		run.Fn3(compile, "kubectl-package", "linux", "amd64"),
+		run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
+		run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
+	)
 }

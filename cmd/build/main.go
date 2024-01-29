@@ -11,10 +11,9 @@ import (
 	"pkg.package-operator.run/cardboard/modules/kubeclients"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
+	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-
-	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 )
 
 var (
@@ -73,14 +72,16 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 	appVersion = mustVersion()
 
 	err := errors.Join(
+		// Required by cardboard itself.
+		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.16.1"),
+		mgr.RegisterGoTool("kind", "sigs.k8s.io/kind", "0.20.0"),
+		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
 		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.13.0"),
-		mgr.RegisterGoTool("kind", "sigs.k8s.io/kind", "0.20.0"),
 		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.28.3"),
 		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.55.0"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
 		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.12.3"),
-		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.16.1"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {
@@ -91,7 +92,6 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 		fmt.Fprintf(os.Stderr, "\n%s\n", err)
 		os.Exit(1)
 	}
-	os.Exit(0)
 }
 
 //
@@ -113,17 +113,7 @@ func (ci *CI) Integration(ctx context.Context, args []string) error {
 
 // Runs linters in CI to check the codebase.
 func (ci *CI) Lint(_ context.Context, _ []string) error {
-	return lint.Check()
-}
-
-// Runs linters and code-gens for pre-commit.
-func (ci *CI) PreCommit(ctx context.Context, args []string) error {
-	self := run.Meth1(ci, ci.PreCommit, args)
-	return mgr.ParallelDeps(ctx, self,
-		run.Meth(generate, generate.All),
-		run.Meth(lint, lint.glciFix),
-		run.Meth(lint, lint.goModTidyAll),
-	)
+	return lint.check()
 }
 
 // Builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
@@ -152,9 +142,19 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 // Development focused commands using local development environment.
 type Dev struct{}
 
+// Runs linters and code-gens for pre-commit.
+func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
+	self := run.Meth1(dev, dev.PreCommit, args)
+	return mgr.ParallelDeps(ctx, self,
+		run.Meth(generate, generate.All),
+		run.Meth(lint, lint.glciFix),
+		run.Meth(lint, lint.goModTidyAll),
+	)
+}
+
 // Generate code, api docs, install files.
-func (d *Dev) Generate(ctx context.Context, args []string) error {
-	self := run.Meth1(d, d.Generate, args)
+func (dev *Dev) Generate(ctx context.Context, args []string) error {
+	self := run.Meth1(dev, dev.Generate, args)
 	if err := mgr.SerialDeps(
 		ctx, self,
 		run.Meth(generate, generate.code),
@@ -173,27 +173,27 @@ func (d *Dev) Generate(ctx context.Context, args []string) error {
 }
 
 // Runs local unittests.
-func (d *Dev) Unit(ctx context.Context, args []string) error {
+func (dev *Dev) Unit(ctx context.Context, args []string) error {
 	return commonUnit(ctx, args)
 }
 
 // Runs local integration tests in a KinD cluster.
-func (d *Dev) Integration(ctx context.Context, args []string) error {
-	return commonIntegration(ctx, run.Meth1(d, d.Integration, args), args)
+func (dev *Dev) Integration(ctx context.Context, args []string) error {
+	return commonIntegration(ctx, run.Meth1(dev, dev.Integration, args), args)
 }
 
 // Runs local linters to check the codebase.
-func (d *Dev) Lint(_ context.Context, _ []string) error {
-	return lint.Check()
+func (dev *Dev) Lint(_ context.Context, _ []string) error {
+	return lint.check()
 }
 
 // Tries to fix linter issues.
-func (d *Dev) LintFix(_ context.Context, _ []string) error {
-	return lint.Fix()
+func (dev *Dev) LintFix(_ context.Context, _ []string) error {
+	return lint.fix()
 }
 
 // Deletes the local development cluster.
-func (d *Dev) Destroy(ctx context.Context, _ []string) error {
+func (dev *Dev) Destroy(ctx context.Context, _ []string) error {
 	return cluster.Destroy(ctx)
 }
 

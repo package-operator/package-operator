@@ -113,9 +113,7 @@ func version() (string, error) {
 
 func mustVersion() string {
 	v, err := version()
-	if err != nil {
-		run.Must(err)
-	}
+	run.Must(err)
 
 	return v
 }

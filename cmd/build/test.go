@@ -73,11 +73,6 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 		return err
 	}
 
-	kubeconfigPath, err := cluster.KubeconfigPath()
-	if err != nil {
-		return err
-	}
-
 	err = cl.CreateAndWaitFromFiles(ctx, []string{filepath.Join("config", "self-bootstrap-job-local.yaml")})
 	if err != nil {
 		return err
@@ -113,21 +108,24 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 		return err
 	}
 
-	// Create a new secret for the kubeconfig
+	// Create a new secret for the kubeconfig.
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-network-admin-kubeconfig",
 			Namespace: "default",
 		},
-		Data: map[string][]byte{
-			"kubeconfig": []byte(internalKubeconfig),
-		},
+		Data: map[string][]byte{"kubeconfig": []byte(internalKubeconfig)},
 	}
 
-	// Deploy the secret with the new kubeconfig
+	// Deploy the secret with the new kubeconfig.
 	_ = cl.CtrlClient.Delete(ctx, secret)
 	if err := cl.CtrlClient.Create(ctx, secret); err != nil {
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
+	}
+
+	kubeconfigPath, err := cluster.KubeconfigPath()
+	if err != nil {
+		return err
 	}
 
 	packageRegistry := "dev-registry.dev-registry.svc.cluster.local:5001/package-operator"
@@ -141,15 +139,15 @@ func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter s
 	}
 
 	if env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] == "" {
-		d := "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
-		env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] = d
+		url := "https://github.com/package-operator/package-operator/releases/latest/download/self-bootstrap-job.yaml"
+		env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] = url
 	}
 
 	tArgs := []string{
 		"go", "test",
 		"-tags=integration", "-coverprofile=.cache/integration/cover.txt",
 		f, "-race", "-test.v", "-failfast", "-timeout=20m", "-count=1", "-json",
-		"-coverpkg=./...,./apis/...,./pkg/...", "./integration/...", "|", "gotestfmt",
+		"-coverpkg=./...,./apis/...,./pkg/...", "./integration/...", "|", "gotestfmt", "--hide=empty-packages",
 	}
 
 	err = shr.New(env).Bash(strings.Join(tArgs, " "))

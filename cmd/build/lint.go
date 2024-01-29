@@ -10,8 +10,8 @@ import (
 // internal struct to namespace all lint related functions.
 type Lint struct{}
 
-func (l Lint) Fix() error   { return l.glciFix() }
-func (l Lint) Check() error { return l.glciCheck() }
+func (l Lint) fix() error   { return l.glciFix() }
+func (l Lint) check() error { return l.glciCheck() }
 
 // TODO make that more nice.
 func (l Lint) goModTidy(workdir string) error {
