@@ -39,6 +39,8 @@ type ownerStrategy interface {
 	) handler.EventHandler
 }
 
+const defaultHostedClusterNamespace = "package-operator-system"
+
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	remotePhasePackageImage string,
@@ -84,7 +86,7 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	desiredPkg, err := c.desiredPackage(hostedCluster, "remote-phase")
+	desiredPkg, err := c.desiredRemotePhasePackage(hostedCluster)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
 	}
@@ -111,7 +113,7 @@ func (c *HostedClusterController) Reconcile(
 		}
 	}
 
-	desiredHostedClusterPkg, err := c.desiredPackage(hostedCluster, "hosted-cluster")
+	desiredHostedClusterPkg, err := c.desiredHostedClusterPackage(hostedCluster)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
 	}
@@ -141,8 +143,23 @@ func (c *HostedClusterController) Reconcile(
 	return ctrl.Result{}, nil
 }
 
+func (c *HostedClusterController) desiredRemotePhasePackage(
+	cluster *v1beta1.HostedCluster,
+) (*corev1alpha1.Package, error) {
+	return c.desiredPackage(cluster, "remote-phase", map[string]any{})
+}
+
+func (c *HostedClusterController) desiredHostedClusterPackage(
+	cluster *v1beta1.HostedCluster,
+) (*corev1alpha1.Package, error) {
+	return c.desiredPackage(cluster, "hosted-cluster", map[string]any{
+		"namespace":              hostedClusterNamespace(cluster),
+		"hostedClusterNamespace": defaultHostedClusterNamespace,
+	})
+}
+
 func (c *HostedClusterController) desiredPackage(
-	cluster *v1beta1.HostedCluster, component string,
+	cluster *v1beta1.HostedCluster, component string, additionalConfig map[string]any,
 ) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
@@ -162,9 +179,8 @@ func (c *HostedClusterController) desiredPackage(
 	if c.remotePhaseTolerations != nil {
 		config["tolerations"] = c.remotePhaseTolerations
 	}
-	if component == "hosted-cluster" {
-		config["namespace"] = fmt.Sprintf("default-%s", cluster.Name)
-		config["hostedClusterNamespace"] = "foobar-disco-dance"
+	for k, v := range additionalConfig {
+		config[k] = v
 	}
 	if len(config) > 0 {
 		configJSON, err := json.Marshal(config)

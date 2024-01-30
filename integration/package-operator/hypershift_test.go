@@ -74,8 +74,8 @@ func TestHyperShift(t *testing.T) {
 	err = Client.Status().Update(ctx, hc)
 	require.NoError(t, err)
 
-	// Wait for roll out
-	pkg := &corev1alpha1.Package{
+	// Wait for roll-out of remote phase package
+	rpPkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "remote-phase",
 			Namespace: ns.Name,
@@ -84,8 +84,21 @@ func TestHyperShift(t *testing.T) {
 	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
 	// few seconds for leader election.
 	err = Waiter.WaitForCondition(
-		ctx, pkg, corev1alpha1.PackageAvailable,
+		ctx, rpPkg, corev1alpha1.PackageAvailable,
 		metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
+	)
+	require.NoError(t, err)
+
+	// Wait for roll-out of hosted cluster package
+	hcPkg := &corev1alpha1.Package{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hosted-cluster",
+			Namespace: ns.Name,
+		},
+	}
+	err = Waiter.WaitForCondition(
+		ctx, hcPkg, corev1alpha1.PackageAvailable,
+		metav1.ConditionTrue, dev.WithTimeout(100*time.Second),
 	)
 	require.NoError(t, err)
 
