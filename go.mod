@@ -13,7 +13,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gobwas/glob v0.2.3
-	github.com/google/go-containerregistry v0.18.0
+	github.com/google/go-containerregistry v0.19.0
 	github.com/magefile/mage v1.15.0
 	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.15.0
