@@ -29,6 +29,8 @@ type ClusterObjectSetPhaseList struct {
 // +kubebuilder:validation:XValidation:rule="has(self.previous) == has(oldSelf.previous)", message="previous is immutable"
 // +kubebuilder:validation:XValidation:rule="has(self.availabilityProbes) == has(oldSelf.availabilityProbes)", message="availabilityProbes is immutable"
 // +kubebuilder:validation:XValidation:rule="has(self.externalObjects) == has(oldSelf.externalObjects)", message="externalObjects is immutable"
+//
+//nolint:lll
 type ClusterObjectSetPhaseSpec struct {
 	// Disables reconciliation of the ClusterObjectSet.
 	// Only Status updates will still be propagated, but object changes will not be reconciled.
