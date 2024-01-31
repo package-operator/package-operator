@@ -1187,6 +1187,20 @@ spec:
                 format: int32
                 type: integer
             type: object
+            x-kubernetes-validations:
+            - message: previous is immutable
+              rule: (has(self.previous) == has(oldSelf.previous)) && (!has(self.previous)
+                || (self.previous == oldSelf.previous))
+            - message: phases is immutable
+              rule: (has(self.phases) == has(oldSelf.phases)) && (!has(self.phases)
+                || (self.phases == oldSelf.phases))
+            - message: availabilityProbes is immutable
+              rule: (has(self.availabilityProbes) == has(oldSelf.availabilityProbes))
+                && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))
+            - message: successDelaySeconds is immutable
+              rule: (has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds))
+                && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
+                oldSelf.successDelaySeconds))
           status:
             default:
               phase: Pending
@@ -2911,6 +2925,20 @@ spec:
                 format: int32
                 type: integer
             type: object
+            x-kubernetes-validations:
+            - message: previous is immutable
+              rule: (has(self.previous) == has(oldSelf.previous)) && (!has(self.previous)
+                || (self.previous == oldSelf.previous))
+            - message: phases is immutable
+              rule: (has(self.phases) == has(oldSelf.phases)) && (!has(self.phases)
+                || (self.phases == oldSelf.phases))
+            - message: availabilityProbes is immutable
+              rule: (has(self.availabilityProbes) == has(oldSelf.availabilityProbes))
+                && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))
+            - message: successDelaySeconds is immutable
+              rule: (has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds))
+                && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
+                oldSelf.successDelaySeconds))
           status:
             default:
               phase: Pending

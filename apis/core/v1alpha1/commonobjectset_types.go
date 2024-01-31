@@ -27,6 +27,8 @@ const (
 )
 
 // ObjectSetTemplateSpec defines an object set.
+// WARNING: when modifying fields in ObjectSetTemplateSpec
+// also update validation rules in (Cluster)ObjectSetSpec.
 type ObjectSetTemplateSpec struct {
 	// Reconcile phase configuration for a ObjectSet.
 	// Phases will be reconciled in order and the contained objects checked

@@ -989,6 +989,8 @@ Used in:
 ### ObjectSetTemplateSpec
 
 ObjectSetTemplateSpec defines an object set.
+WARNING: when modifying fields in ObjectSetTemplateSpec
+also update validation rules in (Cluster)ObjectSetSpec.
 
 | Field | Description |
 | ----- | ----------- |
