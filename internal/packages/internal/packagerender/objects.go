@@ -8,6 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"package-operator.run/apis/manifests/v1alpha1"
+
+	"package-operator.run/apis/manifests/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
@@ -112,4 +116,36 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 		manifests.PackageLabel:         manifest.Name,
 		manifests.PackageInstanceLabel: packageName,
 	}
+}
+
+func filterWithCELAnnotation(
+	objects []unstructured.Unstructured,
+	tmplCtx packagetypes.PackageRenderContext,
+) (
+	[]unstructured.Unstructured, error,
+) {
+	filtered := make([]unstructured.Unstructured, 0, len(objects))
+
+	for _, obj := range objects {
+		cel, ok := obj.GetAnnotations()[v1alpha1.PackageCELConditionAnnotation]
+		if !ok {
+			filtered = append(filtered, obj)
+			continue
+		}
+
+		celResult, err := evaluateCELCondition(cel, tmplCtx)
+		if err != nil {
+			return nil, packagetypes.ViolationError{
+				Reason:  packagetypes.ViolationReasonInvalidCELExpression,
+				Details: err.Error(),
+				Subject: obj.GetName(),
+			}
+		}
+
+		if celResult {
+			filtered = append(filtered, obj)
+		}
+	}
+
+	return filtered, nil
 }

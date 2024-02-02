@@ -13,6 +13,7 @@ const (
 	PackagePhaseAnnotation          = manifestsv1alpha1.PackagePhaseAnnotation
 	PackageConditionMapAnnotation   = manifestsv1alpha1.PackageConditionMapAnnotation
 	PackageExternalObjectAnnotation = manifestsv1alpha1.PackageExternalObjectAnnotation
+	PackageCELConditionAnnotation   = manifestsv1alpha1.PackageCELConditionAnnotation
 )
 
 const (

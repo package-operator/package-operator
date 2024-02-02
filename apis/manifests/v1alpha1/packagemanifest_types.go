@@ -18,6 +18,9 @@ const (
 	// that the referenced object should only be observed during a phase
 	// rather than reconciled.
 	PackageExternalObjectAnnotation = "package-operator.run/external"
+	// PackageCELConditionAnnotation contains a CEL expression
+	// evaluating to a boolean value which determines whether the object is created.
+	PackageCELConditionAnnotation = "package-operator.run/condition"
 )
 
 const (
