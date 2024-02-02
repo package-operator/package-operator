@@ -12,6 +12,9 @@ type ObjectSlice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="objects is immutable"
+	// +kubebuilder:MaxItems=32
 	Objects []ObjectSetObject `json:"objects"`
 }
 

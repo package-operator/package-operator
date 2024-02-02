@@ -26,6 +26,11 @@ type ClusterObjectSetPhaseList struct {
 }
 
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
+// +kubebuilder:validation:XValidation:rule="has(self.previous) == has(oldSelf.previous)", message="previous is immutable"
+// +kubebuilder:validation:XValidation:rule="has(self.availabilityProbes) == has(oldSelf.availabilityProbes)", message="availabilityProbes is immutable"
+// +kubebuilder:validation:XValidation:rule="has(self.externalObjects) == has(oldSelf.externalObjects)", message="externalObjects is immutable"
+//
+//nolint:lll
 type ClusterObjectSetPhaseSpec struct {
 	// Disables reconciliation of the ClusterObjectSet.
 	// Only Status updates will still be propagated, but object changes will not be reconciled.
@@ -35,20 +40,33 @@ type ClusterObjectSetPhaseSpec struct {
 	// Immutable fields below
 
 	// Revision of the parent ObjectSet to use during object adoption.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="revision is immutable"
 	Revision int64 `json:"revision"`
 
 	// Previous revisions of the ClusterObjectSet to adopt objects from.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="previous is immutable"
+	// +kubebuilder:MaxItems=32
 	Previous []PreviousRevisionReference `json:"previous,omitempty"`
 
 	// Availability Probes check objects that are part of the package.
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="availabilityProbes is immutable"
+	// +kubebuilder:MaxItems=32
 	AvailabilityProbes []ObjectSetProbe `json:"availabilityProbes,omitempty"`
 
 	// Objects belonging to this phase.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="objects is immutable"
+	// +kubebuilder:MaxItems=32
 	Objects []ObjectSetObject `json:"objects"`
 
 	// ExternalObjects observed, but not reconciled by this phase.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="externalObjects is immutable"
+	// +kubebuilder:MaxItems=32
 	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 }
 

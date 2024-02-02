@@ -180,6 +180,9 @@ spec:
                   - selector
                   type: object
                 type: array
+                x-kubernetes-validations:
+                - message: availabilityProbes is immutable
+                  rule: self == oldSelf
               externalObjects:
                 description: ExternalObjects observed, but not reconciled by this
                   phase.
@@ -214,6 +217,9 @@ spec:
                   - object
                   type: object
                 type: array
+                x-kubernetes-validations:
+                - message: externalObjects is immutable
+                  rule: self == oldSelf
               objects:
                 description: Objects belonging to this phase.
                 items:
@@ -247,6 +253,9 @@ spec:
                   - object
                   type: object
                 type: array
+                x-kubernetes-validations:
+                - message: objects is immutable
+                  rule: self == oldSelf
               paused:
                 description: Disables reconciliation of the ClusterObjectSet. Only
                   Status updates will still be propagated, but object changes will
@@ -266,15 +275,28 @@ spec:
                   - name
                   type: object
                 type: array
+                x-kubernetes-validations:
+                - message: previous is immutable
+                  rule: self == oldSelf
               revision:
                 description: Revision of the parent ObjectSet to use during object
                   adoption.
                 format: int64
                 type: integer
+                x-kubernetes-validations:
+                - message: revision is immutable
+                  rule: self == oldSelf
             required:
             - objects
             - revision
             type: object
+            x-kubernetes-validations:
+            - message: previous is immutable
+              rule: has(self.previous) == has(oldSelf.previous)
+            - message: availabilityProbes is immutable
+              rule: has(self.availabilityProbes) == has(oldSelf.availabilityProbes)
+            - message: externalObjects is immutable
+              rule: has(self.externalObjects) == has(oldSelf.externalObjects)
           status:
             description: ClusterObjectSetPhaseStatus defines the observed state of
               a ClusterObjectSetPhase.

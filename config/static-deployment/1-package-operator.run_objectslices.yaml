@@ -70,6 +70,9 @@ spec:
               - object
               type: object
             type: array
+            x-kubernetes-validations:
+            - message: objects is immutable
+              rule: self == oldSelf
         required:
         - objects
         type: object
