@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	cluster    *kind.Cluster
 	shr        *sh.Runner
 	mgr        *run.Manager
 	appVersion string
@@ -26,6 +25,7 @@ var (
 	generate *Generate
 	test     *Test
 	lint     *Lint
+	cluster  *Cluster
 
 	//go:embed *.go
 	source embed.FS
@@ -57,17 +57,20 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 			},
 		},
 	}
-	cluster = kind.NewCluster("pko",
-		kind.WithClusterConfig(clusterCfg),
-		kind.WithClientOptions{
-			kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
-		},
-		kind.WithClusterInitializers{
-			kind.ClusterLoadObjectsFromFiles{"config/local-registry.yaml"},
-		})
 	generate = &Generate{}
 	test = &Test{}
 	lint = &Lint{}
+	cluster = &Cluster{
+		kind.NewCluster("pko",
+			kind.WithClusterConfig(clusterCfg),
+			kind.WithClientOptions{
+				kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
+			},
+			kind.WithClusterInitializers{
+				kind.ClusterLoadObjectsFromFiles{"config/local-registry.yaml"},
+			},
+		),
+	}
 
 	appVersion = mustVersion()
 
@@ -102,13 +105,13 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 type CI struct{}
 
 // Runs unittests in CI.
-func (ci *CI) Unit(ctx context.Context, args []string) error {
-	return commonUnit(ctx, args)
+func (ci *CI) Unit(ctx context.Context, _ []string) error {
+	return test.Unit(ctx, "")
 }
 
 // Runs integration tests in CI using a KinD cluster.
-func (ci *CI) Integration(ctx context.Context, args []string) error {
-	return commonIntegration(ctx, run.Meth1(ci, ci.Integration, args), args)
+func (ci *CI) Integration(ctx context.Context, _ []string) error {
+	return test.Integration(ctx, "")
 }
 
 // Runs linters in CI to check the codebase.
@@ -188,12 +191,30 @@ func (dev *Dev) Generate(ctx context.Context, args []string) error {
 
 // Runs local unittests.
 func (dev *Dev) Unit(ctx context.Context, args []string) error {
-	return commonUnit(ctx, args)
+	var filter string
+	switch len(args) {
+	case 0:
+		// nothing
+	case 1:
+		filter = args[0]
+	default:
+		return fmt.Errorf("only supports a single argument") //nolint:goerr113
+	}
+	return test.Unit(ctx, filter)
 }
 
 // Runs local integration tests in a KinD cluster.
 func (dev *Dev) Integration(ctx context.Context, args []string) error {
-	return commonIntegration(ctx, run.Meth1(dev, dev.Integration, args), args)
+	var filter string
+	switch len(args) {
+	case 0:
+		// nothing
+	case 1:
+		filter = args[0]
+	default:
+		return fmt.Errorf("only supports a single argument") //nolint:goerr113
+	}
+	return test.Integration(ctx, filter)
 }
 
 // Runs local linters to check the codebase.
@@ -207,34 +228,11 @@ func (dev *Dev) LintFix(_ context.Context, _ []string) error {
 }
 
 // Deletes the local development cluster.
+func (dev *Dev) Create(ctx context.Context, _ []string) error {
+	return cluster.create(ctx)
+}
+
+// Deletes the local development cluster.
 func (dev *Dev) Destroy(ctx context.Context, _ []string) error {
-	return cluster.Destroy(ctx)
-}
-
-// common unittest target shared by CI and Dev.
-func commonUnit(ctx context.Context, args []string) error {
-	var filter string
-	switch len(args) {
-	case 0:
-		// nothing
-	case 1:
-		filter = args[0]
-	default:
-		return fmt.Errorf("only supports a single argument") //nolint:goerr113
-	}
-	return test.Unit(ctx, filter)
-}
-
-// common integration target shared by CI and Dev.
-func commonIntegration(ctx context.Context, self run.DependencyIDer, args []string) error {
-	var filter string
-	switch len(args) {
-	case 0:
-		// nothing
-	case 1:
-		filter = args[0]
-	default:
-		return fmt.Errorf("only supports a single argument") //nolint:goerr113
-	}
-	return test.Integration(ctx, self, filter)
+	return cluster.destroy(ctx)
 }

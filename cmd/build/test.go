@@ -12,7 +12,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,56 +19,15 @@ import (
 // internal struct to namespace all test related functions.
 type Test struct{}
 
-func (t Test) Integration(ctx context.Context, self run.DependencyIDer, filter string) error {
+func (t Test) Integration(ctx context.Context, filter string) error {
+	// TODO create dep
 	var f string
 	if len(filter) > 0 {
 		f = "-run " + filter
 	}
 
-	if err := mgr.SerialDeps(ctx, self, cluster); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(".cache/integration", 0o755); err != nil {
-		return err
-	}
-
 	cl, err := cluster.Clients()
 	if err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushImage, "package-operator-manager", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "package-operator-webhook", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "remote-phase-manager", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "test-stub", "localhost:5001/package-operator"),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Setenv("PKO_REPOSITORY_HOST", "localhost:5001"); err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushPackage, "remote-phase", "localhost:5001/package-operator"),
-		run.Fn2(pushPackage, "test-stub", "localhost:5001/package-operator"),
-		run.Fn2(pushPackage, "test-stub-multi", "localhost:5001/package-operator"),
-	)
-	if err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushPackage, "package-operator", "localhost:5001/package-operator"),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Unsetenv("PKO_REPOSITORY_HOST"); err != nil {
 		return err
 	}
 
