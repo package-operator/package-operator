@@ -8,15 +8,12 @@ import (
 	"sort"
 	"strings"
 
-	"package-operator.run/apis/manifests/v1alpha1"
-
-	"package-operator.run/apis/manifests/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -74,7 +71,8 @@ func RenderObjects(
 		objs := pathObjectMap[path]
 		objects = append(objects, objs...)
 	}
-	return objects, nil
+
+	return filterWithCELAnnotation(objects, tmplCtx)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
