@@ -116,6 +116,20 @@ func (ci *CI) Lint(_ context.Context, _ []string) error {
 	return lint.check()
 }
 
+func (ci *CI) PostPush(ctx context.Context, args []string) error {
+	self := run.Meth1(ci, ci.PostPush, args)
+	err := mgr.ParallelDeps(ctx, self,
+		run.Meth(generate, generate.All),
+		run.Meth(lint, lint.glciFix),
+		run.Meth(lint, lint.goModTidyAll),
+	)
+	if err != nil {
+		return err
+	}
+
+	return shr.Run("git", "diff", "--quiet", "--exit-code")
+}
+
 // Builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.Release, args)

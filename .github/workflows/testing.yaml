@@ -28,7 +28,7 @@ jobs:
         check-latest: true
 
     - name: Ensure code is sanitized
-      run: ./do CI:PreCommit
+      run: ./do CI:PostPush
 
     - name: Unit
       run: ./do CI:Unit
