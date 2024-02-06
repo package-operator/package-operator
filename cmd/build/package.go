@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func buildPackage(ctx context.Context, name, registry string) error {
-	if err := os.MkdirAll(".cache/packages/", 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(".cache", "packages"), 0o755); err != nil {
 		return err
 	}
 
@@ -27,9 +26,9 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		}
 	}
 
-	path := fmt.Sprintf("./config/packages/%s/container.oci.tar", name)
+	path := filepath.Join("config", "packages", name, "container.oci.tar")
 	err := cmd.NewBuild().BuildFromSource(ctx,
-		"./config/packages/"+name,
+		filepath.Join("config", "packages", name),
 		cmd.WithOutputPath(path),
 		cmd.WithTags{registry + "/" + name + "-package:" + appVersion},
 	)
@@ -41,7 +40,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
-	imgPath, err := filepath.Abs("./config/packages/" + name)
+	imgPath, err := filepath.Abs(filepath.Join("config", "packages", name))
 	if err != nil {
 		return err
 	}

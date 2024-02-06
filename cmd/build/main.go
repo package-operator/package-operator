@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"pkg.package-operator.run/cardboard/modules/kind"
 	"pkg.package-operator.run/cardboard/modules/kubeclients"
@@ -67,7 +68,7 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 				kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
 			},
 			kind.WithClusterInitializers{
-				kind.ClusterLoadObjectsFromFiles{"config/local-registry.yaml"},
+				kind.ClusterLoadObjectsFromFiles{filepath.Join("config", "local-registry.yaml")},
 			},
 		),
 	}

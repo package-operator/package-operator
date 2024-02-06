@@ -14,7 +14,7 @@ import (
 )
 
 func buildImage(ctx context.Context, name, registry string) error {
-	buildDir, err := filepath.Abs(".cache/images/" + name + "/")
+	buildDir, err := filepath.Abs(filepath.Join(".cache", "images", name))
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,9 @@ func buildImage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	if err := shr.Copy(buildDir+"/"+binaryName, "./bin/"+binaryName+"_linux_amd64"); err != nil {
+	dst := filepath.Join(buildDir, binaryName)
+	src := filepath.Join("bin", binaryName+"_linux_amd64")
+	if err := shr.Copy(dst, src); err != nil {
 		return err
 	}
 
@@ -45,10 +47,15 @@ func buildImage(ctx context.Context, name, registry string) error {
 		oci.WithCranePush{},
 	)
 
-	if err := shr.Copy(buildDir+"/passwd", "config/images/passwd"); err != nil {
+	dst = filepath.Join(buildDir, "passwd")
+	src = filepath.Join("config", "images", "passwd")
+	if err := shr.Copy(dst, src); err != nil {
 		return err
 	}
-	if err := shr.Copy(buildDir+"/Containerfile", "config/images/"+name+".Containerfile"); err != nil {
+
+	dst = filepath.Join(buildDir, "Containerfile")
+	src = filepath.Join("config", "images", name+".Containerfile")
+	if err := shr.Copy(dst, src); err != nil {
 		return err
 	}
 
@@ -64,7 +71,7 @@ func buildImage(ctx context.Context, name, registry string) error {
 }
 
 func pushImage(ctx context.Context, name, registry string) error {
-	imgPath, err := filepath.Abs(".cache/images/" + name)
+	imgPath, err := filepath.Abs(filepath.Join(".cache", "images", name))
 	if err != nil {
 		return err
 	}

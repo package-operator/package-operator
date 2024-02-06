@@ -164,7 +164,7 @@ func (Generate) installYamlFile() (err error) {
 // generates a self-bootstrap-job.yaml based on the current VERSION.
 // requires the images to have been build beforehand.
 func (g Generate) selfBootstrapJobLocal(context.Context) error {
-	latestJobBytes, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
+	latestJobBytes, err := os.ReadFile(filepath.Join("config", "self-bootstrap-job.yaml.tpl"))
 	if err != nil {
 		return err
 	}
@@ -184,11 +184,11 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		latestJob = strings.ReplaceAll(latestJob, replace, with)
 	}
 
-	return os.WriteFile("config/self-bootstrap-job-local.yaml", []byte(latestJob), os.ModePerm)
+	return os.WriteFile(filepath.Join("config", "self-bootstrap-job-local.yaml"), []byte(latestJob), os.ModePerm)
 }
 
 func (g Generate) selfBootstrapJob(context.Context) error {
-	latestJobBytes, err := os.ReadFile("config/self-bootstrap-job.yaml.tpl")
+	latestJobBytes, err := os.ReadFile(filepath.Join("config", "self-bootstrap-job.yaml.tpl"))
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 		latestJob = strings.ReplaceAll(latestJob, replace, with)
 	}
 
-	return os.WriteFile("config/self-bootstrap-job.yaml", []byte(latestJob), os.ModePerm)
+	return os.WriteFile(filepath.Join("config", "self-bootstrap-job.yaml"), []byte(latestJob), os.ModePerm)
 }
 
 // PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
@@ -213,7 +213,8 @@ func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	remotePhaseURL := imageURL("quay.io/package-operator", "remote-phase-package", appVersion)
 	mngrURL := imageURL("quay.io/package-operator", "package-operator-manager", appVersion)
 
-	if err := filepath.WalkDir("config/static-deployment", g.includeInPackageOperatorPackage); err != nil {
+	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInPackageOperatorPackage)
+	if err != nil {
 		return err
 	}
 

@@ -103,13 +103,13 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 
 	tArgs := []string{
 		"go", "test",
-		"-tags=integration", "-coverprofile=.cache/integration/cover.txt",
+		"-tags=integration", "-coverprofile=" + filepath.Join(".cache", "integration", "cover.txt"),
 		f, "-race", "-test.v", "-failfast", "-timeout=20m", "-count=1", "-json",
 		"-coverpkg=./...,./apis/...,./pkg/...", "./integration/...", "|", "gotestfmt", "--hide=empty-packages",
 	}
 
 	err = shr.New(env).Bash(strings.Join(tArgs, " "))
-	eErr := cluster.ExportLogs(".cache/integration/logs")
+	eErr := cluster.ExportLogs(filepath.Join(".cache", "integration", "logs"))
 
 	switch {
 	case err != nil:
@@ -123,21 +123,22 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 
 // Run unittests, the filter argument is passed via -run="".
 func (t Test) Unit(_ context.Context, filter string) error {
-	if err := os.MkdirAll(".cache/unit", 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(".cache", "unit"), 0o755); err != nil {
 		return err
 	}
 
-	gotestArgs := []string{"-coverprofile=.cache/unit/cover.txt", "-race", "-json"}
+	gotestArgs := []string{"-coverprofile=" + filepath.Join(".cache", "unit", "cover.txt"), "-race", "-json"}
 	if len(filter) > 0 {
 		gotestArgs = append(gotestArgs, "-run="+filter)
 	}
 
 	argStr := strings.Join(gotestArgs, " ")
+	logPath := filepath.Join(".cache", "unit", "gotest.log")
 
 	return sh.New(
 		sh.WithEnvironment{"CGO_ENABLED": "1"},
 	).Bash(
 		"set -euo pipefail",
-		fmt.Sprintf("go test %s ./... 2>&1 | tee .cache/unit/gotest.log | gotestfmt --hide=empty-packages", argStr),
+		fmt.Sprintf(`go test %s ./... 2>&1 | tee "%s" | gotestfmt --hide=empty-packages`, argStr, logPath),
 	)
 }
