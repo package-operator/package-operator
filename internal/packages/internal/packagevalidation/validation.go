@@ -13,6 +13,7 @@ import (
 // DefaultPackageValidators is a list of package validators that should be executed as a minimum standard.
 var DefaultPackageValidators = PackageValidatorList{
 	&PackageManifestValidator{},
+	&LockfileConsistencyValidator{},
 }
 
 // PackageValidatorList runs a list of validators and joins all errors.

@@ -76,6 +76,9 @@ const (
 	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
 	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files" //nolint: lll
 	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
+	ViolationReasonLockfileMissing               ViolationReason = "Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update" //nolint: lll
+	ViolationReasonImageMissingInLockfile        ViolationReason = "Image specified in manifest but missing from lockfile. Try running: kubectl package update"                      //nolint: lll
+	ViolationReasonImageDifferentToLockfile      ViolationReason = "Image specified in manifest does not match with lockfile. Try running: kubectl package update"                   //nolint: lll
 )
 
 var ErrEmptyPackage = ViolationError{

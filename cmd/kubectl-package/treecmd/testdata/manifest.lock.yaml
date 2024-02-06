@@ -1,0 +1,9 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifestLock
+metadata:
+  creationTimestamp: "2023-02-06T15:27:04Z"
+spec:
+  images:
+  - digest: sha256:f15ba5a5bfa89be25e5989eeca98e983084350e3f36d9546d22185058326d4cc
+    image: something:v1.0
+    name: test
