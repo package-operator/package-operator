@@ -35,13 +35,13 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.3
 	package-operator.run/pkg v1.9.3
-	pkg.package-operator.run/cardboard v0.0.0-20240125103143-1eece6aa79ab
-	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240125103143-1eece6aa79ab
-	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240125103143-1eece6aa79ab
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240125103143-1eece6aa79ab
-	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240125103143-1eece6aa79ab
+	pkg.package-operator.run/cardboard v0.0.0-20240206234040-2a19fc9a7952
+	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240206234040-2a19fc9a7952
+	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240206234040-2a19fc9a7952
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240206234040-2a19fc9a7952
+	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240206234040-2a19fc9a7952
 	sigs.k8s.io/controller-runtime v0.17.1
-	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/kind v0.21.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -144,8 +144,8 @@ require (
 	golang.org/x/tools v0.17.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240122161410-6c6643bf1457 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240122161410-6c6643bf1457 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
 	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

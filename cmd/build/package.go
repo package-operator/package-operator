@@ -37,7 +37,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	return oci.Load(path)
+	return oci.NewOCI("", "").Load(path)
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
