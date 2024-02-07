@@ -52,7 +52,15 @@ type PackageRenderContext struct {
 // RawPackage right after import.
 // No validation has been performed yet.
 type RawPackage struct {
-	Files Files
+	Files       Files
+	Permissions PackagePermissions
+}
+
+type PackagePermissions struct {
+	// ObjectTypes managed by this package.
+	Managed []schema.GroupKind `json:"managed"`
+	// ObjectTypes external to the package, that are included for evaluating status.
+	External []schema.GroupKind `json:"external"`
 }
 
 // Returns a deep copy of the RawPackage map.

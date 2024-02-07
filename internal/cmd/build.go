@@ -97,6 +97,8 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
+	rawPkg.Permissions, err = packages.Permissions(ctx, rawPkg.Files)
+
 	if cfg.OutputPath != "" {
 		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
