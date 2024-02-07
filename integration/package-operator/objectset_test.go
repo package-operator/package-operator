@@ -90,7 +90,7 @@ func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, namespace, class string) (*cor
 	}, nil
 }
 
-func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
+func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) { //nolint:thelper
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "cm-4",
