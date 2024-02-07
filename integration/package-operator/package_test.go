@@ -142,7 +142,9 @@ func TestPackage_success(t *testing.T) {
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestMultiPackageImage,
 					Config: &runtime.RawExtension{
-						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`, SuccessTestMultiPackageImage, TestStubImage)),
+						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
+							SuccessTestMultiPackageImage, TestStubImage,
+						)),
 					},
 				},
 			},
@@ -168,7 +170,9 @@ func TestPackage_success(t *testing.T) {
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestMultiPackageImage,
 					Config: &runtime.RawExtension{
-						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`, SuccessTestMultiPackageImage, TestStubImage)),
+						Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
+							SuccessTestMultiPackageImage, TestStubImage,
+						)),
 					},
 				},
 			},
