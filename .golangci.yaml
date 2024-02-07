@@ -138,6 +138,8 @@ issues:
   - EXC0015 # Docs.
 run:
   skip-files: [ "zz_generated.deepcopy.go$" ]
+  build-tags:
+  - integration
 linters-settings:
   goimports:
     local-prefixes: package-operator.run
