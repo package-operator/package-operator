@@ -68,6 +68,12 @@ func (w WithHeaders) ConfigureTable(c *TableConfig) {
 	c.Headers = []string(w)
 }
 
+type WithGenerate bool
+
+func (w WithGenerate) ConfigureValidatePackage(c *ValidatePackageConfig) {
+	c.Generate = bool(w)
+}
+
 type WithInsecure bool
 
 func (w WithInsecure) ConfigureBuildFromSource(c *BuildFromSourceConfig) {

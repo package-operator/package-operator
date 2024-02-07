@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -86,7 +85,9 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			},
 			PulledPkg: &packages.RawPackage{
 				Files: packages.Files{
-					"manifest.yaml": _manifest,
+					".test-fixtures/namespace-scope": nil,
+					".test-fixtures/cluster-scope":   nil,
+					"manifest.yaml":                  _manifest,
 				},
 			},
 			Assertion: require.NoError,
@@ -133,7 +134,9 @@ type pullerMock struct {
 	mock.Mock
 }
 
-func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error) {
+func (m *pullerMock) Pull(
+	ctx context.Context, ref string, opts ...packages.RegistryOption,
+) (*packages.RawPackage, error) {
 	actualArgs := []any{ctx, ref}
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)

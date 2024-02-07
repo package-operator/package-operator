@@ -95,9 +95,10 @@ func TestStructuralLoader_Load(t *testing.T) {
 		assert.NotNil(t, pkg)
 		assert.NotNil(t, pkg.Manifest, "Manifest must exist")
 		assert.Nil(t, pkg.ManifestLock, "no lockfile")
-		if assert.Len(t, pkg.Files, 2) {
+		if assert.Len(t, pkg.Files, 3) {
 			assert.NotEmpty(t, pkg.Files["Containerfile"])
 			assert.NotEmpty(t, pkg.Files["some-statefulset.yaml"])
+			assert.NotEmpty(t, pkg.Files[".test-fixtures/case/package-operator.Namespace.yaml"])
 		}
 		assert.Empty(t, pkg.Components)
 	})

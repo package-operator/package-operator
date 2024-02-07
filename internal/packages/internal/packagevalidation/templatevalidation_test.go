@@ -2,7 +2,6 @@ package packagevalidation
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -43,11 +42,6 @@ property: {{.package.metadata.namespace}}
 
 func TestTemplateTestValidator(t *testing.T) {
 	t.Parallel()
-	fixturesPath := t.TempDir()
-	defer func() {
-		err := os.RemoveAll(fixturesPath)
-		require.NoError(t, err) // start clean
-	}()
 
 	packageManifest := &manifests.PackageManifest{
 		Test: manifests.PackageManifestTest{
@@ -69,24 +63,16 @@ func TestTemplateTestValidator(t *testing.T) {
 	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	ttv := NewTemplateTestValidator(fixturesPath)
+	ttv := &TemplateTestValidator{}
 
-	originalFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1Content),
-	}
-	originalPkg := &packagetypes.Package{
-		Manifest: packageManifest,
-		Files:    originalFileMap,
-	}
-	err := ttv.ValidatePackage(ctx, originalPkg)
-	require.NoError(t, err)
-
-	// Assert Fixtures have been setup
 	newFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1UpdatedContent),
+		".test-fixtures/t1/file2.yaml.gotmpl": []byte(testFile2Content),
+		".test-fixtures/t1/file.yaml.gotmpl":  []byte(testFile1Content),
+		"file2.yaml.gotmpl":                   []byte(testFile2Content),
+		"file.yaml.gotmpl":                    []byte(testFile1UpdatedContent),
 	}
 	expectedErr := `File mismatch against fixture in file.yaml.gotmpl: Testcase "t1"
---- FIXTURE/file.yaml
+--- FIXTURE/.test-fixtures/t1/file.yaml
 +++ ACTUAL/file.yaml
 @@ -4,4 +4,4 @@
    name: testfile1
@@ -98,7 +84,7 @@ func TestTemplateTestValidator(t *testing.T) {
 		Manifest: packageManifest,
 		Files:    newFileMap,
 	}
-	err = ttv.ValidatePackage(ctx, newPkg)
+	err := ttv.ValidatePackage(ctx, newPkg)
 	require.Equal(t, expectedErr, err.Error())
 }
 

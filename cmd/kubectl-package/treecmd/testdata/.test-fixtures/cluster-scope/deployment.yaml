@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: "test-stub-test"
   namespace: "test"
+  annotations:
+    defaulted: test123
   labels:
     app: test-stub
     instance: "test"
@@ -19,8 +21,9 @@ spec:
       labels:
         app: test-stub
         instance: "test"
+        image: 'chicken'
     spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: ''
+        image: 'registry.package-operator.run/static-image'

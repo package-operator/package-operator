@@ -41,7 +41,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			Args:             []string{sourcePathFixture("invalid_missing_lock_file")},
 			ExpectedExitCode: 1,
 			ExpectedErrorOutput: []string{
-				`Error: building from source: loading package from files: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
+				`Error: building from source: validate package: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
 			},
 		},
 	),
@@ -66,7 +66,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			Args:             []string{sourcePathFixture("invalid_missing_lock_file")},
 			ExpectedExitCode: 1,
 			ExpectedErrorOutput: []string{
-				`Error: building from source: loading package from files: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
+				`Error: building from source: validate package: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
 			},
 		},
 	),

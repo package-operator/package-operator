@@ -64,7 +64,7 @@ func TestToPushedOCI(t *testing.T) { //nolint:paralleltest
 		Files: seedingFileMap,
 	}
 
-	err := ToPushedOCI(ctx, []string{ref}, rawPkg, reg.CraneOpt)
+	err := ToPushedOCI(ctx, []string{ref}, rawPkg, packagetypes.WithCraneOptions{reg.CraneOpt})
 	require.NoError(t, err)
 
 	_, err = crane.Pull(ref, reg.CraneOpt)
