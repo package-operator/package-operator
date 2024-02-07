@@ -12,6 +12,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,7 +21,10 @@ import (
 type Test struct{}
 
 func (t Test) Integration(ctx context.Context, filter string) error {
-	// TODO create dep
+	if err := mgr.SerialDeps(ctx, run.Meth1(t, t.Integration, filter), cluster.Cluster); err != nil {
+		return err
+	}
+
 	var f string
 	if len(filter) > 0 {
 		f = "-run " + filter
