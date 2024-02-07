@@ -77,15 +77,15 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 
 	err := errors.Join(
 		// Required by cardboard itself.
-		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.16.1"),
-		mgr.RegisterGoTool("kind", "sigs.k8s.io/kind", "0.20.0"),
+		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.19.0"),
+		mgr.RegisterGoTool("kind", "sigs.k8s.io/kind", "0.21.0"),
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
-		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.13.0"),
-		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.28.3"),
-		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.55.0"),
+		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.14.0"),
+		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.29.1"),
+		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.55.2"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
-		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.12.3"),
+		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.14.0"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {
