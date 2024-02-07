@@ -17,6 +17,10 @@ type (
 	PackageScopeValidator = packagevalidation.PackageScopeValidator
 	// Runs the template test suites.
 	TemplateTestValidator = packagevalidation.TemplateTestValidator
+	// Validates that the PackageManifestLock is consistent with PackageManifest.
+	LockfileConsistencyValidator = packagevalidation.LockfileConsistencyValidator
+	// Validates that images referenced in the lockfile are still present in the registry.
+	LockfileDigestLookupValidator = packagevalidation.LockfileDigestLookupValidator
 
 	// ObjectValidator knows how to validate objects within a Package.
 	ObjectValidator = packagetypes.ObjectValidator

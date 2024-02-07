@@ -38,9 +38,11 @@ var _ = ginkgo.DescribeTable("build subcommand",
 	),
 	ginkgo.Entry("given the path of a package with images, but no lock file",
 		subCommandTestCase{
-			Args:                []string{sourcePathFixture("invalid_missing_lock_file")},
-			ExpectedExitCode:    1,
-			ExpectedErrorOutput: []string{"manifest.lock.yaml is missing"},
+			Args:             []string{sourcePathFixture("invalid_missing_lock_file")},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{
+				`Error: building from source: loading package from files: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
+			},
 		},
 	),
 	// TODO: Add test registry and fixture with stale lock file
@@ -61,9 +63,11 @@ var _ = ginkgo.DescribeTable("build subcommand",
 	// ),
 	ginkgo.Entry("given the path of a package with images, but no lock file",
 		subCommandTestCase{
-			Args:                []string{sourcePathFixture("invalid_missing_lock_file")},
-			ExpectedExitCode:    1,
-			ExpectedErrorOutput: []string{"manifest.lock.yaml is missing"},
+			Args:             []string{sourcePathFixture("invalid_missing_lock_file")},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{
+				`Error: building from source: loading package from files: Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update in manifest.lock.yaml`, //nolint:lll
+			},
 		},
 	),
 	ginkgo.Entry("given '--output' without tags",
