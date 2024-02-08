@@ -6,14 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +47,6 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 			ObjectMeta: metav1.ObjectMeta{Name: "package-operator-bootstrap", Namespace: "package-operator-system"},
 		},
 		func(obj client.Object) (done bool, err error) { return },
-		wait.WithTimeout(5*time.Minute),
 	)
 	if err != nil {
 		return err
