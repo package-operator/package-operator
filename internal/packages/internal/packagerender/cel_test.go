@@ -3,10 +3,13 @@ package packagerender
 import (
 	"testing"
 
+	"github.com/google/cel-go/cel"
+
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packagetypes"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
 func Test_evaluateCELCondition(t *testing.T) {
@@ -15,25 +18,29 @@ func Test_evaluateCELCondition(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		expression string
+		tmplCtx    *packagetypes.PackageRenderContext
 		expected   bool
 		err        string
 	}{
+		// Simple expression parsing without context
 		{
 			"just true",
 			"true",
+			nil,
 			true,
 			"",
 		},
 		{
 			"simple &&",
 			"true && false",
+			nil,
 			false,
 			"",
 		},
-
 		{
 			"invalid expression",
 			"true && fals",
+			nil,
 			false,
 			"compile error: ERROR: <input>:1:9: undeclared reference to 'fals' (in container '')\n" +
 				" | true && fals\n" +
@@ -42,15 +49,30 @@ func Test_evaluateCELCondition(t *testing.T) {
 		{
 			"invalid return type",
 			"2 + 3",
+			nil,
 			false,
-			"invalid return type: int, expected bool",
+			newErrInvalidReturnType(cel.IntType, cel.BoolType).Error(),
+		},
+
+		// Parsing with template context
+		{
+			name:       "simple read from context",
+			expression: ".config.banana == \"bread\"",
+			tmplCtx: &packagetypes.PackageRenderContext{
+				Package:     manifests.TemplateContextPackage{},
+				Config:      map[string]any{"banana": "bread"},
+				Images:      nil,
+				Environment: manifests.PackageEnvironment{},
+			},
+			expected: true,
+			err:      "",
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := evaluateCELCondition(tc.expression, packagetypes.PackageRenderContext{})
+			result, err := evaluateCELCondition(tc.expression, tc.tmplCtx)
 			if tc.err == "" {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expected, result)
