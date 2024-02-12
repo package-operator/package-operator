@@ -21,10 +21,10 @@ import (
 	"package-operator.run/internal/cmd"
 )
 
-// internal struct to namespace all code-gen functions.
+// Generate is an internal collection of all code-gen functions.
 type Generate struct{}
 
-// runs all code generators.
+// All runs all code generators.
 func (g Generate) All(ctx context.Context) error {
 	self := run.Meth(g, g.All)
 	if err := mgr.SerialDeps(
@@ -82,10 +82,10 @@ func (Generate) code() error {
 func (Generate) docs() error {
 	refPath := filepath.Join("docs", "api-reference.md")
 	return shr.Bash(
-		fmt.Sprintf("k8s-docgen apis/core/v1alpha1 > %s", refPath),
-		fmt.Sprintf("echo >> %s", refPath),
-		fmt.Sprintf("k8s-docgen apis/manifests/v1alpha1 >> %s", refPath),
-		fmt.Sprintf("echo >> %s", refPath),
+		"k8s-docgen apis/core/v1alpha1 > "+refPath,
+		"echo >> "+refPath,
+		"k8s-docgen apis/manifests/v1alpha1 >> "+refPath,
+		"echo >> "+refPath,
 	)
 }
 

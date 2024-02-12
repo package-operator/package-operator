@@ -7,7 +7,7 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
-// internal struct to namespace all lint related functions.
+// Lint is a collection of lint related functions.
 type Lint struct{}
 
 func (l Lint) fix() error   { return l.glciFix() }
@@ -32,4 +32,8 @@ func (Lint) glciFix() error {
 
 func (Lint) glciCheck() error {
 	return shr.Run("golangci-lint", "run", "--deadline=15m", "./...", "./apis/...", "./pkg/...")
+}
+
+func (Lint) validateGitClean() error {
+	return shr.Run("git", "diff", "--quiet", "--exit-code")
 }

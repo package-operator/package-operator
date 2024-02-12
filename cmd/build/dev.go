@@ -2,15 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"pkg.package-operator.run/cardboard/run"
 )
 
-// Development focused commands using local development environment.
+// Dev focused commands using local development environment.
 type Dev struct{}
 
-// Runs linters and code-gens for pre-commit.
+// PreCommit runs linters and code-gens for pre-commit.
 func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.PreCommit, args)
 	return mgr.ParallelDeps(ctx, self,
@@ -40,7 +40,7 @@ func (dev *Dev) Generate(ctx context.Context, args []string) error {
 	)
 }
 
-// Runs local unittests.
+// Unit runs local unittests.
 func (dev *Dev) Unit(ctx context.Context, args []string) error {
 	var filter string
 	switch len(args) {
@@ -49,12 +49,12 @@ func (dev *Dev) Unit(ctx context.Context, args []string) error {
 	case 1:
 		filter = args[0]
 	default:
-		return fmt.Errorf("only supports a single argument") //nolint:goerr113
+		return errors.New("only supports a single argument") //nolint:goerr113
 	}
 	return test.Unit(ctx, filter)
 }
 
-// Runs local integration tests in a KinD cluster.
+// Integration runs local integration tests in a KinD cluster.
 func (dev *Dev) Integration(ctx context.Context, args []string) error {
 	var filter string
 	switch len(args) {
@@ -63,27 +63,27 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 	case 1:
 		filter = args[0]
 	default:
-		return fmt.Errorf("only supports a single argument") //nolint:goerr113
+		return errors.New("only supports a single argument") //nolint:goerr113
 	}
 	return test.Integration(ctx, filter)
 }
 
-// Runs local linters to check the codebase.
+// Lint runs local linters to check the codebase.
 func (dev *Dev) Lint(_ context.Context, _ []string) error {
 	return lint.check()
 }
 
-// Tries to fix linter issues.
+// LintFix tries to fix linter issues.
 func (dev *Dev) LintFix(_ context.Context, _ []string) error {
 	return lint.fix()
 }
 
-// Deletes the local development cluster.
+// Create the local development cluster.
 func (dev *Dev) Create(ctx context.Context, _ []string) error {
 	return cluster.create(ctx)
 }
 
-// Deletes the local development cluster.
+// Destroy the local development cluster.
 func (dev *Dev) Destroy(ctx context.Context, _ []string) error {
 	return cluster.destroy(ctx)
 }

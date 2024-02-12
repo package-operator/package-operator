@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 		env["CGO_ENABLED"] = cgo
 	}
 	if goos == "" || goarch == "" {
-		return fmt.Errorf("invalid os or arch") //nolint:goerr113
+		return errors.New("invalid os or arch") //nolint:goerr113
 	}
 
 	dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", cmd, goos, goarch))
@@ -50,17 +51,4 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 	}
 
 	return nil
-}
-
-// compiles all binaries of the project for all relevant architectures.
-func compileAll(ctx context.Context) error {
-	return mgr.SerialDeps(ctx,
-		run.Fn(compileAll),
-		run.Fn3(compile, "package-operator-manager", "linux", "amd64"),
-		run.Fn3(compile, "remote-phase-manager", "linux", "amd64"),
-		run.Fn3(compile, "package-operator-webhook", "linux", "amd64"),
-		run.Fn3(compile, "kubectl-package", "linux", "amd64"),
-		run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
-		run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
-	)
 }

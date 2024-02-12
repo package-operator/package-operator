@@ -17,9 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// internal struct to namespace all test related functions.
+// Test is a collection of test related functions.
 type Test struct{}
 
+// Integration runs local integration tests in a KinD cluster.
 func (t Test) Integration(ctx context.Context, filter string) error {
 	if err := mgr.SerialDeps(ctx, run.Meth1(t, t.Integration, filter), cluster.Cluster); err != nil {
 		return err
@@ -125,7 +126,7 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 	}
 }
 
-// Run unittests, the filter argument is passed via -run="".
+// Unit runs unittests, the filter argument is passed via -run="".
 func (t Test) Unit(_ context.Context, filter string) error {
 	if err := os.MkdirAll(filepath.Join(".cache", "unit"), 0o755); err != nil {
 		return err

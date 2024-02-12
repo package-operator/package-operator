@@ -59,10 +59,6 @@ func buildImage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	if err := compileAll(ctx); err != nil {
-		return err
-	}
-
 	if err := o.Build(); err != nil {
 		return err
 	}

@@ -8,11 +8,12 @@ import (
 	"pkg.package-operator.run/cardboard/run"
 )
 
+// Cluster focused targets.
 type Cluster struct {
 	*kind.Cluster
 }
 
-// Deletes the local development cluster.
+// Creates the local development cluster.
 func (c *Cluster) create(ctx context.Context) error {
 	self := run.Meth(c, c.create)
 
@@ -61,7 +62,7 @@ func (c *Cluster) create(ctx context.Context) error {
 	return nil
 }
 
-// Deletes the local development cluster.
+// Destroys the local development cluster.
 func (c *Cluster) destroy(ctx context.Context) error {
 	return c.Destroy(ctx)
 }
