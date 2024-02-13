@@ -16,9 +16,9 @@ require (
 	github.com/google/go-containerregistry v0.19.0
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
-	github.com/openshift/api v0.0.0-20240206115603-413e7e5d324e
+	github.com/openshift/api v0.0.0-20240213032657-54b3334bfac5
 	github.com/prometheus/client_golang v1.18.0
-	github.com/pterm/pterm v0.12.78
+	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -31,15 +31,15 @@ require (
 	k8s.io/apimachinery v0.29.1
 	k8s.io/apiserver v0.29.1
 	k8s.io/client-go v0.29.1
-	k8s.io/kube-openapi v0.0.0-20240126223410-2919ad4fcfec
+	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.4
 	package-operator.run/pkg v1.9.4
-	pkg.package-operator.run/cardboard v0.0.0-20240207162314-20964d3da954
-	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240207162314-20964d3da954
-	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240207162314-20964d3da954
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240207162314-20964d3da954
-	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240207162314-20964d3da954
+	pkg.package-operator.run/cardboard v0.0.0-20240212134449-be09630d6c92
+	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240213155707-7ff7f261299f
+	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240212134449-be09630d6c92
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240213155707-7ff7f261299f
+	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240212134449-be09630d6c92
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/kind v0.21.0
 	sigs.k8s.io/yaml v1.4.0
@@ -134,14 +134,14 @@ require (
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
-	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
+	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.17.0 // indirect
+	golang.org/x/tools v0.18.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240205150955-31a09d347014 // indirect
