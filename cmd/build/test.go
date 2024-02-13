@@ -21,8 +21,12 @@ import (
 type Test struct{}
 
 // Integration runs local integration tests in a KinD cluster.
-func (t Test) Integration(ctx context.Context, filter string) error {
-	if err := mgr.SerialDeps(ctx, run.Meth1(t, t.Integration, filter), cluster.Cluster); err != nil {
+func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) error {
+	self := run.Meth2(t, t.Integration, jsonOutput, filter)
+	if err := mgr.ParallelDeps(ctx, self,
+		run.Meth(cluster, cluster.create),
+		run.Meth(generate, generate.All),
+	); err != nil {
 		return err
 	}
 
@@ -106,14 +110,9 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 		env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] = url
 	}
 
-	tArgs := []string{
-		"go", "test",
-		"-tags=integration", "-coverprofile=" + filepath.Join(".cache", "integration", "cover.txt"),
-		f, "-race", "-test.v", "-failfast", "-timeout=20m", "-count=1", "-json",
-		"-coverpkg=./...,./apis/...,./pkg/...", "./integration/...", "|", "gotestfmt", "--hide=empty-packages",
-	}
+	goTestCmd := t.makeGoTestCmd(f, jsonOutput)
 
-	err = shr.New(env).Bash(strings.Join(tArgs, " "))
+	err = shr.New(env).Bash(goTestCmd)
 	eErr := cluster.ExportLogs(filepath.Join(".cache", "integration", "logs"))
 
 	switch {
@@ -124,6 +123,35 @@ func (t Test) Integration(ctx context.Context, filter string) error {
 	default:
 		return nil
 	}
+}
+
+func (Test) makeGoTestCmd(filter string, jsonOutput bool) string {
+	args := []string{
+		"go", "test",
+		"-tags=integration",
+		"-coverprofile=" + filepath.Join(".cache", "integration", "cover.txt"),
+		filter,
+		"-race",
+		"-test.v",
+		"-failfast",
+		"-timeout=20m",
+		"-count=1",
+	}
+
+	if jsonOutput {
+		args = append(args, "-json")
+	}
+
+	args = append(args,
+		"-coverpkg=./...,./apis/...,./pkg/...",
+		"./integration/...",
+	)
+
+	if jsonOutput {
+		args = append(args, "|", "gotestfmt", "--hide=empty-packages")
+	}
+
+	return strings.Join(args, " ")
 }
 
 // Unit runs unittests, the filter argument is passed via -run="".

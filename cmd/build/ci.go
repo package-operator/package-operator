@@ -17,7 +17,7 @@ func (ci *CI) Unit(ctx context.Context, _ []string) error {
 
 // Integration runs integration tests in CI using a KinD cluster.
 func (ci *CI) Integration(ctx context.Context, _ []string) error {
-	return test.Integration(ctx, "")
+	return test.Integration(ctx, true, "")
 }
 
 // Lint runs linters in CI to check the codebase.

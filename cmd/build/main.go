@@ -6,15 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"pkg.package-operator.run/cardboard/modules/kind"
-	"pkg.package-operator.run/cardboard/modules/kubeclients"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
-	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
-
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var (
@@ -37,41 +31,11 @@ func main() {
 
 	mgr = run.New(run.WithSources(source))
 	shr = sh.New()
-	clusterCfg := kindv1alpha4.Cluster{
-		ContainerdConfigPatches: []string{
-			// Replace `imageRegistry` with our local dev-registry.
-			fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
-endpoint = ["http://localhost:31320"]`, "quay.io"),
-		},
-		Nodes: []kindv1alpha4.Node{
-			{
-				Role: kindv1alpha4.ControlPlaneRole,
-				ExtraPortMappings: []kindv1alpha4.PortMapping{
-					// Open port to enable connectivity with local registry.
-					{
-						ContainerPort: 5001,
-						HostPort:      5001,
-						ListenAddress: "127.0.0.1",
-						Protocol:      "TCP",
-					},
-				},
-			},
-		},
-	}
 	generate = &Generate{}
 	test = &Test{}
 	lint = &Lint{}
-	cluster = &Cluster{
-		kind.NewCluster("pko",
-			kind.WithClusterConfig(clusterCfg),
-			kind.WithClientOptions{
-				kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
-			},
-			kind.WithClusterInitializers{
-				kind.ClusterLoadObjectsFromFiles{filepath.Join("config", "local-registry.yaml")},
-			},
-		),
-	}
+
+	cluster = NewCluster()
 
 	appVersion = mustVersion()
 

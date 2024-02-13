@@ -65,7 +65,7 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 	default:
 		return errors.New("only supports a single argument") //nolint:goerr113
 	}
-	return test.Integration(ctx, filter)
+	return test.Integration(ctx, false, filter)
 }
 
 // Lint runs local linters to check the codebase.

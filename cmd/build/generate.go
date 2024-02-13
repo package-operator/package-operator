@@ -175,8 +175,8 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 	replacements := map[string]string{
 		`##registry-overrides##`: registyOverrides,
 		`##pko-config##`:         pkoConfig,
-		`##pko-manager-image##`:  imageURL("localhost:5001/package-operator", "package-operator-manager", appVersion),
-		`##pko-package-image##`:  imageURL(registyOverrides+"/package-operator", "package-operator-package", appVersion),
+		`##pko-manager-image##`:  imageURL("quay.io/package-operator", "package-operator-manager", appVersion),
+		`##pko-package-image##`:  imageURL("quay.io/package-operator", "package-operator-package", appVersion),
 	}
 
 	latestJob := string(latestJobBytes)
