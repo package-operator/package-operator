@@ -40,9 +40,13 @@ func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm2Name := "config-map-2"
 	cm2, cm2Source := createCMAndObjectTemplateSource(cm2Key, cm2Destination, cm2Value, cm2Name)
 
+	// get kubernetes cluster version from apiserver
+	versionInfo, err := DiscoveryClient.ServerVersion()
+	require.NoError(t, err)
+
 	kubernetesKey := "kubernetes"
 	kubernetesPath := ".environment.kubernetes.version"
-	kubernetesValue := "v1.27.3"
+	kubernetesValue := versionInfo.String()
 
 	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
 kind: Package
@@ -143,7 +147,7 @@ spec:
 	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	err := Client.Create(ctx, &cm1)
+	err = Client.Create(ctx, &cm1)
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, &cm1)
 

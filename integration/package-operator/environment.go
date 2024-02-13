@@ -10,6 +10,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
@@ -28,6 +29,10 @@ const (
 var (
 	// Client pointing to the e2e test cluster.
 	Client client.Client
+
+	// DiscoveryClient pointing to the e2e test cluster.
+	DiscoveryClient *discovery.DiscoveryClient
+
 	// Config is the REST config used to connect to the cluster.
 	Config *rest.Config
 	// Scheme used by created clients.
@@ -105,6 +110,11 @@ func initClients(_ context.Context) error {
 	Client, err = client.New(Config, client.Options{Scheme: Scheme})
 	if err != nil {
 		return fmt.Errorf("creating runtime client: %w", err)
+	}
+
+	DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(Config)
+	if err != nil {
+		return fmt.Errorf("creating discovery client: %w", err)
 	}
 
 	return nil
