@@ -39,7 +39,8 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 	dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", cmd, goos, goarch))
 
 	ldflags := []string{
-		"-w", "-s", "--extldflags", "'-zrelro -znow -O1'",
+		"-w", "-s", "-buildid=",
+		"--extldflags", "'-zrelro -znow -O1'",
 		"-X", fmt.Sprintf("'package-operator.run/internal/version.version=%s'", appVersion),
 	}
 
@@ -47,7 +48,7 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 		"go", "build", "--ldflags", strings.Join(ldflags, " "), "--trimpath", "--mod=readonly", "-o", dst, "./cmd/"+cmd,
 	)
 	if err != nil {
-		panic(fmt.Errorf("compiling cmd/%s: %w", cmd, err))
+		return fmt.Errorf("compiling cmd/%s: %w", cmd, err)
 	}
 
 	return nil
