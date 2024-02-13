@@ -67,6 +67,31 @@ func Test_evaluateCELCondition(t *testing.T) {
 			expected: true,
 			err:      "",
 		},
+		{
+			name:       "is hypershift",
+			expression: "has(.environment.hyperShift)",
+			tmplCtx: &packagetypes.PackageRenderContext{
+				Package: manifests.TemplateContextPackage{},
+				Config:  nil,
+				Images:  nil,
+				Environment: manifests.PackageEnvironment{
+					Kubernetes: manifests.PackageEnvironmentKubernetes{},
+					OpenShift:  nil,
+					Proxy:      nil,
+					HyperShift: &manifests.PackageEnvironmentHyperShift{
+						HostedCluster: &manifests.PackageEnvironmentHyperShiftHostedCluster{
+							TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
+								Name:      "banana",
+								Namespace: "bread",
+							},
+							HostedClusterNamespace: "pancake",
+						},
+					},
+				},
+			},
+			expected: true,
+			err:      "",
+		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
