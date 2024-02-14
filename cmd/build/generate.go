@@ -89,7 +89,15 @@ func (Generate) docs() error {
 	)
 }
 
-func (Generate) installYamlFile() (err error) {
+func (Generate) installYamlFile(ctx context.Context) (err error) {
+	self := run.Meth(&Generate{}, (&Generate{}).installYamlFile)
+	if err := mgr.SerialDeps(
+		ctx, self,
+		run.Meth(generate, generate.code), // install.yaml generation needs code generation first
+	); err != nil {
+		return err
+	}
+
 	folderPath := filepath.Join("config", "static-deployment")
 	outputPath := "install.yaml"
 
@@ -209,6 +217,9 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 }
 
 // PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
+// This depends on an up-to-date remote-phase-package image being pushed to quay
+// but we can't code this in as a dependency because then every call to this function would
+// push images to quay. :(.
 func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	remotePhaseURL := imageURL("quay.io/package-operator", "remote-phase-package", appVersion)
 	mngrURL := imageURL("quay.io/package-operator", "package-operator-manager", appVersion)

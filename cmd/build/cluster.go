@@ -18,12 +18,15 @@ import (
 // Cluster focused targets.
 type Cluster struct {
 	*kind.Cluster
+	registryPort int32
 }
 
 // NewCluster prepares a configured cluster object.
-func NewCluster() *Cluster {
-	return &Cluster{
-		kind.NewCluster("pko",
+func NewCluster(registryPort int32) Cluster {
+	return Cluster{
+		registryPort: registryPort,
+
+		Cluster: kind.NewCluster("pko",
 			kind.WithClusterConfig(kindv1alpha4.Cluster{
 				ContainerdConfigPatches: []string{
 					// Replace `imageRegistry` with our local dev-registry.
@@ -37,7 +40,7 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 							// Open port to enable connectivity with local registry.
 							{
 								ContainerPort: 5001,
-								HostPort:      5001,
+								HostPort:      registryPort,
 								ListenAddress: "127.0.0.1",
 								Protocol:      "TCP",
 							},
@@ -58,53 +61,53 @@ endpoint = ["http://localhost:31320"]`, "quay.io"),
 // Creates the local development cluster.
 func (c *Cluster) create(ctx context.Context) error {
 	self := run.Meth(c, c.create)
-
-	if err := mgr.SerialDeps(ctx, self, c); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(".cache/integration", 0o755); err != nil {
-		return err
-	}
-
-	err := mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushImage, "package-operator-manager", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "package-operator-webhook", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "remote-phase-manager", "localhost:5001/package-operator"),
-		run.Fn2(pushImage, "test-stub", "localhost:5001/package-operator"),
+	return mgr.SerialDeps(ctx, self,
+		c, // cardboard's internal cluster magic
+		run.Meth1(c, c.loadImages, c.registryPort),
 	)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Setenv("PKO_REPOSITORY_HOST", "localhost:5001"); err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushPackage, "remote-phase", "localhost:5001/package-operator"),
-		run.Fn2(pushPackage, "test-stub", "localhost:5001/package-operator"),
-		run.Fn2(pushPackage, "test-stub-multi", "localhost:5001/package-operator"),
-	)
-	if err != nil {
-		return err
-	}
-
-	err = mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushPackage, "package-operator", "localhost:5001/package-operator"),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Unsetenv("PKO_REPOSITORY_HOST"); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Destroys the local development cluster.
 func (c *Cluster) destroy(ctx context.Context) error {
 	return c.Destroy(ctx)
+}
+
+// Load images into the local development cluster.
+func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
+	self := run.Meth1(c, c.loadImages, registryPort)
+
+	hostPort := fmt.Sprintf("localhost:%d", registryPort)
+	registry := hostPort + "/package-operator"
+
+	if err := mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushImage, "package-operator-manager", registry),
+		run.Fn2(pushImage, "package-operator-webhook", registry),
+		run.Fn2(pushImage, "remote-phase-manager", registry),
+		run.Fn2(pushImage, "test-stub", registry),
+	); err != nil {
+		return err
+	}
+
+	if err := os.Setenv("PKO_REPOSITORY_HOST", hostPort); err != nil {
+		return err
+	}
+
+	if err := mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushPackage, "remote-phase", registry),
+		run.Fn2(pushPackage, "test-stub", registry),
+		run.Fn2(pushPackage, "test-stub-multi", registry),
+	); err != nil {
+		return err
+	}
+
+	// This needs to be separate because the remote-phase package image has to be pushed before
+	// downstream dependencies of the package-operator package image can be regenerated.
+	// *very very sad @erdii noises*
+	if err := mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushPackage, "package-operator", registry),
+	); err != nil {
+		return err
+	}
+
+	return os.Unsetenv("PKO_REPOSITORY_HOST")
 }

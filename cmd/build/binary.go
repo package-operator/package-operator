@@ -17,7 +17,7 @@ import (
 func compile(ctx context.Context, cmd string, goos, goarch string) error {
 	err := mgr.SerialDeps(ctx,
 		run.Fn3(compile, cmd, goos, goarch),
-		run.Meth(&Generate{}, (&Generate{}).All),
+		run.Meth(generate, generate.All),
 	)
 	if err != nil {
 		return err

@@ -8,6 +8,7 @@ import (
 	"package-operator.run/internal/cmd"
 
 	"pkg.package-operator.run/cardboard/modules/oci"
+	"pkg.package-operator.run/cardboard/run"
 )
 
 func buildPackage(ctx context.Context, name, registry string) error {
@@ -15,24 +16,30 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
+	deps := []run.Dependency{}
+
 	switch name {
 	case "remote-phase":
-		if err := (Generate{}).remotePhaseFiles(ctx); err != nil {
-			return err
-		}
+		deps = append(deps, run.Meth(generate, generate.remotePhaseFiles))
 	case "package-operator":
-		if err := (Generate{}).packageOperatorPackageFiles(ctx); err != nil {
-			return err
-		}
+		deps = append(deps, run.Meth(generate, generate.packageOperatorPackageFiles))
+	}
+
+	self := run.Fn2(buildPackage, name, registry)
+	if err := mgr.ParallelDeps(
+		ctx, self,
+		deps...,
+	); err != nil {
+		return err
 	}
 
 	path := filepath.Join("config", "packages", name, "container.oci.tar")
-	err := cmd.NewBuild().BuildFromSource(ctx,
+
+	if err := cmd.NewBuild().BuildFromSource(ctx,
 		filepath.Join("config", "packages", name),
 		cmd.WithOutputPath(path),
 		cmd.WithTags{registry + "/" + name + "-package:" + appVersion},
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -40,14 +47,19 @@ func buildPackage(ctx context.Context, name, registry string) error {
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
+	self := run.Fn2(buildPackage, name, registry)
+	if err := mgr.SerialDeps(
+		ctx, self,
+		run.Fn2(buildPackage, name, registry),
+	); err != nil {
+		return err
+	}
+
 	imgPath, err := filepath.Abs(filepath.Join("config", "packages", name))
 	if err != nil {
 		return err
 	}
 
-	if err := buildPackage(ctx, name, registry); err != nil {
-		return err
-	}
 	o := oci.NewOCI(name+"-package", imgPath,
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},

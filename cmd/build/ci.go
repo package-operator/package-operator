@@ -22,7 +22,7 @@ func (ci *CI) Integration(ctx context.Context, _ []string) error {
 
 // Lint runs linters in CI to check the codebase.
 func (ci *CI) Lint(_ context.Context, _ []string) error {
-	return lint.check()
+	return lint.glciCheck()
 }
 
 // PostPush runs autofixes in CI and validates that the repo is clean afterwards.
@@ -42,9 +42,7 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 
 // Release builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
-	self := run.Meth1(ci, ci.Release, args)
-
-	registry := "quay.io/package-operator" // TODO?
+	registry := defaultImageRegistry
 
 	if len(args) > 2 {
 		return errors.New("target registry as a single arg or no args for official") //nolint:goerr113
@@ -55,11 +53,27 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		return errors.New("registry may not be empty") //nolint:goerr113
 	}
 
-	return mgr.ParallelDeps(ctx, self,
+	self := run.Meth1(ci, ci.Release, args)
+	if err := mgr.ParallelDeps(ctx, self,
+		// binary images
 		run.Fn2(pushImage, "cli", registry),
 		run.Fn2(pushImage, "package-operator-manager", registry),
 		run.Fn2(pushImage, "package-operator-webhook", registry),
 		run.Fn2(pushImage, "remote-phase-manager", registry),
 		run.Fn2(pushImage, "test-stub", registry),
+
+		// package images
+		run.Fn2(pushPackage, "remote-phase", registry),
+		run.Fn2(pushPackage, "test-stub", registry),
+		run.Fn2(pushPackage, "test-stub-multi", registry),
+	); err != nil {
+		return err
+	}
+
+	// This needs to be separate because the remote-phase package image has to be pushed before
+	// downstream dependencies of the package-operator package image can be regenerated.
+	// *very very sad @erdii noises*
+	return mgr.ParallelDeps(ctx, self,
+		run.Fn2(pushPackage, "package-operator", registry),
 	)
 }

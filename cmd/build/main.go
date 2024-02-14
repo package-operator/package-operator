@@ -12,15 +12,16 @@ import (
 )
 
 var (
-	shr        *sh.Runner
-	mgr        *run.Manager
-	appVersion string
+	shr = sh.New()
+	mgr = run.New(run.WithSources(source))
+
+	appVersion = mustVersion()
 
 	// internal modules.
-	generate *Generate
-	test     *Test
-	lint     *Lint
-	cluster  *Cluster
+	generate Generate
+	test     Test
+	lint     Lint
+	cluster  = NewCluster(devClusterRegistryPort)
 
 	//go:embed *.go
 	source embed.FS
@@ -29,20 +30,9 @@ var (
 func main() {
 	ctx := context.Background()
 
-	mgr = run.New(run.WithSources(source))
-	shr = sh.New()
-	generate = &Generate{}
-	test = &Test{}
-	lint = &Lint{}
-
-	cluster = NewCluster()
-
-	appVersion = mustVersion()
-
 	err := errors.Join(
 		// Required by cardboard itself.
 		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.19.0"),
-		mgr.RegisterGoTool("kind", "sigs.k8s.io/kind", "0.21.0"),
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
 		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.14.0"),
@@ -53,7 +43,8 @@ func main() {
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "\n%s\n", err)
+		os.Exit(1)
 	}
 
 	if err := mgr.Run(ctx); err != nil {

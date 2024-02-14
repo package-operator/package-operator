@@ -10,10 +10,6 @@ import (
 // Lint is a collection of lint related functions.
 type Lint struct{}
 
-func (l Lint) fix() error   { return l.glciFix() }
-func (l Lint) check() error { return l.glciCheck() }
-
-// TODO make that more nice.
 func (l Lint) goModTidy(workdir string) error {
 	return shr.New(sh.WithWorkDir(workdir)).Run("go", "mod", "tidy")
 }

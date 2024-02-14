@@ -23,16 +23,10 @@ func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 // Generate code, api docs, install files.
 func (dev *Dev) Generate(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.Generate, args)
-	if err := mgr.SerialDeps(
-		ctx, self,
-		run.Meth(generate, generate.code),
-	); err != nil {
-		return err
-	}
 
-	// installYamlFile has to come after code generation.
 	return mgr.ParallelDeps(
 		ctx, self,
+		run.Meth(generate, generate.code),
 		run.Meth(generate, generate.docs),
 		run.Meth(generate, generate.installYamlFile),
 		run.Meth(generate, generate.selfBootstrapJob),
@@ -70,12 +64,12 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 
 // Lint runs local linters to check the codebase.
 func (dev *Dev) Lint(_ context.Context, _ []string) error {
-	return lint.check()
+	return lint.glciCheck()
 }
 
 // LintFix tries to fix linter issues.
 func (dev *Dev) LintFix(_ context.Context, _ []string) error {
-	return lint.fix()
+	return lint.glciFix()
 }
 
 // Create the local development cluster.

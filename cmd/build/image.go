@@ -26,10 +26,16 @@ func buildImage(ctx context.Context, name, registry string) error {
 	}
 
 	binaryName := name
+
+	// Why can't we just publish an image named `kubectl-package`? :(
 	if name == "cli" {
 		binaryName = "kubectl-package"
 	}
-	if err := compile(ctx, binaryName, "linux", "amd64"); err != nil {
+
+	self := run.Fn2(buildImage, name, registry)
+	if err := mgr.SerialDeps(ctx, self,
+		run.Fn3(compile, binaryName, "linux", "amd64"),
+	); err != nil {
 		return err
 	}
 
@@ -72,9 +78,13 @@ func pushImage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	if err := buildImage(ctx, name, registry); err != nil {
+	self := run.Fn2(pushImage, name, registry)
+	if err := mgr.SerialDeps(ctx, self,
+		run.Fn2(buildImage, name, registry),
+	); err != nil {
 		return err
 	}
+
 	o := oci.NewOCI(name, imgPath,
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},
