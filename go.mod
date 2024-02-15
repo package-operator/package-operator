@@ -18,9 +18,9 @@ require (
 	github.com/mt-sre/devkube v0.7.1
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
-	github.com/openshift/api v0.0.0-20240122155700-948df9da0f90
+	github.com/openshift/api v0.0.0-20240215110531-750a3e21ebaf
 	github.com/prometheus/client_golang v1.18.0
-	github.com/pterm/pterm v0.12.78
+	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -28,17 +28,17 @@ require (
 	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.26.0
 	golang.org/x/sys v0.17.0
-	k8s.io/api v0.29.1
-	k8s.io/apiextensions-apiserver v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/apiserver v0.29.1
-	k8s.io/client-go v0.29.1
-	k8s.io/kube-openapi v0.0.0-20240117194847-208609032b15
+	k8s.io/api v0.29.2
+	k8s.io/apiextensions-apiserver v0.29.2
+	k8s.io/apimachinery v0.29.2
+	k8s.io/apiserver v0.29.2
+	k8s.io/client-go v0.29.2
+	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	package-operator.run/apis v1.9.3
-	package-operator.run/pkg v1.9.3
+	package-operator.run/apis v1.9.4
+	package-operator.run/pkg v1.9.4
 	sigs.k8s.io/controller-runtime v0.17.1
-	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -130,24 +130,24 @@ require (
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
-	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
+	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.17.0 // indirect
+	golang.org/x/tools v0.18.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
-	google.golang.org/grpc v1.61.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.29.1 // indirect
+	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
