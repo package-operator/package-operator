@@ -21,7 +21,12 @@ var (
 	generate Generate
 	test     Test
 	lint     Lint
-	cluster  = NewCluster(devClusterRegistryPort)
+	cluster  = NewCluster("pko",
+		withLocalRegistry(imageRegistryHost(), devClusterRegistryPort),
+	)
+	hypershiftHostedCluster = NewCluster("pko-hs-hc",
+		withRegistryHostOverrideToOtherCluster(imageRegistryHost(), cluster),
+	)
 
 	//go:embed *.go
 	source embed.FS
