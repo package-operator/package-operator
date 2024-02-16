@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/cmd/kubectl-package/buildcmd"
+	"package-operator.run/cmd/kubectl-package/loadcmd"
 	"package-operator.run/cmd/kubectl-package/rolloutcmd"
 	"package-operator.run/cmd/kubectl-package/rootcmd"
 	"package-operator.run/cmd/kubectl-package/treecmd"
@@ -62,6 +63,16 @@ func (f *defaultRendererFactory) Renderer() treecmd.Renderer {
 			Log: f.logFactory.Logger(),
 		},
 	)
+}
+
+func ProvideLoader() loadcmd.Loader {
+	return &loadcmd.DefaultLoader{}
+}
+
+func ProvideLoadCmd(loader loadcmd.Loader) RootSubCommandResult {
+	return RootSubCommandResult{
+		SubCommand: loadcmd.NewCmd(loader),
+	}
 }
 
 func ProvideUpdateCmd(updater updatecmd.Updater) RootSubCommandResult {

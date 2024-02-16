@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"package-operator.run/cmd/kubectl-package/deps"
+	"package-operator.run/cmd/kubectl-package/loadcmd"
 )
 
 const (
@@ -39,6 +40,6 @@ func run() error {
 func executeRoot(rootCmd *cobra.Command) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-
+	rootCmd.AddCommand(loadcmd.NewLoadCmd())
 	return rootCmd.ExecuteContext(ctx)
 }

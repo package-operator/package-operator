@@ -35,6 +35,7 @@ func constructors() []any {
 		ProvideUpdater,
 		ProvideBuilderFactory,
 		ProvideValidator,
+		ProvideLoadCmd,
 		ProvideRendererFactory,
 		ProvideRolloutCmd,
 		ProvideClientFactory,
