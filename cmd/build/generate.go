@@ -177,14 +177,14 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		return err
 	}
 
-	registyOverrides := "quay.io=dev-registry.dev-registry.svc.cluster.local:5001"
+	registyOverrides := imageRegistryHost() + "=dev-registry.dev-registry.svc.cluster.local:5001"
 	pkoConfig := fmt.Sprintf(`{"registryHostOverrides":"%s"}`, registyOverrides)
 
 	replacements := map[string]string{
 		`##registry-overrides##`: registyOverrides,
 		`##pko-config##`:         pkoConfig,
-		`##pko-manager-image##`:  imageURL("quay.io/package-operator", "package-operator-manager", appVersion),
-		`##pko-package-image##`:  imageURL("quay.io/package-operator", "package-operator-package", appVersion),
+		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
+		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}
 
 	latestJob := string(latestJobBytes)
@@ -204,8 +204,8 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 	replacements := map[string]string{
 		`##registry-overrides##`: "",
 		`##pko-config##`:         "",
-		`##pko-manager-image##`:  imageURL("quay.io/package-operator", "package-operator-manager", appVersion),
-		`##pko-package-image##`:  imageURL("quay.io/package-operator", "package-operator-package", appVersion),
+		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
+		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}
 
 	latestJob := string(latestJobBytes)
@@ -221,8 +221,8 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 // but we can't code this in as a dependency because then every call to this function would
 // push images to quay. :(.
 func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
-	remotePhaseURL := imageURL("quay.io/package-operator", "remote-phase-package", appVersion)
-	mngrURL := imageURL("quay.io/package-operator", "package-operator-manager", appVersion)
+	remotePhaseURL := imageURL(imageRegistry(), "remote-phase-package", appVersion)
+	mngrURL := imageURL(imageRegistry(), "package-operator-manager", appVersion)
 
 	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInPackageOperatorPackage)
 	if err != nil {
@@ -275,7 +275,7 @@ func (Generate) remotePhaseFiles(ctx context.Context) error {
 	}
 
 	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
-		{Name: "remote-phase-manager", Image: imageURL("quay.io/package-operator", "remote-phase-manager", appVersion)},
+		{Name: "remote-phase-manager", Image: imageURL(imageRegistry(), "remote-phase-manager", appVersion)},
 	}
 	manifestYaml, err := yaml.Marshal(manifest)
 	if err != nil {

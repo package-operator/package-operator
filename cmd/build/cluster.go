@@ -31,7 +31,7 @@ func NewCluster(registryPort int32) Cluster {
 				ContainerdConfigPatches: []string{
 					// Replace `imageRegistry` with our local dev-registry.
 					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
-endpoint = ["http://localhost:31320"]`, "quay.io"),
+endpoint = ["http://localhost:31320"]`, imageRegistryHost()),
 				},
 				Nodes: []kindv1alpha4.Node{
 					{
@@ -77,7 +77,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 	self := run.Meth1(c, c.loadImages, registryPort)
 
 	hostPort := fmt.Sprintf("localhost:%d", registryPort)
-	registry := hostPort + "/package-operator"
+	registry := localRegistry(hostPort)
 
 	if err := mgr.ParallelDeps(ctx, self,
 		run.Fn2(pushImage, "package-operator-manager", registry),

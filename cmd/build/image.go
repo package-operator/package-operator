@@ -39,37 +39,32 @@ func buildImage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	dst := filepath.Join(buildDir, binaryName)
-	src := filepath.Join("bin", binaryName+"_linux_amd64")
-	if err := shr.Copy(dst, src); err != nil {
-		return err
+	for _, file := range []struct {
+		dst, src string
+	}{
+		{
+			dst: filepath.Join(buildDir, binaryName),
+			src: filepath.Join("bin", binaryName+"_linux_amd64"),
+		},
+		{
+			dst: filepath.Join(buildDir, "passwd"),
+			src: filepath.Join("config", "images", "passwd"),
+		},
+		{
+			dst: filepath.Join(buildDir, "Containerfile"),
+			src: filepath.Join("config", "images", name+".Containerfile"),
+		},
+	} {
+		if err := shr.Copy(file.dst, file.src); err != nil {
+			return err
+		}
 	}
 
-	o := oci.NewOCI(name, buildDir,
+	return oci.NewOCI(name, buildDir,
 		oci.WithContainerFile("Containerfile"),
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},
-		// push via crane, because podman does not support HTTP pushes for local dev.
-		oci.WithCranePush{},
-	)
-
-	dst = filepath.Join(buildDir, "passwd")
-	src = filepath.Join("config", "images", "passwd")
-	if err := shr.Copy(dst, src); err != nil {
-		return err
-	}
-
-	dst = filepath.Join(buildDir, "Containerfile")
-	src = filepath.Join("config", "images", name+".Containerfile")
-	if err := shr.Copy(dst, src); err != nil {
-		return err
-	}
-
-	if err := o.Build(); err != nil {
-		return err
-	}
-
-	return nil
+	).Build()
 }
 
 func pushImage(ctx context.Context, name, registry string) error {
@@ -85,26 +80,19 @@ func pushImage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	o := oci.NewOCI(name, imgPath,
+	return oci.NewOCI(name, imgPath,
 		oci.WithTags{appVersion},
 		oci.WithRegistries{registry},
 		// push via crane, because podman does not support HTTP pushes for local dev.
 		oci.WithCranePush{},
-	)
-
-	if err := o.Push(); err != nil {
-		return err
-	}
-
-	return nil
+	).Push()
 }
 
 func imageURL(registry, name, version string) string {
 	url := os.Getenv(strings.ReplaceAll(strings.ToUpper(name), "-", "_") + "_IMAGE")
 	if url == "" {
-		url = fmt.Sprintf("%s/%s:%s", registry, name, version)
+		return fmt.Sprintf("%s/%s:%s", registry, name, version)
 	}
-
 	return url
 }
 
@@ -119,7 +107,7 @@ func version() (string, error) {
 		return "", fmt.Errorf("git describe: %w", err)
 	}
 
-	// Depending on what process was used the last tag my either be a version for
+	// Depending on what process was used the last tag may either be a version for
 	// the main module (eg `v1.6.6`) or a version for a submodule (eg `apis/v1.6.6`).
 	return path.Base(strings.TrimSpace(version)), nil
 }
@@ -127,6 +115,5 @@ func version() (string, error) {
 func mustVersion() string {
 	v, err := version()
 	run.Must(err)
-
 	return v
 }

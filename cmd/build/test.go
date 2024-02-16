@@ -95,12 +95,11 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		return err
 	}
 
-	packageRegistry := "dev-registry.dev-registry.svc.cluster.local:5001/package-operator"
 	env := sh.WithEnvironment{
 		"CGO_ENABLED":                          "1",
-		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(packageRegistry, "test-stub-package", appVersion),
-		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(packageRegistry, "test-stub-multi-package", appVersion),
-		"PKO_TEST_STUB_IMAGE":                  imageURL("localhost:5001/package-operator", "test-stub", appVersion),
+		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(imageRegistry(), "test-stub-package", appVersion),
+		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(imageRegistry(), "test-stub-multi-package", appVersion),
+		"PKO_TEST_STUB_IMAGE":                  imageURL(imageRegistry(), "test-stub", appVersion),
 		"PKO_TEST_LATEST_BOOTSTRAP_JOB":        os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB"),
 		"KUBECONFIG":                           kubeconfigPath,
 	}

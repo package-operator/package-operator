@@ -28,12 +28,11 @@ func (ci *CI) Lint(_ context.Context, _ []string) error {
 // PostPush runs autofixes in CI and validates that the repo is clean afterwards.
 func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.PostPush, args)
-	err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.ParallelDeps(ctx, self,
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
 		run.Meth(lint, lint.goModTidyAll),
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -42,7 +41,7 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 
 // Release builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
-	registry := defaultImageRegistry
+	registry := imageRegistry()
 
 	if len(args) > 2 {
 		return errors.New("target registry as a single arg or no args for official") //nolint:goerr113
