@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "test-deployment"
+  namespace: "test"
+  labels:
+    app: test-stub
+    instance: "test"
+  annotations:
+    test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"},\"openShift\":{\"version\":\"v4.13.0\"},\"proxy\":{\"httpProxy\":\"xxx\",\"httpsProxy\":\"xxx\",\"noProxy\":\"xxxxx\"}}"
+    package-operator.run/phase: deploy
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+    package-operator.run/condition: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-stub
+      instance: "test"
+  template:
+    metadata:
+      labels:
+        app: test-stub
+        instance: "test"
+    spec:
+      containers:
+      - name: test-stub
+        image: 'chicken2'
