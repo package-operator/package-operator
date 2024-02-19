@@ -53,6 +53,7 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 	}
 
 	self := run.Meth1(ci, ci.Release, args)
+
 	if err := mgr.ParallelDeps(ctx, self,
 		// binary images
 		run.Fn3(pushImage, "cli", registry, "amd64"),
@@ -60,19 +61,24 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
 		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
 		run.Fn3(pushImage, "test-stub", registry, "amd64"),
+	); err != nil {
+		return err
+	}
 
-		// package images
-		run.Fn2(pushPackage, "remote-phase", registry),
+	if err := mgr.ParallelDeps(ctx, self,
+		// Package images have to be built after binary images have been
+		// because the package lockfiles have to be generated from the image manifest hashes
+		// and these are only known after pushing to the target registry.
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
+		run.Fn2(pushPackage, "remote-phase", registry),
 	); err != nil {
 		return err
 	}
 
 	// This needs to be separate because the remote-phase package image has to be pushed before
-	// downstream dependencies of the package-operator package image can be regenerated.
-	// *very very sad @erdii noises*
-	return mgr.ParallelDeps(ctx, self,
+	// the lockfile of the package-operator package image can be regenerated.
+	return mgr.SerialDeps(ctx, self,
 		run.Fn2(pushPackage, "package-operator", registry),
 	)
 }
