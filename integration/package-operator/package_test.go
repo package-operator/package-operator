@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"testing"
 
+
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -187,6 +190,79 @@ func TestPackage_success(t *testing.T) {
 				pkgFE := &corev1alpha1.ClusterPackage{}
 				err = Client.Get(ctx, client.ObjectKey{Name: "success-multi-frontend", Namespace: "success-multi"}, pkgFE)
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "cel/namespaced",
+			pkg: &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "success-cel",
+					Namespace: "default",
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestCelPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
+							SuccessTestCelPackageImage, TestStubImage,
+						)),
+					},
+				},
+			},
+			objectDeployment: &corev1alpha1.ObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				// deployment should be there
+				deploy := &appsv1.Deployment{}
+				err := Client.Get(ctx, client.ObjectKey{
+					Name:      "test-deployment",
+					Namespace: "default",
+				}, deploy)
+				require.NoError(t, err)
+
+				// configMap should not be there
+				cm := &v1.ConfigMap{}
+				err = Client.Get(ctx, client.ObjectKey{
+					Name:      "test-cm",
+					Namespace: "default",
+				}, cm)
+				require.EqualError(t, err, "configmaps \"test-cm\" not found")
+			},
+		},
+		{
+			name: "cel/cluster",
+			pkg: &corev1alpha1.ClusterPackage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "success-cel",
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: SuccessTestCelPackageImage,
+					Config: &runtime.RawExtension{
+						Raw: []byte(fmt.Sprintf(`{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
+							SuccessTestCelPackageImage, TestStubImage,
+						)),
+					},
+				},
+			},
+			objectDeployment: &corev1alpha1.ClusterObjectDeployment{},
+			postCheck: func(ctx context.Context, t *testing.T) {
+				t.Helper()
+
+				// deployment should be there
+				deploy := &appsv1.Deployment{}
+				err := Client.Get(ctx, client.ObjectKey{
+					Name:      "test-deployment",
+					Namespace: "success-cel",
+				}, deploy)
+				require.NoError(t, err)
+
+				// configMap should not be there
+				cm := &v1.ConfigMap{}
+				err = Client.Get(ctx, client.ObjectKey{
+					Name:      "test-cm",
+					Namespace: "success-cel",
+				}, cm)
+				require.EqualError(t, err, "configmaps \"test-cm\" not found")
 			},
 		},
 	}

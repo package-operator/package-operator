@@ -47,8 +47,10 @@ var (
 	TestStubImage string
 	// SuccessTestPackageImage points to an image to use to test Package installation.
 	SuccessTestPackageImage string
-	// SuccessTestPackageImage points to an image to use to test multi-component Package installation.
+	// SuccessTestMultiPackageImage points to an image to use to test multi-component Package installation.
 	SuccessTestMultiPackageImage string
+	// SuccessTestCelPackageImage points to an image to use to test Package installation with CEL annotations.
+	SuccessTestCelPackageImage string
 
 	FailureTestPackageImage = "localhost/does-not-exist"
 
@@ -63,6 +65,10 @@ func init() {
 	SuccessTestMultiPackageImage = os.Getenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE")
 	if len(SuccessTestMultiPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE not set!")
+	}
+	SuccessTestCelPackageImage = os.Getenv("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE")
+	if len(SuccessTestMultiPackageImage) == 0 {
+		panic("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE not set!")
 	}
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
 	if len(TestStubImage) == 0 {
