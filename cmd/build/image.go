@@ -13,7 +13,7 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
-func buildImage(ctx context.Context, name, registry string) error {
+func buildImage(ctx context.Context, name, registry, goarch string) error {
 	buildDir, err := filepath.Abs(filepath.Join(".cache", "images", name))
 	if err != nil {
 		return err
@@ -32,9 +32,9 @@ func buildImage(ctx context.Context, name, registry string) error {
 		binaryName = "kubectl-package"
 	}
 
-	self := run.Fn2(buildImage, name, registry)
+	self := run.Fn3(buildImage, name, registry, goarch)
 	if err := mgr.SerialDeps(ctx, self,
-		run.Fn3(compile, binaryName, "linux", "amd64"),
+		run.Fn3(compile, binaryName, "linux", goarch),
 	); err != nil {
 		return err
 	}
@@ -67,15 +67,15 @@ func buildImage(ctx context.Context, name, registry string) error {
 	).Build()
 }
 
-func pushImage(ctx context.Context, name, registry string) error {
+func pushImage(ctx context.Context, name, registry, goarch string) error {
 	imgPath, err := filepath.Abs(filepath.Join(".cache", "images", name))
 	if err != nil {
 		return err
 	}
 
-	self := run.Fn2(pushImage, name, registry)
+	self := run.Fn3(pushImage, name, registry, goarch)
 	if err := mgr.SerialDeps(ctx, self,
-		run.Fn2(buildImage, name, registry),
+		run.Fn3(buildImage, name, registry, goarch),
 	); err != nil {
 		return err
 	}

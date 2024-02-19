@@ -55,11 +55,11 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.Release, args)
 	if err := mgr.ParallelDeps(ctx, self,
 		// binary images
-		run.Fn2(pushImage, "cli", registry),
-		run.Fn2(pushImage, "package-operator-manager", registry),
-		run.Fn2(pushImage, "package-operator-webhook", registry),
-		run.Fn2(pushImage, "remote-phase-manager", registry),
-		run.Fn2(pushImage, "test-stub", registry),
+		run.Fn3(pushImage, "cli", registry, "amd64"),
+		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
+		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
+		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
+		run.Fn3(pushImage, "test-stub", registry, "amd64"),
 
 		// package images
 		run.Fn2(pushPackage, "remote-phase", registry),

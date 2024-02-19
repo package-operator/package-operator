@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
@@ -80,10 +81,10 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 	registry := localRegistry(hostPort)
 
 	if err := mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushImage, "package-operator-manager", registry),
-		run.Fn2(pushImage, "package-operator-webhook", registry),
-		run.Fn2(pushImage, "remote-phase-manager", registry),
-		run.Fn2(pushImage, "test-stub", registry),
+		run.Fn3(pushImage, "package-operator-manager", registry, runtime.GOARCH),
+		run.Fn3(pushImage, "package-operator-webhook", registry, runtime.GOARCH),
+		run.Fn3(pushImage, "remote-phase-manager", registry, runtime.GOARCH),
+		run.Fn3(pushImage, "test-stub", registry, runtime.GOARCH),
 	); err != nil {
 		return err
 	}

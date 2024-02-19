@@ -15,8 +15,9 @@ import (
 // compiles code in /cmd/<cmd> for the given OS and ARCH.
 // Binaries will be put in /bin/<cmd>_<os>_<arch>.
 func compile(ctx context.Context, cmd string, goos, goarch string) error {
+	self := run.Fn3(compile, cmd, goos, goarch)
 	err := mgr.SerialDeps(ctx,
-		run.Fn3(compile, cmd, goos, goarch),
+		self,
 		run.Meth(generate, generate.All),
 	)
 	if err != nil {
