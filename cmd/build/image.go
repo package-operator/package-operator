@@ -44,7 +44,7 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 	}{
 		{
 			dst: filepath.Join(buildDir, binaryName),
-			src: filepath.Join("bin", binaryName+"_linux_amd64"),
+			src: filepath.Join("bin", fmt.Sprintf("%s_linux_%s", binaryName, goarch)),
 		},
 		{
 			dst: filepath.Join(buildDir, "passwd"),
