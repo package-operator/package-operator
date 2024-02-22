@@ -59,6 +59,7 @@ func NewCmd(updater Updater) *cobra.Command {
 			return fmt.Errorf("writing lock file: %w", err)
 		}
 
+		fmt.Fprintln(cmd.OutOrStdout(), "Package lock file updated")
 		return nil
 	}
 

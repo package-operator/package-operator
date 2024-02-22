@@ -9,4 +9,6 @@ const (
 	PackageManifestLockFilename = "manifest.lock"
 	// Name of the components folder for multi-components.
 	ComponentsFolder = "components"
+	// Name of the test fixtures folder used for template validation.
+	PackageTestFixturesFolder = ".test-fixtures"
 )

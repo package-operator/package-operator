@@ -12,10 +12,15 @@ import (
 )
 
 // Imports a RawPackage from a container image registry.
-func FromRegistry(ctx context.Context, ref string, opts ...crane.Option) (
+func FromRegistry(ctx context.Context, ref string, opts ...packagetypes.RegistryOption) (
 	*packagetypes.RawPackage, error,
 ) {
-	img, err := crane.Pull(ref, opts...)
+	config := packagetypes.DefaultRegistryOptions()
+	for _, opt := range opts {
+		opt.ApplyToRegistry(&config)
+	}
+
+	img, err := crane.Pull(ref, packagetypes.RegistryOptionsToCraneOptions(ctx, config)...)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +42,7 @@ type response struct {
 }
 
 type pullImageFn func(
-	ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
+	ctx context.Context, ref string, opts ...packagetypes.RegistryOption) (*packagetypes.RawPackage, error)
 
 // Creates a new registry instance to de-duplicate parallel container image pulls.
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
@@ -81,7 +86,7 @@ func (r *Registry) handleRequest(ctx context.Context, image string) <-chan respo
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			rawPkg, err := r.pullImage(ctx, image, crane.Insecure)
+			rawPkg, err := r.pullImage(ctx, image, packagetypes.WithInsecure{})
 
 			r.handleResponse(image, response{
 				RawPackage: rawPkg,

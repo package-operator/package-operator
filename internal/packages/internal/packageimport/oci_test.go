@@ -20,13 +20,13 @@ func TestFromOCI(t *testing.T) {
 	t.Parallel()
 
 	image := buildImage(t, map[string][]byte{
-		packagetypes.OCIPathPrefix + "/file.yaml": []byte(`test: test`),
+		packagetypes.OCIPathPrefix + "/file.yaml":                    []byte(`test: test`),
+		packagetypes.OCIPathPrefix + "/.test-fixtures/something.yml": {11, 12},
 
 		// hidden files that need to be dropped
-		"file.yaml": []byte(`test: test`),
-		packagetypes.OCIPathPrefix + "/.test-fixtures/something.yml":  {11, 12},
 		packagetypes.OCIPathPrefix + "/.test-fixtures/.something.yml": {11, 12},
-		packagetypes.OCIPathPrefix + "/bla/.xxx/something.yml":        {11, 12},
+		"file.yaml": []byte(`test: test`),
+		packagetypes.OCIPathPrefix + "/bla/.xxx/something.yml": {11, 12},
 	})
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
@@ -34,7 +34,8 @@ func TestFromOCI(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, packagetypes.Files{
-		"file.yaml": []byte(`test: test`),
+		"file.yaml":                    []byte(`test: test`),
+		".test-fixtures/something.yml": {11, 12},
 	}, rawPkg.Files)
 }
 

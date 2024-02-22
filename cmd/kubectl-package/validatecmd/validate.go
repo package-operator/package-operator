@@ -41,6 +41,7 @@ func NewCmd(validator Validator) *cobra.Command {
 
 		validateOptions := []internalcmd.ValidatePackageOption{
 			internalcmd.WithInsecure(opts.Insecure),
+			internalcmd.WithGenerate(opts.Generate),
 		}
 
 		if opts.Pull {
@@ -61,6 +62,7 @@ func NewCmd(validator Validator) *cobra.Command {
 
 type options struct {
 	Insecure bool
+	Generate bool
 	Pull     bool
 }
 
@@ -70,6 +72,12 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		"insecure",
 		o.Insecure,
 		"Allows pulling images without TLS or using TLS with unverified certificates.",
+	)
+	flags.BoolVar(
+		&o.Generate,
+		"generate",
+		o.Generate,
+		"(Re-)generate test-fixtures.",
 	)
 	flags.BoolVar(
 		&o.Pull,

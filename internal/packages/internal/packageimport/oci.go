@@ -80,7 +80,7 @@ func stripOCIPathPrefix(path string) (string, error) {
 func isFilePathToBeExcluded(path string) bool {
 	for _, pathSegment := range strings.Split(
 		path, string(filepath.Separator)) {
-		if strings.HasPrefix(pathSegment, ".") {
+		if strings.HasPrefix(pathSegment, ".") && pathSegment != packagetypes.PackageTestFixturesFolder {
 			return true
 		}
 	}

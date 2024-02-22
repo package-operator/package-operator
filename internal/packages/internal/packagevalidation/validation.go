@@ -14,6 +14,7 @@ import (
 var DefaultPackageValidators = PackageValidatorList{
 	&PackageManifestValidator{},
 	&LockfileConsistencyValidator{},
+	&TemplateTestValidator{},
 }
 
 // PackageValidatorList runs a list of validators and joins all errors.

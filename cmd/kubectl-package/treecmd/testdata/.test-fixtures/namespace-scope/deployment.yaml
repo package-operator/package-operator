@@ -1,10 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "test-stub-test"
+  name: "test-stub-name"
+  annotations:
+    defaulted: test123
   labels:
     app: test-stub
-    instance: "test"
+    instance: "name"
   annotations:
     package-operator.run/phase: deploy
 spec:
@@ -12,14 +14,15 @@ spec:
   selector:
     matchLabels:
       app: test-stub
-      instance: "test"
+      instance: "name"
   template:
     metadata:
       labels:
         app: test-stub
-        instance: "test"
+        instance: "name"
+        image: 'chicken'
     spec:
       containers:
       - name: test-stub
         # lazy image injection
-        image: ''
+        image: 'registry.package-operator.run/static-image'

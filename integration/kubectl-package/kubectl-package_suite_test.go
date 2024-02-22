@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -130,7 +129,7 @@ func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) erro
 
 		tags := []string{info.Ref}
 
-		if err := packages.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure); err != nil {
+		if err := packages.ToPushedOCI(ctx, tags, rawPkg, packages.WithInsecure{}); err != nil {
 			return fmt.Errorf("pushing package image: %w", err)
 		}
 	}
@@ -210,7 +209,7 @@ func generateAllPackages(rootDir, registry string) {
 					{
 						Name:   path.Join(registry, "valid-package-fixture"),
 						Image:  path.Join(registry, "valid-package-fixture"),
-						Digest: "sha256:bbb83bd537f5b3179b5d56b9a9086fb9abaa79e18d4d70b7f6572b77500286e4",
+						Digest: "sha256:aa0b42b0c89ea399746b6dffa6270f44f2ee88da58d8d1585490fc2df4aa0eac",
 					},
 				},
 			},

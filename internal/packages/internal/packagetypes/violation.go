@@ -55,30 +55,31 @@ type ViolationReason string
 
 // Predefined reasons for package violations.
 const (
-	ViolationReasonEmptyPackage                  ViolationReason = "Package image contains no files. Might be corrupted."
-	ViolationReasonPackageManifestNotFound       ViolationReason = "PackageManifest not found"
-	ViolationReasonUnknownGVK                    ViolationReason = "unknown GVK"
-	ViolationReasonPackageManifestInvalid        ViolationReason = "PackageManifest invalid"
-	ViolationReasonPackageManifestDuplicated     ViolationReason = "PackageManifest present multiple times"
-	ViolationReasonPackageManifestLockInvalid    ViolationReason = "PackageManifestLock invalid"
-	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
-	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"
-	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation" //nolint: lll
-	ViolationReasonMissingGVK                    ViolationReason = "GroupVersionKind not set"
-	ViolationReasonDuplicateObject               ViolationReason = "Duplicate Object"
-	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"
-	ViolationReasonUnsupportedScope              ViolationReason = "Package unsupported scope"
-	ViolationReasonFixtureMismatch               ViolationReason = "File mismatch against fixture"
-	ViolationReasonComponentsNotEnabled          ViolationReason = "Components not enabled"
-	ViolationReasonComponentNotFound             ViolationReason = "Component not found"
-	ViolationReasonInvalidComponentPath          ViolationReason = "Invalid component path"
-	ViolationReasonUnknown                       ViolationReason = "Unknown reason"
-	ViolationReasonNestedMultiComponentPkg       ViolationReason = "Nesting multi-component packages not allowed"
-	ViolationReasonInvalidFileInComponentsDir    ViolationReason = "The components directory may only contain folders and dot files" //nolint: lll
-	ViolationReasonKubeconform                   ViolationReason = "Kubeconform rejected schema"
-	ViolationReasonLockfileMissing               ViolationReason = "Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update" //nolint: lll
-	ViolationReasonImageMissingInLockfile        ViolationReason = "Image specified in manifest but missing from lockfile. Try running: kubectl package update"                      //nolint: lll
-	ViolationReasonImageDifferentToLockfile      ViolationReason = "Image specified in manifest does not match with lockfile. Try running: kubectl package update"                   //nolint: lll
+	ViolationReasonEmptyPackage                   ViolationReason = "Package image contains no files. Might be corrupted."
+	ViolationReasonPackageManifestNotFound        ViolationReason = "PackageManifest not found"
+	ViolationReasonUnknownGVK                     ViolationReason = "unknown GVK"
+	ViolationReasonPackageManifestInvalid         ViolationReason = "PackageManifest invalid"
+	ViolationReasonPackageManifestDuplicated      ViolationReason = "PackageManifest present multiple times"
+	ViolationReasonPackageManifestLockInvalid     ViolationReason = "PackageManifestLock invalid"
+	ViolationReasonPackageManifestLockDuplicated  ViolationReason = "PackageManifestLock present multiple times"
+	ViolationReasonInvalidYAML                    ViolationReason = "Invalid YAML"
+	ViolationReasonMissingPhaseAnnotation         ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation" //nolint: lll
+	ViolationReasonMissingGVK                     ViolationReason = "GroupVersionKind not set"
+	ViolationReasonDuplicateObject                ViolationReason = "Duplicate Object"
+	ViolationReasonLabelsInvalid                  ViolationReason = "Labels invalid"
+	ViolationReasonUnsupportedScope               ViolationReason = "Package unsupported scope"
+	ViolationReasonFixtureMismatch                ViolationReason = "File mismatch against fixture"
+	ViolationReasonComponentsNotEnabled           ViolationReason = "Components not enabled"
+	ViolationReasonComponentNotFound              ViolationReason = "Component not found"
+	ViolationReasonInvalidComponentPath           ViolationReason = "Invalid component path"
+	ViolationReasonUnknown                        ViolationReason = "Unknown reason"
+	ViolationReasonNestedMultiComponentPkg        ViolationReason = "Nesting multi-component packages not allowed"
+	ViolationReasonInvalidFileInComponentsDir     ViolationReason = "The components directory may only contain folders and dot files" //nolint: lll
+	ViolationReasonKubeconform                    ViolationReason = "Kubeconform rejected schema"
+	ViolationReasonLockfileMissing                ViolationReason = "Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update" //nolint: lll
+	ViolationReasonImageMissingInLockfile         ViolationReason = "Image specified in manifest but missing from lockfile. Try running: kubectl package update"                      //nolint: lll
+	ViolationReasonImageDifferentToLockfile       ViolationReason = "Image specified in manifest does not match with lockfile. Try running: kubectl package update"                   //nolint: lll
+	ViolationReasonTestFixturesForTestCaseMissing ViolationReason = "Test case is missing test-fixtures to compare against"
 )
 
 var ErrEmptyPackage = ViolationError{

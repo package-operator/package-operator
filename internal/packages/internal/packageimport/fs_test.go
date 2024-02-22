@@ -46,7 +46,8 @@ func TestFromFolder(t *testing.T) {
 
 	rawPkg, err := FromFolder(ctx, "testdata/fs")
 	require.NoError(t, err)
-	assert.Len(t, rawPkg.Files, 2)
+	assert.Len(t, rawPkg.Files, 3)
 	assert.Equal(t, "xxx\n", string(rawPkg.Files["my-stuff.txt"]))
+	assert.Equal(t, "xxx\n", string(rawPkg.Files[".test-fixtures/case/package-operator.Namespace.yaml"]))
 	assert.Equal(t, "test: test\n", string(rawPkg.Files["file1.yaml"]))
 }

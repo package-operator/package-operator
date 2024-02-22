@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -110,7 +109,7 @@ type imagePullerMock struct {
 
 func (m *imagePullerMock) Pull(
 	ctx context.Context, ref string,
-	opts ...crane.Option,
+	opts ...packagetypes.RegistryOption,
 ) (*packagetypes.RawPackage, error) {
 	args := m.Called(ctx, ref, opts)
 	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)

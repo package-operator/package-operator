@@ -15,6 +15,8 @@ type (
 	PackageManifestValidator = packagevalidation.PackageManifestValidator
 	// Validates a Package is able to be installed in the given scope.
 	PackageScopeValidator = packagevalidation.PackageScopeValidator
+	// Creates or updates template test fixtures.
+	TemplateTestRenderer = packagevalidation.TemplateTestRenderer
 	// Runs the template test suites.
 	TemplateTestValidator = packagevalidation.TemplateTestValidator
 	// Validates that the PackageManifestLock is consistent with PackageManifest.
@@ -60,6 +62,6 @@ var (
 	// ValidateEachObject iterates over each object in a package and runs the given validation function.
 	ValidateEachObject = packagevalidation.ValidateEachObject
 
-	// Creates a new TemplateTestValidator instance.
-	NewTemplateTestValidator = packagevalidation.NewTemplateTestValidator
+	// Creates a new TemplateTestRenderer instance.
+	NewTemplateTestRenderer = packagevalidation.NewTemplateTestRenderer
 )

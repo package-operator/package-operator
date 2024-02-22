@@ -3,13 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/internal/packages"
+	"package-operator.run/pkg/packaging"
 )
 
 type BuildValidationError struct {
@@ -76,39 +76,38 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 
 	b.cfg.Log.Info("creating image")
 
-	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
+	pkg, err := packaging.Load(ctx, rawPkg)
 	if err != nil {
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
-	var craneOpts []crane.Option
+	var (
+		registryOpts []packaging.RegistryOption
+		craneOpts    []crane.Option
+	)
 	if cfg.Insecure {
+		registryOpts = append(registryOpts, packaging.WithInsecure{})
 		craneOpts = append(craneOpts, crane.Insecure)
 	}
 
-	validators := append(
-		packages.PackageValidatorList{
-			&packages.LockfileDigestLookupValidator{
-				CraneOptions: craneOpts,
-			},
-			packages.NewTemplateTestValidator(filepath.Join(srcPath, ".test-fixtures")),
+	if err := packaging.Validate(ctx, pkg, packaging.WithPackageValidators{
+		&packages.LockfileDigestLookupValidator{
+			CraneOptions: craneOpts,
 		},
-		packages.DefaultPackageValidators...,
-	)
-	if err := validators.ValidatePackage(ctx, pkg); err != nil {
-		return fmt.Errorf("loading package from files: %w", err)
+	}); err != nil {
+		return err
 	}
 
 	if cfg.OutputPath != "" {
 		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
-		if err := packages.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
+		if err := packaging.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
 			return fmt.Errorf("exporting package to file: %w", err)
 		}
 	}
 
 	if cfg.Push {
-		if err := packages.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...); err != nil {
+		if err := packaging.ToPushedOCI(ctx, cfg.Tags, rawPkg, registryOpts...); err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
 		}
 	}

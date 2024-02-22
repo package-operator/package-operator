@@ -29,10 +29,12 @@ func RenderObjects(
 
 	for path, content := range pkg.Files {
 		switch {
+		case strings.HasPrefix(path, ".test-fixtures"):
+			// skip test-fixtures.
 		case strings.HasPrefix(filepath.Base(path), "_"):
 			// skip template helper files.
 		case !packagetypes.IsYAMLFile(path):
-			// skip non YAML files
+			// skip non YAML files.
 		default:
 			objects, err := parseObjects(pkg.Manifest, tmplCtx, path, content)
 			if err != nil {

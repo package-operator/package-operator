@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/hexops/gotextdiff"
+	"github.com/hexops/gotextdiff/myers"
+	"github.com/hexops/gotextdiff/span"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
@@ -18,20 +21,50 @@ import (
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
-// Runs the template test suites.
-type TemplateTestValidator struct {
-	// Path to a folder containing the test fixtures for the package.
-	fixturesFolderPath string
+// Creates or updates template test fixtures.
+type TemplateTestRenderer struct {
+	// Path to the folder containing the package.
+	packagePath string
 }
 
-// Creates a new TemplateTestValidator instance.
-func NewTemplateTestValidator(
-	fixturesFolderPath string,
-) *TemplateTestValidator {
-	return &TemplateTestValidator{
-		fixturesFolderPath: fixturesFolderPath,
+// Creates a new TemplateTestRenderer instance.
+func NewTemplateTestRenderer(packagePath string) *TemplateTestRenderer {
+	return &TemplateTestRenderer{
+		packagePath: packagePath,
 	}
 }
+
+func (r TemplateTestRenderer) UpsertFixtures(
+	ctx context.Context, pkg *packagetypes.Package,
+) error {
+	pkg = pkg.DeepCopy()
+	log := logr.FromContextOrDiscard(ctx).V(1)
+
+	for _, templateTestCase := range pkg.Manifest.Test.Template {
+		log.Info("generating template test case", "name", templateTestCase.Name)
+		if err := r.renderTestFixtures(ctx, pkg, templateTestCase); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r TemplateTestRenderer) renderTestFixtures(
+	ctx context.Context, pkg *packagetypes.Package,
+	testCase manifests.PackageManifestTestCaseTemplate,
+) error {
+	_, err := renderTemplates(ctx, pkg, testCase)
+	if err != nil {
+		return err
+	}
+	return writeRenderedTemplateFiles(
+		filepath.Join(r.packagePath, packagetypes.PackageTestFixturesFolder, testCase.Name),
+		pkg.Files,
+	)
+}
+
+// Runs the template test suites.
+type TemplateTestValidator struct{}
 
 func (v TemplateTestValidator) ValidatePackage(
 	ctx context.Context, pkg *packagetypes.Package,
@@ -61,60 +94,55 @@ func (v TemplateTestValidator) ValidatePackage(
 	return nil
 }
 
-func (v TemplateTestValidator) runTestCase(
-	ctx context.Context, pkg *packagetypes.Package,
+func renderTemplates(
+	ctx context.Context,
+	pkg *packagetypes.Package,
 	testCase manifests.PackageManifestTestCaseTemplate,
-	kcV kubeconformValidator,
-) (rErr error) {
-	log := logr.FromContextOrDiscard(ctx)
-	pkg = pkg.DeepCopy()
-
+) (tmplCtx packagetypes.PackageRenderContext, err error) {
 	configuration := map[string]any{}
 	if testCase.Context.Config != nil {
 		if err := json.Unmarshal(testCase.Context.Config.Raw, &configuration); err != nil {
-			return err
+			return tmplCtx, err
 		}
 	}
 
 	if _, err := packagemanifestvalidation.AdmitPackageConfiguration(ctx, configuration, pkg.Manifest, nil); err != nil {
-		return err
+		return tmplCtx, err
 	}
 
-	tmplCtx := packagetypes.PackageRenderContext{
+	tmplCtx = packagetypes.PackageRenderContext{
 		Package:     testCase.Context.Package,
 		Config:      configuration,
 		Images:      generateStaticImages(pkg.Manifest),
 		Environment: testCase.Context.Environment,
 	}
 	if err := packagerender.RenderTemplates(ctx, pkg, tmplCtx); err != nil {
-		return err
+		return tmplCtx, err
 	}
-	_, err := packagerender.RenderObjects(ctx, pkg, tmplCtx, DefaultObjectValidators)
-	if err != nil {
-		return err
-	}
+	return tmplCtx, nil
+}
+
+func (v TemplateTestValidator) runTestCase(
+	ctx context.Context, pkg *packagetypes.Package,
+	testCase manifests.PackageManifestTestCaseTemplate,
+	kcV kubeconformValidator,
+) (rErr error) {
+	pkg = pkg.DeepCopy()
 
 	// check if test figures exist
-	testFixturePath := filepath.Join(v.fixturesFolderPath, testCase.Name)
-	_, err = os.Stat(testFixturePath)
-	if errors.Is(err, os.ErrNotExist) {
+	if !hasTestFixtures(pkg.Files, testCase) {
 		// no fixtures generated
-		// generate fixtures now
-		log.Info("no fixture found for test case, generating...", "name", testCase.Name)
-		return renderTemplateFiles(testFixturePath, pkg.Files)
+		return packagetypes.ViolationError{
+			Reason:  packagetypes.ViolationReasonTestFixturesForTestCaseMissing,
+			Details: fmt.Sprintf("test case %q", testCase.Name),
+		}
 	}
 
-	actualPath, err := os.MkdirTemp(os.TempDir(), "pko-test-"+testCase.Name+"-")
+	tmplCtx, err := renderTemplates(ctx, pkg, testCase)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if cErr := os.RemoveAll(actualPath); rErr == nil && cErr != nil {
-			rErr = cErr
-		}
-	}()
-
-	if err := renderTemplateFiles(actualPath, pkg.Files); err != nil {
+	if _, err = packagerender.RenderObjects(ctx, pkg, tmplCtx, DefaultObjectValidators); err != nil {
 		return err
 	}
 
@@ -122,6 +150,10 @@ func (v TemplateTestValidator) runTestCase(
 	for relPath := range pkg.Files {
 		if !packagetypes.IsTemplateFile(relPath) {
 			// template source files are of no interest for the test fixtures.
+			continue
+		}
+		if strings.HasPrefix(relPath, packagetypes.PackageTestFixturesFolder) {
+			// skip test-fixtures.
 			continue
 		}
 		path := packagetypes.StripTemplateSuffix(relPath)
@@ -132,11 +164,15 @@ func (v TemplateTestValidator) runTestCase(
 		}
 		violations = append(violations, verrs...)
 
-		fixtureFilePath := filepath.Join(testFixturePath, path)
-		actualFilePath := filepath.Join(actualPath, path)
-
-		file := filepath.Base(fixtureFilePath)
-		diff, err := runDiff(fixtureFilePath, "FIXTURE/"+file, actualFilePath, "ACTUAL/"+file)
+		testFixturePath := testFixtureForPath(path, testCase)
+		actual := pkg.Files[path]
+		fixture, fixtureOk := pkg.Files[testFixtureForPath(path, testCase)]
+		if !fixtureOk && len(bytes.TrimSpace(actual)) == 0 {
+			// No fixture exist and actual file is empty.
+			// -> content probably excluded via template IF condition.
+			continue
+		}
+		diff, err := runDiff(fixture, "FIXTURE/"+testFixturePath, actual, "ACTUAL/"+path)
 		if err != nil {
 			return err
 		}
@@ -146,7 +182,7 @@ func (v TemplateTestValidator) runTestCase(
 
 		violations = append(violations, packagetypes.ViolationError{
 			Reason:  packagetypes.ViolationReasonFixtureMismatch,
-			Details: fmt.Sprintf("Testcase %q\n%s", testCase.Name, string(diff)),
+			Details: fmt.Sprintf("Testcase %q\n%s", testCase.Name, diff),
 			Path:    relPath,
 		})
 	}
@@ -154,7 +190,21 @@ func (v TemplateTestValidator) runTestCase(
 	return errors.Join(violations...)
 }
 
-func renderTemplateFiles(folder string, fileMap packagetypes.Files) error {
+func testFixtureForPath(path string, testCase manifests.PackageManifestTestCaseTemplate) string {
+	return filepath.Join(packagetypes.PackageTestFixturesFolder, testCase.Name, path)
+}
+
+func hasTestFixtures(files packagetypes.Files, testCase manifests.PackageManifestTestCaseTemplate) bool {
+	prefix := filepath.Join(packagetypes.PackageTestFixturesFolder, testCase.Name)
+	for path := range files {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func writeRenderedTemplateFiles(folder string, fileMap packagetypes.Files) error {
 	for relPath := range fileMap {
 		if !packagetypes.IsTemplateFile(relPath) {
 			// template source files are of no interest for the test fixtures.
@@ -179,25 +229,9 @@ func renderTemplateFiles(folder string, fileMap packagetypes.Files) error {
 	return nil
 }
 
-func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
-	_, fileAStatErr := os.Stat(fileA)
-	_, fileBStatErr := os.Stat(fileB)
-	if os.IsNotExist(fileAStatErr) && os.IsNotExist(fileBStatErr) {
-		return nil, nil
-	}
-
-	//nolint:gosec
-	data, err := exec.
-		Command("diff", "-u", "--label="+labelA, "--label="+labelB, fileA, fileB).
-		CombinedOutput()
-	if len(data) > 0 {
-		// diff exits with a non-zero status when the files don't match.
-		// Ignore that failure as long as we get output.
-		err = nil
-	}
-
-	data = bytes.TrimSpace(data)
-	return data, err
+func runDiff(fileAContent []byte, labelA string, fileBContent []byte, labelB string) (string, error) {
+	edits := myers.ComputeEdits(span.URIFromPath(labelA), string(fileAContent), string(fileBContent))
+	return strings.TrimSpace(fmt.Sprint(gotextdiff.ToUnified(labelA, labelB, string(fileAContent), edits))), nil
 }
 
 const staticImage = "registry.package-operator.run/static-image"

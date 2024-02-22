@@ -7,6 +7,8 @@ const (
 	PackageManifestFilename = packagetypes.PackageManifestFilename
 	// Package manifest lock filename without file-extension.
 	PackageManifestLockFilename = packagetypes.PackageManifestLockFilename
+	// Name of the test fixtures folder used for template validation.
+	PackageTestFixturesFolder = packagetypes.PackageTestFixturesFolder
 )
 
 type (
