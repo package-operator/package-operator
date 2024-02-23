@@ -26,22 +26,22 @@ require (
 	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.26.0
 	golang.org/x/sys v0.17.0
-	k8s.io/api v0.29.1
-	k8s.io/apiextensions-apiserver v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/apiserver v0.29.1
-	k8s.io/client-go v0.29.1
+	k8s.io/api v0.29.2
+	k8s.io/apiextensions-apiserver v0.29.2
+	k8s.io/apimachinery v0.29.2
+	k8s.io/apiserver v0.29.2
+	k8s.io/client-go v0.29.2
 	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.4
 	package-operator.run/pkg v1.9.4
-	pkg.package-operator.run/cardboard v0.0.0-20240212134449-be09630d6c92
-	pkg.package-operator.run/cardboard/kubeutils v0.0.0-20240213155707-7ff7f261299f
-	pkg.package-operator.run/cardboard/modules/kind v0.0.0-20240212134449-be09630d6c92
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.0-20240213155707-7ff7f261299f
-	pkg.package-operator.run/cardboard/modules/oci v0.0.0-20240212134449-be09630d6c92
-	sigs.k8s.io/controller-runtime v0.17.1
-	sigs.k8s.io/kind v0.21.0
+	pkg.package-operator.run/cardboard v0.0.1
+	pkg.package-operator.run/cardboard/kubeutils v0.0.1
+	pkg.package-operator.run/cardboard/modules/kind v0.0.1
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.1
+	pkg.package-operator.run/cardboard/modules/oci v0.0.1
+	sigs.k8s.io/controller-runtime v0.17.2
+	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -111,8 +111,8 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.46.0 // indirect
+	github.com/prometheus/client_model v0.6.0 // indirect
+	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
@@ -151,7 +151,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.29.1 // indirect
+	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
