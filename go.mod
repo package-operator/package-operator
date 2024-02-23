@@ -35,11 +35,11 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.4
 	package-operator.run/pkg v1.9.4
-	pkg.package-operator.run/cardboard v0.0.1
-	pkg.package-operator.run/cardboard/kubeutils v0.0.1
-	pkg.package-operator.run/cardboard/modules/kind v0.0.1
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.1
-	pkg.package-operator.run/cardboard/modules/oci v0.0.1
+	pkg.package-operator.run/cardboard v0.0.2
+	pkg.package-operator.run/cardboard/kubeutils v0.0.2
+	pkg.package-operator.run/cardboard/modules/kind v0.0.2
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.2
+	pkg.package-operator.run/cardboard/modules/oci v0.0.2
 	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
@@ -112,7 +112,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
-	github.com/prometheus/common v0.48.0 // indirect
+	github.com/prometheus/common v0.47.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
