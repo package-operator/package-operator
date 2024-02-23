@@ -8,6 +8,8 @@ import (
 )
 
 const (
+	cacheDir = ".cache"
+
 	defaultImageRegistry    = "quay.io/package-operator"
 	imageRegistryEnvvarName = "IMAGE_REGISTRY"
 

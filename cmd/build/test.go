@@ -109,10 +109,14 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] = url
 	}
 
-	goTestCmd := t.makeGoTestCmd(f, jsonOutput)
+	goTestCmd := t.makeGoIntTestCmd(f, jsonOutput)
+
+	if err := os.MkdirAll(filepath.Join(cacheDir, "integration"), 0o755); err != nil {
+		return err
+	}
 
 	err = shr.New(env).Bash(goTestCmd)
-	eErr := cluster.ExportLogs(filepath.Join(".cache", "integration", "logs"))
+	eErr := cluster.ExportLogs(filepath.Join(cacheDir, "integration", "logs"))
 
 	switch {
 	case err != nil:
@@ -124,11 +128,11 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 }
 
-func (Test) makeGoTestCmd(filter string, jsonOutput bool) string {
+func (Test) makeGoIntTestCmd(filter string, jsonOutput bool) string {
 	args := []string{
 		"go", "test",
 		"-tags=integration",
-		"-coverprofile=" + filepath.Join(".cache", "integration", "cover.txt"),
+		"-coverprofile=" + filepath.Join(cacheDir, "integration", "cover.txt"),
 		filter,
 		"-race",
 		"-test.v",
@@ -155,17 +159,17 @@ func (Test) makeGoTestCmd(filter string, jsonOutput bool) string {
 
 // Unit runs unittests, the filter argument is passed via -run="".
 func (t Test) Unit(_ context.Context, filter string) error {
-	if err := os.MkdirAll(filepath.Join(".cache", "unit"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(cacheDir, "unit"), 0o755); err != nil {
 		return err
 	}
 
-	gotestArgs := []string{"-coverprofile=" + filepath.Join(".cache", "unit", "cover.txt"), "-race", "-json"}
+	gotestArgs := []string{"-coverprofile=" + filepath.Join(cacheDir, "unit", "cover.txt"), "-race", "-json"}
 	if len(filter) > 0 {
 		gotestArgs = append(gotestArgs, "-run="+filter)
 	}
 
 	argStr := strings.Join(gotestArgs, " ")
-	logPath := filepath.Join(".cache", "unit", "gotest.log")
+	logPath := filepath.Join(cacheDir, "unit", "gotest.log")
 
 	return sh.New(
 		sh.WithEnvironment{"CGO_ENABLED": "1"},

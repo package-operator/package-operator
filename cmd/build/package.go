@@ -12,7 +12,7 @@ import (
 )
 
 func buildPackage(ctx context.Context, name, registry string) error {
-	if err := os.MkdirAll(filepath.Join(".cache", "packages"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(cacheDir, "packages"), 0o755); err != nil {
 		return err
 	}
 

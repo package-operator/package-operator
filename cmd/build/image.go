@@ -14,7 +14,7 @@ import (
 )
 
 func buildImage(ctx context.Context, name, registry, goarch string) error {
-	buildDir, err := filepath.Abs(filepath.Join(".cache", "images", name))
+	buildDir, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 }
 
 func pushImage(ctx context.Context, name, registry, goarch string) error {
-	imgPath, err := filepath.Abs(filepath.Join(".cache", "images", name))
+	imgPath, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
 	if err != nil {
 		return err
 	}
