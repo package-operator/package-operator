@@ -105,6 +105,7 @@ func TestHyperShift(t *testing.T) {
 func installHyperShift(ctx context.Context, t *testing.T) {
 	t.Helper()
 
+	// TODO: this comment is wrong?!
 	// tests that PackageOperator will deploy a new remote-phase-manager
 	// for every ready HyperShift HostedCluster.
 	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
