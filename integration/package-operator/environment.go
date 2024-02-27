@@ -67,7 +67,7 @@ func init() {
 		panic("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE not set!")
 	}
 	SuccessTestCelPackageImage = os.Getenv("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE")
-	if len(SuccessTestMultiPackageImage) == 0 {
+	if len(SuccessTestCelPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE not set!")
 	}
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
