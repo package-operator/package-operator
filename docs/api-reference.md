@@ -1243,6 +1243,9 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
+  celMacros:
+  - expression: consetetur
+    name: amet
   components: PackageManifestComponentsConfig
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
@@ -1256,36 +1259,36 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: dolor
+    kubernetesVersion: amet
     schemaLocations:
-    - sit
+    - consetetur
   template:
   - context:
       config: runtime.RawExtension
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: ipsum
+            hostedClusterNamespace: sit
             metadata:
               annotations: map[string]string
               labels: map[string]string
-              name: tempor
-              namespace: lorem
+              name: ipsum
+              namespace: dolor
         kubernetes:
-          version: elitr
+          version: diam
         openShift:
-          version: sed
+          version: nonumy
         proxy:
-          httpProxy: diam
-          httpsProxy: nonumy
-          noProxy: eirmod
+          httpProxy: eirmod
+          httpsProxy: tempor
+          noProxy: lorem
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: consetetur
-          namespace: sadipscing
-    name: amet
+          name: elitr
+          namespace: sed
+    name: sadipscing
 
 ```
 
@@ -1312,9 +1315,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: sadipscing
-    image: consetetur
-    name: amet
+  - digest: sed
+    image: elitr
+    name: sadipscing
 
 ```
 
@@ -1419,6 +1422,20 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageManifestCelMacro
+
+PackageManifestCelMacro is a reusable named CEL expression
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | A unique name. When used in 'package-operator.run/condition' annotations,<br>it is replaced with the result of Expression ("true"/"false").<br>Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestImage
 
 PackageManifestImage specifies an image tag to be resolved.
@@ -1488,6 +1505,7 @@ details about phases and availability probes.
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
+| `celMacros` <br><a href="#packagemanifestcelmacro">[]PackageManifestCelMacro</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
 
 
 Used in:

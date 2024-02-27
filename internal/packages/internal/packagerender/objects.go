@@ -3,6 +3,8 @@ package packagerender
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -26,6 +28,11 @@ func RenderObjects(
 ) (
 	[]unstructured.Unstructured, error,
 ) {
+	macros, err := evaluateCELMacros(pkg.Manifest.Spec.CelMacros, &tmplCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	pathObjectMap := map[string][]unstructured.Unstructured{}
 
 	for path, content := range pkg.Files {
@@ -72,7 +79,7 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 
-	return filterWithCELAnnotation(objects, &tmplCtx)
+	return filterWithCELAnnotation(objects, &tmplCtx, macros)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -119,6 +126,7 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
 	tmplCtx *packagetypes.PackageRenderContext,
+	macros map[string]string,
 ) (
 	[]unstructured.Unstructured, error,
 ) {
@@ -130,6 +138,8 @@ func filterWithCELAnnotation(
 			filtered = append(filtered, obj)
 			continue
 		}
+
+		cel = replaceMacros(cel, macros)
 
 		celResult, err := evaluateCELCondition(cel, tmplCtx)
 		if err != nil {
@@ -146,4 +156,58 @@ func filterWithCELAnnotation(
 	}
 
 	return filtered, nil
+}
+
+func replaceMacros(expression string, macros map[string]string) string {
+	result := expression
+	for name, eval := range macros {
+		result = strings.ReplaceAll(result, name, eval)
+	}
+	return result
+}
+
+var DuplicateCELMacroNameError = errors.New("duplicate CEL macro name")
+var CELMacroEvaluationError = errors.New("CEL macro evaluation failed")
+var InvalidCELMacroNameError = errors.New("invalid CEL macro name")
+
+func evaluateCELMacros(
+	macros []manifests.PackageManifestCelMacro,
+	tmplCtx *packagetypes.PackageRenderContext,
+) (
+	map[string]string, error,
+) {
+	evaluation := make(map[string]string, len(macros))
+
+	if macros == nil {
+		return evaluation, nil
+	}
+
+	for _, m := range macros {
+		// validate macro name
+		ok, err := regexp.MatchString("^[_a-zA-Z][_a-zA-Z0-9]*$", m.Name)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", InvalidCELMacroNameError, m.Name)
+		}
+
+		// make sure name is unique
+		if _, ok := evaluation[m.Name]; ok {
+			return nil, fmt.Errorf("%w: %s", DuplicateCELMacroNameError, m.Name)
+		}
+
+		result, err := evaluateCELCondition(m.Expression, tmplCtx)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", CELMacroEvaluationError, m.Name)
+		}
+
+		if result {
+			evaluation[m.Name] = "true"
+		} else {
+			evaluation[m.Name] = "false"
+		}
+	}
+
+	return evaluation, nil
 }
