@@ -30,6 +30,11 @@ spec:
       required:
       - testStubImage
       type: object
+  celMacros:
+  - name: "justTrue"
+    expression: "false || true"
+  - name: "justFalse"
+    expression: "true && (false || false)"
 test:
   template:
   - name: namespace-scope

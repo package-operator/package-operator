@@ -159,6 +159,10 @@ func filterWithCELAnnotation(
 }
 
 func replaceMacros(expression string, macros map[string]string) string {
+	if macros == nil || len(macros) == 0 {
+		return expression
+	}
+
 	result := expression
 	for name, eval := range macros {
 		result = strings.ReplaceAll(result, name, eval)
@@ -166,9 +170,12 @@ func replaceMacros(expression string, macros map[string]string) string {
 	return result
 }
 
-var DuplicateCELMacroNameError = errors.New("duplicate CEL macro name")
-var CELMacroEvaluationError = errors.New("CEL macro evaluation failed")
-var InvalidCELMacroNameError = errors.New("invalid CEL macro name")
+var (
+	ErrDuplicateCELMacroName = errors.New("duplicate CEL macro name")
+	ErrCELMacroEvaluation    = errors.New("CEL macro evaluation failed")
+	ErrInvalidCELMacroName   = errors.New("invalid CEL macro name")
+	macroNameRegexp          = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
+)
 
 func evaluateCELMacros(
 	macros []manifests.PackageManifestCelMacro,
@@ -176,30 +183,25 @@ func evaluateCELMacros(
 ) (
 	map[string]string, error,
 ) {
-	evaluation := make(map[string]string, len(macros))
-
 	if macros == nil {
-		return evaluation, nil
+		return map[string]string{}, nil
 	}
 
+	evaluation := make(map[string]string, len(macros))
 	for _, m := range macros {
 		// validate macro name
-		ok, err := regexp.MatchString("^[_a-zA-Z][_a-zA-Z0-9]*$", m.Name)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, fmt.Errorf("%w: %s", InvalidCELMacroNameError, m.Name)
+		if !macroNameRegexp.MatchString(m.Name) {
+			return nil, fmt.Errorf("%w: '%s'", ErrInvalidCELMacroName, m.Name)
 		}
 
 		// make sure name is unique
 		if _, ok := evaluation[m.Name]; ok {
-			return nil, fmt.Errorf("%w: %s", DuplicateCELMacroNameError, m.Name)
+			return nil, fmt.Errorf("%w: '%s'", ErrDuplicateCELMacroName, m.Name)
 		}
 
 		result, err := evaluateCELCondition(m.Expression, tmplCtx)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", CELMacroEvaluationError, m.Name)
+			return nil, fmt.Errorf("%w: '%s': %w", ErrCELMacroEvaluation, m.Name, err)
 		}
 
 		if result {
