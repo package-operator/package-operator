@@ -67,11 +67,7 @@ func run(opts components.Options) error {
 			bs     *bootstrap.Bootstrapper
 			envMgr *environment.Manager
 		)
-		if err := di.Invoke(func(
-			lbs *bootstrap.Bootstrapper,
-			uncachedClient components.UncachedClient,
-			lenvMgr *environment.Manager,
-		) {
+		if err := di.Invoke(func(lbs *bootstrap.Bootstrapper, _ components.UncachedClient, lenvMgr *environment.Manager) {
 			bs = lbs
 			envMgr = lenvMgr
 		}); err != nil {
@@ -87,7 +83,7 @@ func run(opts components.Options) error {
 			// the RESTMapper will not pick up the new CRDs in the cluster.
 			return di.Invoke(func(
 				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
-				discoveryClient discovery.DiscoveryInterface,
+				_ discovery.DiscoveryInterface,
 			) error {
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
 					return err

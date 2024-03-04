@@ -33,13 +33,11 @@ func TestBootstrapperBootstrap(t *testing.T) {
 
 		log:    testr.New(t),
 		client: c,
-		init: func(ctx context.Context) (
-			bool, error,
-		) {
+		init: func(context.Context) (bool, error) {
 			initCalled = true
 			return true, nil
 		},
-		fix: func(ctx context.Context) error {
+		fix: func(context.Context) error {
 			fixCalled = true
 			return nil
 		},

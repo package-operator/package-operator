@@ -74,13 +74,10 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 	t.Parallel()
 	r := &templateReconciler{
-		preflightChecker: preflight.CheckerFn(func(
-			ctx context.Context, owner, obj client.Object,
-		) (violations []preflight.Violation, err error) {
-			return []preflight.Violation{{
-				Position: "here", Error: "aaaaaaah!",
-			}}, nil
-		}),
+		preflightChecker: preflight.CheckerFn(
+			func(context.Context, client.Object, client.Object) ([]preflight.Violation, error) {
+				return []preflight.Violation{{Position: "here", Error: "aaaaaaah!"}}, nil
+			}),
 	}
 
 	objectTemplate := &corev1alpha1.ObjectTemplate{}

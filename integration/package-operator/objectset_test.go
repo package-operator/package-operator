@@ -148,7 +148,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	}
 	require.NoError(t, Waiter.WaitForObject(ctx, objectSet,
 		"Waiting for .status.controllerOf to be updated",
-		func(obj client.Object) (done bool, err error) {
+		func(client.Object) (bool, error) {
 			return reflect.DeepEqual(objectSet.Status.ControllerOf, expectedControllerOf), nil
 		}))
 
@@ -553,7 +553,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	}
 	require.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
 		"Waiting for .status.controllerOf to be updated",
-		func(obj client.Object) (done bool, err error) {
+		func(client.Object) (bool, error) {
 			return reflect.DeepEqual(objectSetRev2.Status.ControllerOf, expectedControllerOf), nil
 		}))
 	require.Equal(t, expectedControllerOf, objectSetRev2.Status.ControllerOf)
@@ -659,7 +659,7 @@ func objectSetPhaseTestHelper(
 
 	// delete objectSetPhase with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSetPhase, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	err := Waiter.WaitToBeGone(ctx, objectSetPhase, func(obj client.Object) (done bool, err error) { return false, nil })
+	err := Waiter.WaitToBeGone(ctx, objectSetPhase, func(client.Object) (bool, error) { return false, nil })
 	require.NoError(t, err)
 
 	// expect cm to still be there
@@ -712,7 +712,7 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 
 	// delete objectSet with orphan cascade
 	require.NoError(t, Client.Delete(ctx, objectSet, client.PropagationPolicy(metav1.DeletePropagationOrphan)))
-	err = Waiter.WaitToBeGone(ctx, objectSet, func(obj client.Object) (done bool, err error) { return false, nil })
+	err = Waiter.WaitToBeGone(ctx, objectSet, func(client.Object) (bool, error) { return false, nil })
 	require.NoError(t, err)
 
 	// expect objectSet not to be present anymore
@@ -761,7 +761,7 @@ func cleanupOnSuccess(ctx context.Context, t *testing.T, obj client.Object) {
 		if !t.Failed() {
 			// Make sure objects are completely gone before closing the test.
 			_ = Client.Delete(ctx, obj, client.PropagationPolicy(metav1.DeletePropagationForeground))
-			_ = Waiter.WaitToBeGone(ctx, obj, func(obj client.Object) (done bool, err error) { return false, nil })
+			_ = Waiter.WaitToBeGone(ctx, obj, func(client.Object) (bool, error) { return false, nil })
 		}
 	})
 }

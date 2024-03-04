@@ -306,7 +306,7 @@ func validateCustomResourceDefinitionOpenAPISchema( //nolint:maintidx
 			// we recurse into the schema that applies to ObjectMeta.
 			subSsv = subSsv.withInsideResourceMeta()
 			if isRoot {
-				subSsv = subSsv.withForbiddenDefaults(fmt.Sprintf("in top-level %s", property))
+				subSsv = subSsv.withForbiddenDefaults("in top-level " + property)
 			}
 		}
 		propertySchema := jsonSchema

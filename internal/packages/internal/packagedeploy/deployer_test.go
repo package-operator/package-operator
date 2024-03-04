@@ -24,8 +24,7 @@ import (
 var (
 	_          deploymentReconciler = (*deploymentReconcilerMock)(nil)
 	errExample                      = errors.New("example error")
-	//nolint:gosec // not a credential.
-	testDgst = "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
+	testDgst                        = "sha256:52a6b1268e32ed5b6f59da8222f7627979bfb739f32aae3fb5b5ed31b8bf80c4"
 )
 
 func TestNewPackageDeployer(t *testing.T) {

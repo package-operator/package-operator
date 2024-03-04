@@ -208,10 +208,12 @@ func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
 	}
 
 	// wait for object to be fully deleted
-	waiter := wait.NewWaiter(init.client, init.scheme,
+	waiter := wait.NewWaiter(
+		init.client, init.scheme,
 		wait.WithInterval(packageOperatorDeploymentDeletionCheckInterval),
-		wait.WithTimeout(packageOperatorDeploymentDeletionTimeout))
-	return waiter.WaitToBeGone(ctx, deployment, func(obj client.Object) (done bool, err error) { return false, nil })
+		wait.WithTimeout(packageOperatorDeploymentDeletionTimeout),
+	)
+	return waiter.WaitToBeGone(ctx, deployment, func(client.Object) (bool, error) { return false, nil })
 }
 
 func (init *initializer) config() *runtime.RawExtension {

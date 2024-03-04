@@ -101,9 +101,9 @@ func (pv proxyVars) mergeTo(environ []string) []string {
 	// copy all variables we don't override into result
 	for _, kvstr := range environ {
 		// don't copy proxy envvars
-		if strings.HasPrefix(kvstr, fmt.Sprintf("%s=", httpProxyVar)) ||
-			strings.HasPrefix(kvstr, fmt.Sprintf("%s=", httpsProxyVar)) ||
-			strings.HasPrefix(kvstr, fmt.Sprintf("%s=", noProxyVar)) {
+		if strings.HasPrefix(kvstr, httpProxyVar+"=") ||
+			strings.HasPrefix(kvstr, httpsProxyVar+"=") ||
+			strings.HasPrefix(kvstr, noProxyVar+"=") {
 			continue
 		}
 
@@ -111,9 +111,5 @@ func (pv proxyVars) mergeTo(environ []string) []string {
 	}
 
 	// add proxy envvars and return result
-	return append(merged,
-		fmt.Sprintf("%s=%s", httpProxyVar, pv.httpProxy),
-		fmt.Sprintf("%s=%s", httpsProxyVar, pv.httpsProxy),
-		fmt.Sprintf("%s=%s", noProxyVar, pv.noProxy),
-	)
+	return append(merged, httpProxyVar+"="+pv.httpProxy, httpsProxyVar+"="+pv.httpsProxy, noProxyVar+"="+pv.noProxy)
 }

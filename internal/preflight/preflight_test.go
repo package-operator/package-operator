@@ -84,9 +84,9 @@ func TestList(t *testing.T) {
 	t.Parallel()
 	var called bool
 	list := List{
-		CheckerFn(func(ctx context.Context, owner, obj client.Object) (violations []Violation, err error) {
+		CheckerFn(func(context.Context, client.Object, client.Object) ([]Violation, error) {
 			called = true
-			return
+			return nil, nil
 		}),
 	}
 
@@ -106,15 +106,15 @@ func TestPreflightListOk(t *testing.T) {
 
 	list := PhasesCheckerList{
 		phasesCheckerFn(
-			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+			func(context.Context, []corev1alpha1.ObjectSetTemplatePhase) ([]Violation, error) {
 				called1 = true
-				return
+				return nil, nil
 			},
 		),
 		phasesCheckerFn(
-			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+			func(context.Context, []corev1alpha1.ObjectSetTemplatePhase) ([]Violation, error) {
 				called2 = true
-				return
+				return nil, nil
 			},
 		),
 	}
@@ -138,21 +138,21 @@ func TestPreflightListWithError(t *testing.T) {
 
 	list := PhasesCheckerList{
 		phasesCheckerFn(
-			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+			func(context.Context, []corev1alpha1.ObjectSetTemplatePhase) ([]Violation, error) {
 				called1 = true
-				return
+				return nil, nil
 			},
 		),
 		phasesCheckerFn(
-			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+			func(context.Context, []corev1alpha1.ObjectSetTemplatePhase) ([]Violation, error) {
 				called2 = true
-				return violations, errChecker
+				return nil, errChecker
 			},
 		),
 		phasesCheckerFn(
-			func(ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase) (violations []Violation, err error) {
+			func(context.Context, []corev1alpha1.ObjectSetTemplatePhase) ([]Violation, error) {
 				called3 = true
-				return
+				return nil, nil
 			},
 		),
 	}

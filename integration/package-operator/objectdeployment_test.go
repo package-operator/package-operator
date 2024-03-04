@@ -643,7 +643,7 @@ func objectDeploymentTemplate(
 	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
 	probes []corev1alpha1.ObjectSetProbe, name string,
 ) *corev1alpha1.ObjectDeployment {
-	label := fmt.Sprintf("test.package-operator.run/%s", name)
+	label := "test.package-operator.run/" + name
 	return &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

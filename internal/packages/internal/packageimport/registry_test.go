@@ -2,6 +2,7 @@ package packageimport
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -9,7 +10,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -26,9 +26,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 	pkg := &packagetypes.RawPackage{Files: packagetypes.Files{"test": []byte{}}}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			time.Sleep(500 * time.Millisecond)
-		}).
+		Run(func(mock.Arguments) { time.Sleep(500 * time.Millisecond) }).
 		Return(pkg, nil)
 
 	ctx := context.Background()
@@ -38,8 +36,12 @@ func TestRegistry_DelayedPull(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			ff, err := r.Pull(ctx, "quay.io/test123")
-			require.NoError(t, err)
-			assert.Equal(t, pkg, ff)
+			if err != nil {
+				panic(err)
+			}
+			if !reflect.DeepEqual(pkg, ff) {
+				panic("not equal")
+			}
 		}()
 	}
 	wg.Wait()
@@ -59,9 +61,7 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 	ipm := &imagePullerMock{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			time.Sleep(requestDelay)
-		}).
+		Run(func(mock.Arguments) { time.Sleep(requestDelay) }).
 		Return(&packagetypes.RawPackage{Files: packagetypes.Files{"test": nil}}, nil)
 
 	r := NewRegistry(map[string]string{
@@ -81,7 +81,9 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			f, err := r.Pull(ctx, "quay.io/test123")
-			require.NoError(t, err)
+			if err != nil {
+				panic(err)
+			}
 
 			pkgLock.Lock()
 			defer pkgLock.Unlock()
