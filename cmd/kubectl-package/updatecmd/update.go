@@ -4,20 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	internalcmd "package-operator.run/internal/cmd"
-	"package-operator.run/internal/packages"
 )
 
 type Updater interface {
-	GenerateLockData(
-		ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption,
-	) (data []byte, err error)
+	UpdateLockData(ctx context.Context, srcPath string, opts ...internalcmd.GenerateLockDataOption) (err error)
 }
 
 func NewCmd(updater Updater) *cobra.Command {
@@ -39,27 +34,24 @@ func NewCmd(updater Updater) *cobra.Command {
 	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		if args[0] == "" {
+		srcPath := args[0]
+
+		if srcPath == "" {
 			return fmt.Errorf("%w: target path empty", internalcmd.ErrInvalidArgs)
 		}
 
-		srcPath := args[0]
+		err = updater.UpdateLockData(cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
 
-		data, err := updater.GenerateLockData(cmd.Context(), srcPath, internalcmd.WithInsecure(opts.Insecure))
-		if errors.Is(err, internalcmd.ErrLockDataUnchanged) {
+		switch {
+		case err == nil:
+			return nil
+		case errors.Is(err, internalcmd.ErrLockDataUnchanged):
 			fmt.Fprintln(cmd.OutOrStdout(), "Package is already up-to-date")
 
 			return nil
-		} else if err != nil {
+		default:
 			return fmt.Errorf("generating lock data: %w", err)
 		}
-
-		lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFilename+".yaml")
-		if err := os.WriteFile(lockFilePath, data, 0o644); err != nil {
-			return fmt.Errorf("writing lock file: %w", err)
-		}
-
-		return nil
 	}
 
 	return cmd

@@ -8,22 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/mt-sre/devkube/dev"
-	appsv1 "k8s.io/api/apps/v1"
-
-	"sigs.k8s.io/yaml"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
@@ -44,9 +40,13 @@ func TestObjectTemplate_creationDeletion_packages(t *testing.T) {
 	cm2Name := "config-map-2"
 	cm2, cm2Source := createCMAndObjectTemplateSource(cm2Key, cm2Destination, cm2Value, cm2Name)
 
+	// get kubernetes cluster version from apiserver
+	versionInfo, err := DiscoveryClient.ServerVersion()
+	require.NoError(t, err)
+
 	kubernetesKey := "kubernetes"
 	kubernetesPath := ".environment.kubernetes.version"
-	kubernetesValue := "v1.27.3"
+	kubernetesValue := versionInfo.String()
 
 	template := fmt.Sprintf(`apiVersion: package-operator.run/v1alpha1
 kind: Package
@@ -147,7 +147,7 @@ spec:
 	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	err := Client.Create(ctx, &cm1)
+	err = Client.Create(ctx, &cm1)
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, &cm1)
 
@@ -168,7 +168,7 @@ spec:
 			ctx, pkg, "to be created",
 			func(obj client.Object) (done bool, err error) {
 				return true, nil
-			}, dev.WithTimeout(20*time.Second),
+			}, wait.WithTimeout(20*time.Second),
 		),
 	)
 
@@ -214,7 +214,7 @@ spec:
 		Waiter.WaitForObject(
 			ctx, clusterPkg, "to be created",
 			func(obj client.Object) (done bool, err error) { return true, nil },
-			dev.WithTimeout(20*time.Second),
+			wait.WithTimeout(20*time.Second),
 		),
 	)
 
@@ -236,7 +236,7 @@ spec:
 	require.NoError(t,
 		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
 			return true, nil
-		}, dev.WithTimeout(20*time.Second)))
+		}, wait.WithTimeout(20*time.Second)))
 
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment))
 	envVar := deployment.Spec.Template.Spec.Containers[0].Env[0]
@@ -355,7 +355,7 @@ spec:
 		Waiter.WaitForObject(
 			ctx, pkg, "to be created",
 			func(obj client.Object) (done bool, err error) { return true, nil },
-			dev.WithTimeout(20*time.Second),
+			wait.WithTimeout(20*time.Second),
 		),
 	)
 
@@ -438,7 +438,7 @@ data:
 		Waiter.WaitForObject(
 			ctx, cm, "to be created",
 			func(obj client.Object) (done bool, err error) { return true, nil },
-			dev.WithTimeout(20*time.Second),
+			wait.WithTimeout(20*time.Second),
 		),
 	)
 
@@ -455,7 +455,7 @@ data:
 				upatedCM := obj.(*corev1.ConfigMap)
 				return upatedCM.Data["test"] == secretValue, nil
 			},
-			dev.WithTimeout(60*time.Second),
+			wait.WithTimeout(60*time.Second),
 		),
 	)
 }

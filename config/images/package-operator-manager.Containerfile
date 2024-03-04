@@ -9,8 +9,8 @@ FROM scratch
 WORKDIR /
 
 COPY --from=cert-source /tmp/pem/ /etc/pki/ca-trust/extracted/pem/
-COPY passwd /etc/passwd
-COPY package-operator-manager /
+COPY ./passwd /etc/passwd
+COPY ./package-operator-manager /package-operator-manager
 
 USER "noroot"
 

@@ -29,7 +29,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '>=1.21.6'
+        go-version: '>=1.22'
 
     - name: Delete non-semver tags
       run: 'git tag -d $(git tag -l | grep -v "^v")'
@@ -39,14 +39,14 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
+          .cache
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Build & Push images
-      run: ./mage build:pushImages
+    - name: Release the things
+      run: ./do CI:Release
       env:
-        USE_DIGESTS: "true"
         VERSION: ${{github.ref_name}}
         QUAY_USER: ${{ secrets.QUAY_USER }}
         QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
@@ -57,9 +57,6 @@ jobs:
         name: bootstrap-job
         path: |
           config/self-bootstrap-job.yaml
-
-    - name: Build release binaries
-      run: ./mage build:releaseBinaries
 
     - name: Release
       uses: softprops/action-gh-release@v1

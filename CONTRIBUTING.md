@@ -45,15 +45,19 @@ and your reviewers time.
 ### Commands and local development
 
 > **Dev Note**\
-> Before running _mage_ targets run `export CONTAINER_RUNTIME=docker`, `export CONTAINER_RUNTIME=podman` if using `podman`, or you will get cryptic errors from mage that may lead you to think there is a problem with the kind cluster.
+> Before running build targets run `export CONTAINER_RUNTIME=docker`, `export CONTAINER_RUNTIME=podman` if using `podman`, or you may get cryptic errors that may lead you to think there is a problem with the kind cluster.
 
-Package Operator uses [Mage](https://magefile.org/) (Think make, but all targets are written in Go instead of Shell) as task manager and developer command interface.
+Package Operator uses [Cardboard](https://github.com/package-operator/cardboard) (Think make, but all targets are written in Go instead of Shell) as task manager and developer command interface.
 
-| Command                  | Description                                                                               |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| `./mage -l`              | List all available commands.                                                              |
-| `./mage dependency:all`  | Installs all project dependencies into the local checkout.                                |
-| `./mage dev:deploy`      | Creates a new cluster via kind and deploys PKO on it.                                     |
+| Command                | Description                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| `./do Dev:Destroy`     | Deletes the local development cluster.                                                    |
+| `./do Dev:Generate`    | Generate code, api docs, install files.                                                   |
+| `./do Dev:Integration` | Runs local integration tests in a KinD cluster.                                           |
+| `./do Dev:Lint`        | Runs local linters to check the codebase.                                                 |
+| `./do Dev:LintFix`     | Tries to fix linter issues.                                                               |
+| `./do Dev:Unit`        | Runs local unittests.                                                                     |
+
 
 #### Accessing a cluster deployed using dev:deploy
 
@@ -66,13 +70,13 @@ export KUBECONFIG=$PWD/.cache/dev-env/kubeconfig.yaml
 #### Linters
 
 ```sh
-./mage test:lint
+./do Dev:LintFix
 ```
 
 #### Unit Tests
 
 ```sh
-./mage test:unit
+./do Dev:Unit
 ```
 
 #### Integration Tests
@@ -81,14 +85,14 @@ Create a local [KinD](https://kind.sigs.k8s.io/) cluster and run integration
 suite on it.
 
 ```sh
-./mage dev:integration
+./do Dev:Integration
 ```
 
 Regardless of whether the integration suite passes or fails the cluster created
 must be explicitly cleaned up afterwards.
 
 ```sh
-./mage dev:teardown
+./do Dev:Destroy
 ```
 
 ## Submitting Pull Requests

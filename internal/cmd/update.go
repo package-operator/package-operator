@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,11 +21,8 @@ func NewUpdate(opts ...UpdateOption) *Update {
 	var cfg UpdateConfig
 
 	cfg.Option(opts...)
-	cfg.Default()
 
-	return &Update{
-		cfg: cfg,
-	}
+	return &Update{cfg: cfg}
 }
 
 type Update struct {
@@ -43,36 +42,52 @@ func (c *UpdateConfig) Option(opts ...UpdateOption) {
 	}
 }
 
-func (c *UpdateConfig) Default() {
-	if c.Log.GetSink() == nil {
-		c.Log = logr.Discard()
+func clockOrDefaultClock(c Clock) Clock {
+	if c == nil {
+		c = &defaultClock{}
+	}
+	return c
+}
+
+func loaderOrDefaultLoader(p PackageLoader) PackageLoader {
+	if p == nil {
+		p = NewDefaultPackageLoader(runtime.NewScheme())
 	}
 
-	if c.Clock == nil {
-		c.Clock = &defaultClock{}
+	return p
+}
+
+func resolverOrDefaultResolver(r DigestResolver) DigestResolver {
+	if r == nil {
+		r = &defaultDigestResolver{}
 	}
 
-	if c.Loader == nil {
-		c.Loader = NewDefaultPackageLoader(runtime.NewScheme())
-	}
-
-	if c.Resolver == nil {
-		c.Resolver = &defaultDigestResolver{}
-	}
+	return r
 }
 
 type UpdateOption interface {
 	ConfigureUpdate(*UpdateConfig)
 }
 
-func (u *Update) GenerateLockData(
-	ctx context.Context, srcPath string, opts ...GenerateLockDataOption,
-) (data []byte, err error) {
+func (u Update) UpdateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) error {
+	data, err := u.GenerateLockData(ctx, srcPath, opts...)
+	if err != nil {
+		return err
+	}
+	lockFilePath := filepath.Join(srcPath, packages.PackageManifestLockFilename+".yaml")
+	if err := os.WriteFile(lockFilePath, data, 0o644); err != nil {
+		return fmt.Errorf("writing lock file: %w", err)
+	}
+
+	return nil
+}
+
+func (u Update) GenerateLockData(ctx context.Context, srcPath string, opts ...GenerateLockDataOption) ([]byte, error) {
 	var cfg GenerateLockDataConfig
 
 	cfg.Option(opts...)
 
-	pkg, err := u.cfg.Loader.LoadPackage(ctx, srcPath)
+	pkg, err := loaderOrDefaultLoader(u.cfg.Loader).LoadPackage(ctx, srcPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading package: %w", err)
 	}
@@ -93,7 +108,7 @@ func (u *Update) GenerateLockData(
 			APIVersion: manifests.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			CreationTimestamp: u.cfg.Clock.Now(),
+			CreationTimestamp: clockOrDefaultClock(u.cfg.Clock).Now(),
 		},
 		Spec: manifests.PackageManifestLockSpec{
 			Images: lockImages,
@@ -126,16 +141,12 @@ func (u *Update) lockImageFromManifestImage(
 		return manifests.PackageManifestLockImage{}, fmt.Errorf("resolving image URL: %w", err)
 	}
 
-	digest, err := u.cfg.Resolver.ResolveDigest(overriddenImage, WithInsecure(cfg.Insecure))
+	digest, err := resolverOrDefaultResolver(u.cfg.Resolver).ResolveDigest(overriddenImage, WithInsecure(cfg.Insecure))
 	if err != nil {
 		return manifests.PackageManifestLockImage{}, fmt.Errorf("resolving image digest: %w", err)
 	}
 
-	return manifests.PackageManifestLockImage{
-		Name:   img.Name,
-		Image:  img.Image,
-		Digest: digest,
-	}, nil
+	return manifests.PackageManifestLockImage{Name: img.Name, Image: img.Image, Digest: digest}, nil
 }
 
 func lockSpecsAreEqual(spec manifests.PackageManifestLockSpec, other manifests.PackageManifestLockSpec) bool {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -313,7 +313,7 @@ func TestObjectDeployment_external_objects(t *testing.T) {
 				concernedDeployment,
 				corev1alpha1.ObjectDeploymentAvailable,
 				tc.AvailabilityStatus,
-				dev.WithTimeout(2*time.Minute),
+				wait.WithTimeout(2*time.Minute),
 			),
 		)
 	}

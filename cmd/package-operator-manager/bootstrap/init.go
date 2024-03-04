@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/mt-sre/devkube/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -67,18 +67,21 @@ func newInitializer(
 	}
 }
 
-func (init *initializer) Init(ctx context.Context) (
-	needsBootstrap bool, err error,
-) {
+func (init *initializer) Init(ctx context.Context) (needsBootstrap bool, err error) {
 	crds, err := init.crdsFromPackage(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("crdsFromPackage: %w", err)
 	}
 	if err := init.ensureCRDs(ctx, crds); err != nil {
-		return false, err
+		return false, fmt.Errorf("ensureCRDs: %w", err)
 	}
 
-	return init.ensureUpdatedPKO(ctx)
+	needsBootstrap, err = init.ensureUpdatedPKO(ctx)
+	if err != nil {
+		return needsBootstrap, fmt.Errorf("ensureUpdatedPKO: %w", err)
+	}
+
+	return needsBootstrap, nil
 }
 
 func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {
@@ -205,9 +208,9 @@ func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
 	}
 
 	// wait for object to be fully deleted
-	waiter := dev.NewWaiter(init.client, init.scheme,
-		dev.WithInterval(packageOperatorDeploymentDeletionCheckInterval),
-		dev.WithTimeout(packageOperatorDeploymentDeletionTimeout))
+	waiter := wait.NewWaiter(init.client, init.scheme,
+		wait.WithInterval(packageOperatorDeploymentDeletionCheckInterval),
+		wait.WithTimeout(packageOperatorDeploymentDeletionTimeout))
 	return waiter.WaitToBeGone(ctx, deployment, func(obj client.Object) (done bool, err error) { return false, nil })
 }
 

@@ -2,7 +2,6 @@ exclude: |
   (?x)(
     (^vendor/)|
     (^.vscode/)|
-    (mage_output_file.go)|
     (.deepcopy.go$)
   )
 repos:
@@ -26,13 +25,7 @@ repos:
   hooks:
   - id: lint
     name: lint
-    entry: ./mage test:fixlint
-    language: system
-    exclude: ".*"
-    always_run: true
-  - id: code-gen
-    name: code-gen
-    entry: ./mage generate:all
+    entry: ./do Dev:PreCommit
     language: system
     exclude: ".*"
     always_run: true

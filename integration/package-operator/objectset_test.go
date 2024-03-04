@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
+	apimachinerywait "k8s.io/apimachinery/pkg/util/wait"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -90,8 +90,7 @@ func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, namespace, class string) (*cor
 	}, nil
 }
 
-func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
-	t.Helper()
+func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) { //nolint:thelper
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "cm-4",
@@ -227,8 +226,8 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(5*time.Second))
-	require.True(t, wait.Interrupted(err))
+		}, wait.WithTimeout(5*time.Second))
+	require.True(t, apimachinerywait.Interrupted(err))
 
 	// Unpause ObjectSet.
 	require.NoError(t, Client.Patch(ctx, objectSet,
@@ -247,7 +246,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
-		}, dev.WithTimeout(10*time.Second))
+		}, wait.WithTimeout(10*time.Second))
 	require.NoError(t, err)
 
 	// ---------------------------

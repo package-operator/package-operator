@@ -10,12 +10,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/mt-sre/devkube/dev"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -85,7 +85,7 @@ func TestHyperShift(t *testing.T) {
 	// few seconds for leader election.
 	err = Waiter.WaitForCondition(
 		ctx, pkg, corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue, dev.WithTimeout(100*time.Second),
+		metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
 	)
 	require.NoError(t, err)
 
@@ -105,6 +105,7 @@ func TestHyperShift(t *testing.T) {
 func installHyperShift(ctx context.Context, t *testing.T) {
 	t.Helper()
 
+	// TODO: this comment is wrong?!
 	// tests that PackageOperator will deploy a new remote-phase-manager
 	// for every ready HyperShift HostedCluster.
 	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
