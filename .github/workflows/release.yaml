@@ -45,7 +45,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Log in to quay.io
-      uses: docker/login-action@v3
+      uses: redhat-actions/podman-login@v1
       with:
         registry: quay.io
         username: ${{ secrets.QUAY_USER }}
