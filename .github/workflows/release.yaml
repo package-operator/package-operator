@@ -45,12 +45,13 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Log in to quay.io
-      run: ./do CI:RegistryLogin quay.io -u ${{ secrets.QUAY_USER }} -p ${{ secrets.QUAY_TOKEN }}
+      run: ./do CI:RegistryLogin "${{ vars.REGISTRY }}" -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_TOKEN }}"
 
     - name: Release the things
       run: ./do CI:Release
       env:
         VERSION: ${{github.ref_name}}
+        IMAGE_REGISTRY: "${{ vars.REGISTRY }}/${{ vars.NAMESPACE }}"
 
     - uses: cytopia/upload-artifact-retry-action@v0.1.7
       if: ${{ always() }}
