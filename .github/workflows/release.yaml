@@ -45,11 +45,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Log in to quay.io
-      uses: redhat-actions/podman-login@v1
-      with:
-        registry: quay.io
-        username: ${{ secrets.QUAY_USER }}
-        password: ${{ secrets.QUAY_TOKEN }}
+      run: ./do CI:RegistryLogin quay.io -u ${{ secrets.QUAY_USER }} -p ${{ secrets.QUAY_TOKEN }}
 
     - name: Release the things
       run: ./do CI:Release
