@@ -83,7 +83,7 @@ type PackageManifestSpec struct {
 	CelMacros []PackageManifestCelMacro `json:"celMacros,omitempty"`
 }
 
-// PackageManifestCelMacro is a reusable named CEL expression
+// PackageManifestCelMacro is a reusable named CEL expression.
 type PackageManifestCelMacro struct {
 	// A unique name. When used in 'package-operator.run/condition' annotations,
 	// it is replaced with the result of Expression ("true"/"false").

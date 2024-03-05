@@ -1424,7 +1424,7 @@ Used in:
 
 ### PackageManifestCelMacro
 
-PackageManifestCelMacro is a reusable named CEL expression
+PackageManifestCelMacro is a reusable named CEL expression.
 
 | Field | Description |
 | ----- | ----------- |
