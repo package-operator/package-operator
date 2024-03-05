@@ -99,6 +99,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		"CGO_ENABLED":                          "1",
 		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(imageRegistry(), "test-stub-package", appVersion),
 		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(imageRegistry(), "test-stub-multi-package", appVersion),
+		"PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE":   imageURL(imageRegistry(), "test-stub-cel-package", appVersion),
 		"PKO_TEST_STUB_IMAGE":                  imageURL(imageRegistry(), "test-stub", appVersion),
 		"PKO_TEST_LATEST_BOOTSTRAP_JOB":        os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB"),
 		"KUBECONFIG":                           kubeconfigPath,
