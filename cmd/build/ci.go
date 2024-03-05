@@ -39,6 +39,11 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	return lint.validateGitClean()
 }
 
+// Expose crane login to CI.
+func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
+	return shr.Run("crane", append([]string{"auth", "login"}, args...)...)
+}
+
 // Release builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	registry := imageRegistry()
