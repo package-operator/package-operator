@@ -60,6 +60,15 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.Release, args)
 
 	if err := mgr.ParallelDeps(ctx, self,
+		// bootstrap job manifests
+		run.Meth(generate, generate.selfBootstrapJob),
+
+		// binaries
+		run.Fn3(compile, "kubectl-package", "linux", "amd64"),
+		run.Fn3(compile, "kubectl-package", "linux", "arm64"),
+		run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
+		run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
+
 		// binary images
 		run.Fn3(pushImage, "cli", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
