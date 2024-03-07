@@ -69,3 +69,4 @@ jobs:
           bin/kubectl-package_darwin_amd64
           bin/kubectl-package_darwin_arm64
           bin/kubectl-package_linux_amd64
+          bin/kubectl-package_linux_arm64
