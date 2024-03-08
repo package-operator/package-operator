@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 
 	"pkg.package-operator.run/cardboard/run"
 )
@@ -39,29 +38,43 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	return lint.validateGitClean()
 }
 
-// Release builds binaries and releases the CLI, PKO manager, PKO webhooks and test-stub images to the given registry.
+// Expose crane login to CI.
+func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
+	return shr.Run("crane", append([]string{"auth", "login"}, args...)...)
+}
+
+// Release builds binaries (if not exluded with the 'images-only" arg) and releases the
+// CLI, PKO manager, RP manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	registry := imageRegistry()
 
-	if len(args) > 2 {
-		return errors.New("target registry as a single arg or no args for official") //nolint:goerr113
-	} else if len(args) == 1 {
-		registry = args[1]
-	}
-	if registry == "" {
-		return errors.New("registry may not be empty") //nolint:goerr113
-	}
-
 	self := run.Meth1(ci, ci.Release, args)
 
-	if err := mgr.ParallelDeps(ctx, self,
+	deps := []run.Dependency{}
+
+	imagesOnly := len(args) > 0 && args[0] == "images-only"
+	if !imagesOnly {
+		deps = append(deps,
+			// bootstrap job manifests
+			run.Meth(generate, generate.selfBootstrapJob),
+			// binaries
+			run.Fn3(compile, "kubectl-package", "linux", "amd64"),
+			run.Fn3(compile, "kubectl-package", "linux", "arm64"),
+			run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
+			run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
+		)
+	}
+
+	deps = append(deps,
 		// binary images
 		run.Fn3(pushImage, "cli", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
 		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
 		run.Fn3(pushImage, "test-stub", registry, "amd64"),
-	); err != nil {
+	)
+
+	if err := mgr.ParallelDeps(ctx, self, deps...); err != nil {
 		return err
 	}
 
@@ -81,5 +94,14 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 	// the lockfile of the package-operator package image can be regenerated.
 	return mgr.SerialDeps(ctx, self,
 		run.Fn2(pushPackage, "package-operator", registry),
+	)
+}
+
+// Combined RegistryLogin and Release with images-only arg. (This is our downstream CI target.)
+func (ci *CI) RegistryLoginAndReleaseOnlyImages(ctx context.Context, args []string) error {
+	self := run.Meth1(ci, ci.RegistryLoginAndReleaseOnlyImages, args)
+	return mgr.SerialDeps(ctx, self,
+		run.Meth1(ci, ci.RegistryLogin, args),
+		run.Meth1(ci, ci.Release, []string{"images-only"}),
 	)
 }
