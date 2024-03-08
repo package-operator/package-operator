@@ -53,13 +53,6 @@ jobs:
         VERSION: ${{github.ref_name}}
         IMAGE_REGISTRY: "${{ vars.REGISTRY }}/${{ vars.NAMESPACE }}"
 
-    - uses: cytopia/upload-artifact-retry-action@v0.1.7
-      if: ${{ always() }}
-      with:
-        name: bootstrap-job
-        path: |
-          config/self-bootstrap-job.yaml
-
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
