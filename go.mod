@@ -31,15 +31,15 @@ require (
 	k8s.io/apimachinery v0.29.2
 	k8s.io/apiserver v0.29.2
 	k8s.io/client-go v0.29.2
-	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.4
 	package-operator.run/pkg v1.9.4
-	pkg.package-operator.run/cardboard v0.0.2
-	pkg.package-operator.run/cardboard/kubeutils v0.0.2
-	pkg.package-operator.run/cardboard/modules/kind v0.0.2
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.2
-	pkg.package-operator.run/cardboard/modules/oci v0.0.2
+	pkg.package-operator.run/cardboard v0.0.3
+	pkg.package-operator.run/cardboard/kubeutils v0.0.3
+	pkg.package-operator.run/cardboard/modules/kind v0.0.3
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
+	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
@@ -134,7 +134,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a // indirect
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect

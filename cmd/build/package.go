@@ -34,11 +34,12 @@ func buildPackage(ctx context.Context, name, registry string) error {
 	}
 
 	path := filepath.Join("config", "packages", name, "container.oci.tar")
+	url := imageURL(registry, name+"-package", appVersion)
 
 	if err := cmd.NewBuild().BuildFromSource(ctx,
 		filepath.Join("config", "packages", name),
 		cmd.WithOutputPath(path),
-		cmd.WithTags{registry + "/" + name + "-package:" + appVersion},
+		cmd.WithTags{url},
 	); err != nil {
 		return err
 	}
@@ -60,13 +61,9 @@ func pushPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	o := oci.NewOCI(name+"-package", imgPath,
-		oci.WithTags{appVersion},
-		oci.WithRegistries{registry},
-		oci.WithCranePush{},
-	)
+	url := imageURL(registry, name+"-package", appVersion)
 
-	if err := o.Push(); err != nil {
+	if err := oci.NewOCI(url, imgPath, oci.WithCranePush{}).Push(); err != nil {
 		return err
 	}
 
