@@ -2,7 +2,6 @@ package preflight
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +43,7 @@ func (p *NamespaceEscalation) Check(
 	if len(obj.GetNamespace()) > 0 {
 		if obj.GetNamespace() != owner.GetNamespace() {
 			violations = append(violations, Violation{
-				Position: fmt.Sprintf("Object %s", obj.GetName()),
+				Position: "Object " + obj.GetName(),
 				Error:    "Must stay within the same namespace.",
 			})
 		}
@@ -52,8 +51,7 @@ func (p *NamespaceEscalation) Check(
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	mapping, err := p.restMapper.RESTMapping(
-		gvk.GroupKind(), gvk.Version)
+	mapping, err := p.restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if meta.IsNoMatchError(err) {
 		// covered by APIsExistence check
 		return

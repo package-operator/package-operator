@@ -51,7 +51,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		&batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{Name: "package-operator-bootstrap", Namespace: "package-operator-system"},
 		},
-		func(obj client.Object) (done bool, err error) { return },
+		func(client.Object) (done bool, err error) { return },
 	)
 	if err != nil {
 		return err

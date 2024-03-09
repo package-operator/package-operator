@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-//nolint:paralleltest
 func TestProvideOptions(t *testing.T) {
 	t.Setenv("PKO_SUB_COMPONENT_TOLERATIONS",
 		`[{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"},`+

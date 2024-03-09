@@ -68,8 +68,10 @@ func assertInstallDone(ctx context.Context, t *testing.T, pkg *corev1alpha1.Clus
 	for i := range jobList.Items {
 		require.NoError(t,
 			Waiter.WaitToBeGone(ctx, &jobList.Items[i],
-				func(obj client.Object) (done bool, err error) { return false, nil },
-				wait.WithTimeout(UpgradeTestWaitTimeout)))
+				func(client.Object) (bool, error) { return false, nil },
+				wait.WithTimeout(UpgradeTestWaitTimeout),
+			),
+		)
 	}
 
 	require.NoError(t,
@@ -128,8 +130,9 @@ func deleteExistingPKO(ctx context.Context) error {
 		log.Info("deleted ClusterObjectSet", "name", clusterObjectSet.Name, "obj", clusterObjectSet)
 	}
 
-	if err := Waiter.WaitToBeGone(ctx, packageOperatorPackage,
-		func(obj client.Object) (done bool, err error) { return false, nil },
+	if err := Waiter.WaitToBeGone(
+		ctx, packageOperatorPackage,
+		func(client.Object) (bool, error) { return false, nil },
 		wait.WithTimeout(UpgradeTestWaitTimeout),
 	); err != nil {
 		return err
@@ -137,7 +140,7 @@ func deleteExistingPKO(ctx context.Context) error {
 
 	if err := Waiter.WaitToBeGone(ctx,
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: PackageOperatorNamespace}},
-		func(obj client.Object) (done bool, err error) { return false, nil },
+		func(client.Object) (bool, error) { return false, nil },
 		wait.WithTimeout(UpgradeTestWaitTimeout),
 	); err != nil {
 		return err

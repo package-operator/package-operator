@@ -20,15 +20,12 @@ linters:
   #- godox            # Not that useful/false positives.
   #- gomnd            # The annoy is strong.
   #- gomoddirectives  # Not that useful/false positives.
-  #- interfacebloat   # WE do bloaty interfaces.
   #- inamedparam      # Not that useful.
+  #- interfacebloat   # WE do bloaty interfaces.
   #- ireturn          # Not that useful/false positives.
-  #- musttag          # Dislikes our deps.
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
-  #- rowserrcheck     # No SQL here.
-  #- sqlclosecheck    # No SQL here.
   #- tagliatelle      # Reports issues that are not right for us.
   #- testpackage      # Could be nice in the future.
   #- unparam          # Not that useful/false positives.
@@ -63,6 +60,10 @@ linters:
   - gofumpt
   - goheader
   - goimports
+  - gomodguard
+  - goprintffuncname
+  - gosec
+  - gosimple
   - gosmopolitan
   - govet
   - grouper
@@ -93,6 +94,7 @@ linters:
   - sloglint
   - staticcheck
   - stylecheck
+  - sqlclosecheck
   - tagalign
   - tenv
   - testableexamples
@@ -143,3 +145,10 @@ run:
 linters-settings:
   goimports:
     local-prefixes: package-operator.run
+  gosec:
+    excludes:
+    - G301 # Poor file permissions used when creating a directory.
+    - G302 # Poor file permissions used with chmod.
+    - G306 # Poor file permissions used when writing to a new file.
+    - G601 # Taking address of loop variable - not relevant anymore.
+    - G602 # Should reports out of bound access but is broken.

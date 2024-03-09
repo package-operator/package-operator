@@ -109,14 +109,14 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 		},
 		{
 			name: "uncached get errors",
-			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+			mockPrepare: func(_ *testing.T, _ *corev1alpha1.ObjectSet, _, uncachedClient *testutil.CtrlClient) {
 				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("wrap: %w", ErrStatic))
 			},
 			cleanupDone: false,
 			expectedErr: ErrStatic,
-			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
+			assertCalls: func(t *testing.T, _, uncachedClient *testutil.CtrlClient) {
 				t.Helper()
 				uncachedClient.AssertCalled(
 					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -124,14 +124,14 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 		},
 		{
 			name: "orphaned phase",
-			mockPrepare: func(_ *testing.T, os *corev1alpha1.ObjectSet, clientMock, uncachedClient *testutil.CtrlClient) {
+			mockPrepare: func(_ *testing.T, _ *corev1alpha1.ObjectSet, _, uncachedClient *testutil.CtrlClient) {
 				uncachedClient.
 					On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			cleanupDone: true,
 			expectedErr: nil,
-			assertCalls: func(t *testing.T, clientMock, uncachedClient *testutil.CtrlClient) {
+			assertCalls: func(t *testing.T, _, uncachedClient *testutil.CtrlClient) {
 				t.Helper()
 				uncachedClient.AssertCalled(
 					t, "Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything)

@@ -75,7 +75,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 	subTests := []subTest{
 		{
 			name: "happyPath",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -148,7 +148,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		},
 		{
 			name: "deleteAllOfFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -171,7 +171,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		},
 		{
 			name: "listFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -198,7 +198,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		},
 		{
 			name: "patchFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -244,7 +244,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		},
 		{
 			name: "waitToBeGoneFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -320,7 +320,7 @@ func TestEnsureCRDGone(t *testing.T) {
 	subTests := []subTest{
 		{
 			name: "happyPathAlreadyGone",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -341,7 +341,7 @@ func TestEnsureCRDGone(t *testing.T) {
 		},
 		{
 			name: "happyPath",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -370,7 +370,7 @@ func TestEnsureCRDGone(t *testing.T) {
 		},
 		{
 			name: "deleteFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
@@ -391,7 +391,7 @@ func TestEnsureCRDGone(t *testing.T) {
 		},
 		{
 			name: "waitFails",
-			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, scheme *runtime.Scheme) {
+			t: func(t *testing.T, c *testutil.CtrlClient, ctx context.Context, _ *runtime.Scheme) {
 				t.Helper()
 
 				log, err := logr.FromContext(ctx)
