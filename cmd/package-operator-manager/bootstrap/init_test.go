@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -73,7 +73,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
 				).Once().Return(
-					apimachineryerrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+					apimachineryerrors.NewInternalError(errors.New("i'm just chillin' here"))) //nolint:goerr113
 
 				needsBootstrap, err := i.ensureUpdatedPKO(ctx)
 				require.False(t, needsBootstrap)
@@ -98,7 +98,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.IsType(&corev1alpha1.ClusterPackage{}),
 					mock.Anything,
 				).Once().Return(
-					apimachineryerrors.NewInternalError(fmt.Errorf("i'm just chillin' here"))) //nolint:goerr113
+					apimachineryerrors.NewInternalError(errors.New("i'm just chillin' here"))) //nolint:goerr113
 
 				_, err := i.ensureUpdatedPKO(ctx)
 				require.True(t, apimachineryerrors.IsInternalError(err))

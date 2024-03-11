@@ -36,10 +36,10 @@ func main() {
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
 		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.14.0"),
-		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.29.1"),
-		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.55.2"),
+		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.29.2"),
+		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.56.2"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
-		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.14.0"),
+		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.14.2"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {

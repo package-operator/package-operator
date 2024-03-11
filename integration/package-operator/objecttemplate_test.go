@@ -166,7 +166,7 @@ spec:
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, pkg, "to be created",
-			func(obj client.Object) (done bool, err error) {
+			func(client.Object) (bool, error) {
 				return true, nil
 			}, wait.WithTimeout(20*time.Second),
 		),
@@ -213,7 +213,7 @@ spec:
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, clusterPkg, "to be created",
-			func(obj client.Object) (done bool, err error) { return true, nil },
+			func(client.Object) (bool, error) { return true, nil },
 			wait.WithTimeout(20*time.Second),
 		),
 	)
@@ -234,7 +234,7 @@ spec:
 	deployment.Namespace = defaultNamespace
 
 	require.NoError(t,
-		Waiter.WaitForObject(ctx, deployment, "to be created", func(obj client.Object) (done bool, err error) {
+		Waiter.WaitForObject(ctx, deployment, "to be created", func(client.Object) (bool, error) {
 			return true, nil
 		}, wait.WithTimeout(20*time.Second)))
 
@@ -265,10 +265,7 @@ func createCMAndObjectTemplateSource(
 		Name:       cmName,
 		Namespace:  defaultNamespace,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
-			{
-				Key:         fmt.Sprintf(".data.%s", cmKey),
-				Destination: fmt.Sprintf(".%s", cmDestination),
-			},
+			{Key: ".data." + cmKey, Destination: "." + cmDestination}, //nolint:goconst
 		},
 	}
 	return cm, cmSource
@@ -304,10 +301,7 @@ func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
 		Kind:       "Secret",
 		Name:       secretName,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
-			{
-				Key:         fmt.Sprintf(".data.%s", secretKey),
-				Destination: fmt.Sprintf(".%s", secretDestination),
-			},
+			{Key: ".data." + secretKey, Destination: "." + secretDestination},
 		},
 	}
 	packageName := "test-stub-secret-test"
@@ -354,7 +348,7 @@ spec:
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, pkg, "to be created",
-			func(obj client.Object) (done bool, err error) { return true, nil },
+			func(client.Object) (bool, error) { return true, nil },
 			wait.WithTimeout(20*time.Second),
 		),
 	)
@@ -395,10 +389,7 @@ func TestObjectTemplate_waitsForSource(t *testing.T) {
 		Name:       secretName,
 		Optional:   true,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
-			{
-				Key:         fmt.Sprintf(".data.%s", secretKey),
-				Destination: fmt.Sprintf(".%s", secretDestination),
-			},
+			{Key: ".data." + secretKey, Destination: "." + secretDestination},
 		},
 	}
 	cmName := "object-template-cm-1"
@@ -437,7 +428,7 @@ data:
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, cm, "to be created",
-			func(obj client.Object) (done bool, err error) { return true, nil },
+			func(client.Object) (bool, error) { return true, nil },
 			wait.WithTimeout(20*time.Second),
 		),
 	)

@@ -21,6 +21,7 @@ package dynamiccache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -118,7 +119,7 @@ func (c *CacheReader) List(_ context.Context, out client.ObjectList, opts ...cli
 		// combining multiple indices, GetIndexers, etc
 		field, val, requiresExact := requiresExactMatch(listOpts.FieldSelector)
 		if !requiresExact {
-			return fmt.Errorf("non-exact field matches are not supported by the cache")
+			return errors.New("non-exact field matches are not supported by the cache")
 		}
 		// list all objects by the field selector.  If this is namespaced and we have one, ask for the
 		// namespaced index key.  Otherwise, ask for the non-namespaced variant by using the fake "all namespaces"

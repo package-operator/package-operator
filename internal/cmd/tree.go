@@ -204,7 +204,7 @@ func newTreeFromSpec(header string, spec v1alpha1.ObjectSetTemplateSpec) gotree.
 	tree := gotree.New(header)
 
 	for _, phase := range spec.Phases {
-		treePhase := tree.Add(fmt.Sprintf("Phase %s", phase.Name))
+		treePhase := tree.Add("Phase " + phase.Name)
 
 		for _, obj := range phase.Objects {
 			treePhase.Add(

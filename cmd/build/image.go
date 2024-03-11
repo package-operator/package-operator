@@ -14,6 +14,8 @@ import (
 )
 
 func buildImage(ctx context.Context, name, registry, goarch string) error {
+	url := imageURL(registry, name, appVersion)
+
 	buildDir, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
 	if err != nil {
 		return err
@@ -60,14 +62,12 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 		}
 	}
 
-	return oci.NewOCI(name, buildDir,
-		oci.WithContainerFile("Containerfile"),
-		oci.WithTags{appVersion},
-		oci.WithRegistries{registry},
-	).Build()
+	return oci.NewOCI(url, buildDir, oci.WithContainerFile("Containerfile")).Build()
 }
 
 func pushImage(ctx context.Context, name, registry, goarch string) error {
+	url := imageURL(registry, name, appVersion)
+
 	imgPath, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
 	if err != nil {
 		return err
@@ -80,9 +80,7 @@ func pushImage(ctx context.Context, name, registry, goarch string) error {
 		return err
 	}
 
-	return oci.NewOCI(name, imgPath,
-		oci.WithTags{appVersion},
-		oci.WithRegistries{registry},
+	return oci.NewOCI(url, imgPath,
 		// push via crane, because podman does not support HTTP pushes for local dev.
 		oci.WithCranePush{},
 	).Push()

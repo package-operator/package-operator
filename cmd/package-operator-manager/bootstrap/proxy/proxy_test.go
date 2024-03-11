@@ -196,7 +196,7 @@ func TestProxyVarsMergeTo(t *testing.T) {
 			},
 		},
 		{
-			env: []string{fmt.Sprintf("%s=old-proxy", httpProxyVar), "old_var=val"},
+			env: []string{httpProxyVar + "=old-proxy", "old_var=val"},
 			expected: []string{
 				"old_var=val",
 				fmt.Sprintf("%s=%s", httpProxyVar, pv.httpProxy),

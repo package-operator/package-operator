@@ -28,7 +28,7 @@ func (v ViolationError) Error() string {
 
 	// Attach path to message if set.
 	if v.Path != "" {
-		msg += fmt.Sprintf(" in %s", v.Path)
+		msg += " in " + v.Path
 		if v.Index != nil {
 			msg += fmt.Sprintf(" idx %d", *v.Index)
 		}

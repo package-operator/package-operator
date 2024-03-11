@@ -428,7 +428,7 @@ func RelaxedJSONPathExpression(pathExpression string) (string, error) {
 	}
 	submatches := jsonRegexp.FindStringSubmatch(pathExpression)
 	if submatches == nil {
-		err := fmt.Errorf("path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
+		err := errors.New("path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
 		return "", err
 	}
 	if len(submatches) != 3 {

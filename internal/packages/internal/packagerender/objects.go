@@ -159,7 +159,7 @@ func filterWithCELAnnotation(
 }
 
 func replaceMacros(expression string, macros map[string]string) string {
-	if macros == nil || len(macros) == 0 {
+	if len(macros) == 0 {
 		return expression
 	}
 

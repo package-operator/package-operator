@@ -47,7 +47,7 @@ This fix cleans up the singular version of two pluralized CRDs.
 type CRDPluralizationFix struct{}
 
 var (
-	pkoClusterObjectSetLabelSelector = fmt.Sprintf("%s=package-operator", manifestsv1alpha1.PackageLabel)
+	pkoClusterObjectSetLabelSelector = manifestsv1alpha1.PackageLabel + "=package-operator"
 	deletionWaitTimeout              = time.Minute
 	deletionWaitInterval             = time.Second
 )
@@ -151,9 +151,7 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(
 			wait.WithTimeout(deletionWaitTimeout))
 		if err := waiter.WaitToBeGone(ctx,
 			&cos,
-			func(obj client.Object) (done bool, err error) {
-				return false, nil
-			},
+			func(client.Object) (done bool, err error) { return false, nil },
 		); err != nil {
 			return err
 		}
@@ -179,10 +177,11 @@ func (f CRDPluralizationFix) ensureCRDGone(ctx context.Context, fc Context, name
 	}
 
 	// wait for object to be fully deleted
-	waiter := wait.NewWaiter(fc.Client, fc.Client.Scheme(),
-		wait.WithInterval(deletionWaitInterval),
-		wait.WithTimeout(deletionWaitTimeout))
-	return waiter.WaitToBeGone(ctx, crd, func(obj client.Object) (done bool, err error) { return false, nil })
+	waiter := wait.NewWaiter(
+		fc.Client, fc.Client.Scheme(),
+		wait.WithInterval(deletionWaitInterval), wait.WithTimeout(deletionWaitTimeout),
+	)
+	return waiter.WaitToBeGone(ctx, crd, func(client.Object) (bool, error) { return false, nil })
 }
 
 // Checks if at least one of the given CRD pairs exists in the apiserver.

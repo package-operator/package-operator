@@ -43,6 +43,8 @@ jobs:
       with:
         files: .cache/unit/cover.txt,.cache/integration/cover.txt
         token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+        verbose: true
 
     - name: Archive unit test results
       uses: actions/upload-artifact@v4

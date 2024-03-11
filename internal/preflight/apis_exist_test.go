@@ -2,7 +2,7 @@ package preflight_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -44,7 +44,7 @@ func TestAPIExistenceExists(t *testing.T) {
 	obj := &appsv1.Deployment{TypeMeta: metav1.TypeMeta{Kind: "kind", APIVersion: "3"}}
 
 	checkVios := []preflight.Violation{{Position: "12321"}}
-	checkErr := fmt.Errorf("smth") //nolint: goerr113
+	checkErr := errors.New("smth") //nolint: goerr113
 
 	m.On("RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"}).Once().Return(&meta.RESTMapping{}, nil)
 	s.On("Check", ctx, owner, obj).Once().Return(checkVios, checkErr)
@@ -84,7 +84,7 @@ func TestAPIExistenceErr(t *testing.T) {
 	owner := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "blorb"}}
 	obj := &appsv1.Deployment{TypeMeta: metav1.TypeMeta{Kind: "kind", APIVersion: "3"}}
 
-	checkErr := fmt.Errorf("smth") //nolint: goerr113
+	checkErr := errors.New("smth") //nolint: goerr113
 
 	m.On(
 		"RESTMapping", schema.GroupKind{Group: "", Kind: "kind"}, []string{"3"},

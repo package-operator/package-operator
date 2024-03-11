@@ -47,10 +47,10 @@ func TestHypershift_start_foundOnSecondPoll(t *testing.T) {
 	clk := clocktesting.NewFakeClock(time.Time{})
 
 	restMock := &restmappermock.RestMapperMock{}
-	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{}).Run(func(args mock.Arguments) {
+	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{}).Run(func(mock.Arguments) {
 		clk.Step(hyperShiftPollInterval)
 	}).Once()
-	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, nil).Run(func(args mock.Arguments) {
+	restMock.On("RESTMapping").Return(&meta.RESTMapping{}, nil).Run(func(mock.Arguments) {
 		clk.Step(hyperShiftPollInterval)
 	}).Once()
 
