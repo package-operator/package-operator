@@ -10,7 +10,7 @@ metadata:
     package-operator.run/phase: deploy
     package-operator.run/condition-map: |
       Progressing => my-prefix/Progressing
-    package-operator.run/condition: "justTrue || false"
+    package-operator.run/condition: "justTrue"
 spec:
   replicas: 2
   selector:

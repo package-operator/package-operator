@@ -9,6 +9,6 @@ metadata:
   annotations:
     test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"},\"openShift\":{\"version\":\"v4.13.0\"},\"proxy\":{\"httpProxy\":\"xxx\",\"httpsProxy\":\"xxx\",\"noProxy\":\"xxxxx\"}}"
     package-operator.run/phase: deploy
-    package-operator.run/condition: "(false || justTrue) && justFalse"
+    package-operator.run/condition: "false"
 data:
   banana: "bread"

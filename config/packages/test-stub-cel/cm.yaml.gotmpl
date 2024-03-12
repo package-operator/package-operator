@@ -11,6 +11,6 @@ metadata:
   annotations:
     test-environment: {{.environment | toJson | quote}}
     package-operator.run/phase: deploy
-    package-operator.run/condition: "(false || justTrue) && justFalse"
+    package-operator.run/condition: "false"
 data:
   banana: "bread"

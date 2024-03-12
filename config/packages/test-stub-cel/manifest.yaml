@@ -32,9 +32,9 @@ spec:
       type: object
   celMacros:
   - name: "justTrue"
-    expression: "false || true"
+    expression: "true"
   - name: "justFalse"
-    expression: "true && (false || false)"
+    expression: "false"
 test:
   template:
   - name: namespace-scope
