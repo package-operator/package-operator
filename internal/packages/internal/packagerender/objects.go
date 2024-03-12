@@ -13,6 +13,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -70,7 +71,8 @@ func RenderObjects(
 		objs := pathObjectMap[path]
 		objects = append(objects, objs...)
 	}
-	return objects, nil
+
+	return filterWithCELAnnotation(objects, &tmplCtx)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -112,4 +114,36 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 		manifests.PackageLabel:         manifest.Name,
 		manifests.PackageInstanceLabel: packageName,
 	}
+}
+
+func filterWithCELAnnotation(
+	objects []unstructured.Unstructured,
+	tmplCtx *packagetypes.PackageRenderContext,
+) (
+	[]unstructured.Unstructured, error,
+) {
+	filtered := make([]unstructured.Unstructured, 0, len(objects))
+
+	for _, obj := range objects {
+		cel, ok := obj.GetAnnotations()[v1alpha1.PackageCELConditionAnnotation]
+		if !ok {
+			filtered = append(filtered, obj)
+			continue
+		}
+
+		celResult, err := evaluateCELCondition(cel, tmplCtx)
+		if err != nil {
+			return nil, packagetypes.ViolationError{
+				Reason:  packagetypes.ViolationReasonInvalidCELExpression,
+				Details: err.Error(),
+				Subject: obj.GetName(),
+			}
+		}
+
+		if celResult {
+			filtered = append(filtered, obj)
+		}
+	}
+
+	return filtered, nil
 }

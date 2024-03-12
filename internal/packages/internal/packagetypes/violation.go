@@ -79,6 +79,7 @@ const (
 	ViolationReasonLockfileMissing               ViolationReason = "Missing image in manifest.lock.yaml, but using PackageManifest.spec.images. Try running: kubectl package update" //nolint: lll
 	ViolationReasonImageMissingInLockfile        ViolationReason = "Image specified in manifest but missing from lockfile. Try running: kubectl package update"                      //nolint: lll
 	ViolationReasonImageDifferentToLockfile      ViolationReason = "Image specified in manifest does not match with lockfile. Try running: kubectl package update"                   //nolint: lll
+	ViolationReasonInvalidCELExpression          ViolationReason = "The CEL expression in " + manifests.PackageCELConditionAnnotation + " annotation is invalid."                    //nolint: lll
 )
 
 var ErrEmptyPackage = ViolationError{

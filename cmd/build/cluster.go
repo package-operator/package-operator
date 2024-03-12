@@ -97,6 +97,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		run.Fn2(pushPackage, "remote-phase", registry),
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
+		run.Fn2(pushPackage, "test-stub-cel", registry),
 	); err != nil {
 		return err
 	}

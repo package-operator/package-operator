@@ -13,6 +13,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gobwas/glob v0.2.3
+	github.com/google/cel-go v0.17.7
 	github.com/google/go-containerregistry v0.19.0
 	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/onsi/gomega v1.31.1
@@ -80,7 +81,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.17.7 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
