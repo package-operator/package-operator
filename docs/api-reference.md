@@ -1247,6 +1247,9 @@ spec:
   - expression: consetetur
     name: amet
   components: PackageManifestComponentsConfig
+  conditionalPaths:
+  - expression: elitr
+    glob: sadipscing
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1259,36 +1262,36 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: amet
+    kubernetesVersion: sadipscing
     schemaLocations:
-    - consetetur
+    - elitr
   template:
   - context:
       config: runtime.RawExtension
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: sit
+            hostedClusterNamespace: consetetur
             metadata:
               annotations: map[string]string
               labels: map[string]string
-              name: ipsum
-              namespace: dolor
+              name: sit
+              namespace: amet
         kubernetes:
-          version: diam
+          version: eirmod
         openShift:
-          version: nonumy
+          version: tempor
         proxy:
-          httpProxy: eirmod
-          httpsProxy: tempor
-          noProxy: lorem
+          httpProxy: lorem
+          httpsProxy: ipsum
+          noProxy: dolor
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: elitr
-          namespace: sed
-    name: sadipscing
+          name: diam
+          namespace: nonumy
+    name: sed
 
 ```
 
@@ -1315,9 +1318,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: sed
-    image: elitr
-    name: sadipscing
+  - digest: nonumy
+    image: diam
+    name: sed
 
 ```
 
@@ -1436,6 +1439,20 @@ Used in:
 * [PackageManifestSpec](#packagemanifestspec)
 
 
+### PackageManifestConditionalPath
+
+
+
+| Field | Description |
+| ----- | ----------- |
+| `glob` <b>required</b><br>string | A file system path glob pattern.<br>Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestImage
 
 PackageManifestImage specifies an image tag to be resolved.
@@ -1506,6 +1523,7 @@ details about phases and availability probes.
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
 | `celMacros` <br><a href="#packagemanifestcelmacro">[]PackageManifestCelMacro</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object nad its subtree are ignored. |
 
 
 Used in:

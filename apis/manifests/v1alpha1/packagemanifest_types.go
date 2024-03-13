@@ -81,6 +81,19 @@ type PackageManifestSpec struct {
 	// They are evaluated once per package.
 	// +optional
 	CelMacros []PackageManifestCelMacro `json:"celMacros,omitempty"`
+	// Adds CEL conditions to file system paths matching a glob pattern.
+	// If a single condition matching a file system object's path evaluates to false,
+	// the object nad its subtree are ignored.
+	ConditionalPaths []PackageManifestConditionalPath `json:"conditionalPaths,omitempty"`
+}
+
+type PackageManifestConditionalPath struct {
+	// A file system path glob pattern.
+	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match
+	Glob string `json:"glob"`
+	// A CEL expression with a boolean output type.
+	// Has access to the full template context.
+	Expression string `json:"expression"`
 }
 
 // PackageManifestCelMacro is a reusable named CEL expression.
