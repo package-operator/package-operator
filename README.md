@@ -54,7 +54,7 @@ Be careful to check the change notes for alpha and beta APIs.
 
 Package Operator documentation is available on [package-operator.run](https://package-operator.run).
 
-The source of this website is our [website repository](https://github.com/package-operator/package-operator.github.io) which is hosted via Github Pages, [Hugo](https://gohugo.io/) and using the [Doks template](https://getdoks.org/).
+The source of this website is our [website repository](https://github.com/package-operator/website) which is hosted via Netifly, [Hugo](https://gohugo.io/) and using the [Doks template](https://getdoks.org/).
 
 ## Getting in touch
 
