@@ -1,2 +1,3 @@
 ignore:
   - "**/zz_generated*.go"
+  - "cmd/build"
