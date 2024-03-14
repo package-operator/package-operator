@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
+
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -30,13 +33,15 @@ func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployme
 	require.NoError(t, Client.Create(ctx, pkg))
 	cleanupOnSuccess(ctx, t, pkg)
 
+	timeoutOpt := wait.WithTimeout(40 * time.Second)
+
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue))
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue, timeoutOpt))
 	// Condition Mapping from Deployment
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg, "my-prefix/Progressing", metav1.ConditionTrue))
+		Waiter.WaitForCondition(ctx, pkg, "my-prefix/Progressing", metav1.ConditionTrue, timeoutOpt))
 	require.NoError(t,
-		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue))
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, timeoutOpt))
 
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: pkg.GetName(), Namespace: pkg.GetNamespace(),
