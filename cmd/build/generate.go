@@ -54,6 +54,7 @@ func (Generate) code() error {
 		return fmt.Errorf("generating kubernetes manifests: %w", err)
 	}
 
+	// deepcopy generator
 	err = sh.New(sh.WithWorkDir("apis")).Run("controller-gen", "object", "paths=./...")
 	if err != nil {
 		return fmt.Errorf("generating deep copy methods: %w", err)
@@ -64,6 +65,27 @@ func (Generate) code() error {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
+	// conversion generator
+	if err := shr.Run(
+		"conversion-gen", "--input-dirs", "./internal/apis/manifests",
+		"--extra-peer-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
+		"--output-base=./",
+		"--output-file-base=zz_generated.conversion",
+		"-h", "/dev/null"); err != nil {
+		return (fmt.Errorf("generating conversion methods: %w", err))
+	}
+	// conversion-gen expects the SchemeBuilder to be called "localSchemeBuilder"
+	conversionFilePath := "./internal/apis/manifests/zz_generated.conversion.go"
+	conversionFile, err := os.ReadFile(conversionFilePath)
+	if err != nil {
+		return (fmt.Errorf("reading zz_generated.conversion.go file: %w", err))
+	}
+	conversionFile = bytes.Replace(conversionFile, []byte(`localSchemeBuilder`), []byte(`SchemeBuilder`), 1)
+	if err := os.WriteFile(conversionFilePath, conversionFile, os.ModePerm); err != nil {
+		return (fmt.Errorf("writing zz_generated.conversion.go file: %w", err))
+	}
+
+	// copy CRDs over to config/statis-deployment
 	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))
 	if err != nil {
 		return fmt.Errorf("finding CRDs: %w", err)
