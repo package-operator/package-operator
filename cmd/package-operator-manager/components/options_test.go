@@ -8,7 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+//nolint:paralleltest
+//nolint:nolintlint // directive `//nolint:paralleltest` is unused for linter "paralleltest" (nolintlint)
 func TestProvideOptions(t *testing.T) {
+	// t.Parallel()
+	// panic: testing: t.Setenv called after t.Parallel; cannot set environment variables in parallel tests
+
 	t.Setenv("PKO_SUB_COMPONENT_TOLERATIONS",
 		`[{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"},`+
 			`{"effect":"NoSchedule","key":"hypershift.openshift.io/hosted-control-plane"}]`,
