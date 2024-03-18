@@ -123,8 +123,7 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 			},
 		},
 		kind.WithClientOptions{
-			kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
-			kubeclients.WithSchemeBuilder{hsv1beta1.AddToScheme},
+			kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme, hsv1beta1.AddToScheme},
 		},
 		kind.WithClusterInitializers(clusterInitializers),
 	)
