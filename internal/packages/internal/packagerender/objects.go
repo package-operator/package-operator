@@ -3,8 +3,6 @@ package packagerender
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -17,6 +15,7 @@ import (
 
 	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packagerender/celctx"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -28,11 +27,6 @@ func RenderObjects(
 ) (
 	[]unstructured.Unstructured, error,
 ) {
-	macros, err := evaluateCELMacros(pkg.Manifest.Spec.CelMacros, &tmplCtx)
-	if err != nil {
-		return nil, err
-	}
-
 	pathObjectMap := map[string][]unstructured.Unstructured{}
 
 	for path, content := range pkg.Files {
@@ -79,7 +73,7 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 
-	return filterWithCELAnnotation(objects, &tmplCtx, macros)
+	return filterWithCELAnnotation(objects, pkg.Manifest.Spec.CelMacros, &tmplCtx)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -125,11 +119,16 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
+	macros []manifests.PackageManifestCelMacro,
 	tmplCtx *packagetypes.PackageRenderContext,
-	macros map[string]string,
 ) (
 	[]unstructured.Unstructured, error,
 ) {
+	cc, err := celctx.New(macros, tmplCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	filtered := make([]unstructured.Unstructured, 0, len(objects))
 
 	for _, obj := range objects {
@@ -139,9 +138,7 @@ func filterWithCELAnnotation(
 			continue
 		}
 
-		cel = replaceMacros(cel, macros)
-
-		celResult, err := evaluateCELCondition(cel, tmplCtx)
+		celResult, err := cc.Evaluate(cel)
 		if err != nil {
 			return nil, packagetypes.ViolationError{
 				Reason:  packagetypes.ViolationReasonInvalidCELExpression,
@@ -156,60 +153,4 @@ func filterWithCELAnnotation(
 	}
 
 	return filtered, nil
-}
-
-func replaceMacros(expression string, macros map[string]string) string {
-	if len(macros) == 0 {
-		return expression
-	}
-
-	result := expression
-	for name, eval := range macros {
-		result = strings.ReplaceAll(result, name, eval)
-	}
-	return result
-}
-
-var (
-	ErrDuplicateCELMacroName = errors.New("duplicate CEL macro name")
-	ErrCELMacroEvaluation    = errors.New("CEL macro evaluation failed")
-	ErrInvalidCELMacroName   = errors.New("invalid CEL macro name")
-	macroNameRegexp          = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
-)
-
-func evaluateCELMacros(
-	macros []manifests.PackageManifestCelMacro,
-	tmplCtx *packagetypes.PackageRenderContext,
-) (
-	map[string]string, error,
-) {
-	if macros == nil {
-		return map[string]string{}, nil
-	}
-
-	evaluation := make(map[string]string, len(macros))
-	for _, m := range macros {
-		// validate macro name
-		if !macroNameRegexp.MatchString(m.Name) {
-			return nil, fmt.Errorf("%w: '%s'", ErrInvalidCELMacroName, m.Name)
-		}
-
-		// make sure name is unique
-		if _, ok := evaluation[m.Name]; ok {
-			return nil, fmt.Errorf("%w: '%s'", ErrDuplicateCELMacroName, m.Name)
-		}
-
-		result, err := evaluateCELCondition(m.Expression, tmplCtx)
-		if err != nil {
-			return nil, fmt.Errorf("%w: '%s': %w", ErrCELMacroEvaluation, m.Name, err)
-		}
-
-		if result {
-			evaluation[m.Name] = "true"
-		} else {
-			evaluation[m.Name] = "false"
-		}
-	}
-
-	return evaluation, nil
 }
