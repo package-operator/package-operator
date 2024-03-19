@@ -2,6 +2,7 @@ package packagedeploy
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -72,4 +74,92 @@ func TestEachObjectChunker(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Len(t, chunks, 3)
+}
+
+func TestBinpackNextFitChunkerChunker(t *testing.T) {
+	t.Parallel()
+
+	tcases := []struct {
+		name                string
+		objectSizes         []int
+		expectedBucketCount int
+	}{
+		{
+			name: "two small objects - not filling up a single bucket - bypassing chunking",
+			objectSizes: []int{
+				10 * 1024,
+				10 * 1024,
+			},
+			expectedBucketCount: 0,
+		},
+		{
+			name: "one big two small",
+			objectSizes: []int{
+				1024 * 1024,
+				10 * 1024,
+				10 * 1024,
+			},
+			expectedBucketCount: 2,
+		},
+		{
+			name: "one small one big one small",
+			objectSizes: []int{
+				10 * 1024,
+				1024 * 1024,
+				10 * 1024,
+			},
+			expectedBucketCount: 3,
+		},
+		{
+			name: "three big",
+			objectSizes: []int{
+				1024 * 1024,
+				1024 * 1024,
+				1024 * 1024,
+			},
+			expectedBucketCount: 3,
+		},
+		{
+			name: "three bigger",
+			objectSizes: []int{
+				1025 * 1024,
+				1025 * 1024,
+				1025 * 1024,
+			},
+			expectedBucketCount: 3,
+		},
+	}
+
+	for i := range tcases {
+		tc := tcases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := logr.NewContext(context.Background(), testr.New(t))
+
+			c := &BinpackNextFitChunker{}
+
+			objects := make([]corev1alpha1.ObjectSetObject, 0, len(tc.objectSizes))
+			for _, size := range tc.objectSizes {
+				objects = append(objects, corev1alpha1.ObjectSetObject{
+					Object: genBigObject(size),
+				})
+			}
+
+			chunks, err := c.Chunk(ctx, &corev1alpha1.ObjectSetTemplatePhase{
+				Objects: objects,
+			})
+			require.NoError(t, err)
+			assert.Len(t, chunks, tc.expectedBucketCount)
+		})
+	}
+}
+
+func genBigObject(size int) unstructured.Unstructured {
+	obj := unstructured.Unstructured{}
+	obj.SetAnnotations(map[string]string{
+		"a": strings.Repeat("a", size),
+	})
+	return obj
 }
