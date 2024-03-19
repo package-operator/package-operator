@@ -15,7 +15,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.17.7
 	github.com/google/go-containerregistry v0.19.1
-	github.com/onsi/ginkgo/v2 v2.16.0
+	github.com/onsi/ginkgo/v2 v2.17.0
 	github.com/onsi/gomega v1.31.1
 	github.com/openshift/api v0.0.0-20240306072808-610cbc77dbab
 	github.com/prometheus/client_golang v1.19.0
