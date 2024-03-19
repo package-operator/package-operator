@@ -89,8 +89,8 @@ func (dev *Dev) Create(ctx context.Context, _ []string) error {
 }
 
 // Load CRDs into the local development cluster.
-func (dev *Dev) LoadPKOCRDS(ctx context.Context, args []string) error {
-	self := run.Meth1(dev, dev.LoadPKOCRDS, args)
+func (dev *Dev) LoadCRDs(ctx context.Context, args []string) error {
+	self := run.Meth1(dev, dev.LoadCRDs, args)
 	if err := mgr.ParallelDeps(ctx, self,
 		run.Meth(generate, generate.code),
 		run.Meth(cluster, cluster.create),
@@ -130,7 +130,7 @@ func (dev *Dev) Destroy(ctx context.Context, _ []string) error {
 	)
 }
 
-// Install the Hypershift HostedClusters API in the local development cluster.
+// Install the Hypershift HostedCluster API in the local development cluster.
 func (dev *Dev) InstallHypershiftAPIs(ctx context.Context, _ []string) error {
 	self := run.Meth1(dev, dev.InstallHypershiftAPIs, []string{})
 	if err := mgr.ParallelDeps(ctx, self,
@@ -157,7 +157,7 @@ func (dev *Dev) InstallHypershiftAPIs(ctx context.Context, _ []string) error {
 func (dev *Dev) CreateHostedCluster(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.CreateHostedCluster, args)
 	if err := mgr.ParallelDeps(ctx, self,
-		run.Meth1(dev, dev.LoadPKOCRDS, []string{}),
+		run.Meth1(dev, dev.LoadCRDs, []string{}),
 		run.Meth1(dev, dev.InstallHypershiftAPIs, []string{}),
 		run.Meth(hypershiftHostedCluster, hypershiftHostedCluster.create),
 	); err != nil {
@@ -233,15 +233,16 @@ func (dev *Dev) CreateHostedCluster(ctx context.Context, args []string) error {
 	return nil
 }
 
-func (dev *Dev) ExecPKO(ctx context.Context, args []string) error {
-	self := run.Meth1(dev, dev.CreateHostedCluster, args)
+// Run Package Operator manager connected to local development cluster.
+func (dev *Dev) Run(ctx context.Context, args []string) error {
+	self := run.Meth1(dev, dev.Run, args)
 	if err := mgr.SerialDeps(ctx, self,
-		run.Meth1(dev, dev.LoadPKOCRDS, []string{}),
+		run.Meth1(dev, dev.LoadCRDs, []string{}),
 		run.Fn(func() error {
 			// get mgmt cluster clients
 			clClients, err := cluster.Clients()
 			if err != nil {
-				return fmt.Errorf("can't get client for mgmt cluster %s: %w", cluster.Name(), err)
+				return fmt.Errorf("can't get client for cluster %s: %w", cluster.Name(), err)
 			}
 			if err := clClients.CtrlClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -252,7 +253,6 @@ func (dev *Dev) ExecPKO(ctx context.Context, args []string) error {
 			}
 			return nil
 		}),
-		run.Meth(hypershiftHostedCluster, hypershiftHostedCluster.create),
 	); err != nil {
 		return err
 	}
@@ -265,6 +265,14 @@ func (dev *Dev) ExecPKO(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("resolving absolute go binary path: %w", err)
 	}
+	kubeconfigPath, err := cluster.KubeconfigPath()
+	if err != nil {
+		return fmt.Errorf("retrieving cluster kubeconfig path: %w", err)
+	}
+
+	if err = os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+		return fmt.Errorf("setting KUBECONFIG env variable: %w", err)
+	}
 
 	goArgs := []string{
 		absGoBinPath,
@@ -273,7 +281,7 @@ func (dev *Dev) ExecPKO(ctx context.Context, args []string) error {
 		"-namespace", "package-operator-system",
 		"-enable-leader-election=true",
 		"-registry-host-overrides", "quay.io=localhost:5001",
-		"--remote-phase-package-image", imageRegistry() + "/remote-phase-manager:" + appVersion,
+		"--remote-phase-package-image", imageRegistry() + "/remote-phase-package:" + appVersion,
 	}
 
 	return unix.Exec(absGoBinPath, goArgs, os.Environ())
