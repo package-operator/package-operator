@@ -270,7 +270,7 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("retrieving cluster kubeconfig path: %w", err)
 	}
 
-	if err = os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+	if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
 		return fmt.Errorf("setting KUBECONFIG env variable: %w", err)
 	}
 
