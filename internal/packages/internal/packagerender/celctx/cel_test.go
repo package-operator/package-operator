@@ -49,6 +49,25 @@ func Test_newCelCtx(t *testing.T) {
 			},
 			errContains: `CEL macro evaluation failed`,
 		},
+		{
+			name:       "invalid macro name",
+			expression: "1ustTrue",
+			macros: []manifests.PackageManifestCelMacro{
+				{Name: "1ustTrue", Expression: "true"},
+			},
+			tmplCtx:     nil,
+			errContains: ErrInvalidCELMacroName.Error(),
+		},
+		{
+			name:       "duplicate macro name",
+			expression: "justTrue",
+			macros: []manifests.PackageManifestCelMacro{
+				{Name: "justTrue", Expression: "true"},
+				{Name: "justTrue", Expression: "false"},
+			},
+			tmplCtx:     nil,
+			errContains: ErrDuplicateCELMacroName.Error(),
+		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
