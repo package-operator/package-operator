@@ -87,6 +87,8 @@ type PackageManifestSpec struct {
 	ConditionalPaths []PackageManifestConditionalPath `json:"conditionalPaths,omitempty"`
 }
 
+// PackageManifestConditionalPath is used to conditionally
+// render package objects based on their path.
 type PackageManifestConditionalPath struct {
 	// A file system path glob pattern.
 	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match

@@ -1441,7 +1441,8 @@ Used in:
 
 ### PackageManifestConditionalPath
 
-
+PackageManifestConditionalPath is used to conditionally
+render package objects based on their path.
 
 | Field | Description |
 | ----- | ----------- |
