@@ -35,6 +35,9 @@ const (
 	// Allows to force a chunking strategy when set on a Package object.
 	chunkingStrategyAnnotation = "packages.package-operator.run/chunking-strategy"
 
+	// Chunks no objects at all.
+	chunkingStrategyNoOp chunkingStrategy = "NoOp"
+
 	// Chunks objects by putting every single object into it's own slice.
 	chunkingStrategyEachObject chunkingStrategy = "EachObject"
 
@@ -63,8 +66,10 @@ func determineChunkingStrategyForPackage(pkg adapters.GenericPackageAccessor) ob
 		return &EachObjectChunker{}
 	case chunkingStrategyBinpackNextFit:
 		return &BinpackNextFitChunker{}
-	default:
+	case chunkingStrategyNoOp:
 		return &NoOpChunker{}
+	default:
+		return &BinpackNextFitChunker{}
 	}
 }
 

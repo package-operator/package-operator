@@ -19,22 +19,34 @@ import (
 func Test_determineChunkingStrategyForPackage(t *testing.T) {
 	t.Parallel()
 
-	t.Run("EachObject", func(t *testing.T) {
-		t.Parallel()
+	variants := []struct {
+		strategy chunkingStrategy
+		chunker  objectChunker
+	}{
+		{strategy: chunkingStrategyNoOp, chunker: &NoOpChunker{}},
+		{strategy: chunkingStrategyEachObject, chunker: &EachObjectChunker{}},
+		{strategy: chunkingStrategyBinpackNextFit, chunker: &BinpackNextFitChunker{}},
+	}
 
-		pkg := &adapters.GenericPackage{
-			Package: corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						chunkingStrategyAnnotation: string(chunkingStrategyEachObject),
+	for i := range variants {
+		variant := variants[i]
+
+		t.Run(string(variant.strategy), func(t *testing.T) {
+			t.Parallel()
+
+			pkg := &adapters.GenericPackage{
+				Package: corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							chunkingStrategyAnnotation: string(variant.strategy),
+						},
 					},
 				},
-			},
-		}
-		c := determineChunkingStrategyForPackage(pkg)
-		_, ok := c.(*EachObjectChunker)
-		assert.True(t, ok)
-	})
+			}
+			c := determineChunkingStrategyForPackage(pkg)
+			assert.IsType(t, variant.chunker, c)
+		})
+	}
 
 	t.Run("Default", func(t *testing.T) {
 		t.Parallel()
@@ -45,8 +57,7 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 			},
 		}
 		c := determineChunkingStrategyForPackage(pkg)
-		_, ok := c.(*NoOpChunker)
-		assert.True(t, ok)
+		assert.IsType(t, &BinpackNextFitChunker{}, c)
 	})
 }
 
