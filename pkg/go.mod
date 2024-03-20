@@ -6,7 +6,7 @@ require (
 	github.com/google/cel-go v0.17.7
 	github.com/stretchr/testify v1.9.0
 	k8s.io/apimachinery v0.29.3
-	k8s.io/apiserver v0.29.2
+	k8s.io/apiserver v0.29.3
 )
 
 require (
