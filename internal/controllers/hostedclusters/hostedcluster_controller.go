@@ -153,7 +153,7 @@ func (c *HostedClusterController) desiredHostedClusterPackage(
 	cluster *v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
 	return c.desiredPackage(cluster, "hosted-cluster", map[string]any{
-		"namespace":              hostedClusterNamespace(cluster),
+		"namespace":              v1beta1.HostedClusterNamespace(*cluster),
 		"hostedClusterNamespace": defaultHostedClusterNamespace,
 	})
 }

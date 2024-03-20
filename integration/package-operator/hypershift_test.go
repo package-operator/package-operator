@@ -98,7 +98,7 @@ func TestHyperShift(t *testing.T) {
 	}
 	err = Waiter.WaitForCondition(
 		ctx, hcPkg, corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue, dev.WithTimeout(100*time.Second),
+		metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
 	)
 	require.NoError(t, err)
 

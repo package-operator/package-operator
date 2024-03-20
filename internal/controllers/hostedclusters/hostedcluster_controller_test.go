@@ -96,7 +96,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 		`"hostedClusterNamespace":"%s",`+
 		`"namespace":"%s",`+
 		`"tolerations":[{}]}`,
-		defaultHostedClusterNamespace, hostedClusterNamespace(hc))
+		defaultHostedClusterNamespace, hypershiftv1beta1.HostedClusterNamespace(*hc))
 	if assert.NotNil(t, pkg.Spec.Config) {
 		assert.Equal(t, expCfg, string(pkg.Spec.Config.Raw))
 	}
