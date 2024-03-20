@@ -6,25 +6,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
-
-	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
-
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
 func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployment client.Object) {
@@ -159,8 +157,15 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 			err := Client.List(ctx, sliceList)
 			require.NoError(t, err)
 
-			// Just a Deployment
-			assertLenWithJSON(t, sliceList.Items, 2)
+			filteredSlices := []corev1alpha1.ClusterObjectSlice{}
+			for _, item := range sliceList.Items {
+				if !strings.HasPrefix(item.Name, "success-slices-") {
+					continue
+				}
+				filteredSlices = append(filteredSlices, item)
+			}
+
+			assertLenWithJSON(t, filteredSlices, 2)
 		}
 	}
 
