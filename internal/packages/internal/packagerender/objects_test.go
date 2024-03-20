@@ -11,6 +11,7 @@ import (
 
 	"package-operator.run/apis/manifests/v1alpha1"
 
+	"package-operator.run/internal/packages/internal/packagerender/celctx"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -82,7 +83,10 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			filtered, err := filterWithCELAnnotation(tc.objects, tc.macros, tc.tmplCtx)
+			cc, err := celctx.New(tc.macros, tc.tmplCtx)
+			require.NoError(t, err)
+
+			filtered, err := filterWithCELAnnotation(tc.objects, &cc)
 			require.NoError(t, err)
 			require.Equal(t, len(tc.filtered), len(filtered))
 			for i := 0; i < len(filtered); i++ {

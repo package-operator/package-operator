@@ -3,10 +3,14 @@ package packagerender
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/bmatcuk/doublestar"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -52,6 +56,11 @@ func RenderObjects(
 		}
 	}
 
+	err := filterWithCEL(pathObjectMap, &pkg.Manifest.Spec, &tmplCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	// sort paths to have a deterministic output.
 	paths := make([]string, len(pathObjectMap))
 	var i int
@@ -73,7 +82,7 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 
-	return filterWithCELAnnotation(objects, pkg.Manifest.Spec.CelMacros, &tmplCtx)
+	return objects, nil
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -117,22 +126,53 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 	}
 }
 
-func filterWithCELAnnotation(
-	objects []unstructured.Unstructured,
-	macros []manifests.PackageManifestCelMacro,
+func filterWithCEL(
+	pathObjectMap map[string][]unstructured.Unstructured,
+	spec *manifests.PackageManifestSpec,
 	tmplCtx *packagetypes.PackageRenderContext,
-) (
-	[]unstructured.Unstructured, error,
-) {
-	cc, err := celctx.New(macros, tmplCtx)
+) error {
+	// Create CEL evaluation environment
+	cc, err := celctx.New(spec.CelMacros, tmplCtx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	pathsToExclude, err := computeIgnoredPaths(spec.ConditionalPaths, &cc)
+	if err != nil {
+		return err
+	}
+
+	for path, objects := range pathObjectMap {
+		exclude, err := isExcluded(path, pathsToExclude)
+		if err != nil {
+			return err
+		}
+		if exclude {
+			delete(pathObjectMap, path)
+			continue
+		}
+
+		pathObjectMap[path], err = filterWithCELAnnotation(objects, &cc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func filterWithCELAnnotation(
+	objects []unstructured.Unstructured,
+	cc *celctx.CelCtx,
+) (
+	[]unstructured.Unstructured,
+	error,
+) {
 	filtered := make([]unstructured.Unstructured, 0, len(objects))
 
 	for _, obj := range objects {
 		cel, ok := obj.GetAnnotations()[v1alpha1.PackageCELConditionAnnotation]
+		// If object doesn't have CEL annotation, append it
 		if !ok {
 			filtered = append(filtered, obj)
 			continue
@@ -147,10 +187,45 @@ func filterWithCELAnnotation(
 			}
 		}
 
+		// If CEL annotation evaluates to true, append object
 		if celResult {
 			filtered = append(filtered, obj)
 		}
 	}
 
 	return filtered, nil
+}
+
+var ErrInvalidConditionalPathsExpression = errors.New("invalid spec.conditionalPaths expression")
+
+func computeIgnoredPaths(
+	conditionalPaths []manifests.PackageManifestConditionalPath,
+	cc *celctx.CelCtx,
+) (
+	[]string, error,
+) {
+	globs := make([]string, 0, len(conditionalPaths))
+	for _, cp := range conditionalPaths {
+		result, err := cc.Evaluate(cp.Expression)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s: %w", ErrInvalidConditionalPathsExpression, cp.Glob, err)
+		}
+
+		// If expression evaluates to false, add glob to ignored paths
+		if !result {
+			globs = append(globs, cp.Glob)
+		}
+	}
+
+	return globs, nil
+}
+
+func isExcluded(path string, pathsToExclude []string) (bool, error) {
+	for _, glob := range pathsToExclude {
+		exclude, err := doublestar.PathMatch(glob, path)
+		if err != nil || exclude {
+			return exclude, err
+		}
+	}
+	return false, nil
 }
