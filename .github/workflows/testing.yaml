@@ -43,7 +43,7 @@ jobs:
       with:
         files: .cache/unit/cover.txt,.cache/integration/cover.txt
         token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: true
+        fail_ci_if_error: ${{ github.repository_owner == 'package-operator' }}
         verbose: true
 
     - name: Archive unit test results
