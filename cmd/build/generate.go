@@ -243,7 +243,6 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 // but we can't code this in as a dependency because then every call to this function would
 // push images to quay. :(.
 func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
-	remotePhaseURL := imageURL(imageRegistry(), "remote-phase-package", appVersion)
 	mngrURL := imageURL(imageRegistry(), "package-operator-manager", appVersion)
 
 	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInPackageOperatorPackage)
@@ -264,7 +263,6 @@ func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 
 	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
 		{Name: "package-operator-manager", Image: mngrURL},
-		{Name: "remote-phase-package", Image: remotePhaseURL},
 	}
 	manifestYaml, err := yaml.Marshal(manifest)
 	if err != nil {
@@ -283,9 +281,41 @@ func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	return err
 }
 
-// Includes all static-deployment files in the remote-phase-package.
-func (Generate) remotePhaseFiles(ctx context.Context) error {
-	pkgFolder := filepath.Join("config", "packages", "remote-phase")
+// Includes all static-deployment files in the hosted-cluster component of the package-operator package.
+func (Generate) hostedClusterComponentFiles(ctx context.Context) error {
+	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster")
+	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
+	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
+	if err != nil {
+		return err
+	}
+	manifest := &manifestsv1alpha1.PackageManifest{}
+	if err := yaml.Unmarshal(manifestFileContents, manifest); err != nil {
+		return err
+	}
+
+	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
+		{Name: "package-operator-manager", Image: imageURL(imageRegistry(), "package-operator-manager", appVersion)},
+	}
+	manifestYaml, err := yaml.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
+		return err
+	}
+
+	err = cmd.Update{}.UpdateLockData(ctx, pkgFolder)
+	if err == nil || errors.Is(err, cmd.ErrLockDataUnchanged) {
+		return nil
+	}
+
+	return err
+}
+
+// Includes all static-deployment files in the remote-phase component of the package-operator package.
+func (Generate) remotePhaseComponentFiles(ctx context.Context) error {
+	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "remote-phase")
 	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
 	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
 	if err != nil {

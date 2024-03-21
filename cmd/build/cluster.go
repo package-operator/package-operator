@@ -167,18 +167,9 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 	}
 
 	if err := mgr.ParallelDeps(ctx, self,
-		run.Fn2(pushPackage, "remote-phase", registry),
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
 		run.Fn2(pushPackage, "test-stub-cel", registry),
-	); err != nil {
-		return err
-	}
-
-	// This needs to be separate because the remote-phase package image has to be pushed before
-	// downstream dependencies of the package-operator package image can be regenerated.
-	// *very very sad @erdii noises*
-	if err := mgr.ParallelDeps(ctx, self,
 		run.Fn2(pushPackage, "package-operator", registry),
 	); err != nil {
 		return err
