@@ -87,7 +87,7 @@ func TestEachObjectChunker(t *testing.T) {
 	assert.Len(t, chunks, 3)
 }
 
-func TestBinpackNextFitChunkerChunker(t *testing.T) {
+func TestBinpackNextFitChunker(t *testing.T) {
 	t.Parallel()
 
 	tcases := []struct {
