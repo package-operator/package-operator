@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
 	"pkg.package-operator.run/cardboard/run"
@@ -239,83 +241,41 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 }
 
 // PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
-// This depends on an up-to-date remote-phase-package image being pushed to quay
-// but we can't code this in as a dependency because then every call to this function would
-// push images to quay. :(.
 func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
-	mngrURL := imageURL(imageRegistry(), "package-operator-manager", appVersion)
-
+	pkgFolder := filepath.Join("config", "packages", "package-operator")
+	images := map[string]string{
+		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
+	}
 	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInPackageOperatorPackage)
 	if err != nil {
 		return err
 	}
-
-	pkgFolder := filepath.Join("config", "packages", "package-operator")
-	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
-	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
-	if err != nil {
-		return err
-	}
-	manifest := &manifestsv1alpha1.PackageManifest{}
-	if err := yaml.Unmarshal(manifestFileContents, manifest); err != nil {
-		return err
-	}
-
-	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
-		{Name: "package-operator-manager", Image: mngrURL},
-	}
-	manifestYaml, err := yaml.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
-		return err
-	}
-
-	err = cmd.Update{}.UpdateLockData(ctx, pkgFolder)
-	if err == nil || errors.Is(err, cmd.ErrLockDataUnchanged) {
-		return nil
-	}
-
-	return err
+	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
-// Includes all static-deployment files in the hosted-cluster component of the package-operator package.
-func (Generate) hostedClusterComponentFiles(ctx context.Context) error {
-	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster")
-	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
-	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
-	if err != nil {
-		return err
-	}
-	manifest := &manifestsv1alpha1.PackageManifest{}
-	if err := yaml.Unmarshal(manifestFileContents, manifest); err != nil {
-		return err
-	}
-
-	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
-		{Name: "package-operator-manager", Image: imageURL(imageRegistry(), "package-operator-manager", appVersion)},
-	}
-	manifestYaml, err := yaml.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
-		return err
-	}
-
-	err = cmd.Update{}.UpdateLockData(ctx, pkgFolder)
-	if err == nil || errors.Is(err, cmd.ErrLockDataUnchanged) {
-		return nil
-	}
-
-	return err
-}
-
-// Includes all static-deployment files in the remote-phase component of the package-operator package.
-func (Generate) remotePhaseComponentFiles(ctx context.Context) error {
+// Includes all static-deployment files in the remote-phase-package.
+func (g Generate) remotePhaseComponentFiles(ctx context.Context) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "remote-phase")
+	images := map[string]string{
+		"remote-phase-manager": imageURL(imageRegistry(), "remote-phase-manager", appVersion),
+	}
+	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
+}
+
+// Includes all static-deployment files in the remote-phase-package.
+func (g Generate) hostedClusterComponentFiles(ctx context.Context) error {
+	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster")
+	images := map[string]string{
+		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
+	}
+	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInHostedClusterComponent)
+	if err != nil {
+		return err
+	}
+	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
+}
+
+func (g Generate) manifestFileFromTemplate(ctx context.Context, pkgFolder string, images map[string]string) error {
 	manifestFile := filepath.Join(pkgFolder, "manifest.yaml")
 	manifestFileContents, err := os.ReadFile(manifestFile + ".tpl")
 	if err != nil {
@@ -326,13 +286,16 @@ func (Generate) remotePhaseComponentFiles(ctx context.Context) error {
 		return err
 	}
 
-	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{
-		{Name: "remote-phase-manager", Image: imageURL(imageRegistry(), "remote-phase-manager", appVersion)},
+	manifest.Spec.Images = []manifestsv1alpha1.PackageManifestImage{}
+	for k, v := range images {
+		manifest.Spec.Images = append(manifest.Spec.Images, manifestsv1alpha1.PackageManifestImage{Name: k, Image: v})
 	}
+
 	manifestYaml, err := yaml.Marshal(manifest)
 	if err != nil {
 		return err
 	}
+
 	if err := os.WriteFile(manifestFile, manifestYaml, os.ModePerm); err != nil {
 		return err
 	}
@@ -344,16 +307,68 @@ func (Generate) remotePhaseComponentFiles(ctx context.Context) error {
 
 	return err
 }
+
+type includeTransform func(obj *unstructured.Unstructured) (
+	skip bool, annotations map[string]string, subfolder string, objToMarshal interface{})
 
 func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, err error) error {
 	if err != nil {
 		return err
 	}
-
 	if d.IsDir() {
 		return nil
 	}
+	return g.includeInPackage(path, filepath.Join("config", "packages", "package-operator"),
+		func(obj *unstructured.Unstructured) (
+			skip bool, annotations map[string]string, subfolder string, objToMarshal interface{},
+		) {
+			switch obj.GroupVersionKind().GroupKind() {
+			case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:
+				annotations = map[string]string{"package-operator.run/phase": "crds"}
+				subfolder = "crds"
+				objToMarshal = obj.Object
 
+			case schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}:
+				annotations = map[string]string{"package-operator.run/phase": "rbac"}
+				subfolder = "rbac"
+				objToMarshal = obj.Object
+
+			default:
+				skip = true
+			}
+			return
+		},
+	)
+}
+
+func (g Generate) includeInHostedClusterComponent(path string, d fs.DirEntry, err error) error {
+	if err != nil {
+		return err
+	}
+	if d.IsDir() {
+		return nil
+	}
+	return g.includeInPackage(
+		path,
+		filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster"),
+		func(obj *unstructured.Unstructured) (
+			skip bool, annotations map[string]string, subfolder string, objToMarshal interface{},
+		) {
+			switch obj.GroupVersionKind().GroupKind() {
+			case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:
+				annotations = map[string]string{"package-operator.run/phase": "crds"}
+				subfolder = "crds"
+				objToMarshal = obj.Object
+
+			default:
+				skip = true
+			}
+			return
+		},
+	)
+}
+
+func (g Generate) includeInPackage(path string, outFilePath string, transform includeTransform) error {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -372,31 +387,16 @@ func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, er
 		if annotations == nil {
 			annotations = map[string]string{}
 		}
-		gk := obj.GroupVersionKind().GroupKind()
 
-		var (
-			subfolder    string
-			objToMarshal any
-		)
-		switch gk {
-		case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:
-			annotations["package-operator.run/phase"] = "crds"
-			subfolder = "crds"
-			objToMarshal = obj.Object
-
-		case schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}:
-			annotations["package-operator.run/phase"] = "rbac"
-			subfolder = "rbac"
-			objToMarshal = obj.Object
-
-		case schema.GroupKind{Group: "apps", Kind: "Deployment"},
-			schema.GroupKind{Group: "", Kind: "Namespace"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "Role"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
-			schema.GroupKind{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"},
-			schema.GroupKind{Group: "", Kind: "ServiceAccount"}:
+		skip, ann, subfolder, objToMarshal := transform(&obj)
+		if skip {
 			continue
 		}
+
+		for k, v := range ann {
+			annotations[k] = v
+		}
+
 		obj.SetAnnotations(annotations)
 
 		yamlBytes, err := yaml.Marshal(objToMarshal)
@@ -404,7 +404,6 @@ func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, er
 			return err
 		}
 
-		outFilePath := filepath.Join("config", "packages", "package-operator")
 		if len(subfolder) > 0 {
 			outFilePath = filepath.Join(outFilePath, subfolder)
 		}
@@ -412,7 +411,7 @@ func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, er
 		if err := os.MkdirAll(outFilePath, os.ModePerm); err != nil {
 			return fmt.Errorf("creating output directory: %w", err)
 		}
-		outFilePath = filepath.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), gk.Kind))
+		outFilePath = filepath.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), obj.GroupVersionKind().GroupKind()))
 
 		outFile, err := os.Create(outFilePath)
 		if err != nil {
