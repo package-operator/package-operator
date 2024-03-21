@@ -50,7 +50,7 @@ func TestOwnerStrategyAnnotation_HasController(t *testing.T) {
 					UID:       types.UID("1234"),
 					OwnerReferences: []metav1.OwnerReference{
 						{},
-						{Controller: pointer.Bool(true)},
+						{Controller: ptr.To(true)},
 					},
 				},
 			},
