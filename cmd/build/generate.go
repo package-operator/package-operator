@@ -411,7 +411,8 @@ func (g Generate) includeInPackage(path string, outFilePath string, transform in
 		if err := os.MkdirAll(outFilePath, os.ModePerm); err != nil {
 			return fmt.Errorf("creating output directory: %w", err)
 		}
-		outFilePath = filepath.Join(outFilePath, fmt.Sprintf("%s.%s.yaml", obj.GetName(), obj.GroupVersionKind().GroupKind()))
+		outFileName := fmt.Sprintf("%s.%s.yaml", obj.GetName(), obj.GroupVersionKind().GroupKind().Kind)
+		outFilePath = filepath.Join(outFilePath, outFileName)
 
 		outFile, err := os.Create(outFilePath)
 		if err != nil {
