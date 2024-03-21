@@ -18,11 +18,12 @@ func buildPackage(ctx context.Context, name, registry string) error {
 
 	deps := []run.Dependency{}
 
-	switch name {
-	case "remote-phase":
-		deps = append(deps, run.Meth(generate, generate.remotePhaseFiles))
-	case "package-operator":
-		deps = append(deps, run.Meth(generate, generate.packageOperatorPackageFiles))
+	if name == "package-operator" {
+		deps = append(deps,
+			run.Meth(generate, generate.remotePhaseComponentFiles),
+			run.Meth(generate, generate.hostedClusterComponentFiles),
+			run.Meth(generate, generate.packageOperatorPackageFiles),
+		)
 	}
 
 	self := run.Fn2(buildPackage, name, registry)

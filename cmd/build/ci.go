@@ -78,21 +78,13 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if err := mgr.ParallelDeps(ctx, self,
+	return mgr.ParallelDeps(ctx, self,
 		// Package images have to be built after binary images have been
 		// because the package lockfiles have to be generated from the image manifest hashes
 		// and these are only known after pushing to the target registry.
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
 		run.Fn2(pushPackage, "test-stub-cel", registry),
-		run.Fn2(pushPackage, "remote-phase", registry),
-	); err != nil {
-		return err
-	}
-
-	// This needs to be separate because the remote-phase package image has to be pushed before
-	// the lockfile of the package-operator package image can be regenerated.
-	return mgr.SerialDeps(ctx, self,
 		run.Fn2(pushPackage, "package-operator", registry),
 	)
 }
