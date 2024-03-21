@@ -660,7 +660,7 @@ func (r *PhaseReconciler) reconcileObject(
 	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
 		// just create it using desired state!
-		err := r.writer.Create(ctx, desiredObj)
+		err := r.writer.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(FieldOwner))
 		if apimachineryerrors.IsAlreadyExists(err) {
 			// object already exists, but was not in our cache.
 			// get object via uncached client directly from the API server.
