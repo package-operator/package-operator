@@ -29,7 +29,7 @@ spec:
         - name: PKO_IMAGE
           value: "quay.io/package-operator/package-operator-manager:latest"
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
-          value: "quay.io/package-operator/remote-phase-package:latest"
+          value: "quay.io/package-operator/package-operator-package:latest"
         ports:
         - name: metrics
           containerPort: 8080
