@@ -4,7 +4,6 @@ package packageoperator
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -14,21 +13,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
-
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestHyperShift(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	t.Run("HyperShift Installation", func(t *testing.T) {
-		installHyperShift(ctx, t)
-	})
+	require.NoError(t, initClients(ctx))
 
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -113,20 +107,4 @@ func TestHyperShift(t *testing.T) {
 		t.SkipNow() // This test/functionality is not stable.
 		runObjectSetOrphanCascadeDeletionTest(t, ns.Name, "hosted-cluster")
 	})
-}
-
-func installHyperShift(ctx context.Context, t *testing.T) {
-	t.Helper()
-
-	// TODO: this comment is wrong?!
-	// tests that PackageOperator will deploy a new remote-phase-manager
-	// for every ready HyperShift HostedCluster.
-	hostedClusterCRDBytes, err := os.ReadFile("testdata/hostedclusters.crd.yaml")
-	require.NoError(t, err)
-	hostedClusterCRD := &unstructured.Unstructured{}
-	require.NoError(t, yaml.Unmarshal(hostedClusterCRDBytes, hostedClusterCRD))
-	require.NoError(t, Client.Create(ctx, hostedClusterCRD))
-	require.NoError(t, Waiter.WaitForCondition(ctx, hostedClusterCRD, "Established", metav1.ConditionTrue))
-
-	require.NoError(t, initClients(ctx))
 }
