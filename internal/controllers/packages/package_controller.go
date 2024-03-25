@@ -43,6 +43,7 @@ type GenericPackageController struct {
 	scheme           *runtime.Scheme
 	reconciler       []reconciler
 	unpackReconciler *unpackReconciler
+	isBootstrap      bool
 }
 
 func NewPackageController(
@@ -51,11 +52,13 @@ func NewPackageController(
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	isBootstrap bool,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
 		c, log, scheme, imagePuller, packages.NewPackageDeployer(c, scheme),
 		metricsRecorder, packageHashModifier,
+		isBootstrap,
 	)
 }
 
@@ -65,11 +68,13 @@ func NewClusterPackageController(
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	isBootstrap bool,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
 		c, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme),
 		metricsRecorder, packageHashModifier,
+		isBootstrap,
 	)
 }
 
@@ -82,6 +87,7 @@ func newGenericPackageController(
 	packageDeployer packageDeployer,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	isBootstrap bool,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -91,9 +97,8 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		unpackReconciler: newUnpackReconciler(
-			client, imagePuller, packageDeployer,
-			metricsRecorder, packageHashModifier,
-		),
+			client, imagePuller, packageDeployer, metricsRecorder, packageHashModifier),
+		isBootstrap: isBootstrap,
 	}
 
 	controller.reconciler = []reconciler{
@@ -123,12 +128,14 @@ func (c *GenericPackageController) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(c)
 }
 
-func (c *GenericPackageController) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (res ctrl.Result, err error) {
+func (c *GenericPackageController) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := c.log.WithValues("Package", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
+
+	/*if c.isBootstrap && req.Name != "package-operator" {
+		return
+	}*/
 
 	pkg := c.newPackage(c.scheme)
 	if err := c.client.Get(
@@ -145,6 +152,7 @@ func (c *GenericPackageController) Reconcile(
 	}()
 
 	pkgClientObject := pkg.ClientObject()
+
 	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
 		if err := c.handleDeletion(ctx, pkg); err != nil {
 			return res, err

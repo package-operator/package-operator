@@ -36,6 +36,7 @@ type GenericObjectDeploymentController struct {
 	newObjectSet        genericObjectSetFactory
 	newObjectSetList    genericObjectSetListFactory
 	reconciler          []reconciler
+	isBootstrap         bool
 }
 
 func newGenericObjectDeploymentController(
@@ -45,6 +46,7 @@ func newGenericObjectDeploymentController(
 	newObjectDeployment adapters.ObjectDeploymentFactory,
 	newObjectSet genericObjectSetFactory,
 	newObjectSetList genericObjectSetListFactory,
+	isBootstrap bool,
 ) *GenericObjectDeploymentController {
 	controller := &GenericObjectDeploymentController{
 		gvk:                 gvk,
@@ -55,6 +57,7 @@ func newGenericObjectDeploymentController(
 		newObjectDeployment: newObjectDeployment,
 		newObjectSet:        newObjectSet,
 		newObjectSetList:    newObjectSetList,
+		isBootstrap:         isBootstrap,
 	}
 	controller.reconciler = []reconciler{
 		&hashReconciler{
@@ -79,9 +82,7 @@ func newGenericObjectDeploymentController(
 	return controller
 }
 
-func NewObjectDeploymentController(
-	c client.Client, log logr.Logger, scheme *runtime.Scheme,
-) *GenericObjectDeploymentController {
+func NewObjectDeploymentController(c client.Client, log logr.Logger, scheme *runtime.Scheme, isBootstrap bool) *GenericObjectDeploymentController {
 	return newGenericObjectDeploymentController(
 		corev1alpha1.GroupVersion.WithKind("ObjectDeployment"),
 		corev1alpha1.GroupVersion.WithKind("ObjectSet"),
@@ -91,12 +92,11 @@ func NewObjectDeploymentController(
 		adapters.NewObjectDeployment,
 		newGenericObjectSet,
 		newGenericObjectSetList,
+		isBootstrap,
 	)
 }
 
-func NewClusterObjectDeploymentController(
-	c client.Client, log logr.Logger, scheme *runtime.Scheme,
-) *GenericObjectDeploymentController {
+func NewClusterObjectDeploymentController(c client.Client, log logr.Logger, scheme *runtime.Scheme, isBootstrap bool) *GenericObjectDeploymentController {
 	return newGenericObjectDeploymentController(
 		corev1alpha1.GroupVersion.WithKind("ClusterObjectDeployment"),
 		corev1alpha1.GroupVersion.WithKind("ClusterObjectSet"),
@@ -106,14 +106,18 @@ func NewClusterObjectDeploymentController(
 		adapters.NewClusterObjectDeployment,
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetList,
+		isBootstrap,
 	)
 }
 
-func (od *GenericObjectDeploymentController) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
+func (od *GenericObjectDeploymentController) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := od.log.WithValues("ObjectDeployment", req.String())
 	defer log.Info("reconciled")
+
+	/*if od.isBootstrap && req.Name != "package-operator" {
+		return
+	}*/
+
 	ctx = logr.NewContext(ctx, log)
 	objectDeployment := od.newObjectDeployment(od.scheme)
 	if err := od.client.Get(ctx, req.NamespacedName, objectDeployment.ClientObject()); err != nil {
@@ -121,10 +125,6 @@ func (od *GenericObjectDeploymentController) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var (
-		res ctrl.Result
-		err error
-	)
 	for _, reconciler := range od.reconciler {
 		res, err = reconciler.Reconcile(ctx, objectDeployment)
 		if err != nil || !res.IsZero() {

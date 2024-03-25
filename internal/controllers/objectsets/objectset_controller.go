@@ -38,6 +38,8 @@ type GenericObjectSetController struct {
 	recorder        metricsRecorder
 	dynamicCache    dynamicCache
 	teardownHandler teardownHandler
+
+	isBootstrap bool
 }
 
 type reconciler interface {
@@ -66,13 +68,14 @@ func NewObjectSetController(
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	isBootstrap bool,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		restMapper, isBootstrap,
 	)
 }
 
@@ -81,13 +84,14 @@ func NewClusterObjectSetController(
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	isBootstrap bool,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		restMapper, isBootstrap,
 	)
 }
 
@@ -99,6 +103,7 @@ func newGenericObjectSetController(
 	scheme *runtime.Scheme,
 	dynamicCache dynamicCache, uncachedClient client.Reader,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
+	isBootstrap bool,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -109,6 +114,8 @@ func newGenericObjectSetController(
 		scheme:       scheme,
 		dynamicCache: dynamicCache,
 		recorder:     recorder,
+
+		isBootstrap: isBootstrap,
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
@@ -177,6 +184,12 @@ func (c *GenericObjectSetController) Reconcile(
 	log := c.log.WithValues("ObjectSet", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
+
+	/*
+		if c.isBootstrap && req.Name != "package-operator" {
+			return
+		}
+	*/
 
 	objectSet := c.newObjectSet(c.scheme)
 	if err := c.client.Get(

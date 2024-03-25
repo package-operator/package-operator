@@ -57,6 +57,7 @@ func ProvidePackageController(
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
 			registry, recorder, opts.PackageHashModifier,
+			opts.SelfBootstrap != "",
 		),
 	}
 }
@@ -73,6 +74,7 @@ func ProvideClusterPackageController(
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
 			registry, recorder, opts.PackageHashModifier,
+			opts.SelfBootstrap != "",
 		),
 	}
 }
