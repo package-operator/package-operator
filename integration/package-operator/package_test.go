@@ -172,6 +172,48 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 	testNamespacedAndCluster(t, meta, spec, postCheck)
 }
 
+func TestPackage_simpleWithoutSlices(t *testing.T) {
+	meta := metav1.ObjectMeta{
+		Name: "success-no-slices",
+		Annotations: map[string]string{
+			"packages.package-operator.run/chunking-strategy": "NoOp",
+		},
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+		},
+	}
+
+	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+		t.Helper()
+
+		if namespaced {
+			sliceList := &corev1alpha1.ObjectSliceList{}
+			err := Client.List(ctx, sliceList)
+			require.NoError(t, err)
+			assertLenWithJSON(t, sliceList.Items, 0)
+		} else {
+			sliceList := &corev1alpha1.ClusterObjectSliceList{}
+			err := Client.List(ctx, sliceList)
+			require.NoError(t, err)
+
+			filteredSlices := []corev1alpha1.ClusterObjectSlice{}
+			for _, item := range sliceList.Items {
+				if !strings.HasPrefix(item.Name, "success-no-slices-") {
+					continue
+				}
+				filteredSlices = append(filteredSlices, item)
+			}
+
+			assertLenWithJSON(t, filteredSlices, 0)
+		}
+	}
+
+	testNamespacedAndCluster(t, meta, spec, postCheck)
+}
+
 func TestPackage_multi(t *testing.T) {
 	meta := metav1.ObjectMeta{
 		Name:      "success-multi",
