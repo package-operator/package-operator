@@ -42,47 +42,47 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		name     string
 		objects  []unstructured.Unstructured
 		tmplCtx  *packagetypes.PackageRenderContext
-		macros   []manifests.PackageManifestCelMacro
+		snippets []manifests.PackageManifestSnippet
 		filtered []unstructured.Unstructured
 	}{
 		{
 			name:     "no annotation",
 			objects:  []unstructured.Unstructured{newConfigMap("a", "")},
 			tmplCtx:  nil,
-			macros:   nil,
+			snippets: nil,
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
 		},
 		{
 			name:     "simple annotation",
 			objects:  []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "true && false")},
 			tmplCtx:  nil,
-			macros:   nil,
+			snippets: nil,
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
 		},
 		{
-			name:    "macro annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mymacro")},
+			name:    "snippet annotation",
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
-			macros: []manifests.PackageManifestCelMacro{
-				{Name: "mymacro", Expression: "false"},
+			snippets: []manifests.PackageManifestSnippet{
+				{Name: "mysnippet", Expression: "false"},
 			},
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
 		},
 		{
-			name:    "macro annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mymacro")},
+			name:    "snippet annotation",
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
-			macros: []manifests.PackageManifestCelMacro{
-				{Name: "mymacro", Expression: "true"},
+			snippets: []manifests.PackageManifestSnippet{
+				{Name: "mysnippet", Expression: "true"},
 			},
-			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mymacro")},
+			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			filtered, err := filterWithCELAnnotation(tc.objects, tc.macros, tc.tmplCtx)
+			filtered, err := filterWithCELAnnotation(tc.objects, tc.snippets, tc.tmplCtx)
 			require.NoError(t, err)
 			require.Equal(t, len(tc.filtered), len(filtered))
 			for i := 0; i < len(filtered); i++ {

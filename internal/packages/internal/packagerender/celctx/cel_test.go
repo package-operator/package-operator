@@ -17,14 +17,14 @@ func Test_newCelCtx(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		expression  string
-		macros      []manifests.PackageManifestCelMacro
+		snippets    []manifests.PackageManifestSnippet
 		tmplCtx     *packagetypes.PackageRenderContext
 		errContains string
 	}{
 		{
-			name:       "macro read from context",
+			name:       "snippet read from context",
 			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			snippets: []manifests.PackageManifestSnippet{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -36,9 +36,9 @@ func Test_newCelCtx(t *testing.T) {
 			errContains: "",
 		},
 		{
-			name:       "invalid macro expression",
+			name:       "invalid snippet expression",
 			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			snippets: []manifests.PackageManifestSnippet{
 				{Name: "isFoo", Expression: `.config.banana "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -47,33 +47,33 @@ func Test_newCelCtx(t *testing.T) {
 				Images:      nil,
 				Environment: manifests.PackageEnvironment{},
 			},
-			errContains: `CEL macro evaluation failed`,
+			errContains: `CEL snippet evaluation failed`,
 		},
 		{
-			name:       "invalid macro name",
+			name:       "invalid snippet name",
 			expression: "1ustTrue",
-			macros: []manifests.PackageManifestCelMacro{
+			snippets: []manifests.PackageManifestSnippet{
 				{Name: "1ustTrue", Expression: "true"},
 			},
 			tmplCtx:     nil,
-			errContains: ErrInvalidCELMacroName.Error(),
+			errContains: ErrInvalidCELSnippetName.Error(),
 		},
 		{
-			name:       "duplicate macro name",
+			name:       "duplicate snippet name",
 			expression: "justTrue",
-			macros: []manifests.PackageManifestCelMacro{
+			snippets: []manifests.PackageManifestSnippet{
 				{Name: "justTrue", Expression: "true"},
 				{Name: "justTrue", Expression: "false"},
 			},
 			tmplCtx:     nil,
-			errContains: ErrDuplicateCELMacroName.Error(),
+			errContains: ErrDuplicateCELSnippetName.Error(),
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := New(tc.macros, tc.tmplCtx)
+			_, err := New(tc.snippets, tc.tmplCtx)
 			if tc.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -89,7 +89,7 @@ func Test_celCtx_Evaluate(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		expression string
-		macros     []manifests.PackageManifestCelMacro
+		snippets   []manifests.PackageManifestSnippet
 		tmplCtx    *packagetypes.PackageRenderContext
 		expected   bool
 		err        string
@@ -169,9 +169,9 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			err:      "",
 		},
 		{
-			name:       "macro read from context",
+			name:       "snippet read from context",
 			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			snippets: []manifests.PackageManifestSnippet{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -188,7 +188,7 @@ func Test_celCtx_Evaluate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cc, err := New(tc.macros, tc.tmplCtx)
+			cc, err := New(tc.snippets, tc.tmplCtx)
 			require.NoError(t, err)
 
 			result, err := cc.Evaluate(tc.expression)

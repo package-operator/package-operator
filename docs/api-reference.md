@@ -1243,10 +1243,11 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
-  celMacros:
-  - expression: consetetur
-    name: amet
   components: PackageManifestComponentsConfig
+  conditionals:
+    snippets:
+    - expression: consetetur
+      name: amet
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1422,14 +1423,13 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
-### PackageManifestCelMacro
+### PackageManifestConditionals
 
-PackageManifestCelMacro is a reusable named CEL expression.
+PackageManifestConditionals are used to conditionally render objects based on CEL expressions.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` <b>required</b><br>string | A unique name. When used in 'package-operator.run/condition' annotations,<br>it is replaced with the result of Expression ("true"/"false").<br>Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
-| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+| `snippets` <br><a href="#packagemanifestsnippet">[]PackageManifestSnippet</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
 
 
 Used in:
@@ -1492,6 +1492,22 @@ Used in:
 * [PackageManifestSpec](#packagemanifestspec)
 
 
+### PackageManifestSnippet
+
+PackageManifestSnippet is a reusable named CEL expression.
+It is injected as a variable into the CEL evaluation environment,
+and its value is set to the result of Expression ("true"/"false").
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | A unique name. Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestConditionals](#packagemanifestconditionals)
+
+
 ### PackageManifestSpec
 
 PackageManifestSpec represents the spec of the packagemanifest containing the
@@ -1505,7 +1521,7 @@ details about phases and availability probes.
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
-| `celMacros` <br><a href="#packagemanifestcelmacro">[]PackageManifestCelMacro</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `conditionals` <br><a href="#packagemanifestconditionals">PackageManifestConditionals</a> | Used to conditionally render objects based on CEL expressions. |
 
 
 Used in:
