@@ -112,6 +112,7 @@ func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
 	return manifests.TemplateContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
+			Image:                     a.Package.Spec.Image,
 		},
 		Config: a.Package.Spec.Config,
 	}
@@ -161,6 +162,7 @@ func (a *GenericClusterPackage) TemplateContext() manifests.TemplateContext {
 	return manifests.TemplateContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
+			Image:                     a.Spec.Image,
 		},
 		Config: a.Spec.Config,
 	}

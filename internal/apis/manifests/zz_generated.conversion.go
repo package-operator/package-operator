@@ -849,6 +849,7 @@ func autoConvert_manifests_TemplateContextPackage_To_v1alpha1_TemplateContextPac
 	if err := Convert_manifests_TemplateContextObjectMeta_To_v1alpha1_TemplateContextObjectMeta(&in.TemplateContextObjectMeta, &out.TemplateContextObjectMeta, s); err != nil {
 		return err
 	}
+	out.Image = in.Image
 	return nil
 }
 
@@ -861,6 +862,7 @@ func autoConvert_v1alpha1_TemplateContextPackage_To_manifests_TemplateContextPac
 	if err := Convert_v1alpha1_TemplateContextObjectMeta_To_manifests_TemplateContextObjectMeta(&in.TemplateContextObjectMeta, &out.TemplateContextObjectMeta, s); err != nil {
 		return err
 	}
+	out.Image = in.Image
 	return nil
 }
 
