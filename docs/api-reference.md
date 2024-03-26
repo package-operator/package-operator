@@ -1243,7 +1243,13 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
+  celMacros:
+  - expression: consetetur
+    name: amet
   components: PackageManifestComponentsConfig
+  conditionalPaths:
+  - expression: elitr
+    glob: sadipscing
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1256,36 +1262,36 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: dolor
+    kubernetesVersion: sadipscing
     schemaLocations:
-    - sit
+    - elitr
   template:
   - context:
       config: runtime.RawExtension
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: ipsum
+            hostedClusterNamespace: consetetur
             metadata:
               annotations: map[string]string
               labels: map[string]string
-              name: tempor
-              namespace: lorem
+              name: sit
+              namespace: amet
         kubernetes:
-          version: elitr
+          version: eirmod
         openShift:
-          version: sed
+          version: tempor
         proxy:
-          httpProxy: diam
-          httpsProxy: nonumy
-          noProxy: eirmod
+          httpProxy: lorem
+          httpsProxy: ipsum
+          noProxy: dolor
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: consetetur
-          namespace: sadipscing
-    name: amet
+          name: diam
+          namespace: nonumy
+    name: sed
 
 ```
 
@@ -1312,9 +1318,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: sadipscing
-    image: consetetur
-    name: amet
+  - digest: nonumy
+    image: diam
+    name: sed
 
 ```
 
@@ -1419,6 +1425,35 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageManifestCelMacro
+
+PackageManifestCelMacro is a reusable named CEL expression.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | A unique name. When used in 'package-operator.run/condition' annotations,<br>it is replaced with the result of Expression ("true"/"false").<br>Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestConditionalPath
+
+PackageManifestConditionalPath is used to conditionally
+render package objects based on their path.
+
+| Field | Description |
+| ----- | ----------- |
+| `glob` <b>required</b><br>string | A file system path glob pattern.<br>Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestImage
 
 PackageManifestImage specifies an image tag to be resolved.
@@ -1488,6 +1523,8 @@ details about phases and availability probes.
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
+| `celMacros` <br><a href="#packagemanifestcelmacro">[]PackageManifestCelMacro</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object nad its subtree are ignored. |
 
 
 Used in:
