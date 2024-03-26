@@ -110,7 +110,8 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] = url
 	}
 
-	goTestCmd := t.makeGoIntTestCmd(f, jsonOutput)
+	// standard integration tests
+	goTestCmd := t.makeGoIntTestCmd("integration", f, jsonOutput)
 
 	if err := os.MkdirAll(filepath.Join(cacheDir, "integration"), 0o755); err != nil {
 		return err
@@ -124,15 +125,41 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		return err
 	case eErr != nil:
 		return eErr
+	}
+
+	// hypershift integration tests
+	if err := mgr.SerialDeps(ctx, self,
+		run.Meth2(hypershiftHostedCluster, hypershiftHostedCluster.createHostedCluster, &cluster, []string{}),
+	); err != nil {
+		return err
+	}
+
+	goTestHypershiftCmd := t.makeGoIntTestCmd("integration_hypershift", f, jsonOutput)
+
+	if err := os.MkdirAll(filepath.Join(cacheDir, "integration"), 0o755); err != nil {
+		return err
+	}
+
+	err = shr.New(env).Bash(goTestHypershiftCmd)
+	eErr = cluster.ExportLogs(filepath.Join(cacheDir, "integration_hypershift", "logs"))
+	eErr2 := hypershiftHostedCluster.ExportLogs(filepath.Join(cacheDir, "integration_hypershift", "logs"))
+
+	switch {
+	case err != nil:
+		return err
+	case eErr != nil:
+		return eErr
+	case eErr2 != nil:
+		return eErr2
 	default:
 		return nil
 	}
 }
 
-func (Test) makeGoIntTestCmd(filter string, jsonOutput bool) string {
+func (Test) makeGoIntTestCmd(tags string, filter string, jsonOutput bool) string {
 	args := []string{
 		"go", "test",
-		"-tags=integration",
+		"-tags=" + tags,
 		"-coverprofile=" + filepath.Join(cacheDir, "integration", "cover.txt"),
 		filter,
 		"-race",
