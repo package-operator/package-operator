@@ -34,7 +34,7 @@ spec:
         - name: PKO_IMAGE
           value: registry.package-operator.run/static-image
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
-          value: registry.package-operator.run/static-image
+          value: ""
         - name: HTTP_PROXY
           value: "http"
         - name: HTTPS_PROXY

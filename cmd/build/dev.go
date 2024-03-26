@@ -169,6 +169,11 @@ func (dev *Dev) CreateHostedCluster(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("can't get client for mgmt cluster %s: %w", cluster.Name(), err)
 	}
+	// get hosted cluster clients
+	hcClients, err := hypershiftHostedCluster.Clients()
+	if err != nil {
+		return fmt.Errorf("can't get client for hosted cluster %s: %w", hypershiftHostedCluster.Name(), err)
+	}
 
 	// create package-operator-remote-phase-manager ClusterRole in mgmt cluster
 	rpmCrPath := filepath.Join("config", "packages", "package-operator", "rbac",
@@ -188,6 +193,10 @@ func (dev *Dev) CreateHostedCluster(ctx context.Context, args []string) error {
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
 	if err := clClients.CreateAndWaitForReadiness(ctx, namespace); err != nil {
 		return fmt.Errorf("can't create hosted cluster namespace in mgmt cluster %s: %w", cluster.Name(), err)
+	}
+	if err := hcClients.CreateAndWaitForReadiness(ctx, namespace); err != nil {
+		return fmt.Errorf("can't create hosted cluster namespace in hosted cluster %s: %w",
+			hypershiftHostedCluster.Name(), err)
 	}
 
 	// create secret
