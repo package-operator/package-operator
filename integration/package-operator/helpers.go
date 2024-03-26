@@ -282,7 +282,15 @@ func objectSetPhaseTestHelper(
 	}, currentCM))
 }
 
-func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string) {
+func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string) { //nolint:thelper
+	runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(t, Client, Waiter, namespace, class)
+}
+
+// destClient and destWaiter allow to monitor the status of the ObjectSet resources in a different cluster
+// than the one where ObjectSets are created, like in HyperShift integration tests.
+func runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(
+	t *testing.T, destClient client.Client, _ *wait.Waiter, namespace, class string,
+) {
 	t.Helper()
 
 	cm := &corev1.ConfigMap{
@@ -310,7 +318,7 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 
 	// expect cm to be present.
 	currentCM := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm.Name, Namespace: objectSet.Namespace,
 	}, currentCM))
 
@@ -335,7 +343,7 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 	}, currentObjectSet), fmt.Sprintf(`objectsets.package-operator.run "%s" not found`, objectSet.Name))
 
 	// expect cm to still be there
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm.Name, Namespace: objectSet.Namespace,
 	}, currentCM))
 
@@ -345,7 +353,15 @@ func runObjectSetOrphanCascadeDeletionTest(t *testing.T, namespace, class string
 	}
 }
 
-func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
+func runObjectSetHandoverTest(t *testing.T, namespace, class string) { //nolint:thelper
+	runObjectSetHandoverTestWithCustomHandlers(t, Client, Waiter, namespace, class)
+}
+
+// destClient and destWaiter allow to monitor the status of the ObjectSet resources in a different cluster
+// than the one where ObjectSets are created, like in HyperShift integration tests.
+func runObjectSetHandoverTestWithCustomHandlers(
+	t *testing.T, destClient client.Client, _ *wait.Waiter, namespace, class string,
+) {
 	t.Helper()
 
 	cm1 := &corev1.ConfigMap{
@@ -389,13 +405,13 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 
 	// expect cm-1 to be present.
 	currentCM1 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
 	}, currentCM1))
 
 	// expect cm-2 to be present.
 	currentCM2 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM2))
 
@@ -425,13 +441,13 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 	assert.Equal(t, "ProbeFailure", availableCond.Reason)
 
 	// expect cm-2 to still be present.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM2))
 
 	// expect cm-3 to also be present now.
 	currentCM3 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM3))
 
@@ -440,7 +456,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetInTransition, metav1.ConditionTrue))
 
 	// expect cm-1 to still be present and now controlled by Rev2.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
 	}, currentCM1))
 
@@ -478,7 +494,7 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 
 	// Patch cm-1 to pass probe.
 	require.NoError(t,
-		Client.Patch(ctx, currentCM1,
+		destClient.Patch(ctx, currentCM1,
 			client.RawPatch(types.MergePatchType, []byte(`{"metadata":{"annotations":{"name":"cm-1"}}}`))))
 
 	// Expect ObjectSet Rev2 to become Available.
@@ -492,20 +508,30 @@ func runObjectSetHandoverTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForCondition(ctx, objectSetRev1, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
 
 	// expect cm-2 to be gone.
-	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
+	require.EqualError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm2.Name, Namespace: objectSetRev1.Namespace,
 	}, currentCM2), `configmaps "cm-2" not found`)
 
 	// expect cm-3 and cm-1 to be still present
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm1.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM1))
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
 	}, currentCM3))
 }
 
 func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) { //nolint:thelper
+	runObjectSetSetupPauseTeardownTestWithCustomHandlers(t, Client, Waiter, namespace, class)
+}
+
+// destClient and destWaiter allow to monitor the status of the ObjectSet resources in a different cluster
+// than the one where ObjectSets are created, like in HyperShift integration tests.
+//
+//nolint:thelper
+func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
+	t *testing.T, destClient client.Client, destWaiter *wait.Waiter, namespace, class string,
+) {
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "cm-4",
@@ -577,16 +603,16 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 
 	// expect cm-4 to be present.
 	currentCM4 := &corev1.ConfigMap{}
-	require.NoError(t, Client.Get(ctx, cm4Key, currentCM4))
+	require.NoError(t, destClient.Get(ctx, cm4Key, currentCM4))
 
 	// expect cm-5 to NOT be present as Phase-1 didn't complete.
 	currentCM5 := &corev1.ConfigMap{}
-	require.EqualError(t, Client.Get(ctx, cm5Key, currentCM5), `configmaps "cm-5" not found`)
+	require.EqualError(t, destClient.Get(ctx, cm5Key, currentCM5), `configmaps "cm-5" not found`)
 
 	// Patch cm-4 to pass probe.
 	// -------------------------
 	require.NoError(t,
-		Client.Patch(ctx, currentCM4,
+		destClient.Patch(ctx, currentCM4,
 			client.RawPatch(types.MergePatchType, []byte(`{"metadata":{"annotations":{"name":"cm-4"}}}`))))
 
 	// Expect ObjectSet to become Available.
@@ -616,7 +642,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	}, objectSet.Status.ControllerOf)
 
 	// Expect cm-5 to be present now.
-	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm5.Name, Namespace: objectSet.Namespace,
 	}, currentCM5))
 
@@ -633,11 +659,11 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetPaused, metav1.ConditionTrue))
 
 	// should be reconciled to "banana":"bread", if reconciler would not be paused.
-	require.NoError(t, Client.Patch(ctx, currentCM4,
+	require.NoError(t, destClient.Patch(ctx, currentCM4,
 		client.RawPatch(types.MergePatchType, []byte(`{"data":{"banana":"toast"}}`))))
 
 	// Wait 5s for the object to be reconciled, which should not happen, because it's paused.
-	err = Waiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state",
+	err = destWaiter.WaitForObject(ctx, currentCM4, "to NOT be reconciled to its desired state",
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
@@ -657,7 +683,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		}))
 
 	// Wait 10s for the object to be reconciled, which should now happen!
-	err = Waiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state",
+	err = destWaiter.WaitForObject(ctx, currentCM4, "to be reconciled to its desired state",
 		func(obj client.Object) (done bool, err error) {
 			cm := obj.(*corev1.ConfigMap)
 			return cm.Data["banana"] == "bread", nil
@@ -669,7 +695,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 	// ---------------------------
 
 	// Patch cm-4 with extra finalizer, so it can't be deleted till we say so.
-	err = Client.Patch(ctx, currentCM4,
+	err = destClient.Patch(ctx, currentCM4,
 		client.RawPatch(types.StrategicMergePatchType,
 			[]byte(`{"metadata":{"finalizers":["package-operator.run/test-blocker"]}}`),
 		),
@@ -685,13 +711,13 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionFalse))
 
 	// expect cm-5 to be gone already.
-	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
+	require.EqualError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm5.Name, Namespace: objectSet.Namespace,
 	}, currentCM5), `configmaps "cm-5" not found`)
 
 	// Remove our finalizer.
 	require.NoError(t,
-		Client.Patch(ctx, currentCM4,
+		destClient.Patch(ctx, currentCM4,
 			client.RawPatch(types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers/0" }]`))))
 
 	// ObjectSet is now Archived.
@@ -699,7 +725,7 @@ func runObjectSetSetupPauseTeardownTest(t *testing.T, namespace, class string) {
 		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
 
 	// expect cm-4 to be also gone.
-	require.EqualError(t, Client.Get(ctx, client.ObjectKey{
+	require.EqualError(t, destClient.Get(ctx, client.ObjectKey{
 		Name: cm4.Name, Namespace: objectSet.Namespace,
 	}, currentCM4), `configmaps "cm-4" not found`)
 
