@@ -40,7 +40,7 @@ spec:
         - name: PKO_IMAGE
           value: registry.package-operator.run/static-image
         - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
-          value: registry.package-operator.run/static-image
+          value: ""
         image: registry.package-operator.run/static-image
         livenessProbe:
           httpGet:
