@@ -61,9 +61,6 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 
 		// store evaluation result in context
 		conditionsMap[m.Name] = result
-
-		// store condition variable name declaration
-		opts = append(opts, cel.Variable(m.Name, cel.BoolType))
 	}
 
 	ctxMap["cond"] = conditionsMap
