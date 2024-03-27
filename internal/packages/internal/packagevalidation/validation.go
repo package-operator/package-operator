@@ -33,6 +33,10 @@ func (l PackageValidatorList) ValidatePackage(ctx context.Context, pkg *packaget
 type PackageManifestValidator struct{}
 
 func (v *PackageManifestValidator) ValidatePackage(ctx context.Context, pkg *packagetypes.Package) error {
+	return packagetypes.ValidateEachComponent(ctx, pkg, v.doValidatePackage)
+}
+
+func (v *PackageManifestValidator) doValidatePackage(ctx context.Context, pkg *packagetypes.Package, _ bool) error {
 	errList, err := packagemanifestvalidation.ValidatePackageManifest(ctx, pkg.Manifest)
 	if err != nil {
 		return err
@@ -50,7 +54,11 @@ func (v *PackageManifestValidator) ValidatePackage(ctx context.Context, pkg *pac
 // Validates a Package is able to be installed in the given scope.
 type PackageScopeValidator manifests.PackageManifestScope
 
-func (scope PackageScopeValidator) ValidatePackage(_ context.Context, pkg *packagetypes.Package) error {
+func (scope PackageScopeValidator) ValidatePackage(ctx context.Context, pkg *packagetypes.Package) error {
+	return packagetypes.ValidateEachComponent(ctx, pkg, scope.doValidatePackage)
+}
+
+func (scope PackageScopeValidator) doValidatePackage(_ context.Context, pkg *packagetypes.Package, _ bool) error {
 	if !slices.Contains(pkg.Manifest.Spec.Scopes, manifests.PackageManifestScope(scope)) {
 		// Package does not support installation in this scope.
 		return packagetypes.ViolationError{

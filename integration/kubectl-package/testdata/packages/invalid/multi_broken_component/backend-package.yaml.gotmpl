@@ -1,0 +1,20 @@
+apiVersion: package-operator.run/v1alpha1
+{{- if eq .package.metadata.namespace ""}}
+kind: ClusterPackage
+{{- else }}
+kind: Package
+{{- end}}
+metadata:
+  name: "{{.package.metadata.name}}-backend"
+  annotations:
+    package-operator.run/phase: deploy-backend
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+spec:
+  image: beluga
+  component: backend
+  config:
+{{- if eq .package.metadata.namespace ""}}
+    namespace: "{{.package.metadata.name}}"
+{{- end}}
+    testStubImage: seal

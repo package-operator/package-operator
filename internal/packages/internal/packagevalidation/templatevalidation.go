@@ -21,20 +21,26 @@ import (
 // Runs the template test suites.
 type TemplateTestValidator struct {
 	// Path to a folder containing the test fixtures for the package.
-	fixturesFolderPath string
+	packageBaseFolderPath string
 }
 
 // Creates a new TemplateTestValidator instance.
 func NewTemplateTestValidator(
-	fixturesFolderPath string,
+	packageBaseFolderPath string,
 ) *TemplateTestValidator {
 	return &TemplateTestValidator{
-		fixturesFolderPath: fixturesFolderPath,
+		packageBaseFolderPath: packageBaseFolderPath,
 	}
 }
 
 func (v TemplateTestValidator) ValidatePackage(
 	ctx context.Context, pkg *packagetypes.Package,
+) error {
+	return packagetypes.ValidateEachComponent(ctx, pkg, v.doValidatePackage)
+}
+
+func (v TemplateTestValidator) doValidatePackage(
+	ctx context.Context, pkg *packagetypes.Package, isComponent bool,
 ) error {
 	log := logr.FromContextOrDiscard(ctx).V(1)
 
@@ -43,9 +49,14 @@ func (v TemplateTestValidator) ValidatePackage(
 		return err
 	}
 
+	subDir := ""
+	if isComponent {
+		subDir = filepath.Join("components", pkg.Manifest.Name)
+	}
+
 	for _, templateTestCase := range pkg.Manifest.Test.Template {
 		log.Info("running template test case", "name", templateTestCase.Name)
-		if err := v.runTestCase(ctx, pkg, templateTestCase, kcV); err != nil {
+		if err := v.runTestCase(ctx, pkg, templateTestCase, kcV, subDir); err != nil {
 			return err
 		}
 	}
@@ -65,6 +76,7 @@ func (v TemplateTestValidator) runTestCase(
 	ctx context.Context, pkg *packagetypes.Package,
 	testCase manifests.PackageManifestTestCaseTemplate,
 	kcV kubeconformValidator,
+	subDir string,
 ) (rErr error) {
 	log := logr.FromContextOrDiscard(ctx)
 	pkg = pkg.DeepCopy()
@@ -95,7 +107,7 @@ func (v TemplateTestValidator) runTestCase(
 	}
 
 	// check if test figures exist
-	testFixturePath := filepath.Join(v.fixturesFolderPath, testCase.Name)
+	testFixturePath := filepath.Join(v.packageBaseFolderPath, subDir, ".test-fixtures", testCase.Name)
 	_, err = os.Stat(testFixturePath)
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated

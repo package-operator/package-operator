@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -78,7 +77,7 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 			return fmt.Errorf("getting package from path: %w", err)
 		}
 
-		validators = append(validators, packages.NewTemplateTestValidator(filepath.Join(cfg.Path, ".test-fixtures")))
+		validators = append(validators, packages.NewTemplateTestValidator(cfg.Path))
 	} else {
 		var err error
 
