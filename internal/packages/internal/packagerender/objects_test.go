@@ -44,6 +44,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		tmplCtx  *packagetypes.PackageRenderContext
 		snippets []manifests.PackageManifestSnippet
 		filtered []unstructured.Unstructured
+		err      string
 	}{
 		{
 			name:     "no annotation",
@@ -51,6 +52,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			tmplCtx:  nil,
 			snippets: nil,
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
+			err:      "",
 		},
 		{
 			name:     "simple annotation",
@@ -58,6 +60,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			tmplCtx:  nil,
 			snippets: nil,
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
+			err:      "",
 		},
 		{
 			name:    "snippet annotation",
@@ -67,6 +70,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 				{Name: "mysnippet", Expression: "false"},
 			},
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
+			err:      "",
 		},
 		{
 			name:    "snippet annotation",
@@ -76,6 +80,15 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 				{Name: "mysnippet", Expression: "true"},
 			},
 			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
+			err:      "",
+		},
+		{
+			name:     "invalid expression",
+			objects:  []unstructured.Unstructured{newConfigMap("a", "invalid && expression")},
+			tmplCtx:  nil,
+			snippets: nil,
+			filtered: nil,
+			err:      string(packagetypes.ViolationReasonInvalidCELExpression),
 		},
 	} {
 		tc := tc
@@ -83,10 +96,15 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			t.Parallel()
 
 			filtered, err := filterWithCELAnnotation(tc.objects, tc.snippets, tc.tmplCtx)
-			require.NoError(t, err)
-			require.Equal(t, len(tc.filtered), len(filtered))
-			for i := 0; i < len(filtered); i++ {
-				assert.Equal(t, tc.filtered[i], filtered[i])
+
+			if tc.err == "" {
+				require.NoError(t, err)
+				require.Equal(t, len(tc.filtered), len(filtered))
+				for i := 0; i < len(filtered); i++ {
+					assert.Equal(t, tc.filtered[i], filtered[i])
+				}
+			} else {
+				require.ErrorContains(t, err, tc.err)
 			}
 		})
 	}
