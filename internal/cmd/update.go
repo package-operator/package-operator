@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,6 +103,21 @@ func (u Update) GenerateLockData(ctx context.Context, srcPath string, opts ...Ge
 		lockImages[i] = lockImg
 	}
 
+	r := packages.BuildResolver{}
+	lckPtr, err := r.AddManifest(ctx, pkg.Manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	var lcks []manifests.PackageManifestLockDependency
+	err = r.Solve()
+	switch {
+	case err != nil:
+		return nil, err
+	case len(*lckPtr) != 0:
+		lcks = *lckPtr
+	}
+
 	manifestLock := &manifests.PackageManifestLock{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       packages.PackageManifestLockGroupKind.Kind,
@@ -111,12 +127,15 @@ func (u Update) GenerateLockData(ctx context.Context, srcPath string, opts ...Ge
 			CreationTimestamp: clockOrDefaultClock(u.cfg.Clock).Now(),
 		},
 		Spec: manifests.PackageManifestLockSpec{
-			Images: lockImages,
+			Images:       lockImages,
+			Dependencies: lcks,
 		},
 	}
 
-	if pkg.ManifestLock != nil && lockSpecsAreEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
-		return nil, ErrLockDataUnchanged
+	if pkg.ManifestLock != nil {
+		if reflect.DeepEqual(manifestLock.Spec, pkg.ManifestLock.Spec) {
+			return nil, ErrLockDataUnchanged
+		}
 	}
 	v1alpha1ManifestLock, err := packages.ToV1Alpha1ManifestLock(manifestLock)
 	if err != nil {
@@ -147,31 +166,6 @@ func (u *Update) lockImageFromManifestImage(
 	}
 
 	return manifests.PackageManifestLockImage{Name: img.Name, Image: img.Image, Digest: digest}, nil
-}
-
-func lockSpecsAreEqual(spec manifests.PackageManifestLockSpec, other manifests.PackageManifestLockSpec) bool {
-	thisImages := map[string]manifests.PackageManifestLockImage{}
-	for _, image := range spec.Images {
-		thisImages[image.Name] = image
-	}
-
-	otherImages := map[string]manifests.PackageManifestLockImage{}
-	for _, image := range other.Images {
-		otherImages[image.Name] = image
-	}
-
-	if len(thisImages) != len(otherImages) {
-		return false
-	}
-
-	for name, image := range thisImages {
-		otherImage, exists := otherImages[name]
-		if !exists || otherImage != image {
-			return false
-		}
-	}
-
-	return true
 }
 
 type GenerateLockDataConfig struct {
