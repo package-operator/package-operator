@@ -118,9 +118,12 @@ var _ = ginkgo.DescribeTable("validate subcommand",
 	),
 	ginkgo.Entry("given the path of a multi component package with broken component",
 		subCommandTestCase{
-			Args:                []string{sourcePathFixture("invalid_multi_broken_component")},
-			ExpectedExitCode:    1,
-			ExpectedErrorOutput: []string{"Error: validating package: loading package from files: component \"backend\": File mismatch against fixture in deployment.yaml.gotmpl: Testcase \"namespace-scope\"\n"},
+			Args:             []string{sourcePathFixture("invalid_multi_broken_component")},
+			ExpectedExitCode: 1,
+			ExpectedErrorOutput: []string{"Error: validating package: " +
+				"loading package from files: component \"backend\": " +
+				"File mismatch against fixture in deployment.yaml.gotmpl: " +
+				"Testcase \"namespace-scope\"\n"},
 		},
 	),
 )
