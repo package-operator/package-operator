@@ -8,12 +8,32 @@ import (
 	"regexp"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types/ref"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
-var errInvalidReturnType = errors.New("invalid return type")
+var (
+	errContextUnpack             = errors.New("context unpacking error")
+	errEnvCreation               = errors.New("CEL environment creation error")
+	errExpressionCompilation     = errors.New("CEL expression compilation error")
+	errProgramConstruction       = errors.New("program construction error")
+	errProgramEvaluation         = errors.New("program evaluation error")
+	errInvalidReturnType         = errors.New("invalid return type")
+	errDuplicateCELConditionName = errors.New("duplicate CEL condition name")
+	errCELConditionEvaluation    = errors.New("CEL condition evaluation failed")
+	errInvalidCELConditionName   = errors.New("invalid CEL condition name")
+
+	conditionNameRegexp = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
+)
+
+type (
+	unpackContextFn func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error)
+	newEnvFn        func(...cel.EnvOption) (*cel.Env, error)
+	envProgramFn    func(*cel.Env, *cel.Ast) (cel.Program, error)
+	programEvalFn   func(cel.Program, any) (ref.Val, *cel.EvalDetails, error)
+)
 
 // CelCtx contains a cel environment that is prepared with a tmplCtx and pre-evaluated conditions.
 type CelCtx struct {
@@ -26,15 +46,23 @@ type CelCtx struct {
 func New(conditions []manifests.PackageManifestNamedCondition,
 	tmplCtx *packagetypes.PackageRenderContext,
 ) (CelCtx, error) {
-	ctxMap, opts, err := unpackContext(tmplCtx)
+	return newCelCtx(conditions, tmplCtx, unpackContext, cel.NewEnv)
+}
+
+func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
+	tmplCtx *packagetypes.PackageRenderContext,
+	unpack unpackContextFn,
+	newEnv newEnvFn,
+) (CelCtx, error) {
+	ctxMap, opts, err := unpack(tmplCtx)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("context unpacking error: %w", err)
+		return CelCtx{}, fmt.Errorf("%w: %w", errContextUnpack, err)
 	}
 
 	// create CEL environment with context
-	env, err := cel.NewEnv(opts...)
+	env, err := newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("env error: %w", err)
+		return CelCtx{}, fmt.Errorf("%w: %w", errEnvCreation, err)
 	}
 
 	cc := CelCtx{
@@ -46,17 +74,17 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 	for _, m := range conditions {
 		// make sure condition name is allowed
 		if !conditionNameRegexp.MatchString(m.Name) {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
+			return CelCtx{}, fmt.Errorf("%w: '%s'", errInvalidCELConditionName, m.Name)
 		}
 
 		// make sure name is unique and does not shadow a key in conditionsMap
 		if _, ok := conditionsMap[m.Name]; ok {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
+			return CelCtx{}, fmt.Errorf("%w: '%s'", errDuplicateCELConditionName, m.Name)
 		}
 
 		result, err := cc.Evaluate(m.Expression)
 		if err != nil {
-			return CelCtx{}, fmt.Errorf("%w: '%s': %w", ErrCELConditionEvaluation, m.Name, err)
+			return CelCtx{}, fmt.Errorf("%w: '%s': %w", errCELConditionEvaluation, m.Name, err)
 		}
 
 		// store evaluation result in context
@@ -67,9 +95,9 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 	opts = append(opts, cel.Variable("cond", cel.MapType(cel.StringType, cel.BoolType)))
 
 	// recreate CEL environment with condition declarations
-	env, err = cel.NewEnv(opts...)
+	env, err = newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("env error: %w", err)
+		return CelCtx{}, fmt.Errorf("%w: %w", errEnvCreation, err)
 	}
 	cc.env = env
 
@@ -78,34 +106,46 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 
 // Evaluate CEL expressions against the prepared template context and condition results.
 func (cc *CelCtx) Evaluate(expr string) (bool, error) {
+	return cc.evaluate(expr, defaultEnvProgram(), defaultProgramEval())
+}
+
+func defaultEnvProgram() envProgramFn {
+	return func(env *cel.Env, ast *cel.Ast) (cel.Program, error) {
+		return env.Program(ast)
+	}
+}
+
+func defaultProgramEval() programEvalFn {
+	return func(program cel.Program, ctx any) (ref.Val, *cel.EvalDetails, error) {
+		return program.Eval(ctx)
+	}
+}
+
+func (cc *CelCtx) evaluate(expr string, envProgram envProgramFn, programEval programEvalFn) (bool, error) {
 	// compile CEL expression
 	ast, issues := cc.env.Compile(expr)
 	if issues != nil && issues.Err() != nil {
-		return false, fmt.Errorf("compile error: %w", issues.Err())
+		return false, fmt.Errorf("%w: %w", errExpressionCompilation, issues.Err())
 	}
 
 	// create program
-	program, err := cc.env.Program(ast)
+	program, err := envProgram(cc.env, ast)
 	if err != nil {
-		return false, fmt.Errorf("program construction error: %w", err)
+		return false, fmt.Errorf("%w: %w", errProgramConstruction, err)
 	}
 
 	// evaluate the expression with context input
-	out, _, err := program.Eval(cc.ctxMap)
+	out, _, err := programEval(program, cc.ctxMap)
 	if err != nil {
-		return false, fmt.Errorf("evaluation error: %w", err)
+		return false, fmt.Errorf("%w: %w", errProgramEvaluation, err)
 	}
 
 	// make sure that result type is 'bool'
 	if !reflect.DeepEqual(out.Type(), cel.BoolType) {
-		return false, newErrInvalidReturnType(ast.OutputType(), cel.BoolType)
+		return false, fmt.Errorf("%w: %v, expected %v", errInvalidReturnType, ast.OutputType(), cel.BoolType)
 	}
 
 	return out.Value().(bool), nil
-}
-
-func newErrInvalidReturnType(actual, expected *cel.Type) error {
-	return fmt.Errorf("%w: %v, expected %v", errInvalidReturnType, actual, expected)
 }
 
 func unpackContext(tmplCtx *packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
@@ -136,10 +176,3 @@ func structToMap[T any](p *T) (map[string]any, error) {
 	err = json.Unmarshal(data, &result)
 	return result, err
 }
-
-var (
-	ErrDuplicateCELConditionName = errors.New("duplicate CEL condition name")
-	ErrCELConditionEvaluation    = errors.New("CEL condition evaluation failed")
-	ErrInvalidCELConditionName   = errors.New("invalid CEL condition name")
-	conditionNameRegexp          = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
-)

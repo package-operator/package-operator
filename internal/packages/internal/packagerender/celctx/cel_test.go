@@ -1,15 +1,32 @@
 package celctx
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types/ref"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
+
+func mockUnpack(unpacked map[string]any, opts []cel.EnvOption, err error) unpackContextFn {
+	return func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
+		return unpacked, opts, err
+	}
+}
+
+func mockNewEnv(env *cel.Env, err error) newEnvFn {
+	return func(...cel.EnvOption) (*cel.Env, error) {
+		return env, err
+	}
+}
+
+var errMock = errors.New("out of bananas")
 
 func Test_newCelCtx(t *testing.T) {
 	t.Parallel()
@@ -19,6 +36,8 @@ func Test_newCelCtx(t *testing.T) {
 		expression  string
 		conditions  []manifests.PackageManifestNamedCondition
 		tmplCtx     *packagetypes.PackageRenderContext
+		unpack      unpackContextFn
+		newEnv      newEnvFn
 		errContains string
 	}{
 		{
@@ -33,6 +52,8 @@ func Test_newCelCtx(t *testing.T) {
 				Images:      nil,
 				Environment: manifests.PackageEnvironment{},
 			},
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
 			errContains: "",
 		},
 		{
@@ -47,7 +68,9 @@ func Test_newCelCtx(t *testing.T) {
 				Images:      nil,
 				Environment: manifests.PackageEnvironment{},
 			},
-			errContains: `CEL condition evaluation failed`,
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errCELConditionEvaluation.Error(),
 		},
 		{
 			name:       "invalid condition name",
@@ -56,7 +79,9 @@ func Test_newCelCtx(t *testing.T) {
 				{Name: "1ustTrue", Expression: "true"},
 			},
 			tmplCtx:     nil,
-			errContains: ErrInvalidCELConditionName.Error(),
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errInvalidCELConditionName.Error(),
 		},
 		{
 			name:       "duplicate condition name",
@@ -66,14 +91,39 @@ func Test_newCelCtx(t *testing.T) {
 				{Name: "justTrue", Expression: "false"},
 			},
 			tmplCtx:     nil,
-			errContains: ErrDuplicateCELConditionName.Error(),
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errDuplicateCELConditionName.Error(),
+		},
+		{
+			name:       "fail unpack",
+			expression: "true",
+			conditions: nil,
+			tmplCtx: &packagetypes.PackageRenderContext{
+				Package:     manifests.TemplateContextPackage{},
+				Config:      nil,
+				Images:      nil,
+				Environment: manifests.PackageEnvironment{},
+			},
+			unpack:      mockUnpack(nil, nil, errMock),
+			newEnv:      cel.NewEnv,
+			errContains: errContextUnpack.Error(),
+		},
+		{
+			name:        "fail newEnv",
+			expression:  "true",
+			conditions:  nil,
+			tmplCtx:     nil,
+			unpack:      unpackContext,
+			newEnv:      mockNewEnv(nil, errMock),
+			errContains: errEnvCreation.Error(),
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := New(tc.conditions, tc.tmplCtx)
+			_, err := newCelCtx(tc.conditions, tc.tmplCtx, tc.unpack, tc.newEnv)
 			if tc.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -83,57 +133,85 @@ func Test_newCelCtx(t *testing.T) {
 	}
 }
 
-func Test_celCtx_Evaluate(t *testing.T) {
+func mockEnvProgram(fail bool) envProgramFn {
+	if !fail {
+		return defaultEnvProgram()
+	}
+	return func(*cel.Env, *cel.Ast) (cel.Program, error) {
+		return nil, errMock
+	}
+}
+
+func mockProgramEval(fail bool) programEvalFn {
+	if !fail {
+		return defaultProgramEval()
+	}
+	return func(cel.Program, any) (ref.Val, *cel.EvalDetails, error) {
+		return nil, nil, errMock
+	}
+}
+
+func Test_celCtx_evaluate(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name       string
-		expression string
-		conditions []manifests.PackageManifestNamedCondition
-		tmplCtx    *packagetypes.PackageRenderContext
-		expected   bool
-		err        string
+		name        string
+		expression  string
+		envProgram  envProgramFn
+		programEval programEvalFn
+		conditions  []manifests.PackageManifestNamedCondition
+		tmplCtx     *packagetypes.PackageRenderContext
+		expected    bool
+		err         string
 	}{
 		// Simple expression parsing without context
 		{
-			"just true",
-			"true",
-			nil,
-			nil,
-			true,
-			"",
+			name:        "just true",
+			expression:  "true",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    true,
+			err:         "",
 		},
 		{
-			"simple &&",
-			"true && false",
-			nil,
-			nil,
-			false,
-			"",
+			name:        "simple &&",
+			expression:  "true && false",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         "",
 		},
 		{
-			"invalid expression",
-			"true && fals",
-			nil,
-			nil,
-			false,
-			"compile error: ERROR: <input>:1:9: undeclared reference to 'fals' (in container '')\n" +
-				" | true && fals\n" +
-				" | ........^",
+			name:        "invalid expression",
+			expression:  "true && fals",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errExpressionCompilation.Error(),
 		},
 		{
-			"invalid return type",
-			"2 + 3",
-			nil,
-			nil,
-			false,
-			newErrInvalidReturnType(cel.IntType, cel.BoolType).Error(),
+			name:        "invalid return type",
+			expression:  "2 + 3",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errInvalidReturnType.Error(),
 		},
 
 		// Parsing with template context
 		{
-			name:       "simple read from context",
-			expression: `config.banana == "bread"`,
+			name:        "simple read from context",
+			expression:  `config.banana == "bread"`,
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
 			tmplCtx: &packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "bread"},
@@ -144,8 +222,10 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			err:      "",
 		},
 		{
-			name:       "is hypershift",
-			expression: "has(.environment.hyperShift)",
+			name:        "is hypershift",
+			expression:  "has(.environment.hyperShift)",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
 			tmplCtx: &packagetypes.PackageRenderContext{
 				Package: manifests.TemplateContextPackage{},
 				Config:  nil,
@@ -169,8 +249,10 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			err:      "",
 		},
 		{
-			name:       "condition read from context",
-			expression: "cond.isFoo",
+			name:        "condition read from context",
+			expression:  "cond.isFoo",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
@@ -183,6 +265,26 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			expected: true,
 			err:      "",
 		},
+		{
+			name:        "fail program construction",
+			expression:  "false",
+			envProgram:  mockEnvProgram(true),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errProgramConstruction.Error(),
+		},
+		{
+			name:        "fail program evaluation",
+			expression:  "false",
+			envProgram:  defaultEnvProgram(),
+			programEval: mockProgramEval(true),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errProgramEvaluation.Error(),
+		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -191,12 +293,12 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			cc, err := New(tc.conditions, tc.tmplCtx)
 			require.NoError(t, err)
 
-			result, err := cc.Evaluate(tc.expression)
+			result, err := cc.evaluate(tc.expression, tc.envProgram, tc.programEval)
 			if tc.err == "" {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expected, result)
 			} else {
-				require.EqualError(t, err, tc.err)
+				require.ErrorContains(t, err, tc.err)
 			}
 		})
 	}
