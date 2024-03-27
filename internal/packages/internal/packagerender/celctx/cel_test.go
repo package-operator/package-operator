@@ -23,7 +23,7 @@ func Test_newCelCtx(t *testing.T) {
 	}{
 		{
 			name:       "condition read from context",
-			expression: "isFoo",
+			expression: "cond.isFoo",
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
@@ -37,7 +37,7 @@ func Test_newCelCtx(t *testing.T) {
 		},
 		{
 			name:       "invalid condition expression",
-			expression: "isFoo",
+			expression: "cond.isFoo",
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana "foo"`},
 			},
@@ -51,7 +51,7 @@ func Test_newCelCtx(t *testing.T) {
 		},
 		{
 			name:       "invalid condition name",
-			expression: "1ustTrue",
+			expression: "cond.1ustTrue",
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "1ustTrue", Expression: "true"},
 			},
@@ -60,7 +60,7 @@ func Test_newCelCtx(t *testing.T) {
 		},
 		{
 			name:       "duplicate condition name",
-			expression: "justTrue",
+			expression: "cond.justTrue",
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "justTrue", Expression: "true"},
 				{Name: "justTrue", Expression: "false"},
@@ -170,7 +170,7 @@ func Test_celCtx_Evaluate(t *testing.T) {
 		},
 		{
 			name:       "condition read from context",
-			expression: "isFoo",
+			expression: "cond.isFoo",
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},

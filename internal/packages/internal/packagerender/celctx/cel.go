@@ -42,14 +42,15 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 		ctxMap: ctxMap,
 	}
 
+	conditionsMap := map[string]bool{}
 	for _, m := range conditions {
 		// make sure condition name is allowed
 		if !conditionNameRegexp.MatchString(m.Name) {
 			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
 		}
 
-		// make sure name is unique and does not shadow a key in ctxMap
-		if _, ok := ctxMap[m.Name]; ok {
+		// make sure name is unique and does not shadow a key in conditionsMap
+		if _, ok := conditionsMap[m.Name]; ok {
 			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
 		}
 
@@ -59,11 +60,14 @@ func New(conditions []manifests.PackageManifestNamedCondition,
 		}
 
 		// store evaluation result in context
-		ctxMap[m.Name] = result
+		conditionsMap[m.Name] = result
 
 		// store condition variable name declaration
 		opts = append(opts, cel.Variable(m.Name, cel.BoolType))
 	}
+
+	ctxMap["cond"] = conditionsMap
+	opts = append(opts, cel.Variable("cond", cel.MapType(cel.StringType, cel.BoolType)))
 
 	// recreate CEL environment with condition declarations
 	env, err = cel.NewEnv(opts...)
@@ -108,7 +112,6 @@ func newErrInvalidReturnType(actual, expected *cel.Type) error {
 }
 
 func unpackContext(tmplCtx *packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
-	// TODO ask why?
 	if tmplCtx == nil {
 		return map[string]any{}, []cel.EnvOption{}, nil
 	}

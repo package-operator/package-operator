@@ -64,7 +64,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		},
 		{
 			name:    "condition annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || cond.mycondition")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "mycondition", Expression: "false"},
@@ -74,12 +74,12 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		},
 		{
 			name:    "condition annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || cond.mycondition")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "mycondition", Expression: "true"},
 			},
-			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
+			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || cond.mycondition")},
 			err:      "",
 		},
 		{
