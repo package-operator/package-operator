@@ -27,7 +27,7 @@ func (ci *CI) Lint(_ context.Context, _ []string) error {
 // PostPush runs autofixes in CI and validates that the repo is clean afterwards.
 func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.PostPush, args)
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
 		run.Meth(lint, lint.goModTidyAll),
@@ -74,11 +74,11 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		run.Fn3(pushImage, "test-stub", registry, "amd64"),
 	)
 
-	if err := mgr.ParallelDeps(ctx, self, deps...); err != nil {
+	if err := mgr.SerialDeps(ctx, self, deps...); err != nil {
 		return err
 	}
 
-	return mgr.ParallelDeps(ctx, self,
+	return mgr.SerialDeps(ctx, self,
 		// Package images have to be built after binary images have been
 		// because the package lockfiles have to be generated from the image manifest hashes
 		// and these are only known after pushing to the target registry.

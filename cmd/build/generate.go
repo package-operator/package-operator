@@ -37,7 +37,7 @@ func (g Generate) All(ctx context.Context) error {
 	}
 
 	// installYamlFile has to come after code generation.
-	return mgr.ParallelDeps(
+	return mgr.SerialDeps(
 		ctx, self,
 		run.Meth(g, g.docs),
 		run.Meth(g, g.installYamlFile),

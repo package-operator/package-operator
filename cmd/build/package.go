@@ -27,7 +27,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 	}
 
 	self := run.Fn2(buildPackage, name, registry)
-	if err := mgr.ParallelDeps(
+	if err := mgr.SerialDeps(
 		ctx, self,
 		deps...,
 	); err != nil {

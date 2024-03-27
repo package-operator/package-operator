@@ -15,7 +15,7 @@ func (l Lint) goModTidy(workdir string) error {
 }
 
 func (l Lint) goModTidyAll(ctx context.Context) error {
-	return mgr.ParallelDeps(ctx, run.Meth(l, l.goModTidyAll),
+	return mgr.SerialDeps(ctx, run.Meth(l, l.goModTidyAll),
 		run.Meth1(l, l.goModTidy, "."),
 		run.Meth1(l, l.goModTidy, "./apis/"),
 		run.Meth1(l, l.goModTidy, "./pkg/"),

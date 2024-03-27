@@ -23,7 +23,7 @@ type Test struct{}
 // Integration runs local integration tests in a KinD cluster.
 func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) error {
 	self := run.Meth2(t, t.Integration, jsonOutput, filter)
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(cluster, cluster.create),
 		run.Meth(generate, generate.All),
 	); err != nil {

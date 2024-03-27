@@ -147,7 +147,7 @@ func (c *Cluster) create(ctx context.Context) error {
 // Create the local Hypershift development environment.
 func (c *Cluster) createHostedCluster(ctx context.Context, mgmtCl *Cluster, args []string) error {
 	self := run.Meth2(c, c.createHostedCluster, mgmtCl, args)
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth1(mgmtCl, mgmtCl.loadCRDs, []string{}),
 		run.Meth1(mgmtCl, mgmtCl.installHypershiftAPIs, []string{}),
 		run.Meth(c, c.create),
@@ -242,7 +242,7 @@ func (c *Cluster) destroy(ctx context.Context) error {
 // Install the Hypershift HostedCluster API in the local development cluster.
 func (c *Cluster) installHypershiftAPIs(ctx context.Context, _ []string) error {
 	self := run.Meth1(c, c.installHypershiftAPIs, []string{})
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(c, c.create),
 	); err != nil {
 		return err
@@ -269,7 +269,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 	hostPort := fmt.Sprintf("localhost:%d", registryPort)
 	registry := localRegistry(hostPort)
 
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Fn3(pushImage, "package-operator-manager", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "package-operator-webhook", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "remote-phase-manager", registry, runtime.GOARCH),
@@ -282,7 +282,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		return err
 	}
 
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
 		run.Fn2(pushPackage, "test-stub-cel", registry),
@@ -297,7 +297,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 // Load CRDs into the local development cluster.
 func (c *Cluster) loadCRDs(ctx context.Context, args []string) error {
 	self := run.Meth1(c, c.loadCRDs, args)
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(generate, generate.code),
 		run.Meth(c, c.create),
 	); err != nil {

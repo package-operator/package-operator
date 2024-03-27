@@ -22,7 +22,7 @@ type Dev struct{}
 // PreCommit runs linters and code-gens for pre-commit.
 func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.PreCommit, args)
-	return mgr.ParallelDeps(ctx, self,
+	return mgr.SerialDeps(ctx, self,
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
 		run.Meth(lint, lint.goModTidyAll),
@@ -33,7 +33,7 @@ func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 func (dev *Dev) Generate(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.Generate, args)
 
-	return mgr.ParallelDeps(
+	return mgr.SerialDeps(
 		ctx, self,
 		run.Meth(generate, generate.code),
 		run.Meth(generate, generate.docs),
@@ -94,7 +94,7 @@ func (dev *Dev) LoadCRDs(ctx context.Context, args []string) error {
 // Destroy the local development cluster.
 func (dev *Dev) Destroy(ctx context.Context, _ []string) error {
 	self := run.Meth1(dev, dev.Destroy, []string{})
-	return mgr.ParallelDeps(ctx, self,
+	return mgr.SerialDeps(ctx, self,
 		run.Meth(cluster, cluster.destroy),
 		run.Meth(hypershiftHostedCluster, hypershiftHostedCluster.destroy),
 	)
