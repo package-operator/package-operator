@@ -30,8 +30,8 @@ spec:
       required:
       - testStubImage
       type: object
-  conditionals:
-    snippets:
+  conditionalFiltering:
+    namedConditions:
     - name: "justTrue"
       expression: "true"
     - name: "justFalse"

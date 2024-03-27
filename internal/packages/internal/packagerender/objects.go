@@ -73,7 +73,7 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 
-	return filterWithCELAnnotation(objects, pkg.Manifest.Spec.Conditionals.Snippets, &tmplCtx)
+	return filterWithCELAnnotation(objects, pkg.Manifest.Spec.ConditionalFiltering.NamedConditions, &tmplCtx)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -119,7 +119,7 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
-	snippets []manifests.PackageManifestSnippet,
+	snippets []manifests.PackageManifestNamedCondition,
 	tmplCtx *packagetypes.PackageRenderContext,
 ) (
 	[]unstructured.Unstructured, error,

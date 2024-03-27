@@ -79,21 +79,21 @@ type PackageManifestSpec struct {
 	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
 	// Used to conditionally render objects based on CEL expressions.
 	// +optional
-	Conditionals PackageManifestConditionals `json:"conditionals,omitempty"`
+	ConditionalFiltering PackageManifestConditionalFiltering `json:"conditionalFiltering,omitempty"`
 }
 
-// PackageManifestConditionals are used to conditionally render objects based on CEL expressions.
-type PackageManifestConditionals struct {
+// PackageManifestConditionalFiltering are used to conditionally render objects based on CEL expressions.
+type PackageManifestConditionalFiltering struct {
 	// Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.
 	// They are evaluated once per package.
 	// +optional
-	Snippets []PackageManifestSnippet `json:"snippets,omitempty"`
+	NamedConditions []PackageManifestNamedCondition `json:"namedConditions,omitempty"`
 }
 
-// PackageManifestSnippet is a reusable named CEL expression.
+// PackageManifestNamedCondition is a reusable named CEL expression.
 // It is injected as a variable into the CEL evaluation environment,
 // and its value is set to the result of Expression ("true"/"false").
-type PackageManifestSnippet struct {
+type PackageManifestNamedCondition struct {
 	// A unique name. Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]*
 	Name string `json:"name"`
 	// A CEL expression with a boolean output type.

@@ -15,14 +15,17 @@ import (
 
 var errInvalidReturnType = errors.New("invalid return type")
 
-// CelCtx contains a cel environment that is prepared with a tmplCtx and pre-evaluated snippets.
+// CelCtx contains a cel environment that is prepared with a tmplCtx and pre-evaluated conditions.
 type CelCtx struct {
 	env    *cel.Env
 	ctxMap map[string]any
 }
 
-// New pre-evaluates the given snippets against tmplCtx and exposes both tmplCtx + snippet results to cel programs.
-func New(snippets []manifests.PackageManifestSnippet, tmplCtx *packagetypes.PackageRenderContext) (CelCtx, error) {
+// New pre-evaluates the given named conditions against tmplCtx
+// and exposes both tmplCtx + named condition results to cel programs.
+func New(conditions []manifests.PackageManifestNamedCondition,
+	tmplCtx *packagetypes.PackageRenderContext,
+) (CelCtx, error) {
 	ctxMap, opts, err := unpackContext(tmplCtx)
 	if err != nil {
 		return CelCtx{}, fmt.Errorf("context unpacking error: %w", err)
@@ -39,30 +42,30 @@ func New(snippets []manifests.PackageManifestSnippet, tmplCtx *packagetypes.Pack
 		ctxMap: ctxMap,
 	}
 
-	for _, m := range snippets {
-		// make sure snippet name is allowed
-		if !snippetNameRegexp.MatchString(m.Name) {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELSnippetName, m.Name)
+	for _, m := range conditions {
+		// make sure condition name is allowed
+		if !conditionNameRegexp.MatchString(m.Name) {
+			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
 		}
 
 		// make sure name is unique and does not shadow a key in ctxMap
 		if _, ok := ctxMap[m.Name]; ok {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELSnippetName, m.Name)
+			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
 		}
 
 		result, err := cc.Evaluate(m.Expression)
 		if err != nil {
-			return CelCtx{}, fmt.Errorf("%w: '%s': %w", ErrCELSnippetEvaluation, m.Name, err)
+			return CelCtx{}, fmt.Errorf("%w: '%s': %w", ErrCELConditionEvaluation, m.Name, err)
 		}
 
 		// store evaluation result in context
 		ctxMap[m.Name] = result
 
-		// store snippet variable name declaration
+		// store condition variable name declaration
 		opts = append(opts, cel.Variable(m.Name, cel.BoolType))
 	}
 
-	// recreate CEL environment with snippet declarations
+	// recreate CEL environment with condition declarations
 	env, err = cel.NewEnv(opts...)
 	if err != nil {
 		return CelCtx{}, fmt.Errorf("env error: %w", err)
@@ -72,7 +75,7 @@ func New(snippets []manifests.PackageManifestSnippet, tmplCtx *packagetypes.Pack
 	return cc, nil
 }
 
-// Evaluate CEL expressions against the prepared template context and snippet results.
+// Evaluate CEL expressions against the prepared template context and condition results.
 func (cc *CelCtx) Evaluate(expr string) (bool, error) {
 	// compile CEL expression
 	ast, issues := cc.env.Compile(expr)
@@ -135,8 +138,8 @@ func structToMap[T any](p *T) (map[string]any, error) {
 }
 
 var (
-	ErrDuplicateCELSnippetName = errors.New("duplicate CEL snippet name")
-	ErrCELSnippetEvaluation    = errors.New("CEL snippet evaluation failed")
-	ErrInvalidCELSnippetName   = errors.New("invalid CEL snippet name")
-	snippetNameRegexp          = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
+	ErrDuplicateCELConditionName = errors.New("duplicate CEL condition name")
+	ErrCELConditionEvaluation    = errors.New("CEL condition evaluation failed")
+	ErrInvalidCELConditionName   = errors.New("invalid CEL condition name")
+	conditionNameRegexp          = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 )

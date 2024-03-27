@@ -39,63 +39,63 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name     string
-		objects  []unstructured.Unstructured
-		tmplCtx  *packagetypes.PackageRenderContext
-		snippets []manifests.PackageManifestSnippet
-		filtered []unstructured.Unstructured
-		err      string
+		name       string
+		objects    []unstructured.Unstructured
+		tmplCtx    *packagetypes.PackageRenderContext
+		conditions []manifests.PackageManifestNamedCondition
+		filtered   []unstructured.Unstructured
+		err        string
 	}{
 		{
-			name:     "no annotation",
-			objects:  []unstructured.Unstructured{newConfigMap("a", "")},
-			tmplCtx:  nil,
-			snippets: nil,
-			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
-			err:      "",
+			name:       "no annotation",
+			objects:    []unstructured.Unstructured{newConfigMap("a", "")},
+			tmplCtx:    nil,
+			conditions: nil,
+			filtered:   []unstructured.Unstructured{newConfigMap("a", "")},
+			err:        "",
 		},
 		{
-			name:     "simple annotation",
-			objects:  []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "true && false")},
-			tmplCtx:  nil,
-			snippets: nil,
-			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
-			err:      "",
+			name:       "simple annotation",
+			objects:    []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "true && false")},
+			tmplCtx:    nil,
+			conditions: nil,
+			filtered:   []unstructured.Unstructured{newConfigMap("a", "")},
+			err:        "",
 		},
 		{
-			name:    "snippet annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
+			name:    "condition annotation",
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
-			snippets: []manifests.PackageManifestSnippet{
-				{Name: "mysnippet", Expression: "false"},
+			conditions: []manifests.PackageManifestNamedCondition{
+				{Name: "mycondition", Expression: "false"},
 			},
 			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
 			err:      "",
 		},
 		{
-			name:    "snippet annotation",
-			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
+			name:    "condition annotation",
+			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
 			tmplCtx: &packagetypes.PackageRenderContext{},
-			snippets: []manifests.PackageManifestSnippet{
-				{Name: "mysnippet", Expression: "true"},
+			conditions: []manifests.PackageManifestNamedCondition{
+				{Name: "mycondition", Expression: "true"},
 			},
-			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mysnippet")},
+			filtered: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || mycondition")},
 			err:      "",
 		},
 		{
-			name:     "invalid expression",
-			objects:  []unstructured.Unstructured{newConfigMap("a", "invalid && expression")},
-			tmplCtx:  nil,
-			snippets: nil,
-			filtered: nil,
-			err:      string(packagetypes.ViolationReasonInvalidCELExpression),
+			name:       "invalid expression",
+			objects:    []unstructured.Unstructured{newConfigMap("a", "invalid && expression")},
+			tmplCtx:    nil,
+			conditions: nil,
+			filtered:   nil,
+			err:        string(packagetypes.ViolationReasonInvalidCELExpression),
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			filtered, err := filterWithCELAnnotation(tc.objects, tc.snippets, tc.tmplCtx)
+			filtered, err := filterWithCELAnnotation(tc.objects, tc.conditions, tc.tmplCtx)
 
 			if tc.err == "" {
 				require.NoError(t, err)

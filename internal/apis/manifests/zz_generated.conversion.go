@@ -103,13 +103,13 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestConditionals)(nil), (*v1alpha1.PackageManifestConditionals)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals(a.(*PackageManifestConditionals), b.(*v1alpha1.PackageManifestConditionals), scope)
+	if err := s.AddGeneratedConversionFunc((*PackageManifestConditionalFiltering)(nil), (*v1alpha1.PackageManifestConditionalFiltering)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering(a.(*PackageManifestConditionalFiltering), b.(*v1alpha1.PackageManifestConditionalFiltering), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestConditionals)(nil), (*PackageManifestConditionals)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals(a.(*v1alpha1.PackageManifestConditionals), b.(*PackageManifestConditionals), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestConditionalFiltering)(nil), (*PackageManifestConditionalFiltering)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering(a.(*v1alpha1.PackageManifestConditionalFiltering), b.(*PackageManifestConditionalFiltering), scope)
 	}); err != nil {
 		return err
 	}
@@ -153,6 +153,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*PackageManifestNamedCondition)(nil), (*v1alpha1.PackageManifestNamedCondition)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_manifests_PackageManifestNamedCondition_To_v1alpha1_PackageManifestNamedCondition(a.(*PackageManifestNamedCondition), b.(*v1alpha1.PackageManifestNamedCondition), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestNamedCondition)(nil), (*PackageManifestNamedCondition)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_PackageManifestNamedCondition_To_manifests_PackageManifestNamedCondition(a.(*v1alpha1.PackageManifestNamedCondition), b.(*PackageManifestNamedCondition), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*PackageManifestPhase)(nil), (*v1alpha1.PackageManifestPhase)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_manifests_PackageManifestPhase_To_v1alpha1_PackageManifestPhase(a.(*PackageManifestPhase), b.(*v1alpha1.PackageManifestPhase), scope)
 	}); err != nil {
@@ -160,16 +170,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestPhase)(nil), (*PackageManifestPhase)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_PackageManifestPhase_To_manifests_PackageManifestPhase(a.(*v1alpha1.PackageManifestPhase), b.(*PackageManifestPhase), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*PackageManifestSnippet)(nil), (*v1alpha1.PackageManifestSnippet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_manifests_PackageManifestSnippet_To_v1alpha1_PackageManifestSnippet(a.(*PackageManifestSnippet), b.(*v1alpha1.PackageManifestSnippet), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha1.PackageManifestSnippet)(nil), (*PackageManifestSnippet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_PackageManifestSnippet_To_manifests_PackageManifestSnippet(a.(*v1alpha1.PackageManifestSnippet), b.(*PackageManifestSnippet), scope)
 	}); err != nil {
 		return err
 	}
@@ -451,24 +451,24 @@ func Convert_v1alpha1_PackageManifestComponentsConfig_To_manifests_PackageManife
 	return autoConvert_v1alpha1_PackageManifestComponentsConfig_To_manifests_PackageManifestComponentsConfig(in, out, s)
 }
 
-func autoConvert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals(in *PackageManifestConditionals, out *v1alpha1.PackageManifestConditionals, s conversion.Scope) error {
-	out.Snippets = *(*[]v1alpha1.PackageManifestSnippet)(unsafe.Pointer(&in.Snippets))
+func autoConvert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering(in *PackageManifestConditionalFiltering, out *v1alpha1.PackageManifestConditionalFiltering, s conversion.Scope) error {
+	out.NamedConditions = *(*[]v1alpha1.PackageManifestNamedCondition)(unsafe.Pointer(&in.NamedConditions))
 	return nil
 }
 
-// Convert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals is an autogenerated conversion function.
-func Convert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals(in *PackageManifestConditionals, out *v1alpha1.PackageManifestConditionals, s conversion.Scope) error {
-	return autoConvert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals(in, out, s)
+// Convert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering is an autogenerated conversion function.
+func Convert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering(in *PackageManifestConditionalFiltering, out *v1alpha1.PackageManifestConditionalFiltering, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering(in, out, s)
 }
 
-func autoConvert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals(in *v1alpha1.PackageManifestConditionals, out *PackageManifestConditionals, s conversion.Scope) error {
-	out.Snippets = *(*[]PackageManifestSnippet)(unsafe.Pointer(&in.Snippets))
+func autoConvert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering(in *v1alpha1.PackageManifestConditionalFiltering, out *PackageManifestConditionalFiltering, s conversion.Scope) error {
+	out.NamedConditions = *(*[]PackageManifestNamedCondition)(unsafe.Pointer(&in.NamedConditions))
 	return nil
 }
 
-// Convert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals is an autogenerated conversion function.
-func Convert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals(in *v1alpha1.PackageManifestConditionals, out *PackageManifestConditionals, s conversion.Scope) error {
-	return autoConvert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals(in, out, s)
+// Convert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering(in *v1alpha1.PackageManifestConditionalFiltering, out *PackageManifestConditionalFiltering, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering(in, out, s)
 }
 
 func autoConvert_manifests_PackageManifestImage_To_v1alpha1_PackageManifestImage(in *PackageManifestImage, out *v1alpha1.PackageManifestImage, s conversion.Scope) error {
@@ -563,6 +563,28 @@ func Convert_v1alpha1_PackageManifestLockSpec_To_manifests_PackageManifestLockSp
 	return autoConvert_v1alpha1_PackageManifestLockSpec_To_manifests_PackageManifestLockSpec(in, out, s)
 }
 
+func autoConvert_manifests_PackageManifestNamedCondition_To_v1alpha1_PackageManifestNamedCondition(in *PackageManifestNamedCondition, out *v1alpha1.PackageManifestNamedCondition, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Expression = in.Expression
+	return nil
+}
+
+// Convert_manifests_PackageManifestNamedCondition_To_v1alpha1_PackageManifestNamedCondition is an autogenerated conversion function.
+func Convert_manifests_PackageManifestNamedCondition_To_v1alpha1_PackageManifestNamedCondition(in *PackageManifestNamedCondition, out *v1alpha1.PackageManifestNamedCondition, s conversion.Scope) error {
+	return autoConvert_manifests_PackageManifestNamedCondition_To_v1alpha1_PackageManifestNamedCondition(in, out, s)
+}
+
+func autoConvert_v1alpha1_PackageManifestNamedCondition_To_manifests_PackageManifestNamedCondition(in *v1alpha1.PackageManifestNamedCondition, out *PackageManifestNamedCondition, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Expression = in.Expression
+	return nil
+}
+
+// Convert_v1alpha1_PackageManifestNamedCondition_To_manifests_PackageManifestNamedCondition is an autogenerated conversion function.
+func Convert_v1alpha1_PackageManifestNamedCondition_To_manifests_PackageManifestNamedCondition(in *v1alpha1.PackageManifestNamedCondition, out *PackageManifestNamedCondition, s conversion.Scope) error {
+	return autoConvert_v1alpha1_PackageManifestNamedCondition_To_manifests_PackageManifestNamedCondition(in, out, s)
+}
+
 func autoConvert_manifests_PackageManifestPhase_To_v1alpha1_PackageManifestPhase(in *PackageManifestPhase, out *v1alpha1.PackageManifestPhase, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Class = in.Class
@@ -585,28 +607,6 @@ func Convert_v1alpha1_PackageManifestPhase_To_manifests_PackageManifestPhase(in 
 	return autoConvert_v1alpha1_PackageManifestPhase_To_manifests_PackageManifestPhase(in, out, s)
 }
 
-func autoConvert_manifests_PackageManifestSnippet_To_v1alpha1_PackageManifestSnippet(in *PackageManifestSnippet, out *v1alpha1.PackageManifestSnippet, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Expression = in.Expression
-	return nil
-}
-
-// Convert_manifests_PackageManifestSnippet_To_v1alpha1_PackageManifestSnippet is an autogenerated conversion function.
-func Convert_manifests_PackageManifestSnippet_To_v1alpha1_PackageManifestSnippet(in *PackageManifestSnippet, out *v1alpha1.PackageManifestSnippet, s conversion.Scope) error {
-	return autoConvert_manifests_PackageManifestSnippet_To_v1alpha1_PackageManifestSnippet(in, out, s)
-}
-
-func autoConvert_v1alpha1_PackageManifestSnippet_To_manifests_PackageManifestSnippet(in *v1alpha1.PackageManifestSnippet, out *PackageManifestSnippet, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Expression = in.Expression
-	return nil
-}
-
-// Convert_v1alpha1_PackageManifestSnippet_To_manifests_PackageManifestSnippet is an autogenerated conversion function.
-func Convert_v1alpha1_PackageManifestSnippet_To_manifests_PackageManifestSnippet(in *v1alpha1.PackageManifestSnippet, out *PackageManifestSnippet, s conversion.Scope) error {
-	return autoConvert_v1alpha1_PackageManifestSnippet_To_manifests_PackageManifestSnippet(in, out, s)
-}
-
 func autoConvert_manifests_PackageManifestSpec_To_v1alpha1_PackageManifestSpec(in *PackageManifestSpec, out *v1alpha1.PackageManifestSpec, s conversion.Scope) error {
 	out.Scopes = *(*[]v1alpha1.PackageManifestScope)(unsafe.Pointer(&in.Scopes))
 	out.Phases = *(*[]v1alpha1.PackageManifestPhase)(unsafe.Pointer(&in.Phases))
@@ -616,7 +616,7 @@ func autoConvert_manifests_PackageManifestSpec_To_v1alpha1_PackageManifestSpec(i
 	}
 	out.Images = *(*[]v1alpha1.PackageManifestImage)(unsafe.Pointer(&in.Images))
 	out.Components = (*v1alpha1.PackageManifestComponentsConfig)(unsafe.Pointer(in.Components))
-	if err := Convert_manifests_PackageManifestConditionals_To_v1alpha1_PackageManifestConditionals(&in.Conditionals, &out.Conditionals, s); err != nil {
+	if err := Convert_manifests_PackageManifestConditionalFiltering_To_v1alpha1_PackageManifestConditionalFiltering(&in.ConditionalFiltering, &out.ConditionalFiltering, s); err != nil {
 		return err
 	}
 	return nil
@@ -636,7 +636,7 @@ func autoConvert_v1alpha1_PackageManifestSpec_To_manifests_PackageManifestSpec(i
 	}
 	out.Images = *(*[]PackageManifestImage)(unsafe.Pointer(&in.Images))
 	out.Components = (*PackageManifestComponentsConfig)(unsafe.Pointer(in.Components))
-	if err := Convert_v1alpha1_PackageManifestConditionals_To_manifests_PackageManifestConditionals(&in.Conditionals, &out.Conditionals, s); err != nil {
+	if err := Convert_v1alpha1_PackageManifestConditionalFiltering_To_manifests_PackageManifestConditionalFiltering(&in.ConditionalFiltering, &out.ConditionalFiltering, s); err != nil {
 		return err
 	}
 	return nil
