@@ -28,6 +28,7 @@ var (
 	conditionNameRegexp = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 )
 
+// Types used to mock outside functionality for unit tests.
 type (
 	unpackContextFn func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error)
 	newEnvFn        func(...cel.EnvOption) (*cel.Env, error)

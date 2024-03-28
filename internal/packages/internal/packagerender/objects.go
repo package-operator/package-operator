@@ -119,12 +119,12 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
-	snippets []manifests.PackageManifestNamedCondition,
+	conditions []manifests.PackageManifestNamedCondition,
 	tmplCtx *packagetypes.PackageRenderContext,
 ) (
 	[]unstructured.Unstructured, error,
 ) {
-	cc, err := celctx.New(snippets, tmplCtx)
+	cc, err := celctx.New(conditions, tmplCtx)
 	if err != nil {
 		return nil, err
 	}
