@@ -1,3 +1,7 @@
+# https://docs.codecov.com/docs/codecovyml-reference
+# validation command:
+# curl -X POST --data-binary @.codecov.yaml https://codecov.io/validate
 ignore:
   - "**/zz_generated*.go"
   - "cmd/build"
+  - "cmd/test-stub"
