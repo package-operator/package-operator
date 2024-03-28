@@ -5,14 +5,20 @@ import (
 	"errors"
 	"slices"
 
-	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
 // DefaultPackageValidators is a list of package validators that should be executed as a minimum standard.
 var DefaultPackageValidators = PackageValidatorList{
-	&PackageManifestValidator{},
+	&PackageManifestValidator{
+		validatePackageManifest:     packagemanifestvalidation.ValidatePackageManifest,
+		validatePackageManifestLock: packagemanifestvalidation.ValidatePackageManifestLock,
+	},
 	&LockfileConsistencyValidator{},
 }
 
@@ -30,19 +36,22 @@ func (l PackageValidatorList) ValidatePackage(ctx context.Context, pkg *packaget
 }
 
 // Validates PackageManifests and PackageManifestLock.
-type PackageManifestValidator struct{}
+type PackageManifestValidator struct {
+	validatePackageManifest     func(context.Context, *manifests.PackageManifest) (field.ErrorList, error)
+	validatePackageManifestLock func(context.Context, *manifests.PackageManifestLock) (field.ErrorList, error)
+}
 
 func (v *PackageManifestValidator) ValidatePackage(ctx context.Context, pkg *packagetypes.Package) error {
 	return packagetypes.ValidateEachComponent(ctx, pkg, v.doValidatePackage)
 }
 
 func (v *PackageManifestValidator) doValidatePackage(ctx context.Context, pkg *packagetypes.Package, _ bool) error {
-	errList, err := packagemanifestvalidation.ValidatePackageManifest(ctx, pkg.Manifest)
+	errList, err := v.validatePackageManifest(ctx, pkg.Manifest)
 	if err != nil {
 		return err
 	}
 	if pkg.ManifestLock != nil {
-		lockErrList, err := packagemanifestvalidation.ValidatePackageManifestLock(ctx, pkg.ManifestLock)
+		lockErrList, err := v.validatePackageManifestLock(ctx, pkg.ManifestLock)
 		if err != nil {
 			return err
 		}
