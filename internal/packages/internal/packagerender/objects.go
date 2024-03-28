@@ -15,6 +15,7 @@ import (
 
 	"package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packagerender/celctx"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -72,7 +73,7 @@ func RenderObjects(
 		objects = append(objects, objs...)
 	}
 
-	return filterWithCELAnnotation(objects, &tmplCtx)
+	return filterWithCELAnnotation(objects, pkg.Manifest.Spec.ConditionalFiltering.NamedConditions, &tmplCtx)
 }
 
 var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
@@ -118,10 +119,16 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
+	conditions []manifests.PackageManifestNamedCondition,
 	tmplCtx *packagetypes.PackageRenderContext,
 ) (
 	[]unstructured.Unstructured, error,
 ) {
+	cc, err := celctx.New(conditions, tmplCtx)
+	if err != nil {
+		return nil, err
+	}
+
 	filtered := make([]unstructured.Unstructured, 0, len(objects))
 
 	for _, obj := range objects {
@@ -131,7 +138,7 @@ func filterWithCELAnnotation(
 			continue
 		}
 
-		celResult, err := evaluateCELCondition(cel, tmplCtx)
+		celResult, err := cc.Evaluate(cel)
 		if err != nil {
 			return nil, packagetypes.ViolationError{
 				Reason:  packagetypes.ViolationReasonInvalidCELExpression,
