@@ -43,9 +43,9 @@ property: {{.package.metadata.namespace}}
 
 func TestTemplateTestValidator(t *testing.T) {
 	t.Parallel()
-	fixturesPath := t.TempDir()
+	validatorPath := t.TempDir()
 	defer func() {
-		err := os.RemoveAll(fixturesPath)
+		err := os.RemoveAll(validatorPath)
 		require.NoError(t, err) // start clean
 	}()
 
@@ -69,7 +69,7 @@ func TestTemplateTestValidator(t *testing.T) {
 	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-	ttv := NewTemplateTestValidator(fixturesPath)
+	ttv := NewTemplateTestValidator(validatorPath)
 
 	originalFileMap := packagetypes.Files{
 		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1Content),
