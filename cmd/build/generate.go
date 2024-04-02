@@ -253,7 +253,7 @@ func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
-// Includes all static-deployment files in the remote-phase-package.
+// Includes all static-deployment files in the remote-phase component.
 func (g Generate) remotePhaseComponentFiles(ctx context.Context) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "remote-phase")
 	images := map[string]string{
@@ -262,7 +262,7 @@ func (g Generate) remotePhaseComponentFiles(ctx context.Context) error {
 	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
-// Includes all static-deployment files in the remote-phase-package.
+// Includes all static-deployment files in the hosted-cluster component.
 func (g Generate) hostedClusterComponentFiles(ctx context.Context) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster")
 	images := map[string]string{
