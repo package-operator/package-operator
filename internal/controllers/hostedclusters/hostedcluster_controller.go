@@ -22,14 +22,16 @@ import (
 )
 
 type HostedClusterController struct {
-	client                  client.Client
-	log                     logr.Logger
-	scheme                  *runtime.Scheme
-	remotePhasePackageImage string
-	ownerStrategy           ownerStrategy
+	client                      client.Client
+	log                         logr.Logger
+	scheme                      *runtime.Scheme
+	packageOperatorPackageImage string
+	ownerStrategy               ownerStrategy
 
-	remotePhaseAffinity    *corev1.Affinity
-	remotePhaseTolerations []corev1.Toleration
+	remotePhaseAffinity      *corev1.Affinity
+	remotePhaseTolerations   []corev1.Toleration
+	hostedClusterAffinity    *corev1.Affinity
+	hostedClusterTolerations []corev1.Toleration
 }
 
 type ownerStrategy interface {
@@ -43,22 +45,26 @@ const defaultHostedClusterNamespace = "package-operator-system"
 
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
-	remotePhasePackageImage string,
+	packageOperatorPackageImage string,
 	remotePhaseAffinity *corev1.Affinity,
 	remotePhaseTolerations []corev1.Toleration,
+	hostedClusterAffinity *corev1.Affinity,
+	hostedClusterTolerations []corev1.Toleration,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
-		client:                  c,
-		log:                     log,
-		scheme:                  scheme,
-		remotePhasePackageImage: remotePhasePackageImage,
+		client:                      c,
+		log:                         log,
+		scheme:                      scheme,
+		packageOperatorPackageImage: packageOperatorPackageImage,
 		// Using Annotation Owner-Handling,
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
 		ownerStrategy: ownerhandling.NewAnnotation(scheme),
 
-		remotePhaseAffinity:    remotePhaseAffinity,
-		remotePhaseTolerations: remotePhaseTolerations,
+		remotePhaseAffinity:      remotePhaseAffinity,
+		remotePhaseTolerations:   remotePhaseTolerations,
+		hostedClusterAffinity:    hostedClusterAffinity,
+		hostedClusterTolerations: hostedClusterTolerations,
 	}
 	return controller
 }
@@ -146,20 +152,25 @@ func (c *HostedClusterController) Reconcile(
 func (c *HostedClusterController) desiredRemotePhasePackage(
 	cluster *v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
-	return c.desiredPackage(cluster, "remote-phase", map[string]any{})
+	return c.desiredPackage(cluster, "remote-phase",
+		c.remotePhaseAffinity, c.remotePhaseTolerations, map[string]any{})
 }
 
 func (c *HostedClusterController) desiredHostedClusterPackage(
 	cluster *v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
-	return c.desiredPackage(cluster, "hosted-cluster", map[string]any{
-		"namespace":              v1beta1.HostedClusterNamespace(*cluster),
-		"hostedClusterNamespace": defaultHostedClusterNamespace,
-	})
+	return c.desiredPackage(cluster, "hosted-cluster",
+		c.hostedClusterAffinity, c.hostedClusterTolerations,
+		map[string]any{
+			"namespace":              v1beta1.HostedClusterNamespace(*cluster),
+			"hostedClusterNamespace": defaultHostedClusterNamespace,
+		})
 }
 
 func (c *HostedClusterController) desiredPackage(
-	cluster *v1beta1.HostedCluster, component string, additionalConfig map[string]any,
+	cluster *v1beta1.HostedCluster, component string,
+	affinity *corev1.Affinity, tolerations []corev1.Toleration,
+	additionalConfig map[string]any,
 ) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
@@ -167,17 +178,17 @@ func (c *HostedClusterController) desiredPackage(
 			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
-			Image:     c.remotePhasePackageImage,
+			Image:     c.packageOperatorPackageImage,
 			Component: component,
 		},
 	}
 
 	config := map[string]any{}
-	if c.remotePhaseAffinity != nil {
-		config["affinity"] = c.remotePhaseAffinity
+	if affinity != nil {
+		config["affinity"] = affinity
 	}
-	if c.remotePhaseTolerations != nil {
-		config["tolerations"] = c.remotePhaseTolerations
+	if tolerations != nil {
+		config["tolerations"] = tolerations
 	}
 	for k, v := range additionalConfig {
 		config[k] = v

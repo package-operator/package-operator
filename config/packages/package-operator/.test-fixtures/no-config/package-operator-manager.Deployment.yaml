@@ -33,7 +33,7 @@ spec:
               fieldPath: metadata.namespace
         - name: PKO_IMAGE
           value: registry.package-operator.run/static-image
-        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+        - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: ""
         image: registry.package-operator.run/static-image
         livenessProbe:

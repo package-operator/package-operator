@@ -39,7 +39,7 @@ func TestHostedClusterController_noop(t *testing.T) {
 
 	image := "image321"
 	controller := NewHostedClusterController(
-		mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil,
+		mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil, nil, nil,
 	)
 	hcName := "testing123"
 	now := metav1.Now()
@@ -73,8 +73,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 
 	image := "image321"
 	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image,
-		&corev1.Affinity{},
-		[]corev1.Toleration{{}})
+		&corev1.Affinity{}, []corev1.Toleration{{}}, &corev1.Affinity{}, []corev1.Toleration{{}})
 	hcName := "testing123"
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: hcName, Namespace: "default"},
@@ -115,7 +114,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
 	)
 
 	clientMock.
@@ -138,7 +137,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
 	)
 
 	clientMock.
@@ -169,7 +168,7 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
 	)
 
 	clientMock.

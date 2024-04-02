@@ -55,7 +55,7 @@ spec:
               fieldPath: metadata.namespace
         - name: PKO_IMAGE
           value: {{ index .images "package-operator-manager" }}
-        - name: PKO_REMOTE_PHASE_PACKAGE_IMAGE
+        - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: {{ .package.image | quote }}
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "proxy" }}

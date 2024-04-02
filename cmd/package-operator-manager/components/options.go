@@ -29,6 +29,9 @@ const (
 		"This image is used with the HyperShift integration to spin up the remote-phase-manager for every HostedCluster"
 	registryHostOverrides = "List of registry host overrides to change during image pulling. " +
 		"e.g. quay.io=localhost:123,<original-host>=<new-host>"
+	packageOperatorPackageImage = "Image pointing to a package operator package. " +
+		"This image is currently used with the HyperShift integration to spin up the remote-phase-manager " +
+		"and hosted-cluster-manager for every HostedCluster"
 	packageHashModifier             = "An additional value used for the generation of a package's unpackedHash."
 	subCmpntAffinityFlagDescription = "Pod affinity settings used in PKO deployed subcomponents, " +
 		"like remote-phase-manager."
@@ -37,14 +40,15 @@ const (
 )
 
 type Options struct {
-	MetricsAddr             string
-	PPROFAddr               string
-	Namespace               string
-	EnableLeaderElection    bool
-	ProbeAddr               string
-	RemotePhasePackageImage string
-	RegistryHostOverrides   string
-	PackageHashModifier     *int32
+	MetricsAddr                 string
+	PPROFAddr                   string
+	Namespace                   string
+	EnableLeaderElection        bool
+	ProbeAddr                   string
+	RemotePhasePackageImage     string
+	RegistryHostOverrides       string
+	PackageHashModifier         *int32
+	PackageOperatorPackageImage string
 
 	// sub commands
 	SelfBootstrap       string
@@ -84,6 +88,10 @@ func ProvideOptions() (opts Options, err error) {
 	flag.StringVar(
 		&opts.CopyTo, "copy-to", "",
 		copyToFlagDescription)
+	flag.StringVar(
+		&opts.PackageOperatorPackageImage, "package-operator-package-image",
+		os.Getenv("PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE"),
+		packageOperatorPackageImage)
 	flag.StringVar(
 		&opts.SelfBootstrap, "self-bootstrap", "", selfBootstrapFlagDescription)
 	flag.StringVar(

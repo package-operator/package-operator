@@ -158,7 +158,7 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		"-namespace", "package-operator-system",
 		"-enable-leader-election=true",
 		"-registry-host-overrides", "quay.io=localhost:5001",
-		"--remote-phase-package-image", imageRegistry() + "/package-operator-package:" + appVersion,
+		"--package-operator-package-image", imageRegistry() + "/package-operator-package:" + appVersion,
 	}
 
 	return unix.Exec(absGoBinPath, goArgs, os.Environ())
