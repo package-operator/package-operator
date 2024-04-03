@@ -56,7 +56,7 @@ func RenderObjects(
 		}
 	}
 
-	err := filterWithCEL(pathObjectMap, &pkg.Manifest.Spec, &tmplCtx)
+	err := filterWithCEL(pathObjectMap, &pkg.Manifest.Spec.ConditionalFiltering, &tmplCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +128,16 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCEL(
 	pathObjectMap map[string][]unstructured.Unstructured,
-	spec *manifests.PackageManifestSpec,
+	condFiltering *manifests.PackageManifestConditionalFiltering,
 	tmplCtx *packagetypes.PackageRenderContext,
 ) error {
 	// Create CEL evaluation environment
-	cc, err := celctx.New(spec.ConditionalFiltering.NamedConditions, tmplCtx)
+	cc, err := celctx.New(condFiltering.NamedConditions, tmplCtx)
 	if err != nil {
 		return err
 	}
 
-	pathsToExclude, err := computeIgnoredPaths(spec.ConditionalFiltering.ConditionalPaths, &cc)
+	pathsToExclude, err := computeIgnoredPaths(condFiltering.ConditionalPaths, &cc)
 	if err != nil {
 		return err
 	}
