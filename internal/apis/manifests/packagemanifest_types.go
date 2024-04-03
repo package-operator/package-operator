@@ -65,14 +65,32 @@ type PackageManifestSpec struct {
 	// is assumed that the containing package is a single-component package.
 	// +optional
 	Components *PackageManifestComponentsConfig
+	// Used to conditionally render objects based on CEL expressions.
+	// +optional
+	ConditionalFiltering PackageManifestConditionalFiltering
+}
+
+// PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
+type PackageManifestConditionalFiltering struct {
 	// Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.
 	// They are evaluated once per package.
 	// +optional
-	CelMacros []PackageManifestCelMacro
+	NamedConditions []PackageManifestNamedCondition
 	// Adds CEL conditions to file system paths matching a glob pattern.
 	// If a single condition matching a file system object's path evaluates to false,
 	// the object nad its subtree are ignored.
 	ConditionalPaths []PackageManifestConditionalPath
+}
+
+// PackageManifestNamedCondition is a reusable named CEL expression.
+// It is injected as a variable into the CEL evaluation environment,
+// and its value is set to the result of Expression ("true"/"false").
+type PackageManifestNamedCondition struct {
+	// A unique name. Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]*
+	Name string
+	// A CEL expression with a boolean output type.
+	// Has access to the full template context.
+	Expression string
 }
 
 // PackageManifestConditionalPath is used to conditionally
@@ -81,17 +99,6 @@ type PackageManifestConditionalPath struct {
 	// A file system path glob pattern.
 	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match
 	Glob string
-	// A CEL expression with a boolean output type.
-	// Has access to the full template context.
-	Expression string
-}
-
-// PackageManifestCelMacro is a reusable named CEL expression.
-type PackageManifestCelMacro struct {
-	// A unique name. When used in 'package-operator.run/condition' annotations,
-	// it is replaced with the result of Expression ("true"/"false").
-	// Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]*
-	Name string
 	// A CEL expression with a boolean output type.
 	// Has access to the full template context.
 	Expression string

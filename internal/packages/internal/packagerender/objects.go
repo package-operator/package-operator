@@ -132,12 +132,12 @@ func filterWithCEL(
 	tmplCtx *packagetypes.PackageRenderContext,
 ) error {
 	// Create CEL evaluation environment
-	cc, err := celctx.New(spec.CelMacros, tmplCtx)
+	cc, err := celctx.New(spec.ConditionalFiltering.NamedConditions, tmplCtx)
 	if err != nil {
 		return err
 	}
 
-	pathsToExclude, err := computeIgnoredPaths(spec.ConditionalPaths, &cc)
+	pathsToExclude, err := computeIgnoredPaths(spec.ConditionalFiltering.ConditionalPaths, &cc)
 	if err != nil {
 		return err
 	}

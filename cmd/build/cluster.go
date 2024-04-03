@@ -14,58 +14,131 @@ import (
 	"pkg.package-operator.run/cardboard/run"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	hsv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 // Cluster focused targets.
 type Cluster struct {
 	*kind.Cluster
-	registryPort int32
+	registryHostPort int32
+}
+
+type clusterConfigLocalRegistry struct {
+	hostOverride string
+	hostPort     int32
+}
+
+type clusterConfig struct {
+	name                  string
+	registryHostOverrides []struct {
+		host, endpoint string
+	}
+	localRegistry *clusterConfigLocalRegistry
+}
+
+func (cc *clusterConfig) apply(opts ...clusterOption) {
+	for _, opt := range opts {
+		opt(cc)
+	}
+}
+
+type clusterOption func(*clusterConfig)
+
+func withRegistryHostOverride(host, endpoint string) clusterOption {
+	return func(cc *clusterConfig) {
+		cc.registryHostOverrides = append(cc.registryHostOverrides, struct {
+			host     string
+			endpoint string
+		}{
+			host:     host,
+			endpoint: endpoint,
+		})
+	}
+}
+
+func withRegistryHostOverrideToOtherCluster(host string, targetCluster Cluster) clusterOption {
+	return withRegistryHostOverride(host, targetCluster.Name()+"-control-plane")
+}
+
+func withLocalRegistry(hostOverride string, hostPort int32) clusterOption {
+	return func(cc *clusterConfig) {
+		cc.localRegistry = &clusterConfigLocalRegistry{
+			hostPort:     hostPort,
+			hostOverride: hostOverride,
+		}
+	}
+}
+
+func registryOverrideToml(override registryHostOverride) string {
+	return fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
+endpoint = ["%s"]`, override.host, override.endpoint)
+}
+
+type registryHostOverride struct {
+	host     string
+	endpoint string
 }
 
 // NewCluster prepares a configured cluster object.
-func NewCluster(registryPort int32) Cluster {
-	return Cluster{
-		registryPort: registryPort,
-
-		Cluster: kind.NewCluster("pko",
-			kind.WithClusterConfig(kindv1alpha4.Cluster{
-				ContainerdConfigPatches: []string{
-					// Replace `imageRegistry` with our local dev-registry.
-					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."%s"]
-endpoint = ["http://localhost:31320"]`, imageRegistryHost()),
-				},
-				Nodes: []kindv1alpha4.Node{
-					{
-						Role: kindv1alpha4.ControlPlaneRole,
-						ExtraPortMappings: []kindv1alpha4.PortMapping{
-							// Open port to enable connectivity with local registry.
-							{
-								ContainerPort: 5001,
-								HostPort:      registryPort,
-								ListenAddress: "127.0.0.1",
-								Protocol:      "TCP",
-							},
-						},
-					},
-				},
-			}),
-			kind.WithClientOptions{
-				kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme},
-			},
-			kind.WithClusterInitializers{
-				kind.ClusterLoadObjectsFromFiles{filepath.Join("config", "local-registry.yaml")},
-			},
-		),
+func NewCluster(name string, opts ...clusterOption) Cluster {
+	cfg := &clusterConfig{
+		name: name,
 	}
+	cfg.apply(opts...)
+
+	var clusterInitializers []kind.ClusterInitializer
+	cluster := Cluster{}
+
+	containerdConfigPatches := []string{}
+	for _, registryHostOverride := range cfg.registryHostOverrides {
+		containerdConfigPatches = append(containerdConfigPatches, registryOverrideToml(registryHostOverride))
+	}
+
+	var extraPortMappings []kindv1alpha4.PortMapping
+
+	if cfg.localRegistry != nil {
+		cluster.registryHostPort = cfg.localRegistry.hostPort // todo rename field on cluster
+		clusterInitializers = append(clusterInitializers,
+			kind.ClusterLoadObjectsFromFiles{filepath.Join("config", "local-registry.yaml")})
+		containerdConfigPatches = append(containerdConfigPatches, registryOverrideToml(registryHostOverride{
+			host:     cfg.localRegistry.hostOverride,
+			endpoint: "http://localhost:31320",
+		}))
+		extraPortMappings = append(extraPortMappings, kindv1alpha4.PortMapping{
+			ContainerPort: 5001,
+			HostPort:      cfg.localRegistry.hostPort,
+			ListenAddress: "127.0.0.1",
+			Protocol:      "TCP",
+		})
+	}
+
+	cluster.Cluster = kind.NewCluster(cfg.name,
+		kind.WithClusterConfig{
+			ContainerdConfigPatches: containerdConfigPatches,
+			Nodes: []kindv1alpha4.Node{
+				{
+					Role:              kindv1alpha4.ControlPlaneRole,
+					ExtraPortMappings: extraPortMappings,
+				},
+			},
+		},
+		kind.WithClientOptions{
+			kubeclients.WithSchemeBuilder{corev1alpha1.AddToScheme, hsv1beta1.AddToScheme},
+		},
+		kind.WithClusterInitializers(clusterInitializers),
+	)
+
+	return cluster
 }
 
 // Creates the local development cluster.
 func (c *Cluster) create(ctx context.Context) error {
 	self := run.Meth(c, c.create)
-	return mgr.SerialDeps(ctx, self,
-		c, // cardboard's internal cluster magic
-		run.Meth1(c, c.loadImages, c.registryPort),
-	)
+	deps := []run.Dependency{c} // cardboard's internal cluster magic
+	if c.registryHostPort != 0 {
+		deps = append(deps, run.Meth1(c, c.loadImages, c.registryHostPort))
+	}
+	return mgr.SerialDeps(ctx, self, deps...)
 }
 
 // Destroys the local development cluster.

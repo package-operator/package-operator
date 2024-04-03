@@ -15,9 +15,9 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.17.7
-	github.com/google/go-containerregistry v0.19.0
-	github.com/onsi/ginkgo/v2 v2.16.0
-	github.com/onsi/gomega v1.31.1
+	github.com/google/go-containerregistry v0.19.1
+	github.com/onsi/ginkgo/v2 v2.17.1
+	github.com/onsi/gomega v1.32.0
 	github.com/openshift/api v0.0.0-20240306072808-610cbc77dbab
 	github.com/prometheus/client_golang v1.19.0
 	github.com/pterm/pterm v0.12.79
@@ -28,11 +28,11 @@ require (
 	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.18.0
-	k8s.io/api v0.29.2
-	k8s.io/apiextensions-apiserver v0.29.2
-	k8s.io/apimachinery v0.29.2
-	k8s.io/apiserver v0.29.2
-	k8s.io/client-go v0.29.2
+	k8s.io/api v0.29.3
+	k8s.io/apiextensions-apiserver v0.29.3
+	k8s.io/apimachinery v0.29.3
+	k8s.io/apiserver v0.29.3
+	k8s.io/client-go v0.29.3
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	package-operator.run/apis v1.9.4
@@ -60,24 +60,24 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
-	github.com/docker/cli v25.0.4+incompatible // indirect
+	github.com/docker/cli v26.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v25.0.4+incompatible // indirect
+	github.com/docker/docker v26.0.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.11.3 // indirect
+	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
-	github.com/go-openapi/jsonpointer v0.20.3 // indirect
-	github.com/go-openapi/jsonreference v0.20.5 // indirect
-	github.com/go-openapi/swag v0.22.10 // indirect
+	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonreference v0.21.0 // indirect
+	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-task/slim-sprig v2.20.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
-	github.com/prometheus/common v0.50.0 // indirect
+	github.com/prometheus/common v0.51.1 // indirect
 	github.com/prometheus/procfs v0.13.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
@@ -152,9 +152,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.29.2 // indirect
+	k8s.io/component-base v0.29.3 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.0 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )

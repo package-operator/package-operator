@@ -1243,13 +1243,14 @@ metadata:
 spec:
   availabilityProbes:
   - corev1alpha1.ObjectSetProbe
-  celMacros:
-  - expression: consetetur
-    name: amet
   components: PackageManifestComponentsConfig
-  conditionalPaths:
-  - expression: elitr
-    glob: sadipscing
+  conditionalFiltering:
+    conditionalPaths:
+    - expression: elitr
+      glob: sadipscing
+    namedConditions:
+    - expression: consetetur
+      name: amet
   config:
     openAPIV3Schema: apiextensionsv1.JSONSchemaProps
   images:
@@ -1425,14 +1426,14 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
-### PackageManifestCelMacro
+### PackageManifestConditionalFiltering
 
-PackageManifestCelMacro is a reusable named CEL expression.
+PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` <b>required</b><br>string | A unique name. When used in 'package-operator.run/condition' annotations,<br>it is replaced with the result of Expression ("true"/"false").<br>Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
-| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+| `namedConditions` <br><a href="#packagemanifestnamedcondition">[]PackageManifestNamedCondition</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object nad its subtree are ignored. |
 
 
 Used in:
@@ -1451,7 +1452,7 @@ render package objects based on their path.
 
 
 Used in:
-* [PackageManifestSpec](#packagemanifestspec)
+* [PackageManifestConditionalFiltering](#packagemanifestconditionalfiltering)
 
 
 ### PackageManifestImage
@@ -1496,6 +1497,22 @@ Used in:
 * [PackageManifestLock](#packagemanifestlock)
 
 
+### PackageManifestNamedCondition
+
+PackageManifestNamedCondition is a reusable named CEL expression.
+It is injected as a variable into the CEL evaluation environment,
+and its value is set to the result of Expression ("true"/"false").
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | A unique name. Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]* |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context. |
+
+
+Used in:
+* [PackageManifestConditionalFiltering](#packagemanifestconditionalfiltering)
+
+
 ### PackageManifestPhase
 
 PackageManifestPhase defines a package phase.
@@ -1523,8 +1540,7 @@ details about phases and availability probes.
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
-| `celMacros` <br><a href="#packagemanifestcelmacro">[]PackageManifestCelMacro</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
-| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object nad its subtree are ignored. |
+| `conditionalFiltering` <br><a href="#packagemanifestconditionalfiltering">PackageManifestConditionalFiltering</a> | Used to conditionally render objects based on CEL expressions. |
 
 
 Used in:

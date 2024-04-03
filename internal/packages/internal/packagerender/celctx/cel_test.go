@@ -1,9 +1,12 @@
 package celctx
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types/ref"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -11,20 +14,36 @@ import (
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
+func mockUnpack(unpacked map[string]any, opts []cel.EnvOption, err error) unpackContextFn {
+	return func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
+		return unpacked, opts, err
+	}
+}
+
+func mockNewEnv(env *cel.Env, err error) newEnvFn {
+	return func(...cel.EnvOption) (*cel.Env, error) {
+		return env, err
+	}
+}
+
+var errMock = errors.New("out of bananas")
+
 func Test_newCelCtx(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		name        string
 		expression  string
-		macros      []manifests.PackageManifestCelMacro
+		conditions  []manifests.PackageManifestNamedCondition
 		tmplCtx     *packagetypes.PackageRenderContext
+		unpack      unpackContextFn
+		newEnv      newEnvFn
 		errContains string
 	}{
 		{
-			name:       "macro read from context",
-			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			name:       "condition read from context",
+			expression: "cond.isFoo",
+			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -33,12 +52,14 @@ func Test_newCelCtx(t *testing.T) {
 				Images:      nil,
 				Environment: manifests.PackageEnvironment{},
 			},
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
 			errContains: "",
 		},
 		{
-			name:       "invalid macro expression",
-			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			name:       "invalid condition expression",
+			expression: "cond.isFoo",
+			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -47,14 +68,62 @@ func Test_newCelCtx(t *testing.T) {
 				Images:      nil,
 				Environment: manifests.PackageEnvironment{},
 			},
-			errContains: `CEL macro evaluation failed`,
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errCELConditionEvaluation.Error(),
+		},
+		{
+			name:       "invalid condition name",
+			expression: "cond.1ustTrue",
+			conditions: []manifests.PackageManifestNamedCondition{
+				{Name: "1ustTrue", Expression: "true"},
+			},
+			tmplCtx:     nil,
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errInvalidCELConditionName.Error(),
+		},
+		{
+			name:       "duplicate condition name",
+			expression: "cond.justTrue",
+			conditions: []manifests.PackageManifestNamedCondition{
+				{Name: "justTrue", Expression: "true"},
+				{Name: "justTrue", Expression: "false"},
+			},
+			tmplCtx:     nil,
+			unpack:      unpackContext,
+			newEnv:      cel.NewEnv,
+			errContains: errDuplicateCELConditionName.Error(),
+		},
+		{
+			name:       "fail unpack",
+			expression: "true",
+			conditions: nil,
+			tmplCtx: &packagetypes.PackageRenderContext{
+				Package:     manifests.TemplateContextPackage{},
+				Config:      nil,
+				Images:      nil,
+				Environment: manifests.PackageEnvironment{},
+			},
+			unpack:      mockUnpack(nil, nil, errMock),
+			newEnv:      cel.NewEnv,
+			errContains: errContextUnpack.Error(),
+		},
+		{
+			name:        "fail newEnv",
+			expression:  "true",
+			conditions:  nil,
+			tmplCtx:     nil,
+			unpack:      unpackContext,
+			newEnv:      mockNewEnv(nil, errMock),
+			errContains: errEnvCreation.Error(),
 		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := New(tc.macros, tc.tmplCtx)
+			_, err := newCelCtx(tc.conditions, tc.tmplCtx, tc.unpack, tc.newEnv)
 			if tc.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -64,57 +133,85 @@ func Test_newCelCtx(t *testing.T) {
 	}
 }
 
-func Test_celCtx_Evaluate(t *testing.T) {
+func mockEnvProgram(fail bool) envProgramFn {
+	if !fail {
+		return defaultEnvProgram()
+	}
+	return func(*cel.Env, *cel.Ast) (cel.Program, error) {
+		return nil, errMock
+	}
+}
+
+func mockProgramEval(fail bool) programEvalFn {
+	if !fail {
+		return defaultProgramEval()
+	}
+	return func(cel.Program, any) (ref.Val, *cel.EvalDetails, error) {
+		return nil, nil, errMock
+	}
+}
+
+func Test_celCtx_evaluate(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name       string
-		expression string
-		macros     []manifests.PackageManifestCelMacro
-		tmplCtx    *packagetypes.PackageRenderContext
-		expected   bool
-		err        string
+		name        string
+		expression  string
+		envProgram  envProgramFn
+		programEval programEvalFn
+		conditions  []manifests.PackageManifestNamedCondition
+		tmplCtx     *packagetypes.PackageRenderContext
+		expected    bool
+		err         string
 	}{
 		// Simple expression parsing without context
 		{
-			"just true",
-			"true",
-			nil,
-			nil,
-			true,
-			"",
+			name:        "just true",
+			expression:  "true",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    true,
+			err:         "",
 		},
 		{
-			"simple &&",
-			"true && false",
-			nil,
-			nil,
-			false,
-			"",
+			name:        "simple &&",
+			expression:  "true && false",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         "",
 		},
 		{
-			"invalid expression",
-			"true && fals",
-			nil,
-			nil,
-			false,
-			"compile error: ERROR: <input>:1:9: undeclared reference to 'fals' (in container '')\n" +
-				" | true && fals\n" +
-				" | ........^",
+			name:        "invalid expression",
+			expression:  "true && fals",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errExpressionCompilation.Error(),
 		},
 		{
-			"invalid return type",
-			"2 + 3",
-			nil,
-			nil,
-			false,
-			newErrInvalidReturnType(cel.IntType, cel.BoolType).Error(),
+			name:        "invalid return type",
+			expression:  "2 + 3",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errInvalidReturnType.Error(),
 		},
 
 		// Parsing with template context
 		{
-			name:       "simple read from context",
-			expression: `config.banana == "bread"`,
+			name:        "simple read from context",
+			expression:  `config.banana == "bread"`,
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
 			tmplCtx: &packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "bread"},
@@ -125,8 +222,10 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			err:      "",
 		},
 		{
-			name:       "is hypershift",
-			expression: "has(.environment.hyperShift)",
+			name:        "is hypershift",
+			expression:  "has(.environment.hyperShift)",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
 			tmplCtx: &packagetypes.PackageRenderContext{
 				Package: manifests.TemplateContextPackage{},
 				Config:  nil,
@@ -150,9 +249,11 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			err:      "",
 		},
 		{
-			name:       "macro read from context",
-			expression: "isFoo",
-			macros: []manifests.PackageManifestCelMacro{
+			name:        "condition read from context",
+			expression:  "cond.isFoo",
+			envProgram:  defaultEnvProgram(),
+			programEval: defaultProgramEval(),
+			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
 			tmplCtx: &packagetypes.PackageRenderContext{
@@ -164,20 +265,40 @@ func Test_celCtx_Evaluate(t *testing.T) {
 			expected: true,
 			err:      "",
 		},
+		{
+			name:        "fail program construction",
+			expression:  "false",
+			envProgram:  mockEnvProgram(true),
+			programEval: defaultProgramEval(),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errProgramConstruction.Error(),
+		},
+		{
+			name:        "fail program evaluation",
+			expression:  "false",
+			envProgram:  defaultEnvProgram(),
+			programEval: mockProgramEval(true),
+			conditions:  nil,
+			tmplCtx:     nil,
+			expected:    false,
+			err:         errProgramEvaluation.Error(),
+		},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cc, err := New(tc.macros, tc.tmplCtx)
+			cc, err := New(tc.conditions, tc.tmplCtx)
 			require.NoError(t, err)
 
-			result, err := cc.Evaluate(tc.expression)
+			result, err := cc.evaluate(tc.expression, tc.envProgram, tc.programEval)
 			if tc.err == "" {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expected, result)
 			} else {
-				require.EqualError(t, err, tc.err)
+				require.ErrorContains(t, err, tc.err)
 			}
 		})
 	}
