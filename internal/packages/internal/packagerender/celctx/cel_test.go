@@ -70,7 +70,7 @@ func Test_newCelCtx(t *testing.T) {
 			},
 			unpack:      unpackContext,
 			newEnv:      cel.NewEnv,
-			errContains: errCELConditionEvaluation.Error(),
+			errContains: ErrCELConditionEvaluation.Error(),
 		},
 		{
 			name:       "invalid condition name",
@@ -81,7 +81,7 @@ func Test_newCelCtx(t *testing.T) {
 			tmplCtx:     nil,
 			unpack:      unpackContext,
 			newEnv:      cel.NewEnv,
-			errContains: errInvalidCELConditionName.Error(),
+			errContains: ErrInvalidCELConditionName.Error(),
 		},
 		{
 			name:       "duplicate condition name",
@@ -93,7 +93,7 @@ func Test_newCelCtx(t *testing.T) {
 			tmplCtx:     nil,
 			unpack:      unpackContext,
 			newEnv:      cel.NewEnv,
-			errContains: errDuplicateCELConditionName.Error(),
+			errContains: ErrDuplicateCELConditionName.Error(),
 		},
 		{
 			name:       "fail unpack",
@@ -107,7 +107,7 @@ func Test_newCelCtx(t *testing.T) {
 			},
 			unpack:      mockUnpack(nil, nil, errMock),
 			newEnv:      cel.NewEnv,
-			errContains: errContextUnpack.Error(),
+			errContains: ErrContextUnpack.Error(),
 		},
 		{
 			name:        "fail newEnv",
@@ -116,7 +116,7 @@ func Test_newCelCtx(t *testing.T) {
 			tmplCtx:     nil,
 			unpack:      unpackContext,
 			newEnv:      mockNewEnv(nil, errMock),
-			errContains: errEnvCreation.Error(),
+			errContains: ErrEnvCreation.Error(),
 		},
 	} {
 		tc := tc
@@ -193,7 +193,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			conditions:  nil,
 			tmplCtx:     nil,
 			expected:    false,
-			err:         errExpressionCompilation.Error(),
+			err:         ErrExpressionCompilation.Error(),
 		},
 		{
 			name:        "invalid return type",
@@ -203,7 +203,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			conditions:  nil,
 			tmplCtx:     nil,
 			expected:    false,
-			err:         errInvalidReturnType.Error(),
+			err:         ErrInvalidReturnType.Error(),
 		},
 
 		// Parsing with template context
@@ -273,7 +273,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			conditions:  nil,
 			tmplCtx:     nil,
 			expected:    false,
-			err:         errProgramConstruction.Error(),
+			err:         ErrProgramConstruction.Error(),
 		},
 		{
 			name:        "fail program evaluation",
@@ -283,7 +283,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			conditions:  nil,
 			tmplCtx:     nil,
 			expected:    false,
-			err:         errProgramEvaluation.Error(),
+			err:         ErrProgramEvaluation.Error(),
 		},
 	} {
 		tc := tc
