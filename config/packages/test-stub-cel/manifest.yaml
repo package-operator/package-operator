@@ -36,6 +36,9 @@ spec:
       expression: "true"
     - name: "justFalse"
       expression: "false"
+    conditionalPaths:
+    - glob: "ignored*"
+      expression: "cond.justFalse"
 test:
   template:
   - name: namespace-scope

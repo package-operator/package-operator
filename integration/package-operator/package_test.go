@@ -289,6 +289,13 @@ func TestPackage_cel(t *testing.T) {
 			Namespace: ns,
 		}, cm)
 		require.EqualError(t, err, "configmaps \"test-cm\" not found")
+
+		// ignored configMap should not be there
+		err = Client.Get(ctx, client.ObjectKey{
+			Name:      "ignored-cm",
+			Namespace: ns,
+		}, cm)
+		require.EqualError(t, err, "configmaps \"ignored-cm\" not found")
 	}
 
 	testNamespacedAndCluster(t, meta, spec, postCheck)
