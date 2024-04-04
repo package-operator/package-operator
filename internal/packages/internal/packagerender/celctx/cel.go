@@ -15,15 +15,15 @@ import (
 )
 
 var (
-	errContextUnpack             = errors.New("context unpacking error")
-	errEnvCreation               = errors.New("CEL environment creation error")
-	errExpressionCompilation     = errors.New("CEL expression compilation error")
-	errProgramConstruction       = errors.New("program construction error")
-	errProgramEvaluation         = errors.New("program evaluation error")
-	errInvalidReturnType         = errors.New("invalid return type")
-	errDuplicateCELConditionName = errors.New("duplicate CEL condition name")
-	errCELConditionEvaluation    = errors.New("CEL condition evaluation failed")
-	errInvalidCELConditionName   = errors.New("invalid CEL condition name")
+	ErrContextUnpack             = errors.New("context unpacking error")
+	ErrEnvCreation               = errors.New("CEL environment creation error")
+	ErrExpressionCompilation     = errors.New("CEL expression compilation error")
+	ErrProgramConstruction       = errors.New("program construction error")
+	ErrProgramEvaluation         = errors.New("program evaluation error")
+	ErrInvalidReturnType         = errors.New("invalid return type")
+	ErrDuplicateCELConditionName = errors.New("duplicate CEL condition name")
+	ErrCELConditionEvaluation    = errors.New("CEL condition evaluation failed")
+	ErrInvalidCELConditionName   = errors.New("invalid CEL condition name")
 
 	conditionNameRegexp = regexp.MustCompile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 )
@@ -57,13 +57,13 @@ func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
 ) (CelCtx, error) {
 	ctxMap, opts, err := unpack(tmplCtx)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", errContextUnpack, err)
+		return CelCtx{}, fmt.Errorf("%w: %w", ErrContextUnpack, err)
 	}
 
 	// create CEL environment with context
 	env, err := newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", errEnvCreation, err)
+		return CelCtx{}, fmt.Errorf("%w: %w", ErrEnvCreation, err)
 	}
 
 	cc := CelCtx{
@@ -75,17 +75,17 @@ func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
 	for _, m := range conditions {
 		// make sure condition name is allowed
 		if !conditionNameRegexp.MatchString(m.Name) {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", errInvalidCELConditionName, m.Name)
+			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
 		}
 
 		// make sure name is unique and does not shadow a key in conditionsMap
 		if _, ok := conditionsMap[m.Name]; ok {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", errDuplicateCELConditionName, m.Name)
+			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
 		}
 
 		result, err := cc.Evaluate(m.Expression)
 		if err != nil {
-			return CelCtx{}, fmt.Errorf("%w: '%s': %w", errCELConditionEvaluation, m.Name, err)
+			return CelCtx{}, fmt.Errorf("%w: '%s': %w", ErrCELConditionEvaluation, m.Name, err)
 		}
 
 		// store evaluation result in context
@@ -98,7 +98,7 @@ func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
 	// recreate CEL environment with condition declarations
 	env, err = newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", errEnvCreation, err)
+		return CelCtx{}, fmt.Errorf("%w: %w", ErrEnvCreation, err)
 	}
 	cc.env = env
 
@@ -126,24 +126,24 @@ func (cc *CelCtx) evaluate(expr string, envProgram envProgramFn, programEval pro
 	// compile CEL expression
 	ast, issues := cc.env.Compile(expr)
 	if issues != nil && issues.Err() != nil {
-		return false, fmt.Errorf("%w: %w", errExpressionCompilation, issues.Err())
+		return false, fmt.Errorf("%w: %w", ErrExpressionCompilation, issues.Err())
 	}
 
 	// create program
 	program, err := envProgram(cc.env, ast)
 	if err != nil {
-		return false, fmt.Errorf("%w: %w", errProgramConstruction, err)
+		return false, fmt.Errorf("%w: %w", ErrProgramConstruction, err)
 	}
 
 	// evaluate the expression with context input
 	out, _, err := programEval(program, cc.ctxMap)
 	if err != nil {
-		return false, fmt.Errorf("%w: %w", errProgramEvaluation, err)
+		return false, fmt.Errorf("%w: %w", ErrProgramEvaluation, err)
 	}
 
 	// make sure that result type is 'bool'
 	if !reflect.DeepEqual(out.Type(), cel.BoolType) {
-		return false, fmt.Errorf("%w: %v, expected %v", errInvalidReturnType, ast.OutputType(), cel.BoolType)
+		return false, fmt.Errorf("%w: %v, expected %v", ErrInvalidReturnType, ast.OutputType(), cel.BoolType)
 	}
 
 	return out.Value().(bool), nil

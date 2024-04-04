@@ -1245,6 +1245,9 @@ spec:
   - corev1alpha1.ObjectSetProbe
   components: PackageManifestComponentsConfig
   conditionalFiltering:
+    conditionalPaths:
+    - expression: elitr
+      glob: sadipscing
     namedConditions:
     - expression: consetetur
       name: amet
@@ -1260,36 +1263,36 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: amet
+    kubernetesVersion: sadipscing
     schemaLocations:
-    - consetetur
+    - elitr
   template:
   - context:
       config: runtime.RawExtension
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: sit
+            hostedClusterNamespace: consetetur
             metadata:
               annotations: map[string]string
               labels: map[string]string
-              name: ipsum
-              namespace: dolor
+              name: sit
+              namespace: amet
         kubernetes:
-          version: diam
+          version: eirmod
         openShift:
-          version: nonumy
+          version: tempor
         proxy:
-          httpProxy: eirmod
-          httpsProxy: tempor
-          noProxy: lorem
+          httpProxy: lorem
+          httpsProxy: ipsum
+          noProxy: dolor
       package:
         metadata:
           annotations: map[string]string
           labels: map[string]string
-          name: elitr
-          namespace: sed
-    name: sadipscing
+          name: diam
+          namespace: nonumy
+    name: sed
 
 ```
 
@@ -1316,9 +1319,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: sed
-    image: elitr
-    name: sadipscing
+  - digest: nonumy
+    image: diam
+    name: sed
 
 ```
 
@@ -1425,15 +1428,31 @@ Used in:
 
 ### PackageManifestConditionalFiltering
 
-PackageManifestConditionalFiltering are used to conditionally render objects based on CEL expressions.
+PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
 
 | Field | Description |
 | ----- | ----------- |
 | `namedConditions` <br><a href="#packagemanifestnamedcondition">[]PackageManifestNamedCondition</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object is ignored. |
 
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestConditionalPath
+
+PackageManifestConditionalPath is used to conditionally
+render package objects based on their path.
+
+| Field | Description |
+| ----- | ----------- |
+| `glob` <b>required</b><br>string | A file system path glob pattern.<br>Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context and named conditions. |
+
+
+Used in:
+* [PackageManifestConditionalFiltering](#packagemanifestconditionalfiltering)
 
 
 ### PackageManifestImage

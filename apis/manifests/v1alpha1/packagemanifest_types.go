@@ -82,12 +82,16 @@ type PackageManifestSpec struct {
 	ConditionalFiltering PackageManifestConditionalFiltering `json:"conditionalFiltering,omitempty"`
 }
 
-// PackageManifestConditionalFiltering are used to conditionally render objects based on CEL expressions.
+// PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
 type PackageManifestConditionalFiltering struct {
 	// Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.
 	// They are evaluated once per package.
 	// +optional
 	NamedConditions []PackageManifestNamedCondition `json:"namedConditions,omitempty"`
+	// Adds CEL conditions to file system paths matching a glob pattern.
+	// If a single condition matching a file system object's path evaluates to false,
+	// the object is ignored.
+	ConditionalPaths []PackageManifestConditionalPath `json:"conditionalPaths,omitempty"`
 }
 
 // PackageManifestNamedCondition is a reusable named CEL expression.
@@ -98,6 +102,17 @@ type PackageManifestNamedCondition struct {
 	Name string `json:"name"`
 	// A CEL expression with a boolean output type.
 	// Has access to the full template context.
+	Expression string `json:"expression"`
+}
+
+// PackageManifestConditionalPath is used to conditionally
+// render package objects based on their path.
+type PackageManifestConditionalPath struct {
+	// A file system path glob pattern.
+	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match
+	Glob string `json:"glob"`
+	// A CEL expression with a boolean output type.
+	// Has access to the full template context and named conditions.
 	Expression string `json:"expression"`
 }
 

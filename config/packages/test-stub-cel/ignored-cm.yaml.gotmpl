@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "ignored-cm"
+{{- if eq .package.metadata.namespace ""}}
+  namespace: "{{.package.metadata.name}}"
+{{- end}}
+  labels:
+    app: test-stub
+    instance: "{{.package.metadata.name}}"
+  annotations:
+    test-environment: {{.environment | toJson | quote}}
+    package-operator.run/phase: deploy
+data:
+  banana: "bread"
