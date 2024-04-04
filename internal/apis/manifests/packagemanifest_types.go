@@ -78,7 +78,7 @@ type PackageManifestConditionalFiltering struct {
 	NamedConditions []PackageManifestNamedCondition
 	// Adds CEL conditions to file system paths matching a glob pattern.
 	// If a single condition matching a file system object's path evaluates to false,
-	// the object nad its subtree are ignored.
+	// the object is ignored.
 	ConditionalPaths []PackageManifestConditionalPath
 }
 
@@ -100,7 +100,7 @@ type PackageManifestConditionalPath struct {
 	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match
 	Glob string
 	// A CEL expression with a boolean output type.
-	// Has access to the full template context.
+	// Has access to the full template context and named conditions.
 	Expression string
 }
 
