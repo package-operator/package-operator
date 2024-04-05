@@ -22,6 +22,8 @@ import (
 )
 
 func TestOwnerStrategyAnnotation_HasController(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		obj      metav1.Object
@@ -68,8 +70,11 @@ func TestOwnerStrategyAnnotation_HasController(t *testing.T) {
 			expected: false,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			s := NewAnnotation(testScheme)
 			r := s.HasController(test.obj)
 			assert.Equal(t, test.expected, r)

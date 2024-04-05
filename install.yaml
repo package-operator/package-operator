@@ -296,8 +296,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:
@@ -340,8 +340,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:
@@ -699,9 +699,9 @@ spec:
                   properties:
                     collisionProtection:
                       default: Prevent
-                      description: Collision protection prevents Package Operator
-                        from working on objects already under management by a different
-                        operator.
+                      description: |-
+                        Collision protection prevents Package Operator from working on objects already under
+                        management by a different operator.
                       type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
@@ -741,9 +741,9 @@ spec:
                   properties:
                     collisionProtection:
                       default: Prevent
-                      description: Collision protection prevents Package Operator
-                        from working on objects already under management by a different
-                        operator.
+                      description: |-
+                        Collision protection prevents Package Operator from working on objects already under
+                        management by a different operator.
                       type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
@@ -1154,9 +1154,9 @@ spec:
                         properties:
                           collisionProtection:
                             default: Prevent
-                            description: Collision protection prevents Package Operator
-                              from working on objects already under management by
-                              a different operator.
+                            description: |-
+                              Collision protection prevents Package Operator from working on objects already under
+                              management by a different operator.
                             type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
@@ -1198,9 +1198,9 @@ spec:
                         properties:
                           collisionProtection:
                             default: Prevent
-                            description: Collision protection prevents Package Operator
-                              from working on objects already under management by
-                              a different operator.
+                            description: |-
+                              Collision protection prevents Package Operator from working on objects already under
+                              management by a different operator.
                             type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
@@ -1468,8 +1468,9 @@ spec:
               properties:
                 collisionProtection:
                   default: Prevent
-                  description: Collision protection prevents Package Operator from
-                    working on objects already under management by a different operator.
+                  description: |-
+                    Collision protection prevents Package Operator from working on objects already under
+                    management by a different operator.
                   type: string
                 conditionMappings:
                   description: Maps conditions from this object into the Package Operator
@@ -2144,8 +2145,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:
@@ -2188,8 +2189,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:
@@ -2544,9 +2545,9 @@ spec:
                   properties:
                     collisionProtection:
                       default: Prevent
-                      description: Collision protection prevents Package Operator
-                        from working on objects already under management by a different
-                        operator.
+                      description: |-
+                        Collision protection prevents Package Operator from working on objects already under
+                        management by a different operator.
                       type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
@@ -2586,9 +2587,9 @@ spec:
                   properties:
                     collisionProtection:
                       default: Prevent
-                      description: Collision protection prevents Package Operator
-                        from working on objects already under management by a different
-                        operator.
+                      description: |-
+                        Collision protection prevents Package Operator from working on objects already under
+                        management by a different operator.
                       type: string
                     conditionMappings:
                       description: Maps conditions from this object into the Package
@@ -2998,9 +2999,9 @@ spec:
                         properties:
                           collisionProtection:
                             default: Prevent
-                            description: Collision protection prevents Package Operator
-                              from working on objects already under management by
-                              a different operator.
+                            description: |-
+                              Collision protection prevents Package Operator from working on objects already under
+                              management by a different operator.
                             type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
@@ -3042,9 +3043,9 @@ spec:
                         properties:
                           collisionProtection:
                             default: Prevent
-                            description: Collision protection prevents Package Operator
-                              from working on objects already under management by
-                              a different operator.
+                            description: |-
+                              Collision protection prevents Package Operator from working on objects already under
+                              management by a different operator.
                             type: string
                           conditionMappings:
                             description: Maps conditions from this object into the
@@ -3309,8 +3310,9 @@ spec:
               properties:
                 collisionProtection:
                   default: Prevent
-                  description: Collision protection prevents Package Operator from
-                    working on objects already under management by a different operator.
+                  description: |-
+                    Collision protection prevents Package Operator from working on objects already under
+                    management by a different operator.
                   type: string
                 conditionMappings:
                   description: Maps conditions from this object into the Package Operator

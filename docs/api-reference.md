@@ -395,8 +395,8 @@ spec:
         externalObjects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: eirmod
-            sourceType: nonumy
+          - destinationType: tempor
+            sourceType: eirmod
           object:
             apiVersion: apps/v1
             kind: Deployment
@@ -406,8 +406,8 @@ spec:
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: diam
-            sourceType: sed
+          - destinationType: nonumy
+            sourceType: diam
           object:
             apiVersion: apps/v1
             kind: Deployment
@@ -475,8 +475,8 @@ spec:
     externalObjects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: consetetur
-        sourceType: amet
+      - destinationType: sadipscing
+        sourceType: consetetur
       object:
         apiVersion: apps/v1
         kind: Deployment
@@ -486,8 +486,8 @@ spec:
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: sit
-        sourceType: dolor
+      - destinationType: amet
+        sourceType: sit
       object:
         apiVersion: apps/v1
         kind: Deployment
@@ -547,8 +547,8 @@ spec:
   externalObjects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: nonumy
-      sourceType: diam
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -557,8 +557,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: sed
-      sourceType: elitr
+    - destinationType: diam
+      sourceType: sed
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -606,8 +606,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: sit
-    sourceType: dolor
+  - destinationType: amet
+    sourceType: sit
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -868,7 +868,7 @@ ObjectSetObject is an object that is part of the phase of an ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `object` <b>required</b><br>unstructured.Unstructured |  |
-| `collisionProtection` <br><a href="#collisionprotection">CollisionProtection</a> | Collision protection prevents Package Operator from working on objects already under management by a different operator. |
+| `collisionProtection` <br><a href="#collisionprotection">CollisionProtection</a> | Collision protection prevents Package Operator from working on objects already under<br>management by a different operator. |
 | `conditionMappings` <br><a href="#conditionmapping">[]ConditionMapping</a> | Maps conditions from this object into the Package Operator APIs. |
 
 

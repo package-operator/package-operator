@@ -292,8 +292,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:
@@ -336,8 +336,8 @@ spec:
                                 properties:
                                   collisionProtection:
                                     default: Prevent
-                                    description: Collision protection prevents Package
-                                      Operator from working on objects already under
+                                    description: |-
+                                      Collision protection prevents Package Operator from working on objects already under
                                       management by a different operator.
                                     type: string
                                   conditionMappings:

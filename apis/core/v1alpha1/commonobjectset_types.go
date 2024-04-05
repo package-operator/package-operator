@@ -72,7 +72,8 @@ type ObjectSetObject struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +example={apiVersion: apps/v1, kind: Deployment, metadata: {name: example-deployment}}
 	Object unstructured.Unstructured `json:"object"`
-	// Collision protection prevents Package Operator from working on objects already under management by a different operator.
+	// Collision protection prevents Package Operator from working on objects already under
+	// management by a different operator.
 	// +kubebuilder:default=Prevent
 	CollisionProtection CollisionProtection `json:"collisionProtection,omitempty"`
 	// Maps conditions from this object into the Package Operator APIs.
@@ -85,15 +86,20 @@ func (o ObjectSetObject) String() string {
 	return fmt.Sprintf("object %s/%s kind:%s", obj.GetNamespace(), obj.GetName(), obj.GetKind())
 }
 
+// CollisionProtection specifies if and how PKO prevent ownership collisions.
 type CollisionProtection string
 
 const (
-	// Prevent owner collisions entirely by only allowing Package Operator to work with objects itself has created.
+	// CollisionProtectionPrevent prevents owner collisions entirely by only allowing
+	// Package Operator to work with objects itself has created.
 	CollisionProtectionPrevent CollisionProtection = "Prevent"
-	// Allow Package Operator to patch and override objects already present if they are not owned by another controller.
+	// CollisionProtectionIfNoController allows Package Operator to patch and override
+	// objects already present if they are not owned by another controller.
 	CollisionProtectionIfNoController CollisionProtection = "IfNoController"
-	// Allow Package Operator to patch and override objects already present and owned by other controllers.
-	// Be careful! This setting may cause multiple controllers to fight over a resource, causing load on the API server and etcd.
+	// CollisionProtectionNone allows Package Operator to patch and override objects
+	// already present and owned by other controllers.
+	// Be careful! This setting may cause multiple controllers to fight over a resource,
+	// causing load on the API server and etcd.
 	CollisionProtectionNone CollisionProtection = "None"
 )
 

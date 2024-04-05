@@ -11,7 +11,8 @@ import (
 const (
 	// PackagePhaseAnnotation annotation to assign objects to a phase.
 	PackagePhaseAnnotation = "package-operator.run/phase"
-	// PackageConditionMapAnnotation specifies object conditions to map back into Package Operator APIs.
+	// PackageConditionMapAnnotation specifies object conditions to map back
+	// into Package Operator APIs.
 	// Example: Available => my-own-prefix/Available.
 	PackageConditionMapAnnotation = "package-operator.run/condition-map"
 	// PackageExternalObjectAnnotation when set to "True", indicates
@@ -21,7 +22,8 @@ const (
 	// PackageCELConditionAnnotation contains a CEL expression
 	// evaluating to a boolean value which determines whether the object is created.
 	PackageCELConditionAnnotation = "package-operator.run/condition"
-	// Collision protection prevents Package Operator from working on objects already under management by a different operator.
+	// PackageCollisionProtectionAnnotation prevents Package Operator from working
+	// on objects already under management by a different operator.
 	PackageCollisionProtectionAnnotation = "package-operator.run/collision-protection"
 )
 

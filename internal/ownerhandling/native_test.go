@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -18,6 +18,8 @@ import (
 var testScheme = testutil.NewTestSchemeWithCoreV1()
 
 func TestOwnerStrategyNative_HasController(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		obj      metav1.Object
@@ -32,7 +34,7 @@ func TestOwnerStrategyNative_HasController(t *testing.T) {
 					UID:       types.UID("1234"),
 					OwnerReferences: []metav1.OwnerReference{
 						{},
-						{Controller: pointer.Bool(true)},
+						{Controller: ptr.To(true)},
 					},
 				},
 			},
@@ -50,8 +52,11 @@ func TestOwnerStrategyNative_HasController(t *testing.T) {
 			expected: false,
 		},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			s := NewNative(testScheme)
 			r := s.HasController(test.obj)
 			assert.Equal(t, test.expected, r)
