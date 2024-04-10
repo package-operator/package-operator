@@ -718,6 +718,7 @@ func (in *HostedClusterPackageSpec) DeepCopyInto(out *HostedClusterPackageSpec) 
 	*out = *in
 	in.Strategy.DeepCopyInto(&out.Strategy)
 	in.HostedClusterSelector.DeepCopyInto(&out.HostedClusterSelector)
+	in.Selector.DeepCopyInto(&out.Selector)
 	in.Template.DeepCopyInto(&out.Template)
 }
 
