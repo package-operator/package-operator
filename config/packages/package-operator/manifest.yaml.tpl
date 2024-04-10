@@ -919,6 +919,7 @@ test:
   template:
   - context:
       package:
+        image: registry.package-operator.run/static-image
         metadata:
           annotations: null
           labels: null
@@ -927,6 +928,7 @@ test:
     name: no-config
   - context:
       package:
+        image: registry.package-operator.run/static-image
         metadata:
           annotations: null
           labels: null
@@ -953,6 +955,7 @@ test:
     name: affinity-tolerations-resources
   - context:
       package:
+        image: registry.package-operator.run/static-image
         metadata:
           annotations: null
           labels: null
