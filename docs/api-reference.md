@@ -1263,30 +1263,31 @@ spec:
   - PackageManifestScope
 test:
   kubeconform:
-    kubernetesVersion: sadipscing
+    kubernetesVersion: elitr
     schemaLocations:
-    - elitr
+    - sed
   template:
   - context:
       config: runtime.RawExtension
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: consetetur
+            hostedClusterNamespace: sadipscing
             metadata:
               annotations: map[string]string
               labels: map[string]string
-              name: sit
-              namespace: amet
+              name: amet
+              namespace: consetetur
         kubernetes:
-          version: eirmod
-        openShift:
           version: tempor
+        openShift:
+          version: lorem
         proxy:
-          httpProxy: lorem
-          httpsProxy: ipsum
-          noProxy: dolor
+          httpProxy: ipsum
+          httpsProxy: dolor
+          noProxy: sit
       package:
+        image: eirmod
         metadata:
           annotations: map[string]string
           labels: map[string]string
@@ -1319,9 +1320,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: nonumy
-    image: diam
-    name: sed
+  - digest: eirmod
+    image: nonumy
+    name: diam
 
 ```
 
@@ -1641,6 +1642,7 @@ TemplateContextPackage represents the (Cluster)Package object requesting this pa
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <b>required</b><br><a href="#templatecontextobjectmeta">TemplateContextObjectMeta</a> | TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates. |
+| `image` <b>required</b><br>string | Image as presented via the (Cluster)Package API after admission. |
 
 
 Used in:
