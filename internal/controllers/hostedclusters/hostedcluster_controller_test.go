@@ -2,7 +2,6 @@ package hostedclusters
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +38,7 @@ func TestHostedClusterController_noop(t *testing.T) {
 
 	image := "image321"
 	controller := NewHostedClusterController(
-		mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil, nil, nil,
+		mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image, nil, nil,
 	)
 	hcName := "testing123"
 	now := metav1.Now()
@@ -73,7 +72,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 
 	image := "image321"
 	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image,
-		&corev1.Affinity{}, []corev1.Toleration{{}}, &corev1.Affinity{}, []corev1.Toleration{{}})
+		&corev1.Affinity{}, []corev1.Toleration{{}})
 	hcName := "testing123"
 	hc := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: hcName, Namespace: "default"},
@@ -85,19 +84,6 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	assert.Equal(t, image, pkg.Spec.Image)
 	if assert.NotNil(t, pkg.Spec.Config) {
 		assert.Equal(t, `{"affinity":{},"tolerations":[{}]}`, string(pkg.Spec.Config.Raw))
-	}
-
-	pkg, err = controller.desiredHostedClusterPackage(hc)
-	require.NoError(t, err)
-	assert.Equal(t, "hosted-cluster", pkg.Name)
-	assert.Equal(t, image, pkg.Spec.Image)
-	expCfg := fmt.Sprintf(`{"affinity":{},`+
-		`"hostedClusterNamespace":"%s",`+
-		`"namespace":"%s",`+
-		`"tolerations":[{}]}`,
-		defaultHostedClusterNamespace, hypershiftv1beta1.HostedClusterNamespace(*hc))
-	if assert.NotNil(t, pkg.Spec.Config) {
-		assert.Equal(t, expCfg, string(pkg.Spec.Config.Raw))
 	}
 }
 
@@ -114,7 +100,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
 	)
 
 	clientMock.
@@ -137,7 +123,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
 	)
 
 	clientMock.
@@ -168,7 +154,7 @@ func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil, nil, nil,
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
 	)
 
 	clientMock.

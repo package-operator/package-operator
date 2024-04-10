@@ -24,8 +24,6 @@ func ProvideHostedClusterController(
 			// use the same affinity and tolerations for remote-phase and hosted-cluster
 			opts.SubComponentAffinity,
 			opts.SubComponentTolerations,
-			opts.SubComponentAffinity,
-			opts.SubComponentTolerations,
 		),
 	}
 }

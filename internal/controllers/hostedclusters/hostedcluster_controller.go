@@ -28,10 +28,8 @@ type HostedClusterController struct {
 	packageOperatorPackageImage string
 	ownerStrategy               ownerStrategy
 
-	remotePhaseAffinity      *corev1.Affinity
-	remotePhaseTolerations   []corev1.Toleration
-	hostedClusterAffinity    *corev1.Affinity
-	hostedClusterTolerations []corev1.Toleration
+	remotePhaseAffinity    *corev1.Affinity
+	remotePhaseTolerations []corev1.Toleration
 }
 
 type ownerStrategy interface {
@@ -41,15 +39,11 @@ type ownerStrategy interface {
 	) handler.EventHandler
 }
 
-const defaultHostedClusterNamespace = "package-operator-system"
-
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	packageOperatorPackageImage string,
 	remotePhaseAffinity *corev1.Affinity,
 	remotePhaseTolerations []corev1.Toleration,
-	hostedClusterAffinity *corev1.Affinity,
-	hostedClusterTolerations []corev1.Toleration,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
 		client:                      c,
@@ -61,10 +55,8 @@ func NewHostedClusterController(
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
 		ownerStrategy: ownerhandling.NewAnnotation(scheme),
 
-		remotePhaseAffinity:      remotePhaseAffinity,
-		remotePhaseTolerations:   remotePhaseTolerations,
-		hostedClusterAffinity:    hostedClusterAffinity,
-		hostedClusterTolerations: hostedClusterTolerations,
+		remotePhaseAffinity:    remotePhaseAffinity,
+		remotePhaseTolerations: remotePhaseTolerations,
 	}
 	return controller
 }
@@ -119,79 +111,29 @@ func (c *HostedClusterController) Reconcile(
 		}
 	}
 
-	desiredHostedClusterPkg, err := c.desiredHostedClusterPackage(hostedCluster)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
-	}
-	if err = c.ownerStrategy.SetControllerReference(hostedCluster, desiredHostedClusterPkg); err != nil {
-		return ctrl.Result{}, fmt.Errorf("setting controller reference: %w", err)
-	}
-
-	existingHostedClusterPkg := &corev1alpha1.Package{}
-	err = c.client.Get(ctx, client.ObjectKeyFromObject(desiredHostedClusterPkg), existingHostedClusterPkg)
-	if err != nil && errors.IsNotFound(err) {
-		if err := c.client.Create(ctx, desiredHostedClusterPkg); err != nil {
-			return ctrl.Result{}, fmt.Errorf("creating Package: %w", err)
-		}
-		return ctrl.Result{}, nil
-	} else if err != nil {
-		return ctrl.Result{}, fmt.Errorf("getting Package: %w", err)
-	}
-
-	if existingHostedClusterPkg.Spec.Image != desiredHostedClusterPkg.Spec.Image {
-		// update Job
-		existingHostedClusterPkg.Spec.Image = desiredHostedClusterPkg.Spec.Image
-		if err := c.client.Update(ctx, existingHostedClusterPkg); err != nil {
-			return ctrl.Result{}, fmt.Errorf("deleting outdated Package: %w", err)
-		}
-	}
-
 	return ctrl.Result{}, nil
 }
 
 func (c *HostedClusterController) desiredRemotePhasePackage(
 	cluster *v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
-	return c.desiredPackage(cluster, "remote-phase",
-		c.remotePhaseAffinity, c.remotePhaseTolerations, map[string]any{})
-}
-
-func (c *HostedClusterController) desiredHostedClusterPackage(
-	cluster *v1beta1.HostedCluster,
-) (*corev1alpha1.Package, error) {
-	return c.desiredPackage(cluster, "hosted-cluster",
-		c.hostedClusterAffinity, c.hostedClusterTolerations,
-		map[string]any{
-			"namespace":              v1beta1.HostedClusterNamespace(*cluster),
-			"hostedClusterNamespace": defaultHostedClusterNamespace,
-		})
-}
-
-func (c *HostedClusterController) desiredPackage(
-	cluster *v1beta1.HostedCluster, component string,
-	affinity *corev1.Affinity, tolerations []corev1.Toleration,
-	additionalConfig map[string]any,
-) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      component,
+			Name:      "remote-phase",
 			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image:     c.packageOperatorPackageImage,
-			Component: component,
+			Component: "remote-phase",
 		},
 	}
 
 	config := map[string]any{}
-	if affinity != nil {
-		config["affinity"] = affinity
+	if c.remotePhaseAffinity != nil {
+		config["affinity"] = c.remotePhaseAffinity
 	}
-	if tolerations != nil {
-		config["tolerations"] = tolerations
-	}
-	for k, v := range additionalConfig {
-		config[k] = v
+	if c.remotePhaseTolerations != nil {
+		config["tolerations"] = c.remotePhaseTolerations
 	}
 	if len(config) > 0 {
 		configJSON, err := json.Marshal(config)
