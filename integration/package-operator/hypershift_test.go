@@ -31,33 +31,20 @@ func TestHyperShift(t *testing.T) {
 
 	require.NoError(t, initClients(ctx))
 
+	rpPkg := &corev1alpha1.Package{}
+	err := Client.Get(ctx, client.ObjectKey{Name: "remote-phase", Namespace: namespace}, rpPkg)
+	require.NoError(t, err)
+
 	// Wait for roll-out of remote phase package
-	rpPkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "remote-phase",
-			Namespace: namespace,
-		},
-	}
 	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
 	// few seconds for leader election.
-	err := Waiter.WaitForCondition(
+	err = Waiter.WaitForCondition(
 		ctx, rpPkg, corev1alpha1.PackageAvailable,
 		metav1.ConditionTrue, wait.WithTimeout(10000*time.Second),
 	)
 	require.NoError(t, err)
 
-	// Wait for roll-out of hosted cluster package
-	hcPkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hosted-cluster",
-			Namespace: namespace,
-		},
-	}
-	err = Waiter.WaitForCondition(
-		ctx, hcPkg, corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
-	)
-	require.NoError(t, err)
+	pkgImage := rpPkg.Spec.Image
 
 	hClient, hWaiter, err := hostedClusterHandlers()
 	require.NoError(t, err)
@@ -72,6 +59,27 @@ func TestHyperShift(t *testing.T) {
 	t.Run("ObjectSetOrphanCascadeDeletion", func(t *testing.T) {
 		t.SkipNow() // This test/functionality is not stable.
 		runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(t, hClient, hWaiter, namespace, "hosted-cluster")
+	})
+	t.Run("HostedClusterComponent", func(t *testing.T) {
+		hcPkg := &corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hosted-cluster",
+				Namespace: namespace,
+			},
+			Spec: corev1alpha1.PackageSpec{
+				Image:     pkgImage,
+				Component: "hosted-cluster",
+			},
+		}
+
+		require.NoError(t, Client.Create(ctx, hcPkg))
+
+		// Wait for roll-out of hosted cluster package
+		err = Waiter.WaitForCondition(
+			ctx, hcPkg, corev1alpha1.PackageAvailable,
+			metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
+		)
+		require.NoError(t, err)
 	})
 }
 
