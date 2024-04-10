@@ -221,13 +221,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			}
 		}
 
-		if testCase.expectedHashCollisionCount > 0 {
+		if testCase.expectedHashCollisionCount > 0 && concernedDeployment.Status.CollisionCount != nil {
 			// Expect collision count to be the expected value
-			require.True(
-				t,
-				concernedDeployment.Status.CollisionCount != nil &&
-					*concernedDeployment.Status.CollisionCount == int32(testCase.expectedHashCollisionCount),
-			)
+			require.Equal(t, *concernedDeployment.Status.CollisionCount, int32(testCase.expectedHashCollisionCount))
 		}
 	}
 }
