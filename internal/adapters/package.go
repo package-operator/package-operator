@@ -112,7 +112,7 @@ func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
 	return manifests.TemplateContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
-			Image:                     a.Package.Spec.Image,
+			Image:                     a.Spec.Image,
 		},
 		Config: a.Package.Spec.Config,
 	}
