@@ -18,15 +18,16 @@ func buildPackage(ctx context.Context, name, registry string) error {
 
 	deps := []run.Dependency{}
 
-	switch name {
-	case "remote-phase":
-		deps = append(deps, run.Meth(generate, generate.remotePhaseFiles))
-	case "package-operator":
-		deps = append(deps, run.Meth(generate, generate.packageOperatorPackageFiles))
+	if name == "package-operator" {
+		deps = append(deps,
+			run.Meth(generate, generate.remotePhaseComponentFiles),
+			run.Meth(generate, generate.hostedClusterComponentFiles),
+			run.Meth(generate, generate.packageOperatorPackageFiles),
+		)
 	}
 
 	self := run.Fn2(buildPackage, name, registry)
-	if err := mgr.ParallelDeps(
+	if err := mgr.SerialDeps(
 		ctx, self,
 		deps...,
 	); err != nil {
@@ -48,7 +49,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
-	self := run.Fn2(buildPackage, name, registry)
+	self := run.Fn2(pushPackage, name, registry)
 	if err := mgr.SerialDeps(
 		ctx, self,
 		run.Fn2(buildPackage, name, registry),

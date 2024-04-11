@@ -5,20 +5,20 @@ metadata:
     package-operator.run/phase: deploy
   creationTimestamp: null
   labels:
-    app.kubernetes.io/name: package-operator
-  name: package-operator-manager
-  namespace: package-operator-system
+    app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  name: package-operator-hosted-cluster-manager
+  namespace: "test"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: package-operator
+      app.kubernetes.io/name: package-operator-hosted-cluster-manager
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app.kubernetes.io/name: package-operator
+        app.kubernetes.io/name: package-operator-hosted-cluster-manager
     spec:
       containers:
       - args:
@@ -27,20 +27,12 @@ spec:
         - name: metrics
           containerPort: 8080
         env:
+        - name: KUBECONFIG
+          value: /data/kubeconfig
         - name: PKO_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+          value: package-operator-system
         - name: PKO_IMAGE
           value: registry.package-operator.run/static-image
-        - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
-          value: "registry.package-operator.run/static-image"
-        - name: HTTP_PROXY
-          value: "http"
-        - name: HTTPS_PROXY
-          value: "https"
-        - name: NO_PROXY
-          value: "no..."
         image: registry.package-operator.run/static-image
         livenessProbe:
           httpGet:
@@ -56,8 +48,8 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         volumeMounts:
-        - mountPath: /etc/pki/ca-trust/extracted/pem
-          name: trusted-ca-bundle
+        - mountPath: /data
+          name: kubeconfig
           readOnly: true
         # default resources
         resources:
@@ -68,13 +60,8 @@ spec:
             cpu: 200m
             memory: 300Mi
       volumes:
-      - configMap:
-          defaultMode: 420
-          items:
-            - key: ca-bundle.crt
-              path: tls-ca-bundle.pem
-          name: trusted-ca-bundle
-          optional: true
-        name: trusted-ca-bundle
-      serviceAccountName: package-operator
+      - name: kubeconfig
+        secret:
+          secretName: service-network-admin-kubeconfig
+          optional: false
 status: {}

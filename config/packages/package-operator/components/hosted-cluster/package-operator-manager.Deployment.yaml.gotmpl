@@ -5,20 +5,24 @@ metadata:
     package-operator.run/phase: deploy
   creationTimestamp: null
   labels:
-    app.kubernetes.io/name: package-operator
-  name: package-operator-manager
-  namespace: {{ .config.namespace }}
+    app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  name: package-operator-hosted-cluster-manager
+{{- if eq .config.namespace ""}}
+  namespace: "{{ .package.metadata.namespace }}"
+{{- else}}
+  namespace: "{{ .config.namespace }}"
+{{- end}}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: package-operator
+      app.kubernetes.io/name: package-operator-hosted-cluster-manager
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app.kubernetes.io/name: package-operator
+        app.kubernetes.io/name: package-operator-hosted-cluster-manager
     spec:
 {{- if hasKey .config "affinity" }}
       affinity: {{ toJson .config.affinity }}
@@ -33,6 +37,8 @@ spec:
         - name: metrics
           containerPort: 8080
         env:
+        - name: KUBECONFIG
+          value: /data/kubeconfig
 {{- if hasKey .config "registryHostOverrides" }}
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: {{ .config.registryHostOverrides }}
@@ -50,13 +56,9 @@ spec:
           value: {{ toJson .config.tolerations | quote }}
 {{- end}}
         - name: PKO_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+          value: {{ .config.hostedClusterNamespace }}
         - name: PKO_IMAGE
           value: {{ index .images "package-operator-manager" }}
-        - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
-          value: {{ .package.image | quote }}
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "proxy" }}
 {{- if hasKey .environment.proxy "httpProxy" }}
@@ -87,9 +89,12 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+        volumeMounts:
+        - mountPath: /data
+          name: kubeconfig
+          readOnly: true
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "openShift" }}
-        volumeMounts:
         - mountPath: /etc/pki/ca-trust/extracted/pem
           name: trusted-ca-bundle
           readOnly: true
@@ -107,9 +112,13 @@ spec:
             cpu: 200m
             memory: 300Mi
 {{- end}}
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: service-network-admin-kubeconfig
+          optional: false
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "openShift" }}
-      volumes:
       - configMap:
           defaultMode: 420
           items:
@@ -120,5 +129,4 @@ spec:
         name: trusted-ca-bundle
 {{- end}}
 {{- end}}
-      serviceAccountName: package-operator
 status: {}

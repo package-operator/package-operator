@@ -72,14 +72,13 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 
 	image := "image321"
 	controller := NewHostedClusterController(mockClient, ctrl.Log.WithName("hc controller test"), testScheme, image,
-		&corev1.Affinity{},
-		[]corev1.Toleration{{}})
+		&corev1.Affinity{}, []corev1.Toleration{{}})
 	hcName := "testing123"
 	hc := &hypershiftv1beta1.HostedCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: hcName},
+		ObjectMeta: metav1.ObjectMeta{Name: hcName, Namespace: "default"},
 	}
 
-	pkg, err := controller.desiredPackage(hc)
+	pkg, err := controller.desiredRemotePhasePackage(hc)
 	require.NoError(t, err)
 	assert.Equal(t, "remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)

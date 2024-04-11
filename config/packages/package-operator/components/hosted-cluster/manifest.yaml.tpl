@@ -2,7 +2,7 @@ apiVersion: manifests.package-operator.run/v1alpha1
 kind: PackageManifest
 metadata:
   creationTimestamp: null
-  name: package-operator
+  name: hosted-cluster
 spec:
   availabilityProbes:
   - probes:
@@ -24,7 +24,6 @@ spec:
       kind:
         group: apiextensions.k8s.io
         kind: CustomResourceDefinition
-  components: {}
   config:
     openAPIV3Schema:
       properties:
@@ -37,7 +36,11 @@ spec:
         registryHostOverrides:
           type: string
         namespace:
-          description: Namespace to install package operator into.
+          description: Namespace to install package operator into. If empty, the Package namespace will be used.
+          type: string
+          default: ""
+        hostedClusterNamespace:
+          description: Hosted cluster namespace for leader election
           type: string
           default: package-operator-system
         affinity:
@@ -908,64 +911,30 @@ spec:
       type: object
   phases:
   - name: crds
+    class: hosted-cluster
   - name: namespace
-  - name: rbac
+    class: hosted-cluster
+  #- name: rbac
+  #  class: hosted-cluster
   - name: deploy
   scopes:
-  - Cluster
+  - Namespaced
 test:
   kubeconform:
     kubernetesVersion: v1.28.2
   template:
   - context:
       package:
-        image: registry.package-operator.run/static-image
         metadata:
-          annotations: null
-          labels: null
           name: test
-          namespace: ""
-    name: no-config
-  - context:
-      package:
-        image: registry.package-operator.run/static-image
-        metadata:
-          annotations: null
-          labels: null
-          name: test
-          namespace: ""
+          namespace: test
       config:
-        resources:
-          limits:
-            cpu: 10m
-            memory: 13Mi
-          requests:
-            cpu: 10m
-            memory: 12Mi
-        affinity:
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: node-role.kubernetes.io/infra
-                  operator: Exists
-        tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/infra
-    name: affinity-tolerations-resources
+        namespace: another
+        hostedClusterNamespace: yet-another
+    name: with-config
   - context:
       package:
-        image: registry.package-operator.run/static-image
         metadata:
-          annotations: null
-          labels: null
           name: test
-          namespace: ""
-      environment:
-        openShift:
-          version: "xxx"
-        proxy:
-          httpProxy: http
-          httpsProxy: https
-          noProxy: no...
-    name: openshift-with-proxy
+          namespace: test
+    name: without-config

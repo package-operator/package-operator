@@ -20,7 +20,8 @@ func ProvideHostedClusterController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("HostedCluster"),
 			mgr.GetScheme(),
-			opts.RemotePhasePackageImage,
+			opts.PackageOperatorPackageImage,
+			// use the same affinity and tolerations for remote-phase and hosted-cluster
 			opts.SubComponentAffinity,
 			opts.SubComponentTolerations,
 		),

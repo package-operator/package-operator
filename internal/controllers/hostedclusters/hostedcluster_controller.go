@@ -22,11 +22,11 @@ import (
 )
 
 type HostedClusterController struct {
-	client                  client.Client
-	log                     logr.Logger
-	scheme                  *runtime.Scheme
-	remotePhasePackageImage string
-	ownerStrategy           ownerStrategy
+	client                      client.Client
+	log                         logr.Logger
+	scheme                      *runtime.Scheme
+	packageOperatorPackageImage string
+	ownerStrategy               ownerStrategy
 
 	remotePhaseAffinity    *corev1.Affinity
 	remotePhaseTolerations []corev1.Toleration
@@ -41,15 +41,15 @@ type ownerStrategy interface {
 
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
-	remotePhasePackageImage string,
+	packageOperatorPackageImage string,
 	remotePhaseAffinity *corev1.Affinity,
 	remotePhaseTolerations []corev1.Toleration,
 ) *HostedClusterController {
 	controller := &HostedClusterController{
-		client:                  c,
-		log:                     log,
-		scheme:                  scheme,
-		remotePhasePackageImage: remotePhasePackageImage,
+		client:                      c,
+		log:                         log,
+		scheme:                      scheme,
+		packageOperatorPackageImage: packageOperatorPackageImage,
 		// Using Annotation Owner-Handling,
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
@@ -84,7 +84,7 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	desiredPkg, err := c.desiredPackage(hostedCluster)
+	desiredPkg, err := c.desiredRemotePhasePackage(hostedCluster)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("building desired package: %w", err)
 	}
@@ -114,14 +114,17 @@ func (c *HostedClusterController) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-func (c *HostedClusterController) desiredPackage(cluster *v1beta1.HostedCluster) (*corev1alpha1.Package, error) {
+func (c *HostedClusterController) desiredRemotePhasePackage(
+	cluster *v1beta1.HostedCluster,
+) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "remote-phase",
 			Namespace: v1beta1.HostedClusterNamespace(*cluster),
 		},
 		Spec: corev1alpha1.PackageSpec{
-			Image: c.remotePhasePackageImage,
+			Image:     c.packageOperatorPackageImage,
+			Component: "remote-phase",
 		},
 	}
 
