@@ -9,6 +9,7 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ClusterObjectSlice](#clusterobjectslice)
 * [ClusterObjectTemplate](#clusterobjecttemplate)
 * [ClusterPackage](#clusterpackage)
+* [HostedClusterPackage](#hostedclusterpackage)
 * [ObjectDeployment](#objectdeployment)
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
@@ -346,6 +347,49 @@ status:
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
+### HostedClusterPackage
+
+HostedClusterPackage defines package to be rolled out on every HyperShift HostedCluster.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: HostedClusterPackage
+metadata:
+  name: example
+spec:
+  hostedClusterSelector: metav1.LabelSelector
+  selector: metav1.LabelSelector
+  strategy:
+    instant: HostedClusterPackageStrategyInstant
+    rollingUpgrade:
+      maxUnavailable: 1
+      partition:
+        labelKey: elitr
+        order:
+          static:
+          - sed
+  template:
+    metadata: metav1.ObjectMeta
+    spec:
+      component: nonumy
+      config: runtime.RawExtension
+      image: diam
+status:
+  phase: Pending
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#hostedclusterpackagespec">HostedClusterPackageSpec</a> | HostedClusterPackageSpec is the description of a HostedClusterPackage. |
+| `status` <br><a href="#hostedclusterpackagestatus">HostedClusterPackageStatus</a> | HostedClusterPackageStatus describes the status of a HostedClusterPackage. |
+
+
 ### ObjectDeployment
 
 ObjectDeployment is the Schema for the ObjectDeployments API
@@ -384,28 +428,28 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: sed
+      - class: tempor
         externalObjects:
         - conditionMappings:
-          - destinationType: tempor
-            sourceType: eirmod
+          - destinationType: sit
+            sourceType: dolor
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
-        name: elitr
+        name: eirmod
         objects:
         - conditionMappings:
-          - destinationType: nonumy
-            sourceType: diam
+          - destinationType: ipsum
+            sourceType: lorem
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - lorem
+        - amet
       successDelaySeconds: 42
 status:
   phase:Pending: null
@@ -462,28 +506,28 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: dolor
+  - class: sadipscing
     externalObjects:
     - conditionMappings:
-      - destinationType: sadipscing
-        sourceType: consetetur
+      - destinationType: nonumy
+        sourceType: diam
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
-    name: ipsum
+    name: consetetur
     objects:
     - conditionMappings:
-      - destinationType: amet
-        sourceType: sit
+      - destinationType: sed
+        sourceType: elitr
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - elitr
+    - eirmod
   previous:
   - name: previous-revision
   successDelaySeconds: 42
@@ -535,8 +579,8 @@ spec:
           app.kubernetes.io/name: example-operator
   externalObjects:
   - conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: dolor
+      sourceType: ipsum
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -544,8 +588,8 @@ spec:
         name: example-deployment
   objects:
   - conditionMappings:
-    - destinationType: diam
-      sourceType: sed
+    - destinationType: lorem
+      sourceType: tempor
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -560,10 +604,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
 
 ```
 
@@ -592,8 +636,8 @@ metadata:
   namespace: default
 objects:
 - conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: sed
+    sourceType: elitr
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -626,15 +670,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: nonumy
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: dolor
+      key: ipsum
+    kind: eirmod
+    name: lorem
+    namespace: tempor
     optional: "true"
-  template: consetetur
+  template: diam
 status:
   conditions:
   - metav1.Condition
@@ -664,9 +708,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: lorem
+  component: amet
   config: runtime.RawExtension
-  image: tempor
+  image: sit
 status:
   phase: Pending
 
@@ -813,6 +857,131 @@ Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetStatus](#objectsetstatus)
+
+
+### HostedClusterPackagePartitionOrderSpec
+
+HostedClusterPackagePartitionOrderSpec describes ordering for a partition.
+
+| Field | Description |
+| ----- | ----------- |
+| `static` <br>[]string | Allows to define a static partition order.<br>The special * key matches anything not explicitly part of the list. |
+
+
+Used in:
+* [HostedClusterPackagePartitionSpec](#hostedclusterpackagepartitionspec)
+
+
+### HostedClusterPackagePartitionSpec
+
+HostedClusterPackagePartitionSpec describes settings to partition HostedClusters into groups for upgrades.
+Partitions will be upgraded after each other:
+Upgrades in the next partition will only start after the previous has finished.
+
+| Field | Description |
+| ----- | ----------- |
+| `labelKey` <b>required</b><br>string | LabelKey defines a labelKey to group objects on. |
+| `order` <br><a href="#hostedclusterpackagepartitionorderspec">HostedClusterPackagePartitionOrderSpec</a> | Controls how partitions are ordered.<br>By default items will be sorted AlphaNumeric ascending. |
+
+
+Used in:
+* [HostedClusterPackageStrategyRollingUpgrade](#hostedclusterpackagestrategyrollingupgrade)
+
+
+### HostedClusterPackagePartitionStatus
+
+HostedClusterPackagePartitionStatus describes the status of a partition.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name of the partition. |
+| `total` <br><a href="#int32">int32</a> |  |
+| `found` <br><a href="#int32">int32</a> |  |
+| `available` <br><a href="#int32">int32</a> |  |
+| `updated` <br><a href="#int32">int32</a> |  |
+
+
+Used in:
+* [HostedClusterPackageStatus](#hostedclusterpackagestatus)
+
+
+### HostedClusterPackageRefStatus
+
+HostedClusterPackageRefStatus holds a reference to upgrades in-flight.
+
+| Field | Description |
+| ----- | ----------- |
+| `uid` <b>required</b><br>types.UID |  |
+| `name` <b>required</b><br>string |  |
+| `namespace` <br>string |  |
+
+
+Used in:
+* [HostedClusterPackageStatus](#hostedclusterpackagestatus)
+
+
+### HostedClusterPackageSpec
+
+HostedClusterPackageSpec is the description of a HostedClusterPackage.
+
+| Field | Description |
+| ----- | ----------- |
+| `strategy` <b>required</b><br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
+| `hostedClusterSelector` <br>metav1.LabelSelector | HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to. |
+| `selector` <b>required</b><br>metav1.LabelSelector | Selector is a label query over Packages managed by this HostedClusterPackage. |
+| `template` <b>required</b><br><a href="#packagetemplatespec">PackageTemplateSpec</a> | Template describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
+
+
+Used in:
+* [HostedClusterPackage](#hostedclusterpackage)
+
+
+### HostedClusterPackageStatus
+
+HostedClusterPackageStatus describes the status of a HostedClusterPackage.
+
+| Field | Description |
+| ----- | ----------- |
+| `phase` <br><a href="#hostedclusterpackagestatusphase">HostedClusterPackageStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `partitions` <br><a href="#hostedclusterpackagepartitionstatus">[]HostedClusterPackagePartitionStatus</a> | Count of packages found by partition. |
+| `processing` <br><a href="#hostedclusterpackagerefstatus">[]HostedClusterPackageRefStatus</a> | Processing set of packages during upgrade. |
+| `total` <br><a href="#int32">int32</a> |  |
+| `found` <br><a href="#int32">int32</a> |  |
+| `available` <br><a href="#int32">int32</a> |  |
+| `updated` <br><a href="#int32">int32</a> |  |
+
+
+Used in:
+* [HostedClusterPackage](#hostedclusterpackage)
+
+
+### HostedClusterPackageStrategy
+
+HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage.
+
+| Field | Description |
+| ----- | ----------- |
+| `instant` <br><a href="#hostedclusterpackagestrategyinstant">HostedClusterPackageStrategyInstant</a> | Updates all matching Packages instantly and all at the same time. |
+| `rollingUpgrade` <br><a href="#hostedclusterpackagestrategyrollingupgrade">HostedClusterPackageStrategyRollingUpgrade</a> | Performs a rolling upgrade according to maxUnavailable and partition settings. |
+
+
+Used in:
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
+
+
+### HostedClusterPackageStrategyRollingUpgrade
+
+HostedClusterPackageStrategyRollingUpgrade describes the
+rolling upgrade strategy for HostedClusterPackages.
+
+| Field | Description |
+| ----- | ----------- |
+| `maxUnavailable` <b>required</b><br>int | MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.<br>Cannot be below 1, because we cannot surge to create more instances. |
+| `partition` <br><a href="#hostedclusterpackagepartitionspec">HostedClusterPackagePartitionSpec</a> | Partition HostedClusters by label value.<br>All packages in the same partition will have to be upgraded<br>before progressing to the next partition. |
+
+
+Used in:
+* [HostedClusterPackageStrategy](#hostedclusterpackagestrategy)
 
 
 ### ObjectDeploymentSpec
@@ -1092,6 +1261,7 @@ PackageSpec specifies a package.
 
 
 Used in:
+* [PackageTemplateSpec](#packagetemplatespec)
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
 
@@ -1111,6 +1281,20 @@ PackageStatus defines the observed state of a Package.
 Used in:
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
+
+
+### PackageTemplateSpec
+
+PackageTemplateSpec describes the data a package should have when created from a template.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta | Standard object's metadata.<br>More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Specification of the desired behavior of the package. |
+
+
+Used in:
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 
 
 ### PreviousRevisionReference
