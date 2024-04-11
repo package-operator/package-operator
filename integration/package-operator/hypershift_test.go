@@ -61,10 +61,6 @@ func TestHyperShift(t *testing.T) {
 		runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(t, hClient, hWaiter, namespace, "hosted-cluster")
 	})
 	t.Run("HostedClusterComponent", func(t *testing.T) {
-		hcPkgCfg := fmt.Sprintf(`{
-			"namespace": "%s",
-			"hostedClusterNamespace": "package-operator-system"
-		}`, namespace)
 		hcPkg := &corev1alpha1.Package{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hosted-cluster",
@@ -73,9 +69,6 @@ func TestHyperShift(t *testing.T) {
 			Spec: corev1alpha1.PackageSpec{
 				Image:     pkgImage,
 				Component: "hosted-cluster",
-				Config: &runtime.RawExtension{
-					Raw: []byte(hcPkgCfg),
-				},
 			},
 		}
 
