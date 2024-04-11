@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    package-operator.run/phase: deploy
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  name: package-operator-hosted-cluster-manager
+  namespace: "another"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator-hosted-cluster-manager
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: package-operator-hosted-cluster-manager
+    spec:
+      containers:
+      - args:
+        - --enable-leader-election
+        ports:
+        - name: metrics
+          containerPort: 8080
+        env:
+        - name: KUBECONFIG
+          value: /data/kubeconfig
+        - name: PKO_NAMESPACE
+          value: yet-another
+        - name: PKO_IMAGE
+          value: registry.package-operator.run/static-image
+        image: registry.package-operator.run/static-image
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /data
+          name: kubeconfig
+          readOnly: true
+        # default resources
+        resources:
+          limits:
+            cpu: 200m
+            memory: 400Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: service-network-admin-kubeconfig
+          optional: false
+status: {}

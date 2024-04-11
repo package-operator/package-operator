@@ -36,9 +36,9 @@ spec:
         registryHostOverrides:
           type: string
         namespace:
-          description: Namespace to install package operator into.
+          description: Namespace to install package operator into. If empty, the Package namespace will be used.
           type: string
-          default: package-operator-system
+          default: ""
         hostedClusterNamespace:
           description: Hosted cluster namespace for leader election
           type: string
@@ -919,3 +919,22 @@ spec:
   - name: deploy
   scopes:
   - Namespaced
+test:
+  kubeconform:
+    kubernetesVersion: v1.28.2
+  template:
+  - context:
+      package:
+        metadata:
+          name: test
+          namespace: test
+      config:
+        namespace: another
+        hostedClusterNamespace: yet-another
+    name: with-config
+  - context:
+      package:
+        metadata:
+          name: test
+          namespace: test
+    name: without-config

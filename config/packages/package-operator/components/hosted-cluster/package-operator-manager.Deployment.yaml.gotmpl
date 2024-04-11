@@ -7,7 +7,11 @@ metadata:
   labels:
     app.kubernetes.io/name: package-operator-hosted-cluster-manager
   name: package-operator-hosted-cluster-manager
-  namespace: {{ .config.namespace }}
+{{- if eq .config.namespace ""}}
+  namespace: "{{ .package.metadata.namespace }}"
+{{- else}}
+  namespace: "{{ .config.namespace }}"
+{{- end}}
 spec:
   replicas: 1
   selector:
