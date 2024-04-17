@@ -451,13 +451,18 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 
 	testClient := testutil.NewClient()
 	dynamicCacheMock := &dynamicCacheMock{}
+	clientMock := &testutil.CtrlClient{}
 	r := &PhaseReconciler{
-		writer:       testClient,
-		dynamicCache: dynamicCacheMock,
+		writer:         testClient,
+		dynamicCache:   dynamicCacheMock,
+		uncachedClient: clientMock,
 	}
 	owner := &phaseObjectOwnerMock{}
 
 	dynamicCacheMock.
+		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 	testClient.
@@ -643,7 +648,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 		object              client.Object
 		previous            []PreviousObjectSet
 		collisionProtection corev1alpha1.CollisionProtection
-		errorAs             interface{}
+		errorAs             error
 		needsAdoption       bool
 	}{
 		{
@@ -880,7 +885,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 			if test.errorAs == nil {
 				require.NoError(t, err)
 			} else {
-				require.ErrorAs(t, err, test.errorAs)
+				require.ErrorAs(t, err, &test.errorAs) //nolint: testifylint
 			}
 			assert.Equal(t, test.needsAdoption, needsAdoption)
 		})

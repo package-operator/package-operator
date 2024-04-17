@@ -120,6 +120,7 @@ func newGenericObjectSetController(
 			ownerhandling.NewNative(scheme),
 			preflight.NewAPIExistence(restMapper,
 				preflight.List{
+					preflight.NewNoOwnerReferences(restMapper),
 					preflight.NewNamespaceEscalation(restMapper),
 					preflight.NewDryRun(client),
 				},

@@ -442,7 +442,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 ) (actualObj *unstructured.Unstructured, err error) {
 	// Set owner reference
 	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("set controller reference: %w", err)
 	}
 
 	// Ensure to watch this type of object.
@@ -532,7 +532,7 @@ func (r *PhaseReconciler) desiredObject(
 	_ context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
-	desiredObj = &phaseObject.Object
+	desiredObj = phaseObject.Object.DeepCopy()
 
 	// Default namespace to the owners namespace
 	if len(desiredObj.GetNamespace()) == 0 {
@@ -561,17 +561,6 @@ func (r *PhaseReconciler) desiredObject(
 	setObjectRevision(desiredObj, owner.GetRevision())
 
 	return desiredObj, nil
-}
-
-// Returns true if the underlying error is because adoption has been refused.
-func IsAdoptionRefusedError(err error) bool {
-	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
-	if errors.As(err, &prevRevisionError) {
-		return true
-	}
-
-	var revCollisionError *RevisionCollisionError
-	return errors.As(err, &revCollisionError)
 }
 
 // updateStatusError(ctx context.Context, objectSet genericObjectSet,
@@ -632,7 +621,7 @@ type ObjectNotOwnedByPreviousRevisionError struct {
 	CommonObjectPhaseError
 }
 
-func (e ObjectNotOwnedByPreviousRevisionError) Error() string {
+func (e *ObjectNotOwnedByPreviousRevisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, object %s %s not owned by previous revision", e.ObjectGVK, e.ObjectKey)
 }
 
@@ -642,7 +631,7 @@ type RevisionCollisionError struct {
 	CommonObjectPhaseError
 }
 
-func (e RevisionCollisionError) Error() string {
+func (e *RevisionCollisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, revision collision on %s %s", e.ObjectGVK, e.ObjectKey)
 }
 
@@ -656,6 +645,12 @@ func (r *PhaseReconciler) reconcileObject(
 	err = r.dynamicCache.Get(ctx, objKey, currentObj)
 	if err != nil && !apimachineryerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
+	}
+	if apimachineryerrors.IsNotFound(err) {
+		err = r.uncachedClient.Get(ctx, objKey, currentObj)
+		if err != nil && !apimachineryerrors.IsNotFound(err) {
+			return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
+		}
 	}
 	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
@@ -839,7 +834,7 @@ func (c *defaultAdoptionChecker) Check(
 	}
 
 	if !c.isControlledByPreviousRevision(obj, previous) {
-		return false, ObjectNotOwnedByPreviousRevisionError{
+		return false, &ObjectNotOwnedByPreviousRevisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
 				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
@@ -853,7 +848,7 @@ func (c *defaultAdoptionChecker) Check(
 		// This should not have happened.
 		// Revision is same as owner,
 		// but the object is not already owned by this object.
-		return false, RevisionCollisionError{
+		return false, &RevisionCollisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
 				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
