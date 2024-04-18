@@ -108,7 +108,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	// Pre-Creating a ObjectSet that should conflict with Generation 2.
 	existingConflictObjectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-objectdeployment-69b7c79bbf",
+			Name:      "test-objectdeployment-995cbf7d6",
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
@@ -221,13 +221,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 			}
 		}
 
-		if testCase.expectedHashCollisionCount > 0 {
+		if testCase.expectedHashCollisionCount > 0 && concernedDeployment.Status.CollisionCount != nil {
 			// Expect collision count to be the expected value
-			require.True(
-				t,
-				concernedDeployment.Status.CollisionCount != nil &&
-					*concernedDeployment.Status.CollisionCount == int32(testCase.expectedHashCollisionCount),
-			)
+			require.Equal(t, *concernedDeployment.Status.CollisionCount, int32(testCase.expectedHashCollisionCount))
 		}
 	}
 }

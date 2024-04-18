@@ -40,6 +40,20 @@ func NewAnnotation(scheme *runtime.Scheme) *OwnerStrategyAnnotation {
 	}
 }
 
+func (s *OwnerStrategyAnnotation) HasController(obj metav1.Object) bool {
+	for _, ref := range s.getOwnerReferences(obj) {
+		if ref.isController() {
+			return true
+		}
+	}
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.Controller != nil && *ref.Controller {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error) {
 	annotations := owner.GetAnnotations()
 	if annotations == nil {

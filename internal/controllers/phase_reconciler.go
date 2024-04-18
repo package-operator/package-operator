@@ -51,12 +51,14 @@ type ownerStrategy interface {
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
 	OwnerPatch(owner metav1.Object) ([]byte, error)
+	HasController(obj metav1.Object) bool
 }
 
 type adoptionChecker interface {
 	Check(
 		ctx context.Context, owner PhaseObjectOwner, obj client.Object,
 		previous []PreviousObjectSet,
+		collisionProtection corev1alpha1.CollisionProtection,
 	) (needsAdoption bool, err error)
 }
 
@@ -440,7 +442,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 ) (actualObj *unstructured.Unstructured, err error) {
 	// Set owner reference
 	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("set controller reference: %w", err)
 	}
 
 	// Ensure to watch this type of object.
@@ -457,7 +459,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return actualObj, nil
 	}
 
-	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous); err != nil {
+	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous, phaseObject.CollisionProtection); err != nil {
 		return nil, err
 	}
 
@@ -530,7 +532,7 @@ func (r *PhaseReconciler) desiredObject(
 	_ context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
-	desiredObj = &phaseObject.Object
+	desiredObj = phaseObject.Object.DeepCopy()
 
 	// Default namespace to the owners namespace
 	if len(desiredObj.GetNamespace()) == 0 {
@@ -559,17 +561,6 @@ func (r *PhaseReconciler) desiredObject(
 	setObjectRevision(desiredObj, owner.GetRevision())
 
 	return desiredObj, nil
-}
-
-// Returns true if the underlying error is because adoption has been refused.
-func IsAdoptionRefusedError(err error) bool {
-	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
-	if errors.As(err, &prevRevisionError) {
-		return true
-	}
-
-	var revCollisionError *RevisionCollisionError
-	return errors.As(err, &revCollisionError)
 }
 
 // updateStatusError(ctx context.Context, objectSet genericObjectSet,
@@ -630,7 +621,7 @@ type ObjectNotOwnedByPreviousRevisionError struct {
 	CommonObjectPhaseError
 }
 
-func (e ObjectNotOwnedByPreviousRevisionError) Error() string {
+func (e *ObjectNotOwnedByPreviousRevisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, object %s %s not owned by previous revision", e.ObjectGVK, e.ObjectKey)
 }
 
@@ -640,13 +631,14 @@ type RevisionCollisionError struct {
 	CommonObjectPhaseError
 }
 
-func (e RevisionCollisionError) Error() string {
+func (e *RevisionCollisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, revision collision on %s %s", e.ObjectGVK, e.ObjectKey)
 }
 
 func (r *PhaseReconciler) reconcileObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	desiredObj *unstructured.Unstructured, previous []PreviousObjectSet,
+	collisionProtection corev1alpha1.CollisionProtection,
 ) (actualObj *unstructured.Unstructured, err error) {
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
@@ -655,9 +647,22 @@ func (r *PhaseReconciler) reconcileObject(
 		return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
 	}
 	if apimachineryerrors.IsNotFound(err) {
+		err = r.uncachedClient.Get(ctx, objKey, currentObj)
+		if err != nil && !apimachineryerrors.IsNotFound(err) {
+			return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
+		}
+	}
+	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
-		// just create it using server-side apply!
+		// just create it using desired state!
 		err := r.writer.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(FieldOwner))
+		if apimachineryerrors.IsAlreadyExists(err) {
+			// object already exists, but was not in our cache.
+			// get object via uncached client directly from the API server.
+			if err := r.uncachedClient.Get(ctx, objKey, currentObj); err != nil {
+				return nil, fmt.Errorf("getting %s from uncached client: %w", desiredObj.GroupVersionKind(), err)
+			}
+		}
 		if err != nil {
 			return nil, fmt.Errorf("creating: %w", err)
 		}
@@ -671,7 +676,7 @@ func (r *PhaseReconciler) reconcileObject(
 	updatedObj := currentObj.DeepCopy()
 
 	// Check if we can even work on this object or need to adopt it.
-	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous)
+	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous, collisionProtection)
 	if err != nil {
 		return nil, err
 	}
@@ -691,7 +696,7 @@ func (r *PhaseReconciler) reconcileObject(
 		}
 	}
 
-	// Only issue updates when this instance is already or will be controlled by this instance.
+	// Only issue updates when this instance is already controlled by this instance.
 	if r.ownerStrategy.IsController(owner.ClientObject(), updatedObj) {
 		if err := r.patcher.Patch(ctx, desiredObj, currentObj, updatedObj); err != nil {
 			return nil, err
@@ -786,6 +791,7 @@ type defaultAdoptionChecker struct {
 func (c *defaultAdoptionChecker) Check(
 	_ context.Context, owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
+	collisionProtection corev1alpha1.CollisionProtection,
 ) (needsAdoption bool, err error) {
 	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 		// already owner, nothing to do.
@@ -796,6 +802,7 @@ func (c *defaultAdoptionChecker) Check(
 	if err != nil {
 		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
+	// Never ever adopt objects of newer revisions.
 	if currentRevision > owner.GetRevision() {
 		// owned by newer revision.
 		return false, nil
@@ -813,11 +820,21 @@ func (c *defaultAdoptionChecker) Check(
 	// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
 	if len(os.Getenv(ForceAdoptionEnvironmentVariable)) > 0 ||
 		labels[manifestsv1alpha1.PackageLabel] == "package-operator" {
+		collisionProtection = corev1alpha1.CollisionProtectionNone
+	}
+
+	switch collisionProtection {
+	case corev1alpha1.CollisionProtectionNone:
+		// I hope the user knows what he is doing ;)
 		return true, nil
+	case corev1alpha1.CollisionProtectionIfNoController:
+		if !c.ownerStrategy.HasController(obj) {
+			return true, nil
+		}
 	}
 
 	if !c.isControlledByPreviousRevision(obj, previous) {
-		return false, ObjectNotOwnedByPreviousRevisionError{
+		return false, &ObjectNotOwnedByPreviousRevisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
 				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
@@ -831,7 +848,7 @@ func (c *defaultAdoptionChecker) Check(
 		// This should not have happened.
 		// Revision is same as owner,
 		// but the object is not already owned by this object.
-		return false, RevisionCollisionError{
+		return false, &RevisionCollisionError{
 			CommonObjectPhaseError: CommonObjectPhaseError{
 				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
 				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),

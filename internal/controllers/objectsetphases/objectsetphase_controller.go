@@ -38,6 +38,7 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
+	HasController(obj metav1.Object) bool
 	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
 		ownerType client.Object, mapper meta.RESTMapper, isController bool,
@@ -88,7 +89,10 @@ func NewMultiClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
-			preflight.NewDryRun(targetWriter),
+			preflight.List{
+				preflight.NewNoOwnerReferences(targetRESTMapper),
+				preflight.NewDryRun(targetWriter),
+			},
 		),
 	)
 }
@@ -110,7 +114,10 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		class, client, targetWriter,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
-			preflight.List{preflight.NewDryRun(targetWriter)},
+			preflight.List{
+				preflight.NewDryRun(targetWriter),
+				preflight.NewNoOwnerReferences(targetRESTMapper),
+			},
 		),
 	)
 }
@@ -134,6 +141,7 @@ func NewSameClusterObjectSetPhaseController(
 			preflight.List{
 				preflight.NewNamespaceEscalation(restMapper),
 				preflight.NewDryRun(client),
+				preflight.NewNoOwnerReferences(restMapper),
 			},
 		),
 	)
@@ -155,7 +163,10 @@ func NewSameClusterClusterObjectSetPhaseController(
 		class, client, client,
 		preflight.NewAPIExistence(
 			restMapper,
-			preflight.NewDryRun(client),
+			preflight.List{
+				preflight.NewDryRun(client),
+				preflight.NewNoOwnerReferences(restMapper),
+			},
 		),
 	)
 }

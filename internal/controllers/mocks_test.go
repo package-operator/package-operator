@@ -71,8 +71,9 @@ type adoptionCheckerMock struct {
 
 func (m *adoptionCheckerMock) Check(
 	ctx context.Context, owner PhaseObjectOwner, obj client.Object, previous []PreviousObjectSet,
+	collisionProtection corev1alpha1.CollisionProtection,
 ) (needsAdoption bool, err error) {
-	args := m.Called(ctx, owner, obj, previous)
+	args := m.Called(ctx, owner, obj, previous, collisionProtection)
 	return args.Bool(0), args.Error(1)
 }
 

@@ -54,3 +54,14 @@ func (e *PhaseReconcilerError) Error() string {
 func (e *PhaseReconcilerError) CausedBy(reason ErrorReason) bool {
 	return e.reason == reason
 }
+
+// Returns true if the underlying error is because adoption has been refused.
+func IsAdoptionRefusedError(err error) bool {
+	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
+	if errors.As(err, &prevRevisionError) {
+		return true
+	}
+
+	var revCollisionError *RevisionCollisionError
+	return errors.As(err, &revCollisionError)
+}

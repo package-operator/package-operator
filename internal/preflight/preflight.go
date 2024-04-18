@@ -110,7 +110,7 @@ func CheckAll(
 	owner client.Object, objs []client.Object,
 ) (violations []Violation, err error) {
 	for _, obj := range objs {
-		vs, err := checker.Check(ctx, owner, obj)
+		vs, err := checker.Check(ctx, owner, obj.DeepCopyObject().(client.Object))
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func CheckAllInPhase(
 ) (violations []Violation, err error) {
 	ctx = NewContextWithPhase(ctx, phase)
 	for i := range phase.Objects {
-		vs, err := checker.Check(ctx, owner, &objs[i])
+		vs, err := checker.Check(ctx, owner, objs[i].DeepCopy())
 		if err != nil {
 			return nil, err
 		}
