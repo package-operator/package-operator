@@ -3,7 +3,10 @@ package packagevalidation
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -73,19 +76,90 @@ func TestPackageManifestValidator(t *testing.T) {
 	}
 }
 
+type PackageScopeValidatorTestCase struct {
+	rootScopes      []manifests.PackageManifestScope
+	componentScopes []manifests.PackageManifestScope
+	desiredScope    manifests.PackageManifestScope
+	expectError     bool
+}
+
 func TestPackageScopeValidator(t *testing.T) {
 	t.Parallel()
 
-	scopeV := PackageScopeValidator(manifests.PackageManifestScopeCluster)
-
-	ctx := context.Background()
-	manifest := &manifests.PackageManifest{
-		Spec: manifests.PackageManifestSpec{
-			Scopes: []manifests.PackageManifestScope{manifests.PackageManifestScopeNamespaced},
-		},
+	possibleRootScopes := [][]manifests.PackageManifestScope{
+		{manifests.PackageManifestScopeNamespaced},
+		{manifests.PackageManifestScopeCluster},
+		{manifests.PackageManifestScopeNamespaced, manifests.PackageManifestScopeCluster},
 	}
-	err := scopeV.ValidatePackage(ctx, &packagetypes.Package{
-		Manifest: manifest,
-	})
-	require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
+
+	possibleComponentScopes := [][]manifests.PackageManifestScope{
+		nil,
+		{manifests.PackageManifestScopeNamespaced},
+		{manifests.PackageManifestScopeCluster},
+		{manifests.PackageManifestScopeNamespaced, manifests.PackageManifestScopeCluster},
+	}
+
+	possibleDesiredScopes := []manifests.PackageManifestScope{
+		manifests.PackageManifestScopeNamespaced, manifests.PackageManifestScopeCluster,
+	}
+
+	testCases := map[string]PackageScopeValidatorTestCase{}
+
+	for i, rootScopes := range possibleRootScopes {
+		for j, componentScopes := range possibleComponentScopes {
+			for k, desiredScope := range possibleDesiredScopes {
+				expectError := true
+				for _, rootScope := range rootScopes {
+					if rootScope == desiredScope {
+						expectError = false
+					}
+				}
+				// use indexes of each array to build test case name
+				testCases[fmt.Sprintf("R:%d_C:%d_D:%d_E:%t", i, j, k, expectError)] = PackageScopeValidatorTestCase{
+					rootScopes, componentScopes, desiredScope, expectError,
+				}
+			}
+		}
+	}
+
+	for name, tc := range testCases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			var components []packagetypes.Package
+			if tc.componentScopes != nil {
+				components = []packagetypes.Package{
+					{
+						Manifest: &manifests.PackageManifest{
+							ObjectMeta: metav1.ObjectMeta{Name: "test"},
+							Spec: manifests.PackageManifestSpec{
+								Scopes: tc.componentScopes,
+							},
+						},
+					},
+				}
+			}
+
+			pkg := &packagetypes.Package{
+				Manifest: &manifests.PackageManifest{
+					ObjectMeta: metav1.ObjectMeta{Name: "root"},
+					Spec: manifests.PackageManifestSpec{
+						Scopes: tc.rootScopes,
+					},
+				},
+				Components: components,
+			}
+
+			scopeV := PackageScopeValidator(tc.desiredScope)
+
+			err := scopeV.ValidatePackage(ctx, pkg)
+			if tc.expectError {
+				require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
