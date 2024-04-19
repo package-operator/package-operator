@@ -2,7 +2,9 @@ package hostedclusters
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -95,6 +97,50 @@ var readyHostedCluster = &hypershiftv1beta1.HostedCluster{
 	},
 }
 
+func TestHostedClusterController_Reconcile_GetHostedClusterError(t *testing.T) {
+	t.Parallel()
+
+	fooErr := errors.NewBadRequest("foo")
+
+	clientMock := testutil.NewClient()
+	c := NewHostedClusterController(
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+	)
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
+		Return(fooErr)
+
+	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	require.EqualError(t, err, fooErr.Error())
+	assert.Empty(t, res)
+
+	clientMock.AssertExpectations(t)
+}
+
+func TestHostedClusterController_Reconcile_DontHandleDeleted(t *testing.T) {
+	t.Parallel()
+
+	clientMock := testutil.NewClient()
+	c := NewHostedClusterController(
+		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
+	)
+
+	clientMock.
+		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			hc := args.Get(2).(*hypershiftv1beta1.HostedCluster)
+			hc.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		}).
+		Return(nil)
+
+	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	require.NoError(t, err)
+	assert.Empty(t, res)
+
+	clientMock.AssertExpectations(t)
+}
+
 func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 	t.Parallel()
 
@@ -130,7 +176,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
 		Run(func(args mock.Arguments) {
 			obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
-			*obj = *readyHostedCluster
+			*obj = *readyHostedCluster.DeepCopy()
 		}).
 		Return(nil)
 
@@ -149,46 +195,150 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 	clientMock.AssertCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
 }
 
-func TestHostedClusterController_Reconcile_updatesPackage(t *testing.T) {
+func packageConfig(
+	t *testing.T,
+	remotePhaseAffinity *corev1.Affinity,
+	remotePhaseTolerations []corev1.Toleration,
+) *runtime.RawExtension {
+	t.Helper()
+
+	config := map[string]any{}
+	if remotePhaseAffinity != nil {
+		config["affinity"] = remotePhaseAffinity
+	}
+	if remotePhaseTolerations != nil {
+		config["tolerations"] = remotePhaseTolerations
+	}
+
+	configJSON, err := json.Marshal(config)
+	require.NoError(t, err)
+	return &runtime.RawExtension{
+		Raw: configJSON,
+	}
+}
+
+func TestHostedClusterController_Reconcile_updatesPackageSpec(t *testing.T) {
 	t.Parallel()
 
-	clientMock := testutil.NewClient()
-	c := NewHostedClusterController(
-		clientMock, ctrl.Log.WithName("hc controller test"), testScheme, "desired-image:test", nil, nil,
-	)
+	type tcase struct {
+		old, expectedNew            corev1alpha1.PackageSpec
+		packageOperatorPackageImage string
+		remotePhaseAffinity         *corev1.Affinity
+		remotePhaseTolerations      []corev1.Toleration
+	}
 
-	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
-			*obj = *readyHostedCluster
-		}).
-		Return(nil)
+	outdatedImage := "image:outdated"
+	latestImage := "image:latest"
+	expectedComponent := "remote-phase"
 
-	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			obj := args.Get(2).(*corev1alpha1.Package)
-			*obj = corev1alpha1.Package{
-				Spec: corev1alpha1.PackageSpec{
-					Image: "outdated-image:test",
+	tcases := []tcase{
+		{
+			old: corev1alpha1.PackageSpec{
+				Image: outdatedImage,
+			},
+			expectedNew: corev1alpha1.PackageSpec{
+				Image:     latestImage,
+				Component: expectedComponent,
+			},
+			packageOperatorPackageImage: latestImage,
+			remotePhaseAffinity:         nil,
+			remotePhaseTolerations:      nil,
+		},
+		{
+			old: corev1alpha1.PackageSpec{
+				Image:     outdatedImage,
+				Component: "foo",
+			},
+			expectedNew: corev1alpha1.PackageSpec{
+				Image:     latestImage,
+				Component: expectedComponent,
+			},
+			packageOperatorPackageImage: latestImage,
+			remotePhaseAffinity:         nil,
+			remotePhaseTolerations:      nil,
+		},
+		{
+			old: corev1alpha1.PackageSpec{
+				Image: outdatedImage,
+			},
+			expectedNew: corev1alpha1.PackageSpec{
+				Image:     latestImage,
+				Component: expectedComponent,
+				Config: packageConfig(t, &corev1.Affinity{
+					PodAntiAffinity: &corev1.PodAntiAffinity{
+						RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+							{
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"foo": "bar",
+									},
+								},
+							},
+						},
+					},
+				}, nil),
+			},
+			packageOperatorPackageImage: latestImage,
+			remotePhaseAffinity: &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+						{
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"foo": "bar",
+								},
+							},
+						},
+					},
 				},
-			}
-		}).
-		Return(nil)
+			},
+			remotePhaseTolerations: nil,
+		},
+	}
 
-	clientMock.
-		On("Create", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+	for i := range tcases {
+		tcase := tcases[i]
 
-	clientMock.
-		On("Update", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		clientMock := testutil.NewClient()
+		c := NewHostedClusterController(
+			clientMock,
+			ctrl.Log.WithName("hc controller test"),
+			testScheme,
+			tcase.packageOperatorPackageImage,
+			tcase.remotePhaseAffinity,
+			tcase.remotePhaseTolerations,
+		)
 
-	res, err := c.Reconcile(context.Background(), ctrl.Request{})
-	require.NoError(t, err)
-	assert.Empty(t, res)
+		clientMock.
+			On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
+			Run(func(args mock.Arguments) {
+				obj := args.Get(2).(*hypershiftv1beta1.HostedCluster)
+				*obj = *readyHostedCluster.DeepCopy()
+			}).
+			Return(nil)
 
-	clientMock.AssertNotCalled(t, "Create", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
-	clientMock.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything)
+		clientMock.
+			On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+			Run(func(args mock.Arguments) {
+				obj := args.Get(2).(*corev1alpha1.Package)
+				*obj = corev1alpha1.Package{
+					Spec: tcase.old,
+				}
+			}).
+			Return(nil)
+
+		clientMock.
+			On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+			Run(func(args mock.Arguments) {
+				obj := args.Get(1).(*corev1alpha1.Package)
+				require.Equal(t, tcase.expectedNew, obj.Spec)
+			}).
+			Return(nil)
+
+		res, err := c.Reconcile(context.Background(), ctrl.Request{})
+		require.NoError(t, err)
+		assert.Empty(t, res)
+
+		clientMock.AssertExpectations(t)
+	}
 }

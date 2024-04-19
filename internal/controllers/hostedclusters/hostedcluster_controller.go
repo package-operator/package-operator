@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -103,11 +104,11 @@ func (c *HostedClusterController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("getting Package: %w", err)
 	}
 
-	if existingPkg.Spec.Image != desiredPkg.Spec.Image {
-		// update Job
-		existingPkg.Spec.Image = desiredPkg.Spec.Image
+	// Update package if spec is different.
+	if !reflect.DeepEqual(existingPkg.Spec, desiredPkg.Spec) {
+		existingPkg.Spec = desiredPkg.Spec
 		if err := c.client.Update(ctx, existingPkg); err != nil {
-			return ctrl.Result{}, fmt.Errorf("deleting outdated Package: %w", err)
+			return ctrl.Result{}, fmt.Errorf("updating outdated Package: %w", err)
 		}
 	}
 
