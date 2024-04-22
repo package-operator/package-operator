@@ -265,7 +265,7 @@ func createCMAndObjectTemplateSource(
 		Name:       cmName,
 		Namespace:  defaultNamespace,
 		Items: []corev1alpha1.ObjectTemplateSourceItem{
-			{Key: ".data." + cmKey, Destination: "." + cmDestination}, //nolint:goconst
+			{Key: ".data." + cmKey, Destination: "." + cmDestination},
 		},
 	}
 	return cm, cmSource

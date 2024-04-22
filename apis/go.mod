@@ -1,8 +1,10 @@
 module package-operator.run/apis
 
-go 1.21
+go 1.22.0
 
-require k8s.io/apimachinery v0.29.3
+toolchain go1.22.2
+
+require k8s.io/apimachinery v0.29.4
 
 require (
 	github.com/go-logr/logr v1.4.1 // indirect
