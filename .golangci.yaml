@@ -139,7 +139,6 @@ issues:
   - EXC0014 # Docs.
   - EXC0015 # Docs.
 run:
-  skip-files: [ "zz_generated.deepcopy.go$" ]
   build-tags:
   - integration
 linters-settings:

@@ -23,11 +23,11 @@ func (l Lint) goModTidyAll(ctx context.Context) error {
 }
 
 func (Lint) glciFix() error {
-	return shr.Run("golangci-lint", "run", "--fix", "--deadline=15m", "./...", "./apis/...", "./pkg/...")
+	return shr.Run("golangci-lint", "run", "--fix", "./...", "./apis/...", "./pkg/...")
 }
 
 func (Lint) glciCheck() error {
-	return shr.Run("golangci-lint", "run", "--deadline=15m", "./...", "./apis/...", "./pkg/...")
+	return shr.Run("golangci-lint", "run", "./...", "./apis/...", "./pkg/...")
 }
 
 func (Lint) validateGitClean() error {

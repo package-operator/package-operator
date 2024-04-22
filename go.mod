@@ -1,6 +1,8 @@
 module package-operator.run
 
-go 1.21
+go 1.22.0
+
+toolchain go1.22.2
 
 replace (
 	package-operator.run/apis => ./apis
@@ -14,7 +16,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cel-go v0.17.7
+	github.com/google/cel-go v0.17.8
 	github.com/google/go-containerregistry v0.19.1
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.33.0
@@ -33,8 +35,8 @@ require (
 	k8s.io/apimachinery v0.29.4
 	k8s.io/apiserver v0.29.3
 	k8s.io/client-go v0.29.4
-	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
-	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
+	k8s.io/kube-openapi v0.0.0-20240411171206-dc4e619f62f3
+	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	package-operator.run/apis v1.9.4
 	package-operator.run/pkg v1.9.4
 	pkg.package-operator.run/cardboard v0.0.3
@@ -135,7 +137,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.19.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
@@ -144,8 +146,8 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240304212257-790db918fca8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
 	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
