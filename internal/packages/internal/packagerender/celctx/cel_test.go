@@ -119,7 +119,6 @@ func Test_newCelCtx(t *testing.T) {
 			errContains: ErrEnvCreation.Error(),
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -286,7 +285,6 @@ func Test_celCtx_evaluate(t *testing.T) {
 			err:         ErrProgramEvaluation.Error(),
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

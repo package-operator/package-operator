@@ -38,6 +38,7 @@ linters:
   - asciicheck
   - bidichk
   - bodyclose
+  - copyloopvar
   - decorder
   - dupword
   - durationcheck

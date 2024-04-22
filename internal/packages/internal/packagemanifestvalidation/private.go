@@ -236,7 +236,7 @@ func requirestructuralSchema(
 }
 
 // validateCustomResourceDefinitionOpenAPISchema statically validates.
-func validateCustomResourceDefinitionOpenAPISchema( //nolint:maintidx
+func validateCustomResourceDefinitionOpenAPISchema(
 	schema *apiextensions.JSONSchemaProps,
 	fldPath *field.Path,
 	ssv specStandardValidator,
@@ -309,15 +309,14 @@ func validateCustomResourceDefinitionOpenAPISchema( //nolint:maintidx
 				subSsv = subSsv.withForbiddenDefaults("in top-level " + property)
 			}
 		}
-		propertySchema := jsonSchema
 		allErrs.appendErrors(
 			validateCustomResourceDefinitionOpenAPISchema(
-				&propertySchema,
+				&jsonSchema,
 				fldPath.Child("properties").Key(property),
 				subSsv,
 				false,
 				opts,
-				celContext.ChildPropertyContext(&propertySchema, property),
+				celContext.ChildPropertyContext(&jsonSchema, property),
 			),
 		)
 	}
@@ -329,37 +328,33 @@ func validateCustomResourceDefinitionOpenAPISchema( //nolint:maintidx
 	)
 
 	for i, jsonSchema := range schema.AllOf {
-		allOfSchema := jsonSchema
 		allErrs.appendErrors(
 			validateCustomResourceDefinitionOpenAPISchema(
-				&allOfSchema, fldPath.Child("allOf").Index(i), ssv, false, opts, nil,
+				&jsonSchema, fldPath.Child("allOf").Index(i), ssv, false, opts, nil,
 			),
 		)
 	}
 
 	for i, jsonSchema := range schema.OneOf {
-		oneOfSchema := jsonSchema
 		allErrs.appendErrors(
 			validateCustomResourceDefinitionOpenAPISchema(
-				&oneOfSchema, fldPath.Child("oneOf").Index(i), ssv, false, opts, nil,
+				&jsonSchema, fldPath.Child("oneOf").Index(i), ssv, false, opts, nil,
 			),
 		)
 	}
 
 	for i, jsonSchema := range schema.AnyOf {
-		anyOfSchema := jsonSchema
 		allErrs.appendErrors(
 			validateCustomResourceDefinitionOpenAPISchema(
-				&anyOfSchema, fldPath.Child("anyOf").Index(i), ssv, false, opts, nil,
+				&jsonSchema, fldPath.Child("anyOf").Index(i), ssv, false, opts, nil,
 			),
 		)
 	}
 
 	for definition, jsonSchema := range schema.Definitions {
-		definitionSchema := jsonSchema
 		allErrs.appendErrors(
 			validateCustomResourceDefinitionOpenAPISchema(
-				&definitionSchema, fldPath.Child("definitions").Key(definition), ssv, false, opts, nil,
+				&jsonSchema, fldPath.Child("definitions").Key(definition), ssv, false, opts, nil,
 			),
 		)
 	}
@@ -386,14 +381,13 @@ func validateCustomResourceDefinitionOpenAPISchema( //nolint:maintidx
 		)
 		if len(schema.Items.JSONSchemas) != 0 {
 			for i, jsonSchema := range schema.Items.JSONSchemas {
-				itemsSchema := jsonSchema
 				allErrs.appendErrors(
 					validateCustomResourceDefinitionOpenAPISchema(
-						&itemsSchema,
+						&jsonSchema,
 						fldPath.Child("items").Index(i),
 						subSsv,
 						false, opts,
-						celContext.ChildItemsContext(&itemsSchema),
+						celContext.ChildItemsContext(&jsonSchema),
 					),
 				)
 			}

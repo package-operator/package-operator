@@ -61,8 +61,6 @@ func TestValidateEachComponent(t *testing.T) {
 			ValidateFnCount: 1,
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
