@@ -33,8 +33,6 @@ func TestIsExternalResourceNotFound(t *testing.T) {
 			Assertion: assert.False,
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

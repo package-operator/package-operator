@@ -261,8 +261,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 		},
 	}
 
-	for i := range subTests {
-		subTest := subTests[i]
+	for _, subTest := range subTests {
 		c := testutil.NewClient()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
 		t.Run(subTest.name, func(t *testing.T) {
@@ -380,8 +379,7 @@ func Test_initializer_ensureDeploymentGone(t *testing.T) {
 		},
 	}
 
-	for i := range subTests {
-		subTest := subTests[i]
+	for _, subTest := range subTests {
 		c := testutil.NewClient()
 		ctx := logr.NewContext(context.Background(), testr.New(t))
 		t.Run(subTest.name, func(t *testing.T) {

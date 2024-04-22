@@ -299,9 +299,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		},
 	}
 
-	for i := range subTests {
-		subTest := subTests[i]
-
+	for _, subTest := range subTests {
 		t.Run(subTest.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -421,9 +419,7 @@ func TestEnsureCRDGone(t *testing.T) {
 		},
 	}
 
-	for i := range subTests {
-		subTest := subTests[i]
-
+	for _, subTest := range subTests {
 		t.Run(subTest.name, func(t *testing.T) {
 			t.Parallel()
 			t.Helper()

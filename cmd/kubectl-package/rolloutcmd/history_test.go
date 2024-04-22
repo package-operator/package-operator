@@ -357,8 +357,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			}, "\n"),
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

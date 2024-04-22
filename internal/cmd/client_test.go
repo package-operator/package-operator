@@ -55,8 +55,6 @@ func TestClient_GetPackage(t *testing.T) {
 			PackageName: "package",
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -116,8 +114,6 @@ func TestClient_GetObjectDeployment(t *testing.T) {
 			ObjectDeploymentName: "object-deployment",
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -242,8 +238,6 @@ func TestPackage(t *testing.T) {
 			},
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -384,8 +378,6 @@ func TestObjectDeployment(t *testing.T) {
 			},
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -504,8 +496,6 @@ func TestObjectSet(t *testing.T) {
 			},
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

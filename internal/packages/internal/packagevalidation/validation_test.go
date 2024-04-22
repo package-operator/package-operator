@@ -36,7 +36,6 @@ func TestPackageManifestValidator(t *testing.T) {
 		"manifest error w lock": {ManifestErr: errMan, HasManifestLock: true, ExpectedErr: errMan},
 		"manifest lock error":   {HasManifestLock: true, ManifestLockErr: errManLock, ExpectedErr: errManLock},
 	} {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -123,7 +122,6 @@ func TestPackageScopeValidator(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()

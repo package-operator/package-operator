@@ -43,8 +43,6 @@ func TestValidatePackageConfig(t *testing.T) {
 			Assertion: require.Error,
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -103,8 +101,6 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			Assertion: require.Error,
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

@@ -57,8 +57,6 @@ func TestTree_RenderPackage(t *testing.T) {
 			}, "\n"),
 		},
 	} {
-		tc := tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

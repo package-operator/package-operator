@@ -167,8 +167,7 @@ func TestProxyVarsDifferentFrom(t *testing.T) {
 		},
 	}
 
-	for i := range tcases {
-		tc := tcases[i]
+	for _, tc := range tcases {
 		assert.Equal(t, tc.expected, pv.differentFrom(tc.proxy))
 	}
 }
@@ -206,9 +205,7 @@ func TestProxyVarsMergeTo(t *testing.T) {
 		},
 	}
 
-	for i := range tcases {
-		tc := tcases[i]
-
+	for _, tc := range tcases {
 		assert.True(t, reflect.DeepEqual(pv.mergeTo(tc.env), tc.expected))
 	}
 }
@@ -266,8 +263,7 @@ func TestHelperParseEnvSlice(t *testing.T) {
 		},
 	}
 
-	for i := range tcases {
-		tc := tcases[i]
+	for _, tc := range tcases {
 		actual, err := parseEnvSlice(tc.slice)
 		if tc.errIs != nil {
 			require.ErrorIs(t, err, tc.errIs)

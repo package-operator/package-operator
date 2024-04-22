@@ -162,9 +162,7 @@ func (init *initializer) ensurePKORevisionsPaused(ctx context.Context, pkg *core
 		return fmt.Errorf("listing PKO ClusterObjectSets: %w", err)
 	}
 
-	for i := range cosList.Items {
-		cos := &cosList.Items[i]
-
+	for _, cos := range cosList.Items {
 		var updateNeeded bool
 		cosPackageSource := cos.Annotations[manifestsv1alpha1.PackageSourceImageAnnotation]
 		if cosPackageSource == pkg.Spec.Image &&
@@ -180,7 +178,7 @@ func (init *initializer) ensurePKORevisionsPaused(ctx context.Context, pkg *core
 		if !updateNeeded {
 			continue
 		}
-		if err := init.client.Update(ctx, cos); err != nil {
+		if err := init.client.Update(ctx, &cos); err != nil {
 			return fmt.Errorf("pausing PKO ClusterObjectSet: %w", err)
 		}
 	}
@@ -246,9 +244,7 @@ func (init *initializer) crdsFromPackage(ctx context.Context) (
 // ensure all CRDs are installed on the cluster.
 func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Unstructured) error {
 	log := logr.FromContextOrDiscard(ctx)
-	for i := range crds {
-		crd := &crds[i]
-
+	for _, crd := range crds {
 		// Set cache label.
 		labels := crd.GetLabels()
 		if labels == nil {
@@ -258,7 +254,7 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		crd.SetLabels(labels)
 
 		log.Info("ensuring CRD", "name", crd.GetName())
-		if err := init.client.Create(ctx, crd); err != nil &&
+		if err := init.client.Create(ctx, &crd); err != nil &&
 			!errors.IsAlreadyExists(err) {
 			return err
 		}

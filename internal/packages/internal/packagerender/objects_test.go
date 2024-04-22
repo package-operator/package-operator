@@ -93,7 +93,6 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			err:        string(packagetypes.ViolationReasonInvalidCELExpression),
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -192,7 +191,6 @@ func TestFilterWithCEL(t *testing.T) {
 			err:      ErrInvalidConditionalPathsExpression.Error(),
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -279,7 +277,6 @@ func TestComputeIgnoredPaths(t *testing.T) {
 			err:        nil,
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -319,7 +316,6 @@ func TestIsExcluded(t *testing.T) {
 			result:         true,
 		},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

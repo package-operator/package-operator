@@ -137,9 +137,7 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(
 	}
 
 	// for each listed ClusterObjectSet: remove all finalizers and wait for them to be gone.
-	for i := range list.Items {
-		cos := list.Items[i]
-
+	for _, cos := range list.Items {
 		patch := client.MergeFrom(cos.DeepCopy())
 		cos.ObjectMeta.Finalizers = []string{}
 		if err := fc.Client.Patch(ctx, &cos, patch); err != nil {
@@ -205,15 +203,13 @@ func (f CRDPluralizationFix) atleastOneCRDPairExists(ctx context.Context, fc Con
 func (f CRDPluralizationFix) crdPairExists(ctx context.Context, fc Context, crdPair [2]string) (bool, error) {
 	pairExists := [2]bool{false, false}
 
-	for j := range crdPair {
-		crdName := crdPair[j]
-
+	for i, crdName := range crdPair {
 		exists, err := f.crdExists(ctx, fc.Client, crdName)
 		if err != nil {
 			return false, err
 		}
 
-		pairExists[j] = exists
+		pairExists[i] = exists
 	}
 
 	return pairExists[0] && pairExists[1], nil

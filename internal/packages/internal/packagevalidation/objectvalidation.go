@@ -107,7 +107,6 @@ func (v *ObjectDuplicateValidator) ValidateObjects(
 		for idx, object := range objects {
 			gvk := object.GroupVersionKind()
 			groupKind := gvk.GroupKind().String()
-			object := object
 			objectKey := client.ObjectKeyFromObject(&object).String() // namespace and name
 			key := fmt.Sprintf("%s %s", groupKind, objectKey)
 			if _, ok := visited[key]; ok {

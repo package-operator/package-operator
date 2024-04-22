@@ -203,7 +203,6 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
-			currObjectSet := currObjectSet
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				require.NoError(t,
@@ -603,8 +602,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
-		for _, item := range currObjectSetList.Items {
-			currObjectSet := item
+		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				require.NoError(t,

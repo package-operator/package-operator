@@ -269,9 +269,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 		},
 	}
 
-	for i := range tests {
-		name := i
-		tc := tests[i]
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

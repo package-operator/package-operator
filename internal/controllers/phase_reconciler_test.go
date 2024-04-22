@@ -909,7 +909,6 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			os := &ownerStrategyMock{}
@@ -1298,7 +1297,7 @@ func Test_mapConditions(t *testing.T) {
 	}
 }
 
-func TestPhaseReconciler_observeExternalObject(t *testing.T) { //nolint:maintidx
+func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -1418,10 +1417,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) { //nolint:maintidx
 		},
 	}
 
-	for i := range tests {
-		name := i
-		tc := tests[i]
-
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
