@@ -12,8 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -152,8 +154,50 @@ func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1.HostedCluster{}).
 		WatchesRawSource(
-			source.Kind(mgr.GetCache(), &corev1alpha1.Package{}),
-			c.ownerStrategy.EnqueueRequestForOwner(&v1beta1.HostedCluster{}, mgr.GetRESTMapper(), true),
+			source.Kind(
+				mgr.GetCache(),
+				&corev1alpha1.Package{},
+				wrapEventHandlerwithTypedEventHandler[*corev1alpha1.Package](
+					c.ownerStrategy.EnqueueRequestForOwner(&v1beta1.HostedCluster{},
+						mgr.GetRESTMapper(),
+						true,
+					),
+				),
+			),
 		).
 		Complete(c)
+}
+
+type outer[T client.Object] struct {
+	inner handler.TypedEventHandler[client.Object]
+}
+
+// Create implements handler.TypedEventHandler.
+func (o outer[T]) Create(ctx context.Context, evt event.TypedCreateEvent[T], rl workqueue.RateLimitingInterface) {
+	o.inner.Create(ctx, event.TypedCreateEvent[client.Object]{Object: evt.Object}, rl)
+}
+
+// Delete implements handler.TypedEventHandler.
+func (o outer[T]) Delete(ctx context.Context, evt event.TypedDeleteEvent[T], rl workqueue.RateLimitingInterface) {
+	o.inner.Delete(
+		ctx,
+		event.TypedDeleteEvent[client.Object]{Object: evt.Object, DeleteStateUnknown: evt.DeleteStateUnknown},
+		rl,
+	)
+}
+
+// Generic implements handler.TypedEventHandler.
+func (o outer[T]) Generic(ctx context.Context, evt event.TypedGenericEvent[T], rl workqueue.RateLimitingInterface) {
+	o.inner.Generic(ctx, event.TypedGenericEvent[client.Object]{Object: evt.Object}, rl)
+}
+
+// Update implements handler.TypedEventHandler.
+func (o outer[T]) Update(ctx context.Context, evt event.TypedUpdateEvent[T], rl workqueue.RateLimitingInterface) {
+	o.inner.Update(ctx, event.TypedUpdateEvent[client.Object]{ObjectOld: evt.ObjectOld, ObjectNew: evt.ObjectNew}, rl)
+}
+
+func wrapEventHandlerwithTypedEventHandler[T client.Object](
+	inner handler.TypedEventHandler[client.Object],
+) handler.TypedEventHandler[T] {
+	return outer[T]{inner}
 }
