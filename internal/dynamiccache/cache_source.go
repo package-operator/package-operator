@@ -6,16 +6,12 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type eventHandler struct {
-	ctx        context.Context
-	handler    handler.EventHandler
-	queue      workqueue.RateLimitingInterface
-	predicates []predicate.Predicate
+	ctx   context.Context
+	queue workqueue.RateLimitingInterface
 }
 
 var _ source.Source = (*cacheSource)(nil)
@@ -32,22 +28,15 @@ func (e *cacheSource) String() string {
 }
 
 // Implements source.Source interface to be used as event source when setting up controllers.
-func (e *cacheSource) Start(
-	ctx context.Context,
-	handler handler.EventHandler,
-	queue workqueue.RateLimitingInterface,
-	predicates ...predicate.Predicate,
-) error {
+func (e *cacheSource) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.blockNew {
 		panic("Trying to add EventHandlers to dynamiccache.CacheSource after manager start")
 	}
 	e.handlers = append(e.handlers, eventHandler{
-		ctx:        ctx,
-		handler:    handler,
-		queue:      queue,
-		predicates: predicates,
+		ctx:   ctx,
+		queue: queue,
 	})
 	return nil
 }
@@ -72,7 +61,7 @@ func (e *cacheSource) handleNewInformer(
 	// ensure to add all event handlers to the new informer
 	s := source.Informer{Informer: informer}
 	for _, eh := range e.handlers {
-		if err := s.Start(eh.ctx, eh.handler, eh.queue, eh.predicates...); err != nil {
+		if err := s.Start(eh.ctx, eh.queue); err != nil {
 			return err
 		}
 	}

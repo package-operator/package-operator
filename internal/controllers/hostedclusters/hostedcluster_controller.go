@@ -151,8 +151,9 @@ func (c *HostedClusterController) desiredRemotePhasePackage(
 func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1.HostedCluster{}).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1alpha1.Package{}), c.ownerStrategy.EnqueueRequestForOwner(
-			&v1beta1.HostedCluster{}, mgr.GetRESTMapper(), true,
-		)).
+		WatchesRawSource(
+			source.Kind(mgr.GetCache(), &corev1alpha1.Package{}),
+			c.ownerStrategy.EnqueueRequestForOwner(&v1beta1.HostedCluster{}, mgr.GetRESTMapper(), true),
+		).
 		Complete(c)
 }

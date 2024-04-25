@@ -15,8 +15,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"package-operator.run/internal/testutil/metricsmocks"
 )
@@ -339,13 +337,8 @@ type cacheSourceMock struct {
 	mock.Mock
 }
 
-func (m *cacheSourceMock) Start(
-	ctx context.Context,
-	handler handler.EventHandler,
-	queue workqueue.RateLimitingInterface,
-	predicates ...predicate.Predicate,
-) error {
-	args := m.Called(ctx, handler, queue, predicates)
+func (m *cacheSourceMock) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
+	args := m.Called(ctx, queue)
 	return args.Error(0)
 }
 

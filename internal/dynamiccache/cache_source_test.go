@@ -12,7 +12,7 @@ func TestCacheSource(t *testing.T) {
 	cs := &cacheSource{}
 
 	ctx := context.Background()
-	err := cs.Start(ctx, nil, nil)
+	err := cs.Start(ctx, nil)
 	require.NoError(t, err)
 
 	// just checking that the underlying function is called.
@@ -24,7 +24,7 @@ func TestCacheSource(t *testing.T) {
 	require.PanicsWithValue(t,
 		"Trying to add EventHandlers to dynamiccache.CacheSource after manager start",
 		func() {
-			_ = cs.Start(ctx, nil, nil)
+			_ = cs.Start(ctx, nil)
 		},
 	)
 }

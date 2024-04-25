@@ -20,7 +20,7 @@ require (
 	github.com/google/go-containerregistry v0.19.1
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.33.0
-	github.com/openshift/api v0.0.0-20240306072808-610cbc77dbab
+	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
 	github.com/prometheus/client_golang v1.19.0
 	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.0
@@ -30,21 +30,21 @@ require (
 	go.uber.org/dig v1.17.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.19.0
-	k8s.io/api v0.29.4
-	k8s.io/apiextensions-apiserver v0.29.3
-	k8s.io/apimachinery v0.29.4
-	k8s.io/apiserver v0.29.3
-	k8s.io/client-go v0.29.4
-	k8s.io/kube-openapi v0.0.0-20240411171206-dc4e619f62f3
-	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
-	package-operator.run/apis v1.9.4
-	package-operator.run/pkg v1.9.4
-	pkg.package-operator.run/cardboard v0.0.3
+	k8s.io/api v0.30.0
+	k8s.io/apiextensions-apiserver v0.30.0
+	k8s.io/apimachinery v0.30.0
+	k8s.io/apiserver v0.30.0
+	k8s.io/client-go v0.30.0
+	k8s.io/kube-openapi v0.0.0-20240423202451-8948a665c108
+	k8s.io/utils v0.0.0-20240423183400-0849a56e8f22
+	package-operator.run/apis v1.11.0
+	package-operator.run/pkg v1.11.0
+	pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e
 	pkg.package-operator.run/cardboard/kubeutils v0.0.3
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
-	sigs.k8s.io/controller-runtime v0.17.3
+	sigs.k8s.io/controller-runtime v0.18.0
 	sigs.k8s.io/kind v0.22.0
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -153,7 +153,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.29.4 // indirect
+	k8s.io/component-base v0.30.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
