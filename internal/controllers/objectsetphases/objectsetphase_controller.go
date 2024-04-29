@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -26,7 +27,7 @@ type reconciler interface {
 
 type dynamicCache interface {
 	client.Reader
-	Source() source.Source
+	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 }
@@ -321,7 +322,8 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
 		WatchesRawSource(
-			c.dynamicCache.Source(),
-			c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
+			c.dynamicCache.Source(
+				c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
+			),
 		).Complete(c)
 }

@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/internal/apis/manifests"
@@ -21,7 +23,7 @@ import (
 
 type dynamicCache interface {
 	client.Reader
-	Source() source.Source
+	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 	OwnersForGKV(gvk schema.GroupVersionKind) []dynamiccache.OwnerReference
@@ -167,7 +169,9 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
 		WatchesRawSource(
-			c.dynamicCache.Source(),
-			dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme())).
+			c.dynamicCache.Source(
+				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme()),
+			),
+		).
 		Complete(c)
 }

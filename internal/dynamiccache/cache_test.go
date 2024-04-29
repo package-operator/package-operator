@@ -13,18 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/internal/testutil/metricsmocks"
 )
-
-func TestCache_Source(t *testing.T) {
-	t.Parallel()
-	c, cacheSource, _ := setupTestCache(t)
-
-	assert.Same(t, cacheSource, c.Source())
-}
 
 func TestCache_Start(t *testing.T) {
 	t.Parallel()
@@ -337,9 +332,9 @@ type cacheSourceMock struct {
 	mock.Mock
 }
 
-func (m *cacheSourceMock) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
-	args := m.Called(ctx, queue)
-	return args.Error(0)
+func (m *cacheSourceMock) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	args := m.Called(handler, predicates)
+	return args.Get(0).(source.Source)
 }
 
 func (m *cacheSourceMock) blockNewRegistrations() {

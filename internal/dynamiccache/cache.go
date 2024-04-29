@@ -16,7 +16,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -41,7 +43,7 @@ type informerMap interface {
 }
 
 type cacheSourcer interface {
-	source.Source
+	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
 	blockNewRegistrations()
 	handleNewInformer(cache.SharedIndexInformer) error
 }
@@ -99,8 +101,8 @@ func (c *Cache) String() string {
 	return "dynamiccache.Cache"
 }
 
-func (c *Cache) Source() source.Source {
-	return c.cacheSource
+func (c *Cache) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	return c.cacheSource.Source(handler, predicates...)
 }
 
 // Start implements manager.Runnable.

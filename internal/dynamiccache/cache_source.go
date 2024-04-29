@@ -6,40 +6,62 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-type eventHandler struct {
-	ctx   context.Context
-	queue workqueue.RateLimitingInterface
+type cacheSettings struct {
+	source     *cacheSource
+	handler    handler.EventHandler
+	predicates []predicate.Predicate
 }
 
-var _ source.Source = (*cacheSource)(nil)
+var _ source.Source = (*cacheSettings)(nil)
+
+type eventHandler struct {
+	ctx        context.Context
+	queue      workqueue.RateLimitingInterface
+	handler    handler.EventHandler
+	predicates []predicate.Predicate
+}
+
+// Implements source.Source interface to be used as event source when setting up controllers.
+func (e cacheSettings) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
+	e.source.mu.Lock()
+	defer e.source.mu.Unlock()
+	if e.source.blockNew {
+		panic("Trying to add EventHandlers to dynamiccache.CacheSource after manager start")
+	}
+	e.source.handlers = append(e.source.handlers, eventHandler{ctx, queue, e.handler, e.predicates})
+	return nil
+}
 
 type cacheSource struct {
 	mu       sync.RWMutex
 	handlers []eventHandler
 	blockNew bool
+	settings []cacheSettings
 }
 
-// For printing in startup log messages.
-func (e *cacheSource) String() string {
-	return "dynamiccache.CacheSource"
-}
+func (e *cacheSource) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	if handler == nil {
+		panic("handler is nil")
+	}
 
-// Implements source.Source interface to be used as event source when setting up controllers.
-func (e *cacheSource) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.blockNew {
 		panic("Trying to add EventHandlers to dynamiccache.CacheSource after manager start")
 	}
-	e.handlers = append(e.handlers, eventHandler{
-		ctx:   ctx,
-		queue: queue,
-	})
-	return nil
+
+	s := cacheSettings{e, handler, predicates}
+	e.settings = append(e.settings, s)
+	return s
 }
+
+// For printing in startup log messages.
+func (e *cacheSource) String() string { return "dynamiccache.CacheSource" }
 
 // Disables registration of new EventHandlers.
 func (e *cacheSource) blockNewRegistrations() {
@@ -49,9 +71,7 @@ func (e *cacheSource) blockNewRegistrations() {
 }
 
 // Adds all registered EventHandlers to the given informer.
-func (e *cacheSource) handleNewInformer(
-	informer cache.SharedIndexInformer,
-) error {
+func (e *cacheSource) handleNewInformer(informer cache.SharedIndexInformer) error {
 	// this read lock should not be needed,
 	// because the cacheSource should block registration
 	// of new event handlers at this point
@@ -59,8 +79,8 @@ func (e *cacheSource) handleNewInformer(
 	defer e.mu.RUnlock()
 
 	// ensure to add all event handlers to the new informer
-	s := source.Informer{Informer: informer}
 	for _, eh := range e.handlers {
+		s := source.Informer{Informer: informer, Handler: eh.handler, Predicates: eh.predicates}
 		if err := s.Start(eh.ctx, eh.queue); err != nil {
 			return err
 		}
