@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,7 +68,7 @@ func newPackage(meta metav1.ObjectMeta, spec corev1alpha1.PackageSpec, namespace
 func testNamespacedAndCluster(
 	t *testing.T,
 	meta metav1.ObjectMeta, spec corev1alpha1.PackageSpec,
-	postCheck func(ctx context.Context, t *testing.T, namespaced bool),
+	postCheck func(ctx context.Context, t *testing.T, namespace string),
 ) {
 	t.Helper()
 
@@ -87,7 +87,7 @@ func testNamespacedAndCluster(
 			requireDeployPackage(ctx, t, tc.pkg, tc.objectDeployment)
 
 			if postCheck != nil {
-				postCheck(ctx, t, len(tc.namespace) != 0)
+				postCheck(ctx, t, tc.namespace)
 			}
 		})
 	}
@@ -103,10 +103,10 @@ func TestPackage_simple(t *testing.T) {
 			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
 		},
 	}
-	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
 		t.Helper()
 
-		if !namespaced {
+		if namespace == "" {
 			return
 		}
 
@@ -114,7 +114,7 @@ func TestPackage_simple(t *testing.T) {
 		deploy := &appsv1.Deployment{}
 		err := Client.Get(ctx, client.ObjectKey{
 			Name:      "test-stub-success",
-			Namespace: "default",
+			Namespace: namespace,
 		}, deploy)
 		require.NoError(t, err)
 
@@ -132,6 +132,7 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 	meta := metav1.ObjectMeta{
 		Name: "success-slices",
 		Annotations: map[string]string{
+			// Manually force one slice per object.
 			"packages.package-operator.run/chunking-strategy": "EachObject",
 		},
 	}
@@ -142,31 +143,24 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 		},
 	}
 
-	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
 		t.Helper()
 
-		if namespaced {
-			sliceList := &corev1alpha1.ObjectSliceList{}
-			err := Client.List(ctx, sliceList)
-			require.NoError(t, err)
-
-			// Just a Deployment
-			assertLenWithJSON(t, sliceList.Items, 1)
-		} else {
-			sliceList := &corev1alpha1.ClusterObjectSliceList{}
-			err := Client.List(ctx, sliceList)
-			require.NoError(t, err)
-
-			filteredSlices := []corev1alpha1.ClusterObjectSlice{}
-			for _, item := range sliceList.Items {
-				if !strings.HasPrefix(item.Name, "success-slices-") {
-					continue
-				}
-				filteredSlices = append(filteredSlices, item)
-			}
-
-			assertLenWithJSON(t, filteredSlices, 2)
+		// Reminder: Every rendered object get's wrapped into its own ObjectSlice.
+		// Or in go terms: `len(renderedObjects) == len(resultingObjectSlices)`.
+		// The test package renders a deployment plus an additional namespace object
+		// when the package is installed as a ClusterPackage.
+		// When `namespace` is not empty, the test package has been installed as a Package.
+		// When `namespace` is empty, the test package has been installed as a ClusterPackage.
+		assertedAmount := 2 // Deployment and Namespace
+		if namespace != "" {
+			assertedAmount = 1 // only a Deployment
 		}
+
+		assertAmountOfSliceObjectsControlledPerObjectSet(ctx, t, types.NamespacedName{
+			Namespace: namespace,
+			Name:      "success-slices",
+		}, assertedAmount)
 	}
 
 	testNamespacedAndCluster(t, meta, spec, postCheck)
@@ -176,6 +170,7 @@ func TestPackage_simpleWithoutSlices(t *testing.T) {
 	meta := metav1.ObjectMeta{
 		Name: "success-no-slices",
 		Annotations: map[string]string{
+			// Manually disable slicing.
 			"packages.package-operator.run/chunking-strategy": "NoOp",
 		},
 	}
@@ -186,29 +181,12 @@ func TestPackage_simpleWithoutSlices(t *testing.T) {
 		},
 	}
 
-	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
 		t.Helper()
-
-		if namespaced {
-			sliceList := &corev1alpha1.ObjectSliceList{}
-			err := Client.List(ctx, sliceList)
-			require.NoError(t, err)
-			assertLenWithJSON(t, sliceList.Items, 0)
-		} else {
-			sliceList := &corev1alpha1.ClusterObjectSliceList{}
-			err := Client.List(ctx, sliceList)
-			require.NoError(t, err)
-
-			filteredSlices := []corev1alpha1.ClusterObjectSlice{}
-			for _, item := range sliceList.Items {
-				if !strings.HasPrefix(item.Name, "success-no-slices-") {
-					continue
-				}
-				filteredSlices = append(filteredSlices, item)
-			}
-
-			assertLenWithJSON(t, filteredSlices, 0)
-		}
+		assertAmountOfSliceObjectsControlledPerObjectSet(ctx, t, types.NamespacedName{
+			Namespace: namespace,
+			Name:      "success-no-slices",
+		}, 0)
 	}
 
 	testNamespacedAndCluster(t, meta, spec, postCheck)
@@ -228,15 +206,15 @@ func TestPackage_multi(t *testing.T) {
 		},
 	}
 
-	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
 		t.Helper()
 
 		var pkgBE, pkgFE client.Object
 		var ns string
-		if namespaced {
+		if namespace != "" {
 			pkgBE = &corev1alpha1.Package{}
 			pkgFE = &corev1alpha1.Package{}
-			ns = "default"
+			ns = namespace
 		} else {
 			pkgBE = &corev1alpha1.ClusterPackage{}
 			pkgFE = &corev1alpha1.ClusterPackage{}
@@ -264,12 +242,12 @@ func TestPackage_cel(t *testing.T) {
 		},
 	}
 
-	postCheck := func(ctx context.Context, t *testing.T, namespaced bool) {
+	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
 		t.Helper()
 
 		var ns string
-		if namespaced {
-			ns = "default"
+		if namespace != "" {
+			ns = namespace
 		} else {
 			ns = "success-cel"
 		}
@@ -323,18 +301,4 @@ func TestPackage_nonExistent(t *testing.T) {
 	err := Client.Get(ctx, client.ObjectKey{Name: "non-existent", Namespace: "default"}, existingPackage)
 	require.NoError(t, err)
 	require.Equal(t, "ImagePullBackOff", existingPackage.Status.Conditions[0].Reason)
-}
-
-// assert len but print json output.
-func assertLenWithJSON[T any](t *testing.T, obj []T, l int) {
-	t.Helper()
-	if len(obj) == l {
-		return
-	}
-
-	j, err := json.Marshal(obj)
-	if err != nil {
-		panic(err)
-	}
-	t.Error(fmt.Sprintf("should be of len %d", l), string(j))
 }

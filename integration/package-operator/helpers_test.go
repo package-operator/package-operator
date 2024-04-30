@@ -1,3 +1,5 @@
+//go:build integration || integration_hypershift
+
 package packageoperator
 
 import (
@@ -40,17 +42,43 @@ func assertControllerNameHasPrefix(t *testing.T, ownerNamePrefix string, obj cli
 	require.True(t, found, "controller name of %s not prefixed with %s", client.ObjectKeyFromObject(obj), ownerNamePrefix)
 }
 
-func controllerNameHasPrefix(ownerNamePrefix string, obj client.Object) bool {
+func someOwnerRefSatisfiesCond(obj client.Object, filter, cond func(ownerRef metav1.OwnerReference) bool) bool {
 	ownerRefs := append(getOwnerRefsFromAnnotations(obj), obj.GetOwnerReferences()...)
 	for _, ownerRef := range ownerRefs {
-		if ownerRef.Controller == nil || !*ownerRef.Controller {
+		if !filter(ownerRef) {
 			continue
 		}
-		if strings.HasPrefix(ownerRef.Name, ownerNamePrefix) {
+		if cond(ownerRef) {
 			return true
 		}
 	}
 	return false
+}
+
+func ownerNameHasPrefix(ownerNamePrefix string, obj client.Object) bool {
+	return someOwnerRefSatisfiesCond(obj,
+		// filter: noop
+		func(_ metav1.OwnerReference) bool {
+			return true
+		},
+		// condition:
+		func(ownerRef metav1.OwnerReference) bool {
+			return strings.HasPrefix(ownerRef.Name, ownerNamePrefix)
+		},
+	)
+}
+
+func controllerNameHasPrefix(controllerNamePrefix string, obj client.Object) bool {
+	return someOwnerRefSatisfiesCond(obj,
+		// filter: only ownerReferences pointing to the controlling object
+		func(ownerRef metav1.OwnerReference) bool {
+			return ownerRef.Controller != nil && *ownerRef.Controller
+		},
+		// condition:
+		func(ownerRef metav1.OwnerReference) bool {
+			return strings.HasPrefix(ownerRef.Name, controllerNamePrefix)
+		},
+	)
 }
 
 func getOwnerRefsFromAnnotations(obj client.Object) []metav1.OwnerReference {
@@ -759,4 +787,114 @@ func simpleObjectSet(cm *corev1.ConfigMap, namespace, class string) (*corev1alph
 			},
 		},
 	}, nil
+}
+
+func filterListByOwningObjectPrefix[T client.Object, U []T](parentName string, list U) U {
+	ownedByParent := make(U, 0)
+	for _, obj := range list {
+		if !ownerNameHasPrefix(parentName, obj) {
+			continue
+		}
+		ownedByParent = append(ownedByParent, obj)
+	}
+	return ownedByParent
+}
+
+func mapToNamespacedNames[T client.Object, U []T](list U) []types.NamespacedName {
+	names := make([]types.NamespacedName, 0, len(list))
+	for _, obj := range list {
+		names = append(names, types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		})
+	}
+	return names
+}
+
+func getObjectSetNamesControlledBy(ctx context.Context, parent types.NamespacedName) ([]types.NamespacedName, error) {
+	if len(parent.Namespace) != 0 {
+		setList := &corev1alpha1.ObjectSetList{}
+		if err := Client.List(ctx, setList, client.InNamespace(parent.Namespace)); err != nil {
+			return nil, fmt.Errorf("listing ObjectSets: %w", err)
+		}
+		setPointers := make([]*corev1alpha1.ObjectSet, len(setList.Items))
+		for i := range setList.Items {
+			setPointers[i] = &setList.Items[i]
+		}
+		setPointers = filterListByOwningObjectPrefix(parent.Name, setPointers)
+		return mapToNamespacedNames(setPointers), nil
+	}
+
+	setList := &corev1alpha1.ClusterObjectSetList{}
+	if err := Client.List(ctx, setList); err != nil {
+		return nil, fmt.Errorf("listing ClusterObjectSets: %w", err)
+	}
+	setPointers := make([]*corev1alpha1.ClusterObjectSet, len(setList.Items))
+	for i := range setList.Items {
+		setPointers[i] = &setList.Items[i]
+	}
+	setPointers = filterListByOwningObjectPrefix(parent.Name, setPointers)
+	return mapToNamespacedNames(setPointers), nil
+}
+
+func getObjectSliceNamesControlledBy(ctx context.Context, parent types.NamespacedName) ([]types.NamespacedName, error) {
+	if len(parent.Namespace) != 0 {
+		sliceList := &corev1alpha1.ObjectSliceList{}
+		if err := Client.List(ctx, sliceList, client.InNamespace(parent.Namespace)); err != nil {
+			return nil, fmt.Errorf("listing ObjectSlices: %w", err)
+		}
+		slicePointers := make([]*corev1alpha1.ObjectSlice, len(sliceList.Items))
+		for i := range sliceList.Items {
+			slicePointers[i] = &sliceList.Items[i]
+		}
+		slicePointers = filterListByOwningObjectPrefix(parent.Name, slicePointers)
+		return mapToNamespacedNames(slicePointers), nil
+	}
+
+	sliceList := &corev1alpha1.ClusterObjectSliceList{}
+	if err := Client.List(ctx, sliceList); err != nil {
+		return nil, fmt.Errorf("listing clusterObjectSlices: %w", err)
+	}
+	slicePointers := make([]*corev1alpha1.ClusterObjectSlice, len(sliceList.Items))
+	for i := range sliceList.Items {
+		slicePointers[i] = &sliceList.Items[i]
+	}
+	slicePointers = filterListByOwningObjectPrefix(parent.Name, slicePointers)
+	return mapToNamespacedNames(slicePointers), nil
+}
+
+func assertAmountOfSliceObjectsControlledPerObjectSet(
+	ctx context.Context, t *testing.T, name types.NamespacedName, amount int,
+) {
+	t.Helper()
+	sets, err := getObjectSetNamesControlledBy(ctx, name)
+	require.NoError(t, err, "getting (Cluster)ObjectSet names for controller",
+		"err", err,
+		"controller", name,
+	)
+
+	t.Logf("got %d (Cluster)ObjectSet names for controller %s", len(sets), name)
+	for _, set := range sets {
+		slices, err := getObjectSliceNamesControlledBy(ctx, set)
+		require.NoError(t, err, "getting (Cluster)ObjectSlice names controlled by (Cluster)ObjectSet",
+			"err", err,
+			"controller", set,
+		)
+		t.Logf("got %d (Cluster)ObjectSlice names for controller %s", len(slices), set)
+		assertLenWithJSON(t, slices, amount)
+	}
+}
+
+// assert len but print json output.
+func assertLenWithJSON[T any](t *testing.T, obj []T, l int) {
+	t.Helper()
+	if len(obj) == l {
+		return
+	}
+
+	j, err := json.Marshal(obj)
+	if err != nil {
+		panic(err)
+	}
+	t.Error(fmt.Sprintf("should be of len %d", l), string(j))
 }
