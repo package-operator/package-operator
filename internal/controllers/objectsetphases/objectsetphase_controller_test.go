@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -35,8 +37,8 @@ func (c *dynamicCacheMock) Watch(
 	return args.Error(0)
 }
 
-func (c *dynamicCacheMock) Source() source.Source {
-	args := c.Called()
+func (c *dynamicCacheMock) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	args := c.Called(handler, predicates)
 	return args.Get(0).(source.Source)
 }
 

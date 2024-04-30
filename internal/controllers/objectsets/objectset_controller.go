@@ -46,7 +46,7 @@ type reconciler interface {
 
 type dynamicCache interface {
 	client.Reader
-	Source() source.Source
+	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
 	Free(ctx context.Context, obj client.Object) error
 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 }
@@ -160,21 +160,21 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 		For(objectSet, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
 		Owns(objectSetPhase).
 		WatchesRawSource(
-			c.dynamicCache.Source(),
-			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
-			builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
-				c.log.Info(
-					"processing dynamic cache event",
-					"object", client.ObjectKeyFromObject(object),
-					"owners", object.GetOwnerReferences())
-				return true
-			}))).
+			c.dynamicCache.Source(
+				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
+				predicate.NewPredicateFuncs(func(object client.Object) bool {
+					c.log.Info(
+						"processing dynamic cache event",
+						"object", client.ObjectKeyFromObject(object),
+						"owners", object.GetOwnerReferences())
+					return true
+				}),
+			),
+		).
 		Complete(c)
 }
 
-func (c *GenericObjectSetController) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (res ctrl.Result, err error) {
+func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := c.log.WithValues("ObjectSet", req.String())
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)

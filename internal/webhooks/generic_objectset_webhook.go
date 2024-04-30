@@ -22,7 +22,7 @@ type objectSets interface {
 }
 
 type GenericObjectSetWebhookHandler[T objectSets] struct {
-	decoder *admission.Decoder
+	decoder admission.Decoder
 	log     logr.Logger
 	client  client.Client
 }

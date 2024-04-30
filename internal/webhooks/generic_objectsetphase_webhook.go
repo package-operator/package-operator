@@ -22,7 +22,7 @@ type objectSetPhases interface {
 }
 
 type GenericObjectSetPhaseWebhookHandler[T objectSetPhases] struct {
-	decoder *admission.Decoder
+	decoder admission.Decoder
 	log     logr.Logger
 	client  client.Client
 }
