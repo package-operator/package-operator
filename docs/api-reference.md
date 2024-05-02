@@ -1296,6 +1296,8 @@ test:
         kubernetes:
           version: tempor
         openShift:
+          managed:
+            data: map[string]string
           version: lorem
         proxy:
           httpProxy: ipsum
@@ -1412,6 +1414,19 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageEnvironmentManagedOpenShift
+
+PackageEnvironmentManagedOpenShift describes managed OpenShift environments.
+
+| Field | Description |
+| ----- | ----------- |
+| `data` <b>required</b><br><a href="#map[string]string">map[string]string</a> | Data key-value pairs describing details of the Managed OpenShift environment. |
+
+
+Used in:
+* [PackageEnvironmentOpenShift](#packageenvironmentopenshift)
+
+
 ### PackageEnvironmentOpenShift
 
 PackageEnvironmentOpenShift configures openshift environments.
@@ -1419,6 +1434,7 @@ PackageEnvironmentOpenShift configures openshift environments.
 | Field | Description |
 | ----- | ----------- |
 | `version` <b>required</b><br>string | OpenShift server version. |
+| `managed` <br><a href="#packageenvironmentmanagedopenshift">PackageEnvironmentManagedOpenShift</a> | ManagedOpenShift environment information. This section is only set when a managed OpenShift cluster is detected.<br>This includes Red Hat OpenShift Dedicated, Red Hat OpenShift Service on AWS (ROSA) and<br>Azure Red Hat OpenShift (ARO) and their Hosted Control Plane variants. |
 
 
 Used in:

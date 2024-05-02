@@ -208,6 +208,16 @@ type PackageEnvironmentKubernetes struct {
 type PackageEnvironmentOpenShift struct {
 	// OpenShift server version.
 	Version string `json:"version"`
+	// ManagedOpenShift environment information. This section is only set when a managed OpenShift cluster is detected.
+	// This includes Red Hat OpenShift Dedicated, Red Hat OpenShift Service on AWS (ROSA) and
+	// Azure Red Hat OpenShift (ARO) and their Hosted Control Plane variants.
+	Managed *PackageEnvironmentManagedOpenShift `json:"managed,omitempty"`
+}
+
+// PackageEnvironmentManagedOpenShift describes managed OpenShift environments.
+type PackageEnvironmentManagedOpenShift struct {
+	// Data key-value pairs describing details of the Managed OpenShift environment.
+	Data map[string]string `json:"data"`
 }
 
 // PackageEnvironmentProxy configures proxy environments.
