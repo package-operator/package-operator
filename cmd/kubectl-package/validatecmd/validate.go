@@ -20,6 +20,7 @@ func NewCmd(validator Validator) *cobra.Command {
 		validateShort = "validate a package."
 		validateLong  = "validate a package. Target may be a source directory, " +
 			"a package in a tar[.gz] or a fully qualified tag if --pull is set."
+		validationSuccessMessage = "Package validated successfully!"
 	)
 
 	cmd := &cobra.Command{
@@ -53,7 +54,7 @@ func NewCmd(validator Validator) *cobra.Command {
 			return fmt.Errorf("validating package: %w", err)
 		}
 
-		fmt.Fprintln(cmd.OutOrStdout(), "Package validated successfully!")
+		fmt.Fprint(cmd.OutOrStdout(), validationSuccessMessage)
 
 		return nil
 	}
