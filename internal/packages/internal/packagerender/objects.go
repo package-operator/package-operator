@@ -1,12 +1,10 @@
 package packagerender
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -29,10 +27,10 @@ func RenderObjects(
 	tmplCtx packagetypes.PackageRenderContext,
 	validator packagetypes.ObjectValidator,
 ) (
-	[]unstructured.Unstructured, error,
+	pathObject map[string][]unstructured.Unstructured,
+	err error,
 ) {
-	pathObjectMap := map[string][]unstructured.Unstructured{}
-
+	pathObject = map[string][]unstructured.Unstructured{}
 	for path, content := range pkg.Files {
 		switch {
 		case strings.HasPrefix(filepath.Base(path), "_"):
@@ -45,18 +43,53 @@ func RenderObjects(
 				return nil, err
 			}
 			if len(objects) != 0 {
-				pathObjectMap[path] = objects
+				pathObject[path] = objects
 			}
 		}
 	}
 
 	if validator != nil {
-		if err := validator.ValidateObjects(ctx, pkg.Manifest, pathObjectMap); err != nil {
+		if err := validator.ValidateObjects(ctx, pkg.Manifest, pathObject); err != nil {
 			return nil, err
 		}
 	}
+	return pathObject, nil
+}
 
-	err := filterWithCEL(pathObjectMap, &pkg.Manifest.Spec.ConditionalFiltering, &tmplCtx)
+// Renders all .yml and .yaml files into Kubernetes Objects and applies CEL conditionals to filter objects.
+// Will return a map[path]index of filtered object.
+func RenderObjectsWithFilterInfo(
+	ctx context.Context, pkg *packagetypes.Package,
+	tmplCtx packagetypes.PackageRenderContext,
+	validator packagetypes.ObjectValidator,
+) (
+	pathObject map[string][]unstructured.Unstructured,
+	pathFilteredIndex map[string][]int,
+	err error,
+) {
+	pathObject, err = RenderObjects(ctx, pkg, tmplCtx, validator)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pathFilteredIndex, err = filterWithCEL(pathObject, pkg.Manifest.Spec.ConditionalFiltering, tmplCtx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pathObject, pathFilteredIndex, nil
+}
+
+// Renders all .yml and .yaml files into Kubernetes Objects and applies CEL conditionals to filter objects.
+func RenderObjectsWithFilter(
+	ctx context.Context, pkg *packagetypes.Package,
+	tmplCtx packagetypes.PackageRenderContext,
+	validator packagetypes.ObjectValidator,
+) (
+	[]unstructured.Unstructured, error,
+) {
+	pathObjectMap, _, err := RenderObjectsWithFilterInfo(
+		ctx, pkg, tmplCtx, validator,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +118,6 @@ func RenderObjects(
 	return objects, nil
 }
 
-var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
-
 func parseObjects(
 	manifest *manifests.PackageManifest,
 	tmplCtx packagetypes.PackageRenderContext,
@@ -98,15 +129,15 @@ func parseObjects(
 	objects = []unstructured.Unstructured{}
 
 	// Split for every included yaml document.
-	for idx, yamlDocument := range splitYAMLDocumentsRegEx.Split(string(bytes.Trim(content, "---\n")), -1) {
+	for idx, yamlDocument := range packagetypes.SplitYAMLDocuments(content) {
 		obj := unstructured.Unstructured{}
-		if err = yaml.Unmarshal([]byte(yamlDocument), &obj); err != nil {
+		if err = yaml.Unmarshal(yamlDocument, &obj); err != nil {
 			err = packagetypes.ViolationError{
 				Reason:  packagetypes.ViolationReasonInvalidYAML,
 				Details: err.Error(),
 				Path:    path,
 				Index:   ptr.To(idx),
-				Subject: yamlDocument,
+				Subject: string(yamlDocument),
 			}
 			return
 		}
@@ -128,49 +159,56 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCEL(
 	pathObjectMap map[string][]unstructured.Unstructured,
-	condFiltering *manifests.PackageManifestConditionalFiltering,
-	tmplCtx *packagetypes.PackageRenderContext,
-) error {
+	condFiltering manifests.PackageManifestConditionalFiltering,
+	tmplCtx packagetypes.PackageRenderContext,
+) (pathFilteredIndex map[string][]int, err error) {
 	// Create CEL evaluation environment
 	cc, err := celctx.New(condFiltering.NamedConditions, tmplCtx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	pathsToExclude, err := computeIgnoredPaths(condFiltering.ConditionalPaths, &cc)
+	pathsToExclude, err := computeIgnoredPaths(condFiltering.ConditionalPaths, cc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	pathFilteredIndex = map[string][]int{}
 	for path, objects := range pathObjectMap {
 		exclude, err := isExcluded(path, pathsToExclude)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if exclude {
 			delete(pathObjectMap, path)
 			continue
 		}
 
-		pathObjectMap[path], err = filterWithCELAnnotation(objects, &cc)
+		var filteredIndex []int
+		pathObjectMap[path], filteredIndex, err = filterWithCELAnnotation(objects, cc)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		if filteredIndex != nil {
+			pathFilteredIndex[path] = filteredIndex
 		}
 	}
 
-	return nil
+	return pathFilteredIndex, nil
 }
 
+// Filters a list of object on their "package-operator.run/condition" annotation,
+// by evaluating the contained CEL expression and returning a list of filtered objects
+// and the indexes that got removed.
 func filterWithCELAnnotation(
 	objects []unstructured.Unstructured,
 	cc *celctx.CelCtx,
 ) (
-	[]unstructured.Unstructured,
-	error,
+	filtered []unstructured.Unstructured,
+	filteredIndexes []int,
+	err error,
 ) {
-	filtered := make([]unstructured.Unstructured, 0, len(objects))
-
-	for _, obj := range objects {
+	for i, obj := range objects {
 		cel, ok := obj.GetAnnotations()[v1alpha1.PackageCELConditionAnnotation]
 		// If object doesn't have CEL annotation, append it
 		if !ok {
@@ -180,7 +218,7 @@ func filterWithCELAnnotation(
 
 		celResult, err := cc.Evaluate(cel)
 		if err != nil {
-			return nil, packagetypes.ViolationError{
+			return nil, nil, packagetypes.ViolationError{
 				Reason:  packagetypes.ViolationReasonInvalidCELExpression,
 				Details: err.Error(),
 				Subject: obj.GetName(),
@@ -190,10 +228,12 @@ func filterWithCELAnnotation(
 		// If CEL annotation evaluates to true, append object
 		if celResult {
 			filtered = append(filtered, obj)
+		} else {
+			filteredIndexes = append(filteredIndexes, i)
 		}
 	}
 
-	return filtered, nil
+	return filtered, filteredIndexes, nil
 }
 
 var ErrInvalidConditionalPathsExpression = errors.New("invalid spec.conditionalPaths expression")
@@ -204,7 +244,7 @@ func computeIgnoredPaths(
 ) (
 	[]string, error,
 ) {
-	globs := make([]string, 0, len(conditionalPaths))
+	var globs []string
 	for _, cp := range conditionalPaths {
 		result, err := cc.Evaluate(cp.Expression)
 		if err != nil {
@@ -220,9 +260,9 @@ func computeIgnoredPaths(
 	return globs, nil
 }
 
-func isExcluded(path string, pathsToExclude []string) (bool, error) {
+func isExcluded(path string, pathsToExclude []string) (exclude bool, err error) {
 	for _, glob := range pathsToExclude {
-		exclude, err := doublestar.PathMatch(glob, path)
+		exclude, err = doublestar.PathMatch(glob, path)
 		if err != nil || exclude {
 			return exclude, err
 		}

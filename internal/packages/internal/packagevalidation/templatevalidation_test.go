@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
@@ -50,6 +51,14 @@ func TestTemplateTestValidator(t *testing.T) {
 	}()
 
 	packageManifest := &manifests.PackageManifest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pkg",
+		},
+		Spec: manifests.PackageManifestSpec{
+			Phases: []manifests.PackageManifestPhase{
+				{Name: "tesxx"},
+			},
+		},
 		Test: manifests.PackageManifestTest{
 			Template: []manifests.PackageManifestTestCaseTemplate{
 				{
@@ -72,7 +81,8 @@ func TestTemplateTestValidator(t *testing.T) {
 	ttv := NewTemplateTestValidator(validatorPath)
 
 	originalFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1Content),
+		"file2.yaml.gotmpl": []byte(testFile2Content),
+		"file.yaml.gotmpl":  []byte(testFile1Content),
 	}
 	originalPkg := &packagetypes.Package{
 		Manifest: packageManifest,
@@ -83,9 +93,10 @@ func TestTemplateTestValidator(t *testing.T) {
 
 	// Assert Fixtures have been setup
 	newFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1UpdatedContent),
+		"file2.yaml.gotmpl": []byte(testFile2Content),
+		"file.yaml.gotmpl":  []byte(testFile1UpdatedContent),
 	}
-	expectedErr := `File mismatch against fixture in file.yaml.gotmpl: Testcase "t1"
+	expectedErr := `File mismatch against fixture in file.yaml: Testcase "t1"
 --- FIXTURE/file.yaml
 +++ ACTUAL/file.yaml
 @@ -4,4 +4,4 @@

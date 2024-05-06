@@ -101,19 +101,22 @@ func (v TemplateTestValidator) runTestCase(
 	if err := packagerender.RenderTemplates(ctx, pkg, tmplCtx); err != nil {
 		return err
 	}
-	_, err := packagerender.RenderObjects(ctx, pkg, tmplCtx, DefaultObjectValidators)
+	pathObjects, pathFilteredIndex, err := packagerender.RenderObjectsWithFilterInfo(
+		ctx, pkg, tmplCtx, DefaultObjectValidators)
 	if err != nil {
 		return err
 	}
 
 	// check if test figures exist
-	testFixturePath := filepath.Join(v.packageBaseFolderPath, subDir, ".test-fixtures", testCase.Name)
+	testFixturePath := filepath.Join(
+		v.packageBaseFolderPath, subDir,
+		".test-fixtures", testCase.Name)
 	_, err = os.Stat(testFixturePath)
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
 		// generate fixtures now
 		log.Info("no fixture found for test case, generating...", "name", testCase.Name)
-		return renderTemplateFiles(testFixturePath, pkg.Files)
+		return renderTemplateFiles(testFixturePath, pkg.Files, pathFilteredIndex)
 	}
 
 	actualPath, err := os.MkdirTemp(os.TempDir(), "pko-test-"+testCase.Name+"-")
@@ -126,17 +129,16 @@ func (v TemplateTestValidator) runTestCase(
 		}
 	}()
 
-	if err := renderTemplateFiles(actualPath, pkg.Files); err != nil {
+	if err := renderTemplateFiles(actualPath, pkg.Files, pathFilteredIndex); err != nil {
 		return err
 	}
 
 	violations := make([]error, 0, len(pkg.Files))
-	for relPath := range pkg.Files {
-		if !packagetypes.IsTemplateFile(relPath) {
+	for path := range pathObjects {
+		if packagetypes.IsTemplateFile(path) {
 			// template source files are of no interest for the test fixtures.
 			continue
 		}
-		path := packagetypes.StripTemplateSuffix(relPath)
 
 		verrs, err := runKubeconformForFile(path, pkg.Files[path], kcV)
 		if err != nil {
@@ -159,22 +161,41 @@ func (v TemplateTestValidator) runTestCase(
 		violations = append(violations, packagetypes.ViolationError{
 			Reason:  packagetypes.ViolationReasonFixtureMismatch,
 			Details: fmt.Sprintf("Testcase %q\n%s", testCase.Name, string(diff)),
-			Path:    relPath,
+			Path:    path,
 		})
 	}
 
 	return errors.Join(violations...)
 }
 
-func renderTemplateFiles(folder string, fileMap packagetypes.Files) error {
-	for relPath := range fileMap {
-		if !packagetypes.IsTemplateFile(relPath) {
+func renderTemplateFiles(
+	folder string,
+	fileMap packagetypes.Files,
+	pathFilteredIndex map[string][]int,
+) error {
+	for path := range fileMap {
+		if packagetypes.IsTemplateFile(path) ||
+			!packagetypes.IsYAMLFile(path) {
 			// template source files are of no interest for the test fixtures.
 			continue
 		}
 
-		path := packagetypes.StripTemplateSuffix(relPath)
 		content := fileMap[path]
+		if filteredIndexes, ok := pathFilteredIndex[path]; ok {
+			// some documents where filtered at the given path.
+			indexMap := map[int]struct{}{}
+			for _, i := range filteredIndexes {
+				indexMap[i] = struct{}{}
+			}
+			var documents [][]byte
+			for i, doc := range packagetypes.SplitYAMLDocuments(content) {
+				if _, ok := indexMap[i]; ok {
+					continue
+				}
+				documents = append(documents, doc)
+			}
+			content = packagetypes.JoinYAMLDocuments(documents)
+		}
 		if len(bytes.TrimSpace(content)) == 0 {
 			// don't process empty files
 			continue
@@ -191,11 +212,33 @@ func renderTemplateFiles(folder string, fileMap packagetypes.Files) error {
 	return nil
 }
 
+type unknownFileFoundInFixturesFolderError struct {
+	file string
+}
+
+func (e *unknownFileFoundInFixturesFolderError) Error() string {
+	return fmt.Sprintf("file %s should not exist, filtered or empty after template render", e.file)
+}
+
+type fileNotFoundInFixturesFolderError struct {
+	file string
+}
+
+func (e *fileNotFoundInFixturesFolderError) Error() string {
+	return fmt.Sprintf("file %s not found in fixtures folder", e.file)
+}
+
 func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
 	_, fileAStatErr := os.Stat(fileA)
 	_, fileBStatErr := os.Stat(fileB)
 	if os.IsNotExist(fileAStatErr) && os.IsNotExist(fileBStatErr) {
 		return nil, nil
+	}
+	if fileAStatErr == nil && os.IsNotExist(fileBStatErr) {
+		return nil, &unknownFileFoundInFixturesFolderError{file: fileA}
+	}
+	if os.IsNotExist(fileAStatErr) && fileBStatErr == nil {
+		return nil, &fileNotFoundInFixturesFolderError{file: fileA}
 	}
 
 	//nolint:gosec

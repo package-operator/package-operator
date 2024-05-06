@@ -16,20 +16,30 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 
 	opav := &ObjectPhaseAnnotationValidator{}
 
-	okObj := unstructured.Unstructured{}
-	okObj.SetAnnotations(map[string]string{
+	failObj := unstructured.Unstructured{}
+	failObj.SetAnnotations(map[string]string{
 		manifests.PackagePhaseAnnotation: "something",
 	})
 
+	okObj := unstructured.Unstructured{}
+	okObj.SetAnnotations(map[string]string{
+		manifests.PackagePhaseAnnotation: "deploy",
+	})
+
 	ctx := context.Background()
-	manifest := &manifests.PackageManifest{}
+	manifest := &manifests.PackageManifest{
+		Spec: manifests.PackageManifestSpec{
+			Phases: []manifests.PackageManifestPhase{{Name: "deploy"}},
+		},
+	}
 	err := opav.ValidateObjects(
 		ctx, manifest,
 		map[string][]unstructured.Unstructured{
-			"test.yaml": {{}, okObj},
+			"test.yaml": {{}, failObj, okObj},
 		})
 
-	require.EqualError(t, err, "Missing package-operator.run/phase Annotation in test.yaml idx 0")
+	require.EqualError(t, err, `Missing package-operator.run/phase Annotation in test.yaml idx 0
+Phase name not found in manifest in test.yaml idx 1`)
 }
 
 func TestObjectDuplicateValidator(t *testing.T) {

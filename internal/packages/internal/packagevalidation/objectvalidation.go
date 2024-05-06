@@ -77,7 +77,7 @@ func (v *ObjectPhaseAnnotationValidator) ValidateObjects(
 
 func (*ObjectPhaseAnnotationValidator) validate(
 	_ context.Context, path string, index int,
-	obj unstructured.Unstructured, _ *manifests.PackageManifest,
+	obj unstructured.Unstructured, manifest *manifests.PackageManifest,
 ) error {
 	if obj.GetAnnotations() == nil ||
 		len(obj.GetAnnotations()[manifests.PackagePhaseAnnotation]) == 0 {
@@ -87,7 +87,16 @@ func (*ObjectPhaseAnnotationValidator) validate(
 			Index:  ptr.To(index),
 		}
 	}
-	return nil
+	for _, phase := range manifest.Spec.Phases {
+		if phase.Name == obj.GetAnnotations()[manifests.PackagePhaseAnnotation] {
+			return nil
+		}
+	}
+	return packagetypes.ViolationError{
+		Reason: packagetypes.ViolationReasonPhaseNotFound,
+		Path:   path,
+		Index:  ptr.To(index),
+	}
 }
 
 // Validates that Objects with the same name/namespace/kind/group must only exist once over all phases.

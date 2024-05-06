@@ -96,13 +96,6 @@ func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageO
 		return fmt.Errorf("loading package from files: %w", err)
 	}
 
-	if _, err := packages.RenderObjects(
-		ctx, pkg, packages.PackageRenderContext{},
-		packages.DefaultObjectValidators,
-	); err != nil {
-		return fmt.Errorf("loading package from files: %w", err)
-	}
-
 	return nil
 }
 

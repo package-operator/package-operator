@@ -41,43 +41,46 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name       string
-		objects    []unstructured.Unstructured
-		tmplCtx    *packagetypes.PackageRenderContext
-		conditions []manifests.PackageManifestNamedCondition
-		filtered   []unstructured.Unstructured
-		err        string
+		name            string
+		objects         []unstructured.Unstructured
+		tmplCtx         packagetypes.PackageRenderContext
+		conditions      []manifests.PackageManifestNamedCondition
+		filtered        []unstructured.Unstructured
+		filteredIndexes []int
+		err             string
 	}{
 		{
 			name:       "no annotation",
 			objects:    []unstructured.Unstructured{newConfigMap("a", "")},
-			tmplCtx:    nil,
+			tmplCtx:    packagetypes.PackageRenderContext{},
 			conditions: nil,
 			filtered:   []unstructured.Unstructured{newConfigMap("a", "")},
 			err:        "",
 		},
 		{
-			name:       "simple annotation",
-			objects:    []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "true && false")},
-			tmplCtx:    nil,
-			conditions: nil,
-			filtered:   []unstructured.Unstructured{newConfigMap("a", "")},
-			err:        "",
+			name:            "simple annotation",
+			objects:         []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "true && false")},
+			tmplCtx:         packagetypes.PackageRenderContext{},
+			conditions:      nil,
+			filtered:        []unstructured.Unstructured{newConfigMap("a", "")},
+			filteredIndexes: []int{1},
+			err:             "",
 		},
 		{
 			name:    "condition annotation",
 			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || cond.mycondition")},
-			tmplCtx: &packagetypes.PackageRenderContext{},
+			tmplCtx: packagetypes.PackageRenderContext{},
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "mycondition", Expression: "false"},
 			},
-			filtered: []unstructured.Unstructured{newConfigMap("a", "")},
-			err:      "",
+			filtered:        []unstructured.Unstructured{newConfigMap("a", "")},
+			filteredIndexes: []int{1},
+			err:             "",
 		},
 		{
 			name:    "condition annotation",
 			objects: []unstructured.Unstructured{newConfigMap("a", ""), newConfigMap("b", "false || cond.mycondition")},
-			tmplCtx: &packagetypes.PackageRenderContext{},
+			tmplCtx: packagetypes.PackageRenderContext{},
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "mycondition", Expression: "true"},
 			},
@@ -87,7 +90,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 		{
 			name:       "invalid expression",
 			objects:    []unstructured.Unstructured{newConfigMap("a", "invalid && expression")},
-			tmplCtx:    nil,
+			tmplCtx:    packagetypes.PackageRenderContext{},
 			conditions: nil,
 			filtered:   nil,
 			err:        string(packagetypes.ViolationReasonInvalidCELExpression),
@@ -99,10 +102,11 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			cc, err := celctx.New(tc.conditions, tc.tmplCtx)
 			require.NoError(t, err)
 
-			filtered, err := filterWithCELAnnotation(tc.objects, &cc)
+			filtered, filteredIndexes, err := filterWithCELAnnotation(tc.objects, cc)
 			if tc.err == "" {
 				require.NoError(t, err)
 				require.Equal(t, len(tc.filtered), len(filtered))
+				require.Equal(t, tc.filteredIndexes, filteredIndexes)
 				for i := 0; i < len(filtered); i++ {
 					assert.Equal(t, tc.filtered[i], filtered[i])
 				}
@@ -117,24 +121,26 @@ func TestFilterWithCEL(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name          string
-		pathObjectMap map[string][]unstructured.Unstructured
-		tmplCtx       *packagetypes.PackageRenderContext
-		condFiltering *manifests.PackageManifestConditionalFiltering
-		filtered      map[string][]unstructured.Unstructured
-		err           string
+		name              string
+		pathObjectMap     map[string][]unstructured.Unstructured
+		tmplCtx           packagetypes.PackageRenderContext
+		condFiltering     manifests.PackageManifestConditionalFiltering
+		filtered          map[string][]unstructured.Unstructured
+		pathFilteredIndex map[string][]int
+		err               string
 	}{
 		{
 			name: "no filtering",
 			pathObjectMap: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "")},
 			},
-			tmplCtx:       nil,
-			condFiltering: &manifests.PackageManifestConditionalFiltering{},
+			tmplCtx:       packagetypes.PackageRenderContext{},
+			condFiltering: manifests.PackageManifestConditionalFiltering{},
 			filtered: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "")},
 			},
-			err: "",
+			pathFilteredIndex: map[string][]int{},
+			err:               "",
 		},
 		{
 			name: "simple filtering",
@@ -142,8 +148,8 @@ func TestFilterWithCEL(t *testing.T) {
 				"a": {newConfigMap("a", "cond.justTrue")},
 				"b": {newConfigMap("b", "true")},
 			},
-			tmplCtx: nil,
-			condFiltering: &manifests.PackageManifestConditionalFiltering{
+			tmplCtx: packagetypes.PackageRenderContext{},
+			condFiltering: manifests.PackageManifestConditionalFiltering{
 				NamedConditions: []manifests.PackageManifestNamedCondition{
 					{Name: "justTrue", Expression: "true"},
 				},
@@ -154,23 +160,24 @@ func TestFilterWithCEL(t *testing.T) {
 			filtered: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "cond.justTrue")},
 			},
-			err: "",
+			pathFilteredIndex: map[string][]int{},
+			err:               "",
 		},
 		{
 			name: "invalid CEL annotation",
 			pathObjectMap: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "fals")},
 			},
-			tmplCtx:       nil,
-			condFiltering: &manifests.PackageManifestConditionalFiltering{},
+			tmplCtx:       packagetypes.PackageRenderContext{},
+			condFiltering: manifests.PackageManifestConditionalFiltering{},
 			filtered:      nil,
 			err:           string(packagetypes.ViolationReasonInvalidCELExpression),
 		},
 		{
 			name:          "invalid condition expression",
 			pathObjectMap: nil,
-			tmplCtx:       nil,
-			condFiltering: &manifests.PackageManifestConditionalFiltering{
+			tmplCtx:       packagetypes.PackageRenderContext{},
+			condFiltering: manifests.PackageManifestConditionalFiltering{
 				NamedConditions: []manifests.PackageManifestNamedCondition{
 					{Name: "invalid", Expression: "fals"},
 				},
@@ -181,8 +188,8 @@ func TestFilterWithCEL(t *testing.T) {
 		{
 			name:          "invalid conditional path expression",
 			pathObjectMap: nil,
-			tmplCtx:       nil,
-			condFiltering: &manifests.PackageManifestConditionalFiltering{
+			tmplCtx:       packagetypes.PackageRenderContext{},
+			condFiltering: manifests.PackageManifestConditionalFiltering{
 				ConditionalPaths: []manifests.PackageManifestConditionalPath{
 					{Glob: "invalid", Expression: "fals"},
 				},
@@ -194,10 +201,11 @@ func TestFilterWithCEL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := filterWithCEL(tc.pathObjectMap, tc.condFiltering, tc.tmplCtx)
+			pathFilteredIndex, err := filterWithCEL(tc.pathObjectMap, tc.condFiltering, tc.tmplCtx)
 			if tc.err == "" {
 				require.NoError(t, err)
 				assert.True(t, reflect.DeepEqual(tc.pathObjectMap, tc.filtered))
+				assert.Equal(t, tc.pathFilteredIndex, pathFilteredIndex)
 			} else {
 				require.ErrorContains(t, err, tc.err)
 			}
@@ -211,7 +219,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 	for _, tc := range []struct {
 		name             string
 		conditionalPaths []manifests.PackageManifestConditionalPath
-		tmplCtx          *packagetypes.PackageRenderContext
+		tmplCtx          packagetypes.PackageRenderContext
 		conditions       []manifests.PackageManifestNamedCondition
 		result           []string
 		err              error
@@ -219,7 +227,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 		{
 			name:             "no paths",
 			conditionalPaths: nil,
-			tmplCtx:          nil,
+			tmplCtx:          packagetypes.PackageRenderContext{},
 			conditions:       nil,
 			result:           []string{},
 			err:              nil,
@@ -236,7 +244,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 					Expression: "true",
 				},
 			},
-			tmplCtx:    nil,
+			tmplCtx:    packagetypes.PackageRenderContext{},
 			conditions: nil,
 			result:     []string{"banana*"},
 			err:        nil,
@@ -249,7 +257,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 					Expression: "notValid",
 				},
 			},
-			tmplCtx:    nil,
+			tmplCtx:    packagetypes.PackageRenderContext{},
 			conditions: nil,
 			result:     nil,
 			err:        ErrInvalidConditionalPathsExpression,
@@ -266,7 +274,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 					Expression: "cond.justTrue",
 				},
 			},
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "bread"},
 				Images:      nil,
@@ -283,7 +291,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 			cc, err := celctx.New(tc.conditions, tc.tmplCtx)
 			require.NoError(t, err)
 
-			ignoredPaths, err := computeIgnoredPaths(tc.conditionalPaths, &cc)
+			ignoredPaths, err := computeIgnoredPaths(tc.conditionalPaths, cc)
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

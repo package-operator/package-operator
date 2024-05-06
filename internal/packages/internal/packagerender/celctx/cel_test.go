@@ -15,7 +15,7 @@ import (
 )
 
 func mockUnpack(unpacked map[string]any, opts []cel.EnvOption, err error) unpackContextFn {
-	return func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
+	return func(packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
 		return unpacked, opts, err
 	}
 }
@@ -35,7 +35,7 @@ func Test_newCelCtx(t *testing.T) {
 		name        string
 		expression  string
 		conditions  []manifests.PackageManifestNamedCondition
-		tmplCtx     *packagetypes.PackageRenderContext
+		tmplCtx     packagetypes.PackageRenderContext
 		unpack      unpackContextFn
 		newEnv      newEnvFn
 		errContains string
@@ -46,7 +46,7 @@ func Test_newCelCtx(t *testing.T) {
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "foo"},
 				Images:      nil,
@@ -62,7 +62,7 @@ func Test_newCelCtx(t *testing.T) {
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana "foo"`},
 			},
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "foo"},
 				Images:      nil,
@@ -78,7 +78,7 @@ func Test_newCelCtx(t *testing.T) {
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "1ustTrue", Expression: "true"},
 			},
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			unpack:      unpackContext,
 			newEnv:      cel.NewEnv,
 			errContains: ErrInvalidCELConditionName.Error(),
@@ -90,7 +90,7 @@ func Test_newCelCtx(t *testing.T) {
 				{Name: "justTrue", Expression: "true"},
 				{Name: "justTrue", Expression: "false"},
 			},
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			unpack:      unpackContext,
 			newEnv:      cel.NewEnv,
 			errContains: ErrDuplicateCELConditionName.Error(),
@@ -99,7 +99,7 @@ func Test_newCelCtx(t *testing.T) {
 			name:       "fail unpack",
 			expression: "true",
 			conditions: nil,
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      nil,
 				Images:      nil,
@@ -113,7 +113,7 @@ func Test_newCelCtx(t *testing.T) {
 			name:        "fail newEnv",
 			expression:  "true",
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			unpack:      unpackContext,
 			newEnv:      mockNewEnv(nil, errMock),
 			errContains: ErrEnvCreation.Error(),
@@ -159,7 +159,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 		envProgram  envProgramFn
 		programEval programEvalFn
 		conditions  []manifests.PackageManifestNamedCondition
-		tmplCtx     *packagetypes.PackageRenderContext
+		tmplCtx     packagetypes.PackageRenderContext
 		expected    bool
 		err         string
 	}{
@@ -170,7 +170,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    true,
 			err:         "",
 		},
@@ -180,7 +180,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    false,
 			err:         "",
 		},
@@ -190,7 +190,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    false,
 			err:         ErrExpressionCompilation.Error(),
 		},
@@ -200,7 +200,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    false,
 			err:         ErrInvalidReturnType.Error(),
 		},
@@ -211,7 +211,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			expression:  `config.banana == "bread"`,
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "bread"},
 				Images:      nil,
@@ -225,7 +225,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			expression:  "has(.environment.hyperShift)",
 			envProgram:  defaultEnvProgram(),
 			programEval: defaultProgramEval(),
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package: manifests.TemplateContextPackage{},
 				Config:  nil,
 				Images:  nil,
@@ -255,7 +255,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			conditions: []manifests.PackageManifestNamedCondition{
 				{Name: "isFoo", Expression: `.config.banana == "foo"`},
 			},
-			tmplCtx: &packagetypes.PackageRenderContext{
+			tmplCtx: packagetypes.PackageRenderContext{
 				Package:     manifests.TemplateContextPackage{},
 				Config:      map[string]any{"banana": "foo"},
 				Images:      nil,
@@ -270,7 +270,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  mockEnvProgram(true),
 			programEval: defaultProgramEval(),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    false,
 			err:         ErrProgramConstruction.Error(),
 		},
@@ -280,7 +280,7 @@ func Test_celCtx_evaluate(t *testing.T) {
 			envProgram:  defaultEnvProgram(),
 			programEval: mockProgramEval(true),
 			conditions:  nil,
-			tmplCtx:     nil,
+			tmplCtx:     packagetypes.PackageRenderContext{},
 			expected:    false,
 			err:         ErrProgramEvaluation.Error(),
 		},
