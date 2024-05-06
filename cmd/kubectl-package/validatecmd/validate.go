@@ -53,6 +53,8 @@ func NewCmd(validator Validator) *cobra.Command {
 			return fmt.Errorf("validating package: %w", err)
 		}
 
+		fmt.Fprintln(cmd.OutOrStdout(), "Package validated successfully!")
+
 		return nil
 	}
 
