@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,6 +130,20 @@ func TestManager_Init_OpenShift(t *testing.T) {
 			}
 		}).
 		Return(nil)
+	c.
+		On(
+			"Get", mock.Anything, mock.Anything,
+			mock.AnythingOfType("*v1.ConfigMap"), mock.Anything,
+		).
+		Run(func(args mock.Arguments) {
+			cm := args.Get(2).(*corev1.ConfigMap)
+			*cm = corev1.ConfigMap{
+				Data: map[string]string{
+					"test": "test123",
+				},
+			}
+		}).
+		Return(nil)
 	rm.
 		On("RESTMapping", mock.Anything, mock.Anything).
 		Return(&meta.RESTMapping{}, nil)
@@ -146,6 +161,11 @@ func TestManager_Init_OpenShift(t *testing.T) {
 		},
 		OpenShift: &manifests.PackageEnvironmentOpenShift{
 			Version: "v123",
+			Managed: &manifests.PackageEnvironmentManagedOpenShift{
+				Data: map[string]string{
+					"test": "test123",
+				},
+			},
 		},
 		HyperShift: &manifests.PackageEnvironmentHyperShift{},
 		Proxy: &manifests.PackageEnvironmentProxy{

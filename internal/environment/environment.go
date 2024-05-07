@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
+	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,6 +30,10 @@ const (
 	environmentProbeInterval    = 1 * time.Minute
 	openShiftClusterVersionName = "version"
 	openShiftProxyName          = "cluster"
+
+	// Special ConfigMap describing a managed OpenShift cluster.
+	managedOpenShiftCMName      = "osd-cluster-metadata"
+	managedOpenShiftCMNamespace = "openshift-config"
 )
 
 type Sinker interface {
@@ -63,7 +68,7 @@ type Manager struct {
 }
 
 func NewManager(
-	client client.Client,
+	client client.Client, // should be of the uncached variety
 	discoveryClient serverVersionDiscoverer,
 	restMapper restMapper,
 ) *Manager {
@@ -187,9 +192,16 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 		}
 	}
 
-	return &manifests.PackageEnvironmentOpenShift{
+	openShiftEnv = &manifests.PackageEnvironmentOpenShift{
 		Version: openShiftVersion,
-	}, true, nil
+	}
+	if managedOpenShift, isManagedOpenShift, err := m.managedOpenShiftEnvironment(ctx); err != nil {
+		return nil, false, err
+	} else if isManagedOpenShift {
+		openShiftEnv.Managed = managedOpenShift
+	}
+
+	return openShiftEnv, true, nil
 }
 
 func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
@@ -222,6 +234,28 @@ func (m *Manager) openShiftProxyEnvironment(ctx context.Context) (
 		HTTPProxy:  httpProxy,
 		HTTPSProxy: httpsProxy,
 		NoProxy:    noProxy,
+	}, true, nil
+}
+
+func (m *Manager) managedOpenShiftEnvironment(ctx context.Context) (
+	managedOpenShift *manifests.PackageEnvironmentManagedOpenShift,
+	isManagedOpenShift bool,
+	err error,
+) {
+	cm := &corev1.ConfigMap{}
+	err = m.client.Get(ctx, client.ObjectKey{
+		Name:      managedOpenShiftCMName,
+		Namespace: managedOpenShiftCMNamespace,
+	}, cm)
+	if apimachineryerrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf(
+			"getting managed OpenShift ConfigMap: %w", err)
+	}
+	return &manifests.PackageEnvironmentManagedOpenShift{
+		Data: cm.Data,
 	}, true, nil
 }
 
