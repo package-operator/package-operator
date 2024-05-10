@@ -31,7 +31,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -76,7 +76,7 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 		pkg     []*packagetypes.RawPackage
 		pkgLock sync.Mutex
 	)
-	for i := 0; i < numRequests; i++ {
+	for range numRequests {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

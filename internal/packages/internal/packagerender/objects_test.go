@@ -103,7 +103,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 			if tc.err == "" {
 				require.NoError(t, err)
 				require.Equal(t, len(tc.filtered), len(filtered))
-				for i := 0; i < len(filtered); i++ {
+				for i := range len(filtered) {
 					assert.Equal(t, tc.filtered[i], filtered[i])
 				}
 			} else {
