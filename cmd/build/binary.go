@@ -40,7 +40,7 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 	dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", cmd, goos, goarch))
 
 	ldflags := []string{
-		"-buildid=",
+		"-w", "-buildid=",
 		"--extldflags", "'-zrelro -znow -O1'",
 		"-X", fmt.Sprintf("'package-operator.run/internal/version.version=%s'", appVersion),
 	}
