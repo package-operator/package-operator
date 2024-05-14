@@ -1256,61 +1256,62 @@ metadata:
   name: example
   namespace: default
 spec:
-  availabilityProbes:
-  - corev1alpha1.ObjectSetProbe
-  components: PackageManifestComponentsConfig
-  conditionalFiltering:
-    conditionalPaths:
-    - expression: elitr
-      glob: sadipscing
-    namedConditions:
-    - expression: consetetur
-      name: amet
+  availabilityProbes: []
+  components: {}
   config:
-    openAPIV3Schema: apiextensionsv1.JSONSchemaProps
+    openAPIV3Schema:
+      properties:
+        testProp:
+          type: string
+      type: object
+  filter:
+    conditions:
+    - expression: has(environment.openShift)
+      name: isOpenShift
+    paths:
+    - expression: isOpenShift && environment.openShift.version.startsWith('4.15')
+      glob: openshift/v4.15/**
   images:
-  - image: sit
-    name: dolor
+  - image: quay.io/package-operator/test-stub:v1.11.0
+    name: test-stub
   phases:
-  - class: ipsum
-    name: lorem
+  - class: hosted-cluster
+    name: deploy
   scopes:
-  - PackageManifestScope
+  - Cluster
+  - Namespaced
 test:
   kubeconform:
-    kubernetesVersion: elitr
+    kubernetesVersion: v1.29.5
     schemaLocations:
-    - sed
+    - https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json
   template:
   - context:
-      config: runtime.RawExtension
+      config:
+        testProp: Hans
       environment:
         hyperShift:
           hostedCluster:
-            hostedClusterNamespace: sadipscing
+            hostedClusterNamespace: clusters-banana
             metadata:
-              annotations: map[string]string
-              labels: map[string]string
-              name: amet
-              namespace: consetetur
+              name: banana
+              namespace: clusters
         kubernetes:
-          version: tempor
+          version: v1.29.5
         openShift:
           managed:
-            data: map[string]string
-          version: lorem
+            data:
+              test: test
+          version: v4.13.2
         proxy:
-          httpProxy: ipsum
-          httpsProxy: dolor
-          noProxy: sit
+          httpProxy: http://proxy_server_address:port
+          httpsProxy: https://proxy_server_address:port
+          noProxy: .example.com,.local,localhost
       package:
-        image: eirmod
+        image: quay.io/package-operator/test-stub-package:v1.11.0
         metadata:
-          annotations: map[string]string
-          labels: map[string]string
-          name: diam
-          namespace: nonumy
-    name: sed
+          name: test
+    name: lorem
 
 ```
 
@@ -1337,9 +1338,9 @@ metadata:
   namespace: default
 spec:
   images:
-  - digest: eirmod
-    image: nonumy
-    name: diam
+  - digest: sit
+    image: dolor
+    name: ipsum
 
 ```
 
@@ -1458,33 +1459,18 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
-### PackageManifestConditionalFiltering
+### PackageManifestFilter
 
-PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
+PackageManifestFilter is used to conditionally render objects based on CEL expressions.
 
 | Field | Description |
 | ----- | ----------- |
-| `namedConditions` <br><a href="#packagemanifestnamedcondition">[]PackageManifestNamedCondition</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
-| `conditionalPaths` <br><a href="#packagemanifestconditionalpath">[]PackageManifestConditionalPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object is ignored. |
+| `conditions` <br><a href="#packagemanifestnamedcondition">[]PackageManifestNamedCondition</a> | Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.<br>They are evaluated once per package. |
+| `paths` <br><a href="#packagemanifestpath">[]PackageManifestPath</a> | Adds CEL conditions to file system paths matching a glob pattern.<br>If a single condition matching a file system object's path evaluates to false,<br>the object is ignored. |
 
 
 Used in:
 * [PackageManifestSpec](#packagemanifestspec)
-
-
-### PackageManifestConditionalPath
-
-PackageManifestConditionalPath is used to conditionally
-render package objects based on their path.
-
-| Field | Description |
-| ----- | ----------- |
-| `glob` <b>required</b><br>string | A file system path glob pattern.<br>Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match |
-| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context and named conditions. |
-
-
-Used in:
-* [PackageManifestConditionalFiltering](#packagemanifestconditionalfiltering)
 
 
 ### PackageManifestImage
@@ -1542,7 +1528,22 @@ and its value is set to the result of Expression ("true"/"false").
 
 
 Used in:
-* [PackageManifestConditionalFiltering](#packagemanifestconditionalfiltering)
+* [PackageManifestFilter](#packagemanifestfilter)
+
+
+### PackageManifestPath
+
+PackageManifestPath is used to conditionally
+render package objects based on their path.
+
+| Field | Description |
+| ----- | ----------- |
+| `glob` <b>required</b><br>string | A file system path glob pattern.<br>Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match |
+| `expression` <b>required</b><br>string | A CEL expression with a boolean output type.<br>Has access to the full template context and named conditions. |
+
+
+Used in:
+* [PackageManifestFilter](#packagemanifestfilter)
 
 
 ### PackageManifestPhase
@@ -1572,7 +1573,7 @@ details about phases and availability probes.
 | `config` <br><a href="#packagemanifestspecconfig">PackageManifestSpecConfig</a> | Configuration specification. |
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
-| `conditionalFiltering` <br><a href="#packagemanifestconditionalfiltering">PackageManifestConditionalFiltering</a> | Used to conditionally render objects based on CEL expressions. |
+| `filter` <br><a href="#packagemanifestfilter">PackageManifestFilter</a> | Used to filter objects and files based on CEL expressions. |
 
 
 Used in:

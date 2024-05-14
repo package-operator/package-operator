@@ -124,7 +124,7 @@ func TestFilterWithCEL(t *testing.T) {
 		name              string
 		pathObjectMap     map[string][]unstructured.Unstructured
 		tmplCtx           packagetypes.PackageRenderContext
-		condFiltering     manifests.PackageManifestConditionalFiltering
+		condFiltering     manifests.PackageManifestFilter
 		filtered          map[string][]unstructured.Unstructured
 		pathFilteredIndex map[string][]int
 		err               string
@@ -135,7 +135,7 @@ func TestFilterWithCEL(t *testing.T) {
 				"a": {newConfigMap("a", "")},
 			},
 			tmplCtx:       packagetypes.PackageRenderContext{},
-			condFiltering: manifests.PackageManifestConditionalFiltering{},
+			condFiltering: manifests.PackageManifestFilter{},
 			filtered: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "")},
 			},
@@ -149,11 +149,11 @@ func TestFilterWithCEL(t *testing.T) {
 				"b": {newConfigMap("b", "true")},
 			},
 			tmplCtx: packagetypes.PackageRenderContext{},
-			condFiltering: manifests.PackageManifestConditionalFiltering{
-				NamedConditions: []manifests.PackageManifestNamedCondition{
+			condFiltering: manifests.PackageManifestFilter{
+				Conditions: []manifests.PackageManifestNamedCondition{
 					{Name: "justTrue", Expression: "true"},
 				},
-				ConditionalPaths: []manifests.PackageManifestConditionalPath{
+				Paths: []manifests.PackageManifestPath{
 					{Glob: "b", Expression: "!cond.justTrue"},
 				},
 			},
@@ -169,7 +169,7 @@ func TestFilterWithCEL(t *testing.T) {
 				"a": {newConfigMap("a", "fals")},
 			},
 			tmplCtx:       packagetypes.PackageRenderContext{},
-			condFiltering: manifests.PackageManifestConditionalFiltering{},
+			condFiltering: manifests.PackageManifestFilter{},
 			filtered:      nil,
 			err:           string(packagetypes.ViolationReasonInvalidCELExpression),
 		},
@@ -177,8 +177,8 @@ func TestFilterWithCEL(t *testing.T) {
 			name:          "invalid condition expression",
 			pathObjectMap: nil,
 			tmplCtx:       packagetypes.PackageRenderContext{},
-			condFiltering: manifests.PackageManifestConditionalFiltering{
-				NamedConditions: []manifests.PackageManifestNamedCondition{
+			condFiltering: manifests.PackageManifestFilter{
+				Conditions: []manifests.PackageManifestNamedCondition{
 					{Name: "invalid", Expression: "fals"},
 				},
 			},
@@ -189,8 +189,8 @@ func TestFilterWithCEL(t *testing.T) {
 			name:          "invalid conditional path expression",
 			pathObjectMap: nil,
 			tmplCtx:       packagetypes.PackageRenderContext{},
-			condFiltering: manifests.PackageManifestConditionalFiltering{
-				ConditionalPaths: []manifests.PackageManifestConditionalPath{
+			condFiltering: manifests.PackageManifestFilter{
+				Paths: []manifests.PackageManifestPath{
 					{Glob: "invalid", Expression: "fals"},
 				},
 			},
@@ -218,7 +218,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 
 	for _, tc := range []struct {
 		name             string
-		conditionalPaths []manifests.PackageManifestConditionalPath
+		conditionalPaths []manifests.PackageManifestPath
 		tmplCtx          packagetypes.PackageRenderContext
 		conditions       []manifests.PackageManifestNamedCondition
 		result           []string
@@ -234,7 +234,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 		},
 		{
 			name: "simple paths",
-			conditionalPaths: []manifests.PackageManifestConditionalPath{
+			conditionalPaths: []manifests.PackageManifestPath{
 				{
 					Glob:       "banana*",
 					Expression: "false",
@@ -251,7 +251,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 		},
 		{
 			name: "invalid expression",
-			conditionalPaths: []manifests.PackageManifestConditionalPath{
+			conditionalPaths: []manifests.PackageManifestPath{
 				{
 					Glob:       "bananas/**",
 					Expression: "notValid",
@@ -264,7 +264,7 @@ func TestComputeIgnoredPaths(t *testing.T) {
 		},
 		{
 			name: "use context and conditions",
-			conditionalPaths: []manifests.PackageManifestConditionalPath{
+			conditionalPaths: []manifests.PackageManifestPath{
 				{
 					Glob:       "ignored",
 					Expression: ".config.banana == \"notBread\"",

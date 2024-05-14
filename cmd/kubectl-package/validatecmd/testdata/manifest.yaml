@@ -21,11 +21,11 @@ spec:
       kind:
         group: apps
         kind: Deployment
-  conditionalFiltering:
-    conditionalPaths:
+  filter:
+    paths:
     - expression: cond.global_false
       glob: cel-excluded-by-glob.yaml
-    namedConditions:
+    conditions:
     - expression: 'false'
       name: global_false
 test:
