@@ -40,5 +40,5 @@ func SplitYAMLDocuments(file []byte) (docs [][]byte) {
 
 // Joins multiple YAML documents together.
 func JoinYAMLDocuments(documents [][]byte) []byte {
-	return append(bytes.Join(documents, []byte("---\n")), []byte("\n")...)
+	return append(bytes.Join(documents, []byte("\n---\n")), []byte("\n")...)
 }

@@ -3,6 +3,7 @@ package packagevalidation
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -134,4 +135,32 @@ func Test_generateStaticImages(t *testing.T) {
 		"t1": staticImage,
 		"t2": staticImage,
 	}, staticImages)
+}
+
+func Test_renderTemplateFiles(t *testing.T) {
+	t.Parallel()
+	path, err := os.MkdirTemp(os.TempDir(), "pko-test-renderTemplateFiles")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, os.RemoveAll(path))
+	}()
+
+	files := packagetypes.Files{
+		"test.yaml":  []byte("test: xxx\n---\ntest: yyy\n---\ntest: zzz\n"),
+		"test2.yaml": []byte("test: xxx"),
+	}
+	filteredIndexMap := map[string][]int{
+		"test.yaml":  {1},
+		"test2.yaml": {0},
+	}
+
+	err = renderTemplateFiles(path, files, filteredIndexMap)
+	require.NoError(t, err)
+
+	testContent, err := os.ReadFile(filepath.Join(path, "test.yaml"))
+	require.NoError(t, err)
+	assert.Equal(t, "test: xxx\n---\ntest: zzz\n", string(testContent))
+
+	_, err = os.ReadFile(filepath.Join(path, "test2.yaml"))
+	require.True(t, os.IsNotExist(err), "test2.yaml does not exist")
 }
