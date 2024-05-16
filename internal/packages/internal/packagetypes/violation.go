@@ -64,6 +64,7 @@ const (
 	ViolationReasonPackageManifestLockDuplicated ViolationReason = "PackageManifestLock present multiple times"
 	ViolationReasonInvalidYAML                   ViolationReason = "Invalid YAML"
 	ViolationReasonMissingPhaseAnnotation        ViolationReason = "Missing " + manifests.PackagePhaseAnnotation + " Annotation" //nolint: lll
+	ViolationReasonPhaseNotFound                 ViolationReason = "Phase name not found in manifest"                            //nolint: lll
 	ViolationReasonMissingGVK                    ViolationReason = "GroupVersionKind not set"
 	ViolationReasonDuplicateObject               ViolationReason = "Duplicate Object"
 	ViolationReasonLabelsInvalid                 ViolationReason = "Labels invalid"

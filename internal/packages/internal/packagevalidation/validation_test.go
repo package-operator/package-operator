@@ -10,6 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"package-operator.run/internal/apis/manifests"
@@ -157,6 +158,56 @@ func TestPackageScopeValidator(t *testing.T) {
 				require.EqualError(t, err, "Package unsupported scope in manifest.yaml")
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPackageStaticFilesWithoutTestCasesValidator(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		pkg  *packagetypes.Package
+		err  string
+	}{
+		{
+			name: "with test cases",
+			pkg: &packagetypes.Package{
+				Manifest: &manifests.PackageManifest{
+					Test: manifests.PackageManifestTest{
+						Template: []manifests.PackageManifestTestCaseTemplate{
+							{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "without test cases",
+			pkg: &packagetypes.Package{
+				Manifest: &manifests.PackageManifest{},
+				Files: packagetypes.Files{
+					"test.yaml": []byte("test: xxx\n"),
+				},
+			},
+			err: `loading package from files: Invalid YAML ` +
+				`in test.yaml idx 0: error unmarshaling JSON: ` +
+				`while decoding JSON: Object 'Kind' is missing in '{"test":"xxx"}'` +
+				"\ntest: xxx",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			v := &PackageStaticFilesWithoutTestCasesValidator{}
+			ctx := context.Background()
+			err := v.ValidatePackage(ctx, test.pkg)
+			if len(test.err) == 0 {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, test.err)
 			}
 		})
 	}

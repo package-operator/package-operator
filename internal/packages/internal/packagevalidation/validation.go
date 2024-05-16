@@ -3,13 +3,14 @@ package packagevalidation
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
-
-	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
+	"package-operator.run/internal/packages/internal/packagerender"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -20,6 +21,7 @@ var DefaultPackageValidators = PackageValidatorList{
 		validatePackageManifestLock: packagemanifestvalidation.ValidatePackageManifestLock,
 	},
 	&LockfileConsistencyValidator{},
+	&PackageStaticFilesWithoutTestCasesValidator{},
 }
 
 // PackageValidatorList runs a list of validators and joins all errors.
@@ -72,5 +74,25 @@ func (scope PackageScopeValidator) ValidatePackage(_ context.Context, pkg *packa
 		}
 	}
 
+	return nil
+}
+
+// Validates static files if no test-cases are defined.
+type PackageStaticFilesWithoutTestCasesValidator struct{}
+
+func (v PackageStaticFilesWithoutTestCasesValidator) ValidatePackage(
+	ctx context.Context, pkg *packagetypes.Package,
+) error {
+	if len(pkg.Manifest.Test.Template) != 0 {
+		return nil
+	}
+
+	// Call render objects to validate all static objects.
+	if _, err := packagerender.RenderObjects(
+		ctx, pkg, packagetypes.PackageRenderContext{},
+		DefaultObjectValidators,
+	); err != nil {
+		return fmt.Errorf("loading package from files: %w", err)
+	}
 	return nil
 }

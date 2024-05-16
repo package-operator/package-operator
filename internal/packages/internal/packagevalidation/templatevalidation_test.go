@@ -3,12 +3,14 @@ package packagevalidation
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
@@ -50,6 +52,14 @@ func TestTemplateTestValidator(t *testing.T) {
 	}()
 
 	packageManifest := &manifests.PackageManifest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pkg",
+		},
+		Spec: manifests.PackageManifestSpec{
+			Phases: []manifests.PackageManifestPhase{
+				{Name: "tesxx"},
+			},
+		},
 		Test: manifests.PackageManifestTest{
 			Template: []manifests.PackageManifestTestCaseTemplate{
 				{
@@ -72,7 +82,8 @@ func TestTemplateTestValidator(t *testing.T) {
 	ttv := NewTemplateTestValidator(validatorPath)
 
 	originalFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1Content),
+		"file2.yaml.gotmpl": []byte(testFile2Content),
+		"file.yaml.gotmpl":  []byte(testFile1Content),
 	}
 	originalPkg := &packagetypes.Package{
 		Manifest: packageManifest,
@@ -83,9 +94,10 @@ func TestTemplateTestValidator(t *testing.T) {
 
 	// Assert Fixtures have been setup
 	newFileMap := packagetypes.Files{
-		"file2.yaml.gotmpl": []byte(testFile2Content), "file.yaml.gotmpl": []byte(testFile1UpdatedContent),
+		"file2.yaml.gotmpl": []byte(testFile2Content),
+		"file.yaml.gotmpl":  []byte(testFile1UpdatedContent),
 	}
-	expectedErr := `File mismatch against fixture in file.yaml.gotmpl: Testcase "t1"
+	expectedErr := `File mismatch against fixture in file.yaml: Testcase "t1"
 --- FIXTURE/file.yaml
 +++ ACTUAL/file.yaml
 @@ -4,4 +4,4 @@
@@ -123,4 +135,32 @@ func Test_generateStaticImages(t *testing.T) {
 		"t1": staticImage,
 		"t2": staticImage,
 	}, staticImages)
+}
+
+func Test_renderTemplateFiles(t *testing.T) {
+	t.Parallel()
+	path, err := os.MkdirTemp(os.TempDir(), "pko-test-renderTemplateFiles")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, os.RemoveAll(path))
+	}()
+
+	files := packagetypes.Files{
+		"test.yaml":  []byte("test: xxx\n---\ntest: yyy\n---\ntest: zzz\n"),
+		"test2.yaml": []byte("test: xxx"),
+	}
+	filteredIndexMap := map[string][]int{
+		"test.yaml":  {1},
+		"test2.yaml": {0},
+	}
+
+	err = renderTemplateFiles(path, files, filteredIndexMap)
+	require.NoError(t, err)
+
+	testContent, err := os.ReadFile(filepath.Join(path, "test.yaml"))
+	require.NoError(t, err)
+	assert.Equal(t, "test: xxx\n---\ntest: zzz\n", string(testContent))
+
+	_, err = os.ReadFile(filepath.Join(path, "test2.yaml"))
+	require.True(t, os.IsNotExist(err), "test2.yaml does not exist")
 }

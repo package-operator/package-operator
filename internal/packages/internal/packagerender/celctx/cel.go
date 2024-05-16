@@ -30,7 +30,7 @@ var (
 
 // Types used to mock outside functionality for unit tests.
 type (
-	unpackContextFn func(*packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error)
+	unpackContextFn func(packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error)
 	newEnvFn        func(...cel.EnvOption) (*cel.Env, error)
 	envProgramFn    func(*cel.Env, *cel.Ast) (cel.Program, error)
 	programEvalFn   func(cel.Program, any) (ref.Val, *cel.EvalDetails, error)
@@ -45,28 +45,28 @@ type CelCtx struct {
 // New pre-evaluates the given named conditions against tmplCtx
 // and exposes both tmplCtx + named condition results to cel programs.
 func New(conditions []manifests.PackageManifestNamedCondition,
-	tmplCtx *packagetypes.PackageRenderContext,
-) (CelCtx, error) {
+	tmplCtx packagetypes.PackageRenderContext,
+) (*CelCtx, error) {
 	return newCelCtx(conditions, tmplCtx, unpackContext, cel.NewEnv)
 }
 
 func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
-	tmplCtx *packagetypes.PackageRenderContext,
+	tmplCtx packagetypes.PackageRenderContext,
 	unpack unpackContextFn,
 	newEnv newEnvFn,
-) (CelCtx, error) {
+) (*CelCtx, error) {
 	ctxMap, opts, err := unpack(tmplCtx)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", ErrContextUnpack, err)
+		return nil, fmt.Errorf("%w: %w", ErrContextUnpack, err)
 	}
 
 	// create CEL environment with context
 	env, err := newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", ErrEnvCreation, err)
+		return nil, fmt.Errorf("%w: %w", ErrEnvCreation, err)
 	}
 
-	cc := CelCtx{
+	cc := &CelCtx{
 		env:    env,
 		ctxMap: ctxMap,
 	}
@@ -75,17 +75,17 @@ func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
 	for _, m := range conditions {
 		// make sure condition name is allowed
 		if !conditionNameRegexp.MatchString(m.Name) {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
+			return nil, fmt.Errorf("%w: '%s'", ErrInvalidCELConditionName, m.Name)
 		}
 
 		// make sure name is unique and does not shadow a key in conditionsMap
 		if _, ok := conditionsMap[m.Name]; ok {
-			return CelCtx{}, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
+			return nil, fmt.Errorf("%w: '%s'", ErrDuplicateCELConditionName, m.Name)
 		}
 
 		result, err := cc.Evaluate(m.Expression)
 		if err != nil {
-			return CelCtx{}, fmt.Errorf("%w: '%s': %w", ErrCELConditionEvaluation, m.Name, err)
+			return nil, fmt.Errorf("%w: '%s': %w", ErrCELConditionEvaluation, m.Name, err)
 		}
 
 		// store evaluation result in context
@@ -98,7 +98,7 @@ func newCelCtx(conditions []manifests.PackageManifestNamedCondition,
 	// recreate CEL environment with condition declarations
 	env, err = newEnv(opts...)
 	if err != nil {
-		return CelCtx{}, fmt.Errorf("%w: %w", ErrEnvCreation, err)
+		return nil, fmt.Errorf("%w: %w", ErrEnvCreation, err)
 	}
 	cc.env = env
 
@@ -149,11 +149,7 @@ func (cc *CelCtx) evaluate(expr string, envProgram envProgramFn, programEval pro
 	return out.Value().(bool), nil
 }
 
-func unpackContext(tmplCtx *packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
-	if tmplCtx == nil {
-		return map[string]any{}, []cel.EnvOption{}, nil
-	}
-
+func unpackContext(tmplCtx packagetypes.PackageRenderContext) (map[string]any, []cel.EnvOption, error) {
 	ctxMap, err := structToMap(tmplCtx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("context serialization error: %w", err)
@@ -163,12 +159,11 @@ func unpackContext(tmplCtx *packagetypes.PackageRenderContext) (map[string]any, 
 	for k := range ctxMap {
 		opts = append(opts, cel.Variable(k, cel.MapType(cel.StringType, cel.AnyType)))
 	}
-
 	return ctxMap, opts, nil
 }
 
-func structToMap[T any](p *T) (map[string]any, error) {
-	data, err := json.Marshal(*p)
+func structToMap[T any](p T) (map[string]any, error) {
+	data, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
 	}

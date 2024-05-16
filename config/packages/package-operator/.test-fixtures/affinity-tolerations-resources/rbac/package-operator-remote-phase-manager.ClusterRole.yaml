@@ -1,0 +1,42 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    package-operator.run/phase: rbac
+  name: package-operator-remote-phase-manager
+rules:
+- apiGroups:
+  - package-operator.run
+  resources:
+  - objectsetphases
+  - objectsetphases/status
+  - clusterobjectsetphases
+  - clusterobjectsetphases/status
+  - objectsets
+  - objectsets/status
+  - clusterobjectsets
+  - clusterobjectsets/status
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
