@@ -45,7 +45,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	sigs.k8s.io/controller-runtime v0.18.2
-	sigs.k8s.io/kind v0.22.0
+	sigs.k8s.io/kind v0.23.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
