@@ -90,7 +90,7 @@ require (
 	github.com/google/safetext v0.0.0-20240104143208-7a7d9b3d812f // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -145,8 +145,8 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
