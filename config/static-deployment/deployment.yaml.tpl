@@ -15,6 +15,10 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: package-operator
       containers:
       - name: manager
@@ -52,3 +56,8 @@ spec:
           requests:
             cpu: 100m
             memory: 300Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
