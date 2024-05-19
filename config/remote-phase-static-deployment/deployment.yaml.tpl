@@ -15,6 +15,10 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator-remote-phase-manager
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: package-operator-remote-phase-manager
       volumes:
       - name: kubeconfig
@@ -37,6 +41,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         # livenessProbe:
         #   httpGet:
         #     path: /healthz
