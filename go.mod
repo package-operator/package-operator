@@ -14,7 +14,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/disiqueira/gotree v1.0.0
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.17.8
 	github.com/google/go-containerregistry v0.19.1
