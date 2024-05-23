@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"package-operator.run/cmd/kubectl-package/buildcmd"
+	clustertreecmd "package-operator.run/cmd/kubectl-package/clustertreecmd"
 	"package-operator.run/cmd/kubectl-package/rolloutcmd"
 	"package-operator.run/cmd/kubectl-package/rootcmd"
 	"package-operator.run/cmd/kubectl-package/treecmd"
@@ -40,6 +41,12 @@ func ProvideTreeCmd(rendererFactory treecmd.RendererFactory) RootSubCommandResul
 		SubCommand: treecmd.NewCmd(
 			rendererFactory,
 		),
+	}
+}
+
+func ProvideClusterTreeCmd(clientFactory internalcmd.ClientFactory) RootSubCommandResult {
+	return RootSubCommandResult{
+		SubCommand: clustertreecmd.NewClusterTreeCmd(clientFactory),
 	}
 }
 

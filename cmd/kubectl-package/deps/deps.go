@@ -24,6 +24,7 @@ func constructors() []any {
 		ProvideIOStreams,
 		ProvideArgs,
 		ProvideTreeCmd,
+		ProvideClusterTreeCmd,
 		ProvideUpdateCmd,
 		ProvideValidateCmd,
 		ProvideBuildCmd,
