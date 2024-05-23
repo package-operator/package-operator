@@ -71,7 +71,6 @@ func RenderObjectsWithFilterInfo(
 	if err != nil {
 		return nil, nil, err
 	}
-
 	pathFilteredIndex, err = filterWithCEL(pathObject, pkg.Manifest.Spec.Filters, tmplCtx)
 	if err != nil {
 		return nil, nil, err
@@ -181,6 +180,7 @@ func filterWithCEL(
 		}
 		if exclude {
 			delete(pathObjectMap, path)
+			pathFilteredIndex[path] = nil
 			continue
 		}
 

@@ -20,10 +20,18 @@ func FromFolder(ctx context.Context, path string) (*packagetypes.RawPackage, err
 
 // Import a RawPackage from the given FileSystem.
 func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
-	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
 	files := packagetypes.Files{}
+	if err := fs.WalkDir(src, ".", walker(ctx, src, files)); err != nil {
+		return nil, fmt.Errorf("walk source dir: %w", err)
+	}
+	return &packagetypes.RawPackage{
+		Files: files,
+	}, nil
+}
 
-	walker := func(path string, entry fs.DirEntry, ioErr error) error {
+func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDirFunc {
+	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
+	return func(path string, entry fs.DirEntry, ioErr error) error {
 		switch {
 		case ioErr != nil:
 			return fmt.Errorf("access file %s: %w", path, ioErr)
@@ -37,7 +45,8 @@ func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 				return filepath.SkipDir
 			}
 
-		case entry.IsDir():
+		case entry.IsDir(),
+			entry.Type()&os.ModeSymlink == os.ModeSymlink:
 			// no special handling for directories
 
 		default:
@@ -51,11 +60,4 @@ func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 
 		return nil
 	}
-
-	if err := fs.WalkDir(src, ".", walker); err != nil {
-		return nil, fmt.Errorf("walk source dir: %w", err)
-	}
-	return &packagetypes.RawPackage{
-		Files: files,
-	}, nil
 }

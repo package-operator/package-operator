@@ -3,46 +3,18 @@ package packageimport
 import (
 	"context"
 	"testing"
-	"testing/fstest"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"package-operator.run/internal/packages/internal/packagetypes"
 )
-
-func TestFromFS(t *testing.T) {
-	t.Parallel()
-	ctx := logr.NewContext(context.Background(), testr.New(t))
-
-	allEntries := packagetypes.Files{
-		"manifest.yaml":        {5, 6},
-		"manifest.yml":         {7, 8},
-		"test/.dotdot":         {7, 8},
-		"test/.dotdot/.dot":    {7, 8},
-		"subdir/somethingelse": {9, 10},
-	}
-	validEntries := packagetypes.Files{
-		"manifest.yaml":        {5, 6},
-		"manifest.yml":         {7, 8},
-		"subdir/somethingelse": {9, 10},
-	}
-
-	memFS := fstest.MapFS{}
-	for k, v := range allEntries {
-		memFS[k] = &fstest.MapFile{Data: v}
-	}
-
-	rawPkg, err := FromFS(ctx, memFS)
-	require.NoError(t, err)
-	assert.Equal(t, validEntries, rawPkg.Files)
-}
 
 func TestFromFolder(t *testing.T) {
 	t.Parallel()
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(context.Background(), testr.NewWithOptions(t, testr.Options{
+		Verbosity: 99,
+	}))
 
 	rawPkg, err := FromFolder(ctx, "testdata/fs")
 	require.NoError(t, err)

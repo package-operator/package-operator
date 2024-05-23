@@ -1269,7 +1269,7 @@ spec:
     - expression: has(environment.openShift)
       name: isOpenShift
     paths:
-    - expression: isOpenShift && environment.openShift.version.startsWith('4.15')
+    - expression: cond.isOpenShift && environment.openShift.version.startsWith('4.15')
       glob: openshift/v4.15/**
   images:
   - image: quay.io/package-operator/test-stub:v1.11.0

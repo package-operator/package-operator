@@ -123,7 +123,7 @@ type PackageManifestPath struct {
 	Glob string `json:"glob"`
 	// A CEL expression with a boolean output type.
 	// Has access to the full template context and named conditions.
-	// +example=isOpenShift && environment.openShift.version.startsWith('4.15')
+	// +example=cond.isOpenShift && environment.openShift.version.startsWith('4.15')
 	Expression string `json:"expression"`
 }
 

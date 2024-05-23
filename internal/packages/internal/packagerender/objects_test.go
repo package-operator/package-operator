@@ -160,8 +160,10 @@ func TestFilterWithCEL(t *testing.T) {
 			filtered: map[string][]unstructured.Unstructured{
 				"a": {newConfigMap("a", "cond.justTrue")},
 			},
-			pathFilteredIndex: map[string][]int{},
-			err:               "",
+			pathFilteredIndex: map[string][]int{
+				"b": nil,
+			},
+			err: "",
 		},
 		{
 			name: "invalid CEL annotation",
