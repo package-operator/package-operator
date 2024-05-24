@@ -31,7 +31,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.20.0
 	k8s.io/api v0.30.1
-	k8s.io/apiextensions-apiserver v0.30.0
+	k8s.io/apiextensions-apiserver v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/apiserver v0.30.1
 	k8s.io/client-go v0.30.1
@@ -44,7 +44,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
-	sigs.k8s.io/controller-runtime v0.18.2
+	sigs.k8s.io/controller-runtime v0.18.3
 	sigs.k8s.io/kind v0.23.0
 	sigs.k8s.io/yaml v1.4.0
 )
