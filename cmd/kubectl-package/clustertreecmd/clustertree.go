@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
 	internalcmd "package-operator.run/internal/cmd"
 )
 
@@ -34,12 +33,46 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("clusterwide is enabled")
+		//opts.Namespace so use this when package
+		clientL, err := clientFactory.Client()
+		switch strings.ToLower(args.Resource) {
+		case "clusterpackage":
+			Package, err := clientL.GetPackage(cmd.Context(), string(args.Name))
+			if err != nil {
+				return err
+			}
+			tree, err := handleClusterPackage(clientL, Package, cmd)
+			if err != nil {
+				return err
+			}
+			//fmt.Println(tree)
+			_, err = fmt.Fprint(cmd.OutOrStdout(), tree)
+			if err != nil {
+				return err
+			}
 
-		fmt.Println(args)
-		//client, err := clientFactory.Client()
-		if err != nil {
-			return err
+		case "package":
+			if opts.Namespace == "" {
+				return errors.New("--namespace is required as its a namespaced Resource type")
+			}
+			ns := opts.Namespace
+			Package, err := clientL.GetPackage(cmd.Context(), string(args.Name), internalcmd.WithNamespace(ns))
+
+			if err != nil {
+				return err
+			}
+			tree, err := handlePackage(clientL, Package, cmd)
+			if err != nil {
+				return err
+			}
+			//fmt.Println(tree) // this has to be removed as in below step we are redirecting the output
+			_, err = fmt.Fprint(cmd.OutOrStdout(), tree)
+			if err != nil {
+				return err
+			}
+
+		default:
+			return errInvalidResourceType
 		}
 		return nil
 	}
@@ -47,7 +80,7 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 	return cmd
 }
 
-var errRevisionsNotFound = errors.New("revision not found")
+var errInvalidResourceType = errors.New("invalid resource type")
 
 func getArgs(args []string) (*arguments, error) {
 	switch len(args) {
@@ -84,8 +117,6 @@ type arguments struct {
 
 type options struct {
 	Namespace string
-	Output    string
-	Revision  int64
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
@@ -95,18 +126,5 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		"n",
 		o.Namespace,
 		"If present, the namespace scope for this CLI request",
-	)
-	flags.StringVarP(
-		&o.Output,
-		"output",
-		"o",
-		o.Output,
-		"Output format. One of: json|yaml",
-	)
-	flags.Int64Var(
-		&o.Revision,
-		"revision",
-		o.Revision,
-		"See the details, including object set of the revision specified",
 	)
 }

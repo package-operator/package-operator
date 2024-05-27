@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,69 @@ func NewClient(client client.Client) *Client {
 
 type Client struct {
 	client client.Client
+}
+
+func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*corev1alpha1.ObjectSet, error) {
+	obj := &corev1alpha1.Package{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+	}
+	objreslist := &corev1alpha1.ObjectSetList{}
+	if err := c.client.List(ctx, objreslist); err != nil {
+		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
+	}
+	//fmt.Println("the objectset items in namespace with status ")
+	for i := range objreslist.Items {
+		//fmt.Println(objreslist.Items[i].Name, objreslist.Items[i].Status.Phase)
+		//skip the Archived status
+		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
+			obj = &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      objreslist.Items[i].Name,
+					Namespace: objreslist.Items[i].Namespace,
+				},
+			}
+
+		}
+	}
+	objres := &corev1alpha1.ObjectSet{}
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
+		return nil, fmt.Errorf("getting package objecset: %w", err)
+	}
+
+	return objres, nil
+}
+
+func (c *Client) GetClusterObjectset(ctx context.Context, name string, opts ...GetPackageOption) (*corev1alpha1.ClusterObjectSet, error) {
+	obj := &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "",
+		},
+	}
+	objreslist := &corev1alpha1.ClusterObjectSetList{}
+	if err := c.client.List(ctx, objreslist); err != nil {
+		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
+	}
+	//fmt.Println("the objectset items in cluster with Available status ")
+	for i := range objreslist.Items {
+		//fmt.Println("the objectset items are : ", objreslist.Items[i].Name, objreslist.Items[i].Status.Phase)
+		//skip the Archived status
+		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
+			obj = &corev1alpha1.ClusterPackage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: objreslist.Items[i].Name,
+				},
+			}
+
+		}
+	}
+	objres := &corev1alpha1.ClusterObjectSet{}
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
+		return nil, fmt.Errorf("getting package objecset: %w", err)
+	}
+	return objres, nil
 }
 
 func (c *Client) GetPackage(ctx context.Context, name string, opts ...GetPackageOption) (*Package, error) {
