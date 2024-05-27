@@ -12,6 +12,6 @@ COPY --from=cert-source /tmp/pem/ /etc/pki/ca-trust/extracted/pem/
 COPY ./passwd /etc/passwd
 COPY ./remote-phase-manager /remote-phase-manager
 
-USER "noroot"
+USER 10001
 
 ENTRYPOINT ["/remote-phase-manager"]
