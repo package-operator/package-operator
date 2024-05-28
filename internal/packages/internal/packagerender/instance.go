@@ -21,7 +21,7 @@ func RenderPackageInstance(
 	if err := RenderTemplates(ctx, pkg, tmplCtx); err != nil {
 		return nil, err
 	}
-	objects, err := RenderObjects(ctx, pkg, tmplCtx, objValidator)
+	objects, err := RenderObjectsWithFilter(ctx, pkg, tmplCtx, objValidator)
 	if err != nil {
 		return nil, err
 	}

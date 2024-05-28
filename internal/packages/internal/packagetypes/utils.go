@@ -1,7 +1,9 @@
 package packagetypes
 
 import (
+	"bytes"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -24,4 +26,19 @@ func IsYAMLFile(fileName string) bool {
 	default:
 		return false
 	}
+}
+
+var splitYAMLDocumentsRegEx = regexp.MustCompile(`(?m)^---$`)
+
+// Splits a YAML file into multiple documents.
+func SplitYAMLDocuments(file []byte) (docs [][]byte) {
+	for _, yamlDocument := range splitYAMLDocumentsRegEx.Split(string(bytes.Trim(file, "---\n")), -1) {
+		docs = append(docs, bytes.TrimSpace([]byte(yamlDocument)))
+	}
+	return docs
+}
+
+// Joins multiple YAML documents together.
+func JoinYAMLDocuments(documents [][]byte) []byte {
+	return append(bytes.Join(documents, []byte("\n---\n")), []byte("\n")...)
 }

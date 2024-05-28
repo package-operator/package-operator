@@ -26,5 +26,5 @@ func (pol *packageObjectLoad) FromPkg(
 	if err != nil {
 		return nil, err
 	}
-	return packages.RenderObjects(ctx, pkg, packages.PackageRenderContext{}, nil)
+	return packages.RenderObjectsWithFilter(ctx, pkg, packages.PackageRenderContext{}, nil)
 }

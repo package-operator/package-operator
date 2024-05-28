@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/instance: "test"
   annotations:
     test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"}}"
-    package-operator.run/phase: deploy
+    package-operator.run/phase: purposely-wrong-value
 spec:
   replicas: 2
   selector:

@@ -21,6 +21,13 @@ spec:
       kind:
         group: apps
         kind: Deployment
+  conditionalFiltering:
+    conditionalPaths:
+    - expression: cond.global_false
+      glob: cel-excluded-by-glob.yaml
+    namedConditions:
+    - expression: 'false'
+      name: global_false
 test:
   template:
   - name: namespace-scope

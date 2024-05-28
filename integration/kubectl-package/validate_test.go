@@ -127,10 +127,9 @@ var _ = ginkgo.DescribeTable("validate subcommand",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("invalid_multi_broken_component")},
 			ExpectedExitCode: 1,
-			ExpectedErrorOutput: []string{"Error: validating package: " +
-				"loading package from files: component \"backend\": " +
-				"File mismatch against fixture in deployment.yaml.gotmpl: " +
-				"Testcase \"namespace-scope\"\n"},
+			ExpectedErrorOutput: []string{`Error: validating package: ` +
+				`loading package from files: component "backend": ` +
+				`Phase name not found in manifest in deployment.yaml idx 0` + "\n"},
 		},
 	),
 )
