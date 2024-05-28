@@ -20,6 +20,10 @@ spec:
         app.kubernetes.io/name: package-operator-remote-phase-manager
         hypershift.openshift.io/need-management-kas-access: "true"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - --enable-leader-election
@@ -31,6 +35,11 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         image: registry.package-operator.run/static-image
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         name: manager
         resources: {}
         volumeMounts:
