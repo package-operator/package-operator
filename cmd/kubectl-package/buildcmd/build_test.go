@@ -37,7 +37,7 @@ func TestBuildOutput(t *testing.T) {
 	cmd.SetArgs([]string{packagePath, "--tag", "chicken:oldest", "--output", f.Name()})
 
 	require.NoError(t, cmd.Execute())
-	require.Empty(t, stdout.String())
+	require.EqualValues(t, "Package built successfully!", stdout.String())
 	require.Empty(t, stderr.String())
 
 	i, err := tarball.ImageFromPath(f.Name(), nil)
