@@ -1,2 +1,4 @@
-*.yaml
-!/.test-fixtures/***
+manifest.lock.yaml
+manifest.yaml
+crds/
+rbac/*.yaml
