@@ -27,6 +27,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 		subCommandTestCase{
 			Args:             []string{sourcePathFixture("valid_without_config")},
 			ExpectedExitCode: 0,
+			ExpectedOutput:   []string{"Package built successfully!"},
 		},
 	),
 	ginkgo.Entry("given the path of a package with an invalid manifest",
@@ -123,6 +124,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			AdditionalValidations: func() {
 				gomega.Expect(filepath.Join(outputPath, "valid_build.tar")).To(gomega.BeAnExistingFile())
 			},
+			ExpectedOutput: []string{"Package built successfully!"},
 		},
 	),
 	ginkgo.Entry("given '--push' with valid tag",
@@ -137,6 +139,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			AdditionalValidations: func() {
 				gomega.Expect(path.Join(_registryDomain, "valid-package")).To(ExistOnRegistry())
 			},
+			ExpectedOutput: []string{"Package built successfully!"},
 		},
 	),
 )

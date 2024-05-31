@@ -26,6 +26,7 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 		buildShort = "build an PKO package image using manifests at the given path"
 		buildLong  = "builds and optionally pushes an OCI image in the Package Operator" +
 			" package format from the specified build context directory."
+		buildSuccessMessage = "Package built successfully!"
 	)
 
 	cmd := &cobra.Command{
@@ -63,6 +64,7 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 			return fmt.Errorf("building from source: %w", err)
 		}
 
+		fmt.Fprint(cmd.OutOrStdout(), buildSuccessMessage)
 		return nil
 	}
 
