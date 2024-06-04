@@ -36,6 +36,6 @@ func TestRestrictedPolicyPodCreation(t *testing.T) {
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	err := Client.Create(ctx, pod)
-	require.ErrorContains(t, err, " forbidden: violates PodSecurity \"restricted:latest\": ")
+	require.ErrorContains(t, err, `forbidden: violates PodSecurity "restricted:latest": `)
 	defer cleanupOnSuccess(ctx, t, pod)
 }
