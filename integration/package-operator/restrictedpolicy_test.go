@@ -4,18 +4,18 @@ package packageoperator
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/require"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // This test validates that the package-operator namespace is configured to actually enforce the restricted PSS.
 func TestRestrictedPolicyPodCreation(t *testing.T) {
-
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "testing-policy-pod",
