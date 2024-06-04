@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,11 +35,9 @@ func (g Generate) All(ctx context.Context) error {
 		return err
 	}
 
-	// installYamlFile has to come after code generation.
 	return mgr.ParallelDeps(
 		ctx, self,
 		run.Meth(g, g.docs),
-		run.Meth(g, g.installYamlFile),
 		run.Meth(g, g.selfBootstrapJob),
 		run.Meth(g, g.selfBootstrapJobLocal),
 	)
@@ -111,86 +108,6 @@ func (Generate) docs() error {
 		"k8s-docgen apis/manifests/v1alpha1 >> "+refPath,
 		"echo >> "+refPath,
 	)
-}
-
-func (Generate) installYamlFile(ctx context.Context) (err error) {
-	self := run.Meth(&Generate{}, (&Generate{}).installYamlFile)
-	if err := mgr.SerialDeps(
-		ctx, self,
-		run.Meth(generate, generate.code), // install.yaml generation needs code generation first
-	); err != nil {
-		return err
-	}
-
-	folderPath := filepath.Join("config", "static-deployment")
-	outputPath := "install.yaml"
-
-	var entries []fs.DirEntry
-
-	entries, err = os.ReadDir(folderPath)
-	if err != nil {
-		return fmt.Errorf("read dir %q: %w", folderPath, err)
-	}
-
-	infoByName := map[string]fs.DirEntry{}
-	names := []string{}
-	for _, i := range entries {
-		names = append(names, i.Name())
-		infoByName[i.Name()] = i
-	}
-
-	sort.Strings(names)
-
-	if _, err = os.Stat(outputPath); err == nil {
-		err = os.Remove(outputPath)
-		if err != nil {
-			return fmt.Errorf("removing old file: %w", err)
-		}
-	}
-
-	var outputFile *os.File
-
-	outputFile, err = os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed opening file: %w", err)
-	}
-
-	defer func() {
-		if cErr := outputFile.Close(); err == nil {
-			err = cErr
-		}
-	}()
-
-	for i, name := range names {
-		if infoByName[name].IsDir() {
-			continue
-		}
-
-		filePath := filepath.Join(folderPath, name)
-		fileYaml, err := os.ReadFile(filePath)
-		cleanFileYaml := bytes.Trim(fileYaml, "-\n")
-		if err != nil {
-			return fmt.Errorf("reading %s: %w", filePath, err)
-		}
-
-		_, err = outputFile.Write(cleanFileYaml)
-		if err != nil {
-			return fmt.Errorf("failed appending manifest from file %s to output file: %w", name, err)
-		}
-		if i != len(names)-1 {
-			_, err = outputFile.WriteString("\n---\n")
-			if err != nil {
-				return fmt.Errorf("failed appending --- %s to output file: %w", name, err)
-			}
-		} else {
-			_, err = outputFile.WriteString("\n")
-			if err != nil {
-				return fmt.Errorf("failed appending new line %s to output file: %w", name, err)
-			}
-		}
-	}
-
-	return nil
 }
 
 // generates a self-bootstrap-job.yaml based on the current VERSION.
