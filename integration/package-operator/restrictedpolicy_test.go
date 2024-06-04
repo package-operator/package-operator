@@ -4,16 +4,17 @@ package packageoperator
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestRestrictedPolicyPod_creation_(t *testing.T) {
+// This test validates that the package-operator namespace is configured to actually enforce the restricted PSS.
+func TestRestrictedPolicyPodCreation(t *testing.T) {
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -28,21 +29,13 @@ func TestRestrictedPolicyPod_creation_(t *testing.T) {
 				{
 					Name:  "my-container",
 					Image: "nginx:latest",
-					Ports: []corev1.ContainerPort{
-						{
-							ContainerPort: 80,
-						},
-					},
 				},
 			},
 		},
 	}
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-
 	err := Client.Create(ctx, pod)
-	t.Log(err)
-	require.Error(t, err)
+	require.ErrorContains(t, err, " forbidden: violates PodSecurity \"restricted:latest\": ")
 	defer cleanupOnSuccess(ctx, t, pod)
-
 }
