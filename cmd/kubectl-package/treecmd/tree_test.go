@@ -300,6 +300,34 @@ ClusterPackage /name
 `
 		assert.Equal(t, expectedOutput, stdout.String())
 	})
+
+	t.Run("namespace scoped without config path", func(t *testing.T) {
+		t.Parallel()
+
+		scheme, err := internalcmd.NewScheme()
+		require.NoError(t, err)
+
+		factory := &rendererFactoryMock{}
+		factory.On("Renderer").Return(internalcmd.NewTree(scheme))
+
+		cmd := NewCmd(factory)
+		stdout := &bytes.Buffer{}
+		stderr := &bytes.Buffer{}
+		cmd.SetOut(stdout)
+		cmd.SetErr(stderr)
+		cmd.SetArgs([]string{"testdata"})
+
+		require.NoError(t, cmd.Execute())
+		require.Empty(t, stderr.String())
+
+		const expectedOutput = `test-stub
+Package namespace/name
+└── Phase deploy
+    └── apps/v1, Kind=Deployment /test-stub-name
+    └── apps/v1, Kind=Deployment external-name/test-external-name (EXTERNAL)
+`
+		assert.Equal(t, expectedOutput, stdout.String())
+	})
 }
 
 type rendererFactoryMock struct {
