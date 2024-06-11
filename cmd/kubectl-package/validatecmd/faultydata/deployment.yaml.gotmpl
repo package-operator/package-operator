@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "test-stub-{{.package.metadata.name}}"
+{{- if eq .package.metadata.namespace ""}}
+  namespace: "{{.package.metadata.name}}"
+{{- end}}
+  labels:
+    app: test-stub
+    instance: "{{.package.metadata.name}}"
+  annotations:
+    package-operator.run/phase: deploy
+    from-define: {{ template "test" . }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-stub
+      instance: "{{.package.metadata.name}}"
+  template:
+    metadata:
+      labels:
+        app: test-stub
+        instance: "{{.package.metadata.name}}"
+    spec:
+      containers:
+      - name: test-stub
+        # lazy image injection
+        image: '{{index .package.metadata.annotations "package-operator.run/test-stub-image"}}'

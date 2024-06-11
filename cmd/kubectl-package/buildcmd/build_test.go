@@ -124,6 +124,28 @@ func TestBuildInvalidTag(t *testing.T) {
 	require.Error(t, cmd.Execute())
 }
 
+func TestBuildWithPath(t *testing.T) {
+	t.Parallel()
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	packagePath := filepath.Join(wd, "testdata")
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild())
+
+	cmd := NewCmd(factory)
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
+	cmd.SetArgs([]string{packagePath})
+
+	require.NoError(t, cmd.Execute())
+	require.EqualValues(t, "Package built successfully!", stdout.String())
+	require.Empty(t, stderr.String())
+}
+
 type builderFactoryMock struct {
 	mock.Mock
 }

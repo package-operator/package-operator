@@ -35,8 +35,29 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 				ErrorAssertion: require.Error,
 			},
 		},
-		"no objects": {
+		"no clusterpackage objects": {
 			Type: "clusterpackage",
+			Name: "test",
+			Expected: expected{
+				ErrorAssertion: require.Error,
+			},
+		},
+		"no package objects": {
+			Type: "package",
+			Name: "test",
+			Expected: expected{
+				ErrorAssertion: require.Error,
+			},
+		},
+		"no clusterobjectdeployment objects": {
+			Type: "clusterobjectdeployment",
+			Name: "test",
+			Expected: expected{
+				ErrorAssertion: require.Error,
+			},
+		},
+		"no objectdeployment objects": {
+			Type: "objectdeployment",
 			Name: "test",
 			Expected: expected{
 				ErrorAssertion: require.Error,
