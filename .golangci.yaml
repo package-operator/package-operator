@@ -3,7 +3,7 @@ linters:
   # One can't use disable and disable-all. disable-all is preferred to avoid lint failing when golangci gets updated and linters are added.
   # at the same time but it is nice to explicitly state which linters we do not want.
   #disable:
-  #- containedctx     # Context.Context within a struct a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
+  #- containedctx     # Context.Context within a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
   #- contextcheck     # Not that useful/false positives.
   #- cyclop           # Cyclo complexity already calculated by other linters.
   #- depguard         # We do not restrict imports.
@@ -18,11 +18,11 @@ linters:
   #- gochecknoinits   # We have a lot of those.
   #- gocognit         # Not that useful/false positives.
   #- godox            # Not that useful/false positives.
-  #- gomnd            # The annoy is strong.
   #- gomoddirectives  # Not that useful/false positives.
   #- inamedparam      # Not that useful.
   #- interfacebloat   # WE do bloaty interfaces.
   #- ireturn          # Not that useful/false positives.
+  #- mnd            # The annoy is strong.
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
@@ -32,22 +32,23 @@ linters:
   #- varnamelen       # Not that useful/false positives.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
-  #- zerologlint      # No zerolog here.
   enable:
   - asasalint
   - asciicheck
   - bidichk
   - bodyclose
+  - canonicalheader
   - copyloopvar
   - decorder
   - dupword
   - durationcheck
+  - err113
   - errcheck
   - errchkjson
   - errname
   - errorlint
-  - execinquery
   - exportloopref
+  - fatcontext
   - forbidigo
   - ginkgolinter
   - gocheckcompilerdirectives
@@ -56,7 +57,6 @@ linters:
   - gocritic
   - gocyclo
   - godot
-  - goerr113
   - gofmt
   - gofumpt
   - goheader
@@ -70,6 +70,7 @@ linters:
   - grouper
   - importas
   - ineffassign
+  - intrange
   - lll
   - loggercheck
   - maintidx
@@ -93,9 +94,10 @@ linters:
   - revive
   - rowserrcheck
   - sloglint
+  - spancheck
+  - sqlclosecheck
   - staticcheck
   - stylecheck
-  - sqlclosecheck
   - tagalign
   - tenv
   - testableexamples
@@ -108,6 +110,7 @@ linters:
   - usestdlibvars
   - wastedassign
   - whitespace
+  - zerologlint
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0

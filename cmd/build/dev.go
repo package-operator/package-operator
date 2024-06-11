@@ -37,7 +37,6 @@ func (dev *Dev) Generate(ctx context.Context, args []string) error {
 		ctx, self,
 		run.Meth(generate, generate.code),
 		run.Meth(generate, generate.docs),
-		run.Meth(generate, generate.installYamlFile),
 		run.Meth(generate, generate.selfBootstrapJob),
 		run.Meth(generate, generate.selfBootstrapJobLocal),
 	)

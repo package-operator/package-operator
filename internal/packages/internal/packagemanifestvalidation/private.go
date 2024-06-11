@@ -165,7 +165,7 @@ func validateCustomResourceDefinitionValidation(
 
 func statusSubresource(schema *apiextensions.JSONSchemaProps, fldPath *field.Path) *field.Error {
 	v := reflect.ValueOf(schema).Elem()
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		// skip zero values
 		if value := v.Field(i).Interface(); reflect.DeepEqual(value, reflect.Zero(reflect.TypeOf(value)).Interface()) {
 			continue
