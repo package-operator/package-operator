@@ -6,6 +6,11 @@ import (
 	"pkg.package-operator.run/cardboard/run"
 )
 
+const (
+	releaseArgImagesOnly   = "images-only"
+	releaseArgValidateFIPS = "validate-fips"
+)
+
 // CI targets that should only be called within the CI/CD runners.
 type CI struct{}
 
@@ -43,8 +48,18 @@ func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
 	return shr.Run("crane", append([]string{"auth", "login"}, args...)...)
 }
 
-// Release builds binaries (if not exluded with the 'images-only" arg) and releases the
-// CLI, PKO manager, RP manager, PKO webhooks and test-stub images to the given registry.
+func hasArg(args []string, arg string) bool {
+	for _, a := range args {
+		if a == arg {
+			return true
+		}
+	}
+	return false
+}
+
+// Release builds binaries (if not exluded with the 'images-only" arg),
+// validates their FIPS compliance (when requested with the 'validate-fips' arg)
+// and releases the CLI, PKO manager, RP manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	registry := imageRegistry()
 
@@ -52,7 +67,7 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 
 	deps := []run.Dependency{}
 
-	imagesOnly := len(args) > 0 && args[0] == "images-only"
+	imagesOnly := hasArg(args, releaseArgImagesOnly)
 	if !imagesOnly {
 		deps = append(deps,
 			// bootstrap job manifests
@@ -65,13 +80,14 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		)
 	}
 
+	validate := hasArg(args, releaseArgValidateFIPS)
 	deps = append(deps,
 		// binary images
-		run.Fn3(pushImage, "cli", registry, "amd64"),
-		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
-		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
-		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
-		run.Fn3(pushImage, "test-stub", registry, "amd64"),
+		run.Fn4(pushImage, "cli", registry, "amd64", validate),
+		run.Fn4(pushImage, "package-operator-manager", registry, "amd64", validate),
+		run.Fn4(pushImage, "package-operator-webhook", registry, "amd64", validate),
+		run.Fn4(pushImage, "remote-phase-manager", registry, "amd64", validate),
+		run.Fn4(pushImage, "test-stub", registry, "amd64", validate),
 	)
 
 	if err := mgr.ParallelDeps(ctx, self, deps...); err != nil {
@@ -90,10 +106,14 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 }
 
 // Combined RegistryLogin and Release with images-only arg. (This is our downstream CI target.)
-func (ci *CI) RegistryLoginAndReleaseOnlyImages(ctx context.Context, args []string) error {
-	self := run.Meth1(ci, ci.RegistryLoginAndReleaseOnlyImages, args)
+// Validates fips compliance of binaries before releasing them.
+func (ci *CI) ReleaseDownstream(ctx context.Context, args []string) error {
+	self := run.Meth1(ci, ci.ReleaseDownstream, args)
 	return mgr.SerialDeps(ctx, self,
 		run.Meth1(ci, ci.RegistryLogin, args),
-		run.Meth1(ci, ci.Release, []string{"images-only"}),
+		run.Meth1(ci, ci.Release, []string{
+			releaseArgImagesOnly,
+			releaseArgValidateFIPS,
+		}),
 	)
 }
