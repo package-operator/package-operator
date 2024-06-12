@@ -71,8 +71,7 @@ func RenderObjectsWithFilterInfo(
 	if err != nil {
 		return nil, nil, err
 	}
-
-	pathFilteredIndex, err = filterWithCEL(pathObject, pkg.Manifest.Spec.ConditionalFiltering, tmplCtx)
+	pathFilteredIndex, err = filterWithCEL(pathObject, pkg.Manifest.Spec.Filters, tmplCtx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,16 +158,16 @@ func commonLabels(manifest *manifests.PackageManifest, packageName string) map[s
 
 func filterWithCEL(
 	pathObjectMap map[string][]unstructured.Unstructured,
-	condFiltering manifests.PackageManifestConditionalFiltering,
+	condFiltering manifests.PackageManifestFilter,
 	tmplCtx packagetypes.PackageRenderContext,
 ) (pathFilteredIndex map[string][]int, err error) {
 	// Create CEL evaluation environment
-	cc, err := celctx.New(condFiltering.NamedConditions, tmplCtx)
+	cc, err := celctx.New(condFiltering.Conditions, tmplCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	pathsToExclude, err := computeIgnoredPaths(condFiltering.ConditionalPaths, cc)
+	pathsToExclude, err := computeIgnoredPaths(condFiltering.Paths, cc)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +180,7 @@ func filterWithCEL(
 		}
 		if exclude {
 			delete(pathObjectMap, path)
+			pathFilteredIndex[path] = nil
 			continue
 		}
 
@@ -239,7 +239,7 @@ func filterWithCELAnnotation(
 var ErrInvalidConditionalPathsExpression = errors.New("invalid spec.conditionalPaths expression")
 
 func computeIgnoredPaths(
-	conditionalPaths []manifests.PackageManifestConditionalPath,
+	conditionalPaths []manifests.PackageManifestPath,
 	cc *celctx.CelCtx,
 ) (
 	[]string, error,

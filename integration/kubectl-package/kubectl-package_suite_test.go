@@ -123,7 +123,7 @@ func projectRoot() (string, error) {
 
 func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) error {
 	for _, info := range infos {
-		rawPkg, err := packages.FromFS(ctx, os.DirFS(info.Path))
+		rawPkg, err := packages.FromFolder(ctx, info.Path)
 		if err != nil {
 			return fmt.Errorf("importing package from directory: %w", err)
 		}

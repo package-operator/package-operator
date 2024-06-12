@@ -114,6 +114,73 @@ func TestTemplateTestValidator(t *testing.T) {
 	require.Equal(t, expectedErr, err.Error())
 }
 
+func TestTemplateTestValidator_errorUnknownFile(t *testing.T) {
+	t.Parallel()
+	validatorPath := t.TempDir()
+	defer func() {
+		err := os.RemoveAll(validatorPath)
+		require.NoError(t, err) // start clean
+	}()
+
+	t1FixturePath := filepath.Join(validatorPath, testFixturesFolderName, "t1")
+	require.NoError(t, os.MkdirAll(t1FixturePath, os.ModePerm))
+	require.NoError(t, os.WriteFile(filepath.Join(t1FixturePath, "banana.yaml"), []byte("xxx"), os.ModePerm))
+	require.NoError(t, os.WriteFile(filepath.Join(t1FixturePath, "file.yaml"), []byte("xxx\n"), os.ModePerm))
+
+	packageManifest := &manifests.PackageManifest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-pkg",
+		},
+		Spec: manifests.PackageManifestSpec{
+			Phases: []manifests.PackageManifestPhase{
+				{Name: "tesxx"},
+			},
+		},
+		Test: manifests.PackageManifestTest{
+			Template: []manifests.PackageManifestTestCaseTemplate{
+				{
+					Name: "t1",
+					Context: manifests.TemplateContext{
+						Package: manifests.TemplateContextPackage{
+							TemplateContextObjectMeta: manifests.
+								TemplateContextObjectMeta{
+								Name:      "pkg-name",
+								Namespace: "pkg-namespace",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ttv := NewTemplateTestValidator(validatorPath)
+
+	originalFileMap := packagetypes.Files{
+		"file.yaml.gotmpl": []byte(testFile1Content),
+	}
+	originalPkg := &packagetypes.Package{
+		Manifest: packageManifest,
+		Files:    originalFileMap,
+	}
+	err := ttv.ValidatePackage(ctx, originalPkg)
+	expectedErr := `file banana.yaml should not exist, filtered or empty after template render
+File mismatch against fixture in file.yaml: Testcase "t1"
+--- FIXTURE/file.yaml
++++ ACTUAL/file.yaml
+@@ -1 +1,7 @@
+-xxx
++apiVersion: v1
++kind: Test
++metadata:
++  name: testfile1
++  annotations:
++    package-operator.run/phase: tesxx
++property: pkg-name`
+	require.Equal(t, expectedErr, err.Error())
+}
+
 func Test_generateStaticImages(t *testing.T) {
 	t.Parallel()
 	manifest := &manifests.PackageManifest{
@@ -148,10 +215,12 @@ func Test_renderTemplateFiles(t *testing.T) {
 	files := packagetypes.Files{
 		"test.yaml":  []byte("test: xxx\n---\ntest: yyy\n---\ntest: zzz\n"),
 		"test2.yaml": []byte("test: xxx"),
+		"test3.yaml": []byte("test: xxx"),
 	}
 	filteredIndexMap := map[string][]int{
 		"test.yaml":  {1},
 		"test2.yaml": {0},
+		"test3.yaml": nil,
 	}
 
 	err = renderTemplateFiles(path, files, filteredIndexMap)
@@ -163,4 +232,7 @@ func Test_renderTemplateFiles(t *testing.T) {
 
 	_, err = os.ReadFile(filepath.Join(path, "test2.yaml"))
 	require.True(t, os.IsNotExist(err), "test2.yaml does not exist")
+
+	_, err = os.ReadFile(filepath.Join(path, "test3.yaml"))
+	require.True(t, os.IsNotExist(err), "test3.yaml does not exist")
 }

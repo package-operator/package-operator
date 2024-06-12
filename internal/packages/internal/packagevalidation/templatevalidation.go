@@ -13,10 +13,13 @@ import (
 	"github.com/go-logr/logr"
 
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packageimport"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 	"package-operator.run/internal/packages/internal/packagerender"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
+
+const testFixturesFolderName = ".test-fixtures"
 
 // Runs the template test suites.
 type TemplateTestValidator struct {
@@ -110,7 +113,7 @@ func (v TemplateTestValidator) runTestCase(
 	// check if test figures exist
 	testFixturePath := filepath.Join(
 		v.packageBaseFolderPath, subDir,
-		".test-fixtures", testCase.Name)
+		testFixturesFolderName, testCase.Name)
 	_, err = os.Stat(testFixturePath)
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
@@ -134,6 +137,18 @@ func (v TemplateTestValidator) runTestCase(
 	}
 
 	violations := make([]error, 0, len(pkg.Files))
+
+	// check for unknown files
+	fixturesFiles, err := packageimport.Index(testFixturePath)
+	if err != nil {
+		return err
+	}
+	for fixturesPath := range fixturesFiles {
+		if _, ok := pathObjects[fixturesPath]; !ok {
+			violations = append(violations, &unknownFileFoundInFixturesFolderError{file: fixturesPath})
+		}
+	}
+
 	for path := range pathObjects {
 		if packagetypes.IsTemplateFile(path) {
 			// template source files are of no interest for the test fixtures.
@@ -181,7 +196,10 @@ func renderTemplateFiles(
 		}
 
 		content := fileMap[path]
-		if filteredIndexes, ok := pathFilteredIndex[path]; ok {
+		if filteredIndexes, ok := pathFilteredIndex[path]; ok && filteredIndexes == nil {
+			// all documents where filtered at the given path
+			content = nil
+		} else if ok {
 			// some documents where filtered at the given path.
 			indexMap := map[int]struct{}{}
 			for _, i := range filteredIndexes {
@@ -233,9 +251,6 @@ func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
 	_, fileBStatErr := os.Stat(fileB)
 	if os.IsNotExist(fileAStatErr) && os.IsNotExist(fileBStatErr) {
 		return nil, nil
-	}
-	if fileAStatErr == nil && os.IsNotExist(fileBStatErr) {
-		return nil, &unknownFileFoundInFixturesFolderError{file: fileA}
 	}
 	if os.IsNotExist(fileAStatErr) && fileBStatErr == nil {
 		return nil, &fileNotFoundInFixturesFolderError{file: fileA}

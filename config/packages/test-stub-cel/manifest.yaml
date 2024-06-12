@@ -30,13 +30,13 @@ spec:
       required:
       - testStubImage
       type: object
-  conditionalFiltering:
-    namedConditions:
+  filter:
+    conditions:
     - name: "justTrue"
       expression: "true"
     - name: "justFalse"
       expression: "false"
-    conditionalPaths:
+    paths:
     - glob: "ignored*"
       expression: "cond.justFalse"
 test:

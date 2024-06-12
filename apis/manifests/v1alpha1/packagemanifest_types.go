@@ -64,6 +64,7 @@ const (
 type PackageManifestSpec struct {
 	// Scopes declare the available installation scopes for the package.
 	// Either Cluster, Namespaced, or both.
+	// +example=['Cluster','Namespaced']
 	Scopes []PackageManifestScope `json:"scopes"`
 	// Phases correspond to the references to the phases which are going to be the
 	// part of the ObjectDeployment/ClusterObjectDeployment.
@@ -72,6 +73,7 @@ type PackageManifestSpec struct {
 	// All probes need to succeed for a package to be considered Available.
 	// Failing probes will prevent the reconciliation of objects in later phases.
 	// +optional
+	// +example=[]
 	AvailabilityProbes []corev1alpha1.ObjectSetProbe `json:"availabilityProbes,omitempty"`
 	// Configuration specification.
 	Config PackageManifestSpecConfig `json:"config,omitempty"`
@@ -80,22 +82,23 @@ type PackageManifestSpec struct {
 	// Configuration for multi-component packages. If this field is not set it is assumed
 	// that the containing package is a single-component package.
 	// +optional
+	// +example={}
 	Components *PackageManifestComponentsConfig `json:"components,omitempty"`
-	// Used to conditionally render objects based on CEL expressions.
+	// Used to filter objects and files based on CEL expressions.
 	// +optional
-	ConditionalFiltering PackageManifestConditionalFiltering `json:"conditionalFiltering,omitempty"`
+	Filters PackageManifestFilter `json:"filter,omitempty"`
 }
 
-// PackageManifestConditionalFiltering is used to conditionally render objects based on CEL expressions.
-type PackageManifestConditionalFiltering struct {
+// PackageManifestFilter is used to conditionally render objects based on CEL expressions.
+type PackageManifestFilter struct {
 	// Reusable CEL expressions. Can be used in 'package-operator.run/condition' annotations.
 	// They are evaluated once per package.
 	// +optional
-	NamedConditions []PackageManifestNamedCondition `json:"namedConditions,omitempty"`
+	Conditions []PackageManifestNamedCondition `json:"conditions,omitempty"`
 	// Adds CEL conditions to file system paths matching a glob pattern.
 	// If a single condition matching a file system object's path evaluates to false,
 	// the object is ignored.
-	ConditionalPaths []PackageManifestConditionalPath `json:"conditionalPaths,omitempty"`
+	Paths []PackageManifestPath `json:"paths,omitempty"`
 }
 
 // PackageManifestNamedCondition is a reusable named CEL expression.
@@ -103,20 +106,24 @@ type PackageManifestConditionalFiltering struct {
 // and its value is set to the result of Expression ("true"/"false").
 type PackageManifestNamedCondition struct {
 	// A unique name. Must match the CEL identifier pattern: [_a-zA-Z][_a-zA-Z0-9]*
+	// +example=isOpenShift
 	Name string `json:"name"`
 	// A CEL expression with a boolean output type.
 	// Has access to the full template context.
+	// +example=has(environment.openShift)
 	Expression string `json:"expression"`
 }
 
-// PackageManifestConditionalPath is used to conditionally
+// PackageManifestPath is used to conditionally
 // render package objects based on their path.
-type PackageManifestConditionalPath struct {
+type PackageManifestPath struct {
 	// A file system path glob pattern.
 	// Syntax: https://pkg.go.dev/github.com/bmatcuk/doublestar@v1.3.4#Match
+	// +example=openshift/v4.15/**
 	Glob string `json:"glob"`
 	// A CEL expression with a boolean output type.
 	// Has access to the full template context and named conditions.
+	// +example=cond.isOpenShift && environment.openShift.version.startsWith('4.15')
 	Expression string `json:"expression"`
 }
 
@@ -126,24 +133,29 @@ type PackageManifestComponentsConfig struct{}
 // PackageManifestSpecConfig configutes a package manifest.
 type PackageManifestSpecConfig struct {
 	// OpenAPIV3Schema is the OpenAPI v3 schema to use for validation and pruning.
+	// +example={type: object,properties: {testProp: {type: string}}}
 	OpenAPIV3Schema *apiextensionsv1.JSONSchemaProps `json:"openAPIV3Schema,omitempty"`
 }
 
 // PackageManifestPhase defines a package phase.
 type PackageManifestPhase struct {
 	// Name of the reconcile phase. Must be unique within a PackageManifest
+	// +example=deploy
 	Name string `json:"name"`
 	// If non empty, phase reconciliation is delegated to another controller.
 	// If set to the string "default" the built-in controller reconciling the object.
 	// If set to any other string, an out-of-tree controller needs to be present to handle ObjectSetPhase objects.
+	// +example=hosted-cluster
 	Class string `json:"class,omitempty"`
 }
 
 // PackageManifestImage specifies an image tag to be resolved.
 type PackageManifestImage struct {
 	// Image name to be use to reference it in the templates
+	// +example=test-stub
 	Name string `json:"name"`
 	// Image identifier (REPOSITORY[:TAG])
+	// +example=quay.io/package-operator/test-stub:v1.11.0
 	Image string `json:"image"`
 }
 
@@ -165,20 +177,24 @@ type PackageManifestTestCaseTemplate struct {
 // PackageManifestTestKubeconform configures kubeconform testing.
 type PackageManifestTestKubeconform struct {
 	// Kubernetes version to use schemas from.
+	// +example=v1.29.5
 	KubernetesVersion string `json:"kubernetesVersion"`
 	//nolint:lll
 	// OpenAPI schema locations for kubeconform
 	// defaults to:
 	// - https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ .NormalizedKubernetesVersion }}-standalone{{ .StrictSuffix }}/{{ .ResourceKind }}{{ .KindSuffix }}.json
 	// - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+	// +example=['https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json']
 	SchemaLocations []string `json:"schemaLocations,omitempty"`
 }
 
 // TemplateContext is available within the package templating process.
 type TemplateContext struct {
 	// Package object.
+	// +example={image: quay.io/package-operator/test-stub-package:v1.11.0, metadata: {name: test}}
 	Package TemplateContextPackage `json:"package"`
 	// Configuration as presented via the (Cluster)Package API after admission.
+	// +example={testProp: Hans}
 	Config *runtime.RawExtension `json:"config,omitempty"`
 	// Environment specific information.
 	Environment PackageEnvironment `json:"environment"`
@@ -201,12 +217,14 @@ type PackageEnvironment struct {
 // PackageEnvironmentKubernetes configures kubernetes environments.
 type PackageEnvironmentKubernetes struct {
 	// Kubernetes server version.
+	// +example=v1.29.5
 	Version string `json:"version"`
 }
 
 // PackageEnvironmentOpenShift configures openshift environments.
 type PackageEnvironmentOpenShift struct {
 	// OpenShift server version.
+	// +example=v4.13.2
 	Version string `json:"version"`
 	// ManagedOpenShift environment information. This section is only set when a managed OpenShift cluster is detected.
 	// This includes Red Hat OpenShift Dedicated, Red Hat OpenShift Service on AWS (ROSA) and
@@ -217,6 +235,7 @@ type PackageEnvironmentOpenShift struct {
 // PackageEnvironmentManagedOpenShift describes managed OpenShift environments.
 type PackageEnvironmentManagedOpenShift struct {
 	// Data key-value pairs describing details of the Managed OpenShift environment.
+	// +example={test: test}
 	Data map[string]string `json:"data"`
 }
 
@@ -225,10 +244,13 @@ type PackageEnvironmentManagedOpenShift struct {
 // https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
 type PackageEnvironmentProxy struct {
 	// HTTP_PROXY
+	// +example=http://proxy_server_address:port
 	HTTPProxy string `json:"httpProxy,omitempty"`
 	// HTTPS_PROXY
+	// +example=https://proxy_server_address:port
 	HTTPSProxy string `json:"httpsProxy,omitempty"`
 	// NO_PROXY
+	// +example=".example.com,.local,localhost"
 	NoProxy string `json:"noProxy,omitempty"`
 }
 
@@ -239,6 +261,7 @@ type PackageEnvironmentHyperShift struct {
 	// Contains HyperShift HostedCluster specific information.
 	// This information is only available when installed alongside HyperShift within a HostedCluster Namespace.
 	// https://github.com/openshift/hypershift
+	// +example={hostedClusterNamespace: clusters-banana, metadata: {name: banana, namespace: clusters}}
 	HostedCluster *PackageEnvironmentHyperShiftHostedCluster `json:"hostedCluster"`
 }
 
