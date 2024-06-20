@@ -15,6 +15,10 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator-webook-server
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: package-operator
       affinity:
         nodeAffinity:
@@ -68,6 +72,11 @@ spec:
           requests:
             cpu: 100m
             memory: 30Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       volumes:
       - name: tls
         secret:

@@ -4,6 +4,6 @@ WORKDIR /
 COPY ./passwd /etc/passwd
 COPY ./test-stub /test-stub
 
-USER "noroot"
+USER 10001
 
 ENTRYPOINT ["/test-stub"]

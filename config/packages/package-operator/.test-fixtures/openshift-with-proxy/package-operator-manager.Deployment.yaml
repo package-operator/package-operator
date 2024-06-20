@@ -20,6 +20,10 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - --enable-leader-election
@@ -42,6 +46,11 @@ spec:
         - name: NO_PROXY
           value: "no..."
         image: registry.package-operator.run/static-image
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         livenessProbe:
           httpGet:
             path: /healthz

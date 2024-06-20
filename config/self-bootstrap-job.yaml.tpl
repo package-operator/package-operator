@@ -40,6 +40,10 @@ spec:
   activeDeadlineSeconds: 1800
   template:
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       restartPolicy: OnFailure
       serviceAccountName: package-operator
       containers:
@@ -55,4 +59,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
   backoffLimit: 3

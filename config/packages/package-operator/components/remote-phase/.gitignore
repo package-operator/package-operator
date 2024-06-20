@@ -1,7 +1,0 @@
-/*
-!/.gitignore
-!/manifest.yaml.tpl
-!/rbac.yaml
-!/README.md
-!/package-operator-remote-phase-manager.Deployment.yaml.gotmpl
-!/.test-fixtures/***

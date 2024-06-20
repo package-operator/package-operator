@@ -26,6 +26,10 @@ spec:
 {{- if hasKey .config "tolerations" }}
       tolerations: {{ toJson .config.tolerations }}
 {{- end}}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - args:
         - --enable-leader-election
@@ -74,6 +78,11 @@ spec:
 {{- end}}
 {{- end}}
         image: {{ index .images "package-operator-manager" }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         livenessProbe:
           httpGet:
             path: /healthz
