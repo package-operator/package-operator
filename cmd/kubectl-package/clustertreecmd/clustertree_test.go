@@ -19,7 +19,7 @@ import (
 	internalcmd "package-operator.run/internal/cmd"
 )
 
-func TestClusterTreeCmd(t *testing.T) { //nolint:maintidx
+func TestClusterTreeCmd(t *testing.T) {
 	t.Parallel()
 	const expectedOutput = `ClusterPackage /test
 └── Phase phase-1
@@ -48,10 +48,6 @@ namespace/test
 			Labels: map[string]string{"test.package-operator.run/test": "True"},
 		},
 	}
-	//scheme, err := internalcmd.NewScheme()
-	//cmGVK, err := apiutil.GVKForObject(cm4, scheme)
-	//	require.NoError(t, err)
-	//cm4.SetGroupVersionKind(cmGVK)
 	cm4.Kind = "ConfigMap"
 	cm4.APIVersion = "v1"
 	ns1.Kind = "Namespace"
@@ -99,22 +95,24 @@ namespace/test
 						},
 					},
 					Spec: corev1alpha1.ClusterObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{Phases: []corev1alpha1.ObjectSetTemplatePhase{{
-							Name: "phase-1",
-							Objects: []corev1alpha1.ObjectSetObject{
-								{
-									Object: unstructured.Unstructured{Object: cm4Obj},
+						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+							Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+								Name: "phase-1",
+								Objects: []corev1alpha1.ObjectSetObject{
+									{
+										Object: unstructured.Unstructured{Object: cm4Obj},
+									},
 								},
-							},
-						}, {
-							Name: "phase-2",
-							Objects: []corev1alpha1.ObjectSetObject{
-								{
-									Object: unstructured.Unstructured{Object: ns1Obj},
+							}, {
+								Name: "phase-2",
+								Objects: []corev1alpha1.ObjectSetObject{
+									{
+										Object: unstructured.Unstructured{Object: ns1Obj},
+									},
 								},
-							},
-						}},
-						}},
+							}},
+						},
+					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Phase: "Available",
 					},
@@ -138,17 +136,20 @@ namespace/test
 						Namespace: "test",
 						Labels: map[string]string{
 							manifestsv1alpha1.PackageInstanceLabel: "test",
-						}},
+						},
+					},
 					Spec: corev1alpha1.ObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{Phases: []corev1alpha1.ObjectSetTemplatePhase{{
-							Name: "phase-1",
-							Objects: []corev1alpha1.ObjectSetObject{
-								{
-									Object: unstructured.Unstructured{Object: cm4Obj},
+						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+							Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+								Name: "phase-1",
+								Objects: []corev1alpha1.ObjectSetObject{
+									{
+										Object: unstructured.Unstructured{Object: cm4Obj},
+									},
 								},
-							},
-						}},
-						}},
+							}},
+						},
+					},
 
 					Status: corev1alpha1.ObjectSetStatus{
 						Revision: 1,
@@ -187,7 +188,6 @@ namespace/test
 				return
 			}
 			require.NoError(t, cmd.Execute())
-			//t.Log(stdout.String())
 			out := stdout.String()
 			assert.Equal(t, tc.Output, out)
 		})

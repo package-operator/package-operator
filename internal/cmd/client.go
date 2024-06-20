@@ -38,10 +38,7 @@ func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*cor
 	if err := c.client.List(ctx, objreslist); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
-	//fmt.Println("the objectset items in namespace with status ")
 	for i := range objreslist.Items {
-		//fmt.Println(objreslist.Items[i].Name, objreslist.Items[i].Status.Phase)
-		//skip the Archived status
 		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
 			obj = &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
@@ -49,7 +46,6 @@ func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*cor
 					Namespace: objreslist.Items[i].Namespace,
 				},
 			}
-
 		}
 	}
 	objres := &corev1alpha1.ObjectSet{}
@@ -60,7 +56,9 @@ func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*cor
 	return objres, nil
 }
 
-func (c *Client) GetClusterObjectset(ctx context.Context, name string, opts ...GetPackageOption) (*corev1alpha1.ClusterObjectSet, error) {
+func (c *Client) GetClusterObjectset(ctx context.Context, name string,
+	_ ...GetPackageOption,
+) (*corev1alpha1.ClusterObjectSet, error) {
 	obj := &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "",
@@ -70,17 +68,13 @@ func (c *Client) GetClusterObjectset(ctx context.Context, name string, opts ...G
 	if err := c.client.List(ctx, objreslist); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
-	//fmt.Println("the objectset items in cluster with Available status ")
 	for i := range objreslist.Items {
-		//fmt.Println("the objectset items are : ", objreslist.Items[i].Name, objreslist.Items[i].Status.Phase)
-		//skip the Archived status
 		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
 			obj = &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objreslist.Items[i].Name,
 				},
 			}
-
 		}
 	}
 	objres := &corev1alpha1.ClusterObjectSet{}

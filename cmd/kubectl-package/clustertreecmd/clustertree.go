@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
 	internalcmd "package-operator.run/internal/cmd"
 )
 
@@ -14,7 +15,7 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 	const (
 		cmdUse   = "clustertree"
 		cmdShort = "outputs a logical tree view of the package contents and provide arguments in resource/name "
-		cmdLong  = "outputs a logical tree view of the package contents either clusterpackage or package"
+		cmdLong  = "outputs a logical tree view of the package contents of either clusterpackage or package"
 	)
 
 	cmd := &cobra.Command{
@@ -33,11 +34,13 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		//opts.Namespace so use this when package
 		clientL, err := clientFactory.Client()
+		if err != nil {
+			return err
+		}
 		switch strings.ToLower(args.Resource) {
 		case "clusterpackage":
-			Package, err := clientL.GetPackage(cmd.Context(), string(args.Name))
+			Package, err := clientL.GetPackage(cmd.Context(), args.Name)
 			if err != nil {
 				return err
 			}
@@ -45,7 +48,6 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			//fmt.Println(tree)
 			_, err = fmt.Fprint(cmd.OutOrStdout(), tree)
 			if err != nil {
 				return err
@@ -53,11 +55,10 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 
 		case "package":
 			if opts.Namespace == "" {
-				return errors.New("--namespace is required as its a namespaced Resource type")
+				return errors.New("--namespace is required as its a namespaced Resource type") //nolint: goerr113
 			}
 			ns := opts.Namespace
-			Package, err := clientL.GetPackage(cmd.Context(), string(args.Name), internalcmd.WithNamespace(ns))
-
+			Package, err := clientL.GetPackage(cmd.Context(), args.Name, internalcmd.WithNamespace(ns))
 			if err != nil {
 				return err
 			}
@@ -65,7 +66,6 @@ func NewClusterTreeCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			//fmt.Println(tree) // this has to be removed as in below step we are redirecting the output
 			_, err = fmt.Fprint(cmd.OutOrStdout(), tree)
 			if err != nil {
 				return err

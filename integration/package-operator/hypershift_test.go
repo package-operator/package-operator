@@ -12,6 +12,7 @@ import (
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 
 	"k8s.io/apimachinery/pkg/runtime"
+
 	"package-operator.run/apis"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,8 +22,9 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 func TestHyperShift(t *testing.T) {
