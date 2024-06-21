@@ -6,7 +6,6 @@ package manifests
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"package-operator.run/apis/core/v1alpha1"
 )
 

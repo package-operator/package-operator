@@ -12,7 +12,6 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	v1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
