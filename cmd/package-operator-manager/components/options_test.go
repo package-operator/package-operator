@@ -70,3 +70,32 @@ func TestProvideOptions(t *testing.T) {
 		ObjectTemplateResourceRetryInterval:         time.Second * 30,
 	}, opts)
 }
+
+//nolint:paralleltest
+//nolint:nolintlint // directive `//nolint:paralleltest` is unused for linter "paralleltest" (nolintlint)
+func TestEnvToInt(t *testing.T) {
+	t.Run("environment varialble not set", func(t *testing.T) {
+		// t.Parallel()
+		val, err := envToInt("")
+
+		assert.Equal(t, 0, val)
+		assert.NoError(t, err)
+	})
+
+	t.Run("environment variable is set", func(t *testing.T) {
+		t.Setenv("FOO", "1")
+		val, err := envToInt("FOO")
+
+		assert.Equal(t, 1, val)
+		assert.NoError(t, err)
+	})
+
+	t.Run("environment variable set with random value", func(t *testing.T) {
+		t.Setenv("FOO_FOO", "some random -- val")
+		val, err := envToInt("FOO_FOO")
+
+		assert.Equal(t, 0, val)
+		assert.EqualError(t, err, "unable to parse environment variable 'FOO_FOO' as integer:"+
+			" strconv.Atoi: parsing \"some random -- val\": invalid syntax")
+	})
+}

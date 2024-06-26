@@ -48,6 +48,10 @@ func TestObjectDeployment(t *testing.T) {
 	deploy.SetSelector(selector)
 	assert.Equal(t, selector, deploy.Spec.Selector.MatchLabels)
 	assert.Equal(t, selector, deploy.Spec.Template.Metadata.Labels)
+
+	var statusRevision int64 = 2
+	deploy.SetStatusRevision(statusRevision)
+	assert.Equal(t, statusRevision, deploy.GetStatusRevision())
 }
 
 func TestClusterObjectDeployment(t *testing.T) {
@@ -88,6 +92,10 @@ func TestClusterObjectDeployment(t *testing.T) {
 	deploy.SetSelector(selector)
 	assert.Equal(t, selector, deploy.Spec.Selector.MatchLabels)
 	assert.Equal(t, selector, deploy.Spec.Template.Metadata.Labels)
+
+	var statusRevision int64 = 2
+	deploy.SetStatusRevision(statusRevision)
+	assert.Equal(t, statusRevision, deploy.GetStatusRevision())
 }
 
 func Test_objectDeploymentPhase(t *testing.T) {
@@ -125,6 +133,16 @@ func Test_objectDeploymentPhase(t *testing.T) {
 					Status: metav1.ConditionFalse,
 				},
 			},
+			expectedPhase: corev1alpha1.ObjectDeploymentPhaseProgressing,
+		},
+		{
+			name:          "Progressing",
+			conditions:    []metav1.Condition{},
+			expectedPhase: corev1alpha1.ObjectDeploymentPhaseProgressing,
+		},
+		{
+			name:          "Progressing",
+			conditions:    nil,
 			expectedPhase: corev1alpha1.ObjectDeploymentPhaseProgressing,
 		},
 	}
