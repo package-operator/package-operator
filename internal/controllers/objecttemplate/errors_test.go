@@ -15,3 +15,17 @@ func TestTemplateError(t *testing.T) {
 	e := &TemplateError{Err: errTemplate}
 	assert.Equal(t, `template: :6:25: at <.config.password>: map has no entry for key "password"`, e.Error())
 }
+
+func TestJSONPathFormatError(t *testing.T) {
+	t.Parallel()
+
+	e := &JSONPathFormatError{Path: "test"}
+	assert.Equal(t, "path test must be a JSONPath with a leading dot", e.Error())
+}
+
+func TestSourceKeyNotFoundError(t *testing.T) {
+	t.Parallel()
+
+	e := &SourceKeyNotFoundError{Key: "test-key"}
+	assert.Equal(t, "key test-key not found", e.Error())
+}
