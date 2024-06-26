@@ -56,6 +56,7 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 		delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageExternalObjectAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageCollisionProtectionAnnotation)
+		delete(annotations, manifestsv1alpha1.PackageCELConditionAnnotation)
 		if len(annotations) == 0 {
 			// This is important!
 			// When submitted to the API server empty maps will be dropped.
