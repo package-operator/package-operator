@@ -15,6 +15,119 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
+func TestClient_GetObjectset(t *testing.T) {
+	t.Parallel()
+	objectSet := []client.Object{
+		&corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-objset-archived",
+				Namespace: "default",
+			},
+			Status: corev1alpha1.ObjectSetStatus{
+				Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+			},
+		},
+	}
+	/*	objectSet := []client.Object{
+		&corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-objset-archived",
+				Namespace: "default",
+			},
+			Status: corev1alpha1.ObjectSetStatus{
+				Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+			},
+		},
+		&corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-objset-available",
+				Namespace: "default",
+			},
+			Status: corev1alpha1.ObjectSetStatus{
+				Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+			},
+		},
+		&corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-objset-not-ready",
+				Namespace: "default",
+			},
+			Status: corev1alpha1.ObjectSetStatus{
+				Phase: corev1alpha1.ObjectSetStatusPhaseNotReady,
+			},
+		},
+	}*/
+	for name, tc := range map[string]struct {
+		ActualObjects []client.Object
+		Assertion     require.ErrorAssertionFunc
+		PackageName   string
+		Namespace     string
+	}{"package not found": {
+		Assertion:   require.Error,
+		PackageName: "dne",
+	},
+		"Archived Object Set with Package present": {
+			ActualObjects: []client.Object{
+				&corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-objset-archived",
+						Namespace: "default",
+					},
+					Status: corev1alpha1.ObjectSetStatus{
+						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+					},
+				},
+			},
+			Assertion:   require.Error,
+			PackageName: "test-objset",
+			Namespace:   "default",
+		},
+		"Package found": {
+			ActualObjects: []client.Object{&corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-objset-archived",
+					Namespace: "default",
+				},
+				Status: corev1alpha1.ObjectSetStatus{
+					Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+				},
+			},
+				&corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-objset-available",
+						Namespace: "default",
+					},
+					Status: corev1alpha1.ObjectSetStatus{
+						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+					},
+				}},
+			Assertion:   require.Error,
+			PackageName: "test-objset",
+			Namespace:   "default",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			scheme, err := NewScheme()
+			require.NoError(t, err)
+
+			fakeClient := fake.
+				NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objectSet...).
+				Build()
+
+			c := NewClient(fakeClient)
+
+			// Test fetching object set
+			res, err := c.GetObjectset(context.Background(), "test-objset", "default")
+			t.Log(res, err)
+			tc.Assertion(t, err)
+
+		})
+	}
+}
+
 func TestClient_GetPackage(t *testing.T) {
 	t.Parallel()
 

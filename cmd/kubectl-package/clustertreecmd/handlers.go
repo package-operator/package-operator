@@ -47,6 +47,9 @@ func handleClusterPackage(clientL *internalcmd.Client, clsPackage *internalcmd.P
 	if err != nil {
 		return "", err
 	}
+	if result == nil {
+		return "No Objectset found which is available", nil
+	}
 
 	for _, phase := range result.Spec.Phases {
 		treePhase := tree.Add("Phase " + phase.Name)

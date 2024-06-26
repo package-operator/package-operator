@@ -28,18 +28,14 @@ type Client struct {
 }
 
 func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*corev1alpha1.ObjectSet, error) {
-	obj := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
+	obj := &corev1alpha1.Package{}
+
 	objreslist := &corev1alpha1.ObjectSetList{}
 	if err := c.client.List(ctx, objreslist); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
 	for i := range objreslist.Items {
-		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
+		if (objreslist.Items[i].Status.Phase == "Available") && strings.Contains(objreslist.Items[i].Name, name) && (objreslist.Items[i].Namespace == ns) {
 			obj = &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      objreslist.Items[i].Name,
@@ -52,7 +48,6 @@ func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*cor
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
 		return nil, fmt.Errorf("getting package objecset: %w", err)
 	}
-
 	return objres, nil
 }
 
