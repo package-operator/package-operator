@@ -3,6 +3,7 @@ package objecttemplate
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,11 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 	log := testr.New(t)
 	dc := &dynamiccachemocks.DynamicCacheMock{}
 	rm := &restmappermock.RestMapperMock{}
-	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm)
+	cfg := ControllerConfig{
+		OptionalResourceRetryInterval: time.Second * 30,
+		ResourceRetryInterval:         time.Second * 30,
+	}
+	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm, cfg)
 	controller.reconciler = nil // we are testing reconcilers on their own
 
 	objectKey := client.ObjectKey{Name: "test", Namespace: "testns"}
@@ -67,7 +72,11 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 	log := testr.New(t)
 	dc := &dynamiccachemocks.DynamicCacheMock{}
 	rm := &restmappermock.RestMapperMock{}
-	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm)
+	cfg := ControllerConfig{
+		OptionalResourceRetryInterval: time.Second * 30,
+		ResourceRetryInterval:         time.Second * 30,
+	}
+	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm, cfg)
 	controller.reconciler = nil // we are testing reconcilers on their own
 
 	objectKey := client.ObjectKey{Name: "test", Namespace: "testns"}

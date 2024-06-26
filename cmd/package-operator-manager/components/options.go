@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -35,6 +36,10 @@ const (
 		"like remote-phase-manager."
 	subCmpntTolerationsFlagDescription = "Pod tolerations settings used in PKO deployed subcomponents, " +
 		"like remote-phase-manager."
+	objectTemplateOptionalResourceRetryIntervalFlagDescription = "The interval at which the controller will retry " +
+		"getting optional source resource for an ObjectTemplate."
+	objectTemplateResourceRetryIntervalFlagDescription = "The interval at which the controller will retry " +
+		"getting source resource for an ObjectTemplate."
 )
 
 type Options struct {
@@ -56,6 +61,10 @@ type Options struct {
 	// Sub component Settings
 	SubComponentAffinity    *corev1.Affinity
 	SubComponentTolerations []corev1.Toleration
+
+	// Controller configuration
+	ObjectTemplateOptionalResourceRetryInterval time.Duration
+	ObjectTemplateResourceRetryInterval         time.Duration
 }
 
 func ProvideOptions() (opts Options, err error) {
@@ -97,6 +106,15 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.RegistryHostOverrides, "registry-host-overrides",
 		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
 		registryHostOverrides)
+
+	flag.DurationVar(
+		&opts.ObjectTemplateResourceRetryInterval,
+		"object-template-resource-retry-interval",
+		time.Second*30, objectTemplateResourceRetryIntervalFlagDescription)
+	flag.DurationVar(
+		&opts.ObjectTemplateOptionalResourceRetryInterval,
+		"object-template-optional-resource-retry-interval",
+		time.Second*60, objectTemplateOptionalResourceRetryIntervalFlagDescription)
 
 	var (
 		subComponentAffinityJSON    string
