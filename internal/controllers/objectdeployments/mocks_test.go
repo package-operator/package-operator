@@ -15,6 +15,7 @@ var (
 	_ genericObjectSet         = (*genericObjectSetMock)(nil)
 	_ objectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
 	_ objectSetSubReconciler   = (*objectSetSubReconcilerMock)(nil)
+	_ objectDeploymentAccessor = (*genericObjectSetDeploymentMock)(nil)
 )
 
 type genericObjectSetMock struct {
@@ -168,6 +169,80 @@ func (o *genericObjectDeploymentMock) GetConditions() *[]metav1.Condition {
 }
 
 func (o *genericObjectDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
+	args := o.Called()
+	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
+}
+
+type genericObjectSetDeploymentMock struct {
+	mock.Mock
+}
+
+func (o *genericObjectSetDeploymentMock) SetStatusRevision(r int64) {
+	o.Called(r)
+}
+
+func (o *genericObjectSetDeploymentMock) ClientObject() client.Object {
+	args := o.Called()
+	return args.Get(0).(client.Object)
+}
+
+func (o *genericObjectSetDeploymentMock) GetStatusTemplateHash() string {
+	args := o.Called()
+	return args.Get(0).(string)
+}
+
+func (o *genericObjectSetDeploymentMock) SetStatusTemplateHash(templateHash string) {
+	o.Called(templateHash)
+}
+
+func (o *genericObjectSetDeploymentMock) GetGeneration() int64 {
+	args := o.Called()
+	return args.Get(0).(int64)
+}
+
+func (o *genericObjectSetDeploymentMock) SetStatusConditions(conds ...metav1.Condition) {
+	o.Called(conds)
+}
+
+func (o *genericObjectSetDeploymentMock) SetObservedGeneration(a int64) {
+	o.Called(a)
+}
+
+func (o *genericObjectSetDeploymentMock) SetStatusCollisionCount(a *int32) {
+	o.Called(a)
+}
+
+func (o *genericObjectSetDeploymentMock) GetObservedGeneration() int64 {
+	args := o.Called()
+	return args.Get(0).(int64)
+}
+
+func (o *genericObjectSetDeploymentMock) GetRevisionHistoryLimit() *int32 {
+	args := o.Called()
+	return args.Get(0).(*int32)
+}
+
+func (o *genericObjectSetDeploymentMock) GetStatusCollisionCount() *int32 {
+	args := o.Called()
+	res, _ := args.Get(0).(*int32)
+	return res
+}
+
+func (o *genericObjectSetDeploymentMock) GetSelector() metav1.LabelSelector {
+	args := o.Called()
+	return args.Get(0).(metav1.LabelSelector)
+}
+
+func (o *genericObjectSetDeploymentMock) UpdatePhase() {
+	o.Called()
+}
+
+func (o *genericObjectSetDeploymentMock) GetConditions() *[]metav1.Condition {
+	args := o.Called()
+	return args.Get(0).(*[]metav1.Condition)
+}
+
+func (o *genericObjectSetDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
 }
