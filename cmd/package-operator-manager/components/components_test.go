@@ -34,3 +34,24 @@ func TestUncachedClient(t *testing.T) {
 	require.EqualError(t, err,
 		"unable to set up uncached client: must provide non-nil rest.Config to client.New")
 }
+
+func TestProvideRestConfig(t *testing.T) {
+	t.Parallel()
+
+	_, err := ProvideRestConfig()
+	require.Error(t, err)
+}
+
+func TestProvideRestMapper(t *testing.T) {
+	t.Parallel()
+
+	_, err := ProvideRESTMapper()
+	require.NoError(t, err)
+}
+
+func TestProvideManager(t *testing.T) {
+	t.Parallel()
+
+	_, err := ProvideManager(nil, nil, Options{})
+	require.Error(t, err)
+}

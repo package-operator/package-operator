@@ -67,3 +67,15 @@ func TestProvideOptions(t *testing.T) {
 		},
 	}, opts)
 }
+
+func TestEnvToInt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("environment varialble not set", func(t *testing.T) {
+		t.Parallel()
+		val, err := envToInt("")
+
+		assert.Equal(t, 0, val)
+		assert.NoError(t, err)
+	})
+}
