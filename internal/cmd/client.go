@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -28,27 +29,28 @@ type Client struct {
 }
 
 func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*corev1alpha1.ObjectSet, error) {
-	obj := &corev1alpha1.Package{}
-
+	objres := &corev1alpha1.ObjectSet{}
 	objreslist := &corev1alpha1.ObjectSetList{}
 	if err := c.client.List(ctx, objreslist); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
 	for i := range objreslist.Items {
-		if (objreslist.Items[i].Status.Phase == "Available") && strings.Contains(objreslist.Items[i].Name, name) && (objreslist.Items[i].Namespace == ns) {
-			obj = &corev1alpha1.Package{
+		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(
+			objreslist.Items[i].Name, name) && (objreslist.Items[i].Namespace == ns) {
+			obj := &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      objreslist.Items[i].Name,
 					Namespace: objreslist.Items[i].Namespace,
 				},
 			}
+
+			if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
+				return nil, fmt.Errorf("getting package objecset: %w", err)
+			}
+			return objres, nil
 		}
 	}
-	objres := &corev1alpha1.ObjectSet{}
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
-		return nil, fmt.Errorf("getting package objecset: %w", err)
-	}
-	return objres, nil
+	return nil, errors.New("ObjectSet could not be found") //nolint: err113
 }
 
 func (c *Client) GetClusterObjectset(ctx context.Context, name string,

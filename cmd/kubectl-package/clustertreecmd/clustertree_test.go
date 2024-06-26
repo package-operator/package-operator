@@ -152,7 +152,7 @@ namespace/test
 					},
 
 					Status: corev1alpha1.ObjectSetStatus{
-						Revision: 1,
+						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
 					},
 				},
 			},
