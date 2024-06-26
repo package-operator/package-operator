@@ -34,6 +34,24 @@ func TestGenericPackage(t *testing.T) {
 	assert.Empty(t, pkg.GetComponent())
 	p.Spec.Component = "test_component"
 	assert.Equal(t, p.Spec.Component, pkg.GetComponent())
+
+	assert.Empty(t, pkg.GetConditions())
+	p.Status.Conditions = []metav1.Condition{
+		{
+			ObservedGeneration: 1,
+			Type:               "test-type",
+			Reason:             "test-reason",
+			Message:            "test-message",
+		},
+	}
+	assert.Equal(t, p.Status.Conditions, *pkg.GetConditions())
+
+	p.Status.Revision = int64(2)
+	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())
+
+	var statusPhase corev1alpha1.PackageStatusPhase = "test"
+	pkg.setStatusPhase(statusPhase)
+	assert.Equal(t, statusPhase, p.Status.Phase)
 }
 
 func TestGenericClusterPackage(t *testing.T) {
@@ -60,6 +78,24 @@ func TestGenericClusterPackage(t *testing.T) {
 	assert.Empty(t, pkg.GetComponent())
 	p.Spec.Component = "test_component"
 	assert.Equal(t, p.Spec.Component, pkg.GetComponent())
+
+	assert.Empty(t, pkg.GetConditions())
+	p.Status.Conditions = []metav1.Condition{
+		{
+			ObservedGeneration: 1,
+			Type:               "test-type",
+			Reason:             "test-reason",
+			Message:            "test-message",
+		},
+	}
+	assert.Equal(t, p.Status.Conditions, *pkg.GetConditions())
+
+	p.Status.Revision = int64(2)
+	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())
+
+	var statusPhase corev1alpha1.PackageStatusPhase = "test"
+	pkg.setStatusPhase(statusPhase)
+	assert.Equal(t, statusPhase, p.Status.Phase)
 }
 
 func Test_updatePackagePhase(t *testing.T) {
