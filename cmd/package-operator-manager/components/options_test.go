@@ -2,6 +2,7 @@ package components
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,5 +66,7 @@ func TestProvideOptions(t *testing.T) {
 				},
 			},
 		},
+		ObjectTemplateOptionalResourceRetryInterval: time.Second * 60,
+		ObjectTemplateResourceRetryInterval:         time.Second * 30,
 	}, opts)
 }

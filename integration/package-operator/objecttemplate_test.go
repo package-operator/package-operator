@@ -446,7 +446,8 @@ data:
 				upatedCM := obj.(*corev1.ConfigMap)
 				return upatedCM.Data["test"] == secretValue, nil
 			},
-			wait.WithTimeout(60*time.Second),
+			// For optional source the default retryAfter duration in the controller is 60s.
+			wait.WithTimeout(100*time.Second),
 		),
 	)
 }
