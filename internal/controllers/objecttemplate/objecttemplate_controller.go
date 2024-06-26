@@ -3,6 +3,7 @@ package objecttemplate
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -52,16 +53,22 @@ type GenericObjectTemplateController struct {
 	reconciler         []reconciler
 }
 
+type ControllerConfig struct {
+	OptionalResourceRetryInterval time.Duration
+	ResourceRetryInterval         time.Duration
+}
+
 func NewObjectTemplateController(
 	client, uncachedClient client.Client,
 	log logr.Logger,
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
+	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, dynamicCache, scheme,
-		restMapper, newGenericObjectTemplate)
+		restMapper, newGenericObjectTemplate, cfg)
 }
 
 func NewClusterObjectTemplateController(
@@ -70,10 +77,11 @@ func NewClusterObjectTemplateController(
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
+	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, dynamicCache, scheme,
-		restMapper, newGenericClusterObjectTemplate)
+		restMapper, newGenericClusterObjectTemplate, cfg)
 }
 
 func newGenericObjectTemplateController(
@@ -83,6 +91,7 @@ func newGenericObjectTemplateController(
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
 	newObjectTemplate genericObjectTemplateFactory,
+	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	controller := &GenericObjectTemplateController{
 		newObjectTemplate: newObjectTemplate,
@@ -100,6 +109,8 @@ func newGenericObjectTemplateController(
 					preflight.NewNamespaceEscalation(restMapper),
 				},
 			),
+			cfg.OptionalResourceRetryInterval,
+			cfg.ResourceRetryInterval,
 		),
 	}
 	controller.reconciler = []reconciler{controller.templateReconciler}
