@@ -1,10 +1,13 @@
 package rolloutcmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"package-operator.run/internal/cli"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+
 	internalcmd "package-operator.run/internal/cmd"
 )
 
@@ -22,9 +25,9 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 	}
 
-	var opts options
+	var opts rollbckoptions
 
-	opts.AddFlags(cmd.Flags())
+	opts.AddRollbackFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, rawArgs []string) error {
 		args, err := getArgs(rawArgs)
@@ -43,9 +46,9 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 			return err
 		}
 
-		printer := newPrinter(
+		/*printer := newPrinter(
 			cli.NewPrinter(cli.WithOut{Out: cmd.OutOrStdout()}),
-		)
+		)*/
 
 		if opts.Revision > 0 {
 			os, found := list.FindRevision(opts.Revision)
@@ -53,44 +56,40 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 				return errRevisionsNotFound
 			}
 
-			return printer.PrintObjectSet(os, opts)
+			obs := os.GetClusterObjectsettype()
+			if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
+				fmt.Println("Name of archive ", obs.Name)
+				// as the cluster object set of that revision is Archived lets do the logic for rollback
+			}
+
+			phasename := obs.Spec.Phases[0].Name
+			fmt.Printf("phas name  %s", phasename)
+
+			//return printer.PrintObjectSet(os, opts)
+			return nil
 		}
 
 		list.Sort()
 
-		return printer.PrintObjectSetList(list, opts)
+		//return printer.PrintObjectSetList(list, opts)
+		return nil
 	}
 
 	return cmd
 }
 
-//var errRevisionsNotFound = errors.New("revision not found")
-
-type rarguments struct {
-	Resource string
-	Name     string
-	Revision int64
-}
-
-type roptions struct {
+type rollbckoptions struct {
 	Namespace string
-	Output    string
+	Revision  int64
 }
 
-func (o *options) rAddFlags(flags *pflag.FlagSet) {
+func (o *rollbckoptions) AddRollbackFlags(flags *pflag.FlagSet) {
 	flags.StringVarP(
 		&o.Namespace,
 		"namespace",
 		"n",
 		o.Namespace,
 		"If present, the namespace scope for this CLI request",
-	)
-	flags.StringVarP(
-		&o.Output,
-		"output",
-		"o",
-		o.Output,
-		"Output format. One of: json|yaml",
 	)
 	flags.Int64Var(
 		&o.Revision,

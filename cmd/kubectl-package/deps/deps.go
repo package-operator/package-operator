@@ -40,5 +40,6 @@ func constructors() []any {
 		ProvideRolloutCmd,
 		ProvideClientFactory,
 		ProvideRolloutHistoryCmd,
+		ProvideRolloutRollbackCmd,
 	}
 }
