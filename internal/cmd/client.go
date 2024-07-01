@@ -336,6 +336,14 @@ func (s *ObjectSet) HasSucceeded() bool {
 	return meta.IsStatusConditionTrue(s.getConditions(), corev1alpha1.ObjectSetSucceeded)
 }
 
+func (s *ObjectSet) GetClusterObjectsettype() *corev1alpha1.ClusterObjectSet {
+	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
+		return cos
+	}
+	return nil
+
+}
+
 func (s *ObjectSet) getConditions() []metav1.Condition {
 	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
 		return cos.Status.Conditions

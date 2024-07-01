@@ -60,6 +60,7 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 			if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
 				fmt.Println("Name of archive ", obs.Name)
 				// as the cluster object set of that revision is Archived lets do the logic for rollback
+
 			}
 
 			phasename := obs.Spec.Phases[0].Name
