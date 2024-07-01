@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +29,7 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
+	"package-operator.run/internal/utils"
 )
 
 // Requeue every 30s to check if input sources exist now.
@@ -90,6 +93,7 @@ func (r *templateReconciler) Reconcile(
 	existingObj := &unstructured.Unstructured{}
 	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
 	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
+		log.Print("creating first time the obj")
 		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 			return res, fmt.Errorf("handling creation: %w", err)
 		}
@@ -101,15 +105,18 @@ func (r *templateReconciler) Reconcile(
 		return res, fmt.Errorf("updating status conditions from owned object: %w", err)
 	}
 
-	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
-	obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
-	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
-
-	obj.SetResourceVersion(existingObj.GetResourceVersion())
-	if err := r.client.Update(ctx, obj); err != nil {
-		return res, fmt.Errorf("updating templated object: %w", err)
+	ownedByPKO := utils.HasSameController(existingObj, obj)
+	specChanged := !equality.Semantic.DeepEqual(existingObj.Object["spec"], obj.Object["spec"])
+	log.Print(existingObj, obj)
+	if specChanged || !ownedByPKO {
+		obj.SetOwnerReferences(existingObj.GetOwnerReferences())
+		obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
+		obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
+		obj.SetResourceVersion(existingObj.GetResourceVersion())
+		if err := r.client.Update(ctx, obj); err != nil {
+			return res, fmt.Errorf("updating templated object: %w", err)
+		}
 	}
-
 	return res, nil
 }
 
