@@ -125,6 +125,24 @@ func (c *GetPackageConfig) Option(opts ...GetPackageOption) {
 
 type GetPackageOption interface{ ConfigureGetPackage(*GetPackageConfig) }
 
+func (c *Client) PatchClusterObjectDeployment(
+	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet) (*ObjectDeployment, error) {
+
+	obj := &corev1alpha1.ClusterObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+	}
+	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
+		fmt.Println("Patching will happen")
+	}
+	return nil, nil
+}
+
 func (c *Client) GetObjectDeployment(
 	ctx context.Context, name string, opts ...GetObjectDeploymentOption,
 ) (*ObjectDeployment, error) {
