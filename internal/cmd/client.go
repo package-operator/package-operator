@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -139,6 +140,12 @@ func (c *Client) PatchClusterObjectDeployment(
 	}
 	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
 		fmt.Println("Patching will happen")
+
+		fmt.Printf("deployment spec current:  %+v\n", obj.Spec.Template.Spec)
+		patch, val, _ := getDeploymentPatch(&cobs.Spec)
+		fmt.Println(string(val))
+
+		c.client.Patch(ctx, client.ObjectKeyFromObject(obj), val, patch)
 	}
 	return nil, nil
 }
@@ -442,4 +449,15 @@ func (l ObjectSetList) RenderTable(headers ...string) Table {
 	}
 
 	return table
+}
+
+func getDeploymentPatch(clusterdepspec *corev1alpha1.ClusterObjectSetSpec) (types.PatchType, []byte, error) {
+	// Create a patch of the Deployment that replaces spec.template
+	patch, err := json.Marshal([]interface{}{
+		map[string]interface{}{
+			"op":    "replace",
+			"path":  "/spec/template/spec",
+			"value": clusterdepspec,
+		}})
+	return types.JSONPatchType, patch, err
 }
