@@ -118,6 +118,7 @@ func (r *templateReconciler) Reconcile(
 			}
 		}
 	}
+
 	return res, nil
 }
 
