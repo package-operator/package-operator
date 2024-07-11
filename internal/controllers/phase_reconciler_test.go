@@ -45,6 +45,7 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 		dynamicCache:     dynamicCache,
 		ownerStrategy:    ownerStrategy,
 		preflightChecker: preflightChecker,
+		ownerRefChecker:  preflight.List{},
 	}
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
@@ -93,6 +94,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
+			ownerRefChecker:  preflight.List{},
 		}
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
@@ -142,6 +144,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
+			ownerRefChecker:  preflight.List{},
 		}
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
@@ -211,6 +214,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			uncachedClient:   uncachedClient,
 			ownerStrategy:    ownerStrategy,
 			preflightChecker: preflightChecker,
+			ownerRefChecker:  preflight.List{},
 		}
 
 		owner := &phaseObjectOwnerMock{}
@@ -277,6 +281,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) { //nolint:maintidx
 			ownerStrategy:    ownerStrategy,
 			writer:           testClient,
 			preflightChecker: preflightChecker,
+			ownerRefChecker:  preflight.List{},
 		}
 
 		owner := &phaseObjectOwnerMock{}
@@ -554,7 +559,8 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 
 	os := &ownerStrategyMock{}
 	r := &PhaseReconciler{
-		ownerStrategy: os,
+		ownerStrategy:   os,
+		ownerRefChecker: preflight.List{},
 	}
 
 	os.On("SetControllerReference",
@@ -601,7 +607,8 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 
 	os := &ownerStrategyMock{}
 	r := &PhaseReconciler{
-		ownerStrategy: os,
+		ownerStrategy:   os,
+		ownerRefChecker: preflight.List{},
 	}
 
 	os.On("SetControllerReference",
@@ -1557,6 +1564,7 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 		scheme:           testScheme,
 		preflightChecker: pcm,
 		ownerStrategy:    ownerStrategyMock,
+		ownerRefChecker:  preflight.List{},
 	}
 
 	ownerObj := &unstructured.Unstructured{}

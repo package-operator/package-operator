@@ -268,10 +268,16 @@ var crdGK = schema.GroupKind{
 	Kind:  "CustomResourceDefinition",
 }
 
+// GroupKind for CRDs.
+var cbindGK = schema.GroupKind{
+	Group: "rbac.authorization.k8s.io",
+	Kind:  "ClusterRoleBinding",
+}
+
 func crdsFromObjects(objs []unstructured.Unstructured) (crds []unstructured.Unstructured) {
 	for _, obj := range objs {
 		gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
-		if gk != crdGK {
+		if gk != crdGK && gk != cbindGK {
 			continue
 		}
 

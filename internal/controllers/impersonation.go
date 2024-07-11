@@ -187,7 +187,7 @@ func impersonationUserAndGroupsForObject(oi objectIdentity) (user string, groups
 		resourcePlural = "clusterpackages"
 		isClusterScope = true
 	default:
-		panic(fmt.Sprintf("%q unsupported kind for impersonation", oi.Kind))
+		return "", nil
 	}
 
 	if isClusterScope {

@@ -41,6 +41,7 @@ type PhaseReconciler struct {
 	adoptionChecker  adoptionChecker
 	patcher          patcher
 	preflightChecker preflightChecker
+	ownerRefChecker  preflightChecker
 }
 
 type ownerStrategy interface {
@@ -104,6 +105,7 @@ func NewPhaseReconciler(
 		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
 		patcher:          &defaultPatcher{writer: writer},
 		preflightChecker: preflightChecker,
+		ownerRefChecker:  preflight.NewNoOwnerReferences(),
 	}
 }
 
@@ -332,13 +334,17 @@ func (r *PhaseReconciler) teardownPhaseObject(
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
+	// Preflight checker during teardown prevents the deletion of resources in different namespaces and
+	// unblocks teardown when APIs have been removed.
+	// We assume that objects with preflight-check errors have never been deleted in the first place.
 	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
+	var preflightError *preflight.Error
+	if errors.As(err, &preflightError) {
+		return true, nil
+	}
 	if err != nil {
 		return false, fmt.Errorf("building desired object: %w", err)
 	}
-
-	// Preflight checker during teardown prevents the deletion of resources in different namespaces and
-	// unblocks teardown when APIs have been removed.
 	if v, err := r.preflightChecker.Check(ctx, owner.ClientObject(), desiredObj); err != nil {
 		return false, fmt.Errorf("running preflight validation: %w", err)
 	} else if len(v) > 0 {
@@ -532,7 +538,7 @@ func mapConditions(
 // Builds an object as specified in a phase.
 // Includes system labels, namespace and owner reference.
 func (r *PhaseReconciler) desiredObject(
-	_ context.Context, owner PhaseObjectOwner,
+	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured, err error) {
 	desiredObj = phaseObject.Object.DeepCopy()
@@ -562,6 +568,14 @@ func (r *PhaseReconciler) desiredObject(
 	desiredObj.SetLabels(labels)
 
 	setObjectRevision(desiredObj, owner.GetRevision())
+
+	// If an object already has an Owner set, raise it via a preflight error to report to users.
+	if violations, err := r.ownerRefChecker.Check(ctx, owner.ClientObject(), desiredObj); err != nil {
+		return nil, fmt.Errorf("checking owner references: %w", err)
+	} else if len(violations) > 0 {
+		return nil, &preflight.Error{Violations: violations}
+	}
+
 	// Set owner reference
 	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
 		return nil, fmt.Errorf("set controller reference: %w", err)
