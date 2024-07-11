@@ -2,6 +2,7 @@ package kickstart
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,7 +25,9 @@ type Kickstarter struct {
 }
 
 func NewKickstarter(stdin io.Reader) *Kickstarter {
-	return &Kickstarter{stdin: stdin}
+	return &Kickstarter{
+		stdin: stdin,
+	}
 }
 
 func (k *Kickstarter) KickStart(
@@ -40,7 +43,7 @@ func (k *Kickstarter) KickStart(
 	usedGKs := map[schema.GroupKind]struct{}{}
 	var objCount int
 	for _, input := range inputs {
-		objects, err := k.getInput(input)
+		objects, err := k.getInput(ctx, input)
 		if err != nil {
 			return "", fmt.Errorf("get input: %w", err)
 		}
@@ -53,7 +56,7 @@ func (k *Kickstarter) KickStart(
 			usedPhases[phase] = struct{}{}
 			usedGKs[gk] = struct{}{}
 		}
-		objCount = objCount + len(objects)
+		objCount += len(objects)
 	}
 
 	// Write Manifest
@@ -63,10 +66,15 @@ func (k *Kickstarter) KickStart(
 			phases = append(phases, manifestsv1alpha1.PackageManifestPhase{Name: string(phase)})
 		}
 	}
-	var probes []corev1alpha1.ObjectSetProbe
+	//nolint:prealloc
+	var (
+		probes           []corev1alpha1.ObjectSetProbe
+		gksWithoutProbes = map[schema.GroupKind]struct{}{}
+	)
 	for gk := range usedGKs {
 		probe, ok := getProbe(gk)
 		if !ok {
+			gksWithoutProbes[gk] = struct{}{}
 			continue
 		}
 		probes = append(probes, probe)
@@ -82,7 +90,6 @@ func (k *Kickstarter) KickStart(
 		Spec: manifestsv1alpha1.PackageManifestSpec{
 			Phases: phases,
 			Scopes: []manifestsv1alpha1.PackageManifestScope{
-				// TODO: new option?
 				manifestsv1alpha1.PackageManifestScopeCluster,
 				manifestsv1alpha1.PackageManifestScopeNamespaced,
 			},
@@ -97,7 +104,13 @@ func (k *Kickstarter) KickStart(
 		return "", fmt.Errorf("writing PackageManifest: %w", err)
 	}
 
-	return fmt.Sprintf("Kickstarted the %q package with %d objects.", pkgName, objCount), nil
+	msg = fmt.Sprintf("Kickstarted the %q package with %d objects.", pkgName, objCount)
+	report, ok := reportGKsWithoutProbes(gksWithoutProbes)
+	if ok {
+		msg += "\n" + report
+	}
+
+	return msg, nil
 }
 
 func (k *Kickstarter) processObject(
@@ -124,7 +137,7 @@ func (k *Kickstarter) processObject(
 	return phase, gk, os.WriteFile(path, b, os.ModePerm)
 }
 
-func (k *Kickstarter) getInput(input string) (
+func (k *Kickstarter) getInput(ctx context.Context, input string) (
 	[]unstructured.Unstructured, error,
 ) {
 	var reader io.Reader
@@ -136,11 +149,20 @@ func (k *Kickstarter) getInput(input string) (
 	case strings.Index(input, "http://") == 0 ||
 		strings.Index(input, "https://") == 0:
 		// from HTTP(S)
-		resp, err := http.Get(input)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, input, nil)
+		if err != nil {
+			return nil, fmt.Errorf("building HTTP request: %w", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("HTTP get: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				panic(err)
+			}
+		}()
 		reader = resp.Body
 
 	default:
@@ -156,9 +178,7 @@ func (k *Kickstarter) getInput(input string) (
 			if err != nil {
 				return nil, fmt.Errorf("accessing: %w", err)
 			}
-			var (
-				matchObjs []unstructured.Unstructured
-			)
+			var matchObjs []unstructured.Unstructured
 			if i.IsDir() {
 				matchObjs, err = kubemanifests.LoadKubernetesObjectsFromFolder(match)
 			} else {
@@ -189,223 +209,14 @@ func expandIfFilePattern(pattern string) ([]string, error) {
 	if _, err := os.Stat(pattern); os.IsNotExist(err) {
 		matches, err := filepath.Glob(pattern)
 		if err == nil && len(matches) == 0 {
-			return nil, fmt.Errorf(os.ErrNotExist.Error(), pattern)
+			return nil, fmt.Errorf("%s: %w", pattern, os.ErrNotExist)
 		}
-		if err == filepath.ErrBadPattern {
-			return nil, fmt.Errorf("pattern %q is not valid: %v", pattern, err)
+		if errors.Is(err, filepath.ErrBadPattern) {
+			return nil, fmt.Errorf("pattern %q is not valid: %w", pattern, err)
 		}
 		return matches, err
 	}
 	return []string{pattern}, nil
-}
-
-// Determines a phase using the objects Group Kind from a list or presets.
-func guessPresetPhase(gk schema.GroupKind) string {
-	phase, ok := gkPhaseMap[gk]
-	if !ok {
-		return string(presetPhaseOther)
-	}
-	return string(phase)
-}
-
-type presetPhase string
-
-const (
-	presetPhaseNamespaces presetPhase = "namespaces"
-	presetPhasePolicies   presetPhase = "policies"
-	presetPhaseRBAC       presetPhase = "rbac"
-	presetPhaseCRDs       presetPhase = "crds"
-	presetPhaseStorage    presetPhase = "storage"
-	presetPhaseDeploy     presetPhase = "deploy"
-	presetPhasePublish    presetPhase = "publish"
-	// anything else that is not explicitly sorted into a phase.
-	presetPhaseOther presetPhase = "other"
-)
-
-var orderedPhases = []presetPhase{
-	presetPhaseNamespaces,
-	presetPhasePolicies,
-	presetPhaseRBAC,
-	presetPhaseCRDs,
-	presetPhaseStorage,
-	presetPhaseDeploy,
-	presetPhasePublish,
-	presetPhaseOther,
-}
-
-var gkPhaseMap = map[schema.GroupKind]presetPhase{}
-var phaseGKMap = map[presetPhase][]schema.GroupKind{
-	presetPhaseNamespaces: {
-		{Kind: "Namespace"},
-	},
-
-	presetPhasePolicies: {
-		{Kind: "ResourceQuota"},
-		{Kind: "LimitRange"},
-		{Kind: "PriorityClass", Group: "scheduling.k8s.io"},
-		{Kind: "NetworkPolicy", Group: "networking.k8s.io"},
-		{Kind: "HorizontalPodAutoscaler", Group: "autoscaling"},
-		{Kind: "PodDisruptionBudget", Group: "policy"},
-	},
-
-	presetPhaseRBAC: {
-		{Kind: "ServiceAccount", Group: ""},
-		{Kind: "Role", Group: "rbac.authorization.k8s.io"},
-		{Kind: "RoleRolebinding", Group: "rbac.authorization.k8s.io"},
-		{Kind: "ClusterRole", Group: "rbac.authorization.k8s.io"},
-		{Kind: "ClusterRoleRolebinding", Group: "rbac.authorization.k8s.io"},
-	},
-
-	presetPhaseCRDs: {
-		{Kind: "CustomResourceDefinition", Group: "apiextensions.k8s.io"},
-	},
-
-	presetPhaseStorage: {
-		{Kind: "PersistentVolume"},
-		{Kind: "PersistentVolumeClaim"},
-		{Kind: "StorageClass", Group: "storage.k8s.io"},
-	},
-
-	presetPhaseDeploy: {
-		{Kind: "Deployment", Group: "apps"},
-		{Kind: "DaemonSet", Group: "apps"},
-		{Kind: "StatefulSet", Group: "apps"},
-		{Kind: "ReplicaSet"},
-		{Kind: "Pod"}, // probing complicated, may be either Completed or Available.
-		{Kind: "Job", Group: "batch"},
-		{Kind: "CronJob", Group: "batch"},
-		{Kind: "Service"},
-		{Kind: "Secret"},
-		{Kind: "ConfigMap"},
-	},
-
-	presetPhasePublish: {
-		{Kind: "Ingress", Group: "networking.k8s.io"},
-		{Kind: "APIService", Group: "apiregistration.k8s.io"},
-		{Kind: "Route", Group: "route.openshift.io"},
-		{Kind: "MutatingWebhookConfiguration", Group: "admissionregistration.k8s.io"},
-		{Kind: "ValidatingWebhookConfiguration", Group: "admissionregistration.k8s.io"},
-	},
-}
-
-// Determines probes required for the given Group Kind.
-func getProbe(gk schema.GroupKind) (corev1alpha1.ObjectSetProbe, bool) {
-	probes, ok := gkProbes[gk]
-	if !ok {
-		return corev1alpha1.ObjectSetProbe{}, false
-	}
-	return corev1alpha1.ObjectSetProbe{
-		Selector: corev1alpha1.ProbeSelector{
-			Kind: &corev1alpha1.PackageProbeKindSpec{
-				Group: gk.Group,
-				Kind:  gk.Kind,
-			},
-		},
-		Probes: probes,
-	}, true
-}
-
-var gkProbes = map[schema.GroupKind][]corev1alpha1.Probe{
-	{
-		Kind: "Deployment", Group: "apps",
-	}: {
-		availableProbe,
-		replicasUpdatedProbe,
-	},
-	{
-		Kind: "StatefulSet", Group: "apps",
-	}: {
-		availableProbe,
-		replicasUpdatedProbe,
-	},
-	{
-		Kind: "DaemonSet", Group: "apps",
-	}: {
-		{
-			FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-				FieldA: ".status.desiredNumberScheduled",
-				FieldB: ".status.numberAvailable",
-			},
-		},
-	},
-	{
-		Kind: "ReplicaSet", Group: "apps",
-	}: {
-		availableProbe,
-		replicasUpdatedProbe,
-	},
-	{
-		Kind:  "CustomResourceDefinition",
-		Group: "apiextensions.k8s.io",
-	}: {
-		{
-			Condition: &corev1alpha1.ProbeConditionSpec{
-				Type:   "Established",
-				Status: string(metav1.ConditionTrue),
-			},
-		},
-	},
-	{
-		Kind:  "Job",
-		Group: "batch",
-	}: {
-		{
-			Condition: &corev1alpha1.ProbeConditionSpec{
-				Type:   "Complete",
-				Status: string(metav1.ConditionTrue),
-			},
-		},
-	},
-	{
-		Kind:  "Route",
-		Group: "route.openshift.io",
-	}: {
-		{
-			CEL: &corev1alpha1.ProbeCELSpec{
-				Message: "not all ingress points are reporting ready",
-				Rule:    `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
-			},
-		},
-	},
-	{
-		Kind:  "PersistentVolumeClaim",
-		Group: "",
-	}: {
-		{
-			CEL: &corev1alpha1.ProbeCELSpec{
-				Message: "is not yet Bound",
-				Rule:    `self.status.phase == "Bound"`,
-			},
-		},
-	},
-	{
-		Kind:  "ClusterServiceVersion",
-		Group: "operators.coreos.com",
-	}: {
-		{
-			CEL: &corev1alpha1.ProbeCELSpec{
-				Message: "CSV not succeeded",
-				Rule:    `self.status.phase == "Succeeded"`,
-			},
-		},
-	},
-}
-
-// Checks if the Available Condition is True.
-var availableProbe = corev1alpha1.Probe{
-	Condition: &corev1alpha1.ProbeConditionSpec{
-		Type:   "Available",
-		Status: string(metav1.ConditionTrue),
-	},
-}
-
-// Checks if all replicas have been updated.
-// Works for StatefulSets, Deployments and ReplicaSets.
-var replicasUpdatedProbe = corev1alpha1.Probe{
-	FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-		FieldA: ".status.updatedReplicas",
-		FieldB: ".status.replicas",
-	},
 }
 
 func init() {
