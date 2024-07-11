@@ -131,61 +131,95 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetConditions(),
 	)
 
-	if !meta.IsStatusConditionTrue(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
-		var conds []metav1.Condition
+	if meta.IsStatusConditionTrue(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
+		// Latest revision succeeded, so we are no longer progressing.
+		objectDeployment.SetStatusConditions(
+			newProgressingCondition(
+				metav1.ConditionFalse,
+				progressingReasonIdle,
+				"Update concluded.",
+				objectDeployment.GetGeneration(),
+			),
+			// Also clear any "Blocking" condition.
+			metav1.Condition{
+				Type:    corev1alpha1.ObjectDeploymentBlocked,
+				Status:  metav1.ConditionFalse,
+				Reason:  string(progressingReasonIdle),
+				Message: "",
+			},
+		)
 
-		msg := "Latest Revision Status Unknown"
+		if !currentObjectSet.IsAvailable() {
+			objectDeployment.SetStatusConditions(
+				conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
+			)
 
-		availableCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
-		if availableCond != nil {
-			if availableCond.Status == metav1.ConditionFalse {
-				conds = append(conds, conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
-
-				msg = "Latest Revision is Unavailable: " + availableCond.Message
-			} else {
-				msg = "Latest Revision is Available: pending success delay period"
-			}
+			return
 		}
 
+		// Latest objectset revision is also available
+		objectDeployment.SetStatusConditions(
+			newAvailableCondition(
+				metav1.ConditionTrue,
+				availableReasonAvailable,
+				"Latest Revision is Available.",
+				objectDeployment.GetGeneration(),
+			),
+		)
+		return
+	}
+
+	var conds []metav1.Condition
+
+	availableCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+	if availableCond == nil ||
+		!(availableCond.Status == metav1.ConditionFalse ||
+			availableCond.Status == metav1.ConditionTrue) {
+		// Available condition missing or without clear status.
 		conds = append(conds, newProgressingCondition(
 			metav1.ConditionTrue,
 			progressingReasonLatestRevPendingSuccess,
-			msg,
-			objectDeployment.ClientObject().GetGeneration(),
+			"Latest Revision Status Unknown",
+			objectDeployment.GetGeneration(),
 		))
-
 		objectDeployment.SetStatusConditions(conds...)
-
 		return
 	}
 
-	// Latest revision succeeded, so we are no longer progressing.
-	objectDeployment.SetStatusConditions(
-		newProgressingCondition(
-			metav1.ConditionFalse,
-			progressingReasonIdle,
-			"Update concluded.",
-			objectDeployment.GetGeneration(),
-		),
-	)
+	var msg string
+	if availableCond.Status == metav1.ConditionFalse {
+		conds = append(conds, conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
 
-	if !currentObjectSet.IsAvailable() {
-		objectDeployment.SetStatusConditions(
-			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
-		)
-
-		return
+		msg = fmt.Sprintf("Latest Revision is Unavailable due to %s:\n%s", availableCond.Reason, availableCond.Message)
+	} else {
+		msg = "Latest Revision is Available: pending success delay period"
 	}
 
-	// Latest objectset revision is also available
-	objectDeployment.SetStatusConditions(
-		newAvailableCondition(
-			metav1.ConditionTrue,
-			availableReasonAvailable,
-			"Latest Revision is Available.",
-			objectDeployment.GetGeneration(),
-		),
-	)
+	if availableCond.Reason == "PreflightError" ||
+		availableCond.Reason == "InsufficientPermissions" {
+		conds = append(conds, metav1.Condition{
+			Type:    corev1alpha1.ObjectDeploymentBlocked,
+			Status:  metav1.ConditionTrue,
+			Reason:  availableCond.Reason,
+			Message: "Rollout likely blocked without outside intervention.",
+		})
+	} else {
+		// Clear "Blocking" condition.
+		conds = append(conds, metav1.Condition{
+			Type:    corev1alpha1.ObjectDeploymentBlocked,
+			Status:  metav1.ConditionFalse,
+			Reason:  string(progressingReasonIdle),
+			Message: "",
+		})
+	}
+
+	conds = append(conds, newProgressingCondition(
+		metav1.ConditionTrue,
+		progressingReasonLatestRevPendingSuccess,
+		msg,
+		objectDeployment.GetGeneration(),
+	))
+	objectDeployment.SetStatusConditions(conds...)
 }
 
 func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...genericObjectSet) metav1.Condition {

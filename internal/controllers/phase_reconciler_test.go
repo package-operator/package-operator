@@ -1551,16 +1551,22 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 	t.Parallel()
 
+	ownerStrategyMock := &ownerStrategyMock{}
 	pcm := &preflightCheckerMock{}
 	pr := &PhaseReconciler{
 		scheme:           testScheme,
 		preflightChecker: pcm,
+		ownerStrategy:    ownerStrategyMock,
 	}
 
 	ownerObj := &unstructured.Unstructured{}
 	owner := &phaseObjectOwnerMock{}
 	owner.On("ClientObject").Return(ownerObj)
 	owner.On("GetRevision").Return(int64(12))
+
+	ownerStrategyMock.
+		On("SetControllerReference", mock.Anything, mock.Anything).
+		Return(nil)
 
 	pcm.
 		On("Check", mock.Anything, mock.Anything, mock.Anything).

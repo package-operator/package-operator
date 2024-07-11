@@ -29,6 +29,8 @@ const (
 	PackageProgressing = "Progressing"
 	// Unpacked tracks the completion or failure of the image unpack operation.
 	PackageUnpacked = "Unpacked"
+	// Unpacked tracks the ObjectDeployments Blocked condition.
+	PackageBlocked = "Blocked"
 	// Invalid condition tracks unrecoverable validation and loading issues of the Package.
 	// A package might be invalid because of multiple reasons:
 	// - Does not support the right scope -> Namespaced vs. Cluster
@@ -48,6 +50,7 @@ const (
 	PackagePhaseAvailable   PackageStatusPhase = "Available"
 	PackagePhaseProgressing PackageStatusPhase = "Progressing"
 	PackagePhaseUnpacking   PackageStatusPhase = "Unpacking"
+	PackagePhaseBlocked     PackageStatusPhase = "Blocked"
 	PackagePhaseNotReady    PackageStatusPhase = "NotReady"
 	PackagePhaseInvalid     PackageStatusPhase = "Invalid"
 )

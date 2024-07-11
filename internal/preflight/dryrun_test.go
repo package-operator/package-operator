@@ -22,7 +22,7 @@ var errTest = errors.New("explosion")
 func TestDryRun(t *testing.T) {
 	t.Parallel()
 
-	c := testutil.NewClient()
+	c := newImpersonatingClient()
 
 	var objCalled *unstructured.Unstructured
 	c.
@@ -65,7 +65,7 @@ func TestDryRunViolations(t *testing.T) {
 		reason := reasons[i]
 		t.Run(string(reason), func(t *testing.T) {
 			t.Parallel()
-			c := testutil.NewClient()
+			c := newImpersonatingClient()
 
 			c.
 				On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -87,7 +87,7 @@ func TestDryRunViolations(t *testing.T) {
 func TestDryRun_alreadyExists(t *testing.T) {
 	t.Parallel()
 
-	c := testutil.NewClient()
+	c := newImpersonatingClient()
 
 	var objCalled *unstructured.Unstructured
 	c.
@@ -114,7 +114,7 @@ func TestDryRun_alreadyExists(t *testing.T) {
 func TestDryRun_notFround(t *testing.T) {
 	t.Parallel()
 
-	c := testutil.NewClient()
+	c := newImpersonatingClient()
 
 	c.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -137,7 +137,7 @@ func TestDryRun_notFround(t *testing.T) {
 func TestDryRun_emptyreason(t *testing.T) {
 	t.Parallel()
 
-	c := testutil.NewClient()
+	c := newImpersonatingClient()
 
 	e := &apimachineryerrors.StatusError{
 		ErrStatus: metav1.Status{Reason: "", Message: "cheese, also failed to create typed patch object, also more cheese"},
@@ -154,4 +154,16 @@ func TestDryRun_emptyreason(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, v, 1)
 	require.Contains(t, v[0].Error, e.ErrStatus.Message)
+}
+
+type impersonatingClient struct {
+	*testutil.CtrlClient
+}
+
+func (c *impersonatingClient) Impersonate() {}
+
+func newImpersonatingClient() *impersonatingClient {
+	return &impersonatingClient{
+		CtrlClient: testutil.NewClient(),
+	}
 }

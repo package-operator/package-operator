@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -14,6 +15,15 @@ import (
 
 type Error struct {
 	Violations []Violation
+}
+
+func (e *Error) HasReason(r metav1.StatusReason) bool {
+	for _, v := range e.Violations {
+		if v.Reason == r {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Error) Error() string {
@@ -30,6 +40,8 @@ type Violation struct {
 	Position string
 	// Error describing the violation.
 	Error string
+	// API Status Reason for the Violation.
+	Reason metav1.StatusReason
 }
 
 func (v *Violation) String() string {

@@ -15,11 +15,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type DryRun struct {
-	client client.Writer
+type autoImpersonatingWriter interface {
+	client.Writer
+	Impersonate()
 }
 
-func NewDryRun(client client.Writer) *DryRun { return &DryRun{client: client} }
+type DryRun struct {
+	client autoImpersonatingWriter
+}
+
+func NewDryRun(client autoImpersonatingWriter) *DryRun { return &DryRun{client: client} }
 
 func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []Violation, err error) {
 	defer addPositionToViolations(ctx, obj, &violations)
@@ -55,7 +60,7 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonUnsupportedMediaType,
 			metav1.StatusReasonNotAcceptable,
 			metav1.StatusReasonNotFound:
-			return []Violation{{Error: err.Error()}}, nil
+			return []Violation{{Error: err.Error(), Reason: apiErr.Status().Reason}}, nil
 		case "":
 			logr.FromContextOrDiscard(ctx).Info("API status error with empty reason string", "err", apiErr.Status())
 

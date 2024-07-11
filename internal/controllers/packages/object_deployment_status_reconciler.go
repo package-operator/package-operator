@@ -43,6 +43,14 @@ func (r *objectDeploymentStatusReconciler) Reconcile(
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
 	}
 
+	objDepBlockedCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentBlocked)
+	if objDepBlockedCond != nil && objDepBlockedCond.ObservedGeneration == objDep.GetGeneration() {
+		packageBlockedCond := objDepBlockedCond.DeepCopy()
+		packageBlockedCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
+
+		meta.SetStatusCondition(packageObj.GetConditions(), *packageBlockedCond)
+	}
+
 	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
 	controllers.MapConditions(
 		ctx,

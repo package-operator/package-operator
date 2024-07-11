@@ -82,9 +82,14 @@ type preflightChecker interface {
 	) (violations []preflight.Violation, err error)
 }
 
+type autoImpersonatingWriter interface {
+	client.Writer
+	Impersonate()
+}
+
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
-	writer client.Writer,
+	writer autoImpersonatingWriter,
 	dynamicCache dynamicCache,
 	uncachedClient client.Reader,
 	ownerStrategy ownerStrategy,
@@ -102,6 +107,9 @@ func NewPhaseReconciler(
 	}
 }
 
+// May be one of:
+// - (Cluster)ObjectSet
+// - (Cluster)ObjectSetPhase.
 type PhaseObjectOwner interface {
 	ClientObject() client.Object
 	GetRevision() int64
@@ -440,11 +448,6 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 	desiredObj *unstructured.Unstructured,
 	previous []PreviousObjectSet,
 ) (actualObj *unstructured.Unstructured, err error) {
-	// Set owner reference
-	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
-		return nil, fmt.Errorf("set controller reference: %w", err)
-	}
-
 	// Ensure to watch this type of object.
 	if err := r.dynamicCache.Watch(
 		ctx, owner.ClientObject(), desiredObj); err != nil {
@@ -559,7 +562,10 @@ func (r *PhaseReconciler) desiredObject(
 	desiredObj.SetLabels(labels)
 
 	setObjectRevision(desiredObj, owner.GetRevision())
-
+	// Set owner reference
+	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
+		return nil, fmt.Errorf("set controller reference: %w", err)
+	}
 	return desiredObj, nil
 }
 
@@ -579,13 +585,19 @@ func UpdateObjectSetOrPhaseStatusFromError(
 ) (res ctrl.Result, err error) {
 	var preflightError *preflight.Error
 	if errors.As(reconcileErr, &preflightError) {
+		reason := "PreflightError" // generic PreflightError
+		if preflightError.HasReason(metav1.StatusReasonForbidden) {
+			reason = "InsufficientPermissions"
+		}
+
 		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
-			Reason:             "PreflightError",
+			Reason:             reason,
 			Message:            preflightError.Error(),
 		})
+
 		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
 		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
 		return res, updateStatus(ctx)

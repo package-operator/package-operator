@@ -28,6 +28,7 @@ func ProvideObjectSetPhaseController(
 			mgr.GetScheme(), dc, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
+			*mgr.GetConfig(),
 		),
 	}
 }
@@ -43,6 +44,7 @@ func ProvideClusterObjectSetPhaseController(
 			mgr.GetScheme(), dc, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
+			*mgr.GetConfig(),
 		),
 	}
 }

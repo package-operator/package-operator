@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,13 +67,14 @@ func NewObjectSetController(
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	restConfig rest.Config,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		restMapper, restConfig,
 	)
 }
 
@@ -81,13 +83,14 @@ func NewClusterObjectSetController(
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	restConfig rest.Config,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		restMapper, restConfig,
 	)
 }
 
@@ -99,6 +102,7 @@ func newGenericObjectSetController(
 	scheme *runtime.Scheme,
 	dynamicCache dynamicCache, uncachedClient client.Reader,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
+	restConfig rest.Config,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -110,19 +114,21 @@ func newGenericObjectSetController(
 		dynamicCache: dynamicCache,
 		recorder:     recorder,
 	}
+	impersonatingClient := controllers.NewAutoImpersonatingWriter(
+		restConfig, scheme, client,
+	)
 
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
-			scheme, client,
+			scheme, impersonatingClient,
 			dynamicCache,
 			uncachedClient,
 			ownerhandling.NewNative(scheme),
 			preflight.NewAPIExistence(restMapper,
 				preflight.List{
-					preflight.NewNoOwnerReferences(restMapper),
 					preflight.NewNamespaceEscalation(restMapper),
-					preflight.NewDryRun(client),
+					preflight.NewDryRun(impersonatingClient),
 				},
 			),
 		),

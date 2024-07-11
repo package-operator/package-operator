@@ -43,6 +43,8 @@ type ObjectDeploymentStatus struct {
 const (
 	ObjectDeploymentAvailable   = "Available"
 	ObjectDeploymentProgressing = "Progressing"
+	// Reported when preflight errors or permission issues have the rollout stuck.
+	ObjectDeploymentBlocked = "Blocked"
 )
 
 // ObjectDeploymentPhase specifies a phase that a deployment is in.
@@ -54,6 +56,7 @@ const (
 	ObjectDeploymentPhasePending     ObjectDeploymentPhase = "Pending"
 	ObjectDeploymentPhaseAvailable   ObjectDeploymentPhase = "Available"
 	ObjectDeploymentPhaseNotReady    ObjectDeploymentPhase = "NotReady"
+	ObjectDeploymentPhaseBlocked     ObjectDeploymentPhase = "Blocked"
 	ObjectDeploymentPhaseProgressing ObjectDeploymentPhase = "Progressing"
 )
 
