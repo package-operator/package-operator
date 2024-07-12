@@ -20,6 +20,12 @@ import (
 func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 	rawPkg *packagetypes.RawPackage, err error,
 ) {
+	if isOLM, err := peekIsOLM(image); err != nil {
+		return nil, err
+	} else if isOLM {
+		return FromOLMBundleImage(ctx, image)
+	}
+
 	files := packagetypes.Files{}
 	reader := mutate.Extract(image)
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
