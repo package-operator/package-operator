@@ -9,14 +9,14 @@ import (
 )
 
 type Kickstarter interface {
-	KickStart(ctx context.Context, pkgName string, inputs []string) (msg string, err error)
+	Kickstart(ctx context.Context, pkgName string, inputs []string) (msg string, err error)
 }
 
 func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	const (
-		cmdUse   = "kickstart pkg_name"
+		cmdUse   = "kickstart pkg_name (experimental)"
 		cmdShort = "Starts a new package with the given name."
-		cmdLong  = "Starts a new package with the given name containing objects referenced via -f."
+		cmdLong  = "Starts a new package with the given name containing objects referenced via -f in a new folder <pkg_name>."
 	)
 
 	var opts options
@@ -30,7 +30,11 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		msg, err := kickstarter.KickStart(cmd.Context(), args[0], opts.Inputs)
+		if err := opts.Validate(); err != nil {
+			return err
+		}
+
+		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
@@ -41,6 +45,14 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	return cmd
 }
 
+type FlagNeedArgumentError struct {
+	flag string
+}
+
+func (e *FlagNeedArgumentError) Error() string {
+	return fmt.Sprintf("flag needs an argument: '%s' in -%s", e.flag, e.flag)
+}
+
 type options struct {
 	// Inputs (files/http/etc.)
 	Inputs []string
@@ -48,7 +60,7 @@ type options struct {
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
 	const (
-		inputUse = "Files or urls to load objects from."
+		inputUse = "Files or urls to load objects from. Supports glob and \"-\" to read from stdin."
 	)
 
 	flags.StringSliceVarP(
@@ -58,4 +70,13 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		nil,
 		inputUse,
 	)
+}
+
+func (o *options) Validate() error {
+	for _, i := range o.Inputs {
+		if len(i) == 0 {
+			return &FlagNeedArgumentError{}
+		}
+	}
+	return nil
 }

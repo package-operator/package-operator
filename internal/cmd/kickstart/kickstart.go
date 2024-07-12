@@ -5,136 +5,83 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
-	"sigs.k8s.io/yaml"
 
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/packages"
 )
 
 type Kickstarter struct {
-	stdin io.Reader
+	stdin  io.Reader
+	client *http.Client
 }
 
 func NewKickstarter(stdin io.Reader) *Kickstarter {
+	t := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: 5 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 5 * time.Second,
+	}
+	client := &http.Client{
+		Timeout:   time.Second * 30,
+		Transport: t,
+	}
+
 	return &Kickstarter{
-		stdin: stdin,
+		stdin:  stdin,
+		client: client,
 	}
 }
 
-func (k *Kickstarter) KickStart(
+// Runs kickstart processing on given inputs and returns a user message on success.
+func (k *Kickstarter) Kickstart(
 	ctx context.Context,
 	pkgName string,
 	inputs []string,
-) (msg string, err error) {
+) (string, error) {
 	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
 		return "", fmt.Errorf("create directory: %w", err)
 	}
 
-	usedPhases := map[string]struct{}{}
-	usedGKs := map[schema.GroupKind]struct{}{}
-	var objCount int
+	var objects []unstructured.Unstructured
 	for _, input := range inputs {
-		objects, err := k.getInput(ctx, input)
+		newObjects, err := k.getInput(ctx, input)
 		if err != nil {
 			return "", fmt.Errorf("get input: %w", err)
 		}
 
-		for _, obj := range objects {
-			phase, gk, err := k.processObject(pkgName, obj)
-			if err != nil {
-				return "", fmt.Errorf("processing object: %w", err)
-			}
-			usedPhases[phase] = struct{}{}
-			usedGKs[gk] = struct{}{}
-		}
-		objCount += len(objects)
+		objects = append(objects, newObjects...)
 	}
 
-	// Write Manifest
-	var phases []manifestsv1alpha1.PackageManifestPhase
-	for _, phase := range orderedPhases {
-		if _, ok := usedPhases[string(phase)]; ok {
-			phases = append(phases, manifestsv1alpha1.PackageManifestPhase{Name: string(phase)})
-		}
-	}
-	//nolint:prealloc
-	var (
-		probes           []corev1alpha1.ObjectSetProbe
-		gksWithoutProbes = map[schema.GroupKind]struct{}{}
-	)
-	for gk := range usedGKs {
-		probe, ok := getProbe(gk)
-		if !ok {
-			gksWithoutProbes[gk] = struct{}{}
-			continue
-		}
-		probes = append(probes, probe)
-	}
-	manifest := &manifestsv1alpha1.PackageManifest{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PackageManifest",
-			APIVersion: "manifests.package-operator.run/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: pkgName,
-		},
-		Spec: manifestsv1alpha1.PackageManifestSpec{
-			Phases: phases,
-			Scopes: []manifestsv1alpha1.PackageManifestScope{
-				manifestsv1alpha1.PackageManifestScopeCluster,
-				manifestsv1alpha1.PackageManifestScopeNamespaced,
-			},
-			AvailabilityProbes: probes,
-		},
-	}
-	b, err := yaml.Marshal(manifest)
+	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects)
 	if err != nil {
-		return "", fmt.Errorf("marshalling PackageManifest YAML: %w", err)
+		return "", err
 	}
-	if err := os.WriteFile(filepath.Join(pkgName, "manifest.yaml"), b, os.ModePerm); err != nil {
-		return "", fmt.Errorf("writing PackageManifest: %w", err)
+	for path, data := range rawPkg.Files {
+		path = filepath.Join(pkgName, path)
+		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			return "", fmt.Errorf("creating directory: %w", err)
+		}
+		if err := os.WriteFile(path, data, os.ModePerm); err != nil {
+			return "", fmt.Errorf("writing file: %w", err)
+		}
 	}
 
-	msg = fmt.Sprintf("Kickstarted the %q package with %d objects.", pkgName, objCount)
-	report, ok := reportGKsWithoutProbes(gksWithoutProbes)
+	msg := fmt.Sprintf("Kickstarted the %q package with %d objects.", pkgName, res.ObjectCount)
+	report, ok := reportGKsWithoutProbes(res.GroupKindsWithoutProbes)
 	if ok {
 		msg += "\n" + report
 	}
-
 	return msg, nil
-}
-
-func (k *Kickstarter) processObject(
-	pkgName string, obj unstructured.Unstructured,
-) (phase string, gk schema.GroupKind, err error) {
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	gk = obj.GroupVersionKind().GroupKind()
-	phase = guessPresetPhase(gk)
-	annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
-	obj.SetAnnotations(annotations)
-
-	path := filepath.Join(pkgName, phase,
-		fmt.Sprintf("%s.%s.yaml", obj.GetName(), strings.ToLower(obj.GetKind())))
-	b, err := yaml.Marshal(obj.Object)
-	if err != nil {
-		return phase, gk, fmt.Errorf("marshalling YAML: %w", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
-		return phase, gk, fmt.Errorf("creating directory: %w", err)
-	}
-	return phase, gk, os.WriteFile(path, b, os.ModePerm)
 }
 
 func (k *Kickstarter) getInput(ctx context.Context, input string) (
@@ -154,7 +101,7 @@ func (k *Kickstarter) getInput(ctx context.Context, input string) (
 		if err != nil {
 			return nil, fmt.Errorf("building HTTP request: %w", err)
 		}
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := k.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("HTTP get: %w", err)
 		}
@@ -216,13 +163,15 @@ func expandIfFilePattern(pattern string) ([]string, error) {
 		}
 		return matches, err
 	}
+	// Pattern directly matched a file or folder and was not expanded.
 	return []string{pattern}, nil
 }
 
-func init() {
-	for phase, gks := range phaseGKMap {
-		for _, gk := range gks {
-			gkPhaseMap[gk] = phase
-		}
+func reportGKsWithoutProbes(gksWithoutProbes []schema.GroupKind) (report string, ok bool) {
+	report = "[WARN] Some kinds don't have availability probes defined:\n"
+	for _, gk := range gksWithoutProbes {
+		report += fmt.Sprintf("- %s\n", gk.String())
+		ok = true
 	}
+	return report, ok
 }
