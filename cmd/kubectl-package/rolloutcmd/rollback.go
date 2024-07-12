@@ -1,6 +1,7 @@
 package rolloutcmd
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -40,8 +41,12 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		if opts.Revision == 0 {
+			return errors.New("--revision is required as the rollback requires to provide a revision") //nolint: goerr113
+		}
 
 		getter := newObjectSetGetter(client)
+		// this function gets the objectset list from [cluster]package/[cluster]ObjectDeployment
 		list, err := getter.GetObjectSets(cmd.Context(), args.Resource, args.Name, opts.Namespace)
 		if err != nil {
 			return err
@@ -58,38 +63,59 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 			if !found {
 				return errRevisionsNotFound
 			}
+			//Once we find the objectset
+			switch strings.ToLower(args.Resource) {
+			case "clusterobjectdeployment", "clusterpackage":
+				obs := os.GetClusterObjectsettype()
+				if obs == nil {
+					fmt.Println("Error while returning ClusterObjectset")
+				}
+				//this means that the objectset of that revision is currently in available
+				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseAvailable {
+					fmt.Println("Can not rollback from an available ObjectSet Type")
+				}
+				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
 
-			obs := os.GetClusterObjectsettype()
-			//this means that the objectset of that revision is currently in available
-			if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseAvailable {
-				fmt.Println("Can not rollback from an available ObjectSet")
-			}
-			if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
+					fmt.Println("Name of archive ", obs.Name)
 
-				fmt.Println("Name of archive ", obs.Name)
+					// as the cluster object set of that revision is Archived lets do the logic for rollback
+					//patch only if Objcls deployment is available and revision is > 1
 
-				// as the cluster object set of that revision is Archived lets do the logic for rollback
-				//patch only if Objcls deployment is available and revision is > 1
+					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name)
+					fmt.Println("gonna rollback this [cluster]ObjectDeployment : ", objd.Name())
+					//call patch of deployment
 
-				objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name)
-				fmt.Println("gonna rollback this [cluster]ObjectDeployment : ", objd.Name())
-				//call patch of deployment
+					getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
+					if err != nil {
+						return err
+					}
 
-				getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
-				if err != nil {
-					return err
 				}
 
-			}
+			case "objectdeployment", "package":
 
-			phasename := obs.Spec.Phases[0].Name
-			fmt.Printf("phas name  %s", phasename)
+				obs := os.GetObjectsettype()
+				if obs == nil {
+					fmt.Println("Error while returning Objectset Type")
+				}
+				//this means that the objectset of that revision is currently in available
+				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseAvailable {
+					fmt.Println("Can not rollback from an available ObjectSet")
+				}
+				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
+
+					fmt.Println("Name of archive ", obs.Name)
+				}
+
+			default:
+				return errInvalidResourceType
+			}
 
 			//return printer.PrintObjectSet(os, opts)
 			return nil
 		}
-
 		list.Sort()
+		fmt.Println(list)
 
 		//return printer.PrintObjectSetList(list, opts)
 		return nil

@@ -142,10 +142,39 @@ func (c *Client) PatchClusterObjectDeployment(
 		fmt.Println("Patching will happen")
 
 		fmt.Printf("deployment spec current:  %+v\n", obj.Spec.Template.Spec)
-		patch, val, _ := getDeploymentPatch(&cobs.Spec)
-		fmt.Println(string(val))
+		typ, byteval, _ := getClusterObjectDeploymentPatch(&cobs.Spec)
+		fmt.Println(string(byteval))
 
-		c.client.Patch(ctx, client.ObjectKeyFromObject(obj), val, patch)
+		if err := c.client.Patch(ctx, obj, client.RawPatch(typ, byteval)); err != nil {
+			return nil, fmt.Errorf("patching objectdeployment: %w", err)
+		}
+	}
+	return nil, nil
+}
+
+func (c *Client) PatchObjectDeployment(
+	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet) (*ObjectDeployment, error) {
+
+	obj := &corev1alpha1.ClusterObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+	}
+
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+	}
+	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
+		fmt.Println("Patching will happen")
+
+		fmt.Printf("deployment spec current:  %+v\n", obj.Spec.Template.Spec)
+		typ, byteval, _ := getObjectDeploymentPatch(&cobs.Spec)
+		fmt.Println(string(byteval))
+
+		if err := c.client.Patch(ctx, obj, client.RawPatch(typ, byteval)); err != nil {
+			return nil, fmt.Errorf("patching objectdeployment: %w", err)
+		}
 	}
 	return nil, nil
 }
@@ -369,6 +398,14 @@ func (s *ObjectSet) GetClusterObjectsettype() *corev1alpha1.ClusterObjectSet {
 
 }
 
+func (s *ObjectSet) GetObjectsettype() *corev1alpha1.ObjectSet {
+	if cos, ok := s.obj.(*corev1alpha1.ObjectSet); ok {
+		return cos
+	}
+	return nil
+
+}
+
 func (s *ObjectSet) getConditions() []metav1.Condition {
 	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
 		return cos.Status.Conditions
@@ -451,7 +488,18 @@ func (l ObjectSetList) RenderTable(headers ...string) Table {
 	return table
 }
 
-func getDeploymentPatch(clusterdepspec *corev1alpha1.ClusterObjectSetSpec) (types.PatchType, []byte, error) {
+func getClusterObjectDeploymentPatch(clusterdepspec *corev1alpha1.ClusterObjectSetSpec) (types.PatchType, []byte, error) {
+	// Create a patch of the Deployment that replaces spec.template
+	patch, err := json.Marshal([]interface{}{
+		map[string]interface{}{
+			"op":    "replace",
+			"path":  "/spec/template/spec",
+			"value": clusterdepspec,
+		}})
+	return types.JSONPatchType, patch, err
+}
+
+func getObjectDeploymentPatch(clusterdepspec *corev1alpha1.ObjectSetSpec) (types.PatchType, []byte, error) {
 	// Create a patch of the Deployment that replaces spec.template
 	patch, err := json.Marshal([]interface{}{
 		map[string]interface{}{
