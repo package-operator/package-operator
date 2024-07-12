@@ -24,7 +24,7 @@ func TestRegistryV1Converter(t *testing.T) {
 }
 
 var _ = Describe("RegistryV1 Suite", func() {
-	var _ = Describe("Convert", func() {
+	_ = Describe("Convert", func() {
 		var (
 			registryv1Bundle RegistryV1
 			installNamespace string

@@ -2,13 +2,13 @@
 // the operator-framework/operator-registry repository.
 package registry
 
-// AnnotationsFile holds annotation information about a bundle
+// AnnotationsFile holds annotation information about a bundle.
 type AnnotationsFile struct {
 	// annotations is a list of annotations for a given bundle
 	Annotations Annotations `json:"annotations" yaml:"annotations"`
 }
 
-// Annotations is a list of annotations for a given bundle
+// Annotations is a list of annotations for a given bundle.
 type Annotations struct {
 	// PackageName is the name of the overall package, ala `etcd`.
 	PackageName string `json:"operators.operatorframework.io.bundle.package.v1" yaml:"operators.operatorframework.io.bundle.package.v1"`

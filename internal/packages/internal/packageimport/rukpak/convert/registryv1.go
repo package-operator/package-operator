@@ -122,17 +122,17 @@ func RegistryV1ToPlain(rv1 fs.FS, installNamespace string, watchNamespaces []str
 	plainFS := fstest.MapFS{
 		".": &fstest.MapFile{
 			Data:    nil,
-			Mode:    fs.ModeDir | 0755,
+			Mode:    fs.ModeDir | 0o755,
 			ModTime: now,
 		},
 		"manifests": &fstest.MapFile{
 			Data:    nil,
-			Mode:    fs.ModeDir | 0755,
+			Mode:    fs.ModeDir | 0o755,
 			ModTime: now,
 		},
 		"manifests/manifest.yaml": &fstest.MapFile{
 			Data:    manifest.Bytes(),
-			Mode:    0644,
+			Mode:    0o644,
 			ModTime: now,
 		},
 	}

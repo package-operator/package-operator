@@ -34,6 +34,6 @@ func DeepHashObject(obj interface{}) (string, error) {
 	hash = hasher.Sum(hash)
 
 	var i big.Int
-	i.SetBytes(hash[:])
+	i.SetBytes(hash)
 	return i.Text(36), nil
 }
