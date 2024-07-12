@@ -9,9 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/testutil"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func Test_impersonationConfigForObject_namespaced(t *testing.T) {
