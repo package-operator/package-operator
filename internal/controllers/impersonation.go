@@ -13,6 +13,8 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+// AutoImpersonatingWriterWrapper wraps calls from the client.Writer interface
+// into new clients using impersonation depending on the root owner.
 type AutoImpersonatingWriterWrapper struct {
 	restConfig rest.Config
 	scheme     *runtime.Scheme
@@ -32,6 +34,7 @@ func NewAutoImpersonatingWriter(
 	}
 }
 
+// Interface function so clients can require an impersonation aware client.
 func (w *AutoImpersonatingWriterWrapper) Impersonate() {}
 
 func (w *AutoImpersonatingWriterWrapper) Create(
