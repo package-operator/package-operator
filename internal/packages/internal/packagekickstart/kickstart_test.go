@@ -51,7 +51,7 @@ spec:
 func TestKickstartFromBytes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest))
+	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), KickstartOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, 3, res.ObjectCount)
 	if assert.Len(t, res.GroupKindsWithoutProbes, 1) {

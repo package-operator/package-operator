@@ -9,7 +9,7 @@ import (
 )
 
 type Kickstarter interface {
-	Kickstart(ctx context.Context, pkgName string, inputs []string) (msg string, err error)
+	KickStart(ctx context.Context, pkgName string, inputs []string, params []string) (msg string, err error)
 }
 
 func NewCmd(kickstarter Kickstarter) *cobra.Command {
@@ -34,7 +34,7 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 			return err
 		}
 
-		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs)
+		msg, err := kickstarter.KickStart(cmd.Context(), args[0], opts.Inputs, opts.Params)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
@@ -56,17 +56,28 @@ func (e *FlagNeedArgumentError) Error() string {
 type options struct {
 	// Inputs (files/http/etc.)
 	Inputs []string
+	// Parametrize inputs.
+	Params []string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
 	const (
-		inputUse = "Files or urls to load objects from. Supports glob and \"-\" to read from stdin."
+		inputUse       = "Files or urls to load objects from. Supports glob and \"-\" to read from stdin."
+		parametrizeUse = "Parametrize flags: e.g. replicas."
 	)
 
 	flags.StringSliceVarP(
 		&o.Inputs,
 		"filename",
 		"f",
+		nil,
+		inputUse,
+	)
+
+	flags.StringSliceVarP(
+		&o.Params,
+		"parametrize",
+		"p",
 		nil,
 		inputUse,
 	)

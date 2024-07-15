@@ -25,8 +25,8 @@ import (
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 
-	registry "package-operator.run/internal/packages/internal/packageimport/rukpak/operator-registry"
-	"package-operator.run/internal/packages/internal/packageimport/rukpak/util"
+	registry "package-operator.run/internal/packages/internal/packagekickstart/rukpak/operator-registry"
+	"package-operator.run/internal/packages/internal/packagekickstart/rukpak/util"
 )
 
 type RegistryV1 struct {

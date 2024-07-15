@@ -47,6 +47,7 @@ func (k *Kickstarter) Kickstart(
 	ctx context.Context,
 	pkgName string,
 	inputs []string,
+	parametrize []string,
 ) (string, error) {
 	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
 		return "", fmt.Errorf("create directory: %w", err)
@@ -62,7 +63,9 @@ func (k *Kickstarter) Kickstart(
 		objects = append(objects, newObjects...)
 	}
 
-	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects)
+	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects, packages.KickstartOptions{
+		Parametrize: parametrize,
+	})
 	if err != nil {
 		return "", err
 	}

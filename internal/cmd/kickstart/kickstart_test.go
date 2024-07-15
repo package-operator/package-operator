@@ -24,7 +24,7 @@ func TestKickstart(t *testing.T) {
 
 	ctx := context.Background()
 	k := NewKickstarter(nil)
-	msg, err := k.Kickstart(ctx, "my-pkg", []string{"testdata/all-the-objects.yaml"})
+	msg, err := k.Kickstart(ctx, "my-pkg", []string{"testdata/all-the-objects.yaml"}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, kickstartMessage, msg)
 }

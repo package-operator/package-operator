@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,6 +15,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/packages/internal/packagekickstart/parametrize"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -22,7 +24,11 @@ type KickstartResult struct {
 	GroupKindsWithoutProbes []schema.GroupKind
 }
 
-func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstructured) (
+type KickstartOptions struct {
+	Parametrize []string
+}
+
+func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstructured, opts KickstartOptions) (
 	*packagetypes.RawPackage, KickstartResult, error,
 ) {
 	res := KickstartResult{}
@@ -33,6 +39,9 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	// Process objects
 	usedPhases := map[string]struct{}{}
 	usedGKs := map[schema.GroupKind]struct{}{}
+	scheme := &v1.JSONSchemaProps{
+		Type: "object",
+	}
 	var objCount int
 	for _, obj := range objects {
 		annotations := obj.GetAnnotations()
@@ -43,6 +52,16 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 		phase := guessPresetPhase(gk)
 		annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
 		obj.SetAnnotations(annotations)
+
+		if b, ok, err := parametrize.Parametrize(obj, scheme, opts.Parametrize); err != nil {
+			return nil, res, fmt.Errorf("parametrizing: %w", err)
+		} else if ok {
+			path := filepath.Join(phase,
+				fmt.Sprintf("%s.%s.yaml.gotmpl", obj.GetName(),
+					strings.ToLower(obj.GetKind())))
+			rawPkg.Files[path] = b
+			continue
+		}
 
 		path := filepath.Join(phase,
 			fmt.Sprintf("%s.%s.yaml", strings.ReplaceAll(
@@ -95,6 +114,9 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 				manifestsv1alpha1.PackageManifestScopeNamespaced,
 			},
 			AvailabilityProbes: probes,
+			Config: manifestsv1alpha1.PackageManifestSpecConfig{
+				OpenAPIV3Schema: scheme,
+			},
 		},
 	}
 	b, err := yaml.Marshal(manifest)
@@ -112,7 +134,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	return rawPkg, res, nil
 }
 
-func KickstartFromBytes(ctx context.Context, pkgName string, c []byte) (
+func KickstartFromBytes(ctx context.Context, pkgName string, c []byte, opts KickstartOptions) (
 	*packagetypes.RawPackage, KickstartResult, error,
 ) {
 	objects, err := kubemanifests.LoadKubernetesObjectsFromBytes(c)
@@ -120,5 +142,5 @@ func KickstartFromBytes(ctx context.Context, pkgName string, c []byte) (
 		return nil, KickstartResult{},
 			fmt.Errorf("loading Kubernetes manifests: %w", err)
 	}
-	return Kickstart(ctx, pkgName, objects)
+	return Kickstart(ctx, pkgName, objects, opts)
 }

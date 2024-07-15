@@ -14,8 +14,8 @@ import (
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
-	"package-operator.run/internal/packages/internal/packageimport/rukpak/convert"
 	"package-operator.run/internal/packages/internal/packagekickstart"
+	"package-operator.run/internal/packages/internal/packagekickstart/rukpak/convert"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -109,6 +109,6 @@ func FromOLMBundleImage(ctx context.Context, image containerregistrypkgv1.Image)
 		return nil, fmt.Errorf("reading converted manifests: %w", err)
 	}
 
-	rawPkg, _, err = packagekickstart.KickstartFromBytes(ctx, reg.PackageName, manifestBytes)
+	rawPkg, _, err = packagekickstart.KickstartFromBytes(ctx, reg.PackageName, manifestBytes, packagekickstart.KickstartOptions{})
 	return
 }
