@@ -84,11 +84,10 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name)
 					fmt.Println("gonna rollback this [cluster]ObjectDeployment : ", objd.Name())
 					//call patch of deployment
-
-					getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
 					if err != nil {
 						return err
 					}
+					getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
 
 				}
 
@@ -103,7 +102,13 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					fmt.Println("Can not rollback from an available ObjectSet")
 				}
 				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
-
+					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name)
+					fmt.Println("gonna rollback this [cluster]ObjectDeployment : ", objd.Name())
+					//call patch of deployment
+					if err != nil {
+						return err
+					}
+					getter.client.PatchObjectDeployment(cmd.Context(), objd.Name(), objd.Namespace(), *obs)
 					fmt.Println("Name of archive ", obs.Name)
 				}
 
