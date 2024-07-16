@@ -3,6 +3,7 @@ package parametrize
 import (
 	"fmt"
 
+	"github.com/joeycumines/go-dotnotation/dotnotation"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -24,17 +25,28 @@ func Deployment(
 	configSchema := apiextensionsv1.JSONSchemaProps{
 		Type:       "object",
 		Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+		Default: &apiextensionsv1.JSON{
+			Raw: []byte("{}"),
+		},
 	}
 
-	// configKey := fmt.Sprintf(".config.deployments.%s.%s", obj.GetNamespace(), obj.GetName())
 	if opts.Replicas {
+		originalValue, err := dotnotation.Get(obj.Object, "spec.replicas")
+		if err != nil {
+			originalValue = 1
+		}
 		configSchema.Properties["replicas"] = apiextensionsv1.JSONSchemaProps{
 			Type:        "integer",
 			Format:      "int32",
 			Description: fmt.Sprintf("Replica count for Deployment %s/%s.", obj.GetNamespace(), obj.GetName()),
+			Default: &apiextensionsv1.JSON{
+				Raw: []byte(fmt.Sprintf("%v", originalValue)),
+			},
 		}
 		// access via index function because namespaces and names may have dashes in them.
-		replicasAccess := fmt.Sprintf(`index .config.deployments %q %q "replicas"`, obj.GetNamespace(), obj.GetName())
+		replicasAccess := fmt.Sprintf(
+			`index .config "deployments" %q %q "replicas"`,
+			obj.GetNamespace(), obj.GetName())
 		instructions = append(instructions, Expression(replicasAccess, "spec.replicas"))
 	}
 
@@ -46,6 +58,9 @@ func Deployment(
 		schema.Properties["deployments"] = apiextensionsv1.JSONSchemaProps{
 			Type:       "object",
 			Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+			Default: &apiextensionsv1.JSON{
+				Raw: []byte("{}"),
+			},
 		}
 	}
 	if _, ok := schema.Properties["deployments"].
@@ -54,6 +69,9 @@ func Deployment(
 			Properties[obj.GetNamespace()] = apiextensionsv1.JSONSchemaProps{
 			Type:       "object",
 			Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+			Default: &apiextensionsv1.JSON{
+				Raw: []byte("{}"),
+			},
 		}
 	}
 	schema.Properties["deployments"].

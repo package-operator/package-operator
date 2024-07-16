@@ -53,6 +53,10 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 		annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
 		obj.SetAnnotations(annotations)
 
+		usedPhases[phase] = struct{}{}
+		usedGKs[gk] = struct{}{}
+		objCount++
+
 		if b, ok, err := parametrize.Parametrize(obj, scheme, opts.Parametrize); err != nil {
 			return nil, res, fmt.Errorf("parametrizing: %w", err)
 		} else if ok {
@@ -72,10 +76,6 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
 		}
 		rawPkg.Files[path] = b
-
-		usedPhases[phase] = struct{}{}
-		usedGKs[gk] = struct{}{}
-		objCount++
 	}
 
 	// Generate Manifest
@@ -114,11 +114,22 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 				manifestsv1alpha1.PackageManifestScopeNamespaced,
 			},
 			AvailabilityProbes: probes,
-			Config: manifestsv1alpha1.PackageManifestSpecConfig{
-				OpenAPIV3Schema: scheme,
-			},
 		},
 	}
+	if len(scheme.Properties) > 0 {
+		manifest.Spec.Config = manifestsv1alpha1.PackageManifestSpecConfig{
+			OpenAPIV3Schema: scheme,
+		}
+		manifest.Test = manifestsv1alpha1.PackageManifestTest{
+			Template: []manifestsv1alpha1.PackageManifestTestCaseTemplate{
+				{
+					Name:    "defaults",
+					Context: manifestsv1alpha1.TemplateContext{},
+				},
+			},
+		}
+	}
+
 	b, err := yaml.Marshal(manifest)
 	if err != nil {
 		return nil, res, fmt.Errorf("marshalling PackageManifest YAML: %w", err)
