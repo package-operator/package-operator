@@ -41,19 +41,19 @@ var deploy = unstructured.Unstructured{
 
 func TestExecute(t *testing.T) {
 	out, err := Execute(deploy,
-		Expression(
+		Pipeline(
 			`.config.namespace`,
 			"metadata.namespace",
 		),
-		Expression(
+		Pipeline(
 			`index .images "package-operator-manager"`,
 			"spec.template.spec.containers.0.image",
 		),
-		Expression(
+		Pipeline(
 			`.config.replicas`,
 			"spec.replicas",
 		),
-		Expression(
+		Pipeline(
 			`toJson .config.affinity`,
 			"spec.template.spec.affinity",
 		),
@@ -61,7 +61,7 @@ func TestExecute(t *testing.T) {
 			`if hasKey .config "affinity"`,
 			"spec.template.spec.affinity",
 		),
-		Expression(
+		Pipeline(
 			`.environment.proxy.httpProxy | quote`,
 			"spec.template.spec.containers.0.env.0.value",
 		),

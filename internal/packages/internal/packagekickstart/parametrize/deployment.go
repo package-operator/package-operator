@@ -9,7 +9,8 @@ import (
 )
 
 type DeploymentOptions struct {
-	Replicas bool
+	Replicas    bool
+	Tolerations bool
 }
 
 func Deployment(
@@ -47,7 +48,49 @@ func Deployment(
 		replicasAccess := fmt.Sprintf(
 			`index .config "deployments" %q %q "replicas"`,
 			obj.GetNamespace(), obj.GetName())
-		instructions = append(instructions, Expression(replicasAccess, "spec.replicas"))
+		instructions = append(instructions, Pipeline(replicasAccess, "spec.replicas"))
+	}
+
+	if opts.Tolerations {
+		configSchema.Properties["tolerations"] = apiextensionsv1.JSONSchemaProps{
+			Type:        "array",
+			Description: fmt.Sprintf("Additional tolerations for Deployment %s/%s.", obj.GetNamespace(), obj.GetName()),
+			Items: &apiextensionsv1.JSONSchemaPropsOrArray{
+				Schema: &apiextensionsv1.JSONSchemaProps{
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"effect": {
+							Type: "string",
+						},
+						"key": {
+							Type: "string",
+						},
+						"operator": {
+							Type: "string",
+						},
+						"tolerationSeconds": {
+							Format: "int64",
+							Type:   "integer",
+						},
+						"value": {
+							Type: "string",
+						},
+					},
+					Type: "object",
+				},
+			},
+		}
+
+		_, err := dotnotation.Get(obj.Object, "spec.template.spec.tolerations")
+		if err != nil {
+			if err := dotnotation.Set(obj.Object, "spec.template.spec.tolerations", []interface{}{}); err != nil {
+				return nil, err
+			}
+		}
+
+		tolerationsAccess := fmt.Sprintf(
+			`index .config "deployments" %q %q "tolerations"`,
+			obj.GetNamespace(), obj.GetName())
+		instructions = append(instructions, MergeBlock(tolerationsAccess, "spec.template.spec.tolerations"))
 	}
 
 	// Add to Schema.
