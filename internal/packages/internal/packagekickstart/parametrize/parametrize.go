@@ -242,8 +242,10 @@ func Parametrize(
 	}
 	if obj.GroupVersionKind() == deployGVK && len(paramsFlags) > 0 {
 		out, err := Deployment(obj, scheme, DeploymentOptions{
-			Replicas:    slices.Contains(paramsFlags, "replicas"),
-			Tolerations: slices.Contains(paramsFlags, "tolerations"),
+			Replicas:      slices.Contains(paramsFlags, "replicas"),
+			Tolerations:   slices.Contains(paramsFlags, "tolerations"),
+			NodeSelectors: slices.Contains(paramsFlags, "nodeSelectors"),
+			Resources:     slices.Contains(paramsFlags, "resources"),
 		})
 		if err != nil {
 			return nil, false, err

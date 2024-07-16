@@ -95,7 +95,9 @@ spec:
 
 func TestParametrize(t *testing.T) {
 	scheme := &apiextensionsv1.JSONSchemaProps{}
-	out, ok, err := Parametrize(deploy, scheme, []string{"replicas"})
+	out, ok, err := Parametrize(deploy, scheme, []string{
+		"replicas",
+	})
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, `apiVersion: apps/v1
@@ -104,7 +106,7 @@ metadata:
   name: banana
   namespace: fruits
 spec:
-  replicas: {{ .config.deployments.fruits.banana.replicas }}
+  replicas: {{ index .config "deployments" "fruits" "banana" "replicas" }}
   template:
     spec:
       affinity: null
