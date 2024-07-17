@@ -16,6 +16,7 @@ type DeploymentOptions struct {
 	NodeSelectors bool
 	Resources     bool
 	Env           bool
+	Volumes       bool
 }
 
 func Deployment(

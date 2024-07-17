@@ -6,6 +6,7 @@ type KickstartResult = packagekickstart.KickstartResult
 type KickstartOptions = packagekickstart.KickstartOptions
 
 var (
-	Kickstart          = packagekickstart.Kickstart
-	KickstartFromBytes = packagekickstart.KickstartFromBytes
+	Kickstart            = packagekickstart.Kickstart
+	KickstartFromBytes   = packagekickstart.KickstartFromBytes
+	ImportOLMBundleImage = packagekickstart.ImportOLMBundleImage
 )

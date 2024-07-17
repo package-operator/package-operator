@@ -9,7 +9,11 @@ import (
 )
 
 type Kickstarter interface {
-	KickStart(ctx context.Context, pkgName string, inputs []string, params []string) (msg string, err error)
+	KickStart(
+		ctx context.Context, pkgName string,
+		inputs []string, params []string,
+		olmBundle string,
+	) (msg string, err error)
 }
 
 func NewCmd(kickstarter Kickstarter) *cobra.Command {
@@ -34,7 +38,7 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 			return err
 		}
 
-		msg, err := kickstarter.KickStart(cmd.Context(), args[0], opts.Inputs, opts.Params)
+		msg, err := kickstarter.KickStart(cmd.Context(), args[0], opts.Inputs, opts.Params, opts.OLMBundle)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
@@ -58,12 +62,15 @@ type options struct {
 	Inputs []string
 	// Parametrize inputs.
 	Params []string
+	// OLM Bundle.
+	OLMBundle string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
 	const (
 		inputUse       = "Files or urls to load objects from. Supports glob and \"-\" to read from stdin."
 		parametrizeUse = "Parametrize flags: e.g. replicas."
+		olmBundle      = "OLM Bundle OCI to import. e.g. quay.io/xx/xxx:tag"
 	)
 
 	flags.StringSliceVarP(
@@ -80,6 +87,13 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		"p",
 		nil,
 		inputUse,
+	)
+
+	flags.StringVar(
+		&o.OLMBundle,
+		"olm-bundle",
+		"",
+		olmBundle,
 	)
 }
 

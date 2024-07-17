@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
@@ -48,6 +49,7 @@ func (k *Kickstarter) Kickstart(
 	pkgName string,
 	inputs []string,
 	parametrize []string,
+	olmBundle string,
 ) (string, error) {
 	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
 		return "", fmt.Errorf("create directory: %w", err)
@@ -63,6 +65,21 @@ func (k *Kickstarter) Kickstart(
 		objects = append(objects, newObjects...)
 	}
 
+	folderName := pkgName
+	if len(olmBundle) > 0 {
+		img, err := crane.Pull(olmBundle)
+		if err != nil {
+			return "", err
+		}
+
+		objs, reg, err := packages.ImportOLMBundleImage(ctx, img)
+		if err != nil {
+			return "", fmt.Errorf("import olm bundle: %w", err)
+		}
+		objects = append(objects, objs...)
+		pkgName = reg.PackageName
+	}
+
 	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects, packages.KickstartOptions{
 		Parametrize: parametrize,
 	})
@@ -70,7 +87,7 @@ func (k *Kickstarter) Kickstart(
 		return "", err
 	}
 	for path, data := range rawPkg.Files {
-		path = filepath.Join(pkgName, path)
+		path = filepath.Join(folderName, path)
 		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 			return "", fmt.Errorf("creating directory: %w", err)
 		}
