@@ -246,6 +246,7 @@ func Parametrize(
 			Tolerations:   slices.Contains(paramsFlags, "tolerations"),
 			NodeSelectors: slices.Contains(paramsFlags, "nodeSelectors"),
 			Resources:     slices.Contains(paramsFlags, "resources"),
+			Env:           slices.Contains(paramsFlags, "env"),
 		})
 		if err != nil {
 			return nil, false, err

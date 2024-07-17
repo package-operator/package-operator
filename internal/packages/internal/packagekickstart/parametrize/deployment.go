@@ -15,6 +15,7 @@ type DeploymentOptions struct {
 	Tolerations   bool
 	NodeSelectors bool
 	Resources     bool
+	Env           bool
 }
 
 func Deployment(
@@ -113,7 +114,7 @@ func Deployment(
 		instructions = append(instructions, Pipeline(nodeSelectorAccess, "spec.template.spec.nodeSelector"))
 	}
 
-	if opts.Resources {
+	if opts.Resources || opts.Env {
 		configSchema.Properties["containers"] = apiextensionsv1.JSONSchemaProps{
 			Type: "object",
 			Default: &apiextensionsv1.JSON{
@@ -132,56 +133,156 @@ func Deployment(
 			if err != nil {
 				return nil, err
 			}
-
-			originalResources, _, err := unstructured.NestedMap(c, "resources")
-			if err != nil {
-				return nil, err
-			}
-			if originalResources == nil {
-				originalResources = map[string]interface{}{}
-			}
-			defaultRaw, err := json.Marshal(originalResources)
-			if err != nil {
-				return nil, err
-			}
-
-			typeResource := apiextensionsv1.JSONSchemaProps{
-				Type: "object",
-				AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{
-					Schema: &apiextensionsv1.JSONSchemaProps{
-						AnyOf: []apiextensionsv1.JSONSchemaProps{
-							{Type: "integer"},
-							{Type: "string"},
-						},
-						Pattern:      `^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$`,
-						XIntOrString: true,
-					},
-				},
-			}
-
 			configSchema.Properties["containers"].Properties[name] = apiextensionsv1.JSONSchemaProps{
-				Type: "object",
-				Properties: map[string]apiextensionsv1.JSONSchemaProps{
-					"resources": {
-						Type: "object",
-						Default: &apiextensionsv1.JSON{
-							Raw: defaultRaw,
-						},
-						Properties: map[string]apiextensionsv1.JSONSchemaProps{
-							"limits":   typeResource,
-							"requests": typeResource,
-						},
-					},
-				},
+				Type:       "object",
+				Properties: map[string]apiextensionsv1.JSONSchemaProps{},
 				Default: &apiextensionsv1.JSON{
 					Raw: []byte("{}"),
 				},
 			}
 
-			nodeSelectorAccess := fmt.Sprintf(
-				`index .config "deployments" %q %q "containers" %q "resources" | toJson`,
-				obj.GetNamespace(), obj.GetName(), name)
-			instructions = append(instructions, Pipeline(nodeSelectorAccess, fmt.Sprintf("spec.template.spec.containers.%d.resources", i)))
+			if opts.Env {
+				configSchema.Properties["containers"].
+					Properties[name].
+					Properties["env"] = apiextensionsv1.JSONSchemaProps{
+					Type: "array",
+					Default: &apiextensionsv1.JSON{
+						Raw: []byte("[]"),
+					},
+					Items: &apiextensionsv1.JSONSchemaPropsOrArray{
+						Schema: &apiextensionsv1.JSONSchemaProps{
+							Properties: map[string]apiextensionsv1.JSONSchemaProps{
+								"name": {
+									Type: "string",
+								},
+								"value": {
+									Type: "string",
+								},
+								"valueFrom": {
+									Properties: map[string]apiextensionsv1.JSONSchemaProps{
+										"configMapKeyRef": {
+											Properties: map[string]apiextensionsv1.JSONSchemaProps{
+												"key": {
+													Type: "string",
+												},
+												"name": {
+													Type: "string",
+												},
+												"optional": {
+													Type: "boolean",
+												},
+											},
+											Required: []string{"key"},
+											Type:     "object",
+										},
+										"fieldRef": {
+											Properties: map[string]apiextensionsv1.JSONSchemaProps{
+												"apiVersion": {
+													Type: "string",
+												},
+												"fieldPath": {
+													Type: "string",
+												},
+											},
+											Required: []string{"fieldPath"},
+											Type:     "object",
+										},
+										// TODO: Schema is not accepted.
+										// "resourceFieldRef": {
+										// 	Properties: map[string]apiextensionsv1.JSONSchemaProps{
+										// 		"containerName": {
+										// 			Type: "string",
+										// 		},
+										// 		"divisor": {
+										// 			OneOf: []apiextensionsv1.JSONSchemaProps{
+										// 				{Type: "string"},
+										// 				{Type: "number"},
+										// 			},
+										// 		},
+										// 		"resource": {
+										// 			Type: "string",
+										// 		},
+										// 	},
+										// 	Required: []string{"resource"},
+										// 	Type:     "object",
+										// },
+										"secretKeyRef": {
+											Properties: map[string]apiextensionsv1.JSONSchemaProps{
+												"key":      {Type: "string"},
+												"name":     {Type: "string"},
+												"optional": {Type: "boolean"},
+											},
+											Required: []string{"key"},
+											Type:     "object",
+										},
+									},
+									Type: "object",
+								},
+							},
+							Type: "object",
+						},
+					},
+				}
+
+				envDotNotation := fmt.Sprintf("spec.template.spec.containers.%d.env", i)
+				_, err := dotnotation.Get(obj.Object, envDotNotation)
+				if err != nil {
+					if err := dotnotation.Set(obj.Object, envDotNotation, []interface{}{}); err != nil {
+						return nil, err
+					}
+				}
+
+				tolerationsAccess := fmt.Sprintf(
+					`index .config "deployments" %q %q "containers" %q "env"`,
+					obj.GetNamespace(), obj.GetName(), name)
+				instructions = append(instructions, MergeBlock(tolerationsAccess, envDotNotation))
+			}
+
+			if opts.Resources {
+				originalResources, _, err := unstructured.NestedMap(c, "resources")
+				if err != nil {
+					return nil, err
+				}
+				if originalResources == nil {
+					originalResources = map[string]interface{}{}
+				}
+				defaultRaw, err := json.Marshal(originalResources)
+				if err != nil {
+					return nil, err
+				}
+
+				typeResource := apiextensionsv1.JSONSchemaProps{
+					Type: "object",
+					AdditionalProperties: &apiextensionsv1.JSONSchemaPropsOrBool{
+						Schema: &apiextensionsv1.JSONSchemaProps{
+							AnyOf: []apiextensionsv1.JSONSchemaProps{
+								{Type: "integer"},
+								{Type: "string"},
+							},
+							Pattern:      `^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$`,
+							XIntOrString: true,
+						},
+					},
+				}
+
+				configSchema.Properties["containers"].
+					Properties[name].
+					Properties["resources"] = apiextensionsv1.JSONSchemaProps{
+					Type: "object",
+					Default: &apiextensionsv1.JSON{
+						Raw: defaultRaw,
+					},
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"limits":   typeResource,
+						"requests": typeResource,
+					},
+				}
+
+				nodeSelectorAccess := fmt.Sprintf(
+					`index .config "deployments" %q %q "containers" %q "resources" | toJson`,
+					obj.GetNamespace(), obj.GetName(), name)
+				instructions = append(instructions, Pipeline(nodeSelectorAccess, fmt.Sprintf("spec.template.spec.containers.%d.resources", i)))
+			}
 		}
 	}
 
