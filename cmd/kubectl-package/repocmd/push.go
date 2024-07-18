@@ -12,7 +12,7 @@ import (
 
 func newPushCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "push tag file",
+		Use:   "push file tag",
 		Short: "push a repository from file to tag",
 		Args:  cobra.ExactArgs(2),
 	}
