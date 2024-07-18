@@ -97,6 +97,7 @@ func TestLoadRepositoryFromFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, entry2, latest)
 	assert.Len(t, ri.ListEntries("pkg"), 2)
+	assert.Len(t, ri.ListAllEntries(), 2)
 	vs, err := ri.ListVersions("pkg")
 	require.NoError(t, err)
 	assert.Len(t, vs, 3)
@@ -121,20 +122,7 @@ func TestLoadRepositoryFromFile(t *testing.T) {
 func TestSaveRepositoryToFile(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	repo := NewRepositoryIndex(metav1.ObjectMeta{
-		Name:              "test-name",
-		Namespace:         "test-namespace",
-		CreationTimestamp: metav1.Date(2015, time.July, 11, 4, 1, 0, 0, time.UTC),
-	})
-	err := repo.Add(ctx, &manifests.RepositoryEntry{
-		ObjectMeta: metav1.ObjectMeta{Name: "pkg.67890"},
-		Data: manifests.RepositoryEntryData{
-			Name:     "pkg",
-			Image:    "quay.io/yyy",
-			Digest:   "67890",
-			Versions: []string{"v1.3.5", "v1.3.6"},
-		},
-	})
+	repo, err := repositoryToSave(ctx)
 	require.NoError(t, err)
 
 	const repoPath = "testdata/saved-repo.yaml"
@@ -150,4 +138,71 @@ func TestSaveRepositoryToFile(t *testing.T) {
 			panic(err)
 		}
 	})
+}
+
+func TestSaveAndLoadRepositoryToOCI(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo, err := repositoryToSave(ctx)
+	require.NoError(t, err)
+
+	image, err := SaveRepositoryToOCI(ctx, repo)
+	require.NoError(t, err)
+
+	ri, err := LoadRepositoryFromOCI(ctx, image)
+	require.NoError(t, err)
+
+	assert.False(t, ri.IsEmpty())
+	assert.Equal(t, "test-name", ri.Metadata().Name)
+
+	entry1, err := ri.GetVersion("pkg", "v1.3.5")
+	require.NoError(t, err)
+	_, err = ri.GetVersion("pkg", "v2.0.0")
+	require.Error(t, err)
+	_, err = ri.GetVersion("foo", "v1.3.5")
+	require.Error(t, err)
+
+	latest, err := ri.GetLatestEntry("pkg")
+	require.NoError(t, err)
+	_, err = ri.GetLatestEntry("foo")
+	require.Error(t, err)
+
+	assert.Equal(t, entry1, latest)
+
+	assert.Len(t, ri.ListEntries("pkg"), 1)
+	assert.Empty(t, ri.ListEntries("foo"))
+	assert.Len(t, ri.ListAllEntries(), 1)
+
+	vrs, err := ri.ListVersions("pkg")
+	require.NoError(t, err)
+	assert.Len(t, vrs, 2)
+	_, err = ri.ListVersions("foo")
+	require.Error(t, err)
+
+	vs, err := ri.ListVersions("pkg")
+	require.NoError(t, err)
+	assert.Len(t, vs, 2)
+	byDigest, err := ri.GetDigest("pkg", "67890")
+	require.NoError(t, err)
+	assert.Equal(t, entry1, byDigest)
+	_, err = ri.GetDigest("foo", "67890")
+	require.Error(t, err)
+}
+
+func repositoryToSave(ctx context.Context) (*RepositoryIndex, error) {
+	repo := NewRepositoryIndex(metav1.ObjectMeta{
+		Name:              "test-name",
+		Namespace:         "test-namespace",
+		CreationTimestamp: metav1.Date(2015, time.July, 11, 4, 1, 0, 0, time.UTC),
+	})
+	err := repo.Add(ctx, &manifests.RepositoryEntry{
+		ObjectMeta: metav1.ObjectMeta{Name: "pkg.67890"},
+		Data: manifests.RepositoryEntryData{
+			Name:     "pkg",
+			Image:    "quay.io/yyy",
+			Digest:   "67890",
+			Versions: []string{"v1.3.5", "v1.3.6"},
+		},
+	})
+	return repo, err
 }

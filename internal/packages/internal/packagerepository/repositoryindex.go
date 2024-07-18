@@ -173,12 +173,12 @@ func (ri *RepositoryIndex) ListEntries(pkgName string) []manifests.RepositoryEnt
 }
 
 func (ri *RepositoryIndex) ListAllEntries() []manifests.RepositoryEntry {
-	entires := []manifests.RepositoryEntry{}
+	entries := []manifests.RepositoryEntry{}
 	for _, pkgIdx := range ri.packageIndexes {
-		entires = append(entires, pkgIdx.ListEntries()...)
+		entries = append(entries, pkgIdx.ListEntries()...)
 	}
 
-	return entires
+	return entries
 }
 
 func (ri *RepositoryIndex) Metadata() *manifests.Repository {
