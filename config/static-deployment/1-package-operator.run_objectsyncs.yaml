@@ -1,0 +1,96 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: objectsyncs.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: ObjectSync
+    listKind: ObjectSyncList
+    plural: objectsyncs
+    shortNames:
+    - objsync
+    - osync
+    - os
+    singular: objectsync
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ObjectSync synchronizes a singlular source object
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          dest:
+            items:
+              description: NamespacedName
+              properties:
+                name:
+                  type: string
+                namespace:
+                  type: string
+              required:
+              - name
+              - namespace
+              type: object
+            type: array
+            uniqueItems: true
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          src:
+            description: SyncedObjectReference an object synchronized by this ObjectSync.
+            properties:
+              kind:
+                description: Object Kind. Only ConfigMaps and Secrets allowed for
+                  now.
+                enum:
+                - ConfigMap
+                - Secret
+                type: string
+              mark:
+                default: true
+                description: |-
+                  Wether source object should be marked with a label that allows PKO to cache the object.
+                  Defaults to true but it can be toggled off in case there are conflicts with other controllers of the source object.
+                  TODO: If this is turned off, a reconciliation interval has to be defined.
+                type: boolean
+              name:
+                description: Object Name.
+                type: string
+              namespace:
+                description: Object Namespace.
+                type: string
+            required:
+            - kind
+            - mark
+            - name
+            - namespace
+            type: object
+        required:
+        - dest
+        - src
+        type: object
+    served: true
+    storage: true
+    subresources: {}
