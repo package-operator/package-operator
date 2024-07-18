@@ -127,7 +127,7 @@ func (c *GetPackageConfig) Option(opts ...GetPackageOption) {
 type GetPackageOption interface{ ConfigureGetPackage(*GetPackageConfig) }
 
 func (c *Client) PatchClusterObjectDeployment(
-	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet) (*ObjectDeployment, error) {
+	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet) error {
 
 	obj := &corev1alpha1.ClusterObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -136,24 +136,20 @@ func (c *Client) PatchClusterObjectDeployment(
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+		return fmt.Errorf("getting objectdeployment object: %w", err)
 	}
 	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
-		fmt.Println("Patching will happen")
-
-		fmt.Printf("deployment spec current:  %+v\n", obj.Spec.Template.Spec)
 		typ, byteval, _ := getClusterObjectDeploymentPatch(&cobs.Spec)
-		fmt.Println(string(byteval))
 
 		if err := c.client.Patch(ctx, obj, client.RawPatch(typ, byteval)); err != nil {
-			return nil, fmt.Errorf("patching objectdeployment: %w", err)
+			return fmt.Errorf("patching objectdeployment: %w", err)
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (c *Client) PatchObjectDeployment(
-	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet) (*ObjectDeployment, error) {
+	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet) error {
 
 	obj := &corev1alpha1.ClusterObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -163,20 +159,16 @@ func (c *Client) PatchObjectDeployment(
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+		return fmt.Errorf("getting objectdeployment object: %w", err)
 	}
 	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
-		fmt.Println("Patching will happen")
-
-		fmt.Printf("deployment spec current:  %+v\n", obj.Spec.Template.Spec)
 		typ, byteval, _ := getObjectDeploymentPatch(&cobs.Spec)
-		fmt.Println(string(byteval))
 
 		if err := c.client.Patch(ctx, obj, client.RawPatch(typ, byteval)); err != nil {
-			return nil, fmt.Errorf("patching objectdeployment: %w", err)
+			return fmt.Errorf("patching objectdeployment: %w", err)
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (c *Client) GetObjectDeployment(
