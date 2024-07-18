@@ -13,6 +13,7 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
 * [ObjectSlice](#objectslice)
+* [ObjectSync](#objectsync)
 * [ObjectTemplate](#objecttemplate)
 * [Package](#package)
 
@@ -568,6 +569,37 @@ objects:
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
+### ObjectSync
+
+ObjectSync synchronizes a singlular source object
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+dest:
+- name: diam
+  namespace: sed
+kind: ObjectSync
+metadata:
+  name: example
+src:
+  kind: consetetur
+  mark: true
+  name: sadipscing
+  namespace: elitr
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `src` <b>required</b><br><a href="#syncedobjectreference">SyncedObjectReference</a> | SyncedObjectReference an object synchronized by this ObjectSync. |
+| `dest` <b>required</b><br><a href="#namespacedname">[]NamespacedName</a> |  |
+
+
 ### ObjectTemplate
 
 ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
@@ -780,6 +812,20 @@ Used in:
 * [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetStatus](#objectsetstatus)
 * [ObjectTemplateStatus](#objecttemplatestatus)
+
+
+### NamespacedName
+
+NamespacedName.
+
+| Field | Description |
+| ----- | ----------- |
+| `namespace` <b>required</b><br>string |  |
+| `name` <b>required</b><br>string |  |
+
+
+Used in:
+* [ObjectSync](#objectsync)
 
 
 ### ObjectDeploymentSpec
@@ -1183,6 +1229,22 @@ RemotePhaseReference remote phases aka ObjectSetPhase/ClusterObjectSetPhase obje
 Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetStatus](#objectsetstatus)
+
+
+### SyncedObjectReference
+
+SyncedObjectReference an object synchronized by this ObjectSync.
+
+| Field | Description |
+| ----- | ----------- |
+| `kind` <b>required</b><br>string | Object Kind. Only ConfigMaps and Secrets allowed for now. |
+| `name` <b>required</b><br>string | Object Name. |
+| `namespace` <b>required</b><br>string | Object Namespace. |
+| `mark` <b>required</b><br><a href="#bool">bool</a> | Wether source object should be marked with a label that allows PKO to cache the object.<br>Defaults to true but it can be toggled off in case there are conflicts with other controllers of the source object. |
+
+
+Used in:
+* [ObjectSync](#objectsync)
 ## manifests.package-operator.run/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
