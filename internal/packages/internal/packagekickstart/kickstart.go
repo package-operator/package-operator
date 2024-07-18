@@ -42,6 +42,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	scheme := &v1.JSONSchemaProps{
 		Type: "object",
 	}
+	imageContainer := &parametrize.ImageContainer{}
 	var objCount int
 	for _, obj := range objects {
 		annotations := obj.GetAnnotations()
@@ -57,7 +58,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 		usedGKs[gk] = struct{}{}
 		objCount++
 
-		if b, ok, err := parametrize.Parametrize(obj, scheme, opts.Parametrize); err != nil {
+		if b, ok, err := parametrize.Parametrize(obj, scheme, imageContainer, opts.Parametrize); err != nil {
 			return nil, res, fmt.Errorf("parametrizing: %w", err)
 		} else if ok {
 			path := filepath.Join(phase,
@@ -114,6 +115,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 				manifestsv1alpha1.PackageManifestScopeNamespaced,
 			},
 			AvailabilityProbes: probes,
+			Images:             imageContainer.List(),
 		},
 	}
 	if len(scheme.Properties) > 0 {

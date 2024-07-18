@@ -3,6 +3,7 @@ package parametrize
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/joeycumines/go-dotnotation/dotnotation"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -17,11 +18,13 @@ type DeploymentOptions struct {
 	Resources     bool
 	Env           bool
 	Volumes       bool
+	Images        bool
 }
 
 func Deployment(
 	obj unstructured.Unstructured,
 	schema *apiextensionsv1.JSONSchemaProps,
+	imageContainer *ImageContainer,
 	opts DeploymentOptions,
 ) (
 	[]byte, error,
@@ -35,6 +38,42 @@ func Deployment(
 		Default: &apiextensionsv1.JSON{
 			Raw: []byte("{}"),
 		},
+	}
+
+	if opts.Images {
+		configSchema.Properties["containers"] = apiextensionsv1.JSONSchemaProps{
+			Type: "object",
+			Default: &apiextensionsv1.JSON{
+				Raw: []byte("{}"),
+			},
+			Properties: map[string]apiextensionsv1.JSONSchemaProps{},
+		}
+
+		containers, err := dotnotation.Get(obj.Object, "spec.template.spec.containers")
+		if err != nil {
+			return nil, err
+		}
+		for i, container := range containers.([]interface{}) {
+			c := container.(map[string]interface{})
+			name, _, err := unstructured.NestedString(c, "name")
+			if err != nil {
+				return nil, err
+			}
+
+			imageDotNotation := fmt.Sprintf("spec.template.spec.containers.%d.image", i)
+			imageI, err := dotnotation.Get(obj.Object, imageDotNotation)
+			if err != nil {
+				return nil, err
+			}
+			image := imageI.(string)
+			if strings.Contains(image, "@") {
+				// Skip images that are already referenced by digest.
+				continue
+			}
+			imageName := imageContainer.Add(name, image)
+			imageAccess := fmt.Sprintf(`index .images %q`, imageName)
+			instructions = append(instructions, Pipeline(imageAccess, imageDotNotation))
+		}
 	}
 
 	if opts.Replicas {

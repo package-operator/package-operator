@@ -95,7 +95,7 @@ spec:
 
 func TestParametrize(t *testing.T) {
 	scheme := &apiextensionsv1.JSONSchemaProps{}
-	out, ok, err := Parametrize(deploy, scheme, []string{
+	out, ok, err := Parametrize(deploy, scheme, nil, []string{
 		"replicas",
 	})
 	require.NoError(t, err)

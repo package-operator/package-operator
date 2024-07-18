@@ -2,7 +2,6 @@ package packagemanifestvalidation
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
@@ -47,8 +46,6 @@ func AdmitPackageConfiguration(
 
 	// inject default values from schema.
 	defaulting.Default(configuration, s)
-
-	fmt.Println(configuration)
 
 	// validate configuration via schema.
 	ferrs, err := validatePackageConfigurationBySchema(

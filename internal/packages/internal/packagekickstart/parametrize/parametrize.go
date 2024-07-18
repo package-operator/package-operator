@@ -229,6 +229,7 @@ func Pipeline(exp string, fieldPath string) Instruction {
 func Parametrize(
 	obj unstructured.Unstructured,
 	scheme *apiextensionsv1.JSONSchemaProps,
+	imageContainer *ImageContainer,
 	paramsFlags []string,
 ) ([]byte, bool, error) {
 	if len(paramsFlags) == 0 {
@@ -241,12 +242,13 @@ func Parametrize(
 		Kind:    "Deployment",
 	}
 	if obj.GroupVersionKind() == deployGVK && len(paramsFlags) > 0 {
-		out, err := Deployment(obj, scheme, DeploymentOptions{
+		out, err := Deployment(obj, scheme, imageContainer, DeploymentOptions{
 			Replicas:      slices.Contains(paramsFlags, "replicas"),
 			Tolerations:   slices.Contains(paramsFlags, "tolerations"),
 			NodeSelectors: slices.Contains(paramsFlags, "nodeSelectors"),
 			Resources:     slices.Contains(paramsFlags, "resources"),
 			Env:           slices.Contains(paramsFlags, "env"),
+			Images:        slices.Contains(paramsFlags, "images"),
 		})
 		if err != nil {
 			return nil, false, err

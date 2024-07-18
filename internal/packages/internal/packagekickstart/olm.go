@@ -61,14 +61,6 @@ func ImportOLMBundleImage(ctx context.Context, image containerregistrypkgv1.Imag
 		return nil, reg, packagetypes.ErrEmptyPackage
 	}
 
-	fmt.Println("HAAAALO:", rawFS)
-	fmt.Printf("HAAAALOOOO: %#v\n", rawFS["manifests"])
-	d, err := fs.ReadDir(rawFS, "manifests")
-	fmt.Println("HAAAALO2: ", d, err)
-	ffff := bigFS(&rawFS)
-	d, err = fs.ReadDir(ffff, "manifests")
-	fmt.Println("HAAAALO3: ", d, err)
-
 	convertedFS, reg, err := convert.RegistryV1ToPlain(rawFS, "", nil)
 	if err != nil {
 		return nil, reg, fmt.Errorf("converting OLM Bundle to static manifests: %w", err)
@@ -82,12 +74,6 @@ func ImportOLMBundleImage(ctx context.Context, image containerregistrypkgv1.Imag
 		return nil, reg, fmt.Errorf("loading objects from manifests: %w", err)
 	}
 	return objects, reg, nil
-}
-
-type bigFS interface {
-	fs.FS
-	fs.ReadDirFS
-	fs.ReadFileFS
 }
 
 func FromOLMBundleImage(ctx context.Context, image containerregistrypkgv1.Image) (
