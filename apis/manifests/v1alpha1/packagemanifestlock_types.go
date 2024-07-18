@@ -21,6 +21,7 @@ type PackageManifestLockSpec struct {
 	Dependencies []PackageManifestLockDependency `json:"dependencies,omitempty"`
 }
 
+// PackageManifestLockDependency defines a dependency of this package.
 type PackageManifestLockDependency struct {
 	// Image name to be use to reference it in the templates
 	// +example=my-pkg

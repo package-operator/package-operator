@@ -135,6 +135,8 @@ type PackageManifestPath struct {
 	Expression string `json:"expression"`
 }
 
+// PackageManifestRepository contains information about one package repository
+// which could be loaded either from a local file or from a container image.
 type PackageManifestRepository struct {
 	// References a file in the filesystem to load.
 	// +example=../myrepo.yaml
@@ -144,12 +146,13 @@ type PackageManifestRepository struct {
 	Image string `json:"image,omitempty"`
 }
 
-// Uses a solver to find the latest version package image.
+// PackageManifestDependency uses a solver to find the latest version package image.
 type PackageManifestDependency struct {
 	// Resolves the dependency as a image url and digest and commits it to the PackageManifestLock.
 	Image *PackageManifestDependencyImage `json:"image,omitempty"`
 }
 
+// PackageManifestDependencyImage represents a dependency image found by the solver.
 type PackageManifestDependencyImage struct {
 	// Name for the dependency.
 	// +example=my-pkg
@@ -181,9 +184,9 @@ type PackageManifestConstraint struct {
 type PlatformName string
 
 const (
-	// Plain Kubernetes.
+	// Kubernetes platform.
 	Kubernetes PlatformName = "Kubernetes"
-	// Red Hat OpenShift.
+	// OpenShift platform by Red Hat.
 	OpenShift PlatformName = "OpenShift"
 )
 
@@ -200,6 +203,8 @@ type PackageManifestPlatformVersionConstraint struct {
 	Range string `json:"range"`
 }
 
+// PackageManifestUniqueInScopeConstraint constraints this package
+// to be only installed once in the Cluster or once in the same Namespace.
 type PackageManifestUniqueInScopeConstraint struct{}
 
 // PackageManifestComponentsConfig configures components of a package.

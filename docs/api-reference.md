@@ -1375,7 +1375,7 @@ spec:
 
 ### Repository
 
-
+Repository is the k8s resource that represents a package repository.
 
 
 **Example**
@@ -1397,7 +1397,7 @@ metadata:
 
 ### RepositoryEntry
 
-
+RepositoryEntry contains metadata on one image belonging to the repository.
 
 
 **Example**
@@ -1428,7 +1428,7 @@ metadata:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `data` <b>required</b><br><a href="#repositoryentrydata">RepositoryEntryData</a> |  |
+| `data` <b>required</b><br><a href="#repositoryentrydata">RepositoryEntryData</a> | RepositoryEntryData is the part of RepositoryEntry containing the actual data. |
 
 
 
@@ -1557,7 +1557,7 @@ Used in:
 
 ### PackageManifestDependency
 
-Uses a solver to find the latest version package image.
+PackageManifestDependency uses a solver to find the latest version package image.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1570,7 +1570,7 @@ Used in:
 
 ### PackageManifestDependencyImage
 
-
+PackageManifestDependencyImage represents a dependency image found by the solver.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1613,7 +1613,7 @@ Used in:
 
 ### PackageManifestLockDependency
 
-
+PackageManifestLockDependency defines a dependency of this package.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1720,7 +1720,8 @@ Used in:
 
 ### PackageManifestRepository
 
-
+PackageManifestRepository contains information about one package repository
+which could be loaded either from a local file or from a container image.
 
 | Field | Description |
 | ----- | ----------- |
@@ -1812,7 +1813,7 @@ Used in:
 
 ### RepositoryEntryData
 
-
+RepositoryEntryData is the part of RepositoryEntry containing the actual data.
 
 | Field | Description |
 | ----- | ----------- |

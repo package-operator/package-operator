@@ -2,6 +2,7 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// RepositoryEntry contains metadata on one image belonging to the repository.
 // +kubebuilder:object:root=true
 type RepositoryEntry struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -10,6 +11,7 @@ type RepositoryEntry struct {
 	Data RepositoryEntryData `json:"data"`
 }
 
+// RepositoryEntryData is the part of RepositoryEntry containing the actual data.
 type RepositoryEntryData struct {
 	// OCI host/repository and name.
 	// e.g. quay.io/xxx/xxx
