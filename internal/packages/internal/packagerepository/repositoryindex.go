@@ -247,7 +247,9 @@ func (ri *RepositoryIndex) Export(_ context.Context, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	v1Repo.CreationTimestamp = metav1.Now()
+	if v1Repo.CreationTimestamp.IsZero() {
+		v1Repo.CreationTimestamp = metav1.Now()
+	}
 	v1RepoJSON, err := yaml.Marshal(v1Repo)
 	if err != nil {
 		return err

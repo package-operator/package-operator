@@ -4,6 +4,9 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +35,29 @@ metadata:
   name: pkg.12345
 `
 
-func TestRepositoryIndex(t *testing.T) {
+const savedRepositoryExpectedContent = `---
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: Repository
+metadata:
+  creationTimestamp: "2015-07-11T04:01:00Z"
+  name: test-name
+  namespace: test-namespace
+---
+apiVersion: manifests.package-operator.run/v1alpha1
+data:
+  digest: "67890"
+  image: quay.io/yyy
+  name: pkg
+  versions:
+  - v1.3.6
+  - v1.3.5
+kind: RepositoryEntry
+metadata:
+  creationTimestamp: null
+  name: pkg.67890
+`
+
+func TestLoadRepositoryFromFile(t *testing.T) {
 	t.Parallel()
 	entry2 := &manifests.RepositoryEntry{
 		Data: manifests.RepositoryEntryData{
@@ -91,4 +116,38 @@ func TestRepositoryIndex(t *testing.T) {
 	}()
 
 	require.NoError(t, ri.Export(ctx, file))
+}
+
+func TestSaveRepositoryToFile(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := NewRepositoryIndex(metav1.ObjectMeta{
+		Name:              "test-name",
+		Namespace:         "test-namespace",
+		CreationTimestamp: metav1.Date(2015, time.July, 11, 4, 1, 0, 0, time.UTC),
+	})
+	err := repo.Add(ctx, &manifests.RepositoryEntry{
+		ObjectMeta: metav1.ObjectMeta{Name: "pkg.67890"},
+		Data: manifests.RepositoryEntryData{
+			Name:     "pkg",
+			Image:    "quay.io/yyy",
+			Digest:   "67890",
+			Versions: []string{"v1.3.5", "v1.3.6"},
+		},
+	})
+	require.NoError(t, err)
+
+	const repoPath = "testdata/saved-repo.yaml"
+	err = SaveRepositoryToFile(ctx, repoPath, repo)
+	require.NoError(t, err)
+
+	writtenBytes, err := os.ReadFile(repoPath)
+	require.NoError(t, err)
+	require.Equal(t, savedRepositoryExpectedContent, string(writtenBytes))
+
+	t.Cleanup(func() {
+		if err := os.Remove(repoPath); err != nil {
+			panic(err)
+		}
+	})
 }
