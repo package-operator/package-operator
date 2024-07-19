@@ -18,9 +18,11 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.17.8
 	github.com/google/go-containerregistry v0.20.0
+	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
+	github.com/operator-framework/api v0.26.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.1
@@ -79,6 +81,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/go-test/deep v1.1.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect

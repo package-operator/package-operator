@@ -13,6 +13,7 @@ import (
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
+	"package-operator.run/internal/packages/internal/packagekickstart"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -20,6 +21,12 @@ import (
 func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 	rawPkg *packagetypes.RawPackage, err error,
 ) {
+	if isOLM, err := peekIsOLM(image); err != nil {
+		return nil, err
+	} else if isOLM {
+		return packagekickstart.FromOLMBundleImage(ctx, image)
+	}
+
 	files := packagetypes.Files{}
 	reader := mutate.Extract(image)
 	verboseLog := logr.FromContextOrDiscard(ctx).V(1)

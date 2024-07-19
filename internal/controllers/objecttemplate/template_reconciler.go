@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
+	"package-operator.run/internal/utils"
 )
 
 // Requeue every 30s to check if input sources exist now.
@@ -235,7 +235,7 @@ func copySourceItem(
 	sourceObj *unstructured.Unstructured,
 	sourcesConfig map[string]any,
 ) error {
-	jpString, err := RelaxedJSONPathExpression(item.Key)
+	jpString, err := utils.RelaxedJSONPathExpression(item.Key)
 	if err != nil {
 		return err
 	}
@@ -407,38 +407,4 @@ func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate
 		meta.RemoveStatusCondition(objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid)
 	}
 	return err
-}
-
-var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
-
-// RelaxedJSONPathExpression attempts to be flexible with JSONPath expressions, it accepts:
-//   - metadata.name (no leading '.' or curly braces '{...}'
-//   - {metadata.name} (no leading '.')
-//   - .metadata.name (no curly braces '{...}')
-//   - {.metadata.name} (complete expression)
-//
-// And transforms them all into a valid jsonpath expression:
-//
-//	{.metadata.name}
-//
-//nolint:goerr113
-func RelaxedJSONPathExpression(pathExpression string) (string, error) {
-	if len(pathExpression) == 0 {
-		return pathExpression, nil
-	}
-	submatches := jsonRegexp.FindStringSubmatch(pathExpression)
-	if submatches == nil {
-		err := errors.New("path string, expected a 'name1.name2' or '.name1.name2' or '{name1.name2}' or '{.name1.name2}'")
-		return "", err
-	}
-	if len(submatches) != 3 {
-		return "", fmt.Errorf("unexpected submatch list: %v", submatches)
-	}
-	var fieldSpec string
-	if len(submatches[1]) != 0 {
-		fieldSpec = submatches[1]
-	} else {
-		fieldSpec = submatches[2]
-	}
-	return fmt.Sprintf("{.%s}", fieldSpec), nil
 }
