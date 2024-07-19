@@ -9,7 +9,7 @@ import (
 )
 
 type Kickstarter interface {
-	KickStart(
+	Kickstart(
 		ctx context.Context, pkgName string,
 		inputs []string, params []string,
 		olmBundle string,
@@ -38,7 +38,7 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 			return err
 		}
 
-		msg, err := kickstarter.KickStart(cmd.Context(), args[0], opts.Inputs, opts.Params, opts.OLMBundle)
+		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs, opts.Params, opts.OLMBundle)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
