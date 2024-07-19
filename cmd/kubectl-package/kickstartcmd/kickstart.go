@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 type Kickstarter interface {
@@ -16,7 +15,8 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	const (
 		cmdUse   = "kickstart pkg_name (experimental)"
 		cmdShort = "Starts a new package with the given name."
-		cmdLong  = "Starts a new package with the given name containing objects referenced via -f in a new folder <pkg_name>."
+		cmdLong  = "Starts a new package, containing objects referenced via -f, " +
+			"with the given name in a new folder <pkg_name>."
 	)
 
 	var opts options
@@ -27,13 +27,9 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 		Short: cmdShort,
 		Long:  cmdLong,
 	}
-	opts.AddFlags(cmd.Flags())
+	opts.AddFlags(cmd)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		if err := opts.Validate(); err != nil {
-			return err
-		}
-
 		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
@@ -45,22 +41,17 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	return cmd
 }
 
-type FlagNeedArgumentError struct {
-	flag string
-}
-
-func (e *FlagNeedArgumentError) Error() string {
-	return fmt.Sprintf("flag needs an argument: '%s' in -%s", e.flag, e.flag)
-}
-
 type options struct {
 	// Inputs (files/http/etc.)
 	Inputs []string
 }
 
-func (o *options) AddFlags(flags *pflag.FlagSet) {
+func (o *options) AddFlags(cmd *cobra.Command) {
+	flags := cmd.Flags()
+
 	const (
-		inputUse = "Files or urls to load objects from. Supports glob and \"-\" to read from stdin."
+		inputUse = "(Required) Files or urls to load objects from. " +
+			`Supports glob and "-" to read from stdin. Can be supplied multiple times.`
 	)
 
 	flags.StringSliceVarP(
@@ -70,13 +61,8 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		nil,
 		inputUse,
 	)
-}
 
-func (o *options) Validate() error {
-	for _, i := range o.Inputs {
-		if len(i) == 0 {
-			return &FlagNeedArgumentError{}
-		}
+	if err := cmd.MarkFlagRequired("filename"); err != nil {
+		panic(`Programmer error: Unknown flag "filename".`)
 	}
-	return nil
 }

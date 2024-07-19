@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a
+  namespace: ns
+  labels:
+    foo: bar
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a
+  namespace: ns
+  labels:
+    foo: baz

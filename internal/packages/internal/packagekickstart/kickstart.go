@@ -35,19 +35,37 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	usedGKs := map[schema.GroupKind]struct{}{}
 	var objCount int
 	for _, obj := range objects {
+		gk := obj.GroupVersionKind().GroupKind()
+		phase := guessPresetPhase(gk)
+
+		namespacedName, err := parseObjectMeta(obj)
+		if err != nil {
+			return nil, res, fmt.Errorf("parsing namespace and name: %w", err)
+		}
+
+		groupKind, err := parseTypeMeta(obj)
+		if err != nil {
+			return nil, res, fmt.Errorf("parsing groupKind: %w", err)
+		}
+
+		path := filepath.Join(phase,
+			fmt.Sprintf("%s.%s.%s.%s.yaml",
+				namespacedName.namespace,
+				namespacedName.name,
+				strings.ToLower(groupKind.group),
+				strings.ToLower(groupKind.kind)))
+
+		if _, ok := rawPkg.Files[path]; ok {
+			return nil, res, &ObjectIsDuplicateError{obj}
+		}
+
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
 			annotations = map[string]string{}
 		}
-		gk := obj.GroupVersionKind().GroupKind()
-		phase := guessPresetPhase(gk)
 		annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
 		obj.SetAnnotations(annotations)
 
-		path := filepath.Join(phase,
-			fmt.Sprintf("%s.%s.yaml", strings.ReplaceAll(
-				obj.GetName(), string(filepath.Separator), "-"),
-				strings.ToLower(obj.GetKind())))
 		b, err := yaml.Marshal(obj.Object)
 		if err != nil {
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)

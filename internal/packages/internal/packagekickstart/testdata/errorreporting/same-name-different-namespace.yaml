@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aaah
+  namespace: a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aaah
+  namespace: b
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aaah
+  namespace: c

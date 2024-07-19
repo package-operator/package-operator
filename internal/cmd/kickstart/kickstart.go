@@ -19,6 +19,8 @@ import (
 	"package-operator.run/internal/packages"
 )
 
+var errPackageFolderExists = errors.New("package folder already exists")
+
 type Kickstarter struct {
 	stdin  io.Reader
 	client *http.Client
@@ -48,8 +50,15 @@ func (k *Kickstarter) Kickstart(
 	pkgName string,
 	inputs []string,
 ) (string, error) {
-	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
-		return "", fmt.Errorf("create directory: %w", err)
+	// Preflight check: Check if pkgName folder already exists.
+	if _, err := os.Stat(pkgName); err != nil {
+		// If the error is "not exist" then we're fine.
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("preflight check: %w", err)
+		}
+	} else {
+		// Stat was successful and thus something already exists at `pkgName`.
+		return "", fmt.Errorf("%w: %s", errPackageFolderExists, pkgName)
 	}
 
 	var objects []unstructured.Unstructured
@@ -66,6 +75,11 @@ func (k *Kickstarter) Kickstart(
 	if err != nil {
 		return "", err
 	}
+
+	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
+		return "", fmt.Errorf("create directory: %w", err)
+	}
+
 	for path, data := range rawPkg.Files {
 		path = filepath.Join(pkgName, path)
 		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
@@ -139,9 +153,6 @@ func (k *Kickstarter) getInput(ctx context.Context, input string) (
 		return objects, nil
 	}
 
-	if reader == nil {
-		return nil, nil
-	}
 	content, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("reading: %w", err)
