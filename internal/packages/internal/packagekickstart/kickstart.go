@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,6 +29,10 @@ type KickstartOptions struct {
 	Parametrize []string
 }
 
+var namespaceGK = schema.GroupKind{
+	Kind: "Namespace",
+}
+
 func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstructured, opts KickstartOptions) (
 	*packagetypes.RawPackage, KickstartResult, error,
 ) {
@@ -37,6 +42,9 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	}
 
 	// Process objects
+	namespacesFromObjects := map[string]struct{}{}
+	namespaceObjectsFound := map[string]struct{}{}
+
 	usedPhases := map[string]struct{}{}
 	usedGKs := map[schema.GroupKind]struct{}{}
 	scheme := &v1.JSONSchemaProps{
@@ -53,6 +61,13 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 		phase := guessPresetPhase(gk)
 		annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
 		obj.SetAnnotations(annotations)
+
+		if gk == namespaceGK {
+			namespaceObjectsFound[obj.GetName()] = struct{}{}
+		}
+		if ns := obj.GetNamespace(); len(ns) > 0 {
+			namespacesFromObjects[obj.GetNamespace()] = struct{}{}
+		}
 
 		usedPhases[phase] = struct{}{}
 		usedGKs[gk] = struct{}{}
@@ -73,6 +88,38 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 				obj.GetName(), string(filepath.Separator), "-"),
 				strings.ToLower(obj.GetKind())))
 		b, err := yaml.Marshal(obj.Object)
+		if err != nil {
+			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
+		}
+		rawPkg.Files[path] = b
+	}
+
+	// Create files for missing namespaces.
+	for nsName := range namespacesFromObjects {
+		_, ok := namespaceObjectsFound[nsName]
+		if ok {
+			continue
+		}
+
+		phase := string(presetPhaseNamespaces)
+		usedPhases[phase] = struct{}{}
+		ns := &corev1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nsName,
+				Annotations: map[string]string{
+					manifestsv1alpha1.PackagePhaseAnnotation: phase,
+				},
+			},
+		}
+		path := filepath.Join(phase,
+			fmt.Sprintf("%s.%s.yaml", strings.ReplaceAll(
+				ns.GetName(), string(filepath.Separator), "-"),
+				"namespace"))
+		b, err := yaml.Marshal(ns)
 		if err != nil {
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
 		}
