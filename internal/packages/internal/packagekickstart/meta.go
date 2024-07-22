@@ -24,7 +24,7 @@ func parseObjectMeta(obj unstructured.Unstructured) (namespacedName, error) {
 	if !ok {
 		return namespacedName{}, &ObjectIsMissingMetadataError{obj}
 	}
-	// Validate that .metdata is a map.
+	// Validate that .metadata is a map.
 	metamap, ok := metadata.(map[string]interface{})
 	if !ok {
 		return namespacedName{}, &ObjectIsMissingMetadataError{obj}
@@ -36,14 +36,7 @@ func parseObjectMeta(obj unstructured.Unstructured) (namespacedName, error) {
 		return namespacedName{}, &ObjectIsMissingNameError{obj}
 	}
 
-	namespace := obj.GetNamespace()
-	// Default empty namespace - this also happens for cluster-scoped GKs
-	// since there is no reliable way to look up the scope of a GK.
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	escapedNamespace := escapeFilepathSeparator(namespace)
+	escapedNamespace := escapeFilepathSeparator(obj.GetNamespace())
 	escapedName := escapeFilepathSeparator(name)
 	return namespacedName{
 		namespace: escapedNamespace,

@@ -31,6 +31,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	}
 
 	// Process objects
+	duplicateMap := map[string]struct{}{}
 	usedPhases := map[string]struct{}{}
 	usedGKs := map[schema.GroupKind]struct{}{}
 	var objCount int
@@ -43,21 +44,21 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 			return nil, res, fmt.Errorf("parsing namespace and name: %w", err)
 		}
 
-		groupKind, err := parseTypeMeta(obj)
+		validatedGroupKind, err := parseTypeMeta(obj)
 		if err != nil {
 			return nil, res, fmt.Errorf("parsing groupKind: %w", err)
 		}
 
-		path := filepath.Join(phase,
-			fmt.Sprintf("%s.%s.%s.%s.yaml",
-				namespacedName.namespace,
-				namespacedName.name,
-				strings.ToLower(groupKind.group),
-				strings.ToLower(groupKind.kind)))
-
-		if _, ok := rawPkg.Files[path]; ok {
+		// validate that Object is not a duplicate
+		duplicateKey := fmt.Sprintf("%s.%s.%s.%s",
+			namespacedName.namespace,
+			namespacedName.name,
+			strings.ToLower(validatedGroupKind.group),
+			strings.ToLower(validatedGroupKind.kind))
+		if _, ok := duplicateMap[duplicateKey]; ok {
 			return nil, res, &ObjectIsDuplicateError{obj}
 		}
+		duplicateMap[duplicateKey] = struct{}{}
 
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
@@ -69,6 +70,23 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 		b, err := yaml.Marshal(obj.Object)
 		if err != nil {
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
+		}
+
+		// Generate unique object filename in phase folder.
+		// Use pattern `$phase/$name.$kind-$counter.yaml`.
+		counter := 0
+		var path string
+		for {
+			path = filepath.Join(phase,
+				fmt.Sprintf("%s.%s-%d.yaml",
+					strings.ToLower(namespacedName.name),
+					strings.ToLower(validatedGroupKind.kind),
+					counter))
+			if _, ok := rawPkg.Files[path]; !ok {
+				// Found unique name.
+				break
+			}
+			counter++
 		}
 		rawPkg.Files[path] = b
 
