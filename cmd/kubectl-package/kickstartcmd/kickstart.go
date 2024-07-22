@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type Kickstarter interface {
@@ -27,7 +28,7 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 		Short: cmdShort,
 		Long:  cmdLong,
 	}
-	opts.AddFlags(cmd)
+	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs)
@@ -46,11 +47,9 @@ type options struct {
 	Inputs []string
 }
 
-func (o *options) AddFlags(cmd *cobra.Command) {
-	flags := cmd.Flags()
-
+func (o *options) AddFlags(flags *pflag.FlagSet) {
 	const (
-		inputUse = "(Required) Files or urls to load objects from. " +
+		inputUse = "Files or urls to load objects from. " +
 			`Supports glob and "-" to read from stdin. Can be supplied multiple times.`
 	)
 
@@ -61,8 +60,4 @@ func (o *options) AddFlags(cmd *cobra.Command) {
 		nil,
 		inputUse,
 	)
-
-	if err := cmd.MarkFlagRequired("filename"); err != nil {
-		panic(`Programmer error: Unknown flag "filename".`)
-	}
 }
