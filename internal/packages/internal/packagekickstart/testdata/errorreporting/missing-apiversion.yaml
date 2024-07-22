@@ -1,0 +1,4 @@
+kind: Secret
+metadata:
+  namespace: foo
+  name: bar

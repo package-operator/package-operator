@@ -9,6 +9,7 @@ import (
 
 	"package-operator.run/cmd/kubectl-package/buildcmd"
 	clustertreecmd "package-operator.run/cmd/kubectl-package/clustertreecmd"
+	"package-operator.run/cmd/kubectl-package/kickstartcmd"
 	"package-operator.run/cmd/kubectl-package/rolloutcmd"
 	"package-operator.run/cmd/kubectl-package/rootcmd"
 	"package-operator.run/cmd/kubectl-package/treecmd"
@@ -137,6 +138,12 @@ func ProvideRolloutCmd(params rolloutcmd.Params) RootSubCommandResult {
 	}
 }
 
+func ProvideKickstartCmd(ks kickstartcmd.Kickstarter) RootSubCommandResult {
+	return RootSubCommandResult{
+		SubCommand: kickstartcmd.NewCmd(ks),
+	}
+}
+
 type RolloutSubCommandResult struct {
 	dig.Out
 
@@ -151,4 +158,8 @@ func ProvideRolloutHistoryCmd(clientFactory internalcmd.ClientFactory) RolloutSu
 
 func ProvideClientFactory(kcliFactory internalcmd.KubeClientFactory) internalcmd.ClientFactory {
 	return internalcmd.NewDefaultClientFactory(kcliFactory)
+}
+
+func ProvideKickstarter() kickstartcmd.Kickstarter {
+	return internalcmd.NewKickstarter(os.Stdin)
 }
