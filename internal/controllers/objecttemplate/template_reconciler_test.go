@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	missingResourceRetryInterval         = 30 * time.Second
-	missingOptionalResourceRetryInterval = 60 * time.Second
+	resourceRetryInterval         = 3 * time.Second
+	optionalResourceRetryInterval = 6 * time.Second
 )
 
 func Test_templateReconciler_getSourceObject(t *testing.T) {
@@ -566,11 +566,11 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 
 func TestRequeueDurationOnMissingSource(t *testing.T) {
 	t.Parallel()
-	t.Run("missing optional source returns configured missingResourceRetryInterval", func(t *testing.T) {
+	t.Run("missing optional source returns configured optionalResourceRetryInterval", func(t *testing.T) {
 		t.Parallel()
 		r, client, uncachedClient, dc := newControllerAndMocks(t)
-		r.missingOptionalResourceRetryInterval = missingOptionalResourceRetryInterval
-		r.missingResourceRetryInterval = missingResourceRetryInterval
+		r.optionalResourceRetryInterval = optionalResourceRetryInterval
+		r.resourceRetryInterval = resourceRetryInterval
 
 		sources := []corev1alpha1.ObjectTemplateSource{
 			{
@@ -615,15 +615,15 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		}
 		res, err := r.Reconcile(context.Background(), objectTemplate)
 		require.False(t, res.IsZero())
-		assert.Equal(t, missingOptionalResourceRetryInterval, res.RequeueAfter)
+		assert.Equal(t, optionalResourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
 	})
 
-	t.Run("missing source returns configured missingResourceRetryInterval", func(t *testing.T) {
+	t.Run("missing source returns configured resourceRetryInterval", func(t *testing.T) {
 		t.Parallel()
 		r, client, uncachedClient, dc := newControllerAndMocks(t)
-		r.missingOptionalResourceRetryInterval = missingOptionalResourceRetryInterval
-		r.missingResourceRetryInterval = missingResourceRetryInterval
+		r.optionalResourceRetryInterval = optionalResourceRetryInterval
+		r.resourceRetryInterval = resourceRetryInterval
 
 		sources := []corev1alpha1.ObjectTemplateSource{
 			{
@@ -643,7 +643,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			On("Watch", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
-		// Make both dynamic cache and uncache client return not found error.
+		// Make both dynamic cache and uncached client return not found error.
 		dc.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
@@ -668,7 +668,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		}
 		res, err := r.Reconcile(context.Background(), objectTemplate)
 		require.False(t, res.IsZero())
-		assert.Equal(t, missingResourceRetryInterval, res.RequeueAfter)
+		assert.Equal(t, resourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
 	})
 }

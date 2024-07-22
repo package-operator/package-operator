@@ -53,9 +53,14 @@ type GenericObjectTemplateController struct {
 	reconciler         []reconciler
 }
 
+// ControllerConfig holds the configuration for the ObjectTemplate controller.
 type ControllerConfig struct {
+	// OptionalResourceRetryInterval is the interval at which the controller will retry
+	// to fetch optional resources.
 	OptionalResourceRetryInterval time.Duration
-	ResourceRetryInterval         time.Duration
+	// ResourceRetryInterval is the interval at which the controller will retry to fetch
+	// resources(non optional).
+	ResourceRetryInterval time.Duration
 }
 
 func NewObjectTemplateController(
