@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path/filepath"
 	"strings"
 	"testing/fstest"
 
@@ -77,4 +78,46 @@ func ImportOLMBundleImage(_ context.Context, image containerregistrypkgv1.Image)
 		return nil, reg, fmt.Errorf("loading objects from manifests: %w", err)
 	}
 	return objects, reg, nil
+}
+
+const (
+	olmManifestFolder = "manifests"
+	olmMetadataFolder = "metadata"
+)
+
+// Checks image contents to see if it is an OLM bundle image.
+func IsOLMBundleImage(image containerregistrypkgv1.Image) (isOLM bool, err error) {
+	var (
+		packageManifestFound bool
+		manifestsFolderFound bool
+		metadataFolderFound  bool
+	)
+
+	reader := mutate.Extract(image)
+	defer func() {
+		if cErr := reader.Close(); err == nil && cErr != nil {
+			err = cErr
+		}
+	}()
+	tarReader := tar.NewReader(reader)
+
+	for {
+		hdr, err := tarReader.Next()
+		if err != nil && errors.Is(err, io.EOF) {
+			break
+		}
+
+		pkgManifestPath := filepath.Join(packagetypes.OCIPathPrefix, packagetypes.PackageManifestFilename)
+		switch hdr.Name {
+		case pkgManifestPath + ".yml", pkgManifestPath + ".yaml":
+			packageManifestFound = true
+		}
+		if strings.HasPrefix(hdr.Name, olmManifestFolder+"/") {
+			manifestsFolderFound = true
+		}
+		if strings.HasPrefix(hdr.Name, olmMetadataFolder+"/") {
+			metadataFolderFound = true
+		}
+	}
+	return !packageManifestFound && manifestsFolderFound && metadataFolderFound, nil
 }
