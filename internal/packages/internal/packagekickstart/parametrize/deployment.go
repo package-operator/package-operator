@@ -19,6 +19,7 @@ type DeploymentOptions struct {
 	Env           bool
 	Volumes       bool
 	Images        bool
+	GenericOptions
 }
 
 func Deployment(
@@ -32,6 +33,10 @@ func Deployment(
 	var (
 		instructions []Instruction
 	)
+	if inst, ok := parametrizeNamespace(obj); ok {
+		instructions = append(instructions, inst...)
+	}
+
 	configSchema := apiextensionsv1.JSONSchemaProps{
 		Type:       "object",
 		Properties: map[string]apiextensionsv1.JSONSchemaProps{},

@@ -2,11 +2,12 @@ package packagekickstart
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,7 +49,8 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	usedPhases := map[string]struct{}{}
 	usedGKs := map[schema.GroupKind]struct{}{}
 	scheme := &v1.JSONSchemaProps{
-		Type: "object",
+		Type:       "object",
+		Properties: map[string]v1.JSONSchemaProps{},
 	}
 	imageContainer := &parametrize.ImageContainer{}
 	var objCount int
@@ -95,6 +97,7 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 	}
 
 	// Create files for missing namespaces.
+	var namespaces []string
 	for nsName := range namespacesFromObjects {
 		_, ok := namespaceObjectsFound[nsName]
 		if ok {
@@ -103,15 +106,15 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 
 		phase := string(presetPhaseNamespaces)
 		usedPhases[phase] = struct{}{}
-		ns := &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Namespace",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nsName,
-				Annotations: map[string]string{
-					manifestsv1alpha1.PackagePhaseAnnotation: phase,
+		ns := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Namespace",
+				"metadata": map[string]interface{}{
+					"name": nsName,
+					"annotations": map[string]interface{}{
+						manifestsv1alpha1.PackagePhaseAnnotation: phase,
+					},
 				},
 			},
 		}
@@ -119,11 +122,52 @@ func Kickstart(_ context.Context, pkgName string, objects []unstructured.Unstruc
 			fmt.Sprintf("%s.%s.yaml", strings.ReplaceAll(
 				ns.GetName(), string(filepath.Separator), "-"),
 				"namespace"))
-		b, err := yaml.Marshal(ns)
+		var (
+			b   []byte
+			err error
+		)
+		if slices.Contains(opts.Parametrize, "namespaces") {
+			path = filepath.Join(phase,
+				fmt.Sprintf("%s.%s.yaml.gotmpl", strings.ReplaceAll(
+					ns.GetName(), string(filepath.Separator), "-"),
+					"namespace"))
+			b, err = parametrize.Execute(ns, parametrize.Pipeline(
+				fmt.Sprintf("default (index .config.namespaces %q) .config.namespace", nsName), "metadata.name"))
+		} else {
+			b, err = yaml.Marshal(ns.Object)
+		}
 		if err != nil {
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
 		}
 		rawPkg.Files[path] = b
+		namespaces = append(namespaces, nsName)
+	}
+
+	if slices.Contains(opts.Parametrize, "namespaces") {
+		scheme.Properties["namespace"] = v1.JSONSchemaProps{
+			Type: "string",
+			Default: &v1.JSON{
+				Raw: []byte(`""`),
+			},
+		}
+		if len(namespaces) > 0 {
+			scheme.Properties["namespaces"] = v1.JSONSchemaProps{
+				Type:       "object",
+				Properties: map[string]v1.JSONSchemaProps{},
+				Default: &v1.JSON{
+					Raw: []byte("{}"),
+				},
+			}
+		}
+		for _, ns := range namespaces {
+			nsJSON, _ := json.Marshal(ns)
+			scheme.Properties["namespaces"].Properties[ns] = v1.JSONSchemaProps{
+				Type: "string",
+				Default: &v1.JSON{
+					Raw: nsJSON,
+				},
+			}
+		}
 	}
 
 	// Generate Manifest

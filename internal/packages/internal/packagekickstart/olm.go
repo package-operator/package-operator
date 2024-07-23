@@ -85,7 +85,7 @@ func FromOLMBundleImage(ctx context.Context, image containerregistrypkgv1.Image)
 	}
 
 	rawPkg, _, err = Kickstart(ctx, reg.PackageName, objs, KickstartOptions{
-		Parametrize: []string{"env", "replicas", "tolerations", "nodeSelectors", "resources"},
+		Parametrize: []string{"env", "replicas", "tolerations", "nodeSelectors", "resources", "images"},
 	})
 	return
 }

@@ -249,6 +249,9 @@ func Parametrize(
 			Resources:     slices.Contains(paramsFlags, "resources"),
 			Env:           slices.Contains(paramsFlags, "env"),
 			Images:        slices.Contains(paramsFlags, "images"),
+			GenericOptions: GenericOptions{
+				Namespace: slices.Contains(paramsFlags, "namespaces"),
+			},
 		})
 		if err != nil {
 			return nil, false, err
@@ -256,5 +259,100 @@ func Parametrize(
 		return out, true, nil
 	}
 
-	return nil, false, nil
+	return Generic(obj, scheme, GenericOptions{
+		Namespace: slices.Contains(paramsFlags, "namespaces"),
+	})
+}
+
+type GenericOptions struct {
+	Namespace bool
+}
+
+func Generic(
+	obj unstructured.Unstructured,
+	schema *apiextensionsv1.JSONSchemaProps,
+	opts GenericOptions,
+) (
+	[]byte, bool, error,
+) {
+	var (
+		instructions []Instruction
+	)
+	if opts.Namespace {
+		if inst, ok := parametrizeNamespace(obj); ok {
+			instructions = append(instructions, inst...)
+		}
+	}
+
+	if len(instructions) == 0 {
+		return nil, false, nil
+	}
+
+	out, err := Execute(obj, instructions...)
+	if err != nil {
+		return nil, false, err
+	}
+	return out, true, nil
+}
+
+func parametrizeNamespace(obj unstructured.Unstructured) ([]Instruction, bool) {
+	var instructions []Instruction
+	clusterRoleBindingGK := schema.GroupKind{
+		Kind:  "ClusterRoleBinding",
+		Group: "rbac.authorization.k8s.io",
+	}
+	if obj.GroupVersionKind().GroupKind() == clusterRoleBindingGK {
+		subjects, _, _ := unstructured.NestedSlice(obj.Object, "subjects")
+		for i, subjectI := range subjects {
+			subject := subjectI.(map[string]interface{})
+			ns := subject["namespace"].(string)
+			p := ".config.namespace"
+			if len(ns) != 0 {
+				p = fmt.Sprintf("default (index .config.namespaces %q) .config.namespace", ns)
+			}
+
+			instructions = append(instructions, Pipeline(p, fmt.Sprintf("subjects.%d.namespace", i)))
+		}
+
+		return instructions, true
+	}
+
+	if isClusterScoped(obj) {
+		return nil, false
+	}
+
+	ns := obj.GetNamespace()
+	p := ".config.namespace"
+	if len(ns) != 0 {
+		p = fmt.Sprintf("default (index .config.namespaces %q) .config.namespace", ns)
+	}
+	instructions = append(instructions, Pipeline(p, "metadata.namespace"))
+	return instructions, true
+
+}
+
+var clusterScopedGK = map[schema.GroupKind]struct{}{
+	{Kind: "Namespace"}:        {},
+	{Kind: "IngressClass"}:     {},
+	{Kind: "PersistentVolume"}: {},
+
+	{Kind: "ClusterRole", Group: "rbac.authorization.k8s.io"}:        {},
+	{Kind: "ClusterRoleBinding", Group: "rbac.authorization.k8s.io"}: {},
+
+	{Kind: "PriorityClass", Group: "scheduling.k8s.io"}:   {},
+	{Kind: "APIService", Group: "apiregistration.k8s.io"}: {},
+
+	{Kind: "StorageClass", Group: "storage.k8s.io"}:       {},
+	{Kind: "CSIDriver", Group: "storage.k8s.io"}:          {},
+	{Kind: "CSINode", Group: "storage.k8s.io"}:            {},
+	{Kind: "CSIStorageCapacity", Group: "storage.k8s.io"}: {},
+
+	{Kind: "MutatingWebhookConfiguration", Group: "admissionregistration.k8s.io"}:   {},
+	{Kind: "ValidatingWebhookConfiguration", Group: "admissionregistration.k8s.io"}: {},
+	{Kind: "ValidatingAdmissionPolicy", Group: "admissionregistration.k8s.io"}:      {},
+}
+
+func isClusterScoped(obj unstructured.Unstructured) bool {
+	_, ok := clusterScopedGK[obj.GroupVersionKind().GroupKind()]
+	return ok
 }
