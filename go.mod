@@ -21,6 +21,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
+	github.com/operator-framework/api v0.26.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/pterm/pterm v0.12.79
 	github.com/spf13/cobra v1.8.1

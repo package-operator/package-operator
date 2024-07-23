@@ -145,6 +145,8 @@ issues:
 run:
   build-tags:
   - integration
+  skip-dirs:
+  - internal/packages/internal/packagekickstart/rukpak
 linters-settings:
   goimports:
     local-prefixes: package-operator.run
