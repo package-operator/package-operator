@@ -5,3 +5,4 @@ ignore:
   - "**/zz_generated*.go"
   - "cmd/build"
   - "cmd/test-stub"
+  - internal/packages/internal/packagekickstart/rukpak

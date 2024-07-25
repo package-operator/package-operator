@@ -5,9 +5,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/registry"
+	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/stretchr/testify/require"
 )
 
 type InMemoryRegistry struct {
@@ -53,4 +58,26 @@ func (t inMemoryRegistryRoundTripper) RoundTrip(req *http.Request) (*http.Respon
 	t.handler.ServeHTTP(w, req)
 
 	return resp, nil
+}
+
+func BuildImage(t *testing.T, layerData map[string][]byte) containerregistrypkgv1.Image {
+	t.Helper()
+
+	configFile := &containerregistrypkgv1.ConfigFile{
+		Config: containerregistrypkgv1.Config{},
+		RootFS: containerregistrypkgv1.RootFS{Type: "layers"},
+	}
+	image, err := mutate.ConfigFile(empty.Image, configFile)
+	require.NoError(t, err)
+
+	layer, err := crane.Layer(layerData)
+	require.NoError(t, err)
+
+	image, err = mutate.AppendLayers(image, layer)
+	require.NoError(t, err)
+
+	image, err = mutate.Canonical(image)
+	require.NoError(t, err)
+
+	return image
 }

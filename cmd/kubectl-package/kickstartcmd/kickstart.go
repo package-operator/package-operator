@@ -9,14 +9,18 @@ import (
 )
 
 type Kickstarter interface {
-	Kickstart(ctx context.Context, pkgName string, inputs []string) (msg string, err error)
+	Kickstart(
+		ctx context.Context, pkgName string,
+		inputs []string, olmBundle string,
+	) (msg string, err error)
 }
 
 func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	const (
 		cmdUse   = "kickstart pkg_name (experimental)"
 		cmdShort = "Starts a new package with the given name."
-		cmdLong  = "Starts a new package, containing objects referenced via -f, " +
+		cmdLong  = "Starts a new package, containing objects referenced via -f " +
+			"or from an OLM Bundle referenced via -b, " +
 			"with the given name in a new folder <pkg_name>."
 	)
 
@@ -31,7 +35,7 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs)
+		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs, opts.OLMBundle)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
@@ -45,12 +49,16 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 type options struct {
 	// Inputs (files/http/etc.)
 	Inputs []string
+	// OLM Bundle image reference.
+	OLMBundle string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
 	const (
 		inputUse = "Files or urls to load objects from. " +
 			`Supports glob and "-" to read from stdin. Can be supplied multiple times.`
+		olmBundleUse = "OLM Bundle OCI to import. e.g. quay.io/xx/xxx:tag. " +
+			"Overrides the output package name with the bundle's name."
 	)
 
 	flags.StringSliceVarP(
@@ -59,5 +67,12 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		"f",
 		nil,
 		inputUse,
+	)
+	flags.StringVarP(
+		&o.OLMBundle,
+		"olm-bundle",
+		"b",
+		"",
+		olmBundleUse,
 	)
 }

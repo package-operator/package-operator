@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/kubemanifests"
@@ -49,9 +50,11 @@ func (k *Kickstarter) Kickstart(
 	ctx context.Context,
 	pkgName string,
 	inputs []string,
+	olmBundle string,
 ) (string, error) {
+	folderName := pkgName
 	// Preflight check: Check if pkgName folder already exists.
-	if _, err := os.Stat(pkgName); err != nil {
+	if _, err := os.Stat(folderName); err != nil {
 		// If the error is "not exist" then we're fine.
 		if !os.IsNotExist(err) {
 			return "", fmt.Errorf("preflight check: %w", err)
@@ -62,6 +65,7 @@ func (k *Kickstarter) Kickstart(
 	}
 
 	var objects []unstructured.Unstructured
+	// Imports from Inputs.
 	for _, input := range inputs {
 		newObjects, err := k.getInput(ctx, input)
 		if err != nil {
@@ -71,17 +75,33 @@ func (k *Kickstarter) Kickstart(
 		objects = append(objects, newObjects...)
 	}
 
+	// Import from OLM bundle.
+	if len(olmBundle) > 0 {
+		img, err := crane.Pull(olmBundle)
+		if err != nil {
+			return "", err
+		}
+
+		objs, reg, err := packages.ImportOLMBundleImage(ctx, img)
+		if err != nil {
+			return "", fmt.Errorf("import olm bundle: %w", err)
+		}
+		objects = append(objects, objs...)
+		// Take package name from OLM Bundle.
+		pkgName = reg.PackageName
+	}
+
 	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects)
 	if err != nil {
 		return "", err
 	}
 
-	if err := os.Mkdir(pkgName, os.ModePerm); err != nil {
+	// Write files.
+	if err := os.Mkdir(folderName, os.ModePerm); err != nil {
 		return "", fmt.Errorf("create directory: %w", err)
 	}
-
 	for path, data := range rawPkg.Files {
-		path = filepath.Join(pkgName, path)
+		path = filepath.Join(folderName, path)
 		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 			return "", fmt.Errorf("creating directory: %w", err)
 		}
