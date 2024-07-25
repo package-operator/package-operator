@@ -52,8 +52,9 @@ func (k *Kickstarter) Kickstart(
 	inputs []string,
 	olmBundle string,
 ) (string, error) {
+	folderName := pkgName
 	// Preflight check: Check if pkgName folder already exists.
-	if _, err := os.Stat(pkgName); err != nil {
+	if _, err := os.Stat(folderName); err != nil {
 		// If the error is "not exist" then we're fine.
 		if !os.IsNotExist(err) {
 			return "", fmt.Errorf("preflight check: %w", err)
@@ -75,7 +76,6 @@ func (k *Kickstarter) Kickstart(
 	}
 
 	// Import from OLM bundle.
-	folderName := pkgName
 	if len(olmBundle) > 0 {
 		img, err := crane.Pull(olmBundle)
 		if err != nil {
@@ -87,6 +87,7 @@ func (k *Kickstarter) Kickstart(
 			return "", fmt.Errorf("import olm bundle: %w", err)
 		}
 		objects = append(objects, objs...)
+		// Take package name from OLM Bundle.
 		pkgName = reg.PackageName
 	}
 
