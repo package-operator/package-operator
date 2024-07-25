@@ -54,7 +54,7 @@ spec:
 `
 
 	ctx := context.Background()
-	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest))
+	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 3, res.ObjectCount)
 	if assert.Len(t, res.GroupKindsWithoutProbes, 1) {
@@ -82,7 +82,7 @@ metadata:
   namespace: b`
 
 	ctx := context.Background()
-	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest))
+	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 2, res.ObjectCount)
 	assert.Len(t, rawPkg.Files, 3)
@@ -145,7 +145,7 @@ func TestKickStartFromBytes_ErrorReporting(t *testing.T) {
 			bytes, err := os.ReadFile(filepath.Join(wd, "testdata", "errorreporting", tcase.filename))
 			require.NoError(t, err)
 
-			_, _, err = KickstartFromBytes(ctx, "my-pkg", bytes)
+			_, _, err = KickstartFromBytes(ctx, "my-pkg", bytes, nil)
 			if tcase.expectedErrorContains == "" {
 				require.NoError(t, err)
 			} else {

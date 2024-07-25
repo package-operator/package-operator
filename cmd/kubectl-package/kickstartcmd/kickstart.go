@@ -12,6 +12,7 @@ type Kickstarter interface {
 	Kickstart(
 		ctx context.Context, pkgName string,
 		inputs []string, olmBundle string,
+		paramOpts []string,
 	) (msg string, err error)
 }
 
@@ -35,7 +36,8 @@ func NewCmd(kickstarter Kickstarter) *cobra.Command {
 	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		msg, err := kickstarter.Kickstart(cmd.Context(), args[0], opts.Inputs, opts.OLMBundle)
+		msg, err := kickstarter.Kickstart(cmd.Context(), args[0],
+			opts.Inputs, opts.OLMBundle, opts.ParamOpts)
 		if err != nil {
 			return fmt.Errorf("kickstarting package: %w", err)
 		}
@@ -51,6 +53,7 @@ type options struct {
 	Inputs []string
 	// OLM Bundle image reference.
 	OLMBundle string
+	ParamOpts []string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
@@ -59,6 +62,7 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 			`Supports glob and "-" to read from stdin. Can be supplied multiple times.`
 		olmBundleUse = "OLM Bundle OCI to import. e.g. quay.io/xx/xxx:tag. " +
 			"Overrides the output package name with the bundle's name."
+		parametrizeUse = "Parametrize flags: e.g. replicas."
 	)
 
 	flags.StringSliceVarP(
@@ -67,6 +71,13 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 		"f",
 		nil,
 		inputUse,
+	)
+	flags.StringSliceVarP(
+		&o.ParamOpts,
+		"parametrize",
+		"p",
+		nil,
+		parametrizeUse,
 	)
 	flags.StringVarP(
 		&o.OLMBundle,

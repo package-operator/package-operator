@@ -1,43 +1,55 @@
-package packagekickstart
+package presets
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type presetPhase string
+// Determines a phase using the objects Group Kind from a list of presets.
+// Defaults to the value of `presetPhaseOther` if no preset was found.
+func DeterminePhase(gk schema.GroupKind) string {
+	phase, ok := gkPhaseMap[gk]
+	if !ok {
+		return string(PhaseOther)
+	}
+	return string(phase)
+}
+
+// Phase represents a well-known phase.
+type Phase string
 
 const (
-	presetPhaseNamespaces presetPhase = "namespaces"
-	presetPhasePolicies   presetPhase = "policies"
-	presetPhaseRBAC       presetPhase = "rbac"
-	presetPhaseCRDs       presetPhase = "crds"
-	presetPhaseStorage    presetPhase = "storage"
-	presetPhaseDeploy     presetPhase = "deploy"
-	presetPhasePublish    presetPhase = "publish"
-	// anything else that is not explicitly sorted into a phase.
-	presetPhaseOther presetPhase = "other"
+	PhaseNamespaces Phase = "namespaces"
+	PhasePolicies   Phase = "policies"
+	PhaseRBAC       Phase = "rbac"
+	PhaseCRDs       Phase = "crds"
+	PhaseStorage    Phase = "storage"
+	PhaseDeploy     Phase = "deploy"
+	PhasePublish    Phase = "publish"
+	// Anything else that is not explicitly sorted into a phase.
+	PhaseOther Phase = "other"
 )
 
-var orderedPhases = []presetPhase{
-	presetPhaseNamespaces,
-	presetPhasePolicies,
-	presetPhaseRBAC,
-	presetPhaseCRDs,
-	presetPhaseStorage,
-	presetPhaseDeploy,
-	presetPhasePublish,
-	presetPhaseOther,
+// Well known phases ordered.
+var OrderedPhases = []Phase{
+	PhaseNamespaces,
+	PhasePolicies,
+	PhaseRBAC,
+	PhaseCRDs,
+	PhaseStorage,
+	PhaseDeploy,
+	PhasePublish,
+	PhaseOther,
 }
 
 var (
 	// This will be populated from `phaseGKMap` in an init func!
-	gkPhaseMap = map[schema.GroupKind]presetPhase{}
-	phaseGKMap = map[presetPhase][]schema.GroupKind{
-		presetPhaseNamespaces: {
+	gkPhaseMap = map[schema.GroupKind]Phase{}
+	phaseGKMap = map[Phase][]schema.GroupKind{
+		PhaseNamespaces: {
 			{Kind: "Namespace"},
 		},
 
-		presetPhasePolicies: {
+		PhasePolicies: {
 			{Kind: "ResourceQuota"},
 			{Kind: "LimitRange"},
 			{Kind: "PriorityClass", Group: "scheduling.k8s.io"},
@@ -46,7 +58,7 @@ var (
 			{Kind: "PodDisruptionBudget", Group: "policy"},
 		},
 
-		presetPhaseRBAC: {
+		PhaseRBAC: {
 			{Kind: "ServiceAccount"},
 			{Kind: "Role", Group: "rbac.authorization.k8s.io"},
 			{Kind: "RoleRolebinding", Group: "rbac.authorization.k8s.io"},
@@ -54,18 +66,18 @@ var (
 			{Kind: "ClusterRoleBinding", Group: "rbac.authorization.k8s.io"},
 		},
 
-		presetPhaseCRDs: {
+		PhaseCRDs: {
 			{Kind: "CustomResourceDefinition", Group: "apiextensions.k8s.io"},
 		},
 
-		presetPhaseStorage: {
+		PhaseStorage: {
 			{Kind: "PersistentVolume"},
 			{Kind: "PersistentVolumeClaim"},
 			{Kind: "StorageClass", Group: "storage.k8s.io"},
 		},
 
-		presetPhaseDeploy: {
-			{Kind: "Deployment", Group: "apps"},
+		PhaseDeploy: {
+			deployGVK.GroupKind(),
 			{Kind: "DaemonSet", Group: "apps"},
 			{Kind: "StatefulSet", Group: "apps"},
 			{Kind: "ReplicaSet"},
@@ -77,7 +89,7 @@ var (
 			{Kind: "ConfigMap"},
 		},
 
-		presetPhasePublish: {
+		PhasePublish: {
 			{Kind: "Ingress", Group: "networking.k8s.io"},
 			{Kind: "APIService", Group: "apiregistration.k8s.io"},
 			{Kind: "Route", Group: "route.openshift.io"},
@@ -87,12 +99,10 @@ var (
 	}
 )
 
-// Determines a phase using the objects Group Kind from a list of presets.
-// Defaults to the value of `presetPhaseOther` if no preset was found.
-func guessPresetPhase(gk schema.GroupKind) string {
-	phase, ok := gkPhaseMap[gk]
-	if !ok {
-		return string(presetPhaseOther)
+func init() {
+	for phase, gks := range phaseGKMap {
+		for _, gk := range gks {
+			gkPhaseMap[gk] = phase
+		}
 	}
-	return string(phase)
 }
