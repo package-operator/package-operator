@@ -19,7 +19,7 @@ require (
 	github.com/google/cel-go v0.17.8
 	github.com/google/go-containerregistry v0.20.0
 	github.com/onsi/ginkgo/v2 v2.19.0
-	github.com/onsi/gomega v1.33.1
+	github.com/onsi/gomega v1.34.0
 	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
 	github.com/operator-framework/api v0.26.0
 	github.com/prometheus/client_golang v1.19.1
