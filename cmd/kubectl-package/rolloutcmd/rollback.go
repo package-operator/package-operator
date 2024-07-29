@@ -76,7 +76,7 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					if _, err := fmt.Fprint(cmd.OutOrStdout(), "gonna rollback this ClusterObjectDeployment : ", objd.Name()); err != nil {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "gonna rollback this ClusterObjectDeployment : %v with objectset %v ", objd.Name(), obs.Name); err != nil {
 						return err
 					}
 					errs := getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
@@ -92,7 +92,7 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 
 				obs := os.GetObjectsettype()
 				if obs == nil {
-					if _, err := fmt.Fprint(cmd.OutOrStdout(), "Error while returning ClusterObjectset"); err != nil {
+					if _, err := fmt.Fprint(cmd.OutOrStdout(), "Error while returning Objectset"); err != nil {
 						return err
 					}
 				}
@@ -103,12 +103,13 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					}
 				}
 				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
-					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name)
+
+					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name, internalcmd.WithNamespace(opts.Namespace))
 					if err != nil {
 						return err
 					}
 
-					if _, err := fmt.Fprint(cmd.OutOrStdout(), "gonna rollback this ObjectDeployment : ", objd.Name()); err != nil {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "gonna rollback this ObjectDeployment : %v in ns : %v with Objectset : %v ", objd.Name(), objd.Namespace(), obs.Name); err != nil {
 						return err
 					}
 					errs := getter.client.PatchObjectDeployment(cmd.Context(), objd.Name(), objd.Namespace(), *obs)

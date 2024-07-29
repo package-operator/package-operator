@@ -35,7 +35,7 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 			Args:       []string{"invalid"},
 			ShouldFail: true,
 		},
-		"clusterpackage": {
+		"clusterpackage rollback with available status": {
 			Args: []string{"clusterpackage/test", "--revision", "1"},
 			ActualObjects: []client.Object{
 				&corev1alpha1.ClusterPackage{
@@ -58,6 +58,140 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 			},
 			ShouldFail: false,
 			Output:     "Can not rollback from an available ClusterObjectSet Type"},
+		"clusterpackage rollback with archived status": {
+			Args: []string{"clusterpackage/test", "--revision", "1"},
+			ActualObjects: []client.Object{
+				&corev1alpha1.ClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+				},
+				&corev1alpha1.ClusterObjectDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+				},
+				&corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-1",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseArchived,
+						Revision: 1,
+					},
+				},
+				&corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-2",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Revision: 2,
+					},
+				},
+			},
+			ShouldFail: false,
+			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back"},
+		"clusterobjectdeployment rollback with archived status": {
+			Args: []string{"ClusterObjectDeployment/test", "--revision", "1"},
+			ActualObjects: []client.Object{
+				&corev1alpha1.ClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+				},
+				&corev1alpha1.ClusterObjectDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+				},
+				&corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-1",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseArchived,
+						Revision: 1,
+					},
+				},
+				&corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-2",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Revision: 2,
+					},
+				},
+			},
+			ShouldFail: false,
+			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back"},
+
+		"package rollback with archived status": {
+			Args: []string{"package/test", "--namespace", "test", "--revision", "1"},
+			ActualObjects: []client.Object{
+				&corev1alpha1.Package{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+				&corev1alpha1.ObjectDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+				},
+				&corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-1",
+						Namespace: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseArchived,
+						Revision: 1,
+					},
+				},
+				&corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-2",
+						Namespace: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Revision: 2,
+					},
+				},
+			},
+			ShouldFail: false,
+			Output:     "gonna rollback this ObjectDeployment : test in ns : test with Objectset : test-1 Successfully rolled back"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

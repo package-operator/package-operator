@@ -136,13 +136,13 @@ func (c *Client) PatchClusterObjectDeployment(
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return fmt.Errorf("getting objectdeployment object: %w", err)
+		return fmt.Errorf("getting Clusterobjectdeployment object: %w", err)
 	}
 	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
 		typ, byteval, _ := getClusterObjectDeploymentPatch(&cobs.Spec)
 
 		if err := c.client.Patch(ctx, obj, client.RawPatch(typ, byteval)); err != nil {
-			return fmt.Errorf("patching objectdeployment: %w", err)
+			return fmt.Errorf("patching Clusterobjectdeployment: %w", err)
 		}
 	}
 	return nil
@@ -151,7 +151,7 @@ func (c *Client) PatchClusterObjectDeployment(
 func (c *Client) PatchObjectDeployment(
 	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet) error {
 
-	obj := &corev1alpha1.ClusterObjectDeployment{
+	obj := &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
@@ -196,7 +196,7 @@ func (c *Client) GetObjectDeployment(
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+		return nil, fmt.Errorf("getting [Cluster]objectdeployment object: %w", err)
 	}
 
 	return &ObjectDeployment{
