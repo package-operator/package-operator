@@ -8,7 +8,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"package-operator.run/internal/packages/internal/packagekickstart/presets"
+	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
 func TestKickstartFromBytes(t *testing.T) {
@@ -85,7 +89,13 @@ metadata:
 	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 2, res.ObjectCount)
-	assert.Len(t, rawPkg.Files, 3)
+	// both config maps + package manifest + 2 namespace objects.
+	assert.Len(t, rawPkg.Files, 5)
+	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap-1.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["manifest.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["namespaces/a.namespace.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["namespaces/b.namespace.yaml"])
 }
 
 type errorReportingTestCase struct {
@@ -153,4 +163,32 @@ func TestKickStartFromBytes_ErrorReporting(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_addMissingNamespaces(t *testing.T) {
+	t.Parallel()
+	config := &v1.JSONSchemaProps{
+		Properties: map[string]v1.JSONSchemaProps{},
+	}
+	rawPkg := &packagetypes.RawPackage{Files: packagetypes.Files{}}
+	namespacesFromObjects := map[string]struct{}{
+		"banana": {},
+	}
+	namespaceObjectsFound := map[string]struct{}{}
+	usedPhases := map[string]struct{}{}
+	err := addMissingNamespaces(presets.ParametrizeOptions{
+		Namespaces: true,
+	}, config, rawPkg, namespacesFromObjects,
+		namespaceObjectsFound, usedPhases,
+	)
+	require.NoError(t, err)
+
+	assert.Len(t, rawPkg.Files, 1)
+	assert.Equal(t, `apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    package-operator.run/phase: namespaces
+  name: {{ default (index .config.namespaces "banana") .config.namespace }}
+`, string(rawPkg.Files["namespaces/banana.namespace.yaml.gotmpl"]))
 }

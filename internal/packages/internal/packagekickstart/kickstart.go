@@ -2,6 +2,7 @@ package packagekickstart
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/packages/internal/packagekickstart/parametrize"
 	"package-operator.run/internal/packages/internal/packagekickstart/presets"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -50,6 +52,9 @@ func Kickstart(
 			Properties: map[string]v1.JSONSchemaProps{},
 		}
 		imageContainer = &presets.ImageContainer{}
+
+		namespacesFromObjects = map[string]struct{}{}
+		namespaceObjectsFound = map[string]struct{}{}
 	)
 	for _, obj := range objects {
 		gk := obj.GroupVersionKind().GroupKind()
@@ -82,14 +87,22 @@ func Kickstart(
 		annotations[manifestsv1alpha1.PackagePhaseAnnotation] = phase
 		obj.SetAnnotations(annotations)
 
+		// Remember namespace assignments.
+		if gk == namespaceGK {
+			namespaceObjectsFound[obj.GetName()] = struct{}{}
+		}
+		if ns := obj.GetNamespace(); len(ns) > 0 {
+			namespacesFromObjects[obj.GetNamespace()] = struct{}{}
+		}
+		usedPhases[phase] = struct{}{}
+		usedGKs[gk] = struct{}{}
+		objCount++
+
 		// Parametrization.
 		if b, ok, err := presets.Parametrize(obj, scheme, imageContainer, paramOpts); err != nil {
 			return nil, res, fmt.Errorf("parametrizing: %w", err)
 		} else if ok {
-			path := filepath.Join(phase,
-				fmt.Sprintf("%s.%s.yaml.gotmpl", obj.GetName(),
-					strings.ToLower(obj.GetKind())))
-			rawPkg.Files[path] = b
+			addFileWithCollisionPrevention(rawPkg.Files, phase, oid, b, "yaml.gotmpl")
 			continue
 		}
 
@@ -97,11 +110,17 @@ func Kickstart(
 		if err != nil {
 			return nil, res, fmt.Errorf("marshalling YAML: %w", err)
 		}
-		addFileWithCollisionPrevention(rawPkg.Files, phase, oid, b)
+		addFileWithCollisionPrevention(rawPkg.Files, phase, oid, b, "yaml")
+	}
 
-		usedPhases[phase] = struct{}{}
-		usedGKs[gk] = struct{}{}
-		objCount++
+	// Add missing Namespaces
+	err := addMissingNamespaces(
+		paramOpts, scheme, rawPkg,
+		namespacesFromObjects,
+		namespaceObjectsFound, usedPhases,
+	)
+	if err != nil {
+		return nil, res, fmt.Errorf("adding missing namespaces: %w", err)
 	}
 
 	// Generate Manifest
@@ -176,6 +195,7 @@ type objectIdentity struct {
 func addFileWithCollisionPrevention(
 	f packagetypes.Files, phase string,
 	id objectIdentity, b []byte,
+	suffix string,
 ) {
 	// Generate unique object filename in phase folder.
 	// Use pattern `$phase/$name.$kind-$counter.yaml`.
@@ -184,15 +204,17 @@ func addFileWithCollisionPrevention(
 	for {
 		if counter == 0 {
 			path = filepath.Join(phase,
-				fmt.Sprintf("%s.%s.yaml",
+				fmt.Sprintf("%s.%s.%s",
 					strings.ToLower(id.Name),
-					strings.ToLower(id.Kind)))
+					strings.ToLower(id.Kind), suffix),
+			)
 		} else {
 			path = filepath.Join(phase,
-				fmt.Sprintf("%s.%s-%d.yaml",
+				fmt.Sprintf("%s.%s-%d.%s",
 					strings.ToLower(id.Name),
 					strings.ToLower(id.Kind),
-					counter))
+					counter, suffix),
+			)
 		}
 		if _, ok := f[path]; !ok {
 			// Found unique name.
@@ -201,4 +223,95 @@ func addFileWithCollisionPrevention(
 		counter++
 	}
 	f[path] = b
+}
+
+var namespaceGK = schema.GroupKind{
+	Kind: "Namespace",
+}
+
+// Add missing Namespace objects to the kickstarted package.
+func addMissingNamespaces(
+	opts presets.ParametrizeOptions,
+	scheme *v1.JSONSchemaProps,
+	rawPkg *packagetypes.RawPackage,
+	namespacesFromObjects, namespaceObjectsFound, usedPhases map[string]struct{},
+) error {
+	// Create files for missing namespaces.
+	//nolint:prealloc
+	var namespaces []string
+	for nsName := range namespacesFromObjects {
+		_, ok := namespaceObjectsFound[nsName]
+		if ok {
+			continue
+		}
+
+		phase := string(presets.PhaseNamespaces)
+		usedPhases[phase] = struct{}{}
+		ns := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Namespace",
+				"metadata": map[string]interface{}{
+					"name": nsName,
+					"annotations": map[string]interface{}{
+						manifestsv1alpha1.PackagePhaseAnnotation: phase,
+					},
+				},
+			},
+		}
+		path := filepath.Join(phase,
+			fmt.Sprintf("%s.%s.yaml", strings.ReplaceAll(
+				ns.GetName(), string(filepath.Separator), "-"),
+				"namespace"))
+		var (
+			b   []byte
+			err error
+		)
+		if opts.Namespaces {
+			path = filepath.Join(phase,
+				fmt.Sprintf("%s.%s.yaml.gotmpl", strings.ReplaceAll(
+					ns.GetName(), string(filepath.Separator), "-"),
+					"namespace"))
+			b, err = parametrize.Execute(ns, parametrize.Pipeline(
+				fmt.Sprintf("default (index .config.namespaces %q) .config.namespace", nsName), "metadata.name"))
+		} else {
+			b, err = yaml.Marshal(ns.Object)
+		}
+		if err != nil {
+			return fmt.Errorf("marshalling YAML: %w", err)
+		}
+		rawPkg.Files[path] = b
+		namespaces = append(namespaces, nsName)
+	}
+
+	if opts.Namespaces {
+		scheme.Properties["namespace"] = v1.JSONSchemaProps{
+			Type: "string",
+			Default: &v1.JSON{
+				Raw: []byte(`""`),
+			},
+		}
+		if len(namespaces) > 0 {
+			scheme.Properties["namespaces"] = v1.JSONSchemaProps{
+				Type:       "object",
+				Properties: map[string]v1.JSONSchemaProps{},
+				Default: &v1.JSON{
+					Raw: []byte("{}"),
+				},
+			}
+		}
+		for _, ns := range namespaces {
+			nsJSON, err := json.Marshal(ns)
+			if err != nil {
+				return err
+			}
+			scheme.Properties["namespaces"].Properties[ns] = v1.JSONSchemaProps{
+				Type: "string",
+				Default: &v1.JSON{
+					Raw: nsJSON,
+				},
+			}
+		}
+	}
+	return nil
 }
