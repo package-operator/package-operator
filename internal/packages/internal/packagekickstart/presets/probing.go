@@ -1,4 +1,4 @@
-package packagekickstart
+package presets
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,7 +9,7 @@ import (
 
 // Determines probes required for the given Group Kind.
 // Returns a probe if one was found and an ok-style bool to let the caller know if a probe was found.
-func getProbe(gk schema.GroupKind) (corev1alpha1.ObjectSetProbe, bool) {
+func DetermineProbe(gk schema.GroupKind) (corev1alpha1.ObjectSetProbe, bool) {
 	probes, ok := gkProbes[gk]
 	if !ok {
 		return corev1alpha1.ObjectSetProbe{}, false
@@ -23,6 +23,13 @@ func getProbe(gk schema.GroupKind) (corev1alpha1.ObjectSetProbe, bool) {
 		},
 		Probes: probes,
 	}, true
+}
+
+// Returns true if the given GK is known to know need probing.
+// e.g. v1/Secret, v1/ConfigMap, etc.
+func NoProbe(gk schema.GroupKind) bool {
+	_, needsNoProbe := noProbeGK[gk]
+	return needsNoProbe
 }
 
 var gkProbes = map[schema.GroupKind][]corev1alpha1.Probe{
@@ -164,12 +171,4 @@ var noProbeGK = map[schema.GroupKind]struct{}{
 	{Kind: "MutatingWebhookConfiguration", Group: "admissionregistration.k8s.io"}:   {},
 	{Kind: "ValidatingWebhookConfiguration", Group: "admissionregistration.k8s.io"}: {},
 	{Kind: "ValidatingAdmissionPolicy", Group: "admissionregistration.k8s.io"}:      {},
-}
-
-func init() {
-	for phase, gks := range phaseGKMap {
-		for _, gk := range gks {
-			gkPhaseMap[gk] = phase
-		}
-	}
 }

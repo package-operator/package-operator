@@ -51,6 +51,7 @@ func (k *Kickstarter) Kickstart(
 	pkgName string,
 	inputs []string,
 	olmBundle string,
+	paramOpts []string,
 ) (string, error) {
 	folderName := pkgName
 	// Preflight check: Check if pkgName folder already exists.
@@ -91,7 +92,7 @@ func (k *Kickstarter) Kickstart(
 		pkgName = reg.PackageName
 	}
 
-	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects)
+	rawPkg, res, err := packages.Kickstart(ctx, pkgName, objects, paramOpts)
 	if err != nil {
 		return "", err
 	}
