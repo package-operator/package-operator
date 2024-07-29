@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"sigs.k8s.io/yaml"
 )
 
 var _ Instruction = (*mergeBlock)(nil)

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/joeycumines/go-dotnotation/dotnotation"
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"sigs.k8s.io/yaml"
 )
 
 var _ Instruction = (*block)(nil)

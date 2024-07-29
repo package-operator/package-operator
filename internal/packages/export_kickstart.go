@@ -5,7 +5,6 @@ import "package-operator.run/internal/packages/internal/packagekickstart"
 type KickstartResult = packagekickstart.KickstartResult
 
 var (
-	Kickstart = packagekickstart.Kickstart
-	// KickstartFromBytes   = packagekickstart.KickstartFromBytes.
+	Kickstart            = packagekickstart.Kickstart
 	ImportOLMBundleImage = packagekickstart.ImportOLMBundleImage
 )

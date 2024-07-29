@@ -86,16 +86,16 @@ metadata:
   namespace: b`
 
 	ctx := context.Background()
-	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), nil)
+	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), []string{"namespaces"})
 	require.NoError(t, err)
 	assert.Equal(t, 2, res.ObjectCount)
 	// both config maps + package manifest + 2 namespace objects.
 	assert.Len(t, rawPkg.Files, 5)
-	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap.yaml"])
-	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap-1.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap.yaml.gotmpl"])
+	assert.NotEmpty(t, rawPkg.Files["deploy/aaah.configmap-1.yaml.gotmpl"])
 	assert.NotEmpty(t, rawPkg.Files["manifest.yaml"])
-	assert.NotEmpty(t, rawPkg.Files["namespaces/a.namespace.yaml"])
-	assert.NotEmpty(t, rawPkg.Files["namespaces/b.namespace.yaml"])
+	assert.NotEmpty(t, rawPkg.Files["namespaces/a.namespace.yaml.gotmpl"])
+	assert.NotEmpty(t, rawPkg.Files["namespaces/b.namespace.yaml.gotmpl"])
 }
 
 type errorReportingTestCase struct {

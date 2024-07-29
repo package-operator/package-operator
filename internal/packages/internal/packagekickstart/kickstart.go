@@ -161,6 +161,19 @@ func Kickstart(
 			AvailabilityProbes: probes,
 		},
 	}
+	if len(scheme.Properties) > 0 {
+		manifest.Spec.Config = manifestsv1alpha1.PackageManifestSpecConfig{
+			OpenAPIV3Schema: scheme,
+		}
+		manifest.Test = manifestsv1alpha1.PackageManifestTest{
+			Template: []manifestsv1alpha1.PackageManifestTestCaseTemplate{
+				{
+					Name:    "defaults",
+					Context: manifestsv1alpha1.TemplateContext{},
+				},
+			},
+		}
+	}
 	b, err := yaml.Marshal(manifest)
 	if err != nil {
 		return nil, res, fmt.Errorf("marshalling PackageManifest YAML: %w", err)
