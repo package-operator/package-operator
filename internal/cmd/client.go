@@ -127,8 +127,8 @@ func (c *GetPackageConfig) Option(opts ...GetPackageOption) {
 type GetPackageOption interface{ ConfigureGetPackage(*GetPackageConfig) }
 
 func (c *Client) PatchClusterObjectDeployment(
-	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet) error {
-
+	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet,
+) error {
 	obj := &corev1alpha1.ClusterObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -149,8 +149,8 @@ func (c *Client) PatchClusterObjectDeployment(
 }
 
 func (c *Client) PatchObjectDeployment(
-	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet) error {
-
+	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet,
+) error {
 	obj := &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -387,7 +387,6 @@ func (s *ObjectSet) GetClusterObjectsettype() *corev1alpha1.ClusterObjectSet {
 		return cos
 	}
 	return nil
-
 }
 
 func (s *ObjectSet) GetObjectsettype() *corev1alpha1.ObjectSet {
@@ -395,7 +394,6 @@ func (s *ObjectSet) GetObjectsettype() *corev1alpha1.ObjectSet {
 		return cos
 	}
 	return nil
-
 }
 
 func (s *ObjectSet) getConditions() []metav1.Condition {
@@ -480,14 +478,17 @@ func (l ObjectSetList) RenderTable(headers ...string) Table {
 	return table
 }
 
-func getClusterObjectDeploymentPatch(clusterdepspec *corev1alpha1.ClusterObjectSetSpec) (types.PatchType, []byte, error) {
+func getClusterObjectDeploymentPatch(clusterdepspec *corev1alpha1.ClusterObjectSetSpec) (
+	types.PatchType, []byte, error,
+) {
 	// Create a patch of the Deployment that replaces spec.template
 	patch, err := json.Marshal([]interface{}{
 		map[string]interface{}{
 			"op":    "replace",
 			"path":  "/spec/template/spec",
 			"value": clusterdepspec,
-		}})
+		},
+	})
 	return types.JSONPatchType, patch, err
 }
 
@@ -498,6 +499,7 @@ func getObjectDeploymentPatch(clusterdepspec *corev1alpha1.ObjectSetSpec) (types
 			"op":    "replace",
 			"path":  "/spec/template/spec",
 			"value": clusterdepspec,
-		}})
+		},
+	})
 	return types.JSONPatchType, patch, err
 }

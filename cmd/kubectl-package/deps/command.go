@@ -161,6 +161,7 @@ func ProvideRolloutRollbackCmd(clientFactory internalcmd.ClientFactory) RolloutS
 		SubCommand: rolloutcmd.NewRollbackCmd(clientFactory),
 	}
 }
+
 func ProvideClientFactory(kcliFactory internalcmd.KubeClientFactory) internalcmd.ClientFactory {
 	return internalcmd.NewDefaultClientFactory(kcliFactory)
 }

@@ -15,7 +15,7 @@ import (
 	internalcmd "package-operator.run/internal/cmd"
 )
 
-func TestRollbackCmd(t *testing.T) { //nolint:maintidx
+func TestRollbackCmd(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range map[string]struct {
@@ -57,7 +57,8 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 				},
 			},
 			ShouldFail: false,
-			Output:     "Can not rollback from an available ClusterObjectSet Type"},
+			Output:     "Can not rollback from an available ClusterObjectSet Type",
+		},
 		"clusterpackage rollback with archived status": {
 			Args: []string{"clusterpackage/test", "--revision", "1"},
 			ActualObjects: []client.Object{
@@ -100,7 +101,8 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 				},
 			},
 			ShouldFail: false,
-			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back"},
+			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back",
+		},
 		"clusterobjectdeployment rollback with archived status": {
 			Args: []string{"ClusterObjectDeployment/test", "--revision", "1"},
 			ActualObjects: []client.Object{
@@ -143,7 +145,8 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 				},
 			},
 			ShouldFail: false,
-			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back"},
+			Output:     "gonna rollback this ClusterObjectDeployment : test with objectset test-1 Successfully rolled back",
+		},
 
 		"package rollback with archived status": {
 			Args: []string{"package/test", "--namespace", "test", "--revision", "1"},
@@ -191,7 +194,9 @@ func TestRollbackCmd(t *testing.T) { //nolint:maintidx
 				},
 			},
 			ShouldFail: false,
-			Output:     "gonna rollback this ObjectDeployment : test in ns : test with Objectset : test-1 Successfully rolled back"},
+			Output: "gonna rollback this ObjectDeployment : test" +
+				" in ns : test with Objectset : test-1 Successfully rolled back",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

@@ -50,12 +50,13 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 		if err != nil {
 			return err
 		}
+		//nolint:nestif
 		if opts.Revision > 0 {
 			os, found := list.FindRevision(opts.Revision)
 			if !found {
 				return errRevisionsNotFound
 			}
-			//Once we find the objectset
+			// Once we find the objectset
 			switch strings.ToLower(args.Resource) {
 			case "clusterobjectdeployment", "clusterpackage":
 				obs := os.GetClusterObjectsettype()
@@ -63,11 +64,11 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					if _, err := fmt.Fprint(cmd.OutOrStdout(), "Error while returning ClusterObjectset"); err != nil {
 						return err
 					}
-
 				}
-				//this means that the objectset of that revision is currently in available
+				// this means that the objectset of that revision is currently in available
 				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseAvailable {
-					if _, err := fmt.Fprint(cmd.OutOrStdout(), "Can not rollback from an available ClusterObjectSet Type"); err != nil {
+					if _, err := fmt.Fprint(cmd.OutOrStdout(),
+						"Can not rollback from an available ClusterObjectSet Type"); err != nil {
 						return err
 					}
 				}
@@ -76,7 +77,8 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "gonna rollback this ClusterObjectDeployment : %v with objectset %v ", objd.Name(), obs.Name); err != nil {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "gonna rollback this ClusterObjectDeployment : %v with objectset %v ",
+						objd.Name(), obs.Name); err != nil {
 						return err
 					}
 					errs := getter.client.PatchClusterObjectDeployment(cmd.Context(), objd.Name(), *obs)
@@ -96,20 +98,21 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 						return err
 					}
 				}
-				//this means that the objectset of that revision is currently in available
+				// this means that the objectset of that revision is currently in available
 				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseAvailable {
 					if _, err := fmt.Fprint(cmd.OutOrStdout(), "Can not rollback from an available ObjectSet Type"); err != nil {
 						return err
 					}
 				}
 				if obs.Status.Phase == corev1alpha1.ObjectSetStatusPhaseArchived {
-
 					objd, err := getter.client.GetObjectDeployment(cmd.Context(), args.Name, internalcmd.WithNamespace(opts.Namespace))
 					if err != nil {
 						return err
 					}
 
-					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "gonna rollback this ObjectDeployment : %v in ns : %v with Objectset : %v ", objd.Name(), objd.Namespace(), obs.Name); err != nil {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(),
+						"gonna rollback this ObjectDeployment : %v in ns : %v with Objectset : %v ",
+						objd.Name(), objd.Namespace(), obs.Name); err != nil {
 						return err
 					}
 					errs := getter.client.PatchObjectDeployment(cmd.Context(), objd.Name(), objd.Namespace(), *obs)
@@ -125,15 +128,14 @@ func NewRollbackCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 				return errInvalidResourceType
 			}
 
-			//return printer.PrintObjectSet(os, opts)
-			return nil
-		} else {
-			_, err = fmt.Fprint(cmd.OutOrStdout(), "Invalid revision specified")
-			if err != nil {
-				return err
-			}
+			// return printer.PrintObjectSet(os, opts)
 			return nil
 		}
+		_, err = fmt.Fprint(cmd.OutOrStdout(), "Invalid revision specified")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return cmd
