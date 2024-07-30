@@ -20,7 +20,7 @@ require (
 	github.com/google/go-containerregistry v0.20.1
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.19.1
-	github.com/onsi/gomega v1.34.0
+	github.com/onsi/gomega v1.34.1
 	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
 	github.com/operator-framework/api v0.26.0
 	github.com/prometheus/client_golang v1.19.1
@@ -33,9 +33,9 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/sys v0.22.0
 	k8s.io/api v0.30.3
-	k8s.io/apiextensions-apiserver v0.30.2
+	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/apimachinery v0.30.3
-	k8s.io/apiserver v0.30.2
+	k8s.io/apiserver v0.30.3
 	k8s.io/client-go v0.30.3
 	k8s.io/kube-openapi v0.0.0-20240423202451-8948a665c108
 	k8s.io/utils v0.0.0-20240423183400-0849a56e8f22
@@ -138,7 +138,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
