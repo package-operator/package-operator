@@ -61,7 +61,7 @@ var (
 		PhaseRBAC: {
 			{Kind: "ServiceAccount"},
 			{Kind: "Role", Group: "rbac.authorization.k8s.io"},
-			{Kind: "RoleRolebinding", Group: "rbac.authorization.k8s.io"},
+			{Kind: "RoleBinding", Group: "rbac.authorization.k8s.io"},
 			{Kind: "ClusterRole", Group: "rbac.authorization.k8s.io"},
 			{Kind: "ClusterRoleBinding", Group: "rbac.authorization.k8s.io"},
 		},
