@@ -380,6 +380,9 @@ func TestClient_PatchClusterObjectDeployment(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "object-deployment",
 					},
+					Status: corev1alpha1.ClusterObjectDeploymentStatus{
+						Phase: corev1alpha1.ObjectDeploymentPhaseAvailable,
+					},
 				},
 			},
 			Assertion:            require.NoError,
@@ -449,6 +452,9 @@ func TestClient_PatchObjectDeployment(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "object-deployment",
 						Namespace: "test",
+					},
+					Status: corev1alpha1.ObjectDeploymentStatus{
+						Phase: corev1alpha1.ObjectDeploymentPhaseAvailable,
 					},
 				},
 			},
@@ -1014,4 +1020,100 @@ func TestObjectSetList_RenderTable(t *testing.T) {
 	table := list.RenderTable("Revision", "Successful", "Change-Cause")
 
 	assert.Equal(t, expected, table)
+}
+
+func Test_GetObjectsettype(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		ObjectSetObj ObjectSet
+		Expected     *corev1alpha1.ObjectSet
+	}{
+		"cluster object set": {
+			ObjectSetObj: ObjectSet{
+				obj: &corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-object-set",
+					},
+				},
+			},
+			Expected: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-object-set",
+				},
+			},
+		},
+		"object set": {
+			ObjectSetObj: ObjectSet{
+				obj: &corev1alpha1.ObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "object-set",
+						Namespace: "object-set-namespace",
+					},
+				},
+			},
+			Expected: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "object-set",
+					Namespace: "object-set-namespace",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			result := tc.ObjectSetObj.GetObjectsettype()
+			assert.Equal(t, tc.Expected, result)
+			assert.IsType(t, tc.Expected, result)
+		})
+	}
+}
+
+func Test_GetClusterObjectset(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		ObjectSetObj ObjectSet
+		Expected     *corev1alpha1.ClusterObjectSet
+	}{
+		"cluster object set": {
+			ObjectSetObj: ObjectSet{
+				obj: &corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster-object-set",
+					},
+				},
+			},
+			Expected: &corev1alpha1.ClusterObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-object-set",
+				},
+			},
+		},
+		"object set": {
+			ObjectSetObj: ObjectSet{
+				obj: &corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "object-set",
+						Namespace: "object-set-namespace",
+					},
+				},
+			},
+			Expected: &corev1alpha1.ClusterObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "object-set",
+					Namespace: "object-set-namespace",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			result := tc.ObjectSetObj.GetClusterObjectsettype()
+			assert.Equal(t, tc.Expected, result)
+			assert.IsType(t, tc.Expected, result)
+		})
+	}
 }

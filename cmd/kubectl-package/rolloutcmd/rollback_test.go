@@ -35,6 +35,30 @@ func TestRollbackCmd(t *testing.T) {
 			Args:       []string{"invalid"},
 			ShouldFail: true,
 		},
+		"clusterpackage rollback with available status and with 2 args": {
+			Args: []string{"clusterpackage", "test", "--revision", "1"},
+			ActualObjects: []client.Object{
+				&corev1alpha1.ClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+					},
+				},
+				&corev1alpha1.ClusterObjectSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test",
+						Labels: map[string]string{
+							manifestsv1alpha1.PackageInstanceLabel: "test",
+						},
+					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Phase:    corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Revision: 1,
+					},
+				},
+			},
+			ShouldFail: false,
+			Output:     "Can not rollback from an available ClusterObjectSet Type",
+		},
 		"clusterpackage rollback with available status": {
 			Args: []string{"clusterpackage/test", "--revision", "1"},
 			ActualObjects: []client.Object{
@@ -228,7 +252,6 @@ func TestRollbackCmd(t *testing.T) {
 
 				return
 			}
-
 			require.NoError(t, cmd.Execute())
 			assert.Equal(t, tc.Output, out.String())
 		})
