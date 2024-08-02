@@ -31,8 +31,90 @@ func TestNewPackageDeployer(t *testing.T) {
 	t.Parallel()
 
 	c := testutil.NewClient()
-	l := NewPackageDeployer(c, testScheme)
+	uc := testutil.NewClient()
+	l := NewPackageDeployer(c, uc, testScheme)
 	assert.NotNil(t, l)
+}
+
+func TestUniqueConstraint(t *testing.T) {
+	t.Parallel()
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	uc := testutil.NewClient()
+	pAPIPkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test", Namespace: "test",
+			},
+		},
+	}
+
+	cpAPIPkg := &adapters.GenericClusterPackage{
+		ClusterPackage: corev1alpha1.ClusterPackage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test", Namespace: "test",
+			},
+		},
+	}
+
+	manifest := &manifests.PackageManifest{
+		Spec: manifests.PackageManifestSpec{
+			Constraints: []manifests.PackageManifestConstraint{
+				{UniqueInScope: &manifests.PackageManifestUniqueInScopeConstraint{}},
+			},
+		},
+	}
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		dst := args.Get(1).(*corev1alpha1.PackageList)
+		dst.Items = []corev1alpha1.Package{{}}
+	}).Return(nil).Once()
+	msgs, err := validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.NoError(t, err)
+	assert.Empty(t, msgs)
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		dst := args.Get(1).(*corev1alpha1.PackageList)
+		dst.Items = []corev1alpha1.Package{{}, {}}
+	}).Return(nil).Once()
+	msgs, err = validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.NoError(t, err)
+	assert.NotEmpty(t, msgs)
+
+	pAPIPkg.Package.ObjectMeta.Namespace = ""
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		dst := args.Get(1).(*corev1alpha1.ClusterPackageList)
+		dst.Items = []corev1alpha1.ClusterPackage{{}}
+	}).Return(nil).Once()
+	msgs, err = validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.NoError(t, err)
+	assert.Empty(t, msgs)
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		dst := args.Get(1).(*corev1alpha1.ClusterPackageList)
+		dst.Items = []corev1alpha1.ClusterPackage{{}, {}}
+	}).Return(nil).Once()
+	msgs, err = validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.NoError(t, err)
+	assert.NotEmpty(t, msgs)
+
+	//nolint:err113
+	testErr := errors.New("testerr")
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Return(testErr).Once()
+	_, err = validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.Error(t, err)
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Return(testErr).Once()
+	_, err = validateUnique(ctx, uc, cpAPIPkg, manifest)
+	require.Error(t, err)
+
+	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		dst := args.Get(1).(*corev1alpha1.ClusterPackageList)
+		dst.Items = []corev1alpha1.ClusterPackage{}
+	}).Return(nil).Once()
+	_, err = validateUnique(ctx, uc, pAPIPkg, manifest)
+	require.ErrorIs(t, err, ErrNonExisting)
 }
 
 func TestNewClustePackageDeployer(t *testing.T) {
@@ -214,6 +296,8 @@ func TestImageWithDigestError(t *testing.T) {
 
 func Test_validateConstraints(t *testing.T) {
 	t.Parallel()
+	cli := testutil.NewClient()
+	ctx := context.Background()
 	tests := []struct {
 		name        string
 		apiPkg      *adapters.GenericPackage
@@ -311,7 +395,7 @@ func Test_validateConstraints(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateConstraints(test.apiPkg, test.manifest, test.env)
+			err := validateConstraints(ctx, cli, test.apiPkg, test.manifest, test.env)
 			require.NoError(t, err)
 
 			invalidCond := meta.FindStatusCondition(*test.apiPkg.GetConditions(), corev1alpha1.PackageInvalid)

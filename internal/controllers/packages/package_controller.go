@@ -46,7 +46,7 @@ type GenericPackageController struct {
 }
 
 func NewPackageController(
-	c client.Client, log logr.Logger,
+	c client.Client, uncachedClient client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
@@ -54,13 +54,13 @@ func NewPackageController(
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
-		c, log, scheme, imagePuller, packages.NewPackageDeployer(c, scheme),
+		c, uncachedClient, log, scheme, imagePuller, packages.NewPackageDeployer(c, uncachedClient, scheme),
 		metricsRecorder, packageHashModifier,
 	)
 }
 
 func NewClusterPackageController(
-	c client.Client, log logr.Logger,
+	c client.Client, uncachedClient client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
@@ -68,7 +68,7 @@ func NewClusterPackageController(
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
-		c, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme),
+		c, uncachedClient, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme),
 		metricsRecorder, packageHashModifier,
 	)
 }
@@ -76,7 +76,7 @@ func NewClusterPackageController(
 func newGenericPackageController(
 	newPackage adapters.GenericPackageFactory,
 	newObjectDeployment adapters.ObjectDeploymentFactory,
-	client client.Client, log logr.Logger,
+	client client.Client, uncachedClient client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
@@ -91,7 +91,7 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		unpackReconciler: newUnpackReconciler(
-			client, imagePuller, packageDeployer,
+			client, uncachedClient, imagePuller, packageDeployer,
 			metricsRecorder, packageHashModifier,
 		),
 	}
