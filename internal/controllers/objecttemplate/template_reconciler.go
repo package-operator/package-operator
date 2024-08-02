@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/jsonpath"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,6 +32,8 @@ import (
 
 // Requeue every 30s to check if input sources exist now.
 var defaultMissingResourceRetryInterval = 30 * time.Second
+
+const FieldOwner = "package-operator"
 
 type templateReconciler struct {
 	*environment.Sink
@@ -105,11 +108,12 @@ func (r *templateReconciler) Reconcile(
 	obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
 	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
 
-	obj.SetResourceVersion(existingObj.GetResourceVersion())
-	if err := r.client.Update(ctx, obj); err != nil {
-		return res, fmt.Errorf("updating templated object: %w", err)
+	if err := r.client.Patch(ctx, obj, client.Apply, &client.PatchOptions{
+		FieldManager: FieldOwner,
+		Force:        ptr.To(true),
+	}); err != nil {
+		return res, fmt.Errorf("patching object: %w", err)
 	}
-
 	return res, nil
 }
 

@@ -396,7 +396,7 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 
 			r, client, _, dc := newControllerAndMocks(t)
 
-			client.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
