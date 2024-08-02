@@ -17,6 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/csaupgrade"
 	"k8s.io/client-go/util/jsonpath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +34,8 @@ import (
 
 // Requeue every 30s to check if input sources exist now.
 var defaultMissingResourceRetryInterval = 30 * time.Second
+
+const FieldOwner = "package-operator"
 
 type templateReconciler struct {
 	*environment.Sink
@@ -106,6 +111,25 @@ func (r *templateReconciler) Reconcile(
 	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
 
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
+	if err := r.fixFieldManagers(ctx, existingObj); err != nil {
+		return res, fmt.Errorf("fix field managers for SSA: %w", err)
+	}
+
+	patch := obj.DeepCopy()
+	unstructured.RemoveNestedField(patch.Object, "status")
+
+	objectPatch, err := json.Marshal(patch)
+	if err != nil {
+		return res, fmt.Errorf("creating patch: %w", err)
+	}
+	if err := r.client.Patch(ctx, existingObj, client.RawPatch(
+		types.ApplyPatchType, objectPatch),
+		client.FieldOwner(FieldOwner),
+		client.ForceOwnership,
+	); err != nil {
+		return res, fmt.Errorf("patching object: %w", err)
+	}
+
 	if err := r.client.Update(ctx, obj); err != nil {
 		return res, fmt.Errorf("updating templated object: %w", err)
 	}
@@ -122,6 +146,27 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 		return fmt.Errorf("creating object: %w", err)
 	}
 
+	return nil
+}
+
+func (r *templateReconciler) fixFieldManagers(ctx context.Context,
+	currentObj *unstructured.Unstructured,
+) error {
+	oldFieldOwners := sets.New(FieldOwner, "package-operator-manager", "remote-phase-manger")
+
+	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, FieldOwner)
+	switch {
+	case err != nil:
+		return err
+	case len(patch) == 0:
+		// csaupgrade.UpgradeManagedFieldsPatch return nil, nil when no work is to be done. Empty patch cannot be applied so
+		// exit early.
+		return nil
+	}
+
+	if err := r.client.Patch(ctx, currentObj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
+		return fmt.Errorf("update field managers: %w", err)
+	}
 	return nil
 }
 
