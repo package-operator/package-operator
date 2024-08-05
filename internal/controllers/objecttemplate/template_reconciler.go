@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -122,6 +123,7 @@ func (r *templateReconciler) Reconcile(
 	if err != nil {
 		return res, fmt.Errorf("creating patch: %w", err)
 	}
+	log.Println("Entering patch:")
 	if err := r.client.Patch(ctx, existingObj, client.RawPatch(
 		types.ApplyPatchType, objectPatch),
 		client.FieldOwner(FieldOwner),
@@ -129,11 +131,7 @@ func (r *templateReconciler) Reconcile(
 	); err != nil {
 		return res, fmt.Errorf("patching object: %w", err)
 	}
-
-	if err := r.client.Update(ctx, obj); err != nil {
-		return res, fmt.Errorf("updating templated object: %w", err)
-	}
-
+	log.Println("successfully patched")
 	return res, nil
 }
 
