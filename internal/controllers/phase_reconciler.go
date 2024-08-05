@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,10 +19,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/openapi3"
 	"k8s.io/client-go/util/csaupgrade"
+	"k8s.io/kube-openapi/pkg/schemaconv"
+	"k8s.io/kube-openapi/pkg/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
+	"sigs.k8s.io/structured-merge-diff/v4/typed"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -41,6 +49,7 @@ type PhaseReconciler struct {
 	adoptionChecker  adoptionChecker
 	patcher          patcher
 	preflightChecker preflightChecker
+	discoveryClient  discovery.DiscoveryInterface
 }
 
 type ownerStrategy interface {
@@ -89,6 +98,7 @@ func NewPhaseReconciler(
 	uncachedClient client.Reader,
 	ownerStrategy ownerStrategy,
 	preflightChecker preflightChecker,
+	discoveryClient discovery.DiscoveryInterface,
 ) *PhaseReconciler {
 	return &PhaseReconciler{
 		scheme:           scheme,
@@ -99,6 +109,7 @@ func NewPhaseReconciler(
 		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
 		patcher:          &defaultPatcher{writer: writer},
 		preflightChecker: preflightChecker,
+		discoveryClient:  discoveryClient,
 	}
 }
 
@@ -198,8 +209,8 @@ func (r *PhaseReconciler) ReconcilePhase(
 		}
 	}
 
+	meta.RemoveStatusCondition(owner.GetConditions(), corev1alpha1.ObjectSetDiverged)
 	rec := newRecordingProbe(phase.Name, probe)
-
 	for i, phaseObject := range phase.Objects {
 		desiredObj := &desiredObjects[i]
 		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, desiredObj, previous)
@@ -456,6 +467,31 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
 			return nil, fmt.Errorf("looking up object while paused: %w", err)
 		}
+
+		diverged, mfields, err := hasDiverged(owner, r.ownerStrategy, r.discoveryClient, desiredObj, actualObj)
+		if err != nil {
+			return nil, fmt.Errorf("checking for divergence: %w", err)
+		}
+		if diverged {
+			msg := fmt.Sprintf(
+				"Object %s %s/%s has been modified by:",
+				desiredObj.GroupVersionKind().Kind,
+				desiredObj.GetNamespace(),
+				desiredObj.GetName(),
+			)
+			for m, fields := range mfields {
+				msg += fmt.Sprintf("\n- %q: %s", m, strings.ReplaceAll(fields.String(), "\n", ", "))
+			}
+
+			meta.SetStatusCondition(owner.GetConditions(), metav1.Condition{
+				Type:               corev1alpha1.ObjectSetDiverged,
+				Status:             "True",
+				Reason:             "Diverged",
+				Message:            msg,
+				ObservedGeneration: owner.ClientObject().GetGeneration(),
+			})
+		}
+
 		return actualObj, nil
 	}
 
@@ -927,4 +963,206 @@ func setObjectRevision(obj client.Object, revision int64) {
 	}
 	a[corev1alpha1.ObjectSetRevisionAnnotation] = strconv.FormatInt(revision, 10)
 	obj.SetAnnotations(a)
+}
+
+func hasDiverged(
+	owner PhaseObjectOwner,
+	ownerStrategy ownerStrategy,
+	discoveryClient discovery.DiscoveryInterface,
+	desiredObject, actualObject *unstructured.Unstructured,
+) (diverged bool, managerPaths map[string]*fieldpath.Set, err error) {
+
+	gvk := desiredObject.GroupVersionKind()
+
+	r := openapi3.NewRoot(discoveryClient.OpenAPIV3())
+	s, err := r.GVSpec(gvk.GroupVersion())
+	if err != nil {
+		return false, nil, err
+	}
+	ss, err := schemaconv.ToSchemaFromOpenAPI(s.Components.Schemas, false)
+	if err != nil {
+		return false, nil, err
+	}
+
+	var parser typed.Parser
+	ss.CopyInto(&parser.Schema)
+
+	mf, ok := findManagedFields(actualObject)
+	if !ok {
+		// no PKO managed fields -> diverged for sure
+		// diverged on EVERYTHING.
+		return true, nil, nil
+	}
+	actualFieldSet := &fieldpath.Set{}
+	if err := actualFieldSet.FromJSON(bytes.NewReader(mf.FieldsV1.Raw)); err != nil {
+		return false, nil, fmt.Errorf("field set for actual: %w", err)
+	}
+
+	desiredObject = desiredObject.DeepCopy()
+	if err := ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObject); err != nil {
+		return false, nil, err
+	}
+
+	desiredObject = desiredObject.DeepCopy()
+
+	// typedDesired, err := typed.DeducedParseableType.FromUnstructured(desiredObject.Object)
+	// typed.AsTyped()
+
+	tName, err := openAPICanonicalName(*desiredObject)
+	if err != nil {
+		return false, nil, err
+	}
+	typedDesired, err := parser.Type(tName).FromUnstructured(desiredObject.Object)
+	// typedDesired, err := DeducedParseableType.FromUnstructured(desiredObject.Object)
+	if err != nil {
+		return false, nil, fmt.Errorf("struct merge type conversion: %w", err)
+	}
+	desiredFieldSet, err := typedDesired.ToFieldSet()
+	if err != nil {
+		return false, nil, fmt.Errorf("desired to field set: %w", err)
+	}
+
+	diff := desiredFieldSet.Difference(actualFieldSet).Difference(stripSet).Leaves()
+
+	managerPaths = map[string]*fieldpath.Set{}
+	for _, mf := range actualObject.GetManagedFields() {
+		fs := &fieldpath.Set{}
+		if err := fs.FromJSON(bytes.NewReader(mf.FieldsV1.Raw)); err != nil {
+			return false, nil, fmt.Errorf("field set for actual: %w", err)
+		}
+		diff.Leaves().Iterate(func(p fieldpath.Path) {
+			if !fs.Has(p) {
+				return
+			}
+			if _, ok := managerPaths[mf.Manager]; !ok {
+				managerPaths[mf.Manager] = &fieldpath.Set{}
+			}
+			managerPaths[mf.Manager].Insert(p)
+		})
+	}
+	fmt.Println("DIFFFF!", diff.String(), managerPaths)
+
+	return !diff.Empty(), managerPaths, nil
+}
+
+func findManagedFields(accessor metav1.Object) (metav1.ManagedFieldsEntry, bool) {
+	objManagedFields := accessor.GetManagedFields()
+	for _, mf := range objManagedFields {
+		if mf.Manager == FieldOwner && mf.Operation == metav1.ManagedFieldsOperationApply && mf.Subresource == "" {
+			return mf, true
+		}
+	}
+	return metav1.ManagedFieldsEntry{}, false
+}
+
+// taken from:
+// https://github.com/kubernetes/apimachinery/blob/v0.32.0-alpha.0/pkg/util/managedfields/internal/stripmeta.go#L39-L52
+var stripSet = fieldpath.NewSet(
+	fieldpath.MakePathOrDie("apiVersion"),
+	fieldpath.MakePathOrDie("kind"),
+	fieldpath.MakePathOrDie("metadata"),
+	fieldpath.MakePathOrDie("metadata", "name"),
+	fieldpath.MakePathOrDie("metadata", "namespace"),
+	fieldpath.MakePathOrDie("metadata", "creationTimestamp"),
+	fieldpath.MakePathOrDie("metadata", "selfLink"),
+	fieldpath.MakePathOrDie("metadata", "uid"),
+	fieldpath.MakePathOrDie("metadata", "clusterName"),
+	fieldpath.MakePathOrDie("metadata", "generation"),
+	fieldpath.MakePathOrDie("metadata", "managedFields"),
+	fieldpath.MakePathOrDie("metadata", "resourceVersion"),
+)
+
+// // DeducedParseableType is a ParseableType that deduces the type from
+// // the content of the object.
+// var DeducedParseableType typed.ParseableType = createOrDie(typed.YAMLObject(`
+// types:
+// - name: spod
+//   map:
+//     fields:
+//     - name: apiVersion
+//       type:
+//         scalar: string
+//     - name: kind
+//       type:
+//         scalar: string
+//     - name: metadata
+//       type:
+//         namedType: __untyped_deduced_
+//     - name: spec
+//       type:
+//         namedType: spod.spec
+// - name: spod.spec
+//   map:
+//     fields:
+//     - name: test
+//       type:
+//         scalar: string
+//     - name: containers
+//       type:
+//         list:
+//           elementType:
+//             namedType: spod.spec.container
+//           elementRelationship: associative
+//           keys:
+//           - name
+// - name: spod.spec.container
+//   map:
+//     fields:
+//     - name: name
+//       type:
+//         scalar: string
+//     - name: image
+//       type:
+//         scalar: string
+// - name: __untyped_atomic_
+//   scalar: untyped
+//   list:
+//     elementType:
+//       namedType: __untyped_atomic_
+//     elementRelationship: atomic
+//   map:
+//     elementType:
+//       namedType: __untyped_atomic_
+//     elementRelationship: atomic
+// - name: __untyped_deduced_
+//   scalar: untyped
+//   list:
+//     elementType:
+//       namedType: __untyped_atomic_
+//     elementRelationship: atomic
+//   map:
+//     elementType:
+//       namedType: __untyped_deduced_
+//     elementRelationship: separable
+// `)).Type("spod")
+
+// func createOrDie(schema typed.YAMLObject) *typed.Parser {
+// 	p, err := create(schema)
+// 	if err != nil {
+// 		panic(fmt.Errorf("failed to create parser: %v", err))
+// 	}
+// 	return p
+// }
+
+// // create builds an unvalidated parser.
+// func create(s typed.YAMLObject) (*typed.Parser, error) {
+// 	p := typed.Parser{}
+// 	err := yaml.Unmarshal([]byte(s), &p.Schema)
+// 	return &p, err
+// }
+
+func openAPICanonicalName(obj unstructured.Unstructured) (string, error) {
+	gvk := obj.GroupVersionKind()
+
+	var schemaTypeName string
+	o, err := scheme.Scheme.New(gvk)
+	if err != nil && runtime.IsNotRegisteredError(err) {
+		// Assume CRD
+		schemaTypeName = fmt.Sprintf("%s/%s.%s", gvk.Group, gvk.Version, gvk.Kind)
+	} else if err != nil {
+		return "", err
+	} else {
+		schemaTypeName = util.GetCanonicalTypeName(o)
+	}
+	return util.ToRESTFriendlyName(schemaTypeName), nil
 }
