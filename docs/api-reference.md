@@ -312,6 +312,11 @@ spec:
 status:
   conditions:
   - metav1.Condition
+  controllerOf:
+    group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
   phase: ObjectTemplateStatusPhase
 
 ```
@@ -337,9 +342,9 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  component: sadipscing
+  component: nonumy
   config: runtime.RawExtension
-  image: consetetur
+  image: diam
 status:
   phase: Pending
 
@@ -391,30 +396,30 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: sed
+      - class: tempor
         externalObjects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: tempor
-            sourceType: eirmod
+          - destinationType: sit
+            sourceType: dolor
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
-        name: elitr
+        name: eirmod
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: nonumy
-            sourceType: diam
+          - destinationType: ipsum
+            sourceType: lorem
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - lorem
+        - amet
       successDelaySeconds: 42
 status:
   phase:Pending: null
@@ -471,30 +476,30 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: dolor
+  - class: sadipscing
     externalObjects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: sadipscing
-        sourceType: consetetur
+      - destinationType: nonumy
+        sourceType: diam
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
-    name: ipsum
+    name: consetetur
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: amet
-        sourceType: sit
+      - destinationType: sed
+        sourceType: elitr
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - elitr
+    - eirmod
   previous:
   - name: previous-revision
   successDelaySeconds: 42
@@ -547,8 +552,8 @@ spec:
   externalObjects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: dolor
+      sourceType: ipsum
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -557,8 +562,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: diam
-      sourceType: sed
+    - destinationType: lorem
+      sourceType: tempor
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -573,10 +578,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
 
 ```
 
@@ -606,8 +611,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: sed
+    sourceType: elitr
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -640,18 +645,23 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: nonumy
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: dolor
+      key: ipsum
+    kind: eirmod
+    name: lorem
+    namespace: tempor
     optional: "true"
-  template: consetetur
+  template: diam
 status:
   conditions:
   - metav1.Condition
+  controllerOf:
+    group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
   phase: ObjectTemplateStatusPhase
 
 ```
@@ -678,9 +688,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: lorem
+  component: sed
   config: runtime.RawExtension
-  image: tempor
+  image: elitr
 status:
   phase: Pending
 
@@ -827,6 +837,7 @@ Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetStatus](#objectsetstatus)
+* [ObjectTemplateStatus](#objecttemplatestatus)
 
 
 ### ObjectDeploymentSpec
@@ -1072,6 +1083,7 @@ ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the statu
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
+| `controllerOf` <br><a href="#controlledobjectreference">ControlledObjectReference</a> | ControllerOf references the templated object. |
 | `phase` <br><a href="#objecttemplatestatusphase">ObjectTemplateStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 
 
