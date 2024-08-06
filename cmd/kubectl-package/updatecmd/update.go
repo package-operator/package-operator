@@ -46,7 +46,9 @@ func NewCmd(updater Updater) *cobra.Command {
 		case err == nil:
 			return nil
 		case errors.Is(err, internalcmd.ErrLockDataUnchanged):
-			fmt.Fprintln(cmd.OutOrStdout(), "Package is already up-to-date")
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "Package is already up-to-date"); err != nil {
+				panic(err)
+			}
 
 			return nil
 		default:

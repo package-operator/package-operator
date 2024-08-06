@@ -64,7 +64,9 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 			return fmt.Errorf("building from source: %w", err)
 		}
 
-		fmt.Fprint(cmd.OutOrStdout(), buildSuccessMessage)
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), buildSuccessMessage); err != nil {
+			panic(err)
+		}
 		return nil
 	}
 

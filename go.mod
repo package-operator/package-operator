@@ -21,7 +21,7 @@ require (
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.1
-	github.com/openshift/api v0.0.0-20240425081546-8203151f085f
+	github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c
 	github.com/operator-framework/api v0.26.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/pterm/pterm v0.12.79
@@ -37,10 +37,10 @@ require (
 	k8s.io/apimachinery v0.30.3
 	k8s.io/apiserver v0.30.3
 	k8s.io/client-go v0.30.3
-	k8s.io/kube-openapi v0.0.0-20240423202451-8948a665c108
-	k8s.io/utils v0.0.0-20240423183400-0849a56e8f22
-	package-operator.run/apis v1.11.0
-	package-operator.run/pkg v1.11.0
+	k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e
+	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
+	package-operator.run/apis v1.13.0
+	package-operator.run/pkg v1.13.0
 	pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e
 	pkg.package-operator.run/cardboard/kubeutils v0.0.3
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
@@ -89,7 +89,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
-	github.com/google/safetext v0.0.0-20240104143208-7a7d9b3d812f // indirect
+	github.com/google/safetext v0.0.0-20240722112252-5a72de7e7962 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0 // indirect
@@ -149,8 +149,8 @@ require (
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240723171418-e6d459c13d2a // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	google.golang.org/grpc v1.65.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
