@@ -33,6 +33,12 @@ spec:
       containers:
       - args:
         - --enable-leader-election
+        {{- if hasKey .config "objectTemplateResourceRetryInterval" }}
+        - --object-template-resource-retry-interval={{ .config.objectTemplateResourceRetryInterval }}
+        {{- end}}
+        {{- if hasKey .config "objectTemplateOptionalResourceRetryInterval" }}
+        - --object-template-optional-resource-retry-interval={{ .config.objectTemplateOptionalResourceRetryInterval }}
+        {{- end}}
         ports:
         - name: metrics
           containerPort: 8080
