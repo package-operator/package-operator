@@ -297,7 +297,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewMultiClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client, client,
-			mapper,
+			mapper, nil,
 		)
 
 		require.NotNil(t, ctrl)
@@ -309,7 +309,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewMultiClusterClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client, client,
-			mapper,
+			mapper, nil,
 		)
 
 		require.NotNil(t, ctrl)
@@ -321,7 +321,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewSameClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client,
-			mapper,
+			mapper, nil,
 		)
 
 		require.NotNil(t, ctrl)
@@ -333,7 +333,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewSameClusterClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client,
-			mapper,
+			mapper, nil,
 		)
 
 		require.NotNil(t, ctrl)

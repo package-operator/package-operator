@@ -2,6 +2,8 @@ package components
 
 import (
 	"fmt"
+	"path/filepath"
+	"time"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
@@ -13,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	cacheddiskdiscovery "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -177,10 +180,15 @@ func ProvideUncachedClient(
 	return UncachedClient{uncachedClient}, nil
 }
 
-func ProvideDiscoveryClient(restConfig *rest.Config) (
+func ProvideDiscoveryClient(restConfig *rest.Config, opts Options) (
 	discovery.DiscoveryInterface, error,
 ) {
-	return discovery.NewDiscoveryClientForConfig(restConfig)
+	return cacheddiskdiscovery.NewCachedDiscoveryClientForConfig(
+		restConfig,
+		filepath.Join(opts.DiscoveryCache, "discovery"),
+		filepath.Join(opts.DiscoveryCache, "http"),
+		6*time.Hour,
+	)
 }
 
 func ProvideEnvironmentManager(

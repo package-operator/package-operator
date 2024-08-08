@@ -15,6 +15,7 @@ import (
 const (
 	metricsAddrFlagDescription    = "The address the metric endpoint binds to."
 	pprofAddrFlagDescription      = "The address the pprof web endpoint binds to."
+	discoveryCacheDescription     = "Location for the disk-based discovery cache."
 	namespaceFlagDescription      = "The namespace the operator is deployed into."
 	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
@@ -46,6 +47,7 @@ type Options struct {
 	RegistryHostOverrides       string
 	PackageHashModifier         *int32
 	PackageOperatorPackageImage string
+	DiscoveryCache              string
 
 	// sub commands
 	SelfBootstrap       string
@@ -97,6 +99,10 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.RegistryHostOverrides, "registry-host-overrides",
 		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
 		registryHostOverrides)
+	flag.StringVar(
+		&opts.DiscoveryCache, "discovery-cache",
+		"/tmp/pko-discovery-cache",
+		discoveryCacheDescription)
 
 	var (
 		subComponentAffinityJSON    string

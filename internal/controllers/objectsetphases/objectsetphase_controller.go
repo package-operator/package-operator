@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -81,6 +82,7 @@ func NewMultiClusterObjectSetPhaseController(
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	targetDiscoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
@@ -95,6 +97,7 @@ func NewMultiClusterObjectSetPhaseController(
 				preflight.NewDryRun(targetWriter),
 			},
 		),
+		targetDiscoveryClient,
 	)
 }
 
@@ -106,6 +109,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	targetDiscoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
@@ -120,6 +124,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 				preflight.NewNoOwnerReferences(targetRESTMapper),
 			},
 		),
+		targetDiscoveryClient,
 	)
 }
 
@@ -130,6 +135,7 @@ func NewSameClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	discoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
@@ -145,6 +151,7 @@ func NewSameClusterObjectSetPhaseController(
 				preflight.NewNoOwnerReferences(restMapper),
 			},
 		),
+		discoveryClient,
 	)
 }
 
@@ -155,6 +162,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	discoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
@@ -169,6 +177,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 				preflight.NewNoOwnerReferences(restMapper),
 			},
 		),
+		discoveryClient,
 	)
 }
 
@@ -183,6 +192,7 @@ func NewGenericObjectSetPhaseController(
 	client client.Client, // client to get and update ObjectSetPhases.
 	targetWriter client.Writer, // client to patch objects with.
 	preflightChecker preflightChecker,
+	discoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetPhaseController {
 	controller := &GenericObjectSetPhaseController{
 		newObjectSetPhase: newObjectSetPhase,
@@ -199,7 +209,10 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
-			scheme, targetWriter, dynamicCache, uncachedClient, ownerStrategy, preflightChecker),
+			scheme, targetWriter, dynamicCache,
+			uncachedClient, ownerStrategy,
+			preflightChecker, discoveryClient,
+		),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
