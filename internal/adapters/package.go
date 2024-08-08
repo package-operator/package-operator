@@ -182,9 +182,25 @@ func updatePackagePhase(pkg GenericPackageAccessor) {
 		return
 	}
 
+	if meta.IsStatusConditionTrue(
+		*pkg.GetConditions(),
+		corev1alpha1.PackageBlocked,
+	) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseBlocked)
+		return
+	}
+
 	unpackCond := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
 	if unpackCond == nil {
 		pkg.setStatusPhase(corev1alpha1.PackagePhaseUnpacking)
+		return
+	}
+
+	if meta.IsStatusConditionFalse(
+		*pkg.GetConditions(),
+		corev1alpha1.PackageAvailable,
+	) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhaseNotReady)
 		return
 	}
 

@@ -166,13 +166,6 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err != nil {
 		return fmt.Errorf("creating target cluster rest mapper: %w", err)
 	}
-	targetClient, err := client.New(targetCfg, client.Options{
-		Scheme: scheme,
-		Mapper: targetMapper,
-	})
-	if err != nil {
-		return fmt.Errorf("creating target cluster client: %w", err)
-	}
 
 	// Create metrics recorder
 	recorder := metrics.NewRecorder()
@@ -203,7 +196,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
 		mgr.GetScheme(), dc, uncachedTargetClient,
 		opts.class, managementClusterClient,
-		targetClient, targetMapper,
+		targetMapper, *targetCfg,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
@@ -214,7 +207,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
 			mgr.GetScheme(), dc, uncachedTargetClient,
 			opts.class, managementClusterClient,
-			targetClient, targetMapper,
+			targetMapper, *targetCfg,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 		}

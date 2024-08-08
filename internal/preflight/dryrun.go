@@ -15,14 +15,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type DryRun struct {
-	client client.Writer
+type autoImpersonatingWriter interface {
+	client.Writer
+	Impersonate()
 }
 
-func NewDryRun(client client.Writer) *DryRun { return &DryRun{client: client} }
+type DryRun struct {
+	writer autoImpersonatingWriter
+}
+
+func NewDryRun(writer autoImpersonatingWriter) *DryRun {
+	return &DryRun{
+		writer: writer,
+	}
+}
 
 func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []Violation, err error) {
 	defer addPositionToViolations(ctx, obj, &violations)
+	obj = obj.DeepCopyObject().(client.Object)
+
+	// Pretend any new owner is not marked as Controller to get around
+	// preflight issues when adoption objects from other Controllers.
+	ownerRefs := make([]metav1.OwnerReference, len(obj.GetOwnerReferences()))
+	for i, ownerRef := range obj.GetOwnerReferences() {
+		ownerRef.Controller = nil
+		ownerRefs[i] = ownerRef
+	}
+	obj.SetOwnerReferences(ownerRefs)
 
 	objectPatch, mErr := json.Marshal(obj)
 	if mErr != nil {
@@ -31,11 +50,7 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 
 	patch := client.RawPatch(types.ApplyPatchType, objectPatch)
 	dst := obj.DeepCopyObject().(*unstructured.Unstructured)
-	err = p.client.Patch(ctx, dst, patch, client.FieldOwner("package-operator"), client.ForceOwnership, client.DryRunAll)
-
-	if apimachineryerrors.IsNotFound(err) {
-		err = p.client.Create(ctx, obj.DeepCopyObject().(client.Object), client.DryRunAll)
-	}
+	err = p.writer.Patch(ctx, dst, patch, client.FieldOwner("package-operator"), client.ForceOwnership, client.DryRunAll)
 
 	var apiErr apimachineryerrors.APIStatus
 
@@ -55,7 +70,7 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonUnsupportedMediaType,
 			metav1.StatusReasonNotAcceptable,
 			metav1.StatusReasonNotFound:
-			return []Violation{{Error: err.Error()}}, nil
+			return []Violation{{Error: err.Error(), Reason: apiErr.Status().Reason}}, nil
 		case "":
 			logr.FromContextOrDiscard(ctx).Info("API status error with empty reason string", "err", apiErr.Status())
 

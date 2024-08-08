@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -79,20 +80,25 @@ func NewMultiClusterObjectSetPhaseController(
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
-	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	targetRestConfig rest.Config,
 ) *GenericObjectSetPhaseController {
+	targetClient := controllers.NewAutoImpersonatingWriter(
+		targetRestConfig,
+		scheme,
+		client,
+	)
+
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
-		class, client, targetWriter,
+		class, client, targetClient,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
 			preflight.List{
-				preflight.NewNoOwnerReferences(targetRESTMapper),
-				preflight.NewDryRun(targetWriter),
+				preflight.NewDryRun(targetClient),
 			},
 		),
 	)
@@ -104,20 +110,25 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
-	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	targetRestConfig rest.Config,
 ) *GenericObjectSetPhaseController {
+	targetClient := controllers.NewAutoImpersonatingWriter(
+		targetRestConfig,
+		scheme,
+		client,
+	)
+
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
-		class, client, targetWriter,
+		class, client, targetClient,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
 			preflight.List{
-				preflight.NewDryRun(targetWriter),
-				preflight.NewNoOwnerReferences(targetRESTMapper),
+				preflight.NewDryRun(targetClient),
 			},
 		),
 	)
@@ -130,19 +141,25 @@ func NewSameClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	restConfig rest.Config,
 ) *GenericObjectSetPhaseController {
+	targetClient := controllers.NewAutoImpersonatingWriter(
+		restConfig,
+		scheme,
+		client,
+	)
+
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
-		class, client, client,
+		class, client, targetClient,
 		preflight.NewAPIExistence(
 			restMapper,
 			preflight.List{
 				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
+				preflight.NewDryRun(targetClient),
 			},
 		),
 	)
@@ -155,21 +172,32 @@ func NewSameClusterClusterObjectSetPhaseController(
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	restConfig rest.Config,
 ) *GenericObjectSetPhaseController {
+	targetClient := controllers.NewAutoImpersonatingWriter(
+		restConfig,
+		scheme,
+		client,
+	)
+
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
-		class, client, client,
+		class, client, targetClient,
 		preflight.NewAPIExistence(
 			restMapper,
 			preflight.List{
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
+				preflight.NewDryRun(targetClient),
 			},
 		),
 	)
+}
+
+type autoImpersonatingWriter interface {
+	client.Writer
+	Impersonate()
 }
 
 func NewGenericObjectSetPhaseController(
@@ -181,7 +209,7 @@ func NewGenericObjectSetPhaseController(
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
-	targetWriter client.Writer, // client to patch objects with.
+	targetClient autoImpersonatingWriter,
 	preflightChecker preflightChecker,
 ) *GenericObjectSetPhaseController {
 	controller := &GenericObjectSetPhaseController{
@@ -199,8 +227,9 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
-			scheme, targetWriter, dynamicCache, uncachedClient, ownerStrategy, preflightChecker),
-		controllers.NewPreviousRevisionLookup(
+			scheme, targetClient,
+			dynamicCache, uncachedClient,
+			ownerStrategy, preflightChecker), controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
 			}, client).Lookup,

@@ -215,6 +215,11 @@ func (a *ClusterObjectDeployment) GetStatusRevision() int64 {
 }
 
 func objectDeploymentPhase(conditions []metav1.Condition) corev1alpha1.ObjectDeploymentPhase {
+	blockedCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentBlocked)
+	if blockedCond != nil {
+		return corev1alpha1.ObjectDeploymentPhaseBlocked
+	}
+
 	availableCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentAvailable)
 
 	if availableCond != nil {
