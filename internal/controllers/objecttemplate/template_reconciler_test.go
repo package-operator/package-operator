@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,6 +25,11 @@ import (
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/dynamiccachemocks"
+)
+
+const (
+	resourceRetryInterval         = 3 * time.Second
+	optionalResourceRetryInterval = 6 * time.Second
 )
 
 func Test_templateReconciler_getSourceObject(t *testing.T) {
@@ -556,4 +562,154 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRequeueDurationOnMissingSource(t *testing.T) {
+	t.Parallel()
+	t.Run("missing optional source returns configured optionalResourceRetryInterval", func(t *testing.T) {
+		t.Parallel()
+		r, client, uncachedClient, dc := newControllerAndMocks(t)
+		r.optionalResourceRetryInterval = optionalResourceRetryInterval
+		r.resourceRetryInterval = resourceRetryInterval
+
+		sources := []corev1alpha1.ObjectTemplateSource{
+			{
+				Kind:      "ConfigMap",
+				Name:      "test",
+				Namespace: "default",
+				Optional:  true,
+			},
+		}
+
+		client.On("Create", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Maybe()
+		dc.
+			On("Watch", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		// Make both dynamic cache and uncached client return not found error.
+		dc.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+		uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
+		require.NoError(t, err)
+		objectTemplate := &GenericObjectTemplate{
+			ObjectTemplate: corev1alpha1.ObjectTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{
+						controllers.CachedFinalizer,
+					},
+				},
+				Spec: corev1alpha1.ObjectTemplateSpec{
+					Template: string(template),
+					Sources:  sources,
+				},
+			},
+		}
+		res, err := r.Reconcile(context.Background(), objectTemplate)
+		require.False(t, res.IsZero())
+		assert.Equal(t, optionalResourceRetryInterval, res.RequeueAfter)
+		require.NoError(t, err)
+	})
+
+	t.Run("missing source returns configured resourceRetryInterval", func(t *testing.T) {
+		t.Parallel()
+		r, _, uncachedClient, dc := newControllerAndMocks(t)
+		r.optionalResourceRetryInterval = optionalResourceRetryInterval
+		r.resourceRetryInterval = resourceRetryInterval
+
+		sources := []corev1alpha1.ObjectTemplateSource{
+			{
+				Kind:      "ConfigMap",
+				Name:      "test",
+				Namespace: "default",
+				Optional:  false,
+			},
+		}
+
+		dc.
+			On("Watch", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		// Make both dynamic cache and uncached client return not found error.
+		dc.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+		uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
+		require.NoError(t, err)
+		objectTemplate := &GenericObjectTemplate{
+			ObjectTemplate: corev1alpha1.ObjectTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{
+						controllers.CachedFinalizer,
+					},
+				},
+				Spec: corev1alpha1.ObjectTemplateSpec{
+					Template: string(template),
+					Sources:  sources,
+				},
+			},
+		}
+		res, err := r.Reconcile(context.Background(), objectTemplate)
+		require.False(t, res.IsZero())
+		assert.Equal(t, resourceRetryInterval, res.RequeueAfter)
+		require.NoError(t, err)
+	})
+
+	t.Run("reconciler returns error on non missing source errors", func(t *testing.T) {
+		t.Parallel()
+		r, _, uncachedClient, dc := newControllerAndMocks(t)
+		r.optionalResourceRetryInterval = optionalResourceRetryInterval
+		r.resourceRetryInterval = resourceRetryInterval
+
+		sources := []corev1alpha1.ObjectTemplateSource{
+			{
+				Kind:      "ConfigMap",
+				Name:      "test",
+				Namespace: "default",
+				Optional:  false,
+			},
+		}
+
+		dc.
+			On("Watch", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		// Make dynamic cache client return not found error.
+		dc.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+		// Make uncached client return non 404 error.
+		uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewTooManyRequestsError("too many requests"))
+
+		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
+		require.NoError(t, err)
+		objectTemplate := &GenericObjectTemplate{
+			ObjectTemplate: corev1alpha1.ObjectTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{
+						controllers.CachedFinalizer,
+					},
+				},
+				Spec: corev1alpha1.ObjectTemplateSpec{
+					Template: string(template),
+					Sources:  sources,
+				},
+			},
+		}
+		res, err := r.Reconcile(context.Background(), objectTemplate)
+		require.True(t, res.IsZero())
+		require.Error(t, err)
+	})
 }

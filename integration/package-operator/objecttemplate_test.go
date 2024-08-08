@@ -446,7 +446,7 @@ data:
 				upatedCM := obj.(*corev1.ConfigMap)
 				return upatedCM.Data["test"] == secretValue, nil
 			},
-			wait.WithTimeout(60*time.Second),
+			wait.WithTimeout(6*time.Second),
 		),
 	)
 }

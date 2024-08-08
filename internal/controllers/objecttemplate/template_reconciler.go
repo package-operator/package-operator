@@ -34,11 +34,13 @@ var defaultMissingResourceRetryInterval = 30 * time.Second
 
 type templateReconciler struct {
 	*environment.Sink
-	scheme           *runtime.Scheme
-	client           client.Writer
-	uncachedClient   client.Reader
-	dynamicCache     dynamicCache
-	preflightChecker preflightChecker
+	scheme                        *runtime.Scheme
+	client                        client.Writer
+	uncachedClient                client.Reader
+	dynamicCache                  dynamicCache
+	preflightChecker              preflightChecker
+	optionalResourceRetryInterval time.Duration
+	resourceRetryInterval         time.Duration
 }
 
 func newTemplateReconciler(
@@ -47,15 +49,19 @@ func newTemplateReconciler(
 	uncachedClient client.Reader,
 	dynamicCache dynamicCache,
 	preflightChecker preflightChecker,
+	optionalResourceRetryInterval time.Duration,
+	resourceRetryInterval time.Duration,
 ) *templateReconciler {
 	return &templateReconciler{
 		Sink: environment.NewSink(client),
 
-		scheme:           scheme,
-		client:           client,
-		uncachedClient:   uncachedClient,
-		dynamicCache:     dynamicCache,
-		preflightChecker: preflightChecker,
+		scheme:                        scheme,
+		client:                        client,
+		uncachedClient:                uncachedClient,
+		dynamicCache:                  dynamicCache,
+		preflightChecker:              preflightChecker,
+		optionalResourceRetryInterval: optionalResourceRetryInterval,
+		resourceRetryInterval:         resourceRetryInterval,
 	}
 }
 
@@ -69,10 +75,14 @@ func (r *templateReconciler) Reconcile(
 	sourcesConfig := map[string]any{}
 	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig)
 	if err != nil {
+		if isMissingResourceError(err) {
+			res.RequeueAfter = r.resourceRetryInterval
+		}
 		return res, fmt.Errorf("retrieving values from sources: %w", err)
 	}
+	// For optional resources.
 	if retryLater {
-		res.RequeueAfter = defaultMissingResourceRetryInterval
+		res.RequeueAfter = r.optionalResourceRetryInterval
 	}
 
 	obj := &unstructured.Unstructured{
@@ -441,4 +451,12 @@ func RelaxedJSONPathExpression(pathExpression string) (string, error) {
 		fieldSpec = submatches[2]
 	}
 	return fmt.Sprintf("{.%s}", fieldSpec), nil
+}
+
+func isMissingResourceError(err error) bool {
+	var sourceError *SourceError
+	if errors.As(err, &sourceError) {
+		return apimachineryerrors.IsNotFound(sourceError.Err)
+	}
+	return false
 }

@@ -36,6 +36,10 @@ spec:
           format: int32
         registryHostOverrides:
           type: string
+        objectTemplateResourceRetryInterval:
+          type: string
+        objectTemplateOptionalResourceRetryInterval:
+          type: string
         namespace:
           description: Namespace to install package operator into.
           type: string

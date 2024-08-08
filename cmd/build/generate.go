@@ -119,7 +119,11 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 	}
 
 	registyOverrides := imageRegistryHost() + "=dev-registry.dev-registry.svc.cluster.local:5001"
-	pkoConfig := fmt.Sprintf(`{"registryHostOverrides":"%s"}`, registyOverrides)
+	pkoConfig := fmt.Sprintf(`{
+		"registryHostOverrides": "%s",
+		"objectTemplateResourceRetryInterval": "2s",
+		"objectTemplateOptionalResourceRetryInterval": "4s"
+	}`, registyOverrides)
 
 	replacements := map[string]string{
 		`##registry-overrides##`: registyOverrides,

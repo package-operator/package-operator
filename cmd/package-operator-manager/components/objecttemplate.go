@@ -22,13 +22,17 @@ type (
 func ProvideObjectTemplateController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
-	dc *dynamiccache.Cache,
+	dc *dynamiccache.Cache, options Options,
 ) ObjectTemplateController {
 	return ObjectTemplateController{
 		objecttemplate.NewObjectTemplateController(
 			mgr.GetClient(), uncachedClient,
 			log.WithName("controllers").WithName("ObjectTemplate"),
 			dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+			objecttemplate.ControllerConfig{
+				OptionalResourceRetryInterval: options.ObjectTemplateOptionalResourceRetryInterval,
+				ResourceRetryInterval:         options.ObjectTemplateResourceRetryInterval,
+			},
 		),
 	}
 }
@@ -37,12 +41,17 @@ func ProvideClusterObjectTemplateController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
 	dc *dynamiccache.Cache,
+	options Options,
 ) ClusterObjectTemplateController {
 	return ClusterObjectTemplateController{
 		objecttemplate.NewClusterObjectTemplateController(
 			mgr.GetClient(), uncachedClient,
 			log.WithName("controllers").WithName("ClusterObjectTemplate"),
 			dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+			objecttemplate.ControllerConfig{
+				OptionalResourceRetryInterval: options.ObjectTemplateOptionalResourceRetryInterval,
+				ResourceRetryInterval:         options.ObjectTemplateResourceRetryInterval,
+			},
 		),
 	}
 }
