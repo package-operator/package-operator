@@ -171,6 +171,9 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		Scheme: scheme,
 		Mapper: targetMapper,
 	})
+	if err != nil {
+		return fmt.Errorf("creating target cluster client: %w", err)
+	}
 	targetDiscoveryClient, err := discovery.NewDiscoveryClientForConfig(targetCfg)
 	if err != nil {
 		return fmt.Errorf("creating target cluster discovery client: %w", err)

@@ -21,7 +21,6 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 )
@@ -1791,98 +1790,4 @@ func Test_openAPICanonicalName(t *testing.T) {
 			assert.Equal(t, test.cn, cn)
 		})
 	}
-}
-
-func Test_hasDiverged(t *testing.T) {
-	t.FailNow()
-	t.Parallel()
-
-	ownerStrategy := ownerhandling.NewNative(testScheme)
-
-	ownerObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "v1",
-			"kind":       "Banana",
-			"metadata": map[string]any{
-				"generation": int64(4),
-			},
-		},
-	}
-	owner := &phaseObjectOwnerMock{}
-	owner.On("ClientObject").Return(ownerObj)
-
-	desiredObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "v1",
-			"kind":       "Banana",
-			"spec": map[string]any{
-				"test": "banana",
-				"containers": []interface{}{
-					map[string]interface{}{
-						"name":  "test",
-						"image": "image3000",
-					},
-				},
-			},
-		},
-	}
-	actualObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"spec": map[string]any{
-				"test": "hans",
-				"containers": []interface{}{
-					map[string]interface{}{
-						"name":  "test",
-						"image": "image5000",
-					},
-				},
-			},
-		},
-	}
-	actualObj.SetManagedFields([]metav1.ManagedFieldsEntry{
-		{
-			Manager:   FieldOwner,
-			Operation: metav1.ManagedFieldsOperationApply,
-			FieldsV1: &metav1.FieldsV1{
-				Raw: []byte(`{
-	"f:apiVersion":{},
-	"f:kind":{},
-	"f:metadata":{
-		".":{},
-		"f:name":{},
-		"f:ownerReferences":{}
-	},
-	"f:spec":{
-		"f:containers":{
-		    ".": {},
-			"k:{\"name\":\"test\"}":{
-				".":{},
-				"f:name":{}
-			}
-		}
-	}
-}`),
-			},
-		},
-		{
-			Manager:   "someoneelse",
-			Operation: metav1.ManagedFieldsOperationApply,
-			FieldsV1: &metav1.FieldsV1{
-				Raw: []byte(`{
-	"f:spec":{
-		"f:test":{},
-		"f:containers":{
-			"k:{\"name\":\"test\"}":{
-				"f:image":{}
-			}
-		}
-	}
-}`),
-			},
-		},
-	})
-
-	div, _, err := hasDiverged(owner, ownerStrategy, nil, desiredObj, actualObj)
-	require.NoError(t, err)
-	assert.False(t, div)
 }

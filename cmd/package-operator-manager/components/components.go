@@ -192,7 +192,7 @@ func ProvideDiscoveryClient(restConfig *rest.Config, opts Options) (
 		restConfig,
 		filepath.Join(opts.DiscoveryCache, "discovery"),
 		filepath.Join(opts.DiscoveryCache, "http"),
-		time.Duration(6*time.Hour),
+		6*time.Hour,
 	)
 }
 
@@ -200,7 +200,6 @@ func ProvideEnvironmentManager(
 	client UncachedClient,
 	discoveryClient discovery.DiscoveryInterface,
 	mgr ctrl.Manager,
-	opts Options,
 ) *environment.Manager {
 	return environment.NewManager(
 		client, discoveryClient, mgr.GetRESTMapper())

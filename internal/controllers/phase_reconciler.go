@@ -599,10 +599,6 @@ func (r *PhaseReconciler) desiredObject(
 	return desiredObj, nil
 }
 
-// updateStatusError(ctx context.Context, objectSet genericObjectSet,
-// 	reconcileErr error,
-// ) (res ctrl.Result, err error)
-
 type ObjectSetOrPhase interface {
 	ClientObject() client.Object
 	GetConditions() *[]metav1.Condition
@@ -971,7 +967,6 @@ func hasDiverged(
 	discoveryClient discovery.DiscoveryInterface,
 	desiredObject, actualObject *unstructured.Unstructured,
 ) (diverged bool, managerPaths map[string]*fieldpath.Set, err error) {
-
 	gvk := desiredObject.GroupVersionKind()
 
 	r := openapi3.NewRoot(discoveryClient.OpenAPIV3())
@@ -1066,96 +1061,18 @@ var stripSet = fieldpath.NewSet(
 	fieldpath.MakePathOrDie("metadata", "resourceVersion"),
 )
 
-// // DeducedParseableType is a ParseableType that deduces the type from
-// // the content of the object.
-// var DeducedParseableType typed.ParseableType = createOrDie(typed.YAMLObject(`
-// types:
-// - name: spod
-//   map:
-//     fields:
-//     - name: apiVersion
-//       type:
-//         scalar: string
-//     - name: kind
-//       type:
-//         scalar: string
-//     - name: metadata
-//       type:
-//         namedType: __untyped_deduced_
-//     - name: spec
-//       type:
-//         namedType: spod.spec
-// - name: spod.spec
-//   map:
-//     fields:
-//     - name: test
-//       type:
-//         scalar: string
-//     - name: containers
-//       type:
-//         list:
-//           elementType:
-//             namedType: spod.spec.container
-//           elementRelationship: associative
-//           keys:
-//           - name
-// - name: spod.spec.container
-//   map:
-//     fields:
-//     - name: name
-//       type:
-//         scalar: string
-//     - name: image
-//       type:
-//         scalar: string
-// - name: __untyped_atomic_
-//   scalar: untyped
-//   list:
-//     elementType:
-//       namedType: __untyped_atomic_
-//     elementRelationship: atomic
-//   map:
-//     elementType:
-//       namedType: __untyped_atomic_
-//     elementRelationship: atomic
-// - name: __untyped_deduced_
-//   scalar: untyped
-//   list:
-//     elementType:
-//       namedType: __untyped_atomic_
-//     elementRelationship: atomic
-//   map:
-//     elementType:
-//       namedType: __untyped_deduced_
-//     elementRelationship: separable
-// `)).Type("spod")
-
-// func createOrDie(schema typed.YAMLObject) *typed.Parser {
-// 	p, err := create(schema)
-// 	if err != nil {
-// 		panic(fmt.Errorf("failed to create parser: %v", err))
-// 	}
-// 	return p
-// }
-
-// // create builds an unvalidated parser.
-// func create(s typed.YAMLObject) (*typed.Parser, error) {
-// 	p := typed.Parser{}
-// 	err := yaml.Unmarshal([]byte(s), &p.Schema)
-// 	return &p, err
-// }
-
 func openAPICanonicalName(obj unstructured.Unstructured) (string, error) {
 	gvk := obj.GroupVersionKind()
 
 	var schemaTypeName string
 	o, err := scheme.Scheme.New(gvk)
-	if err != nil && runtime.IsNotRegisteredError(err) {
+	switch {
+	case err != nil && runtime.IsNotRegisteredError(err):
 		// Assume CRD
 		schemaTypeName = fmt.Sprintf("%s/%s.%s", gvk.Group, gvk.Version, gvk.Kind)
-	} else if err != nil {
+	case err != nil:
 		return "", err
-	} else {
+	default:
 		schemaTypeName = util.GetCanonicalTypeName(o)
 	}
 	return util.ToRESTFriendlyName(schemaTypeName), nil
