@@ -1005,15 +1005,11 @@ func hasDiverged(
 
 	desiredObject = desiredObject.DeepCopy()
 
-	// typedDesired, err := typed.DeducedParseableType.FromUnstructured(desiredObject.Object)
-	// typed.AsTyped()
-
 	tName, err := openAPICanonicalName(*desiredObject)
 	if err != nil {
 		return false, nil, err
 	}
 	typedDesired, err := parser.Type(tName).FromUnstructured(desiredObject.Object)
-	// typedDesired, err := DeducedParseableType.FromUnstructured(desiredObject.Object)
 	if err != nil {
 		return false, nil, fmt.Errorf("struct merge type conversion: %w", err)
 	}
@@ -1040,8 +1036,6 @@ func hasDiverged(
 			managerPaths[mf.Manager].Insert(p)
 		})
 	}
-	fmt.Println("DIFFFF!", diff.String(), managerPaths)
-
 	return !diff.Empty(), managerPaths, nil
 }
 
