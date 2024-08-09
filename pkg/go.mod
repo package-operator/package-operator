@@ -5,14 +5,14 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/google/cel-go v0.17.8
+	github.com/google/cel-go v0.21.0
 	github.com/stretchr/testify v1.9.0
 	k8s.io/apimachinery v0.30.3
 	k8s.io/apiserver v0.30.3
 )
 
 require (
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
