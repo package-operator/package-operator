@@ -42,5 +42,6 @@ func constructors() []any {
 		ProvideRolloutHistoryCmd,
 		ProvideKickstartCmd,
 		ProvideKickstarter,
+		ProvideRolloutRollbackCmd,
 	}
 }

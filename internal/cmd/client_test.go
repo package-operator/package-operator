@@ -300,7 +300,7 @@ func TestClient_GetObjectDeployment(t *testing.T) {
 		ObjectDeploymentName string
 		Options              []GetObjectDeploymentOption
 	}{
-		"objectdeployment not found": {
+		"Objectdeployment not found": {
 			Assertion:            require.Error,
 			ObjectDeploymentName: "dne",
 		},
@@ -345,6 +345,150 @@ func TestClient_GetObjectDeployment(t *testing.T) {
 
 			c := NewClient(fakeClient)
 			_, err = c.GetObjectDeployment(context.Background(), tc.ObjectDeploymentName, tc.Options...)
+			tc.Assertion(t, err)
+		})
+	}
+}
+
+func TestClient_PatchClusterObjectDeployment(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		ActualObjects        []client.Object
+		Assertion            require.ErrorAssertionFunc
+		ObjectDeploymentName string
+		ObjectSetObs         *corev1alpha1.ClusterObjectSet
+	}{
+		"ObjectDeployment not found": {
+			Assertion:            require.Error,
+			ObjectDeploymentName: "object-deployment",
+			ObjectSetObs: &corev1alpha1.ClusterObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-object-set",
+					Labels: map[string]string{
+						manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
+					},
+				},
+				Status: corev1alpha1.ClusterObjectSetStatus{
+					Revision: 1,
+				},
+			},
+		},
+		"ObjectDeployment found": {
+			ActualObjects: []client.Object{
+				&corev1alpha1.ClusterObjectDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "object-deployment",
+					},
+					Status: corev1alpha1.ClusterObjectDeploymentStatus{
+						Phase: corev1alpha1.ObjectDeploymentPhaseAvailable,
+					},
+				},
+			},
+			Assertion:            require.NoError,
+			ObjectDeploymentName: "object-deployment",
+			ObjectSetObs: &corev1alpha1.ClusterObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-object-set",
+					Labels: map[string]string{
+						manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
+					},
+				},
+				Status: corev1alpha1.ClusterObjectSetStatus{
+					Revision: 1,
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			scheme, err := NewScheme()
+			require.NoError(t, err)
+
+			fakeClient := fake.
+				NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.ActualObjects...).
+				Build()
+
+			c := NewClient(fakeClient)
+			err = c.PatchClusterObjectDeployment(context.Background(), tc.ObjectDeploymentName, *tc.ObjectSetObs)
+			tc.Assertion(t, err)
+		})
+	}
+}
+
+func TestClient_PatchObjectDeployment(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		ActualObjects        []client.Object
+		Assertion            require.ErrorAssertionFunc
+		ObjectDeploymentName string
+		namespace            string
+		ObjectSetObs         *corev1alpha1.ObjectSet
+	}{
+		"ObjectDeployment not found": {
+			Assertion:            require.Error,
+			ObjectDeploymentName: "object-deployment",
+			namespace:            "test",
+			ObjectSetObs: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-object-set",
+					Namespace: "test",
+					Labels: map[string]string{
+						manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
+					},
+				},
+				Status: corev1alpha1.ObjectSetStatus{
+					Revision: 1,
+				},
+			},
+		},
+		"ObjectDeployment found": {
+			ActualObjects: []client.Object{
+				&corev1alpha1.ObjectDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "object-deployment",
+						Namespace: "test",
+					},
+					Status: corev1alpha1.ObjectDeploymentStatus{
+						Phase: corev1alpha1.ObjectDeploymentPhaseAvailable,
+					},
+				},
+			},
+			Assertion:            require.NoError,
+			ObjectDeploymentName: "object-deployment",
+			namespace:            "test",
+			ObjectSetObs: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cluster-object-set",
+					Namespace: "test",
+					Labels: map[string]string{
+						manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
+					},
+				},
+				Status: corev1alpha1.ObjectSetStatus{
+					Revision: 1,
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			scheme, err := NewScheme()
+			require.NoError(t, err)
+
+			fakeClient := fake.
+				NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.ActualObjects...).
+				Build()
+
+			c := NewClient(fakeClient)
+			err = c.PatchObjectDeployment(context.Background(), tc.ObjectDeploymentName, tc.namespace, *tc.ObjectSetObs)
 			tc.Assertion(t, err)
 		})
 	}
