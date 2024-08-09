@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: i-should-stay
+  annotations:
+    package-operator.run/phase: deploy
+data:
+  key1: test123
