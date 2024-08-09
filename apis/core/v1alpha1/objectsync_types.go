@@ -4,16 +4,41 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ObjectSync synchronizes a singlular source object
+// SecretSync synchronizes a singlular source object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName={"objsync","osync","os"}
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type ObjectSync struct {
+type SecretSync struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:Required
-	Src SyncedObjectReference `json:"src"`
+	Spec SecretSyncSpec `json:"spec"`
+
+	// +kubebuilder:default={phase:Pending}
+	Status SecretSyncStatus `json:"status,omitempty"`
+}
+
+// SecretSyncList contains a list of SecretSyncs.
+// +kubebuilder:object:root=true
+type SecretSyncList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []SecretSync `json:"items"`
+}
+
+// SecretSyncSpec contains the desired config if an SecretSync.
+type SecretSyncSpec struct {
+	// Disables reconciliation of the SecretSync.
+	// Only Status updates will still be reported, but object changes will not be reconciled.
+	// +optional
+	Paused bool `json:"paused,omitempty"`
+
+	// +kubebuilder:default={watch:{}}
+	Strategy SecretSyncStrategy `json:"strategy"`
+
+	// +kubebuilder:validation:Required
+	Src NamespacedName `json:"src"`
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:MaxItems=32
@@ -21,36 +46,64 @@ type ObjectSync struct {
 	Dest []NamespacedName `json:"dest"`
 }
 
-// ObjectSyncList contains a list of ObjectSyncs.
-// +kubebuilder:object:root=true
-type ObjectSyncList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ObjectSync `json:"items"`
+// SecretSyncStatus contains the observed state of a SecretSync.
+type SecretSyncStatus struct {
+	// Conditions is a list of status conditions ths object is in.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Phase is not part of any API contract
+	// it will go away as soon as kubectl can print conditions!
+	// When evaluating object state in code, use .Conditions instead.
+	Phase SecretSyncStatusPhase `json:"phase,omitempty"`
+	// TODO: maybe include last sync timestamp
+	// References all objects controlled by this instance.
+	ControllerOf []NamespacedName `json:"controllerOf,omitempty"`
 }
 
-// func init() { register(&ObjectSync{}, &ClusterObjectSliceList{}) }
+// SecretSyncStrategy configures which strategy is used for synchronization. Exactly one strategy must be configured at any given time.
+// Defaults to the `Watch` strategy if not specified.
+// +kubebuilder:validation:XValidation:rule="self.exists_one(_, true)", message="exactly one strategy is must be configured"
+//
+//nolint:lll
+type SecretSyncStrategy struct {
+	// The `Poll` strategy synchronizes source and destinations in regular intervals which can be configured.
+	Poll *SecretSyncStrategyPoll `json:"poll,omitempty"`
 
-// SyncedObjectReference an object synchronized by this ObjectSync.
-type SyncedObjectReference struct {
-	// Object Kind. Only ConfigMaps and Secrets allowed for now.
-	// +kubebuilder:validation:Enum=ConfigMap;Secret
-	Kind string `json:"kind"`
-	// Object Name.
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
-	// Object Namespace.
-	// +kubebuilder:validation:Required
-	Namespace string `json:"namespace"`
-	// Wether source object should be marked with a label that allows PKO to cache the object.
-	// Defaults to true but it can be toggled off in case there are conflicts with other controllers of the source object.
-	// TODO: If this is turned off, a reconciliation interval has to be defined.
-	// +kubebuilder:default=true
-	Mark bool `json:"mark"`
+	// The `Watch` strategy watches the source object for changes and queues re-synchronization whenever a the manager observes a write to a source.
+	// Caution: package-operator will add a label to the source object to make it visible to its in-memory caches which can lead to a write cascade on the object
+	// if it is managed by a controller that insists on owning the full shape of the object. You can use the `Poll` strategy instead if you observe this happening,
+	// and have reasons not to change the behaviour of the controller in question.
+	Watch *SecretSyncStrategyWatch `json:"watch,omitempty"`
 }
 
-// NamespacedName.
+// SecretSyncStrategyPoll contains configuration for the `Poll` sync strategy.
+type SecretSyncStrategyPoll struct {
+	// Specifies the poll interval as a string which can be parsed to a time.Duration
+	// by [time.ParseDuration](https://pkg.go.dev/time#ParseDuration).
+	// +kubebuilder:validation:Required
+	Interval metav1.Duration `json:"interval"`
+}
+
+// SecretSyncStrategyWatch contains configuration for the `Watch` sync strategy.
+type SecretSyncStrategyWatch struct{}
+
+// NamespacedName container.
 type NamespacedName struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
 }
+
+// SecretSyncStatusPhase defines the status phase of a SecretSync object.
+type SecretSyncStatusPhase string
+
+// Well-known SecretSync Phases for printing a Status in kubectl,
+// see deprecation notice in SecretSyncStatus for details.
+const (
+	// Default phase, when object is created and has not been serviced by a controller yet.
+	SecretSyncStatusPhasePending SecretSyncStatusPhase = "Pending"
+	// Sync maps to Sync condition == True, if not overridden by a more specific status below.
+	SecretSyncStatusPhaseSync SecretSyncStatusPhase = "Sync"
+	// Paused maps to the Paused condition.
+	SecretSyncStatusPhasePaused SecretSyncStatusPhase = "Paused"
+)
+
+// func init() { register(&SecretSync{}, &ClusterObjectSliceList{}) }
