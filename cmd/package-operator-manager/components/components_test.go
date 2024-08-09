@@ -34,3 +34,18 @@ func TestUncachedClient(t *testing.T) {
 	require.EqualError(t, err,
 		"unable to set up uncached client: must provide non-nil rest.Config to client.New")
 }
+
+func TestProvideRestConfig(t *testing.T) {
+	t.Parallel()
+
+	_, err := ProvideRestConfig()
+	require.EqualError(t, err, "invalid configuration: no configuration has been provided"+
+		", try setting KUBERNETES_MASTER environment variable")
+}
+
+func TestProvideManager(t *testing.T) {
+	t.Parallel()
+
+	_, err := ProvideManager(nil, nil, Options{})
+	require.EqualError(t, err, "must specify Config")
+}
