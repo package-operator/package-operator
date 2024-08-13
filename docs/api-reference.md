@@ -13,9 +13,9 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ObjectSet](#objectset)
 * [ObjectSetPhase](#objectsetphase)
 * [ObjectSlice](#objectslice)
-* [ObjectSync](#objectsync)
 * [ObjectTemplate](#objecttemplate)
 * [Package](#package)
+* [SecretSync](#secretsync)
 
 
 ### ClusterObjectDeployment
@@ -569,37 +569,6 @@ objects:
 | `objects` <b>required</b><br><a href="#objectsetobject">[]ObjectSetObject</a> |  |
 
 
-### ObjectSync
-
-ObjectSync synchronizes a singlular source object
-
-
-**Example**
-
-```yaml
-apiVersion: package-operator.run/v1alpha1
-dest:
-- name: diam
-  namespace: sed
-kind: ObjectSync
-metadata:
-  name: example
-src:
-  kind: consetetur
-  mark: true
-  name: sadipscing
-  namespace: elitr
-
-```
-
-
-| Field | Description |
-| ----- | ----------- |
-| `metadata` <br>metav1.ObjectMeta |  |
-| `src` <b>required</b><br><a href="#syncedobjectreference">SyncedObjectReference</a> | SyncedObjectReference an object synchronized by this ObjectSync. |
-| `dest` <b>required</b><br><a href="#namespacedname">[]NamespacedName</a> |  |
-
-
 ### ObjectTemplate
 
 ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
@@ -617,15 +586,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: eirmod
+  - apiVersion: sadipscing
     items:
-    - destination: sit
-      key: dolor
-    kind: tempor
-    name: ipsum
-    namespace: lorem
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
     optional: "true"
-  template: nonumy
+  template: consetetur
 status:
   conditions:
   - metav1.Condition
@@ -674,6 +643,40 @@ status:
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#packagespec">PackageSpec</a> | PackageSpec specifies a package. |
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
+
+
+### SecretSync
+
+SecretSync synchronizes a singlular source object
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: SecretSync
+metadata:
+  name: example
+spec:
+  dest:
+  - name: amet
+    namespace: sit
+  paused: "true"
+  src:
+    name: dolor
+    namespace: ipsum
+  strategy: '{watch:{}}'
+status:
+  phase:Pending: null
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <b>required</b><br><a href="#secretsyncspec">SecretSyncSpec</a> | SecretSyncSpec contains the desired config if an SecretSync. |
+| `status` <br><a href="#secretsyncstatus">SecretSyncStatus</a> | SecretSyncStatus contains the observed state of a SecretSync. |
 
 
 
@@ -816,7 +819,7 @@ Used in:
 
 ### NamespacedName
 
-NamespacedName.
+NamespacedName container.
 
 | Field | Description |
 | ----- | ----------- |
@@ -825,7 +828,9 @@ NamespacedName.
 
 
 Used in:
-* [ObjectSync](#objectsync)
+* [SecretSyncSpec](#secretsyncspec)
+* [SecretSyncSpec](#secretsyncspec)
+* [SecretSyncStatus](#secretsyncstatus)
 
 
 ### ObjectDeploymentSpec
@@ -1231,20 +1236,63 @@ Used in:
 * [ObjectSetStatus](#objectsetstatus)
 
 
-### SyncedObjectReference
+### SecretSyncSpec
 
-SyncedObjectReference an object synchronized by this ObjectSync.
+SecretSyncSpec contains the desired config if an SecretSync.
 
 | Field | Description |
 | ----- | ----------- |
-| `kind` <b>required</b><br>string | Object Kind. Only ConfigMaps and Secrets allowed for now. |
-| `name` <b>required</b><br>string | Object Name. |
-| `namespace` <b>required</b><br>string | Object Namespace. |
-| `mark` <b>required</b><br><a href="#bool">bool</a> | Wether source object should be marked with a label that allows PKO to cache the object.<br>Defaults to true but it can be toggled off in case there are conflicts with other controllers of the source object. |
+| `paused` <br><a href="#bool">bool</a> | Disables reconciliation of the SecretSync.<br>Only Status updates will still be reported, but object changes will not be reconciled. |
+| `strategy` <b>required</b><br><a href="#secretsyncstrategy">SecretSyncStrategy</a> | SecretSyncStrategy configures which strategy is used for synchronization. Exactly one strategy must be configured at any given time.<br>Defaults to the `Watch` strategy if not specified. |
+| `src` <b>required</b><br><a href="#namespacedname">NamespacedName</a> | NamespacedName container. |
+| `dest` <b>required</b><br><a href="#namespacedname">[]NamespacedName</a> |  |
 
 
 Used in:
-* [ObjectSync](#objectsync)
+* [SecretSync](#secretsync)
+
+
+### SecretSyncStatus
+
+SecretSyncStatus contains the observed state of a SecretSync.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#secretsyncstatusphase">SecretSyncStatusPhase</a> | Phase is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `controllerOf` <br><a href="#namespacedname">[]NamespacedName</a> | References all objects controlled by this instance. |
+
+
+Used in:
+* [SecretSync](#secretsync)
+
+
+### SecretSyncStrategy
+
+SecretSyncStrategy configures which strategy is used for synchronization. Exactly one strategy must be configured at any given time.
+Defaults to the `Watch` strategy if not specified.
+
+| Field | Description |
+| ----- | ----------- |
+| `poll` <br><a href="#secretsyncstrategypoll">SecretSyncStrategyPoll</a> | The `Poll` strategy synchronizes source and destinations in regular intervals which can be configured. |
+| `watch` <br><a href="#secretsyncstrategywatch">SecretSyncStrategyWatch</a> | The `Watch` strategy watches the source object for changes and queues re-synchronization whenever a the manager observes a write to a source.<br>Caution: package-operator will add a label to the source object to make it visible to its in-memory caches which can lead to a write cascade on the object<br>if it is managed by a controller that insists on owning the full shape of the object. You can use the `Poll` strategy instead if you observe this happening,<br>and have reasons not to change the behaviour of the controller in question. |
+
+
+Used in:
+* [SecretSyncSpec](#secretsyncspec)
+
+
+### SecretSyncStrategyPoll
+
+SecretSyncStrategyPoll contains configuration for the `Poll` sync strategy.
+
+| Field | Description |
+| ----- | ----------- |
+| `interval` <b>required</b><br>metav1.Duration | Specifies the poll interval as a string which can be parsed to a time.Duration<br>by [time.ParseDuration](https://pkg.go.dev/time#ParseDuration). |
+
+
+Used in:
+* [SecretSyncStrategy](#secretsyncstrategy)
 ## manifests.package-operator.run/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,

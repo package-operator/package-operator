@@ -57,6 +57,9 @@ func NewComponents() (*dig.Container, error) {
 
 		// HostedCluster
 		ProvideHostedClusterController,
+
+		// SecretSync
+		ProvideSecretSyncController,
 	}
 	for _, p := range providers {
 		if err := container.Provide(p); err != nil {

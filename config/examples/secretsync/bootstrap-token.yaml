@@ -1,0 +1,15 @@
+apiVersion: package-operator.run/v1alpha1
+kind: SecretSync
+metadata:
+  name: bootstrap-token
+spec:
+  strategy:
+    watch: {}
+  src:
+    namespace: kube-system
+    name: bootstrap-token-abcdef
+  dest:
+  - namespace: default
+    name: synced-bootstrap-token-2
+  - namespace: default
+    name: synced-bootstrap-token
