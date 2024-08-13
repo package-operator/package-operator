@@ -109,7 +109,6 @@ func newGenericObjectTemplateController(
 			preflight.NewAPIExistence(
 				restMapper,
 				preflight.List{
-					preflight.NewNoOwnerReferences(restMapper),
 					preflight.NewEmptyNamespaceNoDefault(restMapper),
 					preflight.NewNamespaceEscalation(restMapper),
 				},

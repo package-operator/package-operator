@@ -28,6 +28,32 @@ subjects:
   name: package-operator
   namespace: package-operator-system
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    package-operator.run/phase: rbac
+  labels:
+    package-operator.run/cache: "True"
+  name: package-operator-packages
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: Group
+  name: pko:clusterpackages
+- kind: Group
+  name: pko:clusterobjectdeployments
+- kind: Group
+  name: pko:clusterobjectsets
+- kind: Group
+  name: pko:packages
+- kind: Group
+  name: pko:objectdeployments
+- kind: Group
+  name: pko:objectsets
+---
 apiVersion: batch/v1
 kind: Job
 metadata:

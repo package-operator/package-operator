@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -296,8 +297,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client, client,
-			mapper,
+			dc, client, class, client,
+			mapper, rest.Config{},
 		)
 
 		require.NotNil(t, ctrl)
@@ -308,8 +309,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client, client,
-			mapper,
+			dc, client, class, client,
+			mapper, rest.Config{},
 		)
 
 		require.NotNil(t, ctrl)
@@ -321,7 +322,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewSameClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client,
-			mapper,
+			mapper, rest.Config{},
 		)
 
 		require.NotNil(t, ctrl)
@@ -333,7 +334,7 @@ func TestInitializers(t *testing.T) {
 		ctrl := NewSameClusterClusterObjectSetPhaseController(
 			log, scheme,
 			dc, client, class, client,
-			mapper,
+			mapper, rest.Config{},
 		)
 
 		require.NotNil(t, ctrl)

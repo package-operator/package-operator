@@ -28,6 +28,7 @@ func ProvideObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), dc, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			*mgr.GetConfig(),
 		),
 	}
 }
@@ -44,6 +45,7 @@ func ProvideClusterObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), dc, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			*mgr.GetConfig(),
 		),
 	}
 }
