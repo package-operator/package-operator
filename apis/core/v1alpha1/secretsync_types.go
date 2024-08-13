@@ -6,7 +6,8 @@ import (
 
 // SecretSync synchronizes a singlular source object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster,shortName={"objsync","osync","os"}
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,shortName={"ssync"}
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type SecretSync struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -42,7 +43,7 @@ type SecretSyncSpec struct {
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:MaxItems=32
-	// +kubebuilder:validation:UniqueItems=true
+	// +list-type=set
 	Dest []NamespacedName `json:"dest"`
 }
 
@@ -61,7 +62,7 @@ type SecretSyncStatus struct {
 
 // SecretSyncStrategy configures which strategy is used for synchronization. Exactly one strategy must be configured at any given time.
 // Defaults to the `Watch` strategy if not specified.
-// +kubebuilder:validation:XValidation:rule="self.exists_one(_, true)", message="exactly one strategy is must be configured"
+// +kubebuilder:validation:XValidation:rule="(has(self.poll) && !has(self.watch)) || (!has(self.poll) && has(self.watch))", message="exactly one strategy is must be configured"
 //
 //nolint:lll
 type SecretSyncStrategy struct {
@@ -106,4 +107,4 @@ const (
 	SecretSyncStatusPhasePaused SecretSyncStatusPhase = "Paused"
 )
 
-// func init() { register(&SecretSync{}, &ClusterObjectSliceList{}) }
+func init() { register(&SecretSync{}, &SecretSyncList{}) }

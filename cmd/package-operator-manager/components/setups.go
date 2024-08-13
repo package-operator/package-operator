@@ -52,6 +52,8 @@ type AllControllers struct {
 
 	ObjectTemplate        ObjectTemplateController
 	ClusterObjectTemplate ClusterObjectTemplateController
+
+	SecretSync SecretSyncController
 }
 
 func (ac AllControllers) List() []any {
@@ -61,6 +63,7 @@ func (ac AllControllers) List() []any {
 		ac.ObjectDeployment, ac.ClusterObjectDeployment,
 		ac.Package, ac.ClusterPackage,
 		ac.ObjectTemplate, ac.ClusterObjectTemplate,
+		ac.SecretSync,
 	}
 }
 
@@ -105,6 +108,10 @@ func (ac AllControllers) SetupWithManager(mgr ctrl.Manager) error {
 		{
 			name:       "ClusterObjectTemplate",
 			controller: ac.ClusterObjectTemplate,
+		},
+		{
+			name:       "SecretSync",
+			controller: ac.SecretSync,
 		},
 	})
 }
