@@ -16,19 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-)
-
-const (
-	// This label is set on all dynamic objects to limit caches.
-	DynamicCacheLabel = "package-operator.run/cache"
-	// Common finalizer to free allocated caches when objects are deleted.
-	CachedFinalizer = "package-operator.run/cached"
-	// Records cause of change for history keeping.
-	ChangeCauseAnnotation = "kubernetes.io/change-cause"
-	// Causes PKO to skip ownership checks, used during self-bootstrap.
-	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
-	// Name of the PKO field manager for server-side apply.
-	FieldOwner = "package-operator"
+	"package-operator.run/internal/constants"
 )
 
 // Ensures the given finalizer is set and persisted on the given object.
@@ -88,7 +76,7 @@ func RemoveFinalizer(
 func EnsureCachedFinalizer(
 	ctx context.Context, c client.Client, obj client.Object,
 ) error {
-	return EnsureFinalizer(ctx, c, obj, CachedFinalizer)
+	return EnsureFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
 
 type cacheFreer interface {
@@ -104,7 +92,7 @@ func FreeCacheAndRemoveFinalizer(
 		return fmt.Errorf("free cache: %w", err)
 	}
 
-	return RemoveFinalizer(ctx, c, obj, CachedFinalizer)
+	return RemoveFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
 
 type isControllerChecker interface {
@@ -186,7 +174,7 @@ func AddDynamicCacheLabel(
 		labels = map[string]string{}
 	}
 
-	labels[DynamicCacheLabel] = "True" //nolint:goconst
+	labels[constants.DynamicCacheLabel] = "True" //nolint:goconst
 	updated.SetLabels(labels)
 
 	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {
@@ -203,7 +191,7 @@ func RemoveDynamicCacheLabel(
 
 	labels := updated.GetLabels()
 
-	delete(labels, DynamicCacheLabel)
+	delete(labels, constants.DynamicCacheLabel)
 	updated.SetLabels(labels)
 
 	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {

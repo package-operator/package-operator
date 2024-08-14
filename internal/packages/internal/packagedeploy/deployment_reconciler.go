@@ -18,7 +18,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/utils"
 )
@@ -102,7 +102,7 @@ func (r *DeploymentReconciler) Reconcile(
 			actualDeploy.ClientObject().GetAnnotations(),
 			desiredDeploy.ClientObject().GetAnnotations(),
 		)
-		annotations[controllers.ChangeCauseAnnotation] = getChangeCause(actualDeploy, desiredDeploy)
+		annotations[constants.ChangeCauseAnnotation] = getChangeCause(actualDeploy, desiredDeploy)
 		actualDeploy.ClientObject().SetAnnotations(annotations)
 
 		labels := labels.Merge(
@@ -352,7 +352,7 @@ func getChangeCause(
 
 	if len(changes) == 0 {
 		// retain old message.
-		return actualAnnotations[controllers.ChangeCauseAnnotation]
+		return actualAnnotations[constants.ChangeCauseAnnotation]
 	}
 
 	return fmt.Sprintf("Package %s changed.", strings.Join(changes, " and "))

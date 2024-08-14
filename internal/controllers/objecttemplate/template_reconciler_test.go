@@ -20,7 +20,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
@@ -70,7 +70,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 
 	if assert.NotNil(t, srcObj) {
 		assert.Equal(t, map[string]string{
-			controllers.DynamicCacheLabel: "True",
+			constants.DynamicCacheLabel: "True",
 		}, srcObj.GetLabels())
 	}
 	client.AssertCalled(
@@ -416,7 +416,7 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
-							controllers.CachedFinalizer,
+							constants.CachedFinalizer,
 						},
 					},
 					Spec: corev1alpha1.ObjectTemplateSpec{
@@ -601,7 +601,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{
-						controllers.CachedFinalizer,
+						constants.CachedFinalizer,
 					},
 				},
 				Spec: corev1alpha1.ObjectTemplateSpec{
@@ -649,7 +649,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{
-						controllers.CachedFinalizer,
+						constants.CachedFinalizer,
 					},
 				},
 				Spec: corev1alpha1.ObjectTemplateSpec{
@@ -699,7 +699,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{
-						controllers.CachedFinalizer,
+						constants.CachedFinalizer,
 					},
 				},
 				Spec: corev1alpha1.ObjectTemplateSpec{

@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
@@ -114,7 +115,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
-							controllers.CachedFinalizer,
+							constants.CachedFinalizer,
 						},
 					},
 				},
@@ -379,7 +380,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
-							controllers.CachedFinalizer,
+							constants.CachedFinalizer,
 						},
 					},
 				},

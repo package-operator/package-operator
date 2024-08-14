@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
 )
 
@@ -232,7 +233,7 @@ func TestAddDynamicCacheLabel(t *testing.T) {
 	t.Parallel()
 
 	expectedLabels := map[string]string{
-		DynamicCacheLabel: "True",
+		constants.DynamicCacheLabel: "True",
 	}
 
 	object := &unstructured.Unstructured{}
@@ -262,7 +263,7 @@ func TestRemoveDynamicCacheLabel(t *testing.T) {
 		Object: map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
-					DynamicCacheLabel: "True",
+					constants.DynamicCacheLabel: "True",
 				},
 			},
 		},

@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	apis "package-operator.run/apis"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/objectsetphases"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/metrics"
@@ -185,7 +185,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			// so we prevent our caches from exploding!
 			schema.GroupVersionKind{}: dynamiccache.Selector{
 				Label: labels.SelectorFromSet(labels.Set{
-					controllers.DynamicCacheLabel: "True",
+					constants.DynamicCacheLabel: "True",
 				}),
 			},
 		})

@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
@@ -298,7 +299,7 @@ func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 	// When removing the finalizer this function may be called one last time.
 	// .Teardown may allocate new watches and leave dangling watches.
 	if controllerutil.ContainsFinalizer(
-		objectSetPhase.ClientObject(), controllers.CachedFinalizer) {
+		objectSetPhase.ClientObject(), constants.CachedFinalizer) {
 		var err error
 		done, err = c.teardownHandler.Teardown(ctx, objectSetPhase)
 		if err != nil {

@@ -18,7 +18,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
 )
 
@@ -330,7 +330,7 @@ func Test_getChangeCause(t *testing.T) {
 				Annotations: map[string]string{
 					manifestsv1alpha1.PackageSourceImageAnnotation: "quay.io/xxx/some:thing",
 					manifestsv1alpha1.PackageConfigAnnotation:      "{}",
-					controllers.ChangeCauseAnnotation:              deploy1Cause,
+					constants.ChangeCauseAnnotation:                deploy1Cause,
 				},
 			},
 		},

@@ -19,6 +19,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/ownerhandling"
@@ -324,7 +325,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 
 	// When removing the finalizer this function may be called one last time.
 	// .Teardown may allocate new watches and leave dangling watches.
-	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), controllers.CachedFinalizer) {
+	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), constants.CachedFinalizer) {
 		var err error
 		done, err = c.teardownHandler.Teardown(ctx, objectSet)
 		if err != nil {

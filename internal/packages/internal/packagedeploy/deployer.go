@@ -17,7 +17,7 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 	"package-operator.run/internal/packages/internal/packagerender"
 	"package-operator.run/internal/packages/internal/packagestructure"
@@ -192,7 +192,7 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	annotations := map[string]string{
 		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetImage(),
 		manifestsv1alpha1.PackageConfigAnnotation:      string(configJSON),
-		controllers.ChangeCauseAnnotation: fmt.Sprintf(
+		constants.ChangeCauseAnnotation: fmt.Sprintf(
 			"Installing %s package.", pkgInstance.Manifest.Name),
 	}
 
