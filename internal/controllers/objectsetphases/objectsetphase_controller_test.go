@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/testutil"
 )
@@ -148,7 +148,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 
 			objectSetPhase := GenericObjectSetPhase{}
 			objectSetPhase.Finalizers = []string{
-				controllers.CachedFinalizer,
+				constants.CachedFinalizer,
 			}
 			objectSetPhase.Labels = map[string]string{
 				corev1alpha1.ObjectSetPhaseClassLabel: test.class,
@@ -219,7 +219,7 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{
 				ObjectSetPhase: corev1alpha1.ObjectSetPhase{
 					ObjectMeta: metav1.ObjectMeta{Finalizers: []string{
-						controllers.CachedFinalizer,
+						constants.CachedFinalizer,
 					}},
 				},
 			})

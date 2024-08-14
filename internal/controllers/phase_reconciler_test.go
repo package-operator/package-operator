@@ -21,6 +21,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 )
@@ -587,7 +588,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]any{
-					DynamicCacheLabel:                      "True",
+					constants.DynamicCacheLabel:            "True",
 					manifestsv1alpha1.PackageLabel:         "pkg-label",
 					manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
 				},
@@ -631,7 +632,7 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 					corev1alpha1.ObjectSetRevisionAnnotation: "5",
 				},
 				"labels": map[string]any{
-					DynamicCacheLabel: "True",
+					constants.DynamicCacheLabel: "True",
 				},
 				"namespace": "my-owner-ns",
 			},
@@ -1345,7 +1346,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 							"name":      "external",
 							"namespace": "owner-ns",
 							"labels": map[string]any{
-								DynamicCacheLabel: "True",
+								constants.DynamicCacheLabel: "True",
 							},
 						},
 					},
@@ -1463,7 +1464,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 						labels = make(map[string]string)
 					}
 
-					labels[DynamicCacheLabel] = "True"
+					labels[constants.DynamicCacheLabel] = "True"
 
 					obj.SetLabels(labels)
 				}).Return(nil)
@@ -1502,7 +1503,7 @@ func TestPhaseReconciler_observeExternalObject(t *testing.T) {
 					labels = make(map[string]string)
 				}
 
-				labels[DynamicCacheLabel] = "True"
+				labels[constants.DynamicCacheLabel] = "True"
 
 				observed.SetLabels(labels)
 
@@ -1584,7 +1585,7 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 func hasDynamicCacheLabel(obj corev1alpha1.ObjectSetObject) bool {
 	labels := obj.Object.GetLabels()
 
-	return labels != nil && labels[DynamicCacheLabel] == "True"
+	return labels != nil && labels[constants.DynamicCacheLabel] == "True"
 }
 
 type preflightCheckerMock struct {

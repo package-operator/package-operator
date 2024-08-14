@@ -12,7 +12,7 @@ import (
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap/proxy"
 	"package-operator.run/cmd/package-operator-manager/components"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/packages"
 )
@@ -100,7 +100,7 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 
 	// Force Adoption of objects during initial bootstrap to take ownership of
 	// CRDs, Namespace, ServiceAccount and ClusterRoleBinding.
-	if err := os.Setenv(controllers.ForceAdoptionEnvironmentVariable, "1"); err != nil {
+	if err := os.Setenv(constants.ForceAdoptionEnvironmentVariable, "1"); err != nil {
 		return err
 	}
 	if err := runManager(ctx); err != nil {

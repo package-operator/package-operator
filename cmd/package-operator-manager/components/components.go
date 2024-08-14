@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	apis "package-operator.run/apis"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/environment"
@@ -111,7 +111,7 @@ func ProvideManager(
 				// Limit caches to only contain Jobs that we create ourselves.
 				&batchv1.Job{}: {
 					Label: labels.SelectorFromSet(labels.Set{
-						controllers.DynamicCacheLabel: "True",
+						constants.DynamicCacheLabel: "True",
 					}),
 				},
 			},
@@ -153,7 +153,7 @@ func ProvideDynamicCache(
 			// so we prevent our caches from exploding!
 			schema.GroupVersionKind{}: dynamiccache.Selector{
 				Label: labels.SelectorFromSet(labels.Set{
-					controllers.DynamicCacheLabel: "True",
+					constants.DynamicCacheLabel: "True",
 				}),
 			},
 		})

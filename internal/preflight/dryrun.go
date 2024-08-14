@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"package-operator.run/internal/constants"
 )
 
 type DryRun struct {
@@ -31,7 +33,7 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 
 	patch := client.RawPatch(types.ApplyPatchType, objectPatch)
 	dst := obj.DeepCopyObject().(*unstructured.Unstructured)
-	err = p.client.Patch(ctx, dst, patch, client.FieldOwner("package-operator"), client.ForceOwnership, client.DryRunAll)
+	err = p.client.Patch(ctx, dst, patch, client.FieldOwner(constants.FieldOwner), client.ForceOwnership, client.DryRunAll)
 
 	if apimachineryerrors.IsNotFound(err) {
 		err = p.client.Create(ctx, obj.DeepCopyObject().(client.Object), client.DryRunAll)

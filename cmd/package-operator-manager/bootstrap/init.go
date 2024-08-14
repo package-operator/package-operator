@@ -18,7 +18,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/objectdeployments"
 )
 
@@ -250,7 +250,7 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		if labels == nil {
 			labels = map[string]string{}
 		}
-		labels[controllers.DynamicCacheLabel] = "True"
+		labels[constants.DynamicCacheLabel] = "True"
 		crd.SetLabels(labels)
 
 		log.Info("ensuring CRD", "name", crd.GetName())

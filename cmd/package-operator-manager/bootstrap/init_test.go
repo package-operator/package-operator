@@ -21,7 +21,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
 )
 
@@ -418,7 +418,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 
 	for _, crd := range crds {
 		assert.Equal(t, map[string]string{
-			controllers.DynamicCacheLabel: "True",
+			constants.DynamicCacheLabel: "True",
 		}, crd.GetLabels())
 	}
 	c.AssertExpectations(t)
