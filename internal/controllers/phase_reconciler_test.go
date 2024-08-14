@@ -1723,3 +1723,72 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		um.AssertExpectations(t)
 	})
 }
+
+func Test_openAPICanonicalName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		obj  unstructured.Unstructured
+		cn   string
+	}{
+		{
+			name: "Pod",
+			obj: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+				},
+			},
+			cn: "io.k8s.api.core.v1.Pod",
+		},
+		{
+			name: "Secret",
+			obj: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Secret",
+				},
+			},
+			cn: "io.k8s.api.core.v1.Secret",
+		},
+		{
+			name: "Deployment",
+			obj: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "apps/v1",
+					"kind":       "Deployment",
+				},
+			},
+			cn: "io.k8s.api.apps.v1.Deployment",
+		},
+		{
+			name: "RoleBinding",
+			obj: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "rbac.authorization.k8s.io/v1",
+					"kind":       "RoleBinding",
+				},
+			},
+			cn: "io.k8s.api.rbac.v1.RoleBinding",
+		},
+		{
+			name: "PKO CRD",
+			obj: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "package-operator.run/v1alpha1",
+					"kind":       "Package",
+				},
+			},
+			cn: "run.package-operator.v1alpha1.Package",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			cn, err := openAPICanonicalName(test.obj)
+			require.NoError(t, err)
+			assert.Equal(t, test.cn, cn)
+		})
+	}
+}

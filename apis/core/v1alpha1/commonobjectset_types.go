@@ -119,6 +119,11 @@ const (
 	// InTransition condition is True when the ObjectSet is not in control of all objects defined in spec.
 	// This holds true during rollout of the first instance or while handing over objects between two ObjectSets.
 	ObjectSetInTransition = "InTransition"
+	// Diverged condition is set to True when the ObjectSet detects objects under management have
+	// changed from their expected value.
+	// This can happen with manual changes to objects, when the ObjectSet is paused or
+	// during handover to a new ObjectSet.
+	ObjectSetDiverged = "Diverged"
 )
 
 // ObjectSetStatusPhase defines the status phase of an object set.
