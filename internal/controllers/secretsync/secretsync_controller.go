@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/dynamiccachehandling"
 	"package-operator.run/internal/ownerhandling"
 )
 
@@ -79,48 +81,70 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log := c.log.WithValues("SecretSync", req.String())
 	defer log.Info("reconciled")
 
+	// Get SecretSync from cluster.
 	secretSync := &v1alpha1.SecretSync{}
 	if err := c.client.Get(ctx, req.NamespacedName, secretSync); err != nil {
 		return ctrl.Result{}, fmt.Errorf("getting Secretsync: %w", err)
 	}
 
-	sourceObject := &v1.Secret{}
+	// Do nothing if object is deleting and sync strategy is "poll".
+	if !secretSync.DeletionTimestamp.IsZero() && secretSync.Spec.Strategy.Poll != nil {
+		return ctrl.Result{}, nil
+	}
 
+	// Get source Secret.
+	srcSecret := &v1.Secret{}
 	if err := c.client.Get(ctx, types.NamespacedName{
 		Namespace: secretSync.Spec.Src.Namespace,
 		Name:      secretSync.Spec.Src.Name,
-	}, sourceObject); err != nil {
+	}, srcSecret); err != nil {
 		return ctrl.Result{}, fmt.Errorf("getting source object: %w", err)
 	}
 
-	// TODO: keep track of controlled objects
+	// TODO: The cache label removal on srcSecret should be guarded by a finalizer, right?
+
+	// Do nothing except releasing the srcSecret from our syncStrategy if object is deleting.
+	if !secretSync.DeletionTimestamp.IsZero() {
+		// Refactoring / API-Extension guard: Panic if we got here but the strategy is not "watch".
+		// This should only ever happen if a new strategy was introduced and the implementation
+		// of this controller wasn't changed to reflect that or the code was refactored.
+		if secretSync.Spec.Strategy.Watch == nil {
+			panic(
+				fmt.Errorf("ENOTIMPLEMENTED: deleted secret sync not employ .spec.strategy.poll even though it is expected in the code: %s",
+					secretSync.Namespace,
+					secretSync.Name,
+				),
+			)
+		}
+
+		if err := dynamiccachehandling.RemoveDynamicCacheLabel(ctx, c.client, secretSync); err != nil {
+			return ctrl.Result{}, fmt.Errorf("removing dynamic cache label from source secret: %w")
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	// Keep track of controlled objects.
 	controllerOf := []v1alpha1.NamespacedName{}
 	controllerOfLUT := map[v1alpha1.NamespacedName]struct{}{}
 
+	// Sync to destination secrets.
 	for _, dest := range secretSync.Spec.Dest {
-		targetObject := &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: dest.Namespace,
-				Name:      dest.Name,
+		targetObject := srcSecret.DeepCopy()
+		targetObject.ObjectMeta = metav1.ObjectMeta{
+			Namespace: dest.Namespace,
+			Name:      dest.Name,
+			Labels: map[string]string{
+				controllers.DynamicCacheLabel: "True",
 			},
-			// wat? why do i have to specify this?
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			Immutable: sourceObject.Immutable,
-			Type:      sourceObject.Type,
-			Data:      sourceObject.Data,
 		}
 
 		if err := c.ownerStrategy.SetControllerReference(secretSync, targetObject); err != nil {
 			return ctrl.Result{}, fmt.Errorf("setting controller reference: %w", err)
 		}
 
-		// TODO: field owner string should be one central const over the whole project?
-		// TODO: clarify client.ForceOwnership
 		if err := c.client.Patch(ctx, targetObject,
-			client.Apply, client.ForceOwnership, client.FieldOwner("package-operator")); err != nil {
+			client.Apply, client.ForceOwnership, client.FieldOwner(controllers.FieldOwner)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patching destination secret: %w", err)
 		}
 
@@ -135,7 +159,6 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Garbage collect Secrets which aren't controlled by this SecretSync anymore.
-
 	for _, controlledSecretRef := range secretSync.Status.ControllerOf {
 		if _, ok := controllerOfLUT[controlledSecretRef]; ok {
 			continue
@@ -152,26 +175,26 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Update status.
-
+	// TODO change from .Path to .Update
 	newStatus := *secretSync.Status.DeepCopy()
 	newStatus.ControllerOf = controllerOf
-
 	if !reflect.DeepEqual(secretSync.Status, newStatus) {
-		// TODO: field owner string should be one central const over the whole project?
-		// TODO: clarify client.ForceOwnership
+
 		if err := c.client.Status().Patch(ctx, &v1alpha1.SecretSync{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretSync.Name,
 				Namespace: secretSync.Namespace,
 			},
-			// TODO: Why do I have to add TypeMeta to prevent 'patching SecretSync status: invalid object type: /, Kind='
 			TypeMeta: secretSync.TypeMeta,
 			Status:   newStatus,
 		},
-			client.Apply, client.ForceOwnership, client.FieldOwner("package-operator")); err != nil {
+			client.Apply, client.ForceOwnership, client.FieldOwner(controllers.FieldOwner)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patching SecretSync status: %w", err)
 		}
 	}
 
-	return ctrl.Result{}, nil
+	// Let syncStrategy decide if reconciliation request should be requeued after a certain time.
+	res := &ctrl.Result{}
+	c.syncStrategy.SetRequeueAfter(res)
+	return *res, nil
 }
