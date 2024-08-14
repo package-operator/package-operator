@@ -734,6 +734,7 @@ ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeplo
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ClusterObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References (Cluster)ObjectSets controlled by this instance. |
 
 
 Used in:
@@ -833,8 +834,10 @@ ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
 
 
 Used in:
+* [ClusterObjectDeploymentStatus](#clusterobjectdeploymentstatus)
 * [ClusterObjectSetPhaseStatus](#clusterobjectsetphasestatus)
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
+* [ObjectDeploymentStatus](#objectdeploymentstatus)
 * [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetStatus](#objectsetstatus)
 * [ObjectTemplateStatus](#objecttemplatestatus)
@@ -866,6 +869,7 @@ ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References (Cluster)ObjectSets controlled by this instance. |
 
 
 Used in:

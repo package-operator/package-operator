@@ -478,6 +478,30 @@ spec:
                   - type
                   type: object
                 type: array
+              controllerOf:
+                description: References (Cluster)ObjectSets controlled by this instance.
+                items:
+                  description: ControlledObjectReference an object controlled by this
+                    ObjectSet/ObjectSetPhase.
+                  properties:
+                    group:
+                      description: Object Group.
+                      type: string
+                    kind:
+                      description: Object Kind.
+                      type: string
+                    name:
+                      description: Object Name.
+                      type: string
+                    namespace:
+                      description: Object Namespace.
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
               phase:
                 description: |-
                   This field is not part of any API contract

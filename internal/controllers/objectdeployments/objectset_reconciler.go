@@ -186,6 +186,27 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			objectDeployment.GetGeneration(),
 		),
 	)
+
+	controllerOf := make([]corev1alpha1.ControlledObjectReference, 0, len(prevObjectSets)+1)
+	for _, os := range prevObjectSets {
+		controllerOf = append(controllerOf, getControlledObjRef(os))
+	}
+	controllerOf = append(controllerOf, getControlledObjRef(currentObjectSet))
+
+	objectDeployment.SetStatusControllerOf(controllerOf)
+}
+
+func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectReference {
+	obj := os.ClientObject()
+	cor := corev1alpha1.ControlledObjectReference{
+		Kind:  obj.GetObjectKind().GroupVersionKind().Kind,
+		Group: obj.GetObjectKind().GroupVersionKind().Group,
+		Name:  obj.GetName(),
+	}
+	if ns := obj.GetNamespace(); len(ns) > 0 {
+		cor.Namespace = ns
+	}
+	return cor
 }
 
 func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...genericObjectSet) metav1.Condition {

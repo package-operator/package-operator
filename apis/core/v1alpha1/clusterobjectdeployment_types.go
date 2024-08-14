@@ -29,6 +29,8 @@ type ClusterObjectDeploymentStatus struct {
 	TemplateHash string `json:"templateHash,omitempty"`
 	// Deployment revision.
 	Revision int64 `json:"revision,omitempty"`
+	// References (Cluster)ObjectSets controlled by this instance.
+	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 
 // ClusterObjectDeployment is the Schema for the ClusterObjectDeployments API
