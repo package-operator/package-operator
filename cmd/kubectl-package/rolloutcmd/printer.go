@@ -40,7 +40,7 @@ func (p *printer) PrintObjectSet(os internalcmd.ObjectSet, opts options) error {
 		return err
 	}
 
-	return p.printer.PrintfOut(string(data))
+	return p.printer.PrintfOut("%s", string(data))
 }
 
 func (p *printer) PrintObjectSetList(l internalcmd.ObjectSetList, opts options) error {
@@ -51,14 +51,14 @@ func (p *printer) PrintObjectSetList(l internalcmd.ObjectSetList, opts options) 
 			return fmt.Errorf("rendering object set list to json: %w", err)
 		}
 
-		return p.printer.PrintfOut(string(data) + "\n")
+		return p.printer.PrintfOut("%s", string(data)+"\n")
 	case "yaml":
 		data, err := l.RenderYAML()
 		if err != nil {
 			return fmt.Errorf("rendering object set list to yaml: %w", err)
 		}
 
-		return p.printer.PrintfOut(string(data))
+		return p.printer.PrintfOut("%s", string(data))
 	case "":
 		table := l.RenderTable("REVISION", "SUCCESSFUL", "CHANGE-CAUSE")
 
