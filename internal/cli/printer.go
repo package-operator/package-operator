@@ -77,7 +77,7 @@ func (p *Printer) PrintTable(t cmd.Table) error {
 		return fmt.Errorf("rendering table: %w", err)
 	}
 
-	if err := p.PrintfOut(output + "\n"); err != nil {
+	if err := p.PrintfOut("%s\n", output); err != nil {
 		return fmt.Errorf("printing table: %w", err)
 	}
 
