@@ -76,6 +76,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	// Create a new secret for the kubeconfig.
+	// TODO(erdii): document that this is part of the remote-phase-manager dependencies for int testing.
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-network-admin-kubeconfig",
@@ -85,6 +86,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	// Deploy the secret with the new kubeconfig.
+	// TODO(erdii): error handling for the delete (ignoring not found).
 	_ = cl.CtrlClient.Delete(ctx, secret)
 	if err := cl.CtrlClient.Create(ctx, secret); err != nil {
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
