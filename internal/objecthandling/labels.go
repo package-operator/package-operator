@@ -1,4 +1,4 @@
-package dynamiccachehandling
+package objecthandling
 
 import (
 	"context"
@@ -9,6 +9,14 @@ import (
 
 	"package-operator.run/internal/controllers"
 )
+
+// HasDynamicCacheLabel checks if the given client object has the dynamic cache label.
+// It does not retrieve anything from the API.
+func HasDynamicCacheLabel(obj client.Object) bool {
+	labels := obj.GetLabels()
+	value, ok := labels[controllers.DynamicCacheLabel]
+	return ok && value == "True"
+}
 
 // AddDynamicCacheLabel ensures that the given object is labeled
 // for recognition by the dynamic cache.

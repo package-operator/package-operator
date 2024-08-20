@@ -93,6 +93,15 @@ type NamespacedName struct {
 	Name      string `json:"name"`
 }
 
+// SecretSync condition types.
+const (
+	// Sync indicates that all the source secret has been synced to all destinations at least once.
+	SecretSyncSync = "Sync"
+
+	// Paused indicates that the SecretSync is currently not reconciling its destination secrets.
+	SecretSyncPaused = "Paused"
+)
+
 // SecretSyncStatusPhase defines the status phase of a SecretSync object.
 type SecretSyncStatusPhase string
 
