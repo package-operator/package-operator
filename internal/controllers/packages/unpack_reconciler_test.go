@@ -21,10 +21,11 @@ import (
 func TestUnpackReconciler(t *testing.T) {
 	t.Parallel()
 	c := testutil.NewClient()
+	uc := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -33,7 +34,7 @@ func TestUnpackReconciler(t *testing.T) {
 		On("Pull", mock.Anything, mock.Anything).
 		Return(rawPkg, nil)
 	pd.
-		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	pkg := &adapters.GenericPackage{
@@ -62,10 +63,11 @@ func TestUnpackReconciler(t *testing.T) {
 func TestUnpackReconciler_noop(t *testing.T) {
 	t.Parallel()
 	c := testutil.NewClient()
+	uc := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 
@@ -88,10 +90,11 @@ var errTest = errors.New("test error")
 func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	t.Parallel()
 	c := testutil.NewClient()
+	uc := testutil.NewClient()
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
 
 	const image = "test123:latest"
 

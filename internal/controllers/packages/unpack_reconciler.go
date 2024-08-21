@@ -25,6 +25,8 @@ import (
 type unpackReconciler struct {
 	*environment.Sink
 
+	uncachedClient client.Client
+
 	imagePuller         imagePuller
 	packageDeployer     packageDeployer
 	packageLoadRecorder packageLoadRecorder
@@ -40,6 +42,7 @@ type packageLoadRecorder interface {
 
 func newUnpackReconciler(
 	c client.Client,
+	uncachedClient client.Client,
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	packageLoadRecorder packageLoadRecorder,
@@ -52,13 +55,14 @@ func newUnpackReconciler(
 	cfg.Default()
 
 	return &unpackReconciler{
-		Sink: environment.NewSink(c),
+		environment.NewSink(c),
 
-		imagePuller:         imagePuller,
-		packageDeployer:     packageDeployer,
-		packageLoadRecorder: packageLoadRecorder,
-		backoff:             cfg.GetBackoff(),
-		packageHashModifier: packageHashModifier,
+		uncachedClient,
+		imagePuller,
+		packageDeployer,
+		packageLoadRecorder,
+		cfg.GetBackoff(),
+		packageHashModifier,
 	}
 }
 
