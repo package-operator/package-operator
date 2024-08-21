@@ -232,7 +232,7 @@ type RemotePhaseReference struct {
 	UID  types.UID `json:"uid"`
 }
 
-// ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
+// ControlledObjectReference an object controlled by this object.
 type ControlledObjectReference struct {
 	// Object Kind.
 	Kind string `json:"kind"`

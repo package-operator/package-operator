@@ -198,15 +198,12 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 
 func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectReference {
 	obj := os.ClientObject()
-	cor := corev1alpha1.ControlledObjectReference{
-		Kind:  obj.GetObjectKind().GroupVersionKind().Kind,
-		Group: obj.GetObjectKind().GroupVersionKind().Group,
-		Name:  obj.GetName(),
+	return corev1alpha1.ControlledObjectReference{
+		Kind:      obj.GetObjectKind().GroupVersionKind().Kind,
+		Group:     obj.GetObjectKind().GroupVersionKind().Group,
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
 	}
-	if ns := obj.GetNamespace(); len(ns) > 0 {
-		cor.Namespace = ns
-	}
-	return cor
 }
 
 func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...genericObjectSet) metav1.Condition {

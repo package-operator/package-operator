@@ -482,10 +482,10 @@ spec:
                   type: object
                 type: array
               controllerOf:
-                description: References (Cluster)ObjectSets controlled by this instance.
+                description: ControllerOf references the owned ClusterObjectSet revisions.
                 items:
                   description: ControlledObjectReference an object controlled by this
-                    ObjectSet/ObjectSetPhase.
+                    object.
                   properties:
                     group:
                       description: Object Group.

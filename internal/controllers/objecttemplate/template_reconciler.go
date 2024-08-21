@@ -123,13 +123,10 @@ func (r *templateReconciler) Reconcile(
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	controllerOf := corev1alpha1.ControlledObjectReference{
-		Kind:  gvk.Kind,
-		Group: gvk.Group,
-		Name:  obj.GetName(),
-	}
-
-	if ns := obj.GetNamespace(); len(ns) > 0 {
-		controllerOf.Namespace = ns
+		Kind:      gvk.Kind,
+		Group:     gvk.Group,
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
 	}
 
 	objectTemplate.SetStatusControllerOf(controllerOf)

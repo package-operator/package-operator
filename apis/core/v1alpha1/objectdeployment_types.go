@@ -37,7 +37,7 @@ type ObjectDeploymentStatus struct {
 	TemplateHash string `json:"templateHash,omitempty"`
 	// Deployment revision.
 	Revision int64 `json:"revision,omitempty"`
-	// References (Cluster)ObjectSets controlled by this instance.
+	// ControllerOf references the owned ObjectSet revisions.
 	ControllerOf []ControlledObjectReference `json:"controllerOf,omitempty"`
 }
 

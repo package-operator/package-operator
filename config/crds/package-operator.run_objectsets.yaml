@@ -437,7 +437,7 @@ spec:
                 description: References all objects controlled by this instance.
                 items:
                   description: ControlledObjectReference an object controlled by this
-                    ObjectSet/ObjectSetPhase.
+                    object.
                   properties:
                     group:
                       description: Object Group.
