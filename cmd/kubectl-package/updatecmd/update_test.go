@@ -73,8 +73,16 @@ func TestUpdateWithValidPath_SuccessfullyUpdated(t *testing.T) {
 
 	require.NoError(t, cmd.Execute())
 	require.Empty(t, stderr.String())
-	require.Empty(t, stdout.String())
+	require.Equal(t, "Package updated successfully!\n", stdout.String())
 
-	err := os.Remove("testdata/successfully-updated/manifest.lock.yaml")
+	const testLockFile = "testdata/successfully-updated/manifest.lock.yaml"
+
+	_, err := os.Stat(testLockFile)
 	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		if err := os.Remove(testLockFile); err != nil {
+			panic(err)
+		}
+	})
 }
