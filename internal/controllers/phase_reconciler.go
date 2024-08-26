@@ -427,8 +427,17 @@ func (r *PhaseReconciler) teardownExternalObject(
 		return false, fmt.Errorf("retrieving external object: %w", err)
 	}
 
-	r.ownerStrategy.RemoveOwner(ownerObj, obj)
-	if err := r.writer.Update(ctx, obj); err != nil {
+	newObj := &unstructured.Unstructured{}
+	newObj.SetGroupVersionKind(ownerObj.GetObjectKind().GroupVersionKind())
+	newObj.SetOwnerReferences(ownerObj.GetOwnerReferences())
+
+	patch, err := observed.MarshalJSON()
+	if err != nil {
+		return false, fmt.Errorf("error creating patch: %w", err)
+	}
+
+	r.ownerStrategy.RemoveOwner(ownerObj, newObj)
+	if err := r.writer.Patch(ctx, newObj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
 		return false, fmt.Errorf("removing owner reference: %w", err)
 	}
 
