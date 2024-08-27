@@ -138,6 +138,13 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	// Ensure cache finalizer if sync strategy is "watch".
+	if secretSync.Spec.Strategy.Watch != nil && secretSync.DeletionTimestamp.IsZero() {
+		if err := objecthandling.EnsureCachedFinalizer(ctx, c.client, secretSync); err != nil {
+			return ctrl.Result{}, fmt.Errorf("ensuring cached finalizer: %w", err)
+		}
+	}
+
 	// Get source Secret.
 	srcSecret := &v1.Secret{}
 	if err := c.client.Get(ctx, types.NamespacedName{
@@ -147,13 +154,31 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("getting source object: %w", err)
 	}
 
-	if !objecthandling.HasDynamicCacheLabel(srcSecret) {
-		if err := objecthandling.AddDynamicCacheLabel(ctx, c.client, srcSecret); err != nil {
-			return ctrl.Result{}, fmt.Errorf("adding dynamic cache label: %w", err)
+	// Take care of dynamic caching if strategy is "watch".
+	if secretSync.Spec.Strategy.Watch != nil {
+		if secretSync.DeletionTimestamp.IsZero() {
+			// If the SecretSync isn't deleted: Ensure that the source Secret has the dynamic cache label.
+			if !objecthandling.HasDynamicCacheLabel(srcSecret) {
+				if err := objecthandling.EnsureDynamicCacheLabel(ctx, c.client, srcSecret); err != nil {
+					return ctrl.Result{}, fmt.Errorf("adding dynamic cache label: %w", err)
+				}
+			}
+		} else {
+			// If the SecretSync is being deleted:
+			// Free cache from srcSecret.
+			if err := c.dynamicCache.Free(ctx, srcSecret); err != nil {
+				return ctrl.Result{}, fmt.Errorf("cache freeing src secret: %w", err)
+			}
+
+			// TODO: how does this work at all?
+			if err := objecthandling.FreeCacheAndRemoveFinalizer(ctx, c.client, secretSync, c.dynamicCache); err != nil {
+				return ctrl.Result{}, fmt.Errorf("removing finalizer and freeing cache: %w", err)
+			}
+
+			// Return early because there is nothing more to reconcile.
+			return ctrl.Result{}, nil
 		}
 	}
-
-	// TODO: The cache label removal on srcSecret should be guarded by a finalizer, right?
 
 	// Do nothing except releasing the srcSecret from our syncStrategy if object is deleting.
 	if !secretSync.DeletionTimestamp.IsZero() {
