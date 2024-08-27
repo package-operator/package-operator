@@ -18,9 +18,14 @@ func HasDynamicCacheLabel(obj client.Object) bool {
 	return ok && value == "True"
 }
 
-// AddDynamicCacheLabel ensures that the given object is labeled
+// EnsureDynamicCacheLabel ensures that the given object is labeled
 // for recognition by the dynamic cache.
-func AddDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Object) error {
+func EnsureDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Object) error {
+	// Return early if the cache label is already there.
+	if HasDynamicCacheLabel(obj) {
+		return nil
+	}
+
 	updated := &unstructured.Unstructured{}
 	updated.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 
