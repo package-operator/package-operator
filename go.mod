@@ -19,7 +19,7 @@ require (
 	github.com/google/cel-go v0.17.8
 	github.com/google/go-containerregistry v0.20.2
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
-	github.com/onsi/ginkgo/v2 v2.20.1
+	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c
 	github.com/operator-framework/api v0.26.0
