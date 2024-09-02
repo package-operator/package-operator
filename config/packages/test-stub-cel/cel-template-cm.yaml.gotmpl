@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "cel-template-cm"
+{{- if eq .package.metadata.namespace ""}}
+  namespace: "{{.package.metadata.name}}"
+{{- end}}
+  labels:
+    app: test-stub
+    instance: "{{.package.metadata.name}}"
+  annotations:
+    test-environment: {{.environment | toJson | quote}}
+    package-operator.run/phase: deploy
+data:
+{{- if cel "true && false"}}
+  should-not: "be-here"
+{{- else}}
+  banana: "bread"
+{{- end}}
