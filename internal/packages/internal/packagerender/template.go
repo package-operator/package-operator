@@ -4,12 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"text/template"
+
+	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/packages/internal/packagerender/celctx"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/transform"
 )
+
+var errConstructingCelContext = errors.New("constructing CEL context")
 
 // Runs a go-template transformer on all .gotmpl files.
 func RenderTemplates(_ context.Context, pkg *packagetypes.Package, tmplCtx packagetypes.PackageRenderContext) error {
@@ -21,6 +27,12 @@ func RenderTemplates(_ context.Context, pkg *packagetypes.Package, tmplCtx packa
 	templ := template.New("pkg").Option("missingkey=error")
 	templ = templ.Funcs(transform.SprigFuncs(templ)).
 		Funcs(transform.FileFuncs(pkg.Files))
+
+	celFn, err := celTemplateFunction(pkg.Manifest.Spec.Filters.Conditions, tmplCtx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errConstructingCelContext, err)
+	}
+	templ = templ.Funcs(celFn)
 
 	// gather all templates to allow cross-file declarations and reuse of helpers.
 	for path, content := range pkg.Files {
@@ -82,4 +94,22 @@ func workaroundnovalue(actualCtx map[string]any) {
 	if metadata["labels"] == nil {
 		metadata["labels"] = map[string]string{}
 	}
+}
+
+func celTemplateFunction(
+	conditions []manifests.PackageManifestNamedCondition,
+	tmplCtx packagetypes.PackageRenderContext,
+) (
+	template.FuncMap, error,
+) {
+	cc, err := celctx.New(conditions, tmplCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return template.FuncMap{
+		"cel": func(expression string) (bool, error) {
+			return cc.Evaluate(expression)
+		},
+	}, nil
 }

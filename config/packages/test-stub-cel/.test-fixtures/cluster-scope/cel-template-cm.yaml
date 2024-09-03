@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "cel-template-cm"
+  namespace: "test"
+  labels:
+    app: test-stub
+    instance: "test"
+  annotations:
+    test-environment: "{\"kubernetes\":{\"version\":\"v1.27.0\"},\"openShift\":{\"version\":\"v4.13.0\"},\"proxy\":{\"httpProxy\":\"xxx\",\"httpsProxy\":\"xxx\",\"noProxy\":\"xxxxx\"}}"
+    package-operator.run/phase: deploy
+data:
+  banana: "bread"

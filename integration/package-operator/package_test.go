@@ -274,6 +274,21 @@ func TestPackage_cel(t *testing.T) {
 			Namespace: ns,
 		}, cm)
 		require.EqualError(t, err, "configmaps \"ignored-cm\" not found")
+
+		// check that "cel-template-cm" was templated correctly
+		celTemplateCm := &v1.ConfigMap{}
+		err = Client.Get(ctx, client.ObjectKey{
+			Name:      "cel-template-cm",
+			Namespace: ns,
+		}, celTemplateCm)
+		require.NoError(t, err)
+
+		v, ok := celTemplateCm.Data["banana"]
+		require.True(t, ok)
+		assert.Equal(t, "bread", v)
+
+		_, ok = celTemplateCm.Data["should-not"]
+		assert.False(t, ok)
 	}
 
 	testNamespacedAndCluster(t, meta, spec, postCheck)
