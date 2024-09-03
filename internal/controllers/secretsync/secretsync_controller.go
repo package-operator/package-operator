@@ -36,14 +36,22 @@ type ownerStrategy interface {
 	SetControllerReference(owner, obj metav1.Object) error
 }
 
+type reconcileResult struct {
+	res           ctrl.Result
+	statusChanged bool
+}
+
+type reconciler interface {
+	Reconcile(ctx context.Context, req *v1alpha1.SecretSync) (reconcileResult, error)
+}
+
 type Controller struct {
-	log    logr.Logger
-	client client.Client
-	scheme *runtime.Scheme
-
-	dynamicCache dynamicCache
-
+	log           logr.Logger
+	client        client.Client
+	scheme        *runtime.Scheme
+	dynamicCache  dynamicCache
 	ownerStrategy ownerStrategy
+	reconcilers   []reconciler
 }
 
 func NewController(
@@ -86,14 +94,46 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Get SecretSync from cluster.
 	secretSync := &v1alpha1.SecretSync{}
 	if err := c.client.Get(ctx, req.NamespacedName, secretSync); err != nil {
-		return ctrl.Result{}, fmt.Errorf("getting Secretsync: %w", err)
+		return ctrl.Result{}, client.IgnoreNotFound(fmt.Errorf("getting Secretsync: %w", err))
 	}
+
+	var (
+		statusChanged bool
+		res           ctrl.Result
+		err           error
+	)
+	for _, reconciler := range c.reconcilers {
+		rr, errI := reconciler.Reconcile(ctx, secretSync)
+		if rr.statusChanged {
+			statusChanged = true
+		}
+		res = rr.res
+		if errI != nil {
+			err = errI
+			break
+		}
+	}
+
+	if statusChanged {
+		if err := c.client.Status().Update(ctx, secretSync); err != nil {
+			return res, fmt.Errorf("updating SecretSync status: %w", err)
+		}
+	}
+
+	return res, err
+
+	// reconcililiations / phases should be
+
+	// - ensure cache finalizer presence/absence (and free caches if needed)
+	// - return early if in deletion
+	// - establish conditions
+	// - reconcile pause condition + phase
+	// -
 
 	pauseCondChanged := meta.SetStatusCondition(&secretSync.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.SecretSyncPaused,
 		Status:             pausedBoolToConditionBool(secretSync.Spec.Paused),
-		Reason:             "TODO",
-		Message:            "TODO",
+		Reason:             pausedBoolToConditionReason(secretSync.Spec.Paused),
 		ObservedGeneration: secretSync.Generation,
 	})
 
@@ -119,12 +159,27 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		if updatePauseStatus {
 			// Update status.
-			secretSync.ObjectMeta.ResourceVersion = ""
 			// Set correct phase.
 			secretSync.Status.Phase = pausedBoolToPhase(secretSync.Spec.Paused)
-			if err := c.client.Status().Update(ctx, secretSync, client.FieldOwner(controllers.FieldOwner)); err != nil {
+			intentObject := &v1alpha1.SecretSync{
+				TypeMeta: secretSync.TypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name: secretSync.Name,
+				},
+				Status: secretSync.Status,
+			}
+
+			if err := c.client.Status().Patch(
+				ctx,
+				intentObject,
+				client.Apply,
+				client.FieldOwner(controllers.FieldOwner),
+			); err != nil {
 				return ctrl.Result{}, fmt.Errorf("updating paused SecretSync status: %w", err)
 			}
+			// Copy changed resource version, in case something wants to .Update the SecretSync object later.
+			// (Looking at you EnsureCachedFinalizer() 🤨)
+			secretSync.ResourceVersion = intentObject.ResourceVersion
 		}
 	}
 
@@ -154,33 +209,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("getting source object: %w", err)
 	}
 
-	// Take care of dynamic caching if strategy is "watch".
-	if secretSync.Spec.Strategy.Watch != nil {
-		if secretSync.DeletionTimestamp.IsZero() {
-			// If the SecretSync isn't deleted: Ensure that the source Secret has the dynamic cache label.
-			if !objecthandling.HasDynamicCacheLabel(srcSecret) {
-				if err := objecthandling.EnsureDynamicCacheLabel(ctx, c.client, srcSecret); err != nil {
-					return ctrl.Result{}, fmt.Errorf("adding dynamic cache label: %w", err)
-				}
-			}
-		} else {
-			// If the SecretSync is being deleted:
-			// Free cache from srcSecret.
-			if err := c.dynamicCache.Free(ctx, srcSecret); err != nil {
-				return ctrl.Result{}, fmt.Errorf("cache freeing src secret: %w", err)
-			}
-
-			// TODO: how does this work at all?
-			if err := objecthandling.FreeCacheAndRemoveFinalizer(ctx, c.client, secretSync, c.dynamicCache); err != nil {
-				return ctrl.Result{}, fmt.Errorf("removing finalizer and freeing cache: %w", err)
-			}
-
-			// Return early because there is nothing more to reconcile.
-			return ctrl.Result{}, nil
-		}
-	}
-
-	// Do nothing except releasing the srcSecret from our syncStrategy if object is deleting.
+	// Do nothing except releasing the srcSecret from our ownerCache if object is deleting.
 	if !secretSync.DeletionTimestamp.IsZero() {
 		// Refactoring / API-Extension guard: Panic if we got here but the strategy is not "watch".
 		// This should only ever happen if a new strategy was introduced and the implementation
@@ -192,11 +221,26 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			)
 		}
 
-		if err := objecthandling.RemoveDynamicCacheLabel(ctx, c.client, secretSync); err != nil {
-			return ctrl.Result{}, fmt.Errorf("removing dynamic cache label from source secret: %w", err)
+		if err := objecthandling.FreeCacheAndRemoveFinalizer(ctx, c.client, secretSync, c.dynamicCache); err != nil {
+			return ctrl.Result{}, fmt.Errorf("free cache and remove finalizer: %w", err)
+		}
+
+		// Free cache from srcSecret.
+		if err := c.dynamicCache.Free(ctx, srcSecret); err != nil {
+			return ctrl.Result{}, fmt.Errorf("cache freeing src secret: %w", err)
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	// Take care of dynamic caching if strategy is "watch".
+	if secretSync.Spec.Strategy.Watch != nil {
+		// Ensure that the source Secret has the dynamic cache label.
+		if !objecthandling.HasDynamicCacheLabel(srcSecret) {
+			if err := objecthandling.EnsureDynamicCacheLabel(ctx, c.client, srcSecret); err != nil {
+				return ctrl.Result{}, fmt.Errorf("adding dynamic cache label: %w", err)
+			}
+		}
 	}
 
 	// Keep track of controlled objects.
@@ -256,16 +300,40 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	meta.SetStatusCondition(&newStatus.Conditions, metav1.Condition{
 		Type:               v1alpha1.SecretSyncSync,
 		Status:             metav1.ConditionTrue,
-		Reason:             "TODO success",
-		Message:            "TODO Reconciliation completed successfully.",
+		Reason:             "SuccessfulSync",
+		Message:            "Synchronization completed successfully.",
 		ObservedGeneration: secretSync.Generation,
 	})
 	if !reflect.DeepEqual(secretSync.Status, newStatus) {
 		secretSync.Status = newStatus
-		secretSync.ObjectMeta.ResourceVersion = ""
-		if err := c.client.Status().Update(ctx, secretSync, client.FieldOwner(controllers.FieldOwner)); err != nil {
+		// TODO: why am I not allowed to disable optimistic locking here?
+		// secretSync.ObjectMeta.ResourceVersion = ""
+		// gives me this error:
+		//nolint:lll
+		// 2024-08-28T10:18:46+02:00       ERROR   Reconciler error        {"controller": "secretsync", "controllerGroup": "package-operator.run", "controllerKind": "SecretSync", "SecretSync": {"name":"bootstrap-token"}, "namespace": "", "name": "bootstrap-token", "reconcileID": "5603ba3a-a5c7-4167-bc9b-03e8e0bc17f0", "error": "updating SecretSync status: secretsyncs.package-operator.run \"bootstrap-token\" is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update"}
+		// metadata.resourceVersion: Invalid value: 0x0: must be specified for an update
+		// if err := c.client.Status().Update(ctx, secretSync, client.FieldOwner(controllers.FieldOwner)); err != nil {
+		// 	return ctrl.Result{}, fmt.Errorf("updating SecretSync status: %w", err)
+		// }
+
+		// Using SSA instead works:
+		intentObject := &v1alpha1.SecretSync{
+			TypeMeta: secretSync.TypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: secretSync.Name,
+			},
+			Status: secretSync.Status,
+		}
+		if err := c.client.Status().Patch(
+			ctx,
+			intentObject,
+			client.Apply,
+			client.FieldOwner(controllers.FieldOwner),
+		); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating SecretSync status: %w", err)
 		}
+		// Copy changed resource version over, in case something wants to .Update the SecretSync object later.
+		secretSync.ResourceVersion = intentObject.ResourceVersion
 	}
 
 	// If sync strategy "poll": Requeue after poll interval.
@@ -284,6 +352,14 @@ func pausedBoolToConditionBool(b bool) metav1.ConditionStatus {
 	}
 
 	return metav1.ConditionFalse
+}
+
+func pausedBoolToConditionReason(b bool) string {
+	if b {
+		return "SpecSaysPaused"
+	}
+
+	return "SpecSaysUnpaused"
 }
 
 func pausedBoolToPhase(b bool) v1alpha1.SecretSyncStatusPhase {
