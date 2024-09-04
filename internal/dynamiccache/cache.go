@@ -133,9 +133,15 @@ func (c *Cache) OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference {
 }
 
 // Watch the given object type and associate the watch with the given owner.
+// TODO(erdii) change type of `obj` to client.Object for cleanliness' sake.
 func (c *Cache) Watch(
 	ctx context.Context, owner client.Object, obj runtime.Object,
 ) error {
+	obj, _, err := ensureUnstructured(obj)
+	if err != nil {
+		return err
+	}
+
 	c.informerReferencesMux.Lock()
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
@@ -227,6 +233,11 @@ func (c *Cache) Get(
 	key client.ObjectKey, out client.Object,
 	opts ...client.GetOption,
 ) error {
+	uns, wasConverted, err := ensureUnstructured(out)
+	if err != nil {
+		return err
+	}
+
 	gvk, err := apiutil.GVKForObject(out, c.scheme)
 	if err != nil {
 		return err
@@ -240,12 +251,20 @@ func (c *Cache) Get(
 		return &CacheNotStartedError{}
 	}
 
-	_, reader, err := c.informerMap.Get(ctx, gvk, out)
+	_, reader, err := c.informerMap.Get(ctx, gvk, uns)
 	if err != nil {
 		return fmt.Errorf("getting Informer from Map: %w", err)
 	}
 
-	return reader.Get(ctx, key, out, opts...)
+	if err := reader.Get(ctx, key, uns, opts...); err != nil {
+		return err
+	}
+
+	if !wasConverted {
+		return nil
+	}
+
+	return toStructured(uns, out)
 }
 
 // List implements client.Reader.
@@ -265,6 +284,11 @@ func (c *Cache) list(
 	ctx context.Context,
 	out client.ObjectList, opts ...client.ListOption,
 ) error {
+	uns, wasConverted, err := ensureUnstructuredList(out)
+	if err != nil {
+		return err
+	}
+
 	gvk, err := apiutil.GVKForObject(out, c.scheme)
 	if err != nil {
 		return err
@@ -275,12 +299,20 @@ func (c *Cache) list(
 		return &CacheNotStartedError{}
 	}
 
-	_, reader, err := c.informerMap.Get(ctx, gvk, out)
+	_, reader, err := c.informerMap.Get(ctx, gvk, uns)
 	if err != nil {
 		return fmt.Errorf("getting Informer from Map: %w", err)
 	}
 
-	return reader.List(ctx, out, opts...)
+	if err := reader.List(ctx, uns, opts...); err != nil {
+		return err
+	}
+
+	if !wasConverted {
+		return nil
+	}
+
+	return toStructuredList(uns, out)
 }
 
 func (c *Cache) ownerRef(owner client.Object) (OwnerReference, error) {
