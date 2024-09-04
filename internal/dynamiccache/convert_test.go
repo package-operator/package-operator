@@ -10,10 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const name = "foo"
+
 func TestEnsureUnstructured(t *testing.T) {
 	t.Parallel()
 
-	name := "foo"
 	// Passing a secret object yields an unstructured with the same data.
 	uns, wasConverted, err := ensureUnstructured(&v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -39,7 +40,6 @@ func TestEnsureUnstructured(t *testing.T) {
 func TestEnsureUnstructuredList(t *testing.T) {
 	t.Parallel()
 
-	name := "foo"
 	// Passing a secret object list yields an unstructured with the same data.
 	uns, wasConverted, err := ensureUnstructuredList(&v1.SecretList{
 		Items: []v1.Secret{
@@ -69,7 +69,6 @@ func TestEnsureUnstructuredList(t *testing.T) {
 func TestToStructured(t *testing.T) {
 	t.Parallel()
 
-	name := "foo"
 	uns := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "v1",
 		"kind":       "Secret",
@@ -87,7 +86,6 @@ func TestToStructured(t *testing.T) {
 func TestToStructuredList(t *testing.T) {
 	t.Parallel()
 
-	name := "foo"
 	uns := &unstructured.UnstructuredList{Object: map[string]any{
 		"items": []any{
 			map[string]any{
