@@ -898,3 +898,24 @@ func assertLenWithJSON[T any](t *testing.T, obj []T, l int) {
 	}
 	t.Error(fmt.Sprintf("should be of len %d", l), string(j))
 }
+
+func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployment client.Object) {
+	t.Helper()
+
+	require.NoError(t, Client.Create(ctx, pkg))
+	cleanupOnSuccess(ctx, t, pkg)
+
+	timeoutOpt := wait.WithTimeout(40 * time.Second)
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue, timeoutOpt))
+	// Condition Mapping from Deployment
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg, "my-prefix/Progressing", metav1.ConditionTrue, timeoutOpt))
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue, timeoutOpt))
+
+	require.NoError(t, Client.Get(ctx, client.ObjectKey{
+		Name: pkg.GetName(), Namespace: pkg.GetNamespace(),
+	}, objectDeployment))
+}

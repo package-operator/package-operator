@@ -38,7 +38,7 @@ func TestVerifyOwnership_UnsupportedKind(t *testing.T) {
 	}
 
 	_, err := VerifyOwnership(&cm, &cm)
-	assert.ErrorIs(t, err, errUnsupportedOwnerKind)
+	assert.ErrorIs(t, err, ErrUnsupportedOwnerKind)
 }
 
 func TestVerifyOwnership_Package(t *testing.T) {

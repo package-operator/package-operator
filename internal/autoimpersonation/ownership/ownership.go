@@ -10,12 +10,12 @@ import (
 	"package-operator.run/apis/core/v1alpha1"
 )
 
-var errUnsupportedOwnerKind = errors.New("unsupported owner kind")
+var ErrUnsupportedOwnerKind = errors.New("unsupported owner kind")
 
 func VerifyOwnership(obj, owner client.Object) (bool, error) {
 	ver, ok := verifiers[owner.GetObjectKind().GroupVersionKind().Kind]
 	if !ok {
-		return false, fmt.Errorf("%w: %s", errUnsupportedOwnerKind, owner.GetObjectKind().GroupVersionKind().Kind)
+		return false, fmt.Errorf("%w: %s", ErrUnsupportedOwnerKind, owner.GetObjectKind().GroupVersionKind().Kind)
 	}
 
 	return ver(obj, owner), nil
