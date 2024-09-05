@@ -137,7 +137,7 @@ func (c *Cache) OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference {
 func (c *Cache) Watch(
 	ctx context.Context, owner client.Object, obj runtime.Object,
 ) error {
-	obj, _, err := ensureUnstructured(obj)
+	uns, _, err := ensureUnstructured(obj)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (c *Cache) Watch(
 			"ownerNamespace", owner.GetNamespace())
 
 		// Create/Get Informer
-		informer, _, err := c.informerMap.Get(ctx, gvk, obj)
+		informer, _, err := c.informerMap.Get(ctx, gvk, uns)
 		if err != nil {
 			return fmt.Errorf("getting informer from InformerMap: %w", err)
 		}
