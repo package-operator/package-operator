@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
 )
 
@@ -540,7 +540,7 @@ func TestSecretSyncController_Reconcile_Full(t *testing.T) {
 			// Assert correct usage of Server Side Apply (SSA).
 			opts := args.Get(3).([]client.PatchOption)
 			assert.Contains(t, opts, client.ForceOwnership)
-			assert.Contains(t, opts, client.FieldOwner(controllers.FieldOwner))
+			assert.Contains(t, opts, client.FieldOwner(constants.FieldOwner))
 
 			secret := args.Get(1).(*v1.Secret)
 			secretKey := client.ObjectKeyFromObject(secret)
