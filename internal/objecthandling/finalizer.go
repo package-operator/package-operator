@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -68,7 +68,7 @@ func RemoveFinalizer(
 func EnsureCachedFinalizer(
 	ctx context.Context, c client.Client, obj client.Object,
 ) error {
-	return EnsureFinalizer(ctx, c, obj, controllers.CachedFinalizer)
+	return EnsureFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
 
 type cacheFreer interface {
@@ -84,5 +84,5 @@ func FreeCacheAndRemoveFinalizer(
 		return fmt.Errorf("free cache: %w", err)
 	}
 
-	return RemoveFinalizer(ctx, c, obj, controllers.CachedFinalizer)
+	return RemoveFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }

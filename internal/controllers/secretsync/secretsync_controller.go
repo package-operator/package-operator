@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/objecthandling"
 	"package-operator.run/internal/ownerhandling"
 )
@@ -173,7 +173,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				ctx,
 				intentObject,
 				client.Apply,
-				client.FieldOwner(controllers.FieldOwner),
+				client.FieldOwner(constants.FieldOwner),
 			); err != nil {
 				return ctrl.Result{}, fmt.Errorf("updating paused SecretSync status: %w", err)
 			}
@@ -254,7 +254,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Namespace: dest.Namespace,
 			Name:      dest.Name,
 			Labels: map[string]string{
-				controllers.DynamicCacheLabel: "True",
+				constants.DynamicCacheLabel: "True",
 			},
 		}
 
@@ -263,7 +263,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		if err := c.client.Patch(ctx, targetObject,
-			client.Apply, client.ForceOwnership, client.FieldOwner(controllers.FieldOwner)); err != nil {
+			client.Apply, client.ForceOwnership, client.FieldOwner(constants.FieldOwner)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patching destination secret: %w", err)
 		}
 
@@ -312,7 +312,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		//nolint:lll
 		// 2024-08-28T10:18:46+02:00       ERROR   Reconciler error        {"controller": "secretsync", "controllerGroup": "package-operator.run", "controllerKind": "SecretSync", "SecretSync": {"name":"bootstrap-token"}, "namespace": "", "name": "bootstrap-token", "reconcileID": "5603ba3a-a5c7-4167-bc9b-03e8e0bc17f0", "error": "updating SecretSync status: secretsyncs.package-operator.run \"bootstrap-token\" is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update"}
 		// metadata.resourceVersion: Invalid value: 0x0: must be specified for an update
-		// if err := c.client.Status().Update(ctx, secretSync, client.FieldOwner(controllers.FieldOwner)); err != nil {
+		// if err := c.client.Status().Update(ctx, secretSync, client.FieldOwner(constants.FieldOwner)); err != nil {
 		// 	return ctrl.Result{}, fmt.Errorf("updating SecretSync status: %w", err)
 		// }
 
@@ -328,7 +328,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			ctx,
 			intentObject,
 			client.Apply,
-			client.FieldOwner(controllers.FieldOwner),
+			client.FieldOwner(constants.FieldOwner),
 		); err != nil {
 			return ctrl.Result{}, fmt.Errorf("updating SecretSync status: %w", err)
 		}
