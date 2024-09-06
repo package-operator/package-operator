@@ -64,5 +64,9 @@ func toStructured(in *unstructured.Unstructured, out runtime.Object) error {
 }
 
 func toStructuredList(in *unstructured.UnstructuredList, out client.ObjectList) error {
-	return runtime.DefaultUnstructuredConverter.FromUnstructured(in.Object, out)
+	// Warning! The conversion input must be supplied via `in.UnstructuredContent()`,
+	// because using `in.Object` will result in the loss of all list items.
+	// The only other workaround I found, was marshaling the unstructured input into
+	// json/yaml and then remarshaling into `out`.
+	return runtime.DefaultUnstructuredConverter.FromUnstructured(in.UnstructuredContent(), out)
 }
