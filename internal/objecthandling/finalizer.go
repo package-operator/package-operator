@@ -6,14 +6,15 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
-	"package-operator.run/internal/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"package-operator.run/internal/constants"
 )
 
 // Ensures the given finalizer is set and persisted on the given object.
 func EnsureFinalizer(
-	ctx context.Context, c client.Client,
+	ctx context.Context, c client.Writer,
 	obj client.Object, finalizer string,
 ) error {
 	if controllerutil.ContainsFinalizer(obj, finalizer) {
@@ -40,7 +41,7 @@ func EnsureFinalizer(
 
 // Removes the given finalizer and persists the change.
 func RemoveFinalizer(
-	ctx context.Context, c client.Client,
+	ctx context.Context, c client.Writer,
 	obj client.Object, finalizer string,
 ) error {
 	if !controllerutil.ContainsFinalizer(obj, finalizer) {
@@ -66,7 +67,7 @@ func RemoveFinalizer(
 }
 
 func EnsureCachedFinalizer(
-	ctx context.Context, c client.Client, obj client.Object,
+	ctx context.Context, c client.Writer, obj client.Object,
 ) error {
 	return EnsureFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
@@ -77,7 +78,7 @@ type cacheFreer interface {
 
 // Frees caches and removes the associated finalizer.
 func FreeCacheAndRemoveFinalizer(
-	ctx context.Context, c client.Client,
+	ctx context.Context, c client.Writer,
 	obj client.Object, cache cacheFreer,
 ) error {
 	if err := cache.Free(ctx, obj); err != nil {
