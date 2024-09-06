@@ -95,7 +95,7 @@ func TestToStructured(t *testing.T) {
 	assert.Equal(t, name, secret.Name)
 }
 
-func TestToStructuredList(t *testing.T) {
+func TestToStructuredList_DataInMap(t *testing.T) {
 	t.Parallel()
 
 	uns := &unstructured.UnstructuredList{Object: map[string]any{
@@ -113,5 +113,31 @@ func TestToStructuredList(t *testing.T) {
 	err := toStructuredList(uns, secretList)
 
 	require.NoError(t, err)
+	require.Len(t, secretList.Items, 1)
+	assert.Equal(t, name, secretList.Items[0].Name)
+}
+
+func TestToStructuredList_DataInItemsField(t *testing.T) {
+	t.Parallel()
+
+	uns := &unstructured.UnstructuredList{
+		Object: map[string]any{},
+		Items: []unstructured.Unstructured{
+			{
+				Object: map[string]any{
+					"apiVersion": "v1",
+					"kind":       "Secret",
+					"metadata": map[string]any{
+						"name": name,
+					},
+				},
+			},
+		},
+	}
+	secretList := &v1.SecretList{}
+	err := toStructuredList(uns, secretList)
+
+	require.NoError(t, err)
+	require.Len(t, secretList.Items, 1)
 	assert.Equal(t, name, secretList.Items[0].Name)
 }
