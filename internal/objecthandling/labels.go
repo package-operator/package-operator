@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/constants"
@@ -26,18 +25,15 @@ func EnsureDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Ob
 		return nil
 	}
 
-	updated := &unstructured.Unstructured{}
-	updated.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
 
 	labels[constants.DynamicCacheLabel] = "True"
-	updated.SetLabels(labels)
+	obj.SetLabels(labels)
 
-	if err := w.Patch(ctx, updated,
+	if err := w.Patch(ctx, obj,
 		client.Apply, client.ForceOwnership, client.FieldOwner(constants.FieldOwner)); err != nil {
 		return fmt.Errorf("patching dynamic cache label: %w", err)
 	}
@@ -49,15 +45,11 @@ func EnsureDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Ob
 // the label for dynamic cache inclusion anymore.
 // It returns the updated version of the object.
 func RemoveDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Object) error {
-	updated := &unstructured.Unstructured{}
-	updated.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-
 	labels := obj.GetLabels()
-
 	delete(labels, constants.DynamicCacheLabel)
-	updated.SetLabels(labels)
+	obj.SetLabels(labels)
 
-	if err := w.Patch(ctx, updated,
+	if err := w.Patch(ctx, obj,
 		client.Apply, client.ForceOwnership, client.FieldOwner(constants.FieldOwner)); err != nil {
 		return fmt.Errorf("patching dynamic cache label: %w", err)
 	}
