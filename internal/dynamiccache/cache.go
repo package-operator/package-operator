@@ -137,7 +137,7 @@ func (c *Cache) OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference {
 func (c *Cache) Watch(
 	ctx context.Context, owner client.Object, obj runtime.Object,
 ) error {
-	uns, _, err := ensureUnstructured(obj)
+	uns, _, err := ensureUnstructured(obj, c.scheme)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (c *Cache) Get(
 	key client.ObjectKey, out client.Object,
 	opts ...client.GetOption,
 ) error {
-	uns, wasConverted, err := ensureUnstructured(out)
+	uns, wasConverted, err := ensureUnstructured(out, c.scheme)
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (c *Cache) list(
 	ctx context.Context,
 	out client.ObjectList, opts ...client.ListOption,
 ) error {
-	uns, wasConverted, err := ensureUnstructuredList(out)
+	uns, wasConverted, err := ensureUnstructuredList(out, c.scheme)
 	if err != nil {
 		return err
 	}

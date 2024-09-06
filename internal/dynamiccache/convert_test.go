@@ -8,6 +8,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"package-operator.run/internal/testutil"
 )
 
 const name = "foo"
@@ -20,17 +22,22 @@ func TestEnsureUnstructured(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-	})
+	}, testutil.NewTestSchemeWithCoreV1())
 	require.NoError(t, err)
 	assert.IsType(t, &unstructured.Unstructured{}, uns)
 	assert.True(t, wasConverted)
+
+	// Assert that typemeta was carried over.
+	assert.Equal(t, "v1", uns.Object["apiVersion"])
+	assert.Equal(t, "Secret", uns.Object["kind"])
+
 	// Assert that name was carried over.
 	actualName := uns.Object["metadata"].(map[string]any)["name"].(string)
 	assert.Equal(t, name, actualName)
 
 	// Passing an unstructed object yiels the same unstructured.
 	in := &unstructured.Unstructured{}
-	uns, wasConverted, err = ensureUnstructured(in)
+	uns, wasConverted, err = ensureUnstructured(in, testutil.NewTestSchemeWithCoreV1())
 	require.NoError(t, err)
 	assert.IsType(t, &unstructured.Unstructured{}, uns)
 	assert.False(t, wasConverted)
@@ -49,17 +56,22 @@ func TestEnsureUnstructuredList(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, testutil.NewTestSchemeWithCoreV1())
 	require.NoError(t, err)
 	assert.IsType(t, &unstructured.UnstructuredList{}, uns)
 	assert.True(t, wasConverted)
+
+	// Assert that typemeta was carried over.
+	assert.Equal(t, "v1", uns.Object["apiVersion"])
+	assert.Equal(t, "SecretList", uns.Object["kind"])
+
 	// Assert that name was carried over.
 	actualName := uns.Object["items"].([]any)[0].(map[string]any)["metadata"].(map[string]any)["name"].(string)
 	assert.Equal(t, name, actualName)
 
 	// Passing an unstructed object yiels the same unstructured.
 	in := &unstructured.UnstructuredList{}
-	uns, wasConverted, err = ensureUnstructuredList(in)
+	uns, wasConverted, err = ensureUnstructuredList(in, testutil.NewTestSchemeWithCoreV1())
 	require.NoError(t, err)
 	assert.IsType(t, &unstructured.UnstructuredList{}, uns)
 	assert.False(t, wasConverted)
