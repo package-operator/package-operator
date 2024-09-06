@@ -1,11 +1,14 @@
 package packages
 
-import "package-operator.run/internal/packages/internal/packagerepository"
+import (
+	"package-operator.run/internal/packages/internal/packagerepository"
+)
 
 type (
 	RepositoryIndex      = packagerepository.RepositoryIndex
 	MultiRepositoryIndex = packagerepository.MultiRepositoryIndex
 	Entry                = packagerepository.Entry
+	RepositoryStore      = packagerepository.RepositoryStore
 )
 
 var (
@@ -16,4 +19,5 @@ var (
 	SaveRepositoryToFile    = packagerepository.SaveRepositoryToFile
 	SaveRepositoryToOCI     = packagerepository.SaveRepositoryToOCI
 	LoadRepositoryFromOCI   = packagerepository.LoadRepositoryFromOCI
+	NewRepositoryStore      = packagerepository.NewRepositoryStore
 )
