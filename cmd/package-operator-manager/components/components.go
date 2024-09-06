@@ -57,6 +57,9 @@ func NewComponents() (*dig.Container, error) {
 
 		// HostedCluster
 		ProvideHostedClusterController,
+
+		// SecretSync
+		ProvideSecretSyncController,
 	}
 	for _, p := range providers {
 		if err := container.Provide(p); err != nil {
@@ -107,6 +110,7 @@ func ProvideManager(
 		MapperProvider:             apiutil.NewDynamicRESTMapper,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
+				// TODO: remove this, we don't unpack via jobs anymore.
 				// We create Jobs to unpack package images.
 				// Limit caches to only contain Jobs that we create ourselves.
 				&batchv1.Job{}: {
