@@ -5,6 +5,8 @@ package packageoperator
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -13,20 +15,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/autoimpersonation/ownership"
 	"package-operator.run/internal/controllers/objectsets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
+//nolint:tparallel
 func TestVerifyOwnership(t *testing.T) {
 	pkg := &corev1alpha1.Package{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Package",
-			APIVersion: "package-operator.run/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-pkg",
 			Namespace: "default",
@@ -40,14 +39,7 @@ func TestVerifyOwnership(t *testing.T) {
 	}
 
 	// deploy package
-	objectDeployment := &adapters.ObjectDeployment{
-		ObjectDeployment: corev1alpha1.ObjectDeployment{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ObjectDeployment",
-				APIVersion: "package-operator.run/v1alpha1",
-			},
-		},
-	}
+	objectDeployment := &adapters.ObjectDeployment{}
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	requireDeployPackage(ctx, t, pkg, objectDeployment.ClientObject())
 
@@ -56,18 +48,11 @@ func TestVerifyOwnership(t *testing.T) {
 	require.Len(t, controllerOf, 1)
 	objectSetReference := controllerOf[0]
 
-	objectSet := &objectsets.GenericObjectSet{
-		ObjectSet: corev1alpha1.ObjectSet{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ObjectSet",
-				APIVersion: "package-operator.run/v1alpha1",
-			},
-		},
-	}
+	objectSet := &objectsets.GenericObjectSet{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name:      objectSetReference.Name,
 		Namespace: objectSetReference.Namespace,
-	}, &objectSet.ObjectSet))
+	}, objectSet.ClientObject()))
 
 	// objectSet should reference the deployment in '.status.controllerOf'
 	controllerOf = objectSet.GetStatusControllerOf()
@@ -80,43 +65,58 @@ func TestVerifyOwnership(t *testing.T) {
 		Namespace: deploymentReference.Namespace,
 	}, deployment))
 
+	// `Client.Get()` doesn't populate the `TypeMeta` field that is used by the ownership verification logic,
+	// so it has to be added manually
 	objectSet.ObjectSet.TypeMeta = metav1.TypeMeta{
 		Kind:       "ObjectSet",
 		APIVersion: "package-operator.run/v1alpha1",
 	}
+	objectDeployment.ObjectDeployment.TypeMeta = metav1.TypeMeta{
+		Kind:       "ObjectDeployment",
+		APIVersion: "package-operator.run/v1alpha1",
+	}
+	pkg.TypeMeta = metav1.TypeMeta{
+		Kind:       "Package",
+		APIVersion: "package-operator.run/v1alpha1",
+	}
+	deployment.TypeMeta = metav1.TypeMeta{
+		Kind:       "Deployment",
+		APIVersion: "apps/v1",
+	}
 
 	ownershipChain := []client.Object{
 		pkg,
-		objectDeployment,
-		objectSet,
+		objectDeployment.ClientObject(),
+		objectSet.ClientObject(),
 		deployment,
 	}
-
-	fmt.Printf("%#v\n", pkg.GetObjectKind())
-	fmt.Printf("%#v\n", objectDeployment.GetObjectKind())
-	fmt.Printf("%#v\n", objectSet.GetObjectKind())
-	fmt.Printf("%#v\n", deployment.GetObjectKind())
 
 	t.Run("all possible links", func(t *testing.T) {
 		t.Parallel()
 
-		for i := 0; i < len(ownershipChain); i++ {
-			for j := 0; j < len(ownershipChain); j++ {
+		for i := range ownershipChain {
+			for j := range ownershipChain {
 				parent := ownershipChain[i]
 				child := ownershipChain[j]
+
+				msg := fmt.Sprintf("parent: %s, child: %s",
+					parent.GetObjectKind().GroupVersionKind().String(),
+					child.GetObjectKind().GroupVersionKind().String())
+
 				isOwner, err := ownership.VerifyOwnership(child, parent)
 
-				if i+1 == j {
+				switch i {
+				case j - 1:
 					// link should be valid
-					require.NoError(t, err)
-					assert.True(t, isOwner)
-				} else if i == 3 {
+					require.NoError(t, err, msg)
+					assert.True(t, isOwner, msg)
+				case 3:
 					// parent is 'deployment' --> invalid owner kind
-					assert.ErrorIs(t, err, ownership.ErrUnsupportedOwnerKind)
-				} else {
+					require.ErrorIs(t, err, ownership.ErrUnsupportedOwnerKind, msg)
+				default:
 					// link should be invalid
-					require.NoError(t, err)
-					assert.False(t, isOwner)
+					require.NoError(t, err, msg)
+					assert.False(t, isOwner, msg)
 				}
 			}
 		}
