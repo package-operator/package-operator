@@ -1256,6 +1256,8 @@ containing file-based manifests for the packaging infrastructure.
 
 * [PackageManifest](#packagemanifest)
 * [PackageManifestLock](#packagemanifestlock)
+* [Repository](#repository)
+* [RepositoryEntry](#repositoryentry)
 
 
 ### PackageManifest
@@ -1280,6 +1282,18 @@ spec:
         testProp:
           type: string
       type: object
+  constraints:
+  - platform:
+    - Kubernetes
+    platformVersion:
+      name: Kubernetes
+      range: '>=1.20.x'
+    uniqueInScope: PackageManifestUniqueInScopeConstraint
+  dependencies:
+  - image:
+      name: my-pkg
+      package: my-pkg.my-repo
+      range: '>=2.1'
   filter:
     conditions:
     - expression: has(environment.openShift)
@@ -1293,6 +1307,9 @@ spec:
   phases:
   - class: hosted-cluster
     name: deploy
+  repositories:
+  - file: ../myrepo.yaml
+    image: quay.io/package-operator/my-repo:latest
   scopes:
   - Cluster
   - Namespaced
@@ -1353,10 +1370,15 @@ metadata:
   name: example
   namespace: default
 spec:
+  dependencies:
+  - digest: sha256:00e48c32b3cdcf9e2c66467f2beb0ef33b43b54e2b56415db4ee431512c406ea
+    image: quay.io/package-operator/remote-phase-package
+    name: my-pkg
+    version: v1.12.3
   images:
-  - digest: sit
-    image: dolor
-    name: ipsum
+  - digest: sha256:00e48c32b3cdcf9e2c66467f2beb0ef33b43b54e2b56415db4ee431512c406ea
+    image: quay.io/package-operator/remote-phase-package
+    name: my-pkg
 
 ```
 
@@ -1365,6 +1387,64 @@ spec:
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
 | `spec` <br><a href="#packagemanifestlockspec">PackageManifestLockSpec</a> | PackageManifestLockSpec defines a set of packages that are locked to a specific version. |
+
+
+### Repository
+
+Repository is the k8s resource that represents a package repository.
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: Repository
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+
+
+### RepositoryEntry
+
+RepositoryEntry contains metadata on one image belonging to the repository.
+
+
+**Example**
+
+```yaml
+apiVersion: manifests.package-operator.run/v1alpha1
+data:
+  constraints:
+  - platform:
+    - Kubernetes
+    platformVersion:
+      name: Kubernetes
+      range: '>=1.20.x'
+    uniqueInScope: PackageManifestUniqueInScopeConstraint
+  digest: dolor
+  image: ipsum
+  name: amet
+  versions:
+  - sit
+kind: RepositoryEntry
+metadata:
+  name: example
+  namespace: default
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `data` <b>required</b><br><a href="#repositoryentrydata">RepositoryEntryData</a> | RepositoryEntryData is the part of RepositoryEntry containing the actual data. |
 
 
 
@@ -1475,6 +1555,50 @@ Used in:
 * [PackageEnvironment](#packageenvironment)
 
 
+### PackageManifestConstraint
+
+PackageManifestConstraint configures environment constraints to block package installation.
+
+| Field | Description |
+| ----- | ----------- |
+| `platformVersion` <br><a href="#packagemanifestplatformversionconstraint">PackageManifestPlatformVersionConstraint</a> | PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.<br>This constraint is ignored when running on a different platform.<br>e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.<br>Use the Platform constraint to enforce running on a specific platform. |
+| `platform` <br><a href="#platformname">[]PlatformName</a> | Valid platforms that support this package. |
+| `uniqueInScope` <br><a href="#packagemanifestuniqueinscopeconstraint">PackageManifestUniqueInScopeConstraint</a> | Constraints this package to be only installed once in the Cluster or once in the same Namespace. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+* [RepositoryEntryData](#repositoryentrydata)
+
+
+### PackageManifestDependency
+
+PackageManifestDependency uses a solver to find the latest version package image.
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <br><a href="#packagemanifestdependencyimage">PackageManifestDependencyImage</a> | Resolves the dependency as a image url and digest and commits it to the PackageManifestLock. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
+### PackageManifestDependencyImage
+
+PackageManifestDependencyImage represents a dependency image found by the solver.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Name for the dependency. |
+| `package` <b>required</b><br>string | Package FQDN <package-name>.<repository name> |
+| `range` <b>required</b><br>string | Semantic Versioning 2.0.0 version range. |
+
+
+Used in:
+* [PackageManifestDependency](#packagemanifestdependency)
+
+
 ### PackageManifestFilter
 
 PackageManifestFilter is used to conditionally render objects based on CEL expressions.
@@ -1503,6 +1627,22 @@ Used in:
 * [PackageManifestSpec](#packagemanifestspec)
 
 
+### PackageManifestLockDependency
+
+PackageManifestLockDependency defines a dependency of this package.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br>string | Image name to be use to reference it in the templates |
+| `image` <b>required</b><br>string | Image identifier (REPOSITORY[:TAG]) |
+| `digest` <b>required</b><br>string | Image digest |
+| `version` <b>required</b><br>string | Version of the dependency that has been chosen. |
+
+
+Used in:
+* [PackageManifestLockSpec](#packagemanifestlockspec)
+
+
 ### PackageManifestLockImage
 
 PackageManifestLockImage contains information about a resolved image.
@@ -1525,6 +1665,7 @@ PackageManifestLockSpec defines a set of packages that are locked to a specific 
 | Field | Description |
 | ----- | ----------- |
 | `images` <b>required</b><br><a href="#packagemanifestlockimage">[]PackageManifestLockImage</a> | List of resolved images |
+| `dependencies` <br><a href="#packagemanifestlockdependency">[]PackageManifestLockDependency</a> | List of resolved dependency images. |
 
 
 Used in:
@@ -1576,6 +1717,38 @@ Used in:
 * [PackageManifestSpec](#packagemanifestspec)
 
 
+### PackageManifestPlatformVersionConstraint
+
+PackageManifestPlatformVersionConstraint enforces that the platform matches the given version range.
+This constraint is ignored when running on a different platform.
+e.g. a PlatformVersionConstraint OpenShift>=4.13.x is ignored when installed on a plain Kubernetes cluster.
+Use the Platform constraint to enforce running on a specific platform.
+
+| Field | Description |
+| ----- | ----------- |
+| `name` <b>required</b><br><a href="#platformname">PlatformName</a> | Name of the platform this constraint should apply to. |
+| `range` <b>required</b><br>string | Semantic Versioning 2.0.0 version range. |
+
+
+Used in:
+* [PackageManifestConstraint](#packagemanifestconstraint)
+
+
+### PackageManifestRepository
+
+PackageManifestRepository contains information about one package repository
+which could be loaded either from a local file or from a container image.
+
+| Field | Description |
+| ----- | ----------- |
+| `file` <br>string | References a file in the filesystem to load. |
+| `image` <br>string | References an image in a container image registry. |
+
+
+Used in:
+* [PackageManifestSpec](#packagemanifestspec)
+
+
 ### PackageManifestSpec
 
 PackageManifestSpec represents the spec of the packagemanifest containing the
@@ -1590,6 +1763,9 @@ details about phases and availability probes.
 | `images` <b>required</b><br><a href="#packagemanifestimage">[]PackageManifestImage</a> | List of images to be resolved |
 | `components` <br><a href="#packagemanifestcomponentsconfig">PackageManifestComponentsConfig</a> | Configuration for multi-component packages. If this field is not set it is assumed<br>that the containing package is a single-component package. |
 | `filter` <br><a href="#packagemanifestfilter">PackageManifestFilter</a> | Used to filter objects and files based on CEL expressions. |
+| `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints limit what environments a package can be installed into.<br>e.g. can only be installed on OpenShift. |
+| `repositories` <br><a href="#packagemanifestrepository">[]PackageManifestRepository</a> | Repository references that are used to validate constraints and resolve dependencies. |
+| `dependencies` <br><a href="#packagemanifestdependency">[]PackageManifestDependency</a> | Dependency references to resolve and use within this package. |
 
 
 Used in:
@@ -1649,6 +1825,23 @@ PackageManifestTestKubeconform configures kubeconform testing.
 
 Used in:
 * [PackageManifestTest](#packagemanifesttest)
+
+
+### RepositoryEntryData
+
+RepositoryEntryData is the part of RepositoryEntry containing the actual data.
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <b>required</b><br>string | OCI host/repository and name.<br>e.g. quay.io/xxx/xxx |
+| `digest` <b>required</b><br>string | Image digest uniquely identifying this image. |
+| `versions` <b>required</b><br>[]string | Semver V2 versions that are assigned to the package. |
+| `constraints` <br><a href="#packagemanifestconstraint">[]PackageManifestConstraint</a> | Constraints of the package. |
+| `name` <br>string | Name of the package. |
+
+
+Used in:
+* [RepositoryEntry](#repositoryentry)
 
 
 ### TemplateContext
