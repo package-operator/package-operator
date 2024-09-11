@@ -647,7 +647,7 @@ status:
 
 ### SecretSync
 
-SecretSync synchronizes a singlular source object
+SecretSync synchronizes a singular secret into multiple destinations.
 
 
 **Example**

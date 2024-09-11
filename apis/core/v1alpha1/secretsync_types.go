@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SecretSync synchronizes a singlular source object
+// SecretSync synchronizes a singular secret into multiple destinations.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName={"ssync"}
@@ -89,8 +89,11 @@ type SecretSyncStrategyWatch struct{}
 
 // NamespacedName container.
 type NamespacedName struct {
+	// +kubebuilder:validation:Required
 	Namespace string `json:"namespace"`
-	Name      string `json:"name"`
+
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
 }
 
 // SecretSync condition types.
