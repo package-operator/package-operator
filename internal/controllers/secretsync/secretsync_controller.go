@@ -2,6 +2,7 @@ package secretsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -88,7 +89,9 @@ func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 					c.log.Info(
 						"processing dynamic cache event",
 						"object", client.ObjectKeyFromObject(object),
-						"owners", object.GetOwnerReferences())
+						"owners", object.GetOwnerReferences(),
+						"gvk", object.GetObjectKind().GroupVersionKind(),
+					)
 					return true
 				}),
 			),
@@ -96,6 +99,15 @@ func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 		WatchesRawSource(
 			c.dynamicCache.Source(
 				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, &v1alpha1.SecretSync{}, mgr.GetScheme()),
+				predicate.NewPredicateFuncs(func(object client.Object) bool {
+					c.log.Info(
+						"processing dynamic cache event",
+						"gvk", object.GetObjectKind().GroupVersionKind(),
+						"object", client.ObjectKeyFromObject(object),
+						"owners", object.GetOwnerReferences(),
+					)
+					return true
+				}),
 			),
 		).
 		Complete(c)
@@ -121,21 +133,21 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if rr.statusChanged {
 			statusChanged = true
 		}
-		if !rr.res.IsZero() {
-			res = rr.res
-			break
-		}
 		if errI != nil {
 			err = errI
+			break
+		}
+		if !rr.res.IsZero() {
+			res = rr.res
 			break
 		}
 	}
 
 	if statusChanged {
-		if err := c.client.Status().Update(ctx, secretSync); err != nil {
-			return res, fmt.Errorf("updating SecretSync status: %w", err)
+		errS := c.client.Status().Update(ctx, secretSync)
+		if errS != nil {
+			err = errors.Join(err, fmt.Errorf("updating SecretSync status: %w", errS))
 		}
 	}
-
 	return res, err
 }
