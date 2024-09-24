@@ -34,7 +34,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	path := filepath.Join("config", "packages", name, "container.oci.tar")
+	path := filepath.Join(".cache", "packages", name, "container.oci.tar")
 	url := imageURL(registry, name+"-package", appVersion)
 
 	if err := cmd.NewBuild().BuildFromSource(ctx,
@@ -57,7 +57,7 @@ func pushPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	imgPath, err := filepath.Abs(filepath.Join("config", "packages", name))
+	imgPath, err := filepath.Abs(filepath.Join(".cache", "packages", name))
 	if err != nil {
 		return err
 	}
