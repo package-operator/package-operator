@@ -28,13 +28,6 @@ func handlePackage(clientL *internalcmd.Client, nsPackage *internalcmd.Package,
 					obj.Object.GroupVersionKind(),
 					client.ObjectKeyFromObject(&obj.Object)))
 		}
-
-		for _, obj := range phase.ExternalObjects {
-			treePhase.Add(
-				fmt.Sprintf("%s %s (EXTERNAL)",
-					obj.Object.GroupVersionKind(),
-					client.ObjectKeyFromObject(&obj.Object)))
-		}
 	}
 	return tree.Print(), nil
 }
@@ -57,13 +50,6 @@ func handleClusterPackage(clientL *internalcmd.Client, clsPackage *internalcmd.P
 		for _, obj := range phase.Objects {
 			treePhase.Add(
 				fmt.Sprintf("%s %s",
-					obj.Object.GroupVersionKind(),
-					client.ObjectKeyFromObject(&obj.Object)))
-		}
-
-		for _, obj := range phase.ExternalObjects {
-			treePhase.Add(
-				fmt.Sprintf("%s %s (EXTERNAL)",
 					obj.Object.GroupVersionKind(),
 					client.ObjectKeyFromObject(&obj.Object)))
 		}

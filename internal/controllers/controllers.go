@@ -174,7 +174,7 @@ func AddDynamicCacheLabel(
 		labels = map[string]string{}
 	}
 
-	labels[constants.DynamicCacheLabel] = "True" //nolint:goconst
+	labels[constants.DynamicCacheLabel] = "True"
 	updated.SetLabels(labels)
 
 	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {
