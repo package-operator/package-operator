@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
@@ -316,4 +319,181 @@ func TestPackage_nonExistent(t *testing.T) {
 	err := Client.Get(ctx, client.ObjectKey{Name: "non-existent", Namespace: "default"}, existingPackage)
 	require.NoError(t, err)
 	require.Equal(t, "ImagePullBackOff", existingPackage.Status.Conditions[0].Reason)
+}
+
+func TestPackage_externalObject_teardown(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	meta := metav1.ObjectMeta{
+		Name: "success",
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+		},
+	}
+	pkg := newPackage(meta, spec, true)
+	requireDeployPackage(ctx, t, pkg, &corev1alpha1.ObjectDeployment{})
+	// Test if environment information is injected successfully.
+	deploy := &appsv1.Deployment{}
+	err := Client.Get(ctx, client.ObjectKey{
+		Name:      "test-stub-success",
+		Namespace: "default",
+	}, deploy)
+	require.NoError(t, err)
+
+	var env manifestsv1alpha1.PackageEnvironment
+	te := deploy.Annotations["test-environment"]
+	err = json.Unmarshal([]byte(te), &env)
+	require.NoError(t, err)
+	assert.NotEmpty(t, env.Kubernetes.Version)
+	objectSet := &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "external",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				AvailabilityProbes: []corev1alpha1.ObjectSetProbe{
+					{
+						Selector: corev1alpha1.ProbeSelector{
+							Kind: &corev1alpha1.PackageProbeKindSpec{
+								Kind:  "Deployment",
+								Group: "apps",
+							},
+						},
+						Probes: []corev1alpha1.Probe{
+							{
+								FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
+									FieldA: ".status.updatedReplicas",
+									FieldB: ".status.replicas",
+								},
+							},
+							{
+								Condition: &corev1alpha1.ProbeConditionSpec{
+									Status: string(metav1.ConditionTrue),
+									Type:   string(appsv1.DeploymentAvailable),
+								},
+							},
+						},
+					},
+				},
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{
+					{
+						Name: "deploy",
+						ExternalObjects: []corev1alpha1.ObjectSetObject{
+							{
+								Object: unstructured.Unstructured{
+									Object: map[string]any{
+										"apiVersion": "apps/v1",
+										"kind":       "Deployment",
+										"metadata": map[string]any{
+											"name": "test-stub-success",
+										},
+									},
+								},
+								ConditionMappings: []corev1alpha1.ConditionMapping{
+									{
+										SourceType:      string(appsv1.DeploymentAvailable),
+										DestinationType: "a/DeploymentAvailable",
+									},
+									{
+										SourceType:      string(appsv1.DeploymentProgressing),
+										DestinationType: "a/DeploymentProgressing",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, Client.Create(ctx, objectSet))
+	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+	cleanupOnSuccess(ctx, t, objectSet)
+	require.NoError(t, Client.Delete(ctx, objectSet))
+	require.NoError(t,
+		Waiter.WaitForObject(
+			ctx, deploy, "external ownerReference to be removed",
+			func(client.Object) (bool, error) {
+				deploy = &appsv1.Deployment{}
+				err = Client.Get(ctx, client.ObjectKey{
+					Name:      "test-stub-success",
+					Namespace: "default",
+				}, deploy)
+				externalOwner := false
+				for _, own := range deploy.GetOwnerReferences() {
+					if own.Name == "external" {
+						externalOwner = true
+					}
+				}
+				return len(deploy.GetOwnerReferences()) == 1 && !externalOwner, err
+			},
+			wait.WithTimeout(15*time.Second),
+		))
+}
+
+func TestPackage_internalObject_teardown(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	meta := metav1.ObjectMeta{
+		Name: "success",
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+		},
+	}
+	pkg := newPackage(meta, spec, true)
+	requireDeployPackage(ctx, t, pkg, &corev1alpha1.ObjectDeployment{})
+	// Test if environment information is injected successfully.
+	deploy := &appsv1.Deployment{}
+	err := Client.Get(ctx, client.ObjectKey{
+		Name:      "test-stub-success",
+		Namespace: "default",
+	}, deploy)
+	require.NoError(t, err)
+	cleanupOnSuccess(ctx, t, deploy)
+	var env manifestsv1alpha1.PackageEnvironment
+	te := deploy.Annotations["test-environment"]
+	err = json.Unmarshal([]byte(te), &env)
+	require.NoError(t, err)
+	assert.NotEmpty(t, env.Kubernetes.Version)
+	deploy.OwnerReferences[0].Controller = ptr.To(false)
+	err = Client.Update(ctx, deploy)
+	require.NoError(t, err)
+	objDeploy := &corev1alpha1.ObjectDeployment{}
+	err = Client.Get(ctx, client.ObjectKey{
+		Name:      "success",
+		Namespace: "default",
+	}, objDeploy)
+	require.NoError(t, err)
+	templateHash := objDeploy.Status.TemplateHash
+	objectSet := &corev1alpha1.ObjectSet{}
+	err = Client.Get(ctx, client.ObjectKey{
+		Name:      "success-" + templateHash,
+		Namespace: "default",
+	}, objectSet)
+	require.NoError(t, err)
+	require.NoError(t, Client.Delete(ctx, objectSet))
+	require.NoError(t,
+		Waiter.WaitForObject(
+			ctx, deploy, "internal ownerReference to be removed",
+			func(client.Object) (bool, error) {
+				deploy = &appsv1.Deployment{}
+				err = Client.Get(ctx, client.ObjectKey{
+					Name:      "test-stub-success",
+					Namespace: "default",
+				}, deploy)
+				internalOwner := false
+				for _, own := range deploy.GetOwnerReferences() {
+					if own.Name == "success" {
+						internalOwner = true
+					}
+				}
+				return len(deploy.GetOwnerReferences()) == 1 && !internalOwner, err
+			},
+			wait.WithTimeout(40*time.Second),
+		))
 }

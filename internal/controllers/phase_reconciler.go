@@ -361,14 +361,36 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
 			return true, nil
 		}
+		// Option 1: Merge patch, only provide the ownerReference to patch
+		object := &unstructured.Unstructured{}
+		object.SetOwnerReferences(currentObj.GetOwnerReferences())
+		r.ownerStrategy.RemoveOwner(owner.ClientObject(), object)
+		objectPatch, err := json.Marshal(object)
+		if err != nil {
+			return false, fmt.Errorf("creating patch: %w", err)
+		}
+		if err = r.writer.Patch(ctx, currentObj, client.RawPatch(
+			types.MergePatchType, objectPatch,
+		)); err != nil {
+			return false, fmt.Errorf("removing external object owner reference: %w", err)
+		}
+		// Option 2 : SSA patch
+		// r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
+		// currentObj.SetManagedFields(nil)
+		// unstructured.RemoveNestedField(currentObj.Object, "status")
+		// if err := r.writer.Patch(ctx, currentObj, client.Apply,
+		//	client.FieldOwner(constants.FieldOwner)); err != nil {
+		//	return false, fmt.Errorf("removing external object owner reference: %w", err)
+		//}
 
 		// This object is controlled by someone else
 		// so we don't have to delete it for cleanup.
 		// But we still want to remove ourselves as potential owner.
-		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
-		if err := r.writer.Update(ctx, currentObj); err != nil {
-			return false, fmt.Errorf("removing owner reference: %w", err)
-		}
+		// r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
+		//
+		// if err := r.writer.Update(ctx, currentObj); err != nil {
+		//	return false, fmt.Errorf("removing owner reference: %w", err)
+		//}
 		return true, nil
 	}
 
@@ -427,11 +449,27 @@ func (r *PhaseReconciler) teardownExternalObject(
 		return false, fmt.Errorf("retrieving external object: %w", err)
 	}
 
-	r.ownerStrategy.RemoveOwner(ownerObj, obj)
-	if err := r.writer.Update(ctx, obj); err != nil {
-		return false, fmt.Errorf("removing owner reference: %w", err)
+	// Option 1: Merge patch, only provide the ownerReference to patch
+	object := &unstructured.Unstructured{}
+	object.SetOwnerReferences(observed.GetOwnerReferences())
+	r.ownerStrategy.RemoveOwner(ownerObj, object)
+	objectPatch, err := json.Marshal(object)
+	if err != nil {
+		return false, fmt.Errorf("creating patch: %w", err)
 	}
-
+	if err = r.writer.Patch(ctx, observed, client.RawPatch(
+		types.MergePatchType, objectPatch,
+	)); err != nil {
+		return false, fmt.Errorf("removing external object owner reference: %w", err)
+	}
+	// Option 2 : SSA patch
+	// r.ownerStrategy.RemoveOwner(ownerObj, observed)
+	// observed.SetManagedFields(nil)
+	// unstructured.RemoveNestedField(observed.Object, "status")
+	// if err := r.writer.Patch(ctx, observed, client.Apply,
+	//	client.FieldOwner(constants.FieldOwner)); err != nil {
+	//	return false, fmt.Errorf("removing external object owner reference: %w", err)
+	//}
 	return true, nil
 }
 
