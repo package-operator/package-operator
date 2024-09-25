@@ -1,8 +1,0 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: "test-external-name"
-  namespace: external-name
-  annotations:
-    package-operator.run/phase: deploy
-    package-operator.run/external: "True"

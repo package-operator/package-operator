@@ -212,13 +212,6 @@ func newTreeFromSpec(header string, spec v1alpha1.ObjectSetTemplateSpec) gotree.
 					obj.Object.GroupVersionKind(),
 					client.ObjectKeyFromObject(&obj.Object)))
 		}
-
-		for _, obj := range phase.ExternalObjects {
-			treePhase.Add(
-				fmt.Sprintf("%s %s (EXTERNAL)",
-					obj.Object.GroupVersionKind(),
-					client.ObjectKeyFromObject(&obj.Object)))
-		}
 	}
 
 	return tree

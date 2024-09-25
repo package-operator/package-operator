@@ -51,10 +51,8 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 		annotations := object.GetAnnotations()
 		phaseAnnotation := annotations[manifestsv1alpha1.PackagePhaseAnnotation]
 		collisionProtectionAnnotation := annotations[manifestsv1alpha1.PackageCollisionProtectionAnnotation]
-		isExternalObject := annotations[manifestsv1alpha1.PackageExternalObjectAnnotation] == "True"
 		delete(annotations, manifestsv1alpha1.PackagePhaseAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageConditionMapAnnotation)
-		delete(annotations, manifestsv1alpha1.PackageExternalObjectAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageCollisionProtectionAnnotation)
 		delete(annotations, manifestsv1alpha1.PackageCELConditionAnnotation)
 		if len(annotations) == 0 {
@@ -80,11 +78,7 @@ func (c phaseCollector) AddObjects(objs ...unstructured.Unstructured) {
 			CollisionProtection: corev1alpha1.CollisionProtection(collisionProtectionAnnotation),
 		}
 
-		if isExternalObject {
-			c.addExternalObjects(phaseAnnotation, objSetObj)
-		} else {
-			c.addObjects(phaseAnnotation, objSetObj)
-		}
+		c.addObjects(phaseAnnotation, objSetObj)
 	}
 }
 
@@ -99,21 +93,10 @@ func (c phaseCollector) addObjects(phaseName string, objs ...corev1alpha1.Object
 	c[phaseName] = entry
 }
 
-func (c phaseCollector) addExternalObjects(phaseName string, objs ...corev1alpha1.ObjectSetObject) {
-	entry, ok := c[phaseName]
-	if !ok {
-		return
-	}
-
-	entry.Phase.ExternalObjects = append(entry.Phase.ExternalObjects, objs...)
-
-	c[phaseName] = entry
-}
-
 func (c phaseCollector) Collect() []corev1alpha1.ObjectSetTemplatePhase {
 	entries := make([]phaseCollectorEntry, 0, len(c))
 	for _, entry := range c {
-		if len(entry.Phase.Objects) == 0 && len(entry.Phase.ExternalObjects) == 0 {
+		if len(entry.Phase.Objects) == 0 {
 			// empty phases may happen due to templating for scope or topology restrictions.
 			continue
 		}

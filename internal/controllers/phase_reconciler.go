@@ -217,75 +217,7 @@ func (r *PhaseReconciler) ReconcilePhase(
 		rec.Probe(actualObj)
 	}
 
-	for _, obj := range phase.ExternalObjects {
-		observedObj, err := r.observeExternalObject(ctx, owner, obj)
-		if err != nil {
-			return nil, res, fmt.Errorf("%s: %w", obj, err)
-		}
-
-		rec.Probe(observedObj)
-	}
-
 	return actualObjects, rec.Result(), nil
-}
-
-func (r *PhaseReconciler) observeExternalObject(
-	ctx context.Context,
-	owner PhaseObjectOwner,
-	extObj corev1alpha1.ObjectSetObject,
-) (*unstructured.Unstructured, error) {
-	var (
-		obj      = &extObj.Object
-		ownerObj = owner.ClientObject()
-	)
-
-	if len(obj.GetNamespace()) == 0 {
-		obj.SetNamespace(ownerObj.GetNamespace())
-	}
-
-	// Watch this external object while the owner of the phase is active
-	if err := r.dynamicCache.Watch(ctx, ownerObj, obj); err != nil {
-		return nil, fmt.Errorf("watching external object: %w", err)
-	}
-
-	var (
-		key      = client.ObjectKeyFromObject(obj)
-		observed = obj.DeepCopy()
-	)
-
-	if err := r.dynamicCache.Get(ctx, key, observed); apimachineryerrors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
-			return nil, NewExternalResourceNotFoundError(obj)
-		} else if err != nil {
-			return nil, fmt.Errorf("retrieving external object: %w", err)
-		}
-
-		// Update object to ensure it is part of our cache and we get events to reconcile.
-		if observed, err = AddDynamicCacheLabel(ctx, r.writer, observed); err != nil {
-			return nil, fmt.Errorf("adding cache label: %w", err)
-		}
-	} else if err != nil {
-		return nil, fmt.Errorf("retrieving external object: %w", err)
-	}
-
-	if err := r.ownerStrategy.SetOwnerReference(ownerObj, observed); err != nil {
-		return nil, fmt.Errorf("setting owner reference: %w", err)
-	}
-	ownerPatch, err := r.ownerStrategy.OwnerPatch(observed)
-	if err != nil {
-		return nil, fmt.Errorf("determining owner patch: %w", err)
-	}
-	if err := r.writer.Patch(ctx, observed, client.RawPatch(
-		types.MergePatchType, ownerPatch,
-	)); err != nil {
-		return nil, fmt.Errorf("patching object ownership: %w", err)
-	}
-
-	if err := mapConditions(ctx, owner, extObj.ConditionMappings, observed); err != nil {
-		return nil, err
-	}
-
-	return observed, nil
 }
 
 func (r *PhaseReconciler) TeardownPhase(
@@ -293,22 +225,11 @@ func (r *PhaseReconciler) TeardownPhase(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	var cleanupCounter int
-	objectsToCleanup := len(phase.Objects) + len(phase.ExternalObjects)
+	objectsToCleanup := len(phase.Objects)
 	for _, phaseObject := range phase.Objects {
 		done, err := r.teardownPhaseObject(ctx, owner, phaseObject)
 		if err != nil {
 			return false, err
-		}
-
-		if done {
-			cleanupCounter++
-		}
-	}
-
-	for _, extObj := range phase.ExternalObjects {
-		done, err := r.teardownExternalObject(ctx, owner, extObj)
-		if err != nil {
-			return false, fmt.Errorf("tearing down external object: %w", err)
 		}
 
 		if done {
@@ -387,52 +308,6 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	}
 
 	return false, nil
-}
-
-func (r *PhaseReconciler) teardownExternalObject(
-	ctx context.Context, owner PhaseObjectOwner,
-	extObj corev1alpha1.ObjectSetObject,
-) (cleanupDone bool, err error) {
-	var (
-		obj      = &extObj.Object
-		ownerObj = owner.ClientObject()
-	)
-
-	if len(obj.GetNamespace()) == 0 {
-		obj.SetNamespace(ownerObj.GetNamespace())
-	}
-
-	// handles the case where cache must be repaired after objectset
-	// was initially reconciled
-	if err := r.dynamicCache.Watch(ctx, ownerObj, obj); err != nil {
-		return false, fmt.Errorf("watching external object: %w", err)
-	}
-
-	var (
-		key      = client.ObjectKeyFromObject(obj)
-		observed = obj.DeepCopy()
-	)
-	if err := r.dynamicCache.Get(ctx, key, observed); apimachineryerrors.IsNotFound(err) {
-		if err := r.uncachedClient.Get(ctx, key, obj); apimachineryerrors.IsNotFound(err) {
-			// external object does not exist therefore no action is needed
-			return true, nil
-		} else if err != nil {
-			return false, fmt.Errorf("retrieving external object: %w", err)
-		}
-
-		if _, err = RemoveDynamicCacheLabel(ctx, r.writer, observed); err != nil {
-			return false, fmt.Errorf("removing cache label: %w", err)
-		}
-	} else if err != nil {
-		return false, fmt.Errorf("retrieving external object: %w", err)
-	}
-
-	r.ownerStrategy.RemoveOwner(ownerObj, obj)
-	if err := r.writer.Update(ctx, obj); err != nil {
-		return false, fmt.Errorf("removing owner reference: %w", err)
-	}
-
-	return true, nil
 }
 
 func (r *PhaseReconciler) reconcilePhaseObject(

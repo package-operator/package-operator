@@ -60,8 +60,6 @@ type ObjectSetTemplatePhase struct {
 	// Objects belonging to this phase.
 	Objects []ObjectSetObject `json:"objects,omitempty"`
 
-	// ExternalObjects observed, but not reconciled by this phase.
-	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 	// References to ObjectSlices containing objects for this phase.
 	Slices []string `json:"slices,omitempty"`
 }

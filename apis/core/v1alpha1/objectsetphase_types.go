@@ -27,7 +27,6 @@ type ObjectSetPhaseList struct {
 // ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 // +kubebuilder:validation:XValidation:rule="has(self.previous) == has(oldSelf.previous)", message="previous is immutable"
 // +kubebuilder:validation:XValidation:rule="has(self.availabilityProbes) == has(oldSelf.availabilityProbes)", message="availabilityProbes is immutable"
-// +kubebuilder:validation:XValidation:rule="has(self.externalObjects) == has(oldSelf.externalObjects)", message="externalObjects is immutable"
 //
 //nolint:lll
 type ObjectSetPhaseSpec struct {
@@ -61,12 +60,6 @@ type ObjectSetPhaseSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="objects is immutable"
 	// +kubebuilder:MaxItems=32
 	Objects []ObjectSetObject `json:"objects"`
-
-	// ExternalObjects observed, but not reconciled by this phase.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="externalObjects is immutable"
-	// +kubebuilder:MaxItems=32
-	ExternalObjects []ObjectSetObject `json:"externalObjects,omitempty"`
 }
 
 // ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.

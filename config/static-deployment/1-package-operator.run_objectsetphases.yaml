@@ -188,49 +188,6 @@ spec:
                 x-kubernetes-validations:
                 - message: availabilityProbes is immutable
                   rule: self == oldSelf
-              externalObjects:
-                description: ExternalObjects observed, but not reconciled by this
-                  phase.
-                items:
-                  description: ObjectSetObject is an object that is part of the phase
-                    of an ObjectSet.
-                  properties:
-                    collisionProtection:
-                      default: Prevent
-                      description: |-
-                        Collision protection prevents Package Operator from working on objects already under
-                        management by a different operator.
-                      type: string
-                    conditionMappings:
-                      description: Maps conditions from this object into the Package
-                        Operator APIs.
-                      items:
-                        description: ConditionMapping maps one condition type to another.
-                        properties:
-                          destinationType:
-                            description: Destination condition type to report into
-                              Package Operator APIs.
-                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]'
-                            type: string
-                          sourceType:
-                            description: Source condition type.
-                            type: string
-                        required:
-                        - destinationType
-                        - sourceType
-                        type: object
-                      type: array
-                    object:
-                      type: object
-                      x-kubernetes-embedded-resource: true
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - object
-                  type: object
-                type: array
-                x-kubernetes-validations:
-                - message: externalObjects is immutable
-                  rule: self == oldSelf
               objects:
                 description: Objects belonging to this phase.
                 items:
@@ -312,8 +269,6 @@ spec:
               rule: has(self.previous) == has(oldSelf.previous)
             - message: availabilityProbes is immutable
               rule: has(self.availabilityProbes) == has(oldSelf.availabilityProbes)
-            - message: externalObjects is immutable
-              rule: has(self.externalObjects) == has(oldSelf.externalObjects)
           status:
             description: ObjectSetPhaseStatus defines the observed state of a ObjectSetPhase.
             properties:
