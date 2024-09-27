@@ -27,6 +27,8 @@ type ObjectDeploymentAccessor interface {
 	SetSelector(labels map[string]string)
 	SetStatusRevision(r int64)
 	GetStatusRevision() int64
+	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
+	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 }
 
 type ObjectDeploymentFactory func(
@@ -139,6 +141,14 @@ func (a *ObjectDeployment) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
+func (a *ObjectDeployment) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+	a.Status.ControllerOf = controllerOf
+}
+
+func (a *ObjectDeployment) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
+}
+
 type ClusterObjectDeployment struct {
 	corev1alpha1.ClusterObjectDeployment
 }
@@ -212,6 +222,14 @@ func (a *ClusterObjectDeployment) SetStatusRevision(r int64) {
 
 func (a *ClusterObjectDeployment) GetStatusRevision() int64 {
 	return a.Status.Revision
+}
+
+func (a *ClusterObjectDeployment) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+	a.Status.ControllerOf = controllerOf
+}
+
+func (a *ClusterObjectDeployment) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
 }
 
 func objectDeploymentPhase(conditions []metav1.Condition) corev1alpha1.ObjectDeploymentPhase {

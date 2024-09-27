@@ -282,6 +282,11 @@ spec:
 status:
   conditions:
   - metav1.Condition
+  controllerOf:
+    group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
   phase: ObjectTemplateStatusPhase
 
 ```
@@ -307,9 +312,9 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  component: lorem
+  component: amet
   config: runtime.RawExtension
-  image: tempor
+  image: sit
 status:
   phase: Pending
 
@@ -361,20 +366,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: dolor
-        name: ipsum
+      - class: sadipscing
+        name: consetetur
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: amet
-            sourceType: sit
+          - destinationType: sed
+            sourceType: elitr
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - consetetur
+        - diam
       successDelaySeconds: 42
 status:
   phase:Pending: null
@@ -431,20 +436,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: elitr
-    name: sadipscing
+  - class: eirmod
+    name: nonumy
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: diam
-        sourceType: sed
+      - destinationType: lorem
+        sourceType: tempor
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - nonumy
+    - ipsum
   previous:
   - name: previous-revision
   successDelaySeconds: 42
@@ -497,8 +502,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: tempor
-      sourceType: eirmod
+    - destinationType: sit
+      sourceType: dolor
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -513,10 +518,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: ipsum
-    kind: lorem
-    name: dolor
-    namespace: sit
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
 
 ```
 
@@ -546,8 +551,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: consetetur
-    sourceType: amet
+  - destinationType: diam
+    sourceType: sed
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -580,18 +585,23 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: elitr
+  - apiVersion: eirmod
     items:
-    - destination: tempor
-      key: eirmod
-    kind: sed
-    name: nonumy
-    namespace: diam
+    - destination: sit
+      key: dolor
+    kind: tempor
+    name: ipsum
+    namespace: lorem
     optional: "true"
-  template: sadipscing
+  template: nonumy
 status:
   conditions:
   - metav1.Condition
+  controllerOf:
+    group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
   phase: ObjectTemplateStatusPhase
 
 ```
@@ -618,9 +628,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: ipsum
+  component: diam
   config: runtime.RawExtension
-  image: lorem
+  image: sed
 status:
   phase: Pending
 
@@ -664,6 +674,7 @@ ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeplo
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ClusterObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | ControllerOf references the owned ClusterObjectSet revisions. |
 
 
 Used in:
@@ -751,7 +762,7 @@ Used in:
 
 ### ControlledObjectReference
 
-ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
+ControlledObjectReference an object controlled by this object.
 
 | Field | Description |
 | ----- | ----------- |
@@ -762,10 +773,13 @@ ControlledObjectReference an object controlled by this ObjectSet/ObjectSetPhase.
 
 
 Used in:
+* [ClusterObjectDeploymentStatus](#clusterobjectdeploymentstatus)
 * [ClusterObjectSetPhaseStatus](#clusterobjectsetphasestatus)
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
+* [ObjectDeploymentStatus](#objectdeploymentstatus)
 * [ObjectSetPhaseStatus](#objectsetphasestatus)
 * [ObjectSetStatus](#objectsetstatus)
+* [ObjectTemplateStatus](#objecttemplatestatus)
 
 
 ### ObjectDeploymentSpec
@@ -794,6 +808,7 @@ ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
 | `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
+| `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | ControllerOf references the owned ObjectSet revisions. |
 
 
 Used in:
@@ -1006,6 +1021,7 @@ ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the statu
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions the templated object is in. |
+| `controllerOf` <br><a href="#controlledobjectreference">ControlledObjectReference</a> | ControllerOf references the templated object. |
 | `phase` <br><a href="#objecttemplatestatusphase">ObjectTemplateStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 
 

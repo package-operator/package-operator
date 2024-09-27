@@ -173,6 +173,15 @@ func (o *genericObjectDeploymentMock) GetObjectSetTemplate() corev1alpha1.Object
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
 }
 
+func (o *genericObjectDeploymentMock) SetStatusControllerOf(a []corev1alpha1.ControlledObjectReference) {
+	o.Called(a)
+}
+
+func (o *genericObjectDeploymentMock) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	args := o.Called()
+	return args.Get(0).([]corev1alpha1.ControlledObjectReference)
+}
+
 type genericObjectSetDeploymentMock struct {
 	mock.Mock
 }
@@ -245,6 +254,15 @@ func (o *genericObjectSetDeploymentMock) GetConditions() *[]metav1.Condition {
 func (o *genericObjectSetDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
+}
+
+func (o *genericObjectSetDeploymentMock) SetStatusControllerOf(a []corev1alpha1.ControlledObjectReference) {
+	o.Called(a)
+}
+
+func (o *genericObjectSetDeploymentMock) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	args := o.Called()
+	return args.Get(0).([]corev1alpha1.ControlledObjectReference)
 }
 
 type objectSetSubReconcilerMock struct {

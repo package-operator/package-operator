@@ -121,6 +121,16 @@ func (r *templateReconciler) Reconcile(
 		return res, fmt.Errorf("updating templated object: %w", err)
 	}
 
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	controllerOf := corev1alpha1.ControlledObjectReference{
+		Kind:      gvk.Kind,
+		Group:     gvk.Group,
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}
+
+	objectTemplate.SetStatusControllerOf(controllerOf)
+
 	return res, nil
 }
 

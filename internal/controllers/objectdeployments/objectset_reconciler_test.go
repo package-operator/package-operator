@@ -237,6 +237,8 @@ func makeObjectDeploymentMock(name string, namespace string,
 			Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
 		}},
 	)
+	res.On("SetStatusControllerOf", mock.Anything).Return()
+	res.On("GetStatusControllerOf").Return(nil)
 	return res
 }
 

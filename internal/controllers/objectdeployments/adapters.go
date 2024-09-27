@@ -21,4 +21,6 @@ type objectDeploymentAccessor interface {
 	GetGeneration() int64
 	SetStatusTemplateHash(templateHash string)
 	SetStatusRevision(r int64)
+	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
+	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 }

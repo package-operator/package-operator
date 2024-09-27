@@ -16,6 +16,8 @@ type genericObjectTemplate interface {
 	GetConditions() *[]metav1.Condition
 	GetGeneration() int64
 	UpdatePhase()
+	SetStatusControllerOf(corev1alpha1.ControlledObjectReference)
+	GetStatusControllerOf() corev1alpha1.ControlledObjectReference
 }
 
 type genericObjectTemplateFactory func(
@@ -76,6 +78,14 @@ func (t *GenericObjectTemplate) UpdatePhase() {
 	t.Status.Phase = getObjectTemplatePhase(t)
 }
 
+func (t *GenericObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {
+	t.Status.ControllerOf = controllerOf
+}
+
+func (t *GenericObjectTemplate) GetStatusControllerOf() corev1alpha1.ControlledObjectReference {
+	return t.Status.ControllerOf
+}
+
 type GenericClusterObjectTemplate struct {
 	corev1alpha1.ClusterObjectTemplate
 }
@@ -109,4 +119,12 @@ func getObjectTemplatePhase(objectTemplate genericObjectTemplate) corev1alpha1.O
 		return corev1alpha1.ObjectTemplatePhaseError
 	}
 	return corev1alpha1.ObjectTemplatePhaseActive
+}
+
+func (t *GenericClusterObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {
+	t.Status.ControllerOf = controllerOf
+}
+
+func (t *GenericClusterObjectTemplate) GetStatusControllerOf() corev1alpha1.ControlledObjectReference {
+	return t.Status.ControllerOf
 }

@@ -24,6 +24,7 @@ type genericObjectSet interface {
 	GetRevision() int64
 	GetRemotePhases() []corev1alpha1.RemotePhaseReference
 	SetRemotePhases([]corev1alpha1.RemotePhaseReference)
+	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 }
 
@@ -126,6 +127,10 @@ func (a *GenericObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.Con
 	a.Status.ControllerOf = controllerOf
 }
 
+func (a *GenericObjectSet) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
+}
+
 type GenericClusterObjectSet struct {
 	corev1alpha1.ClusterObjectSet
 }
@@ -188,6 +193,10 @@ func (a *GenericClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemoteP
 
 func (a *GenericClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
+}
+
+func (a *GenericClusterObjectSet) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+	return a.Status.ControllerOf
 }
 
 func objectSetStatusPhase(conditions []metav1.Condition) corev1alpha1.ObjectSetStatusPhase {
