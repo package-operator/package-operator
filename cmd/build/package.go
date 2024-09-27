@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -34,11 +35,18 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	path := filepath.Join("config", "packages", name, "container.oci.tar")
+	manifestDir := filepath.Join("config", "packages", name)
+	outDir := filepath.Join(".cache", "packages", name)
+	path := filepath.Join(outDir, "container.oci.tar")
 	url := imageURL(registry, name+"-package", appVersion)
 
+	// Prepare output directory because kubectl-package (the `cmd` below) expects that it exists.
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("making directory tree: %w", err)
+	}
+
 	if err := cmd.NewBuild().BuildFromSource(ctx,
-		filepath.Join("config", "packages", name),
+		manifestDir,
 		cmd.WithOutputPath(path),
 		cmd.WithTags{url},
 	); err != nil {
@@ -57,7 +65,7 @@ func pushPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	imgPath, err := filepath.Abs(filepath.Join("config", "packages", name))
+	imgPath, err := filepath.Abs(filepath.Join(".cache", "packages", name))
 	if err != nil {
 		return err
 	}

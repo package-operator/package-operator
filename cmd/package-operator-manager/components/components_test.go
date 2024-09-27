@@ -36,7 +36,7 @@ func TestUncachedClient(t *testing.T) {
 }
 
 func TestProvideRestConfig(t *testing.T) {
-	t.Parallel()
+	t.Setenv("KUBECONFIG", "")
 
 	_, err := ProvideRestConfig()
 	require.EqualError(t, err, "invalid configuration: no configuration has been provided"+

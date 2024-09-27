@@ -17,9 +17,10 @@ type Updater interface {
 
 func NewCmd(updater Updater) *cobra.Command {
 	const (
-		updateUse   = "update source_path"
-		updateShort = "updates image digests of the specified package"
-		updateLong  = "updates image digests of the specified package storing them in the manifest.lock file"
+		updateUse            = "update source_path"
+		updateShort          = "updates image digests of the specified package"
+		updateLong           = "updates image digests of the specified package storing them in the manifest.lock file"
+		updateSuccessMessage = "Package updated successfully!"
 	)
 
 	cmd := &cobra.Command{
@@ -44,6 +45,10 @@ func NewCmd(updater Updater) *cobra.Command {
 
 		switch {
 		case err == nil:
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), updateSuccessMessage); err != nil {
+				panic(err)
+			}
+
 			return nil
 		case errors.Is(err, internalcmd.ErrLockDataUnchanged):
 			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "Package is already up-to-date"); err != nil {
