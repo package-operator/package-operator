@@ -5,6 +5,7 @@ package packageoperator
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -15,13 +16,54 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/autoimpersonation/ownership"
 	"package-operator.run/internal/controllers/objectsets"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
+
+var typeMetaType = reflect.TypeOf(metav1.TypeMeta{})
+
+// Test helper that uses reflection to get to the underlying struct value of a `runtime.Object`
+// and set its TypeMeta field with data acquired from the passed scheme.
+// Trivia:
+// `runtime.Object` is a narrower `client.Object`, so this will work on `client.Object`s, too.
+func requireSetTypeMeta(t *testing.T, o runtime.Object, scheme *runtime.Scheme) {
+	t.Helper()
+
+	// Get value from interface.
+	value := reflect.ValueOf(o)
+
+	// Dereference pointers.
+	for value.Kind() == reflect.Pointer {
+		value = value.Elem()
+	}
+
+	// Ensure that a field called "TypeMeta" exists
+	// and that it has the correct type.
+	fieldType, fieldFound := value.Type().FieldByName("TypeMeta")
+	require.True(t, fieldFound, "field is missing on input value")
+	require.True(t, typeMetaType.AssignableTo(fieldType.Type),
+		"field is having wrong type",
+		"expected", typeMetaType,
+		"actual", fieldType.Type)
+
+	// Prepare TypeMeta value.
+	gvk, err := apiutil.GVKForObject(o.(client.Object), scheme)
+	require.NoError(t, err)
+	typeMeta := metav1.TypeMeta{
+		Kind:       gvk.Kind,
+		APIVersion: gvk.GroupVersion().String(),
+	}
+
+	// Set value to field.
+	field := value.FieldByName("TypeMeta")
+	field.Set(reflect.ValueOf(typeMeta))
+}
 
 //nolint:tparallel
 func TestVerifyOwnership(t *testing.T) {
@@ -65,30 +107,15 @@ func TestVerifyOwnership(t *testing.T) {
 		Namespace: deploymentReference.Namespace,
 	}, deployment))
 
-	// `Client.Get()` doesn't populate the `TypeMeta` field that is used by the ownership verification logic,
-	// so it has to be added manually
-	objectSet.ObjectSet.TypeMeta = metav1.TypeMeta{
-		Kind:       "ObjectSet",
-		APIVersion: "package-operator.run/v1alpha1",
-	}
-	objectDeployment.ObjectDeployment.TypeMeta = metav1.TypeMeta{
-		Kind:       "ObjectDeployment",
-		APIVersion: "package-operator.run/v1alpha1",
-	}
-	pkg.TypeMeta = metav1.TypeMeta{
-		Kind:       "Package",
-		APIVersion: "package-operator.run/v1alpha1",
-	}
-	deployment.TypeMeta = metav1.TypeMeta{
-		Kind:       "Deployment",
-		APIVersion: "apps/v1",
-	}
-
 	ownershipChain := []client.Object{
 		pkg,
 		objectDeployment.ClientObject(),
 		objectSet.ClientObject(),
 		deployment,
+	}
+
+	for _, obj := range ownershipChain {
+		requireSetTypeMeta(t, obj, Scheme)
 	}
 
 	t.Run("all possible links", func(t *testing.T) {
