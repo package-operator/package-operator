@@ -15,11 +15,12 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"pkg.package-operator.run/boxcutter/machinery/ownerhandling"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/utils"
 )
 

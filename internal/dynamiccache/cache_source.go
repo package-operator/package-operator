@@ -8,40 +8,44 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-type cacheSettings struct {
+type cacheSettings[T comparable] struct {
 	source     *cacheSource
 	handler    handler.EventHandler
 	predicates []predicate.Predicate
 }
 
-var _ source.Source = (*cacheSettings)(nil)
+var _ source.Source = (*cacheSettings[reconcile.Request])(nil)
 
-type eventHandler struct {
+type eventHandler[T comparable] struct {
 	ctx        context.Context
-	queue      workqueue.RateLimitingInterface
+	queue      workqueue.TypedRateLimitingInterface[T]
 	handler    handler.EventHandler
 	predicates []predicate.Predicate
 }
 
 // Implements source.Source interface to be used as event source when setting up controllers.
-func (e cacheSettings) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
+func (e *cacheSettings[T]) Start(
+	ctx context.Context,
+	queue workqueue.TypedRateLimitingInterface[reconcile.Request],
+) error {
 	e.source.mu.Lock()
 	defer e.source.mu.Unlock()
 	if e.source.blockNew {
 		panic("Trying to add EventHandlers to dynamiccache.CacheSource after manager start")
 	}
-	e.source.handlers = append(e.source.handlers, eventHandler{ctx, queue, e.handler, e.predicates})
+	e.source.handlers = append(e.source.handlers, eventHandler[reconcile.Request]{ctx, queue, e.handler, e.predicates})
 	return nil
 }
 
 type cacheSource struct {
 	mu       sync.RWMutex
-	handlers []eventHandler
+	handlers []eventHandler[reconcile.Request]
 	blockNew bool
-	settings []cacheSettings
+	settings []cacheSettings[reconcile.Request]
 }
 
 func (e *cacheSource) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
@@ -55,9 +59,9 @@ func (e *cacheSource) Source(handler handler.EventHandler, predicates ...predica
 		panic("Trying to add EventHandlers to dynamiccache.CacheSource after manager start")
 	}
 
-	s := cacheSettings{e, handler, predicates}
+	s := cacheSettings[reconcile.Request]{e, handler, predicates}
 	e.settings = append(e.settings, s)
-	return s
+	return &s
 }
 
 // For printing in startup log messages.

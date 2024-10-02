@@ -5,23 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 
-	"github.com/go-logr/logr"
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/csaupgrade"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"pkg.package-operator.run/boxcutter/machinery"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -35,13 +30,11 @@ type PhaseReconciler struct {
 	scheme *runtime.Scheme
 	// just specify a writer, because we don't want to ever read from another source than
 	// the dynamic cache that is managed to hold the objects we are reconciling.
-	writer           client.Writer
-	dynamicCache     dynamicCache
-	uncachedClient   client.Reader
-	ownerStrategy    ownerStrategy
-	adoptionChecker  adoptionChecker
-	patcher          patcher
-	preflightChecker preflightChecker
+	writer         client.Writer
+	dynamicCache   dynamicCache
+	uncachedClient client.Reader
+	ownerStrategy  ownerStrategy
+	phaseEngine    *machinery.PhaseEngine
 }
 
 type ownerStrategy interface {
@@ -51,23 +44,6 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
-	OwnerPatch(owner metav1.Object) ([]byte, error)
-	HasController(obj metav1.Object) bool
-}
-
-type adoptionChecker interface {
-	Check(
-		owner PhaseObjectOwner, obj client.Object,
-		previous []PreviousObjectSet,
-		collisionProtection corev1alpha1.CollisionProtection,
-	) (needsAdoption bool, err error)
-}
-
-type patcher interface {
-	Patch(
-		ctx context.Context,
-		desiredObj, currentObj, updatedObj *unstructured.Unstructured,
-	) error
 }
 
 type dynamicCache interface {
@@ -77,29 +53,22 @@ type dynamicCache interface {
 	) error
 }
 
-type preflightChecker interface {
-	Check(
-		ctx context.Context, owner, obj client.Object,
-	) (violations []preflight.Violation, err error)
-}
-
 func NewPhaseReconciler(
 	scheme *runtime.Scheme,
 	writer client.Writer,
 	dynamicCache dynamicCache,
 	uncachedClient client.Reader,
 	ownerStrategy ownerStrategy,
-	preflightChecker preflightChecker,
+	phaseEngine *machinery.PhaseEngine,
 ) *PhaseReconciler {
 	return &PhaseReconciler{
-		scheme:           scheme,
-		writer:           writer,
-		dynamicCache:     dynamicCache,
-		uncachedClient:   uncachedClient,
-		ownerStrategy:    ownerStrategy,
-		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
-		patcher:          &defaultPatcher{writer: writer},
-		preflightChecker: preflightChecker,
+		scheme:         scheme,
+		writer:         writer,
+		dynamicCache:   dynamicCache,
+		uncachedClient: uncachedClient,
+		ownerStrategy:  ownerStrategy,
+
+		phaseEngine: phaseEngine,
 	}
 }
 
@@ -174,49 +143,60 @@ func (e *ProbingResult) String() string {
 		e.PhaseName, e.StringWithoutPhase())
 }
 
+type probeWrapper struct {
+	probe probing.Prober
+}
+
+func (w *probeWrapper) Probe(obj *unstructured.Unstructured) (success bool, messages []string) {
+	success, m := w.probe.Probe(obj)
+	return success, []string{m}
+}
+
 func (r *PhaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
 ) (actualObjects []client.Object, res ProbingResult, err error) {
-	desiredObjects := make([]unstructured.Unstructured, len(phase.Objects))
-	for i, phaseObject := range phase.Objects {
-		desired, err := r.desiredObject(ctx, owner, phaseObject)
-		if err != nil {
-			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
-		}
-		desiredObjects[i] = *desired
+	mphase := r.desiredPhase(owner, phase, probe, previous)
+
+	pres, err := r.phaseEngine.Reconcile(ctx, owner.ClientObject(), owner.GetRevision(), mphase)
+	if err != nil {
+		return nil, ProbingResult{}, err
 	}
 
-	violations, err := preflight.CheckAllInPhase(
-		ctx, r.preflightChecker, owner.ClientObject(), phase, desiredObjects)
-	if err != nil {
-		return nil, res, err
+	if pres.PreflightViolation != nil {
+		perr := &preflight.Error{
+			Violations: []preflight.Violation{{
+				Error: pres.PreflightViolation.String(),
+			}},
+		}
+		return nil, res, perr
 	}
-	if len(violations) > 0 {
-		return nil, res, &preflight.Error{
-			Violations: violations,
+	for _, ores := range pres.Objects {
+		if ores.Action() != machinery.ActionCollision {
+			continue
+		}
+		return nil, res, &ObjectNotOwnedByPreviousRevisionError{
+			CommonObjectPhaseError: CommonObjectPhaseError{
+				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
+				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
+				ObjectKey: client.ObjectKeyFromObject(ores.Object()),
+				ObjectGVK: ores.Object().GetObjectKind().GroupVersionKind(),
+			},
 		}
 	}
 
 	rec := newRecordingProbe(phase.Name, probe)
-
-	for i, phaseObject := range phase.Objects {
-		desiredObj := &desiredObjects[i]
-		actualObj, err := r.reconcilePhaseObject(ctx, owner, phaseObject, desiredObj, previous)
-		if apimachineryerrors.IsNotFound(err) {
-			// Don't error, just observe.
-			rec.RecordMissingObject(desiredObj)
-			continue
+	actualObjects = make([]client.Object, 0, len(phase.Objects))
+	for i, ores := range pres.Objects {
+		actualObjects = append(actualObjects, ores.Object())
+		if !ores.Probe().Success {
+			rec.recordForObj(ores.Object(), strings.Join(ores.Probe().Messages, " and "))
 		}
-		if err != nil {
-			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
+		if err := mapConditions(ctx, owner, phase.Objects[i].ConditionMappings, ores.Object()); err != nil {
+			return nil, ProbingResult{}, fmt.Errorf("map conditions: %w", err)
 		}
-		actualObjects = append(actualObjects, actualObj)
-
-		rec.Probe(actualObj)
 	}
-
 	return actualObjects, rec.Result(), nil
 }
 
@@ -224,126 +204,8 @@ func (r *PhaseReconciler) TeardownPhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
-	var cleanupCounter int
-	objectsToCleanup := len(phase.Objects)
-	for _, phaseObject := range phase.Objects {
-		done, err := r.teardownPhaseObject(ctx, owner, phaseObject)
-		if err != nil {
-			return false, err
-		}
-
-		if done {
-			cleanupCounter++
-		}
-	}
-
-	return cleanupCounter == objectsToCleanup, nil
-}
-
-func (r *PhaseReconciler) teardownPhaseObject(
-	ctx context.Context, owner PhaseObjectOwner,
-	phaseObject corev1alpha1.ObjectSetObject,
-) (cleanupDone bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
-
-	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
-	if err != nil {
-		return false, fmt.Errorf("building desired object: %w", err)
-	}
-
-	// Preflight checker during teardown prevents the deletion of resources in different namespaces and
-	// unblocks teardown when APIs have been removed.
-	if v, err := r.preflightChecker.Check(ctx, owner.ClientObject(), desiredObj); err != nil {
-		return false, fmt.Errorf("running preflight validation: %w", err)
-	} else if len(v) > 0 {
-		return true, nil
-	}
-
-	// Ensure to watch this type of object, also during teardown!
-	// If the controller was restarted or crashed during deletion, we might not have a cache in memory anymore.
-	if err := r.dynamicCache.Watch(
-		ctx, owner.ClientObject(), desiredObj); err != nil {
-		return false, fmt.Errorf("watching new resource: %w", err)
-	}
-
-	currentObj := desiredObj.DeepCopy()
-	err = r.uncachedClient.Get(
-		ctx, client.ObjectKeyFromObject(desiredObj), currentObj)
-	if err != nil && apimachineryerrors.IsNotFound(err) {
-		// No matter who the owner of this object is,
-		// it's already gone.
-		return true, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("getting object for teardown: %w", err)
-	}
-
-	if !r.ownerStrategy.IsController(owner.ClientObject(), currentObj) {
-		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
-			return true, nil
-		}
-
-		// This object is controlled by someone else
-		// so we don't have to delete it for cleanup.
-		// But we still want to remove ourselves as potential owner.
-		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
-		if err := r.writer.Update(ctx, currentObj); err != nil {
-			return false, fmt.Errorf("removing owner reference: %w", err)
-		}
-		return true, nil
-	}
-
-	log.Info("deleting managed object",
-		"apiVersion", currentObj.GetAPIVersion(),
-		"kind", currentObj.GroupVersionKind().Kind,
-		"namespace", currentObj.GetNamespace(),
-		"name", currentObj.GetName())
-
-	err = r.writer.Delete(ctx, currentObj)
-	if err != nil && apimachineryerrors.IsNotFound(err) {
-		return true, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("deleting object for teardown: %w", err)
-	}
-
-	return false, nil
-}
-
-func (r *PhaseReconciler) reconcilePhaseObject(
-	ctx context.Context, owner PhaseObjectOwner,
-	phaseObject corev1alpha1.ObjectSetObject,
-	desiredObj *unstructured.Unstructured,
-	previous []PreviousObjectSet,
-) (actualObj *unstructured.Unstructured, err error) {
-	// Set owner reference
-	if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), desiredObj); err != nil {
-		return nil, fmt.Errorf("set controller reference: %w", err)
-	}
-
-	// Ensure to watch this type of object.
-	if err := r.dynamicCache.Watch(
-		ctx, owner.ClientObject(), desiredObj); err != nil {
-		return nil, fmt.Errorf("watching new resource: %w", err)
-	}
-
-	if owner.IsPaused() {
-		actualObj = desiredObj.DeepCopy()
-		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
-			return nil, fmt.Errorf("looking up object while paused: %w", err)
-		}
-		return actualObj, nil
-	}
-
-	if actualObj, err = r.reconcileObject(ctx, owner, desiredObj, previous, phaseObject.CollisionProtection); err != nil {
-		return nil, err
-	}
-
-	if err = mapConditions(ctx, owner, phaseObject.ConditionMappings, actualObj); err != nil {
-		return nil, err
-	}
-
-	return actualObj, nil
+	mphase := r.desiredPhase(owner, phase, nil, nil)
+	return r.phaseEngine.Teardown(ctx, owner.ClientObject(), owner.GetRevision(), mphase)
 }
 
 func mapConditions(
@@ -402,22 +264,79 @@ func mapConditions(
 	return nil
 }
 
-// Builds an object as specified in a phase.
-// Includes system labels, namespace and owner reference.
-func (r *PhaseReconciler) desiredObject(
-	_ context.Context, owner PhaseObjectOwner,
-	phaseObject corev1alpha1.ObjectSetObject,
-) (desiredObj *unstructured.Unstructured, err error) {
-	desiredObj = phaseObject.Object.DeepCopy()
+func (r *PhaseReconciler) desiredPhase(
+	owner PhaseObjectOwner,
+	phase corev1alpha1.ObjectSetTemplatePhase,
+	probe probing.Prober, previous []PreviousObjectSet,
+) machinery.Phase {
+	mphase := machinery.Phase{
+		Name: phase.Name,
+	}
+	prev := make([]client.Object, 0, len(previous))
+	for _, p := range previous {
+		prev = append(prev, p.ClientObject())
 
-	// Default namespace to the owners namespace
-	if len(desiredObj.GetNamespace()) == 0 {
-		desiredObj.SetNamespace(
-			owner.ClientObject().GetNamespace())
+		// Add nested (Cluster)ObjectSetPhases as valid previous owners.
+		remotePhases := p.GetRemotePhases()
+		if len(remotePhases) == 0 {
+			continue
+		}
+		prevGVK, err := apiutil.GVKForObject(p.ClientObject(), r.scheme)
+		if err != nil {
+			panic(err)
+		}
+
+		var remoteGVK schema.GroupVersionKind
+		if strings.HasPrefix(prevGVK.Kind, "Cluster") {
+			// ClusterObjectSet
+			remoteGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetPhase")
+		} else {
+			// ObjectSet
+			remoteGVK = corev1alpha1.GroupVersion.WithKind("ObjectSetPhase")
+		}
+		for _, remote := range remotePhases {
+			potentialRemoteOwner := &unstructured.Unstructured{}
+			potentialRemoteOwner.SetGroupVersionKind(remoteGVK)
+			potentialRemoteOwner.SetName(remote.Name)
+			potentialRemoteOwner.SetUID(remote.UID)
+			potentialRemoteOwner.SetNamespace(p.ClientObject().GetNamespace())
+			prev = append(prev, potentialRemoteOwner)
+		}
+	}
+	commonOpts := []machinery.ObjectOption{
+		machinery.WithPreviousOwners(prev),
+	}
+	if probe != nil {
+		commonOpts = append(commonOpts, machinery.WithProbe{Probe: &probeWrapper{probe: probe}})
+	}
+	if owner.IsPaused() {
+		commonOpts = append(commonOpts, machinery.WithPaused{})
+	}
+	// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
+	var forceOwnership bool
+	// if len(os.Getenv(constants.ForceAdoptionEnvironmentVariable)) > 0 {
+	if owner.ClientObject().GetLabels()[manifestsv1alpha1.PackageLabel] == "package-operator" {
+		forceOwnership = true
 	}
 
+	for _, o := range phase.Objects {
+		mphase.Objects = append(
+			mphase.Objects,
+			r.desiredPhaseObject(owner, o, commonOpts, forceOwnership))
+	}
+	return mphase
+}
+
+func (r *PhaseReconciler) desiredPhaseObject(
+	owner PhaseObjectOwner,
+	phaseObject corev1alpha1.ObjectSetObject,
+	commonOpts []machinery.ObjectOption,
+	forceOwnership bool,
+) machinery.PhaseObject {
+	obj := phaseObject.Object.DeepCopy()
+
 	// Set cache label
-	labels := desiredObj.GetLabels()
+	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
@@ -431,17 +350,23 @@ func (r *PhaseReconciler) desiredObject(
 			labels[manifestsv1alpha1.PackageInstanceLabel] = pkgInstanceLabel
 		}
 	}
+	obj.SetLabels(labels)
 
-	desiredObj.SetLabels(labels)
+	if len(obj.GetNamespace()) == 0 {
+		obj.SetNamespace(owner.ClientObject().GetNamespace())
+	}
 
-	setObjectRevision(desiredObj, owner.GetRevision())
-
-	return desiredObj, nil
+	pobj := machinery.PhaseObject{
+		Object: obj,
+		Opts:   commonOpts,
+	}
+	if forceOwnership {
+		pobj.Opts = append(pobj.Opts, machinery.WithCollisionProtection(machinery.CollisionProtectionNone))
+	} else {
+		pobj.Opts = append(pobj.Opts, machinery.WithCollisionProtection(phaseObject.CollisionProtection))
+	}
+	return pobj
 }
-
-// updateStatusError(ctx context.Context, objectSet genericObjectSet,
-// 	reconcileErr error,
-// ) (res ctrl.Result, err error)
 
 type ObjectSetOrPhase interface {
 	ClientObject() client.Object
@@ -509,297 +434,4 @@ type RevisionCollisionError struct {
 
 func (e *RevisionCollisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, revision collision on %s %s", e.ObjectGVK, e.ObjectKey)
-}
-
-func (r *PhaseReconciler) reconcileObject(
-	ctx context.Context, owner PhaseObjectOwner,
-	desiredObj *unstructured.Unstructured, previous []PreviousObjectSet,
-	collisionProtection corev1alpha1.CollisionProtection,
-) (actualObj *unstructured.Unstructured, err error) {
-	objKey := client.ObjectKeyFromObject(desiredObj)
-	currentObj := desiredObj.DeepCopy()
-	err = r.dynamicCache.Get(ctx, objKey, currentObj)
-	if err != nil && !apimachineryerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
-	}
-	if apimachineryerrors.IsNotFound(err) {
-		err = r.uncachedClient.Get(ctx, objKey, currentObj)
-		if err != nil && !apimachineryerrors.IsNotFound(err) {
-			return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
-		}
-	}
-	if apimachineryerrors.IsNotFound(err) {
-		// The object is not yet present on the cluster,
-		// just create it using desired state!
-		err := r.writer.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(constants.FieldOwner))
-		if apimachineryerrors.IsAlreadyExists(err) {
-			// object already exists, but was not in our cache.
-			// get object via uncached client directly from the API server.
-			if err := r.uncachedClient.Get(ctx, objKey, currentObj); err != nil {
-				return nil, fmt.Errorf("getting %s from uncached client: %w", desiredObj.GroupVersionKind(), err)
-			}
-		}
-		if err != nil {
-			return nil, fmt.Errorf("creating: %w", err)
-		}
-		return desiredObj, nil
-	}
-
-	// An object already exists - this is the complicated part.
-
-	// Keep a copy of the object on the cluster for comparison.
-	// UpdatedObj will be changed according to desiredObj.
-	updatedObj := currentObj.DeepCopy()
-
-	// Check if we can even work on this object or need to adopt it.
-	needsAdoption, err := r.adoptionChecker.Check(owner, currentObj, previous, collisionProtection)
-	if err != nil {
-		return nil, err
-	}
-
-	// Take over object ownership by patching metadata.
-	if needsAdoption {
-		log := logr.FromContextOrDiscard(ctx)
-		log.Info("adopting object",
-			"OwnerKey", client.ObjectKeyFromObject(owner.ClientObject()),
-			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
-			"ObjectKey", client.ObjectKeyFromObject(desiredObj),
-			"ObjectGVK", desiredObj.GetObjectKind().GroupVersionKind())
-		setObjectRevision(updatedObj, owner.GetRevision())
-		r.ownerStrategy.ReleaseController(updatedObj)
-		if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), updatedObj); err != nil {
-			return nil, err
-		}
-	}
-
-	// Only issue updates when this instance is already controlled by this instance.
-	if r.ownerStrategy.IsController(owner.ClientObject(), updatedObj) {
-		if err := r.patcher.Patch(ctx, desiredObj, currentObj, updatedObj); err != nil {
-			return nil, err
-		}
-	}
-
-	return updatedObj, nil
-}
-
-type defaultPatcher struct {
-	writer client.Writer
-}
-
-func (p *defaultPatcher) Patch(
-	ctx context.Context,
-	desiredObj, // object as specified by users
-	currentObj, // object as currently present on the cluster
-	// deepCopy of currentObj, already updated for owner handling
-	updatedObj *unstructured.Unstructured,
-) error {
-	// Ensure owners are present
-	desiredObj.SetOwnerReferences(updatedObj.GetOwnerReferences())
-
-	patch := desiredObj.DeepCopy()
-	// never patch status, even if specified
-	// we would just start a fight with whatever controller is realizing this object.
-	unstructured.RemoveNestedField(patch.Object, "status")
-
-	if err := p.fixFieldManagers(ctx, currentObj); err != nil {
-		return fmt.Errorf("fix field managers for SSA: %w", err)
-	}
-
-	objectPatch, err := json.Marshal(patch)
-	if err != nil {
-		return fmt.Errorf("creating patch: %w", err)
-	}
-	if err := p.writer.Patch(ctx, updatedObj, client.RawPatch(
-		types.ApplyPatchType, objectPatch),
-		client.FieldOwner(constants.FieldOwner),
-		client.ForceOwnership,
-	); err != nil {
-		return fmt.Errorf("patching object: %w", err)
-	}
-	return nil
-}
-
-// Autogenerated field owner names that we used previously.
-// We need the list replace all of them with the value of `FieldOwner`.
-var oldFieldOwners = sets.New(constants.FieldOwner, "package-operator-manager", "remote-phase-manger")
-
-// Migrate field ownerships to be compatible with server-side apply.
-// SSA really is complicated: https://github.com/kubernetes/kubernetes/issues/99003
-func (p *defaultPatcher) fixFieldManagers(
-	ctx context.Context,
-	currentObj *unstructured.Unstructured,
-) error {
-	patch, err := csaupgrade.UpgradeManagedFieldsPatch(currentObj, oldFieldOwners, constants.FieldOwner)
-	switch {
-	case err != nil:
-		return err
-	case len(patch) == 0:
-		// csaupgrade.UpgradeManagedFieldsPatch return nil, nil when no work is to be done. Empty patch cannot be applied so
-		// exit early.
-		return nil
-	}
-
-	if err := p.writer.Patch(ctx, currentObj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
-		return fmt.Errorf("update field managers: %w", err)
-	}
-	return nil
-}
-
-func mergeKeysFrom[K comparable, V any](base, additional map[K]V) map[K]V {
-	if base == nil {
-		base = map[K]V{}
-	}
-	for k, v := range additional {
-		base[k] = v
-	}
-	if len(base) == 0 {
-		return nil
-	}
-	return base
-}
-
-type defaultAdoptionChecker struct {
-	scheme        *runtime.Scheme
-	ownerStrategy ownerStrategy
-}
-
-// Check detects whether an ownership change is needed.
-func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object,
-	previous []PreviousObjectSet,
-	collisionProtection corev1alpha1.CollisionProtection,
-) (needsAdoption bool, err error) {
-	if c.ownerStrategy.IsController(owner.ClientObject(), obj) {
-		// already owner, nothing to do.
-		return false, nil
-	}
-
-	currentRevision, err := getObjectRevision(obj)
-	if err != nil {
-		return false, fmt.Errorf("getting revision of object: %w", err)
-	}
-	// Never ever adopt objects of newer revisions.
-	if currentRevision > owner.GetRevision() {
-		// owned by newer revision.
-		return false, nil
-	}
-
-	// Forced adoption is enabled:
-	// - for all objects via the envvar in `ForceAdoptionEnvironmentVariable`
-	// - for all objects in the package-operator (Cluster)Package
-
-	// TODO: check if `obj.GetLabels()` actually CAN return a non-initialized map (aka `nil`)
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
-	if len(os.Getenv(constants.ForceAdoptionEnvironmentVariable)) > 0 ||
-		labels[manifestsv1alpha1.PackageLabel] == "package-operator" {
-		collisionProtection = corev1alpha1.CollisionProtectionNone
-	}
-
-	switch collisionProtection {
-	case corev1alpha1.CollisionProtectionNone:
-		// I hope the user knows what he is doing ;)
-		return true, nil
-	case corev1alpha1.CollisionProtectionIfNoController:
-		if !c.ownerStrategy.HasController(obj) {
-			return true, nil
-		}
-	}
-
-	if !c.isControlledByPreviousRevision(obj, previous) {
-		return false, &ObjectNotOwnedByPreviousRevisionError{
-			CommonObjectPhaseError: CommonObjectPhaseError{
-				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
-				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
-				ObjectKey: client.ObjectKeyFromObject(obj),
-				ObjectGVK: obj.GetObjectKind().GroupVersionKind(),
-			},
-		}
-	}
-
-	if currentRevision == owner.GetRevision() {
-		// This should not have happened.
-		// Revision is same as owner,
-		// but the object is not already owned by this object.
-		return false, &RevisionCollisionError{
-			CommonObjectPhaseError: CommonObjectPhaseError{
-				OwnerKey:  client.ObjectKeyFromObject(owner.ClientObject()),
-				OwnerGVK:  owner.ClientObject().GetObjectKind().GroupVersionKind(),
-				ObjectKey: client.ObjectKeyFromObject(obj),
-				ObjectGVK: obj.GetObjectKind().GroupVersionKind(),
-			},
-		}
-	}
-
-	// Object belongs to an older/lesser revision,
-	// is not already owned by us and also belongs to a previous revision.
-	return true, nil
-}
-
-func (c *defaultAdoptionChecker) isControlledByPreviousRevision(
-	obj client.Object, previous []PreviousObjectSet,
-) bool {
-	for _, prev := range previous {
-		if c.ownerStrategy.IsController(prev.ClientObject(), obj) {
-			return true
-		}
-
-		remotePhases := prev.GetRemotePhases()
-		if len(remotePhases) == 0 {
-			continue
-		}
-
-		prevGVK, err := apiutil.GVKForObject(prev.ClientObject(), c.scheme)
-		if err != nil {
-			panic(err)
-		}
-
-		var remoteGVK schema.GroupVersionKind
-		if strings.HasPrefix(prevGVK.Kind, "Cluster") {
-			// ClusterObjectSet
-			remoteGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetPhase")
-		} else {
-			// ObjectSet
-			remoteGVK = corev1alpha1.GroupVersion.WithKind("ObjectSetPhase")
-		}
-		for _, remote := range remotePhases {
-			potentialRemoteOwner := &unstructured.Unstructured{}
-			potentialRemoteOwner.SetGroupVersionKind(remoteGVK)
-			potentialRemoteOwner.SetName(remote.Name)
-			potentialRemoteOwner.SetUID(remote.UID)
-			potentialRemoteOwner.SetNamespace(
-				prev.ClientObject().GetNamespace())
-
-			if c.ownerStrategy.IsController(potentialRemoteOwner, obj) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// Retrieves the revision number from a well-known annotation on the given object.
-func getObjectRevision(obj client.Object) (int64, error) {
-	a := obj.GetAnnotations()
-	if a == nil {
-		return 0, nil
-	}
-
-	if len(a[corev1alpha1.ObjectSetRevisionAnnotation]) == 0 {
-		return 0, nil
-	}
-
-	return strconv.ParseInt(a[corev1alpha1.ObjectSetRevisionAnnotation], 10, 64)
-}
-
-// Stores the revision number in a well-known annotation on the given object.
-func setObjectRevision(obj client.Object, revision int64) {
-	a := obj.GetAnnotations()
-	if a == nil {
-		a = map[string]string{}
-	}
-	a[corev1alpha1.ObjectSetRevisionAnnotation] = strconv.FormatInt(revision, 10)
-	obj.SetAnnotations(a)
 }

@@ -32,6 +32,7 @@ linters:
   #- varnamelen       # Not that useful/false positives.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
+  #- dupword          # Annoying with mocks (mock.Anything)
   enable:
   - asasalint
   - asciicheck
@@ -40,7 +41,6 @@ linters:
   - canonicalheader
   - copyloopvar
   - decorder
-  - dupword
   - durationcheck
   - err113
   - errcheck

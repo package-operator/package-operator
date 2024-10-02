@@ -1,29 +1,10 @@
 package controllers
 
 import (
-	"context"
-	"errors"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
-	"package-operator.run/internal/constants"
-	"package-operator.run/internal/preflight"
-	"package-operator.run/internal/testutil"
 )
 
 var testScheme = runtime.NewScheme()
@@ -36,6 +17,7 @@ func init() {
 		panic(err)
 	}
 }
+<<<<<<< HEAD
 
 func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	t.Parallel()
@@ -1349,3 +1331,5 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		um.AssertExpectations(t)
 	})
 }
+=======
+>>>>>>> de9a80dc (f)

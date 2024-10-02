@@ -1,16 +1,11 @@
 package controllers
 
 import (
-	"context"
-
 	"github.com/stretchr/testify/mock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
 
@@ -30,6 +25,7 @@ func (m *previousOwnerMock) GetPrevious() []corev1alpha1.PreviousRevisionReferen
 
 type ownerStrategyMock = ownerhandlingmocks.OwnerStrategyMock
 
+<<<<<<< HEAD
 type phaseObjectOwnerMock struct {
 	mock.Mock
 }
@@ -89,18 +85,20 @@ func (m *patcherMock) Patch(
 	return args.Error(0)
 }
 
+=======
+>>>>>>> de9a80dc (f)
 type previousObjectSetMock struct {
 	mock.Mock
 }
 
-func newPreviousObjectSetMockWithoutRemotes(
-	obj client.Object,
-) *previousObjectSetMock {
-	m := &previousObjectSetMock{}
-	m.On("ClientObject").Return(obj)
-	m.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{})
-	return m
-}
+// func newPreviousObjectSetMockWithoutRemotes(
+// 	obj client.Object,
+// ) *previousObjectSetMock {
+// 	m := &previousObjectSetMock{}
+// 	m.On("ClientObject").Return(obj)
+// 	m.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{})
+// 	return m
+// }
 
 func (m *previousObjectSetMock) ClientObject() client.Object {
 	args := m.Called()

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -173,6 +174,10 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err != nil {
 		return fmt.Errorf("creating target cluster client: %w", err)
 	}
+	targetDiscoveryClient, err := discovery.NewDiscoveryClientForConfig(targetCfg)
+	if err != nil {
+		return fmt.Errorf("creating target cluster discovery client: %w", err)
+	}
 
 	// Create metrics recorder
 	recorder := metrics.NewRecorder()
@@ -203,7 +208,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
 		mgr.GetScheme(), dc, uncachedTargetClient,
 		opts.class, managementClusterClient,
-		targetClient, targetMapper,
+		targetClient, targetMapper, targetDiscoveryClient,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
@@ -214,7 +219,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
 			mgr.GetScheme(), dc, uncachedTargetClient,
 			opts.class, managementClusterClient,
-			targetClient, targetMapper,
+			targetClient, targetMapper, targetDiscoveryClient,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 		}

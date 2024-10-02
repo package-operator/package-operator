@@ -9,6 +9,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
+	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/machinery/ownerhandling"
+	"pkg.package-operator.run/boxcutter/machinery/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,7 +26,6 @@ import (
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
 )
 
@@ -36,9 +39,10 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
-	recorder        metricsRecorder
-	dynamicCache    dynamicCache
-	teardownHandler teardownHandler
+	recorder           metricsRecorder
+	dynamicCache       dynamicCache
+	teardownHandler    teardownHandler
+	revisionReconciler reconciler
 }
 
 type reconciler interface {
@@ -62,18 +66,28 @@ type metricsRecorder interface {
 	RecordObjectSetMetrics(objectSet metrics.GenericObjectSet)
 }
 
+type phaseValidator interface {
+	Validate(
+		ctx context.Context,
+		owner client.Object,
+		phase validation.Phase,
+	) (validation.PhaseViolation, error)
+}
+
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	discoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		discoveryClient,
+		validation.NewNamespacedPhaseValidator(restMapper, c),
 	)
 }
 
@@ -82,13 +96,15 @@ func NewClusterObjectSetController(
 	scheme *runtime.Scheme,
 	dw dynamicCache, uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	discoveryClient discovery.DiscoveryInterface,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		newGenericClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, uc, r,
-		restMapper,
+		discoveryClient,
+		validation.NewClusterPhaseValidator(restMapper, c),
 	)
 }
 
@@ -99,7 +115,9 @@ func newGenericObjectSetController(
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
 	dynamicCache dynamicCache, uncachedClient client.Reader,
-	recorder metricsRecorder, restMapper meta.RESTMapper,
+	recorder metricsRecorder,
+	discoveryClient discovery.DiscoveryInterface,
+	phaseValidator phaseValidator,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
@@ -112,19 +130,20 @@ func newGenericObjectSetController(
 		recorder:     recorder,
 	}
 
+	os := ownerhandling.NewNative(scheme)
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
 		controllers.NewPhaseReconciler(
 			scheme, client,
 			dynamicCache,
 			uncachedClient,
-			ownerhandling.NewNative(scheme),
-			preflight.NewAPIExistence(restMapper,
-				preflight.List{
-					preflight.NewNoOwnerReferences(restMapper),
-					preflight.NewNamespaceEscalation(restMapper),
-					preflight.NewDryRun(client),
-				},
+			os,
+			machinery.NewPhaseEngine(
+				machinery.NewObjectEngine(dynamicCache, uncachedClient, client, os,
+					machinery.NewComparator(os, discoveryClient, "package-operator"),
+					"package-operator", "package-operator.run",
+				),
+				phaseValidator,
 			),
 		),
 		newObjectSetRemotePhaseReconciler(
@@ -140,12 +159,15 @@ func newGenericObjectSetController(
 
 	controller.teardownHandler = phasesReconciler
 
+	revReconciler := &revisionReconciler{
+		scheme:       scheme,
+		client:       client,
+		newObjectSet: newObjectSet,
+	}
+
+	controller.revisionReconciler = revReconciler
 	controller.reconciler = []reconciler{
-		&revisionReconciler{
-			scheme:       scheme,
-			client:       client,
-			newObjectSet: newObjectSet,
-		},
+		revReconciler,
 		newObjectSliceLoadReconciler(scheme, client, newObjectSlice),
 		phasesReconciler,
 	}
@@ -203,7 +225,7 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 
 	if !objectSet.ClientObject().GetDeletionTimestamp().IsZero() ||
 		objectSet.IsArchived() {
-		if err := c.handleDeletionAndArchival(ctx, objectSet); err != nil {
+		if res, err := c.handleDeletionAndArchival(ctx, objectSet); err != nil || !res.IsZero() {
 			return res, err
 		}
 
@@ -319,9 +341,18 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(
 
 func (c *GenericObjectSetController) handleDeletionAndArchival(
 	ctx context.Context, objectSet genericObjectSet,
-) error {
+) (res ctrl.Result, err error) {
 	// always make sure to remove Available condition
 	defer meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+
+	// Ensure .status.revision is set.
+	res, err = c.revisionReconciler.Reconcile(ctx, objectSet)
+	if err != nil {
+		return res, err
+	}
+	if !res.IsZero() {
+		return res, err
+	}
 
 	done := true
 
@@ -331,7 +362,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		var err error
 		done, err = c.teardownHandler.Teardown(ctx, objectSet)
 		if err != nil {
-			return fmt.Errorf("error tearing down during deletion: %w", err)
+			return res, fmt.Errorf("error tearing down during deletion: %w", err)
 		}
 	}
 
@@ -346,12 +377,12 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 			})
 		}
 		// don't remove finalizer before deletion is done
-		return nil
+		return res, nil
 	}
 
 	if err := controllers.FreeCacheAndRemoveFinalizer(
 		ctx, c.client, objectSet.ClientObject(), c.dynamicCache); err != nil {
-		return err
+		return res, err
 	}
 
 	// Needs to be called _after_ FreeCacheAndRemoveFinalizer,
@@ -366,5 +397,5 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		objectSet.SetStatusControllerOf(nil) // we are no longer controlling anything.
 	}
 
-	return nil
+	return res, nil
 }
