@@ -951,11 +951,11 @@ test:
             requiredDuringSchedulingIgnoredDuringExecution:
               nodeSelectorTerms:
               - matchExpressions:
-                - key: node-role.kubernetes.io/infra
+                - key: hypershift.openshift.io/hosted-control-plane
                   operator: Exists
         tolerations:
         - effect: NoSchedule
-          key: node-role.kubernetes.io/infra
+          key: hypershift.openshift.io/hosted-control-plane
     name: affinity-tolerations-resources
   - context:
       package:

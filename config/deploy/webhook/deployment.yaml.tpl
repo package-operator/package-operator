@@ -25,7 +25,7 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution:
           - preference:
               matchExpressions:
-              - key: node-role.kubernetes.io/infra
+              - key: hypershift.openshift.io/hosted-control-plane
                 operator: Exists
             weight: 1
         podAntiAffinity:
@@ -41,7 +41,7 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       tolerations:
         - effect: NoSchedule
-          key: node-role.kubernetes.io/infra
+          key: hypershift.openshift.io/hosted-control-plane
         - effect: NoSchedule
           key: node-role.kubernetes.io/master
       containers:
