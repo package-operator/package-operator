@@ -137,19 +137,26 @@ func (a *GenericClusterRepository) GetUnpackedHash() string {
 }
 
 func updateRepositoryPhase(pkg GenericRepositoryAccessor) {
-	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.RepositoryInvalid) {
+	var filteredCond []metav1.Condition
+	for _, c := range *pkg.GetConditions() {
+		if c.ObservedGeneration == pkg.ClientObject().GetGeneration() {
+			filteredCond = append(filteredCond, c)
+		}
+	}
+
+	if meta.IsStatusConditionTrue(filteredCond, corev1alpha1.RepositoryInvalid) {
 		pkg.setStatusPhase(corev1alpha1.RepositoryPhaseInvalid)
 		return
 	}
 
-	unpackCond := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.RepositoryUnpacked)
+	unpackCond := meta.FindStatusCondition(filteredCond, corev1alpha1.RepositoryUnpacked)
 	if unpackCond == nil {
 		pkg.setStatusPhase(corev1alpha1.RepositoryPhaseUnpacking)
 		return
 	}
 
 	if meta.IsStatusConditionTrue(
-		*pkg.GetConditions(),
+		filteredCond,
 		corev1alpha1.RepositoryProgressing,
 	) {
 		pkg.setStatusPhase(corev1alpha1.RepositoryPhaseProgressing)
@@ -157,7 +164,7 @@ func updateRepositoryPhase(pkg GenericRepositoryAccessor) {
 	}
 
 	if meta.IsStatusConditionTrue(
-		*pkg.GetConditions(),
+		filteredCond,
 		corev1alpha1.RepositoryAvailable,
 	) {
 		pkg.setStatusPhase(corev1alpha1.RepositoryPhaseAvailable)
