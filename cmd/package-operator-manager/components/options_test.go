@@ -16,12 +16,12 @@ func TestProvideOptions(t *testing.T) {
 	// panic: testing: t.Setenv called after t.Parallel; cannot set environment variables in parallel tests
 
 	t.Setenv("PKO_SUB_COMPONENT_TOLERATIONS",
-		`[{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"},`+
+		`[{"effect":"NoSchedule","key":"hypershift.openshift.io/hosted-control-plane"},`+
 			`{"effect":"NoSchedule","key":"hypershift.openshift.io/hosted-control-plane"}]`,
 	)
 	t.Setenv("PKO_SUB_COMPONENT_AFFINITY",
 		`{ "nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [ `+
-			`{ "matchExpressions": [ { "key": "node-role.kubernetes.io/infra", "operator": "Exists" } ] }, `+
+			`{ "matchExpressions": [ { "key": "hypershift.openshift.io/hosted-control-plane", "operator": "Exists" } ] }, `+
 			`{ "matchExpressions": [ { "key": "hypershift.openshift.io/hosted-control-plane", "operator": "Exists" }`+
 			` ] } ] } } }`,
 	)
@@ -34,7 +34,7 @@ func TestProvideOptions(t *testing.T) {
 		ProbeAddr:            ":8081",
 		SubComponentTolerations: []corev1.Toleration{
 			{
-				Key:    "node-role.kubernetes.io/infra",
+				Key:    "hypershift.openshift.io/hosted-control-plane",
 				Effect: corev1.TaintEffectNoSchedule,
 			},
 			{
@@ -49,7 +49,7 @@ func TestProvideOptions(t *testing.T) {
 						{
 							MatchExpressions: []corev1.NodeSelectorRequirement{
 								{
-									Key:      "node-role.kubernetes.io/infra",
+									Key:      "hypershift.openshift.io/hosted-control-plane",
 									Operator: corev1.NodeSelectorOpExists,
 								},
 							},
