@@ -54,3 +54,11 @@ func compile(ctx context.Context, cmd string, goos, goarch string) error {
 
 	return nil
 }
+
+// Validate fips readyness of binary by demonstrating that
+// the compiled go binary contains bindings to a fips validated crypto library.
+func validateFIPS(_ context.Context, _ string, _, _ string) error {
+	// something like
+	// run go tool nm on binary and look for correct symbols/patterns in output
+	return nil
+}
