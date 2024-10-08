@@ -764,9 +764,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 
 			test.mockPrepare(os, owner)
 
-			ctx := context.Background()
 			needsAdoption, err := c.Check(
-				ctx, owner, test.object, test.previous, test.collisionProtection)
+				owner, test.object, test.previous, test.collisionProtection)
 			if test.errorAs == nil {
 				require.NoError(t, err)
 			} else {

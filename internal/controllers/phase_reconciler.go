@@ -57,7 +57,7 @@ type ownerStrategy interface {
 
 type adoptionChecker interface {
 	Check(
-		ctx context.Context, owner PhaseObjectOwner, obj client.Object,
+		owner PhaseObjectOwner, obj client.Object,
 		previous []PreviousObjectSet,
 		collisionProtection corev1alpha1.CollisionProtection,
 	) (needsAdoption bool, err error)
@@ -552,7 +552,7 @@ func (r *PhaseReconciler) reconcileObject(
 	updatedObj := currentObj.DeepCopy()
 
 	// Check if we can even work on this object or need to adopt it.
-	needsAdoption, err := r.adoptionChecker.Check(ctx, owner, currentObj, previous, collisionProtection)
+	needsAdoption, err := r.adoptionChecker.Check(owner, currentObj, previous, collisionProtection)
 	if err != nil {
 		return nil, err
 	}
@@ -664,8 +664,7 @@ type defaultAdoptionChecker struct {
 }
 
 // Check detects whether an ownership change is needed.
-func (c *defaultAdoptionChecker) Check(
-	_ context.Context, owner PhaseObjectOwner, obj client.Object,
+func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object,
 	previous []PreviousObjectSet,
 	collisionProtection corev1alpha1.CollisionProtection,
 ) (needsAdoption bool, err error) {
