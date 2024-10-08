@@ -40,17 +40,20 @@ const (
 		"getting optional source resource for an ObjectTemplate."
 	objectTemplateResourceRetryIntervalFlagDescription = "The interval at which the controller will retry " +
 		"getting source resource for an ObjectTemplate."
+	securityEnhancedPackagesFlagDescription = "Enable security enhanced packages for PKO." +
+		"Enabling this prevents users from granting themselves elevated privileges using PKO"
 )
 
 type Options struct {
-	MetricsAddr                 string
-	PPROFAddr                   string
-	Namespace                   string
-	EnableLeaderElection        bool
-	ProbeAddr                   string
-	RegistryHostOverrides       string
-	PackageHashModifier         *int32
-	PackageOperatorPackageImage string
+	MetricsAddr                    string
+	PPROFAddr                      string
+	Namespace                      string
+	EnableLeaderElection           bool
+	ProbeAddr                      string
+	RegistryHostOverrides          string
+	PackageHashModifier            *int32
+	PackageOperatorPackageImage    string
+	EnableSecurityEnhancedPackages bool
 
 	// sub commands
 	SelfBootstrap       string
@@ -106,6 +109,10 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.RegistryHostOverrides, "registry-host-overrides",
 		os.Getenv("PKO_REGISTRY_HOST_OVERRIDES"),
 		registryHostOverrides)
+	flag.BoolVar(
+		&opts.EnableSecurityEnhancedPackages, "enable-security-enhanced-packages",
+		false,
+		securityEnhancedPackagesFlagDescription)
 
 	flag.DurationVar(
 		&opts.ObjectTemplateResourceRetryInterval,
