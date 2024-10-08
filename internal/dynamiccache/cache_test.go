@@ -100,7 +100,7 @@ func TestCache_Watch(t *testing.T) {
 		informerMap.AssertCalled(t, "Get", mock.Anything, schema.GroupVersionKind{
 			Kind:    "Secret",
 			Version: "v1",
-		}, obj, mock.Anything)
+		}, mock.IsType(&unstructured.Unstructured{}))
 		cacheSource.AssertCalled(t, "handleNewInformer", mock.Anything)
 	})
 
@@ -199,7 +199,7 @@ func TestCache_Reader(t *testing.T) {
 		err = c.Get(ctx, key, obj)
 		require.NoError(t, err)
 
-		reader.AssertCalled(t, "Get", mock.Anything, key, obj, mock.Anything)
+		reader.AssertCalled(t, "Get", mock.Anything, key, mock.IsType(&unstructured.Unstructured{}), mock.Anything)
 	})
 
 	t.Run("List", func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestCache_Reader(t *testing.T) {
 		err = c.List(ctx, obj)
 		require.NoError(t, err)
 
-		reader.AssertCalled(t, "List", mock.Anything, obj, mock.Anything)
+		reader.AssertCalled(t, "List", mock.Anything, mock.IsType(&unstructured.UnstructuredList{}), mock.Anything)
 	})
 
 	// "reset" informerReferences to test error case,
