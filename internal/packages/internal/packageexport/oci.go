@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/crane"
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -49,6 +51,24 @@ func ToOCI(pkg *packagetypes.RawPackage) (containerregistrypkgv1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var managed []string
+	for m := range pkg.Permissions.Managed {
+		managed = append(managed, pkg.Permissions.Managed[m].String())
+	}
+	var external []string
+	for e := range pkg.Permissions.External {
+		external = append(external, pkg.Permissions.External[e].String())
+	}
+
+	annotations := map[string]string{
+		"managed":  strings.Join(managed, ","),
+		"external": strings.Join(external, ","),
+	}
+
+	image = mutate.MediaType(image, types.OCIManifestSchema1)
+	image = mutate.ConfigMediaType(image, types.OCIConfigJSON)
+	image = mutate.Annotations(image, annotations).(containerregistrypkgv1.Image)
 
 	return image, nil
 }
