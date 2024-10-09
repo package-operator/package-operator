@@ -62,7 +62,7 @@ func ToOCIFile(dst string, tags []string, pkg *packagetypes.RawPackage) error {
 		return err
 	}
 
-	if err := os.MkdirAll(path.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(path.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("making directory tree: %w", err)
 	}
 
