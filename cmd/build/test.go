@@ -32,7 +32,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 
 	var f string
 	if len(filter) > 0 {
-		f = "-run " + filter
+		f = fmt.Sprintf(`-run "%s"`, filter)
 	}
 
 	cl, err := cluster.Clients()
