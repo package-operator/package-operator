@@ -325,6 +325,15 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 		WatchesRawSource(
 			c.dynamicCache.Source(
 				c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
+				predicate.NewPredicateFuncs(func(object client.Object) bool {
+					c.log.Info(
+						"processing dynamic cache event",
+						"gvk", object.GetObjectKind().GroupVersionKind(),
+						"object", client.ObjectKeyFromObject(object),
+						"owners", object.GetOwnerReferences(),
+					)
+					return true
+				}),
 			),
 		).Complete(c)
 }

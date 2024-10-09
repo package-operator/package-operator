@@ -166,8 +166,10 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.Info(
 						"processing dynamic cache event",
+						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),
-						"owners", object.GetOwnerReferences())
+						"owners", object.GetOwnerReferences(),
+					)
 					return true
 				}),
 			),
