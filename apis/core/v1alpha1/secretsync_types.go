@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // SecretSync synchronizes a singular secret into multiple destinations.
@@ -94,6 +95,22 @@ type NamespacedName struct {
 
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
+}
+
+// NamespacedNameFromVanilla converts a types.NamespacedName to a NamespacedName.
+func NamespacedNameFromVanilla(key types.NamespacedName) NamespacedName {
+	return NamespacedName{
+		Namespace: key.Namespace,
+		Name:      key.Name,
+	}
+}
+
+// ToVanilla converts a NamespacedName to a types.NamespacedName.
+func (nn NamespacedName) ToVanilla() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: nn.Namespace,
+		Name:      nn.Name,
+	}
 }
 
 // SecretSync condition types.

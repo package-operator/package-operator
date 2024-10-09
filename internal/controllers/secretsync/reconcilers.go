@@ -2,6 +2,7 @@ package secretsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -18,7 +19,9 @@ import (
 	"package-operator.run/internal/objecthandling"
 )
 
-const managedByLabel = "package-operator.run/managed-by-secretsync"
+const ManagedByLabel = "package-operator.run/managed-by-secretsync"
+
+var ErrInvalidStrategy = errors.New("invalid strategy")
 
 var _ reconciler = (*deletionReconciler)(nil)
 
@@ -63,7 +66,7 @@ func (r *deletionReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1
 		return reconcileResult{}, nil
 	// Error out if sync strategy is neither of the above.
 	default:
-		return reconcileResult{}, fmt.Errorf("ENOTIMPLEMENTED: deleted secret sync does not employ a valid sync strategy.")
+		return reconcileResult{}, fmt.Errorf("%w: strategy not implemented", ErrInvalidStrategy)
 	}
 }
 
@@ -131,7 +134,7 @@ func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.S
 			Name:      dest.Name,
 			Labels: map[string]string{
 				constants.DynamicCacheLabel: "True",
-				managedByLabel:              secretSync.Name,
+				ManagedByLabel:              secretSync.Name,
 			},
 		}
 
@@ -156,19 +159,11 @@ func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.S
 
 	// Garbage collect secrets not managed by this SecretSync anymore.
 	managedSecretsList := &v1.SecretList{}
-	// managedSecretsList := &unstructured.UnstructuredList{
-	// 	Object: map[string]interface{}{
-	// 		"apiVersion": "v1",
-	// 		"kind":       "SecretList",
-	// 	},
-	// }
 	if err := r.dynamicCache.List(ctx, managedSecretsList, client.MatchingLabels{
-		managedByLabel: secretSync.Name,
+		ManagedByLabel: secretSync.Name,
 	}); err != nil {
 		return reconcileResult{}, fmt.Errorf("listing managed secrets: %w", err)
 	}
-
-	fmt.Printf("managedSecretsList len(%d)\n", len(managedSecretsList.Items))
 
 	// Delete secrets that are not managed anymore.
 	for _, managedSecret := range managedSecretsList.Items {
