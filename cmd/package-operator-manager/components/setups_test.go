@@ -65,6 +65,7 @@ func TestAllControllers(t *testing.T) {
 		cpkg   = newMock()
 		otmpl  = newMock()
 		cotmpl = newMock()
+		ssync  = newMock()
 	)
 	all := AllControllers{
 		ObjectSet:        ObjectSetController{os},
@@ -81,6 +82,8 @@ func TestAllControllers(t *testing.T) {
 
 		ObjectTemplate:        ObjectTemplateController{otmpl},
 		ClusterObjectTemplate: ClusterObjectTemplateController{cotmpl},
+
+		SecretSync: SecretSyncController{ssync},
 	}
 	err := all.SetupWithManager(nil)
 	require.NoError(t, err)
