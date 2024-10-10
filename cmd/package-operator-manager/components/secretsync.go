@@ -13,6 +13,7 @@ type SecretSyncController struct{ controller }
 func ProvideSecretSyncController(
 	mgr ctrl.Manager, log logr.Logger,
 	dc *dynamiccache.Cache,
+	uncachedClient UncachedClient,
 ) SecretSyncController {
 	return SecretSyncController{
 		secretsync.NewController(
@@ -20,6 +21,7 @@ func ProvideSecretSyncController(
 			log.WithName("controllers").WithName("SecretSync"),
 			mgr.GetScheme(),
 			dc,
+			uncachedClient,
 		),
 	}
 }
