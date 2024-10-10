@@ -81,7 +81,7 @@ type secretReconciler struct {
 // srcReaderForStrategy returns the correct client for getting the source secret for the given strategy.
 // Watch -> dynamicCache because the cache-label has been applied to the source and cache
 // has been primed by calling .Watch()
-// Poll -> uncachedClient - because the user explictly opted out of caching/watching
+// Poll -> uncachedClient - because the user explicitly opted out of caching/watching.
 func (r *secretReconciler) srcReaderForStrategy(strategy v1alpha1.SecretSyncStrategy) client.Reader {
 	switch {
 	case strategy.Watch != nil:

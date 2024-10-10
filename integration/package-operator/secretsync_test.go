@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
@@ -97,12 +96,6 @@ func assertAPISecretData(ctx context.Context, t *testing.T, key types.Namespaced
 	secret := &corev1.Secret{}
 	require.NoError(t, Client.Get(ctx, key, secret))
 	require.Equal(t, expected, convertByteToStringMap(secret.Data))
-}
-
-func assertSecretNotFound(ctx context.Context, t *testing.T, key types.NamespacedName) {
-	t.Helper()
-
-	require.True(t, apimachineryerrors.IsNotFound(Client.Get(ctx, key, &corev1.Secret{})))
 }
 
 func TestSecretSync_Matrix(t *testing.T) {
