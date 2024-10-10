@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,9 @@ func applyObjectWithCleanup(ctx context.Context, t *testing.T, obj client.Object
 
 	t.Cleanup(func() {
 		require.NoError(t, client.IgnoreNotFound(Client.Delete(ctx, obj)))
+		require.NoError(t, Waiter.WaitToBeGone(ctx, obj, func(_ client.Object) (done bool, err error) {
+			return false, nil
+		}))
 	})
 }
 
@@ -81,6 +85,9 @@ func createTestNamespaceWithCleanup(ctx context.Context, t *testing.T, name stri
 
 	t.Cleanup(func() {
 		require.NoError(t, Client.Delete(ctx, ns))
+		require.NoError(t, Waiter.WaitToBeGone(ctx, ns, func(_ client.Object) (done bool, err error) {
+			return false, nil
+		}))
 	})
 }
 
@@ -98,7 +105,7 @@ func assertSecretNotFound(ctx context.Context, t *testing.T, key types.Namespace
 	require.True(t, apimachineryerrors.IsNotFound(Client.Get(ctx, key, &corev1.Secret{})))
 }
 
-func TestSecretSync_Happy(t *testing.T) {
+func TestSecretSync_Matrix(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	type tcase struct {
@@ -107,15 +114,33 @@ func TestSecretSync_Happy(t *testing.T) {
 		// Dst namespaces are allowed to be non-unique within the list.
 		src  types.NamespacedName
 		dsts []types.NamespacedName
+		// Will be populated by the for-loop below.
+		stategy corev1alpha1.SecretSyncStrategy
 	}
 
+	// Each test case is combined with each strategy listed here:
+	strategies := []func(tcase) tcase{
+		func(t tcase) tcase {
+			t.name += "_watch"
+			t.stategy = corev1alpha1.SecretSyncStrategy{
+				Watch: &corev1alpha1.SecretSyncStrategyWatch{},
+			}
+			return t
+		},
+		func(t tcase) tcase {
+			t.name += "_poll"
+			t.stategy = corev1alpha1.SecretSyncStrategy{
+				Poll: &corev1alpha1.SecretSyncStrategyPoll{
+					Interval: metav1.Duration{Duration: time.Second},
+				},
+			}
+			return t
+		},
+	}
 	tcases := []tcase{
 		{
 			name: "MultipleTargetsInSingleNamespace",
-			src: types.NamespacedName{
-				Namespace: "secretsync-src-1",
-				Name:      "src-simple",
-			},
+			src:  types.NamespacedName{Namespace: "secretsync-src-1", Name: "src-simple"},
 			dsts: []types.NamespacedName{
 				{Namespace: "secretsync-dst-1", Name: "dst-simple-1"},
 				{Namespace: "secretsync-dst-1", Name: "dst-simple-1"},
@@ -158,14 +183,20 @@ func TestSecretSync_Happy(t *testing.T) {
 		},
 	}
 
-	// dataSteps MUST have at least len(2).
+	matrixoutput := []tcase{}
+	for _, tcase := range tcases {
+		for _, applyStrategy := range strategies {
+			matrixoutput = append(matrixoutput, applyStrategy(tcase))
+		}
+	}
+
 	dataSteps := []map[string]string{
 		{"foo": "bar"},
 		{"foo": "two", "banana": "dance"},
 		{"foo": "three", "banana": "dance", "socken": "affe"},
 	}
 
-	for _, tcase := range tcases {
+	for _, tcase := range matrixoutput {
 		t.Run(tcase.name, func(t *testing.T) {
 			// Assert proper test data.
 			require.GreaterOrEqual(t, len(dataSteps), 2)
@@ -193,17 +224,15 @@ func TestSecretSync_Happy(t *testing.T) {
 
 			secretSync := &corev1alpha1.SecretSync{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "simple",
+					Name: "integration-matrix",
 				},
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "SecretSync",
 					APIVersion: corev1alpha1.GroupVersion.String(),
 				},
 				Spec: corev1alpha1.SecretSyncSpec{
-					Strategy: corev1alpha1.SecretSyncStrategy{
-						Watch: &corev1alpha1.SecretSyncStrategyWatch{},
-					},
-					Src: corev1alpha1.NamespacedNameFromVanilla(tcase.src),
+					Strategy: tcase.stategy,
+					Src:      corev1alpha1.NamespacedNameFromVanilla(tcase.src),
 					Dest: func() []corev1alpha1.NamespacedName {
 						out := []corev1alpha1.NamespacedName{}
 						for _, dst := range tcase.dsts {
@@ -253,10 +282,23 @@ func TestSecretSync_Happy(t *testing.T) {
 				return false, nil
 			}))
 
-			// Assert that all dst secrets are gone, too.
+			// Assert that all dst secrets vanish, too.
+			var eg errgroup.Group
 			for _, dst := range tcase.dsts {
-				assertSecretNotFound(ctx, t, dst)
+				eg.Go(func() error {
+					secret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: dst.Namespace,
+							Name:      dst.Name,
+						},
+					}
+					return Waiter.WaitToBeGone(ctx, secret, func(_ client.Object) (done bool, err error) {
+						return false, nil
+					})
+				})
 			}
+
+			require.NoError(t, eg.Wait())
 		})
 	}
 }

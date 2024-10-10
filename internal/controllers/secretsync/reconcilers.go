@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
@@ -73,9 +72,25 @@ func (r *deletionReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1
 var _ reconciler = (*secretReconciler)(nil)
 
 type secretReconciler struct {
-	client        client.Client
-	ownerStrategy ownerStrategy
-	dynamicCache  dynamicCache
+	client         client.Client
+	uncachedClient client.Client
+	ownerStrategy  ownerStrategy
+	dynamicCache   dynamicCache
+}
+
+// srcReaderForStrategy returns the correct client for getting the source secret for the given strategy.
+// Watch -> dynamicCache because the cache-label has been applied to the source and cache
+// has been primed by calling .Watch()
+// Poll -> uncachedClient - because the user explictly opted out of caching/watching
+func (r *secretReconciler) srcReaderForStrategy(strategy v1alpha1.SecretSyncStrategy) client.Reader {
+	switch {
+	case strategy.Watch != nil:
+		return r.dynamicCache
+	case strategy.Poll != nil:
+		return r.uncachedClient
+	default:
+		panic(ErrInvalidStrategy)
+	}
 }
 
 func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.SecretSync) (reconcileResult, error) {
@@ -115,7 +130,7 @@ func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.S
 	}
 
 	srcSecret := &v1.Secret{}
-	if err := r.client.Get(ctx, types.NamespacedName{
+	if err := r.srcReaderForStrategy(secretSync.Spec.Strategy).Get(ctx, types.NamespacedName{
 		Namespace: secretSync.Spec.Src.Namespace,
 		Name:      secretSync.Spec.Src.Name,
 	}, srcSecret); err != nil {
@@ -129,6 +144,12 @@ func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.S
 	// Sync to destination secrets.
 	for _, dest := range secretSync.Spec.Dest {
 		targetObject := srcSecret.DeepCopy()
+		// Ensure correct typemeta for .Path() because even though
+		// the dynamicCache doesn't strip it, the uncached client does.
+		targetObject.TypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		}
 		targetObject.ObjectMeta = metav1.ObjectMeta{
 			Namespace: dest.Namespace,
 			Name:      dest.Name,
@@ -136,6 +157,12 @@ func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *v1alpha1.S
 				constants.DynamicCacheLabel: "True",
 				ManagedByLabel:              secretSync.Name,
 			},
+		}
+
+		// Ensure to watch Secrets.
+		if err := r.dynamicCache.Watch(
+			ctx, secretSync, targetObject); err != nil {
+			return reconcileResult{}, fmt.Errorf("watching new resource: %w", err)
 		}
 
 		if err := r.ownerStrategy.SetControllerReference(secretSync, targetObject); err != nil {
@@ -214,6 +241,10 @@ var _ reconciler = (*pauseReconciler)(nil)
 type pauseReconciler struct{}
 
 func (r *pauseReconciler) Reconcile(_ context.Context, secretSync *v1alpha1.SecretSync) (reconcileResult, error) {
+	if !secretSync.DeletionTimestamp.IsZero() {
+		return reconcileResult{}, nil
+	}
+
 	condChanged := meta.SetStatusCondition(&secretSync.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.SecretSyncPaused,
 		Status:             pausedBoolToConditionBool(secretSync.Spec.Paused),
@@ -234,23 +265,6 @@ func (r *pauseReconciler) Reconcile(_ context.Context, secretSync *v1alpha1.Secr
 
 	return reconcileResult{
 		statusChanged: statusChanged,
-	}, nil
-}
-
-var _ reconciler = (*pollReconciler)(nil)
-
-type pollReconciler struct{}
-
-func (r *pollReconciler) Reconcile(_ context.Context, secretSync *v1alpha1.SecretSync) (reconcileResult, error) {
-	// Skip requeueing for polling if SecretSync is paused or strategy is not "poll".
-	if secretSync.Spec.Paused || secretSync.Spec.Strategy.Poll == nil {
-		return reconcileResult{}, nil
-	}
-
-	return reconcileResult{
-		res: reconcile.Result{
-			RequeueAfter: secretSync.Spec.Strategy.Poll.Interval.Duration,
-		},
 	}, nil
 }
 

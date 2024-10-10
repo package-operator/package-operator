@@ -34,7 +34,6 @@ type ownerStrategy interface {
 }
 
 type reconcileResult struct {
-	res           ctrl.Result
 	statusChanged bool
 }
 
@@ -56,6 +55,7 @@ func NewController(
 	log logr.Logger,
 	scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
+	uncachedClient client.Client,
 ) *Controller {
 	return &Controller{
 		log:           log,
@@ -69,12 +69,12 @@ func NewController(
 				dynamicCache: dynamicCache,
 			},
 			&secretReconciler{
-				client:        client,
-				ownerStrategy: ownerhandling.NewNative(scheme),
-				dynamicCache:  dynamicCache,
+				client:         client,
+				ownerStrategy:  ownerhandling.NewNative(scheme),
+				dynamicCache:   dynamicCache,
+				uncachedClient: uncachedClient,
 			},
 			&pauseReconciler{},
-			&pollReconciler{},
 		},
 	}
 }
@@ -125,7 +125,6 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	var (
 		statusChanged bool
-		res           ctrl.Result
 		err           error
 	)
 	for _, reconciler := range c.reconcilers {
@@ -137,10 +136,6 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = errI
 			break
 		}
-		if !rr.res.IsZero() {
-			res = rr.res
-			break
-		}
 	}
 
 	if statusChanged {
@@ -149,5 +144,14 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = errors.Join(err, fmt.Errorf("updating SecretSync status: %w", errS))
 		}
 	}
-	return res, err
+
+	// Skip requeueing for polling if SecretSync is paused or strategy is not "poll".
+	if secretSync.Spec.Paused || secretSync.Spec.Strategy.Poll == nil {
+		return ctrl.Result{}, err
+	}
+
+	// Requeue for polling strategy.
+	return ctrl.Result{
+		RequeueAfter: secretSync.Spec.Strategy.Poll.Interval.Duration,
+	}, err
 }

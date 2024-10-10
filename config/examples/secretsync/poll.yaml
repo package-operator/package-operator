@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: default
+  name: poll
+data:
+  foo: YmFy
+  bar: YmF6
+---
+apiVersion: package-operator.run/v1alpha1
+kind: SecretSync
+metadata:
+  name: poll
+spec:
+  strategy:
+    poll:
+      interval: 1s
+
+  src:
+    namespace: default
+    name: poll
+  dest:
+  - namespace: default
+    name: synced-poll1
+  - namespace: default
+    name: synced-poll2
