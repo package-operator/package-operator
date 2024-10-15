@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    package-operator.run/phase: deploy
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/name: package-operator
+  name: package-operator-manager
+  namespace: package-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: package-operator
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/name: package-operator
+    spec:
+      affinity: {"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/infra","operator":"Exists"}]}]}}}
+      tolerations: [{"effect":"NoSchedule","key":"node-role.kubernetes.io/infra"}]
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - args:
+        - --enable-leader-election
+        ports:
+        - name: metrics
+          containerPort: 8080
+        env:
+        - name: PKO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_IMAGE
+          value: registry.package-operator.run/static-image
+        - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
+          value: "registry.package-operator.run/static-image"
+        image: registry.package-operator.run/static-image
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources: {"limits":{"cpu":"10m","memory":"13Mi"},"requests":{"cpu":"10m","memory":"12Mi"}}
+      serviceAccountName: package-operator
+status: {}

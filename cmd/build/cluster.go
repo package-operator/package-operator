@@ -37,6 +37,7 @@ type clusterConfig struct {
 		host, endpoint string
 	}
 	localRegistry *clusterConfigLocalRegistry
+	nodeLabels    map[string]string
 }
 
 func (cc *clusterConfig) apply(opts ...clusterOption) {
@@ -46,6 +47,12 @@ func (cc *clusterConfig) apply(opts ...clusterOption) {
 }
 
 type clusterOption func(*clusterConfig)
+
+func withNodeLabels(labels map[string]string) clusterOption {
+	return func(cc *clusterConfig) {
+		cc.nodeLabels = labels
+	}
+}
 
 func withRegistryHostOverride(host, endpoint string) clusterOption {
 	return func(cc *clusterConfig) {
@@ -120,6 +127,7 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 			ContainerdConfigPatches: containerdConfigPatches,
 			Nodes: []kindv1alpha4.Node{
 				{
+					Labels:            cfg.nodeLabels,
 					Role:              kindv1alpha4.ControlPlaneRole,
 					ExtraPortMappings: extraPortMappings,
 				},

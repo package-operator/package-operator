@@ -23,6 +23,7 @@ var (
 	lint     Lint
 	cluster  = NewCluster("pko",
 		withLocalRegistry(imageRegistryHost(), devClusterRegistryPort),
+		withNodeLabels(map[string]string{"hypershift-affinity-test-label": "true"}),
 	)
 	hypershiftHostedCluster = NewCluster("pko-hs-hc",
 		withRegistryHostOverrideToOtherCluster(imageRegistryHost(), cluster),
