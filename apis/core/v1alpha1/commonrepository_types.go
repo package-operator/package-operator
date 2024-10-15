@@ -20,8 +20,6 @@ const (
 	// When the Repository is reporting "Available" = True, it's expected that whatever the Repository installs
 	// is up and operational. Repository "Availability" may change multiple times during it's lifecycle.
 	RepositoryAvailable = "Available"
-	// Progressing indicates that a new release is being rolled out.
-	RepositoryProgressing = "Progressing"
 	// Unpacked tracks the completion or failure of the image unpack operation.
 	RepositoryUnpacked = "Unpacked"
 	// Invalid condition tracks unrecoverable validation and loading issues of the Repository.
@@ -37,12 +35,11 @@ type RepositoryStatusPhase string
 // Well-known Repository Phases for printing a Status in kubectl,
 // see deprecation notice in RepositoryStatus for details.
 const (
-	RepositoryPhasePending     RepositoryStatusPhase = "Pending"
-	RepositoryPhaseAvailable   RepositoryStatusPhase = "Available"
-	RepositoryPhaseProgressing RepositoryStatusPhase = "Progressing"
-	RepositoryPhaseUnpacking   RepositoryStatusPhase = "Unpacking"
-	RepositoryPhaseNotReady    RepositoryStatusPhase = "NotReady"
-	RepositoryPhaseInvalid     RepositoryStatusPhase = "Invalid"
+	RepositoryPhasePending   RepositoryStatusPhase = "Pending"
+	RepositoryPhaseAvailable RepositoryStatusPhase = "Available"
+	RepositoryPhaseUnpacking RepositoryStatusPhase = "Unpacking"
+	RepositoryPhaseNotReady  RepositoryStatusPhase = "NotReady"
+	RepositoryPhaseInvalid   RepositoryStatusPhase = "Invalid"
 )
 
 // RepositorySpec specifies a repository.
