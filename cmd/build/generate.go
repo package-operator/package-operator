@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -118,16 +119,27 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		return err
 	}
 
+	type cfg struct {
+		RegistryHostOverrides                       string `json:"registryHostOverrides"`
+		ObjectTemplateOptionalResourceRetryInterval string `json:"objectTemplateOptionalResourceRetryInterval"`
+		ObjectTemplateResourceRetryInterval         string `json:"objectTemplateResourceRetryInterval"`
+		SubcomponentTolerations                     string `json:"subcomponentTolerations,omitempty"`
+		SubcomponentAffinity                        string `json:"subcomponentAffinity,omitempty"`
+	}
+
 	registyOverrides := imageRegistryHost() + "=dev-registry.dev-registry.svc.cluster.local:5001"
-	pkoConfig := fmt.Sprintf(`{
-		"registryHostOverrides": "%s",
-		"objectTemplateResourceRetryInterval": "2s",
-		"objectTemplateOptionalResourceRetryInterval": "4s"
-	}`, registyOverrides)
+	cfgBytes, err := json.Marshal(cfg{
+		ObjectTemplateResourceRetryInterval:         "2s",
+		ObjectTemplateOptionalResourceRetryInterval: "4s",
+		RegistryHostOverrides:                       registyOverrides,
+	})
+	if err != nil {
+		return err
+	}
 
 	replacements := map[string]string{
 		`##registry-overrides##`: registyOverrides,
-		`##pko-config##`:         pkoConfig,
+		`##pko-config##`:         string(cfgBytes),
 		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
 		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}

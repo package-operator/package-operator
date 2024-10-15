@@ -4,6 +4,7 @@ package packageoperator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
@@ -62,6 +64,35 @@ func TestHyperShift(t *testing.T) {
 		t.SkipNow() // This test/functionality is not stable.
 		runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(t, hClient, hWaiter, namespace, "hosted-cluster")
 	})
+
+	t.Run("SubcomponentTolerationsAffinity", func(t *testing.T) {
+		type a struct {
+			Tolerations             string `json:"tolerations"`
+			Affinity                string `json:"affinity"`
+			SubcomponentAffinity    string `json:"subcomponentAffinity"`
+			SubcomponentTolerations string `json:"subcomponentTolerations"`
+		}
+		// Get ClusterPackage/package-operator.spec.config.subcomponent{Tolerations,Affinity}
+
+		pkoPkg := &corev1alpha1.ClusterPackage{}
+		require.NoError(t, Client.Get(ctx, client.ObjectKey{Name: "package-operator"}, pkoPkg))
+		rootCfg := &a{}
+		require.NoError(t, json.Unmarshal(pkoPkg.Spec.Config.Raw, rootCfg))
+
+		// and compare with Package/remote-phase.spec.config.{tolerations,affinity}
+		require.NoError(t, err)
+		subCfg := &a{}
+		require.NotNil(t, rpPkg)
+		require.NotNil(t, rpPkg.Spec)
+		require.NotNil(t, rpPkg.Spec.Config)
+		require.NotNil(t, rpPkg.Spec.Config.Raw)
+
+		require.NoError(t, json.Unmarshal(rpPkg.Spec.Config.Raw, subCfg))
+
+		assert.Equal(t, rootCfg.SubcomponentAffinity, subCfg.Affinity)
+		assert.Equal(t, rootCfg.SubcomponentTolerations, subCfg.Tolerations)
+	})
+
 	t.Run("HostedClusterComponent", func(t *testing.T) {
 		hcPkg := &corev1alpha1.Package{
 			ObjectMeta: metav1.ObjectMeta{
