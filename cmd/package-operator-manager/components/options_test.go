@@ -68,6 +68,7 @@ func TestProvideOptions(t *testing.T) {
 		},
 		ObjectTemplateOptionalResourceRetryInterval: time.Second * 60,
 		ObjectTemplateResourceRetryInterval:         time.Second * 30,
+		EnableSecurityEnhancedPackages:              false,
 	}, opts)
 }
 

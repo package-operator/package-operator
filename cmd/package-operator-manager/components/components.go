@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	apis "package-operator.run/apis"
+	autoimpersonation "package-operator.run/internal/autoimpersonation"
 	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/dynamiccache"
@@ -39,6 +40,7 @@ func NewComponents() (*dig.Container, error) {
 		ProvideMetricsRecorder, ProvideDynamicCache,
 		ProvideUncachedClient, ProvideOptions, ProvideLogger,
 		ProvideRegistry, ProvideDiscoveryClient, ProvideEnvironmentManager,
+		ProvidePotentiallyImpersonatingClient,
 
 		// -----------
 		// Controllers
@@ -190,4 +192,13 @@ func ProvideEnvironmentManager(
 ) *environment.Manager {
 	return environment.NewManager(
 		client, discoveryClient, mgr.GetRESTMapper())
+}
+
+func ProvidePotentiallyImpersonatingClient(
+	restConfig *rest.Config,
+	scheme *runtime.Scheme,
+	client client.Client,
+	opts Options,
+) (client.Writer, error) {
+	return autoimpersonation.NewPotentiallyAutoImpersonatingWriter(opts.EnableSecurityEnhancedPackages, *restConfig, scheme, client)
 }
