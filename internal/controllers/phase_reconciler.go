@@ -538,6 +538,7 @@ func (r *PhaseReconciler) reconcileObject(
 			if err := r.uncachedClient.Get(ctx, objKey, currentObj); err != nil {
 				return nil, fmt.Errorf("getting %s from uncached client: %w", desiredObj.GroupVersionKind(), err)
 			}
+			// Bug? Have to fall through to patch code below instead of returning desiredObj?
 		}
 		if err != nil {
 			return nil, fmt.Errorf("creating: %w", err)
