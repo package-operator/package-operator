@@ -10,11 +10,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -90,12 +92,62 @@ func createTestNamespaceWithCleanup(ctx context.Context, t *testing.T, name stri
 	})
 }
 
-func assertAPISecretData(ctx context.Context, t *testing.T, key types.NamespacedName, expected map[string]string) {
+func assertAPISecretDataAndMutable(ctx context.Context, t *testing.T, key types.NamespacedName, expected map[string]string) {
 	t.Helper()
 
 	secret := &corev1.Secret{}
 	require.NoError(t, Client.Get(ctx, key, secret))
-	require.Equal(t, expected, convertByteToStringMap(secret.Data))
+	// All destination secrets must be mutable.
+	assert.True(t, secret.Immutable == nil || *secret.Immutable == false)
+	assert.Equal(t, expected, convertByteToStringMap(secret.Data))
+}
+
+func TestSecretSync_ForcesMutableDstSecrets(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	src := types.NamespacedName{
+		Name:      "secretsync-src-1",
+		Namespace: "default",
+	}
+	dst := types.NamespacedName{
+		Name:      "secretsync-dst-1",
+		Namespace: "default",
+	}
+	data := map[string]string{
+		"hi": "there",
+	}
+
+	secretSync := &corev1alpha1.SecretSync{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "integration-immutable-src",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "SecretSync",
+			APIVersion: corev1alpha1.GroupVersion.String(),
+		},
+		Spec: corev1alpha1.SecretSyncSpec{
+			Strategy: corev1alpha1.SecretSyncStrategy{
+				Poll: &corev1alpha1.SecretSyncStrategyPoll{
+					Interval: metav1.Duration{Duration: time.Second},
+				},
+			},
+			Src: corev1alpha1.NamespacedNameFromVanilla(src),
+			Dest: []corev1alpha1.NamespacedName{
+				corev1alpha1.NamespacedNameFromVanilla(dst),
+			},
+		},
+	}
+
+	srcSecret := newSourceSecret(src, data)
+	srcSecret.Immutable = ptr.To(true)
+	applyObjectWithCleanup(ctx, t, srcSecret)
+	applyObjectWithCleanup(ctx, t, secretSync)
+
+	require.NoError(t,
+		Waiter.WaitForCondition(
+			ctx, secretSync, corev1alpha1.SecretSyncSync, metav1.ConditionTrue, wait.WithTimeout(time.Second*10)))
+
+	assertAPISecretDataAndMutable(ctx, t, dst, data)
 }
 
 func TestSecretSync_Matrix(t *testing.T) {
@@ -107,11 +159,12 @@ func TestSecretSync_Matrix(t *testing.T) {
 		// Dst namespaces are allowed to be non-unique within the list.
 		src  types.NamespacedName
 		dsts []types.NamespacedName
-		// Will be populated by the for-loop below.
+
+		// Will be populated by a for-loop below.
 		stategy corev1alpha1.SecretSyncStrategy
 	}
 
-	// Each test case is combined with each strategy listed here:
+	// Each test case is combined with all strategies listed here:
 	strategies := []func(tcase) tcase{
 		func(t tcase) tcase {
 			t.name += "_watch"
@@ -130,6 +183,7 @@ func TestSecretSync_Matrix(t *testing.T) {
 			return t
 		},
 	}
+
 	tcases := []tcase{
 		{
 			name: "MultipleTargetsInSingleNamespace",
@@ -176,10 +230,11 @@ func TestSecretSync_Matrix(t *testing.T) {
 		},
 	}
 
-	matrixoutput := []tcase{}
+	generatedTestCases := []tcase{}
 	for _, tcase := range tcases {
 		for _, applyStrategy := range strategies {
-			matrixoutput = append(matrixoutput, applyStrategy(tcase))
+			tc := applyStrategy(tcase)
+			generatedTestCases = append(generatedTestCases, tc)
 		}
 	}
 
@@ -189,7 +244,7 @@ func TestSecretSync_Matrix(t *testing.T) {
 		{"foo": "three", "banana": "dance", "socken": "affe"},
 	}
 
-	for _, tcase := range matrixoutput {
+	for _, tcase := range generatedTestCases {
 		t.Run(tcase.name, func(t *testing.T) {
 			// Assert proper test data.
 			require.GreaterOrEqual(t, len(dataSteps), 2)
@@ -244,7 +299,7 @@ func TestSecretSync_Matrix(t *testing.T) {
 
 			// Assert that dst secrets have correct data.
 			for _, dst := range tcase.dsts {
-				assertAPISecretData(ctx, t, dst, firstStepData)
+				assertAPISecretDataAndMutable(ctx, t, dst, firstStepData)
 			}
 
 			// Iteratively update src data in steps and assert that new data is synced to all dst secrets.
@@ -265,7 +320,7 @@ func TestSecretSync_Matrix(t *testing.T) {
 						return reflect.DeepEqual(convertByteToStringMap(s.Data), stepData), nil
 					}))
 
-					assertAPISecretData(ctx, t, dst, stepData)
+					assertAPISecretDataAndMutable(ctx, t, dst, stepData)
 				}
 			}
 
