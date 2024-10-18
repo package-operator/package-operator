@@ -586,15 +586,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: eirmod
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: sit
+      key: dolor
+    kind: tempor
+    name: ipsum
+    namespace: lorem
     optional: "true"
-  template: consetetur
+  template: nonumy
 status:
   conditions:
   - metav1.Condition
@@ -659,12 +659,12 @@ metadata:
   name: example
 spec:
   dest:
-  - name: amet
-    namespace: sit
+  - name: lorem
+    namespace: tempor
   paused: "true"
   src:
-    name: dolor
-    namespace: ipsum
+    name: eirmod
+    namespace: nonumy
   strategy: '{watch:{}}'
 status:
   phase:Pending: null
