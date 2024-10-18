@@ -97,7 +97,7 @@ type NamespacedName struct {
 	Name string `json:"name"`
 }
 
-// NamespacedNameFromVanilla converts a types.NamespacedName to a NamespacedName.
+// NamespacedNameFromVanilla converts a "k8s.io/apimachinery/pkg/types".NamespacedName to a corev1alpha1.NamespacedName.
 func NamespacedNameFromVanilla(key types.NamespacedName) NamespacedName {
 	return NamespacedName{
 		Namespace: key.Namespace,

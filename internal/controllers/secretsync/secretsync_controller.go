@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"package-operator.run/apis/core/v1alpha1"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/ownerhandling"
 )
@@ -29,6 +29,8 @@ type dynamicCache interface {
 }
 
 type ownerStrategy interface {
+	IsController(owner, obj metav1.Object) bool
+	HasController(obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	SetControllerReference(owner, obj metav1.Object) error
 }
@@ -38,7 +40,7 @@ type reconcileResult struct {
 }
 
 type reconciler interface {
-	Reconcile(ctx context.Context, req *v1alpha1.SecretSync) (reconcileResult, error)
+	Reconcile(ctx context.Context, req *corev1alpha1.SecretSync) (reconcileResult, error)
 }
 
 type Controller struct {
@@ -69,8 +71,11 @@ func NewController(
 				dynamicCache: dynamicCache,
 			},
 			&secretReconciler{
-				client:         client,
-				ownerStrategy:  ownerhandling.NewNative(scheme),
+				client:        client,
+				ownerStrategy: ownerhandling.NewNative(scheme),
+				adoptionChecker: &defaultAdoptionChecker{
+					ownerStrategy: ownerhandling.NewNative(scheme),
+				},
 				dynamicCache:   dynamicCache,
 				uncachedClient: uncachedClient,
 			},
@@ -81,10 +86,10 @@ func NewController(
 
 func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.SecretSync{}).
+		For(&corev1alpha1.SecretSync{}).
 		WatchesRawSource(
 			c.dynamicCache.Source(
-				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &v1alpha1.SecretSync{}),
+				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &corev1alpha1.SecretSync{}),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.Info(
 						"processing dynamic cache event",
@@ -98,7 +103,7 @@ func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		WatchesRawSource(
 			c.dynamicCache.Source(
-				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, &v1alpha1.SecretSync{}, mgr.GetScheme()),
+				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, &corev1alpha1.SecretSync{}, mgr.GetScheme()),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.Info(
 						"processing dynamic cache event",
@@ -118,7 +123,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	defer log.Info("reconciled")
 
 	// Get SecretSync from cluster.
-	secretSync := &v1alpha1.SecretSync{}
+	secretSync := &corev1alpha1.SecretSync{}
 	if err := c.client.Get(ctx, req.NamespacedName, secretSync); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(fmt.Errorf("getting Secretsync: %w", err))
 	}
