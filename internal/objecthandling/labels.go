@@ -2,8 +2,10 @@ package objecthandling
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/constants"
@@ -29,15 +31,24 @@ func EnsureDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Ob
 	if labels == nil {
 		labels = map[string]string{}
 	}
-
 	labels[constants.DynamicCacheLabel] = "True"
 	obj.SetLabels(labels)
 
-	if err := w.Patch(ctx, obj,
-		client.Apply, client.ForceOwnership, client.FieldOwner(constants.FieldOwner)); err != nil {
-		return fmt.Errorf("patching dynamic cache label: %w", err)
+	patch := map[string]any{
+		"metadata": map[string]any{
+			"resourceVersion": obj.GetResourceVersion(),
+			"labels":          obj.GetLabels(),
+		},
 	}
 
+	patchJSON, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("marshalling patch to ensure dynamic cache label: %w", err)
+	}
+
+	if err := w.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
+		return fmt.Errorf("patching dynamic cache label: %w", err)
+	}
 	return nil
 }
 
@@ -49,10 +60,20 @@ func RemoveDynamicCacheLabel(ctx context.Context, w client.Writer, obj client.Ob
 	delete(labels, constants.DynamicCacheLabel)
 	obj.SetLabels(labels)
 
-	if err := w.Patch(ctx, obj,
-		client.Apply, client.ForceOwnership, client.FieldOwner(constants.FieldOwner)); err != nil {
-		return fmt.Errorf("patching dynamic cache label: %w", err)
+	patch := map[string]any{
+		"metadata": map[string]any{
+			"resourceVersion": obj.GetResourceVersion(),
+			"labels":          obj.GetLabels(),
+		},
 	}
 
+	patchJSON, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("marshalling patch to remove dynamic cache label: %w", err)
+	}
+
+	if err := w.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
+		return fmt.Errorf("patching dynamic cache label: %w", err)
+	}
 	return nil
 }

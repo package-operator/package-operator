@@ -30,7 +30,7 @@ func EnsureFinalizer(
 	}
 	patchJSON, err := json.Marshal(patch)
 	if err != nil {
-		return fmt.Errorf("marshalling patch to remove finalizer: %w", err)
+		return fmt.Errorf("marshalling patch to ensure finalizer: %w", err)
 	}
 
 	if err := c.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
