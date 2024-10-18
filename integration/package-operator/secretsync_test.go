@@ -92,7 +92,10 @@ func createTestNamespaceWithCleanup(ctx context.Context, t *testing.T, name stri
 	})
 }
 
-func assertAPISecretDataAndMutable(ctx context.Context, t *testing.T, key types.NamespacedName, expected map[string]string) {
+func assertAPISecretDataAndMutable(
+	ctx context.Context, t *testing.T,
+	key types.NamespacedName, expected map[string]string,
+) {
 	t.Helper()
 
 	secret := &corev1.Secret{}

@@ -43,7 +43,9 @@ func makeCoreV1SecretTypeMeta() metav1.TypeMeta {
 }
 
 // Takes care of potential cleanup when object is deleting.
-func (r *deletionReconciler) Reconcile(ctx context.Context, secretSync *corev1alpha1.SecretSync) (reconcileResult, error) {
+func (r *deletionReconciler) Reconcile(
+	ctx context.Context, secretSync *corev1alpha1.SecretSync,
+) (reconcileResult, error) {
 	// Return early if object is not being deleted.
 	if secretSync.DeletionTimestamp.IsZero() {
 		return reconcileResult{}, nil
@@ -106,7 +108,9 @@ func (r *secretReconciler) srcReaderForStrategy(strategy corev1alpha1.SecretSync
 	}
 }
 
-func (r *secretReconciler) Reconcile(ctx context.Context, secretSync *corev1alpha1.SecretSync) (reconcileResult, error) {
+func (r *secretReconciler) Reconcile(
+	ctx context.Context, secretSync *corev1alpha1.SecretSync,
+) (reconcileResult, error) {
 	// Do nothing if SecretSync is paused or is deleting.
 	if secretSync.Spec.Paused || !secretSync.DeletionTimestamp.IsZero() {
 		return reconcileResult{}, nil
