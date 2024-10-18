@@ -3,6 +3,8 @@ package packageexport
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/go-logr/logr"
@@ -58,6 +60,10 @@ func ToOCIFile(dst string, tags []string, pkg *packagetypes.RawPackage) error {
 	image, err := ToOCI(pkg)
 	if err != nil {
 		return err
+	}
+
+	if err := os.MkdirAll(path.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("making directory tree: %w", err)
 	}
 
 	m := map[string]containerregistrypkgv1.Image{}

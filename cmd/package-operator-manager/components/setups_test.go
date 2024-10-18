@@ -65,6 +65,7 @@ func TestAllControllers(t *testing.T) {
 		cpkg   = newMock()
 		otmpl  = newMock()
 		cotmpl = newMock()
+		ssync  = newMock()
 	)
 	all := AllControllers{
 		ObjectSet:        ObjectSetController{os},
@@ -81,6 +82,8 @@ func TestAllControllers(t *testing.T) {
 
 		ObjectTemplate:        ObjectTemplateController{otmpl},
 		ClusterObjectTemplate: ClusterObjectTemplateController{cotmpl},
+
+		SecretSync: SecretSyncController{ssync},
 	}
 	err := all.SetupWithManager(nil)
 	require.NoError(t, err)
@@ -88,7 +91,7 @@ func TestAllControllers(t *testing.T) {
 	for _, m := range mocks {
 		m.AssertExpectations(t)
 	}
-	assert.Len(t, all.List(), 10)
+	assert.Len(t, all.List(), 11)
 }
 
 func TestBootstrapControllers(t *testing.T) {
