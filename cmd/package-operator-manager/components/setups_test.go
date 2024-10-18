@@ -91,7 +91,7 @@ func TestAllControllers(t *testing.T) {
 	for _, m := range mocks {
 		m.AssertExpectations(t)
 	}
-	assert.Len(t, all.List(), 10)
+	assert.Len(t, all.List(), 11)
 }
 
 func TestBootstrapControllers(t *testing.T) {
