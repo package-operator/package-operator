@@ -78,22 +78,20 @@ func TestHyperShift(t *testing.T) {
 			SubcomponentAffinity    corev1.Affinity     `json:"subcomponentAffinity"`
 			SubcomponentTolerations []corev1.Toleration `json:"subcomponentTolerations"`
 		}
-		// Get ClusterPackage/package-operator.spec.config.subcomponent{Tolerations,Affinity}
 
+		// Get ClusterPackage/package-operator.spec.config.subcomponent{Tolerations,Affinity}
 		pkoPkg := &corev1alpha1.ClusterPackage{}
 		require.NoError(t, Client.Get(ctx, client.ObjectKey{Name: "package-operator"}, pkoPkg))
 		rootCfg := &PkoPkgConfig{}
 		require.NoError(t, json.Unmarshal(pkoPkg.Spec.Config.Raw, rootCfg))
 
-		// and compare with Package/remote-phase.spec.config.{tolerations,affinity}
-		require.NoError(t, err)
+		// and validate their propagation to Package/remote-phase.spec.config.{tolerations,affinity}.
 		subCfg := &RemotePhasePkgConfig{}
-
 		require.NoError(t, json.Unmarshal(rpPkg.Spec.Config.Raw, subCfg))
-
 		assert.True(t, reflect.DeepEqual(rootCfg.SubcomponentAffinity, subCfg.Affinity))
 		assert.True(t, reflect.DeepEqual(rootCfg.SubcomponentTolerations, subCfg.Tolerations))
 
+		// Validate propagation to the remote-phase deployment oject.
 		deployment := &appsv1.Deployment{}
 		require.NoError(t, Client.Get(ctx,
 			client.ObjectKey{
@@ -101,7 +99,6 @@ func TestHyperShift(t *testing.T) {
 			},
 			deployment,
 		))
-
 		require.NotNil(t, subCfg.Affinity.NodeAffinity)
 		assert.True(t, reflect.DeepEqual(subCfg.Affinity.NodeAffinity, deployment.Spec.Template.Spec.Affinity.NodeAffinity))
 		assert.True(t, reflect.DeepEqual(subCfg.Tolerations, deployment.Spec.Template.Spec.Tolerations))
