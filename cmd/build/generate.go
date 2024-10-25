@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -20,6 +21,8 @@ import (
 
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/cmd"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Generate is an internal collection of all code-gen functions.
@@ -118,16 +121,44 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		return err
 	}
 
+	type cfg struct {
+		RegistryHostOverrides                       string              `json:"registryHostOverrides"`
+		ObjectTemplateOptionalResourceRetryInterval string              `json:"objectTemplateOptionalResourceRetryInterval"`
+		ObjectTemplateResourceRetryInterval         string              `json:"objectTemplateResourceRetryInterval"`
+		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity,omitempty"`
+		SubcomponentTolerations                     []corev1.Toleration `json:"subcomponentTolerations,omitempty"`
+	}
+
 	registyOverrides := imageRegistryHost() + "=dev-registry.dev-registry.svc.cluster.local:5001"
-	pkoConfig := fmt.Sprintf(`{
-		"registryHostOverrides": "%s",
-		"objectTemplateResourceRetryInterval": "2s",
-		"objectTemplateOptionalResourceRetryInterval": "4s"
-	}`, registyOverrides)
+	cfgBytes, err := json.Marshal(cfg{
+		ObjectTemplateResourceRetryInterval:         "2s",
+		ObjectTemplateOptionalResourceRetryInterval: "4s",
+		RegistryHostOverrides:                       registyOverrides,
+		// Affinity for int test TestHyperShift/SubcomponentTolerationsAffinity
+		SubcomponentAffinity: corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{
+						{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{Key: "hypershift-affinity-test-label", Operator: "Exists"},
+							},
+						},
+					},
+				},
+			},
+		},
+		SubcomponentTolerations: []corev1.Toleration{
+			{Effect: "NoSchedule", Key: "node-role.kubernetes.io/infra"},
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	replacements := map[string]string{
 		`##registry-overrides##`: registyOverrides,
-		`##pko-config##`:         pkoConfig,
+		`##pko-config##`:         string(cfgBytes),
 		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
 		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}
