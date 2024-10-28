@@ -32,23 +32,23 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.30.0
 	golang.org/x/sys v0.26.0
-	k8s.io/api v0.31.1
+	k8s.io/api v0.31.2
 	k8s.io/apiextensions-apiserver v0.31.0
-	k8s.io/apimachinery v0.31.1
+	k8s.io/apimachinery v0.31.2
 	k8s.io/apiserver v0.31.0
 	k8s.io/client-go v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e
 	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
 	package-operator.run/apis v1.13.0
 	package-operator.run/pkg v1.13.0
-	pkg.package-operator.run/boxcutter v0.0.0-20241002092642-eccc91d6ea83
+	pkg.package-operator.run/boxcutter v0.0.0-20241028105544-0899030bd2e0
 	pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e
 	pkg.package-operator.run/cardboard/kubeutils v0.0.3
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
-	sigs.k8s.io/controller-runtime v0.19.0
+	sigs.k8s.io/controller-runtime v0.19.1
 	sigs.k8s.io/kind v0.24.0
 	sigs.k8s.io/yaml v1.4.0
 )
