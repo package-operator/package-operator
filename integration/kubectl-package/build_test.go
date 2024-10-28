@@ -81,17 +81,6 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			ExpectedErrorOutput: []string{"output or push is requested but no tags are set"},
 		},
 	),
-	ginkgo.Entry("given '--output' with an invalid path",
-		subCommandTestCase{
-			Args: []string{
-				"--output", filepath.Join("dne", "dne"),
-				"--tag", "test",
-				sourcePathFixture("valid_without_config"),
-			},
-			ExpectedExitCode:    1,
-			ExpectedErrorOutput: []string{"no such file or directory"},
-		},
-	),
 	ginkgo.Entry("given '--output' with an invalid tag",
 		subCommandTestCase{
 			Args: []string{

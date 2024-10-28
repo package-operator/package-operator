@@ -22,7 +22,7 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 
 	// nothing should happen and nil functions should not be called when env.Proxy is empty
 	// (which means that no proxy is configured in the cluster)
-	// TODO(jgwosdz): there is an edge case where PKO was started with envvars that configure
+	// TODO(erdii): there is an edge case where PKO was started with envvars that configure
 	// a proxy but no proxy is configured in the cluster. Should pko then strip this proxy
 	// from the env and restart itself or should it just keep running with proxy settings?
 	t.Run("env.Proxy_IsNil", func(t *testing.T) {
