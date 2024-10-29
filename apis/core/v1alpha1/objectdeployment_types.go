@@ -13,6 +13,8 @@ type ObjectDeploymentSpec struct {
 	Selector metav1.LabelSelector `json:"selector"`
 	// Template to create new ObjectSets from.
 	Template ObjectSetTemplate `json:"template"`
+	// If Paused is true, the object and its children will not be reconciled.
+	Paused bool `json:"paused,omitempty"`
 }
 
 // ObjectSetTemplate describes the template to create new ObjectSets from.
