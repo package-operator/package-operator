@@ -11,7 +11,40 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/autoimpersonation/ownership"
 )
+
+// Guard interface that ensures that you cannot accidentally pass a regular client instead,
+// except by explicitly wrapping it.
+// This interface should be used throughout the codebase when the client underneath MUST be auto impersonating
+// if the security enhanced packages Feature is enabled.
+type PotentiallyImpersonatingClient interface {
+	client.Writer
+	Impersonate()
+}
+
+type wrappedRegularClient struct {
+	client.Writer
+}
+
+func (wrappedRegularClient) Impersonate() {}
+
+func NewPotentiallyAutoImpersonatingWriter(
+	enabled bool,
+	restConfig rest.Config,
+	scheme *runtime.Scheme,
+	reader client.Reader,
+) (PotentiallyImpersonatingClient, error) {
+	if !enabled {
+		client, err := client.New(&restConfig, client.Options{})
+		if err != nil {
+			return nil, err
+		}
+		return wrappedRegularClient{client}, nil
+	}
+
+	return NewAutoImpersonatingWriter(restConfig, scheme, reader), nil
+}
 
 // AutoImpersonatingWriterWrapper wraps calls from the client.Writer interface
 // into new clients using impersonation depending on the root owner.
@@ -20,19 +53,6 @@ type AutoImpersonatingWriterWrapper struct {
 	scheme     *runtime.Scheme
 	// I want a cached client pls!
 	reader client.Reader
-}
-
-func NewPotentiallyAutoImpersonatingWriter(
-	enabled bool,
-	restConfig rest.Config,
-	scheme *runtime.Scheme,
-	reader client.Reader,
-) (client.Writer, error) {
-	if !enabled {
-		return client.New(&restConfig, client.Options{})
-	}
-
-	return NewAutoImpersonatingWriter(restConfig, scheme, reader), nil
 }
 
 func NewAutoImpersonatingWriter(
@@ -103,7 +123,7 @@ func (w *AutoImpersonatingWriterWrapper) DeleteAllOf(
 func (w *AutoImpersonatingWriterWrapper) clientUsingPKOImpersonationSettings(
 	ctx context.Context, obj client.Object,
 ) (client.Writer, error) {
-	c := w.restConfig // shallow colpy of rest.Config
+	c := w.restConfig // shallow copy of rest.Config
 	ic, err := w.impersonationConfigForObject(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -134,6 +154,9 @@ type objectIdentity struct {
 	Namespace string
 }
 
+// This method travels up the ownership chain only picking references that set the
+// controller flag and point to an object in our `corev1alpha1` api group version
+// and constructs an objectIdentity pointing to the top-most object it enounters.
 func (w AutoImpersonatingWriterWrapper) getOwner(ctx context.Context, obj client.Object) (objectIdentity, error) {
 	for _, ownerRef := range obj.GetOwnerReferences() {
 		gv, err := schema.ParseGroupVersion(ownerRef.APIVersion)
@@ -161,6 +184,16 @@ func (w AutoImpersonatingWriterWrapper) getOwner(ctx context.Context, obj client
 			}, potentialOwner); err != nil {
 				return objectIdentity{}, err
 			}
+			secure, err := ownership.VerifyOwnership(obj, potentialOwner)
+			if err != nil {
+				return objectIdentity{}, fmt.Errorf("error verifying onwership chain %s", err)
+			}
+			if !secure {
+				// return some error to say you don't have permissions
+				return objectIdentity{}, &OwnershipError{Object: obj.GetName()}
+
+			}
+
 			// recurse into this function
 			return w.getOwner(ctx, potentialOwner)
 		}
@@ -170,6 +203,15 @@ func (w AutoImpersonatingWriterWrapper) getOwner(ctx context.Context, obj client
 		Namespace: obj.GetNamespace(),
 		Kind:      obj.GetObjectKind().GroupVersionKind().Kind,
 	}, nil
+}
+
+// TODO change this from a string
+type OwnershipError struct {
+	Object string
+}
+
+func (e *OwnershipError) Error() string {
+	return fmt.Sprintf("error in ownership chain for %s", e.Object)
 }
 
 const impersonationPrefix = "pko"
@@ -201,6 +243,13 @@ func impersonationUserAndGroupsForObject(oi objectIdentity) (user string, groups
 	case "ClusterPackage":
 		resourceSingular = "clusterpackage"
 		resourcePlural = "clusterpackages"
+		isClusterScope = true
+	case "ObjectTemplate":
+		resourceSingular = "objecttemplate"
+		resourcePlural = "objecttemplates"
+	case "ClusterObjectTemplate":
+		resourceSingular = "clusterobjecttemplate"
+		resourcePlural = "clusterobjecttemplates"
 		isClusterScope = true
 	default:
 		return "", nil

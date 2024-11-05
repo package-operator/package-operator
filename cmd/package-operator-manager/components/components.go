@@ -197,8 +197,8 @@ func ProvideEnvironmentManager(
 func ProvidePotentiallyImpersonatingClient(
 	restConfig *rest.Config,
 	scheme *runtime.Scheme,
-	client client.Client,
+	mgr ctrl.Manager,
 	opts Options,
-) (client.Writer, error) {
-	return autoimpersonation.NewPotentiallyAutoImpersonatingWriter(opts.EnableSecurityEnhancedPackages, *restConfig, scheme, client)
+) (autoimpersonation.PotentiallyImpersonatingClient, error) {
+	return autoimpersonation.NewPotentiallyAutoImpersonatingWriter(opts.EnableSecurityEnhancedPackages, *restConfig, scheme, mgr.GetClient())
 }

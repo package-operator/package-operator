@@ -41,7 +41,7 @@ const (
 	objectTemplateResourceRetryIntervalFlagDescription = "The interval at which the controller will retry " +
 		"getting source resource for an ObjectTemplate."
 	securityEnhancedPackagesFlagDescription = "Enable security enhanced packages for PKO." +
-		"Enabling this prevents users from granting themselves elevated privileges using PKO"
+		"Enabling this prevents users from granting themselves elevated privileges using PKO. This is an alpha feature and should not be used in production to prevent privilege escalation."
 )
 
 type Options struct {
