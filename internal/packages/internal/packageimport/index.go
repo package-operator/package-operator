@@ -9,7 +9,7 @@ import (
 func Index(basepath string) (map[string]struct{}, error) {
 	paths := map[string]struct{}{}
 
-	return paths, walk(basepath, func(path string, info fs.FileInfo, err error) error {
+	return paths, walkWithSymlinks(basepath, basepath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -53,8 +53,4 @@ func walkWithSymlinks(filename string, linkDirname string, walkFn filepath.WalkF
 		return walkFn(path, info, err)
 	}
 	return filepath.Walk(filename, symWalkFunc)
-}
-
-func walk(path string, walkFn filepath.WalkFunc) error {
-	return walkWithSymlinks(path, path, walkFn)
 }
