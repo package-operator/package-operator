@@ -81,8 +81,7 @@ func (r *Registry) handleRequest(ctx context.Context, image string) <-chan respo
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			rawPkg, err := r.pullImage(ctx, image, crane.Insecure)
-
+			rawPkg, err := r.pullImage(ctx, image)
 			r.handleResponse(image, response{
 				RawPackage: rawPkg,
 				Err:        err,
