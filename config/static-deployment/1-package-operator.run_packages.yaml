@@ -76,6 +76,10 @@ spec:
                   this image will be unpacked by the package-loader to render
                   the ObjectDeployment for propagating the installation of the package.
                 type: string
+              paused:
+                description: If Paused is true, the package and its children will
+                  not be reconciled.
+                type: boolean
             required:
             - image
             type: object

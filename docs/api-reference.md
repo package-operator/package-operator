@@ -316,6 +316,7 @@ spec:
   component: amet
   config: runtime.RawExtension
   image: sit
+  paused: "true"
 status:
   phase: Pending
 
@@ -633,6 +634,7 @@ spec:
   component: diam
   config: runtime.RawExtension
   image: sed
+  paused: "true"
 status:
   phase: Pending
 
@@ -1058,6 +1060,7 @@ PackageSpec specifies a package.
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render<br>the ObjectDeployment for propagating the installation of the package. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
 | `component` <br>string | Desired component to deploy from multi-component packages. |
+| `paused` <br><a href="#bool">bool</a> | If Paused is true, the package and its children will not be reconciled. |
 
 
 Used in:

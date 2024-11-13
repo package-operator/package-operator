@@ -65,4 +65,6 @@ type PackageSpec struct {
 	// Desired component to deploy from multi-component packages.
 	// +optional
 	Component string `json:"component,omitempty"`
+	// If Paused is true, the package and its children will not be reconciled.
+	Paused bool `json:"paused,omitempty"`
 }
