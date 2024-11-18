@@ -67,6 +67,29 @@ func (o *objectSetReconciler) Reconcile(
 		prevObjectSets = objectSets
 	}
 
+	for _, objectSet := range objectSets {
+		// Propagate ObjectDeployment's `.Spec.Paused` down to ObjectSet's `.Spec.LifecycleState` when
+		// the ObjectDeployment is paused or being unpaused. The ObjectSet should not be unpaused when
+		// the ObjectDeployment has not been paused (i.e., the ObjectSet was paused directly).
+		if (!objectSet.IsSpecPaused() && objectDeployment.GetSpecPaused()) || isBeingUnpaused(objectDeployment) {
+			if objectDeployment.GetSpecPaused() {
+				objectSet.SetPaused()
+			} else {
+				objectSet.SetActive()
+			}
+
+			if err = o.client.Update(ctx, objectSet.ClientObject()); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to unpause objectset: %w", err)
+			}
+		}
+	}
+
+	// Skip subreconcilers when paused
+	if objectDeployment.GetSpecPaused() {
+		o.setObjectDeploymentStatus(ctx, currentObjectSet, prevObjectSets, objectDeployment)
+		return ctrl.Result{}, nil
+	}
+
 	var (
 		res              ctrl.Result
 		subReconcilerErr error
@@ -194,6 +217,8 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	controllerOf = append(controllerOf, getControlledObjRef(currentObjectSet))
 
 	objectDeployment.SetStatusControllerOf(controllerOf)
+
+	updatePausedStatus(currentObjectSet, objectDeployment)
 }
 
 func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectReference {
@@ -245,6 +270,31 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 	return false, ""
 }
 
+func updatePausedStatus(currentObjectSet genericObjectSet, objectDeployment objectDeploymentAccessor) {
+	pausedCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+	objectSetStatusPaused := pausedCond != nil && pausedCond.Status == metav1.ConditionTrue
+
+	if objectSetStatusPaused && objectDeployment.GetSpecPaused() {
+		objectDeployment.SetStatusConditions(
+			newPausedCondition(
+				metav1.ConditionTrue,
+				pausedReasonPaused,
+				"Latest revision is paused: "+pausedCond.Message,
+				objectDeployment.GetGeneration(),
+			),
+		)
+	}
+
+	if !objectSetStatusPaused && isBeingUnpaused(objectDeployment) {
+		objectDeployment.RemoveStatusConditions(corev1alpha1.ObjectDeploymentPaused)
+	}
+}
+
+func isBeingUnpaused(objectDeployment objectDeploymentAccessor) bool {
+	pausedCond := meta.FindStatusCondition(*objectDeployment.GetConditions(), corev1alpha1.ObjectDeploymentPaused)
+	return pausedCond != nil && pausedCond.Status == metav1.ConditionTrue && !objectDeployment.GetSpecPaused()
+}
+
 func newAvailableCondition(
 	status metav1.ConditionStatus, reason availableReason, msg string, generation int64,
 ) metav1.Condition {
@@ -291,3 +341,25 @@ const (
 	progressingReasonLatestRevPendingSuccess progressingReason = "LatestRevisionPendingSuccess"
 	progressingReasonProgressing             progressingReason = "Progressing"
 )
+
+type pausedReason string
+
+func (r pausedReason) String() string {
+	return string(r)
+}
+
+const (
+	pausedReasonPaused = "Paused"
+)
+
+func newPausedCondition(
+	status metav1.ConditionStatus, reason pausedReason, msg string, generation int64,
+) metav1.Condition {
+	return metav1.Condition{
+		Type:               corev1alpha1.ObjectDeploymentPaused,
+		Status:             status,
+		Reason:             reason.String(),
+		Message:            msg,
+		ObservedGeneration: generation,
+	}
+}
