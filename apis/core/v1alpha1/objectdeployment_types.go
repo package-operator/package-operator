@@ -47,6 +47,7 @@ type ObjectDeploymentStatus struct {
 const (
 	ObjectDeploymentAvailable   = "Available"
 	ObjectDeploymentProgressing = "Progressing"
+	ObjectDeploymentPaused      = "Paused"
 )
 
 // ObjectDeploymentPhase specifies a phase that a deployment is in.
@@ -59,6 +60,7 @@ const (
 	ObjectDeploymentPhaseAvailable   ObjectDeploymentPhase = "Available"
 	ObjectDeploymentPhaseNotReady    ObjectDeploymentPhase = "NotReady"
 	ObjectDeploymentPhaseProgressing ObjectDeploymentPhase = "Progressing"
+	ObjectDeploymentPhasePaused      ObjectDeploymentPhase = "Paused"
 )
 
 // ObjectDeployment is the Schema for the ObjectDeployments API

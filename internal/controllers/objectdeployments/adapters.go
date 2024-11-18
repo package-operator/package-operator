@@ -15,6 +15,7 @@ type objectDeploymentAccessor interface {
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
 	GetRevisionHistoryLimit() *int32
 	SetStatusConditions(...metav1.Condition)
+	RemoveStatusConditions(...string)
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetStatusTemplateHash() string
@@ -23,4 +24,6 @@ type objectDeploymentAccessor interface {
 	SetStatusRevision(r int64)
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
+	GetSpecPaused() bool
+	SetSpecPaused(paused bool)
 }

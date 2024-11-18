@@ -239,6 +239,9 @@ func makeObjectDeploymentMock(name string, namespace string,
 	)
 	res.On("SetStatusControllerOf", mock.Anything).Return()
 	res.On("GetStatusControllerOf").Return(nil)
+	res.On("RemoveStatusConditions", corev1alpha1.ObjectDeploymentPaused).Return()
+	res.On("GetSpecPaused").Return(false)
+	res.On("SetSpecPaused", mock.Anything).Return()
 	return res
 }
 
