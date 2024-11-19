@@ -68,10 +68,13 @@ func (o *objectSetReconciler) Reconcile(
 	}
 
 	for _, objectSet := range objectSets {
-		// Propagate ObjectDeployment's `.Spec.Paused` down to ObjectSet's `.Spec.LifecycleState` when
-		// the ObjectDeployment is paused or being unpaused. The ObjectSet should not be unpaused when
-		// the ObjectDeployment has not been paused (i.e., the ObjectSet was paused directly).
-		if (!objectSet.IsSpecPaused() && objectDeployment.GetSpecPaused()) || isBeingUnpaused(objectDeployment) {
+		if objectSet.IsArchived() {
+			continue
+		}
+
+		// The pause value in the ObjectDeployment controls the pause value in ObjectSet.
+		// Update only when the values differ.
+		if objectDeployment.GetSpecPaused() != objectSet.IsSpecPaused() {
 			if objectDeployment.GetSpecPaused() {
 				objectSet.SetPaused()
 			} else {
@@ -272,9 +275,7 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 
 func updatePausedStatus(currentObjectSet genericObjectSet, objectDeployment objectDeploymentAccessor) {
 	pausedCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
-	objectSetStatusPaused := pausedCond != nil && pausedCond.Status == metav1.ConditionTrue
-
-	if objectSetStatusPaused && objectDeployment.GetSpecPaused() {
+	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
 		objectDeployment.SetStatusConditions(
 			newPausedCondition(
 				metav1.ConditionTrue,
@@ -283,16 +284,9 @@ func updatePausedStatus(currentObjectSet genericObjectSet, objectDeployment obje
 				objectDeployment.GetGeneration(),
 			),
 		)
-	}
-
-	if !objectSetStatusPaused && isBeingUnpaused(objectDeployment) {
+	} else {
 		objectDeployment.RemoveStatusConditions(corev1alpha1.ObjectDeploymentPaused)
 	}
-}
-
-func isBeingUnpaused(objectDeployment objectDeploymentAccessor) bool {
-	pausedCond := meta.FindStatusCondition(*objectDeployment.GetConditions(), corev1alpha1.ObjectDeploymentPaused)
-	return pausedCond != nil && pausedCond.Status == metav1.ConditionTrue && !objectDeployment.GetSpecPaused()
 }
 
 func newAvailableCondition(
