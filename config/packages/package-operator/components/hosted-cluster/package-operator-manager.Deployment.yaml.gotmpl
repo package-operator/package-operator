@@ -133,8 +133,8 @@ spec:
           items:
             - key: ca-bundle.crt
               path: tls-ca-bundle.pem
-          name: trusted-ca-bundle
-          optional: true
+          name: openshift-config-managed-trusted-ca-bundle
+          optional: false
         name: trusted-ca-bundle
 {{- end}}
 {{- end}}
