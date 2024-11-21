@@ -1,0 +1,15 @@
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectSet
+metadata:
+  name: test
+spec:
+  phases:
+  - name: test
+    objects:
+    - object:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: test
+        data:
+          banana: banana

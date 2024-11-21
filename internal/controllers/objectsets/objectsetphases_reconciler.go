@@ -14,9 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"pkg.package-operator.run/boxcutter/machinery/ownerhandling"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
 	internalprobing "package-operator.run/internal/probing"
 	"package-operator.run/pkg/probing"

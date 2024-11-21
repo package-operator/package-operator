@@ -17,11 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"pkg.package-operator.run/boxcutter/machinery/ownerhandling"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/internal/ownerhandling"
 )
 
 type HostedClusterController struct {
@@ -56,7 +58,7 @@ func NewHostedClusterController(
 		// Using Annotation Owner-Handling,
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
-		ownerStrategy: ownerhandling.NewAnnotation(scheme),
+		ownerStrategy: ownerhandling.NewAnnotation(scheme, "package-operator.run"),
 
 		remotePhaseAffinity:    remotePhaseAffinity,
 		remotePhaseTolerations: remotePhaseTolerations,
@@ -169,35 +171,53 @@ func (c *HostedClusterController) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 type outer[T client.Object] struct {
-	inner handler.TypedEventHandler[client.Object]
+	inner handler.TypedEventHandler[client.Object, reconcile.Request]
 }
 
 // Create implements handler.TypedEventHandler.
-func (o outer[T]) Create(ctx context.Context, evt event.TypedCreateEvent[T], rl workqueue.RateLimitingInterface) {
-	o.inner.Create(ctx, event.TypedCreateEvent[client.Object]{Object: evt.Object}, rl)
+func (o outer[T]) Create(
+	ctx context.Context, evt event.TypedCreateEvent[T],
+	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	o.inner.Create(ctx, event.TypedCreateEvent[client.Object]{
+		Object: evt.Object,
+	}, rl)
 }
 
 // Delete implements handler.TypedEventHandler.
-func (o outer[T]) Delete(ctx context.Context, evt event.TypedDeleteEvent[T], rl workqueue.RateLimitingInterface) {
+func (o outer[T]) Delete(
+	ctx context.Context, evt event.TypedDeleteEvent[T],
+	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	o.inner.Delete(
 		ctx,
-		event.TypedDeleteEvent[client.Object]{Object: evt.Object, DeleteStateUnknown: evt.DeleteStateUnknown},
+		event.TypedDeleteEvent[client.Object]{
+			Object: evt.Object, DeleteStateUnknown: evt.DeleteStateUnknown,
+		},
 		rl,
 	)
 }
 
 // Generic implements handler.TypedEventHandler.
-func (o outer[T]) Generic(ctx context.Context, evt event.TypedGenericEvent[T], rl workqueue.RateLimitingInterface) {
+func (o outer[T]) Generic(
+	ctx context.Context, evt event.TypedGenericEvent[T],
+	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	o.inner.Generic(ctx, event.TypedGenericEvent[client.Object]{Object: evt.Object}, rl)
 }
 
 // Update implements handler.TypedEventHandler.
-func (o outer[T]) Update(ctx context.Context, evt event.TypedUpdateEvent[T], rl workqueue.RateLimitingInterface) {
-	o.inner.Update(ctx, event.TypedUpdateEvent[client.Object]{ObjectOld: evt.ObjectOld, ObjectNew: evt.ObjectNew}, rl)
+func (o outer[T]) Update(
+	ctx context.Context, evt event.TypedUpdateEvent[T],
+	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	o.inner.Update(ctx, event.TypedUpdateEvent[client.Object]{
+		ObjectOld: evt.ObjectOld, ObjectNew: evt.ObjectNew,
+	}, rl)
 }
 
 func wrapEventHandlerwithTypedEventHandler[T client.Object](
-	inner handler.TypedEventHandler[client.Object],
-) handler.TypedEventHandler[T] {
+	inner handler.TypedEventHandler[client.Object, reconcile.Request],
+) handler.TypedEventHandler[T, reconcile.Request] {
 	return outer[T]{inner}
 }
