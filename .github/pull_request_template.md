@@ -16,6 +16,8 @@
 - [ ] This PR passes all pre-commit hook validations.
 - [ ] This PR is fully tested and regression tests are included.
 - [ ] Relevant documentation has been updated.
+- [ ] The commits in this PR follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+      standard.
 
 ### Additional Information
 
