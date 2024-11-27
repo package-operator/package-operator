@@ -36,6 +36,7 @@ const (
 	// - Malformed Yaml
 	// - Issues resulting from the template process.
 	PackageInvalid = "Invalid"
+	PackagePaused  = "Paused"
 )
 
 // PackageStatusPhase defines a status phase of a package.
@@ -50,6 +51,7 @@ const (
 	PackagePhaseUnpacking   PackageStatusPhase = "Unpacking"
 	PackagePhaseNotReady    PackageStatusPhase = "NotReady"
 	PackagePhaseInvalid     PackageStatusPhase = "Invalid"
+	PackagePhasePaused      PackageStatusPhase = "Paused"
 )
 
 // PackageSpec specifies a package.
