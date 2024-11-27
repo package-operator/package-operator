@@ -19,6 +19,7 @@ type ObjectDeploymentAccessor interface {
 	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
 	GetRevisionHistoryLimit() *int32
 	SetStatusConditions(...metav1.Condition)
+	RemoveStatusConditions(...string)
 	SetStatusCollisionCount(*int32)
 	GetStatusCollisionCount() *int32
 	GetGeneration() int64
@@ -29,6 +30,8 @@ type ObjectDeploymentAccessor interface {
 	GetStatusRevision() int64
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
+	GetSpecPaused() bool
+	SetSpecPaused(paused bool)
 }
 
 type ObjectDeploymentFactory func(
@@ -110,6 +113,12 @@ func (a *ObjectDeployment) SetStatusConditions(conds ...metav1.Condition) {
 	}
 }
 
+func (a *ObjectDeployment) RemoveStatusConditions(condTypes ...string) {
+	for _, ct := range condTypes {
+		meta.RemoveStatusCondition(&a.Status.Conditions, ct)
+	}
+}
+
 func (a *ObjectDeployment) SetStatusTemplateHash(templateHash string) {
 	a.Status.TemplateHash = templateHash
 }
@@ -147,6 +156,14 @@ func (a *ObjectDeployment) SetStatusControllerOf(controllerOf []corev1alpha1.Con
 
 func (a *ObjectDeployment) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
 	return a.Status.ControllerOf
+}
+
+func (a *ObjectDeployment) GetSpecPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *ObjectDeployment) SetSpecPaused(paused bool) {
+	a.Spec.Paused = paused
 }
 
 type ClusterObjectDeployment struct {
@@ -193,6 +210,12 @@ func (a *ClusterObjectDeployment) SetStatusConditions(conds ...metav1.Condition)
 	}
 }
 
+func (a *ClusterObjectDeployment) RemoveStatusConditions(condTypes ...string) {
+	for _, ct := range condTypes {
+		meta.RemoveStatusCondition(&a.Status.Conditions, ct)
+	}
+}
+
 func (a *ClusterObjectDeployment) SetStatusTemplateHash(templateHash string) {
 	a.Status.TemplateHash = templateHash
 }
@@ -232,7 +255,20 @@ func (a *ClusterObjectDeployment) GetStatusControllerOf() []corev1alpha1.Control
 	return a.Status.ControllerOf
 }
 
+func (a *ClusterObjectDeployment) GetSpecPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *ClusterObjectDeployment) SetSpecPaused(paused bool) {
+	a.Spec.Paused = paused
+}
+
 func objectDeploymentPhase(conditions []metav1.Condition) corev1alpha1.ObjectDeploymentPhase {
+	pausedCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentPaused)
+	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
+		return corev1alpha1.ObjectDeploymentPhasePaused
+	}
+
 	availableCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentAvailable)
 
 	if availableCond != nil {
