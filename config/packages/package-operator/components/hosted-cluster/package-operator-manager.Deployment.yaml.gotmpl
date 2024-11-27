@@ -61,8 +61,6 @@ spec:
 {{- end}}
         - name: PKO_NAMESPACE
           value: {{ .config.hostedClusterNamespace }}
-        - name: PKO_IMAGE
-          value: {{ index .images "package-operator-manager" }}
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "proxy" }}
 {{- if hasKey .environment.proxy "httpProxy" }}
