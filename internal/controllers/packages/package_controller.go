@@ -37,12 +37,13 @@ type GenericPackageController struct {
 	newPackage          adapters.GenericPackageFactory
 	newObjectDeployment adapters.ObjectDeploymentFactory
 
-	recorder         metricsRecorder
-	client           client.Client
-	log              logr.Logger
-	scheme           *runtime.Scheme
-	reconciler       []reconciler
-	unpackReconciler *unpackReconciler
+	recorder               metricsRecorder
+	client                 client.Client
+	log                    logr.Logger
+	scheme                 *runtime.Scheme
+	reconciler             []reconciler
+	unpackReconciler       *unpackReconciler
+	objDepStatusReconciler *objectDeploymentStatusReconciler
 }
 
 func NewPackageController(
@@ -94,15 +95,16 @@ func newGenericPackageController(
 			client, uncachedClient, imagePuller, packageDeployer,
 			metricsRecorder, packageHashModifier,
 		),
-	}
-
-	controller.reconciler = []reconciler{
-		controller.unpackReconciler,
-		&objectDeploymentStatusReconciler{
+		objDepStatusReconciler: &objectDeploymentStatusReconciler{
 			client:              client,
 			scheme:              scheme,
 			newObjectDeployment: newObjectDeployment,
 		},
+	}
+
+	controller.reconciler = []reconciler{
+		controller.unpackReconciler,
+		controller.objDepStatusReconciler,
 	}
 
 	return controller
@@ -150,6 +152,28 @@ func (c *GenericPackageController) Reconcile(
 			return res, err
 		}
 		return res, nil
+	}
+
+	objDep := c.newObjectDeployment(c.scheme)
+	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkgClientObject), objDep.ClientObject())
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+
+	if pkg.GetSpecPaused() != objDep.GetSpecPaused() {
+		objDep.SetSpecPaused(pkg.GetSpecPaused())
+		if err = c.client.Update(ctx, objDep.ClientObject()); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to unpause objectdeployment: %w", err)
+		}
+	}
+
+	// Skip subreconcilers when paused
+	if pkg.GetSpecPaused() {
+		res, err = c.objDepStatusReconciler.Reconcile(ctx, pkg)
+		if err != nil {
+			return res, err
+		}
+		return res, c.updateStatus(ctx, pkg)
 	}
 
 	for _, r := range c.reconciler {
