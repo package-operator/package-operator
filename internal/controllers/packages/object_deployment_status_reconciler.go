@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,16 @@ func (r *objectDeploymentStatusReconciler) Reconcile(
 		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
 		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
+	}
+
+	objDepPausedCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentPaused)
+	if objDepPausedCond != nil && objDepPausedCond.ObservedGeneration == objDep.ClientObject().GetGeneration() &&
+		objDepPausedCond.Status == metav1.ConditionTrue {
+		packagePausedCond := objDepPausedCond.DeepCopy()
+		packagePausedCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
+		meta.SetStatusCondition(packageObj.GetConditions(), *packagePausedCond)
+	} else {
+		meta.RemoveStatusCondition(packageObj.GetConditions(), corev1alpha1.PackagePaused)
 	}
 
 	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
