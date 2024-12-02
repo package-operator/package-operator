@@ -3,9 +3,12 @@ package repocmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/go-containerregistry/pkg/crane"
 
 	"github.com/stretchr/testify/assert"
 
@@ -15,6 +18,47 @@ import (
 
 	"package-operator.run/internal/packages"
 )
+
+const (
+	authRegistryHost  = "localhost:5002"
+	plainRegistryHost = "localhost:5001"
+)
+
+var (
+	appVersion                      string
+	nonExistingImage                string
+	unauthenticatedImage            string
+	testStubImage                   string
+	testStubPackageImage            string
+	testStubPackageImageDigest      string
+	testStubMultiPackageImage       string
+	testStubMultiPackageImageDigest string
+)
+
+func init() {
+	appVersion = os.Getenv("PKO_TEST_VERSION")
+	if len(appVersion) == 0 {
+		panic("PKO_TEST_VERSION not set!")
+	}
+	nonExistingImage = img(plainRegistryHost, "package-operator/foobar", "vX.Y.Z")
+	unauthenticatedImage = img(authRegistryHost, "package-operator/unauthenticated", "v1.0.0")
+	testStubImage = img(plainRegistryHost, "package-operator/test-stub", appVersion)
+	testStubPackageImage = img(plainRegistryHost, "package-operator/test-stub-package", appVersion)
+	testStubMultiPackageImage = img(plainRegistryHost, "package-operator/test-stub-multi-package", appVersion)
+	var err error
+	testStubPackageImageDigest, err = crane.Digest(testStubPackageImage)
+	if err != nil {
+		panic(err)
+	}
+	testStubMultiPackageImageDigest, err = crane.Digest(testStubMultiPackageImage)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func img(host, path, tag string) string {
+	return fmt.Sprintf("%s/%s:%s", host, path, tag)
+}
 
 func TestRepoCmdCorrectRun(t *testing.T) {
 	t.Parallel()
@@ -43,17 +87,17 @@ func TestRepoCmdCorrectRun(t *testing.T) {
 	})
 
 	// add existing package images
-	cmd = newCmd("add", testRepoFile, "quay.io/package-operator/test-stub-package:v1.10.0", "1.10.0", "1.11.0")
+	cmd = newCmd("add", testRepoFile, testStubPackageImage, "1.0.0", "1.1.0")
 	require.NoError(t, cmd.Execute())
-	cmd = newCmd("add", testRepoFile, "quay.io/package-operator/test-stub-multi-package:v1.10.0", "1.10.0")
+	cmd = newCmd("add", testRepoFile, testStubMultiPackageImage, "1.0.0")
 	require.NoError(t, cmd.Execute())
 
 	// add non existing container image triggers error
-	cmd = newCmd("add", testRepoFile, "quay.io/package-operator/foobar:vX.Y.Z", "1.0.0")
+	cmd = newCmd("add", testRepoFile, nonExistingImage, "1.0.0")
 	require.ErrorContains(t, cmd.Execute(), "pull package image")
 
 	// add container image which is not a package operator package triggers error
-	cmd = newCmd("add", testRepoFile, "quay.io/package-operator/test-stub:v1.9.3", "1.9.3")
+	cmd = newCmd("add", testRepoFile, testStubImage, "1.0.1")
 	require.ErrorContains(t, cmd.Execute(), "raw package from package image")
 
 	idx := assertIdx(ctx, t, testRepoFile, 2)
@@ -61,15 +105,15 @@ func TestRepoCmdCorrectRun(t *testing.T) {
 	assertTestStubMultiEntry(t, idx)
 
 	// remove existing package image
-	cmd = newCmd("remove", testRepoFile, "quay.io/package-operator/test-stub-multi-package:v1.10.0")
+	cmd = newCmd("remove", testRepoFile, testStubMultiPackageImage)
 	require.NoError(t, cmd.Execute())
 
 	// remove non existing package image triggers error
-	cmd = newCmd("remove", testRepoFile, "quay.io/package-operator/foobar:vX.Y.Z")
+	cmd = newCmd("remove", testRepoFile, nonExistingImage)
 	require.ErrorContains(t, cmd.Execute(), "pull package image")
 
 	// remove container image which is not a package operator package triggers error
-	cmd = newCmd("remove", testRepoFile, "quay.io/package-operator/test-stub:v1.9.3")
+	cmd = newCmd("remove", testRepoFile, testStubImage)
 	require.ErrorContains(t, cmd.Execute(), "raw package from package image")
 
 	idx = assertIdx(ctx, t, testRepoFile, 1)
@@ -77,7 +121,7 @@ func TestRepoCmdCorrectRun(t *testing.T) {
 
 	// currently we don't want to push to a real container registry each unit test run
 	// but if the error is about a 401 code, this means all the previous logic works
-	cmd = newCmd("push", testRepoFile, "quay.io/package-operator/non-existing-repo:v1.0.0")
+	cmd = newCmd("push", testRepoFile, unauthenticatedImage)
 	require.ErrorContains(t, cmd.Execute(), "unexpected status code 401 Unauthorized")
 }
 
@@ -177,11 +221,10 @@ func assertTestStubEntry(t *testing.T, idx *packages.RepositoryIndex) {
 	require.NoError(t, err)
 	assert.Len(t, vrs, 2)
 
-	dig, err := idx.GetDigest("test-stub",
-		"199355dc900272b86ec5fb691bd20bea44a5dfb6a376aafb3f8beac035fc4cea")
+	dig, err := idx.GetDigest("test-stub", testStubPackageImageDigest[7:])
 	require.NoError(t, err)
-	assert.Contains(t, dig.Data.Versions, "v1.10.0")
-	assert.Contains(t, dig.Data.Versions, "v1.11.0")
+	assert.Contains(t, dig.Data.Versions, "v1.0.0")
+	assert.Contains(t, dig.Data.Versions, "v1.1.0")
 }
 
 func assertTestStubMultiEntry(t *testing.T, idx *packages.RepositoryIndex) {
@@ -193,8 +236,7 @@ func assertTestStubMultiEntry(t *testing.T, idx *packages.RepositoryIndex) {
 	require.NoError(t, err)
 	assert.Len(t, vrs, 1)
 
-	dig, err := idx.GetDigest("test-stub-multi",
-		"b1d675be4210169a23aaadb5cf6bd9294b4455704305c80e3bd2913d4a66137a")
+	dig, err := idx.GetDigest("test-stub-multi", testStubMultiPackageImageDigest[7:])
 	require.NoError(t, err)
-	assert.Contains(t, dig.Data.Versions, "v1.10.0")
+	assert.Contains(t, dig.Data.Versions, "v1.0.0")
 }
