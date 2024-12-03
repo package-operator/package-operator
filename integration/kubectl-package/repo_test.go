@@ -1,4 +1,6 @@
-package repocmd
+//go:build integration
+
+package kubectlpackage
 
 import (
 	"bytes"
@@ -7,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"package-operator.run/cmd/kubectl-package/repocmd"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 
@@ -195,7 +199,7 @@ func TestRepoCmdMalformedParams(t *testing.T) {
 }
 
 func newCmd(args ...string) *cobra.Command {
-	cmd := NewCmd()
+	cmd := repocmd.NewCmd()
 	cmd.SetArgs(args)
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
