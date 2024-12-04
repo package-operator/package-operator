@@ -41,6 +41,8 @@ metadata:
   namespace: dev-registry
 type: Opaque
 stringData:
+  # username: registry
+  # password: foobar
   htpasswd: |
     registry:$2y$05$tXrX0My2D/qIQAUIb7472u.ahWdG5eHp6FkSu9eyjRQCfciwAIt7a
 ---
