@@ -9,25 +9,28 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages"
 )
 
-func NewValidate(scheme *runtime.Scheme, opts ...ValidateOption) *Validate {
+func NewValidate(uncachedClient client.Client, scheme *runtime.Scheme, opts ...ValidateOption) *Validate {
 	var cfg ValidateConfig
 
 	cfg.Option(opts...)
 	cfg.Default()
 
 	return &Validate{
-		cfg:    cfg,
-		scheme: scheme,
+		cfg:            cfg,
+		scheme:         scheme,
+		uncachedClient: uncachedClient,
 	}
 }
 
 type Validate struct {
-	cfg    ValidateConfig
-	scheme *runtime.Scheme
+	cfg            ValidateConfig
+	scheme         *runtime.Scheme
+	uncachedClient client.Client
 }
 
 type ValidateConfig struct {
@@ -54,7 +57,9 @@ type ValidateOption interface {
 	ConfigureValidate(*ValidateConfig)
 }
 
-type PullFn func(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error)
+type PullFn func(
+	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
+) (*packages.RawPackage, error)
 
 func (v *Validate) ValidatePackage(ctx context.Context, opts ...ValidatePackageOption) error {
 	var cfg ValidatePackageConfig
@@ -120,7 +125,7 @@ func (v *Validate) getPackageFromRemoteRef(
 		opts = append(opts, crane.Insecure)
 	}
 
-	rawPkg, err := v.cfg.Pull(ctx, ref.String(), opts...)
+	rawPkg, err := v.cfg.Pull(ctx, v.uncachedClient, ref.String(), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("importing package from image: %w", err)
 	}

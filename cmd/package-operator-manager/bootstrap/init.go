@@ -33,10 +33,11 @@ const (
 // Will shut down PKO prior to bootstrapping if the ClusterPackage was updated to ensure that new "non-buggy"
 // PKO code will handle the migration.
 type initializer struct {
-	client    client.Client
-	scheme    *runtime.Scheme
-	loader    packageObjectLoader
-	pullImage bootstrapperPullImageFn
+	client         client.Client
+	uncachedClient client.Client
+	scheme         *runtime.Scheme
+	loader         packageObjectLoader
+	pullImage      bootstrapperPullImageFn
 
 	// config
 	packageOperatorNamespace string
@@ -46,6 +47,7 @@ type initializer struct {
 
 func newInitializer(
 	client client.Client,
+	uncachedClient client.Client,
 	scheme *runtime.Scheme,
 	loader packageObjectLoader,
 	pullImage bootstrapperPullImageFn,
@@ -56,10 +58,11 @@ func newInitializer(
 	selfConfig string,
 ) *initializer {
 	return &initializer{
-		client:    client,
-		scheme:    scheme,
-		loader:    loader,
-		pullImage: pullImage,
+		client:         client,
+		uncachedClient: uncachedClient,
+		scheme:         scheme,
+		loader:         loader,
+		pullImage:      pullImage,
 
 		packageOperatorNamespace: packageOperatorNamespace,
 		selfBootstrapImage:       selfBootstrapImage,
@@ -68,7 +71,7 @@ func newInitializer(
 }
 
 func (init *initializer) Init(ctx context.Context) (needsBootstrap bool, err error) {
-	crds, err := init.crdsFromPackage(ctx)
+	crds, err := init.crdsFromPackage(ctx, init.uncachedClient)
 	if err != nil {
 		return false, fmt.Errorf("crdsFromPackage: %w", err)
 	}
@@ -224,10 +227,10 @@ func (init *initializer) config() *runtime.RawExtension {
 	return packageConfig
 }
 
-func (init *initializer) crdsFromPackage(ctx context.Context) (
-	crds []unstructured.Unstructured, err error,
-) {
-	rawPkg, err := init.pullImage(ctx, init.selfBootstrapImage)
+func (init *initializer) crdsFromPackage(
+	ctx context.Context, uncachedClient client.Client,
+) (crds []unstructured.Unstructured, err error) {
+	rawPkg, err := init.pullImage(ctx, uncachedClient, init.selfBootstrapImage)
 	if err != nil {
 		return nil, err
 	}

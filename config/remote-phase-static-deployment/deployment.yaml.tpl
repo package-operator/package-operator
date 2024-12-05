@@ -41,6 +41,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: PKO_SERVICE_ACCOUNT
+          valueFrom:
+            FieldRef:
+              fieldPath: spec.serviceAccountName
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

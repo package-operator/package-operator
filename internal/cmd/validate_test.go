@@ -8,8 +8,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages"
+	"package-operator.run/internal/testutil"
 )
 
 func TestValidatePackageConfig(t *testing.T) {
@@ -107,15 +109,18 @@ func TestValidate_ValidatePackage(t *testing.T) {
 			scheme, err := NewScheme()
 			require.NoError(t, err)
 
+			uncachedClient := testutil.NewClient()
+
 			mPuller := &pullerMock{}
 
 			if tc.PulledPkg != nil {
 				mPuller.
-					On("Pull", mock.Anything, "test", mock.Anything).
+					On("Pull", mock.Anything, mock.Anything, "test").
 					Return(tc.PulledPkg, nil)
 			}
 
 			validate := NewValidate(
+				uncachedClient,
 				scheme,
 				WithPuller{Pull: mPuller.Pull},
 			)
@@ -129,8 +134,10 @@ type pullerMock struct {
 	mock.Mock
 }
 
-func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error) {
-	actualArgs := []any{ctx, ref}
+func (m *pullerMock) Pull(
+	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
+) (*packages.RawPackage, error) {
+	actualArgs := []any{ctx, uncachedClient, ref}
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)
 	}

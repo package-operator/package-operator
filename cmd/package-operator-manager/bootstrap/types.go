@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages"
 )
@@ -15,7 +16,7 @@ type packageObjectLoader interface {
 }
 
 type bootstrapperPullImageFn func(
-	ctx context.Context, image string) (*packages.RawPackage, error)
+	ctx context.Context, uncachedClient client.Client, image string) (*packages.RawPackage, error)
 
 type packageObjectLoad struct{}
 

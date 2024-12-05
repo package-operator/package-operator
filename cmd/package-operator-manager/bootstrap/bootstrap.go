@@ -40,7 +40,7 @@ func NewBootstrapper(
 ) (*Bootstrapper, error) {
 	c := uncachedClient
 	init := newInitializer(
-		c, scheme, &packageObjectLoad{},
+		c, uncachedClient, scheme, &packageObjectLoad{},
 		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig,
 	)
 	fixer := newFixer(c, log, opts.Namespace)
