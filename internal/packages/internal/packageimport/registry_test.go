@@ -10,8 +10,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
+	"package-operator.run/internal/testutil"
 )
 
 func TestRegistry_DelayedPull(t *testing.T) {
@@ -30,12 +32,13 @@ func TestRegistry_DelayedPull(t *testing.T) {
 		Return(pkg, nil)
 
 	ctx := context.Background()
+	uncachedClient := testutil.NewClient()
 	var wg sync.WaitGroup
 	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ff, err := r.Pull(ctx, "quay.io/test123")
+			ff, err := r.Pull(ctx, uncachedClient, "quay.io/test123")
 			if err != nil {
 				panic(err)
 			}
@@ -76,11 +79,12 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 		pkg     []*packagetypes.RawPackage
 		pkgLock sync.Mutex
 	)
+	uncachedClient := testutil.NewClient()
 	for range numRequests {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			f, err := r.Pull(ctx, "quay.io/test123")
+			f, err := r.Pull(ctx, uncachedClient, "quay.io/test123")
 			if err != nil {
 				panic(err)
 			}
@@ -111,9 +115,9 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, ref string,
+	ctx context.Context, uncachedClient client.Client, ref string,
 	opts ...crane.Option,
 ) (*packagetypes.RawPackage, error) {
-	args := m.Called(ctx, ref, opts)
+	args := m.Called(ctx, uncachedClient, ref, opts)
 	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)
 }
