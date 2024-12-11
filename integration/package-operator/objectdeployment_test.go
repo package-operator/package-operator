@@ -5,11 +5,14 @@ package packageoperator
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -137,40 +141,16 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Assert that all the expected conditions are reported
 		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx,
-					concernedDeployment,
-					expectedCond,
-					expectedStatus,
-				),
-			)
-			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.Equal(t, expectedStatus, cond.Status)
+			requireCondition(ctx, t, concernedDeployment, expectedCond, expectedStatus)
 		}
 
 		// ObjectSet for the current deployment revision should be present
 		currentObjectSet := &corev1alpha1.ObjectSet{}
-		require.NoError(t,
-			Client.Get(ctx,
-				client.ObjectKey{
-					Name:      ExpectedObjectSetName(concernedDeployment),
-					Namespace: concernedDeployment.Namespace,
-				},
-				currentObjectSet,
-			),
-		)
+		// TODO(reviewer): is this more or less readable?
+		requireClientGet(ctx, t, ExpectedObjectSetName(concernedDeployment), concernedDeployment.Namespace, currentObjectSet)
 
 		// Assert that the ObjectSet for the current revision has the expected availability status
-		require.NoError(t,
-			Waiter.WaitForCondition(ctx,
-				currentObjectSet,
-				corev1alpha1.ObjectSetAvailable,
-				testCase.expectedRevisionAvailability,
-			),
-		)
-		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
-		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.Equal(t, testCase.expectedRevisionAvailability, availableCond.Status)
+		requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetAvailable, testCase.expectedRevisionAvailability)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -184,35 +164,14 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Expect ObjectSet to be created
 		// Expect concerned ObjectSet to be created
-		labelSelector := concernedDeployment.Spec.Selector
-		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
-		require.NoError(t, err)
-		currObjectSetList := &corev1alpha1.ObjectSetList{}
-		err = Client.List(
-			ctx, currObjectSetList,
-			client.MatchingLabelsSelector{
-				Selector: objectSetSelector,
-			},
-			client.InNamespace(concernedDeployment.GetNamespace()),
-		)
-		require.NoError(t, err)
-
+		currObjectSetList := listObjectSetRevisions(ctx, t, concernedDeployment)
 		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
-				require.NoError(t,
-					Waiter.WaitForCondition(ctx,
-						&currObjectSet,
-						corev1alpha1.ObjectSetArchived,
-						metav1.ConditionTrue,
-					),
-				)
-				archivedCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
-				require.NotNil(t, archivedCond, "Archived condition is expected to be reported")
-				require.Equal(t, metav1.ConditionTrue, archivedCond.Status)
+				requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
 				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
@@ -451,40 +410,15 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		cleanupOnSuccess(ctx, t, concernedDeployment)
 		// Assert that all the expected conditions are reported
 		for expectedCond, expectedStatus := range testCase.expectedDeploymentConditions {
-			require.NoError(t,
-				Waiter.WaitForCondition(ctx,
-					concernedDeployment,
-					expectedCond,
-					expectedStatus,
-				),
-			)
-			cond := meta.FindStatusCondition(concernedDeployment.Status.Conditions, expectedCond)
-			require.Equal(t, expectedStatus, cond.Status)
+			requireCondition(ctx, t, concernedDeployment, expectedCond, expectedStatus)
 		}
 
 		// ObjectSet for the current deployment revision should be present
 		currentObjectSet := &corev1alpha1.ObjectSet{}
-		require.NoError(t,
-			Client.Get(ctx,
-				client.ObjectKey{
-					Name:      ExpectedObjectSetName(concernedDeployment),
-					Namespace: concernedDeployment.Namespace,
-				},
-				currentObjectSet,
-			),
-		)
+		requireClientGet(ctx, t, ExpectedObjectSetName(concernedDeployment), concernedDeployment.Namespace, currentObjectSet)
 
 		// Assert that the ObjectSet for the current revision has the expected availability status
-		require.NoError(t,
-			Waiter.WaitForCondition(ctx,
-				currentObjectSet,
-				corev1alpha1.ObjectSetAvailable,
-				testCase.expectedRevisionAvailability,
-			),
-		)
-		availableCond := meta.FindStatusCondition(currentObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
-		require.NotNil(t, availableCond, "Available condition is expected to be reported")
-		require.Equal(t, testCase.expectedRevisionAvailability, availableCond.Status)
+		requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetAvailable, testCase.expectedRevisionAvailability)
 
 		// Assert that the ObjectSet reports the right TemplateHash
 		require.Equal(t,
@@ -497,35 +431,14 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 			currentObjectSet.Status.Revision)
 
 		// Expect concerned ObjectSet to be created
-		labelSelector := concernedDeployment.Spec.Selector
-		objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
-		require.NoError(t, err)
-		currObjectSetList := &corev1alpha1.ObjectSetList{}
-		err = Client.List(
-			ctx, currObjectSetList,
-			client.MatchingLabelsSelector{
-				Selector: objectSetSelector,
-			},
-			client.InNamespace(concernedDeployment.GetNamespace()),
-		)
-		require.NoError(t, err)
-
+		currObjectSetList := listObjectSetRevisions(ctx, t, concernedDeployment)
 		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
-				require.NoError(t,
-					Waiter.WaitForCondition(ctx,
-						&currObjectSet,
-						corev1alpha1.ObjectSetArchived,
-						metav1.ConditionTrue,
-					),
-				)
-				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetArchived)
-				require.NotNil(t, availableCond, "Available condition is expected to be reported")
-				require.Equal(t, metav1.ConditionTrue, availableCond.Status)
+				requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
 				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
@@ -538,6 +451,96 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestObjectDeployment_Pause(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	testConfigMap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-cm",
+		},
+		Data: map[string]string{"banana": "bread"},
+	}
+
+	objectDeployment := objectDeploymentTemplate([]corev1alpha1.ObjectSetTemplatePhase{
+		{
+			Name: "test-phase",
+			Objects: []corev1alpha1.ObjectSetObject{
+				{
+					Object: cmTemplate(testConfigMap.Name, testConfigMap.Data, t),
+				},
+			},
+		},
+	}, nil, "test-od")
+
+	require.NoError(t, Client.Create(ctx, objectDeployment))
+	cleanupOnSuccess(ctx, t, objectDeployment)
+
+	// Assert that the ObjectDeployment reports available condition
+	requireCondition(ctx, t, objectDeployment, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+
+	// ObjectSet should be present
+	objectSet := &corev1alpha1.ObjectSet{}
+	requireClientGet(ctx, t, ExpectedObjectSetName(objectDeployment), objectDeployment.Namespace, objectSet)
+
+	// Assert that the ObjectSet is available
+	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+	// ConfigMap should be present
+	cm := &corev1.ConfigMap{}
+	requireClientGet(ctx, t, testConfigMap.Name, objectDeployment.Namespace, cm)
+	assert.True(t, reflect.DeepEqual(testConfigMap.Data, cm.Data))
+
+	// Pause ObjectDeployment Reconciliation
+	objectDeployment.Spec.Paused = true
+	require.NoError(t, Client.Update(ctx, objectDeployment))
+
+	// Assert that the ObjectSet is paused
+	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetPaused, metav1.ConditionTrue)
+
+	requireClientGet(ctx, t, objectSet.Name, objectSet.Namespace, objectSet)
+	assert.Equal(t, corev1alpha1.ObjectSetLifecycleStatePaused, objectSet.Spec.LifecycleState)
+
+	// Add a new config map to the paused ObjectDeployment
+	requireClientGet(ctx, t, objectDeployment.Name, objectDeployment.Namespace, objectDeployment)
+	newConfigMapName := "new-config-map"
+	objectDeployment.Spec.Template.Spec.Phases[0].Objects = append(objectDeployment.Spec.Template.Spec.Phases[0].Objects,
+		corev1alpha1.ObjectSetObject{
+			Object: cmTemplate(newConfigMapName, nil, t),
+		})
+	require.NoError(t, Client.Update(ctx, objectDeployment))
+
+	// The ObjectSet should not be archived
+	require.ErrorIs(t,
+		Waiter.WaitForCondition(ctx,
+			objectSet,
+			corev1alpha1.ObjectSetArchived,
+			metav1.ConditionTrue,
+		),
+		context.DeadlineExceeded,
+	)
+
+	// No new revisions should be created
+	objectSetList := listObjectSetRevisions(ctx, t, objectDeployment)
+	assert.Len(t, objectSetList.Items, 1)
+
+	// Unpause ObjectDeployment
+	requireClientGet(ctx, t, objectDeployment.Name, objectDeployment.Namespace, objectDeployment)
+	objectDeployment.Spec.Paused = false
+	require.NoError(t, Client.Update(ctx, objectDeployment))
+
+	// Wait for ObjectDeployment to be available
+	requireCondition(ctx, t, objectDeployment, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+	requireClientGet(ctx, t, objectDeployment.Name, objectDeployment.Namespace, objectDeployment)
+	assert.Equal(t, corev1alpha1.ObjectDeploymentPhaseAvailable, objectDeployment.Status.Phase)
+
+	// A new revision should be created
+	objectSetList = listObjectSetRevisions(ctx, t, objectDeployment)
+	assert.Len(t, objectSetList.Items, 2)
+
+	// New config map should be there
+	requireClientGet(ctx, t, newConfigMapName, objectDeployment.Namespace, &testConfigMap)
 }
 
 func ExpectedObjectSetName(deployment *corev1alpha1.ObjectDeployment) string {
@@ -702,4 +705,66 @@ func hashCollisionTestProbe(configmapFieldA, configmapFieldB string) []corev1alp
 			},
 		},
 	}
+}
+
+func listObjectSetRevisions(
+	ctx context.Context, t *testing.T,
+	objectDeployment *corev1alpha1.ObjectDeployment,
+) *corev1alpha1.ObjectSetList {
+	t.Helper()
+
+	labelSelector := objectDeployment.Spec.Selector
+	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
+	require.NoError(t, err)
+
+	objectSetList := &corev1alpha1.ObjectSetList{}
+	err = Client.List(
+		ctx, objectSetList,
+		client.MatchingLabelsSelector{
+			Selector: objectSetSelector,
+		},
+		client.InNamespace(objectDeployment.GetNamespace()),
+	)
+	require.NoError(t, err)
+
+	return objectSetList
+}
+
+func requireCondition(
+	ctx context.Context, t *testing.T, object client.Object,
+	conditionType string, conditionStatus metav1.ConditionStatus,
+) {
+	t.Helper()
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx,
+			object, conditionType, conditionStatus,
+			wait.WithTimeout(60*time.Second),
+		),
+	)
+
+	var conditions []metav1.Condition
+	if od, ok := object.(*corev1alpha1.ObjectDeployment); ok {
+		conditions = od.Status.Conditions
+	} else {
+		conditions = object.(*corev1alpha1.ObjectSet).Status.Conditions
+	}
+
+	cond := meta.FindStatusCondition(conditions, conditionType)
+	require.NotNil(t, cond, conditionType+" condition is expected to be reported")
+	assert.Equal(t, conditionStatus, cond.Status)
+}
+
+func requireClientGet(ctx context.Context, t *testing.T, name, namespace string, object client.Object) {
+	t.Helper()
+
+	require.NoError(t,
+		Client.Get(ctx,
+			client.ObjectKey{
+				Name:      name,
+				Namespace: namespace,
+			},
+			object,
+		),
+	)
 }
