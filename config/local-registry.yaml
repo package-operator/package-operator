@@ -3,6 +3,49 @@ kind: Namespace
 metadata:
   name: dev-registry
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-registry-proxy-config
+  namespace: dev-registry
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+    http {
+      upstream registry {
+        server localhost:5000;
+      }
+
+      server {
+        listen 5080;
+
+        location / {
+          auth_basic "Registry realm";
+          auth_basic_user_file /etc/nginx/htpasswd/htpasswd;
+
+          proxy_pass http://registry;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-htpasswd
+  namespace: dev-registry
+type: Opaque
+stringData:
+  # username: registry
+  # password: foobar
+  htpasswd: |
+    registry:$2y$05$tXrX0My2D/qIQAUIb7472u.ahWdG5eHp6FkSu9eyjRQCfciwAIt7a
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +72,26 @@ spec:
         ports:
         - containerPort: 5000
           hostPort: 5001
+
+      - image: nginx:alpine
+        name: nginx-auth-proxy
+        ports:
+          - containerPort: 5080
+            hostPort: 5002
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+          - name: htpasswd
+            mountPath: /etc/nginx/htpasswd
+
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-registry-proxy-config
+      - name: htpasswd
+        secret:
+          secretName: registry-htpasswd
 ---
 apiVersion: v1
 kind: Service
@@ -39,10 +102,16 @@ metadata:
   namespace: dev-registry
 spec:
   ports:
-  - port: 5001
+  - name: plain
+    port: 5001
     protocol: TCP
     targetPort: 5000
     nodePort: 31320
+  - name: authenticated
+    port: 5002
+    protocol: TCP
+    targetPort: 5080
+    nodePort: 31321
   selector:
     app: dev-registry
   type: NodePort
