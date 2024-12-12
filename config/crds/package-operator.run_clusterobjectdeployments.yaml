@@ -51,6 +51,10 @@ spec:
             description: ClusterObjectDeploymentSpec defines the desired state of
               a ClusterObjectDeployment.
             properties:
+              paused:
+                description: If Paused is true, the object and its children will not
+                  be reconciled.
+                type: boolean
               revisionHistoryLimit:
                 default: 10
                 description: Number of old revisions in the form of archived ObjectSets
