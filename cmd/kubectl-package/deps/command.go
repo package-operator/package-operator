@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/dig"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/cmd/kubectl-package/buildcmd"
 	clustertreecmd "package-operator.run/cmd/kubectl-package/clustertreecmd"
@@ -97,8 +98,8 @@ func ProvideValidateCmd(validator validatecmd.Validator) RootSubCommandResult {
 	}
 }
 
-func ProvideValidator(scheme *runtime.Scheme) validatecmd.Validator {
-	return internalcmd.NewValidate(scheme)
+func ProvideValidator(scheme *runtime.Scheme, uncachedClient client.Client) validatecmd.Validator {
+	return internalcmd.NewValidate(uncachedClient, scheme)
 }
 
 func ProvideBuildCmd(builderFactory buildcmd.BuilderFactory) RootSubCommandResult {
