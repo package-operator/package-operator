@@ -1,12 +1,15 @@
 module package-operator.run/apis
 
 go 1.22.0
+toolchain go1.23.4
 
-toolchain go1.22.2
+require k8s.io/apimachinery v0.32.0
 
-require k8s.io/apimachinery v0.30.3
-
-require sigs.k8s.io/yaml v1.4.0 // indirect
+require (
+	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
+)
 
 require (
 	github.com/go-logr/logr v1.4.2 // indirect
@@ -16,14 +19,13 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
-	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
+	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
 )
