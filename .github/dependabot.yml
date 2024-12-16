@@ -7,7 +7,6 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
   open-pull-requests-limit: 100
 - package-ecosystem: gomod
   directory: /apis
@@ -16,7 +15,6 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
   open-pull-requests-limit: 100
 - package-ecosystem: gomod
   directory: /pkg
@@ -25,11 +23,9 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
   open-pull-requests-limit: 100
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
-  assignees: [ eqrx ]
   open-pull-requests-limit: 100
