@@ -18,6 +18,11 @@ updates:
     dependency-name: "*"
   assignees: [ eqrx ]
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: gomod
   directory: /pkg
   schedule:
@@ -27,9 +32,18 @@ updates:
     dependency-name: "*"
   assignees: [ eqrx ]
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
   assignees: [ eqrx ]
   open-pull-requests-limit: 100
+  groups:
+    actions:
+      applies-to: version-updates
+      patterns: ["*"]
