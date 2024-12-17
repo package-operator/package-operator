@@ -29,12 +29,18 @@ spec:
       type: string
     - jsonPath: .status.conditions[?(@.type=="Archived")].status
       name: Archived
+      priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=="Succeeded")].status
       name: Succeeded
+      priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=="InTransition")].status
       name: InTransition
+      priority: 1
+      type: string
+    - jsonPath: .status.revision
+      name: Revision
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

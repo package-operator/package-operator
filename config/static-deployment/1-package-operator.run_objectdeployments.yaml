@@ -27,6 +27,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Progressing")].status
       name: Progressing
       type: string
+    - jsonPath: .status.revision
+      name: Revision
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

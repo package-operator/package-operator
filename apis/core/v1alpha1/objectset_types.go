@@ -19,9 +19,10 @@ import (
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
-// +kubebuilder:printcolumn:name="Archived",type=string,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
-// +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="Succeeded")].status`
-// +kubebuilder:printcolumn:name="InTransition",type=string,JSONPath=`.status.conditions[?(@.type=="InTransition")].status`
+// +kubebuilder:printcolumn:name="Archived",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
+// +kubebuilder:printcolumn:name="Succeeded",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Succeeded")].status`
+// +kubebuilder:printcolumn:name="InTransition",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="InTransition")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
