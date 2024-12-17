@@ -20,6 +20,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:printcolumn:name="Archived",type=string,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
 // +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="Succeeded")].status`
 // +kubebuilder:printcolumn:name="InTransition",type=string,JSONPath=`.status.conditions[?(@.type=="InTransition")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
