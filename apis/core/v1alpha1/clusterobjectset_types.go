@@ -15,6 +15,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName={"clobjset","cos"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
+// +kubebuilder:printcolumn:name="Archived",type=string,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
+// +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="Succeeded")].status`
+// +kubebuilder:printcolumn:name="InTransition",type=string,JSONPath=`.status.conditions[?(@.type=="InTransition")].status`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -38,8 +43,6 @@ type ClusterObjectSetList struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.phases) == has(oldSelf.phases)) && (!has(self.phases) || (self.phases == oldSelf.phases))", message="phases is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.availabilityProbes) == has(oldSelf.availabilityProbes)) && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))", message="availabilityProbes is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds)) && (!has(self.successDelaySeconds) || (self.successDelaySeconds == oldSelf.successDelaySeconds))", message="successDelaySeconds is immutable"
-//
-//nolint:lll
 type ClusterObjectSetSpec struct {
 	// Specifies the lifecycle state of the ClusterObjectSet.
 	// +kubebuilder:default="Active"

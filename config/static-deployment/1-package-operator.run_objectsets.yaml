@@ -21,6 +21,21 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Available")].status
+      name: Available
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Paused")].status
+      name: Paused
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Archived")].status
+      name: Archived
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Succeeded")].status
+      name: Succeeded
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="InTransition")].status
+      name: InTransition
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

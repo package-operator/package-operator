@@ -21,6 +21,12 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Available")].status
+      name: Available
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Progressing")].status
+      name: Progressing
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -47,7 +53,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
+            description: ObjectDeploymentSpec defines the desired state of an ObjectDeployment.
             properties:
               revisionHistoryLimit:
                 default: 10
@@ -360,7 +366,7 @@ spec:
           status:
             default:
               phase: Pending
-            description: ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
+            description: ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
             properties:
               collisionCount:
                 description: Count of hash collisions of the ObjectDeployment.

@@ -17,6 +17,11 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName={"objset","os"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
+// +kubebuilder:printcolumn:name="Archived",type=string,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
+// +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="Succeeded")].status`
+// +kubebuilder:printcolumn:name="InTransition",type=string,JSONPath=`.status.conditions[?(@.type=="InTransition")].status`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -40,8 +45,6 @@ type ObjectSetList struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.phases) == has(oldSelf.phases)) && (!has(self.phases) || (self.phases == oldSelf.phases))", message="phases is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.availabilityProbes) == has(oldSelf.availabilityProbes)) && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))", message="availabilityProbes is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds)) && (!has(self.successDelaySeconds) || (self.successDelaySeconds == oldSelf.successDelaySeconds))", message="successDelaySeconds is immutable"
-//
-//nolint:lll
 type ObjectSetSpec struct {
 	// Specifies the lifecycle state of the ObjectSet.
 	// +kubebuilder:default="Active"
