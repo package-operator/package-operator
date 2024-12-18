@@ -10,6 +10,11 @@ updates:
   reviewers:
   - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: gomod
   directory: /apis
   schedule:
@@ -47,7 +52,3 @@ updates:
   reviewers:
   - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100
-  groups:
-    actions:
-      applies-to: version-updates
-      patterns: ["*"]
