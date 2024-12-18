@@ -17,7 +17,14 @@ spec:
     singular: clusterobjecttemplate
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="package-operator.run/Invalid")].status
+      name: Invalid
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-

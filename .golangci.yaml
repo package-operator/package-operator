@@ -117,6 +117,9 @@ issues:
   exclude-dirs:
   - internal/packages/internal/packagekickstart/rukpak
   exclude-rules:
+  - linters:
+    - lll
+    source: "^//( ?)[+]kubebuilder"
   # Integration tests MUST NOT run in parallel.
   - path: 'integration\/.+\.go'
     linters: [paralleltest]
