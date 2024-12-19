@@ -556,6 +556,5 @@ func makeObjectSetMock(
 	mock.On("IsArchived").Return(isArchived)
 	mock.On("SetPaused").Return()
 	mock.On("SetArchived").Return()
-	mock.On("SetActive").Return()
 	return mock
 }

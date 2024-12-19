@@ -99,8 +99,17 @@ func (o *genericObjectSetMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateS
 	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
 }
 
-func (o *genericObjectSetMock) SetActive() {
+func (o *genericObjectSetMock) SetActiveByParent() {
 	o.Called()
+}
+
+func (o *genericObjectSetMock) SetPausedByParent() {
+	o.Called()
+}
+
+func (o *genericObjectSetMock) GetPausedByParent() bool {
+	args := o.Called()
+	return args.Get(0).(bool)
 }
 
 type genericObjectDeploymentMock struct {

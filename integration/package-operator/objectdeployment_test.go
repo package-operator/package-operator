@@ -438,7 +438,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		for _, currObjectSet := range currObjectSetList.Items {
 			currObjectSetRevision := currObjectSet.Status.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
-				requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
+				requireCondition(ctx, t, &currObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
 				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
