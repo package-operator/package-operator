@@ -64,6 +64,21 @@ Package Operator uses [Cardboard](https://github.com/package-operator/cardboard)
 | `./do Dev:Unit`        | Runs local unittests.                                                                                                           |
 | `./do Dev:Run`         | Prepares development cluster and `go runs` package-operator-manager out-of-cluster.                                             |
 
+#### Setting up the local development cluster without shadowing image pulling (pod workload images and package-operator package images) from quay.io
+
+By default, the local development environment will redirect image pulls from `quay.io` to the local dev registry running at `localhost:5000` instead.
+
+These redirects affect:
+- package-operator-manager: will pull package images when a `(Cluster)Package` object changes.
+- kubelet/container-runtime: will pull workload images specified in `Pod` objects.
+
+If you need to access (package) images from `quay.io` you can move the override out of the way by:
+1. Ensuring to fully destroy your current development environment, by running: `./do Dev:Destroy`.
+2. Recreating the development environment with another registry prefix (that will be redirected to localhost:5000, which in turn frees up access to quay.io): `IMAGE_REGISTRY=ctr.package-operator.run/dev ./do Dev:Create`.
+3. Prepend all other cardboard commands with `IMAGE_REGISTRY=ctr.package-operator.run/dev` (or export it via an `.envrc`).
+
+We're thinking of changing this away from quay.io by default.
+
 #### Accessing a local development cluster created by cardboard
 
 Replace `<cluster_name>` with either of:
