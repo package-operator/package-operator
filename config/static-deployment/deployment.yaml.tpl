@@ -30,8 +30,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: PKO_IMAGE
-          value: "quay.io/package-operator/package-operator-manager:latest"
         - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: "quay.io/package-operator/package-operator-package:latest"
         ports:
