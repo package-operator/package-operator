@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	internalcmd "package-operator.run/internal/cmd"
-	"package-operator.run/internal/testutil"
 )
 
 func TestValidateFolder(t *testing.T) {
@@ -15,9 +14,8 @@ func TestValidateFolder(t *testing.T) {
 
 	scheme, err := internalcmd.NewScheme()
 	require.NoError(t, err)
-	uncachedClient := testutil.NewClient()
 
-	cmd := NewCmd(internalcmd.NewValidate(uncachedClient, scheme))
+	cmd := NewCmd(internalcmd.NewValidate(scheme))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -34,9 +32,8 @@ func TestValidate_NoPath(t *testing.T) {
 
 	scheme, err := internalcmd.NewScheme()
 	require.NoError(t, err)
-	uncachedClient := testutil.NewClient()
 
-	cmd := NewCmd(internalcmd.NewValidate(uncachedClient, scheme))
+	cmd := NewCmd(internalcmd.NewValidate(scheme))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)
@@ -51,9 +48,8 @@ func TestValidate_InvalidPath(t *testing.T) {
 
 	scheme, err := internalcmd.NewScheme()
 	require.NoError(t, err)
-	uncachedClient := testutil.NewClient()
 
-	cmd := NewCmd(internalcmd.NewValidate(uncachedClient, scheme))
+	cmd := NewCmd(internalcmd.NewValidate(scheme))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.SetOut(stdout)

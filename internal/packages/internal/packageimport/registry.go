@@ -2,134 +2,35 @@ package packageimport
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 	"sync"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/logs"
-	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/packages/internal/packageimport/kubekeychain"
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/utils"
 )
 
-func getPullSecret(ctx context.Context, uncachedClient client.Client, name, namespace string) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	err := uncachedClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
-	return secret, err
-}
-
-func createKeychain(ctx context.Context, uncachedClient client.Client) (authn.Keychain, error) {
-	var pullSecrets []corev1.Secret
-
-	saName := types.NamespacedName{Namespace: os.Getenv("PKO_NAMESPACE"), Name: os.Getenv("PKO_SERVICE_ACCOUNT")}
-
-	sa := &corev1.ServiceAccount{}
-	err := uncachedClient.Get(ctx, saName, sa)
-	switch {
-	case err == nil:
-		pullSecrets = make([]corev1.Secret, 0, len(sa.ImagePullSecrets))
-		for _, localObjectRef := range sa.ImagePullSecrets {
-			ps, err := getPullSecret(ctx, uncachedClient, localObjectRef.Name, saName.Namespace)
-			switch {
-			case err == nil:
-				pullSecrets = append(pullSecrets, *ps)
-			case k8serrors.IsNotFound(err):
-				logs.Warn.Printf("secret %s not found; ignoring", localObjectRef.Name)
-			default:
-				return nil, err
-			}
-		}
-	case k8serrors.IsNotFound(err):
-		logs.Warn.Printf("serviceaccount default; ignoring")
-	default:
-		return nil, err
+// Imports a RawPackage from a container image registry, while supplying pull credentials which are dynamically discovered from the ServiceAccount PKO is running under.
+func FromRegistryInCluster(
+	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
+) (*packagetypes.RawPackage, error) {
+	chain, err := kubekeychain.New(ctx, uncachedClient)
+	if err != nil {
+		return nil, fmt.Errorf("creating keychain: %w", err)
 	}
-
-	keyring := &keyring{map[string][]authn.AuthConfig{}}
-
-	var cfg struct {
-		Auths map[string]authn.AuthConfig `json:"auths"`
-	}
-
-	for _, secret := range pullSecrets {
-		jsonCfg, jsonCfgExists := secret.Data[corev1.DockerConfigJsonKey]
-		baseCfg, cfgExists := secret.Data[corev1.DockerConfigKey]
-		switch {
-		case secret.Type == corev1.SecretTypeDockerConfigJson && jsonCfgExists && len(jsonCfg) > 0:
-			if err := json.Unmarshal(jsonCfg, &cfg); err != nil {
-				return nil, err
-			}
-		case secret.Type == corev1.SecretTypeDockercfg && cfgExists && len(baseCfg) > 0:
-			if err := json.Unmarshal(baseCfg, &cfg.Auths); err != nil {
-				return nil, err
-			}
-		}
-
-		for registry, v := range cfg.Auths {
-			if !strings.HasPrefix(registry, "https://") && !strings.HasPrefix(registry, "http://") {
-				registry = "https://" + registry
-			}
-			parsed, err := url.Parse(registry)
-			if err != nil {
-				return nil, fmt.Errorf("entry %q in dockercfg invalid (%w)", registry, err)
-			}
-
-			effectivePath := parsed.Path
-			if strings.HasPrefix(effectivePath, "/v2/") || strings.HasPrefix(effectivePath, "/v1/") {
-				effectivePath = effectivePath[3:]
-			}
-			key := parsed.Host
-			if (effectivePath != "") && (effectivePath != "/") {
-				key += effectivePath
-			}
-
-			keyring.creds[key] = append(keyring.creds[key], v)
-		}
-	}
-	return keyring, nil
-}
-
-type keyring struct {
-	creds map[string][]authn.AuthConfig
-}
-
-func (keyring *keyring) Resolve(target authn.Resource) (authn.Authenticator, error) {
-	image := target.String()
-	auths := []authn.AuthConfig{}
-
-	for idx, creds := range keyring.creds {
-		if idx == image {
-			auths = append(auths, creds...)
-		}
-	}
-
-	if len(auths) == 0 {
-		return authn.Anonymous, nil
-	}
-
-	auth := auths[0]
-	auth.Auth = ""
-	return authn.FromConfig(auth), nil
+	opts = append(opts, crane.WithAuthFromKeychain(chain))
+	return FromRegistry(ctx, ref, opts...)
 }
 
 // Imports a RawPackage from a container image registry.
 func FromRegistry(
-	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
+	ctx context.Context, ref string, opts ...crane.Option,
 ) (*packagetypes.RawPackage, error) {
-	chain, err := createKeychain(ctx, uncachedClient)
-	if err != nil {
-		return nil, err
-	}
-	img, err := crane.Pull(ref, append(opts, crane.WithAuthFromKeychain(chain))...)
+	img, err := crane.Pull(ref, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +58,7 @@ type pullImageFn func(
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
-		pullImage:             FromRegistry,
+		pullImage:             FromRegistryInCluster,
 		inFlight:              make(map[string][]chan<- response),
 	}
 }

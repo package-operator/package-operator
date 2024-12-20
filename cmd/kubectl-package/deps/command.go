@@ -97,13 +97,8 @@ func ProvideValidateCmd(validator validatecmd.Validator) RootSubCommandResult {
 	}
 }
 
-func ProvideValidator(scheme *runtime.Scheme, cf internalcmd.KubeClientFactory) (validatecmd.Validator, error) {
-	uncachedClient, err := cf.GetKubeClient()
-	if err != nil {
-		uncachedClient = nil
-	}
-
-	return internalcmd.NewValidate(uncachedClient, scheme), nil
+func ProvideValidator(scheme *runtime.Scheme) validatecmd.Validator {
+	return internalcmd.NewValidate(scheme)
 }
 
 func ProvideBuildCmd(builderFactory buildcmd.BuilderFactory) RootSubCommandResult {
