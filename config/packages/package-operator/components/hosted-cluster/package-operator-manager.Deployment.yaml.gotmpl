@@ -61,6 +61,10 @@ spec:
 {{- end}}
         - name: PKO_NAMESPACE
           value: {{ .config.hostedClusterNamespace }}
+        - name: PKO_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
         - name: PKO_IMAGE
           value: {{ index .images "package-operator-manager" }}
 {{- if hasKey . "environment" }}

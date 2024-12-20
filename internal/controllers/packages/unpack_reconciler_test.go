@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -31,7 +32,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	rawPkg := &packages.RawPackage{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(rawPkg, nil)
 	pd.
 		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -100,7 +101,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	rawPkg := &packages.RawPackage{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(rawPkg, errTest)
 
 	pkg := &adapters.GenericPackage{
@@ -126,9 +127,9 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, image string,
+	ctx context.Context, uncachedClient client.Client, image string,
 ) (*packages.RawPackage, error) {
-	args := m.Called(ctx, image)
+	args := m.Called(ctx, uncachedClient, image)
 	return args.Get(0).(*packages.RawPackage), args.Error(1)
 }
 

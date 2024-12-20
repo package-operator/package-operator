@@ -2,19 +2,34 @@ package packageimport
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/packages/internal/packageimport/kubekeychain"
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/utils"
 )
 
+// Imports a RawPackage from a container image registry, while supplying pull credentials which are dynamically discovered from the ServiceAccount PKO is running under.
+func FromRegistryInCluster(
+	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
+) (*packagetypes.RawPackage, error) {
+	chain, err := kubekeychain.FromServiceAccountPullSecrets(ctx, uncachedClient)
+	if err != nil {
+		return nil, fmt.Errorf("creating keychain: %w", err)
+	}
+	opts = append(opts, crane.WithAuthFromKeychain(chain))
+	return FromRegistry(ctx, ref, opts...)
+}
+
 // Imports a RawPackage from a container image registry.
-func FromRegistry(ctx context.Context, ref string, opts ...crane.Option) (
-	*packagetypes.RawPackage, error,
-) {
+func FromRegistry(
+	ctx context.Context, ref string, opts ...crane.Option,
+) (*packagetypes.RawPackage, error) {
 	img, err := crane.Pull(ref, opts...)
 	if err != nil {
 		return nil, err
@@ -37,24 +52,26 @@ type response struct {
 }
 
 type pullImageFn func(
-	ctx context.Context, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
+	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option) (*packagetypes.RawPackage, error)
 
 // Creates a new registry instance to de-duplicate parallel container image pulls.
 func NewRegistry(registryHostOverrides map[string]string) *Registry {
 	return &Registry{
 		registryHostOverrides: registryHostOverrides,
-		pullImage:             FromRegistry,
+		pullImage:             FromRegistryInCluster,
 		inFlight:              make(map[string][]chan<- response),
 	}
 }
 
-func (r *Registry) Pull(ctx context.Context, image string) (*packagetypes.RawPackage, error) {
+func (r *Registry) Pull(
+	ctx context.Context, uncachedClient client.Client, image string,
+) (*packagetypes.RawPackage, error) {
 	image, err := r.applyOverride(image)
 	if err != nil {
 		return nil, err
 	}
 
-	res := <-r.handleRequest(ctx, image)
+	res := <-r.handleRequest(ctx, uncachedClient, image)
 
 	return res.RawPackage, res.Err
 }
@@ -75,13 +92,13 @@ func (r *Registry) applyOverride(image string) (string, error) {
 // on the in flight pull requests, more specifically, a check if an image pull
 // is in flight after a pull attempt has started, but before the first receiver
 // is registered.
-func (r *Registry) handleRequest(ctx context.Context, image string) <-chan response {
+func (r *Registry) handleRequest(ctx context.Context, uncachedClient client.Client, image string) <-chan response {
 	r.inFlightLock.Lock()
 	defer r.inFlightLock.Unlock()
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			rawPkg, err := r.pullImage(ctx, image)
+			rawPkg, err := r.pullImage(ctx, uncachedClient, image)
 			r.handleResponse(image, response{
 				RawPackage: rawPkg,
 				Err:        err,
