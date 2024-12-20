@@ -29,6 +29,7 @@ type genericObjectSet interface {
 	SetPaused()
 	IsSpecPaused() bool
 	IsAvailable() bool
+	SetActive()
 }
 
 type genericObjectSetFactory func(
@@ -201,6 +202,10 @@ func (a *GenericObjectSet) GetObjects() ([]objectIdentifier, error) {
 	return result, nil
 }
 
+func (a *GenericObjectSet) SetActive() {
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
+}
+
 type GenericClusterObjectSet struct {
 	corev1alpha1.ClusterObjectSet
 }
@@ -320,6 +325,10 @@ func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
 		}
 	}
 	return result, nil
+}
+
+func (a *GenericClusterObjectSet) SetActive() {
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
 }
 
 type objectSetsByRevisionAscending []genericObjectSet
