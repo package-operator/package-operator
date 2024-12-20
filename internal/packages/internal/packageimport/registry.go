@@ -18,7 +18,7 @@ import (
 func FromRegistryInCluster(
 	ctx context.Context, uncachedClient client.Client, ref string, opts ...crane.Option,
 ) (*packagetypes.RawPackage, error) {
-	chain, err := kubekeychain.New(ctx, uncachedClient)
+	chain, err := kubekeychain.FromServiceAccountPullSecrets(ctx, uncachedClient)
 	if err != nil {
 		return nil, fmt.Errorf("creating keychain: %w", err)
 	}
