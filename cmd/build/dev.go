@@ -156,6 +156,8 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		"./cmd/package-operator-manager",
 		"-namespace", "package-operator-system",
 		"-enable-leader-election=true",
+		"-service-account-namespace", "default",
+		"-service-account-name", "default",
 		"-registry-host-overrides", imageRegistryHost() + "=localhost:5001",
 		"--package-operator-package-image", imageRegistry() + "/package-operator-package:" + appVersion,
 	}
