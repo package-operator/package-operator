@@ -49,6 +49,8 @@ var (
 	SuccessTestMultiPackageImage string
 	// SuccessTestCelPackageImage points to an image to use to test Package installation with CEL annotations.
 	SuccessTestCelPackageImage string
+	// SuccessTestPackageImageAuthenticated points to the test stub package image but requires authentication.
+	SuccessTestPackageImageAuthenticated string
 
 	FailureTestPackageImage = "localhost/does-not-exist"
 
@@ -59,6 +61,10 @@ func init() {
 	SuccessTestPackageImage = os.Getenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE")
 	if len(SuccessTestPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_PACKAGE_IMAGE not set!")
+	}
+	SuccessTestPackageImageAuthenticated = os.Getenv("PKO_TEST_SUCCESS_PACKAGE_IMAGE_AUTH")
+	if len(SuccessTestPackageImage) == 0 {
+		panic("PKO_TEST_SUCCESS_PACKAGE_IMAGE_AUTH not set!")
 	}
 	SuccessTestMultiPackageImage = os.Getenv("PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE")
 	if len(SuccessTestMultiPackageImage) == 0 {

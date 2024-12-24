@@ -6,18 +6,24 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/utils"
 )
 
 // RequestManager de-duplicates multiple parallel container image pulls.
+// Has a (semi) in-cluster dependency because it uses `FromRegistryInCluster`.
 type RequestManager struct {
 	registryHostOverrides map[string]string
 
 	pullImage    pullImageFn
 	inFlight     map[string][]chan<- response
 	inFlightLock sync.Mutex
+
+	serviceAccount types.NamespacedName
+	uncachedClient client.Client
 }
 
 type response struct {
@@ -26,15 +32,22 @@ type response struct {
 }
 
 type pullImageFn func(
-	ctx context.Context, ref string, opts ...crane.Option,
+	ctx context.Context, uncachedClient client.Client,
+	serviceAccount types.NamespacedName,
+	ref string, opts ...crane.Option,
 ) (*packagetypes.RawPackage, error)
 
 // Creates a new request manager instance to de-duplicate parallel container image pulls.
-func NewRequestManager(registryHostOverrides map[string]string) *RequestManager {
+func NewRequestManager(
+	registryHostOverrides map[string]string,
+	uncachedClient client.Client, serviceAccount types.NamespacedName,
+) *RequestManager {
 	return &RequestManager{
 		registryHostOverrides: registryHostOverrides,
-		pullImage:             FromRegistry,
+		pullImage:             FromRegistryInCluster,
 		inFlight:              make(map[string][]chan<- response),
+		serviceAccount:        serviceAccount,
+		uncachedClient:        uncachedClient,
 	}
 }
 
@@ -73,7 +86,7 @@ func (r *RequestManager) handleRequest(ctx context.Context, image string) <-chan
 
 	if _, inFlight := r.inFlight[image]; !inFlight {
 		go func(ctx context.Context, image string) {
-			rawPkg, err := r.pullImage(ctx, image)
+			rawPkg, err := r.pullImage(ctx, r.uncachedClient, r.serviceAccount, image)
 			r.handleResponse(image, response{
 				RawPackage: rawPkg,
 				Err:        err,
