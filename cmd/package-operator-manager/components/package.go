@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	controllerspackages "package-operator.run/internal/controllers/packages"
@@ -22,8 +23,15 @@ type (
 	}
 )
 
-func ProvideRequestManager(log logr.Logger, opts Options) *packages.RequestManager {
-	return packages.NewRequestManager(prepareRegistryHostOverrides(log, opts.RegistryHostOverrides))
+func ProvideRequestManager(log logr.Logger, uncachedClient UncachedClient, opts Options) *packages.RequestManager {
+	return packages.NewRequestManager(
+		prepareRegistryHostOverrides(log, opts.RegistryHostOverrides),
+		uncachedClient.Client,
+		types.NamespacedName{
+			Namespace: opts.ServiceAccountNamespace,
+			Name:      opts.ServiceAccountName,
+		},
+	)
 }
 
 func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]string {
