@@ -22,9 +22,8 @@ type (
 	}
 )
 
-func ProvideRegistry(log logr.Logger, opts Options) *packages.Registry {
-	return packages.NewRegistry(
-		prepareRegistryHostOverrides(log, opts.RegistryHostOverrides))
+func ProvideRequestManager(log logr.Logger, opts Options) *packages.RequestManager {
+	return packages.NewRequestManager(prepareRegistryHostOverrides(log, opts.RegistryHostOverrides))
 }
 
 func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]string {
@@ -47,7 +46,7 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 
 func ProvidePackageController(
 	mgr ctrl.Manager, log logr.Logger, uncachedClient UncachedClient,
-	registry *packages.Registry,
+	requestManager *packages.RequestManager,
 	recorder *metrics.Recorder,
 	opts Options,
 ) PackageController {
@@ -57,7 +56,7 @@ func ProvidePackageController(
 			uncachedClient,
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
-			registry, recorder, opts.PackageHashModifier,
+			requestManager, recorder, opts.PackageHashModifier,
 		),
 	}
 }
@@ -65,7 +64,7 @@ func ProvidePackageController(
 func ProvideClusterPackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
-	registry *packages.Registry,
+	requestManager *packages.RequestManager,
 	recorder *metrics.Recorder,
 	opts Options,
 ) ClusterPackageController {
@@ -74,7 +73,7 @@ func ProvideClusterPackageController(
 			mgr.GetClient(), uncachedClient.Client,
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
-			registry, recorder, opts.PackageHashModifier,
+			requestManager, recorder, opts.PackageHashModifier,
 		),
 	}
 }
