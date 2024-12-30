@@ -30,6 +30,10 @@ func (Lint) glciCheck() error {
 	return shr.Run("golangci-lint", "run", "./...", "./apis/...", "./pkg/...")
 }
 
+func (Lint) govulnCheck() error {
+	return shr.Run("govulncheck", "--show=verbose", "./...")
+}
+
 func (Lint) validateGitClean() error {
 	return shr.Run("git", "diff", "--quiet", "--exit-code")
 }
