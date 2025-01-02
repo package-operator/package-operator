@@ -13,7 +13,7 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
-func buildImage(ctx context.Context, name, registry, goarch string) error {
+func buildImage(ctx context.Context, name, registry, goarch string, validate bool) error {
 	url := imageURL(registry, name, appVersion)
 
 	buildDir, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
@@ -34,10 +34,28 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 		binaryName = "kubectl-package"
 	}
 
-	self := run.Fn3(buildImage, name, registry, goarch)
-	if err := mgr.SerialDeps(ctx, self,
+	/*
+		TODO - remove comment
+
+		wanted flow:
+		- have a boolean toggle: build with/without validating binary fips compliance
+		- without: upstream build
+		- with: downstream build
+		- compile binary
+		- validate binary
+		- use binary in image build process
+	*/
+
+	// Conditionally validate binary after compilation.
+	deps := []run.Dependency{
 		run.Fn3(compile, binaryName, "linux", goarch),
-	); err != nil {
+	}
+	if validate {
+		deps = append(deps, run.Fn3(validateFIPS, binaryName, "linux", goarch))
+	}
+
+	self := run.Fn4(buildImage, name, registry, goarch, validate)
+	if err := mgr.SerialDeps(ctx, self, deps...); err != nil {
 		return err
 	}
 
@@ -65,7 +83,7 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 	return oci.NewOCI(url, buildDir, oci.WithContainerFile("Containerfile")).Build()
 }
 
-func pushImage(ctx context.Context, name, registry, goarch string) error {
+func pushImage(ctx context.Context, name, registry, goarch string, validate bool) error {
 	url := imageURL(registry, name, appVersion)
 
 	imgPath, err := filepath.Abs(filepath.Join(cacheDir, "images", name))
@@ -73,9 +91,9 @@ func pushImage(ctx context.Context, name, registry, goarch string) error {
 		return err
 	}
 
-	self := run.Fn3(pushImage, name, registry, goarch)
+	self := run.Fn4(pushImage, name, registry, goarch, validate)
 	if err := mgr.SerialDeps(ctx, self,
-		run.Fn3(buildImage, name, registry, goarch),
+		run.Fn4(buildImage, name, registry, goarch, validate),
 	); err != nil {
 		return err
 	}
