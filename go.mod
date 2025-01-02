@@ -12,17 +12,17 @@ replace (
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/bmatcuk/doublestar v1.3.4
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cel-go v0.17.8
+	github.com/google/cel-go v0.20.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c
-	github.com/operator-framework/api v0.26.0
+	github.com/operator-framework/api v0.27.0
 	github.com/operator-framework/deppy v0.3.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/pterm/pterm v0.12.79
@@ -34,11 +34,11 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.33.0
 	golang.org/x/sys v0.28.0
-	k8s.io/api v0.30.3
-	k8s.io/apiextensions-apiserver v0.30.3
-	k8s.io/apimachinery v0.30.3
-	k8s.io/apiserver v0.30.3
-	k8s.io/client-go v0.30.3
+	k8s.io/api v0.31.0
+	k8s.io/apiextensions-apiserver v0.31.0
+	k8s.io/apimachinery v0.31.0
+	k8s.io/apiserver v0.31.0
+	k8s.io/client-go v0.31.0
 	k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	package-operator.run/apis v1.13.0
@@ -49,7 +49,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
-	sigs.k8s.io/controller-runtime v0.18.5
+	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/kind v0.26.0
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -63,7 +63,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1 //indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -79,6 +79,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-air/gini v1.0.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
@@ -122,7 +123,7 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
@@ -134,6 +135,7 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/vbatts/tar-split v0.11.6 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0 // indirect
@@ -158,10 +160,11 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241219192143-6b3ec007d9bb // indirect
 	google.golang.org/grpc v1.69.2 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.30.3 // indirect
+	k8s.io/component-base v0.31.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
