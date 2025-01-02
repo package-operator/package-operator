@@ -14,10 +14,10 @@ import (
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
-func TestRegistry_DelayedPull(t *testing.T) {
+func TestRequestManager_DelayedPull(t *testing.T) {
 	t.Parallel()
 
-	r := NewRegistry(map[string]string{
+	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
 	})
 	ipm := &imagePullerMock{}
@@ -25,7 +25,7 @@ func TestRegistry_DelayedPull(t *testing.T) {
 
 	pkg := &packagetypes.RawPackage{Files: packagetypes.Files{"test": []byte{}}}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.IsType("string")).
 		Run(func(mock.Arguments) { time.Sleep(500 * time.Millisecond) }).
 		Return(pkg, nil)
 
@@ -47,10 +47,10 @@ func TestRegistry_DelayedPull(t *testing.T) {
 	wg.Wait()
 
 	ipm.AssertNumberOfCalls(t, "Pull", 1)
-	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest", mock.Anything)
+	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest")
 }
 
-func TestRegistry_DelayedRequests(t *testing.T) {
+func TestRequestManager_DelayedRequests(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -60,11 +60,11 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.IsType("string")).
 		Run(func(mock.Arguments) { time.Sleep(requestDelay) }).
 		Return(&packagetypes.RawPackage{Files: packagetypes.Files{"test": nil}}, nil)
 
-	r := NewRegistry(map[string]string{
+	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
 	})
 	r.pullImage = ipm.Pull
@@ -111,9 +111,8 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, ref string,
-	opts ...crane.Option,
+	ctx context.Context, ref string, _ ...crane.Option,
 ) (*packagetypes.RawPackage, error) {
-	args := m.Called(ctx, ref, opts)
+	args := m.Called(ctx, ref)
 	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)
 }

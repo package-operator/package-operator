@@ -35,7 +35,7 @@ type Bootstrapper struct {
 func NewBootstrapper(
 	scheme *runtime.Scheme, log logr.Logger,
 	uncachedClient components.UncachedClient,
-	registry *packages.Registry,
+	registry *packages.RequestManager,
 	opts components.Options,
 ) (*Bootstrapper, error) {
 	c := uncachedClient
