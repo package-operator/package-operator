@@ -282,14 +282,27 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
 			return true, nil
 		}
-
-		// This object is controlled by someone else
-		// so we don't have to delete it for cleanup.
-		// But we still want to remove ourselves as potential owner.
-		r.ownerStrategy.RemoveOwner(owner.ClientObject(), currentObj)
-		if err := r.writer.Update(ctx, currentObj); err != nil {
-			return false, fmt.Errorf("removing owner reference: %w", err)
+		object := &unstructured.Unstructured{}
+		object.SetOwnerReferences(currentObj.GetOwnerReferences())
+		r.ownerStrategy.RemoveOwner(owner.ClientObject(), object)
+		objectPatch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					constants.DynamicCacheLabel: nil,
+				},
+				"ownerReferences": object.GetOwnerReferences(),
+			},
 		}
+		objectPatchJSON, err := json.Marshal(objectPatch)
+		if err != nil {
+			return false, fmt.Errorf("creating patch: %w", err)
+		}
+		if err = r.writer.Patch(ctx, currentObj, client.RawPatch(
+			types.MergePatchType, objectPatchJSON,
+		)); err != nil {
+			return false, fmt.Errorf("removing external object owner reference: %w", err)
+		}
+
 		return true, nil
 	}
 
