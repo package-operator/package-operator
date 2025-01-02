@@ -38,7 +38,7 @@ func main() {
 
 	err := errors.Join(
 		// Required by cardboard itself.
-		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.1"),
+		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.2"),
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
 		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.17.0"),
