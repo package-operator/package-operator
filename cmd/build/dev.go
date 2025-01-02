@@ -26,6 +26,7 @@ func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
 		run.Meth(lint, lint.goModTidyAll),
+		run.Meth(lint, lint.govulnCheck),
 	)
 }
 
@@ -78,6 +79,11 @@ func (dev *Dev) Lint(_ context.Context, _ []string) error {
 // LintFix tries to fix linter issues.
 func (dev *Dev) LintFix(_ context.Context, _ []string) error {
 	return lint.glciFix()
+}
+
+// Runs govulncheck against the code in this repo.
+func (Dev) Govulncheck(_ context.Context, _ []string) error {
+	return lint.govulnCheck()
 }
 
 // Create the local development cluster.

@@ -46,6 +46,7 @@ func main() {
 		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.60.1"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
 		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.15.3"),
+		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.3"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {
