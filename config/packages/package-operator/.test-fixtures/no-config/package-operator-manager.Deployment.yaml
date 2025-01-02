@@ -35,6 +35,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: PKO_SERVICE_ACCOUNT_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_SERVICE_ACCOUNT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
         - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: "registry.package-operator.run/static-image"
         image: registry.package-operator.run/static-image
