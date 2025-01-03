@@ -45,7 +45,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	if assert.NotNil(t, patch) {
 		j, err := patch.Data(obj)
 		require.NoError(t, err)
-		assert.Equal(t,
+		assert.JSONEq(t,
 			`{"metadata":{"finalizers":["already-present","test-finalizer"],"resourceVersion":"xxx-123"}}`,
 			string(j),
 		)
@@ -81,7 +81,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	if assert.NotNil(t, patch) {
 		j, err := patch.Data(obj)
 		require.NoError(t, err)
-		assert.Equal(t, `{"metadata":{"finalizers":["already-present"],"resourceVersion":"xxx-123"}}`, string(j))
+		assert.JSONEq(t, `{"metadata":{"finalizers":["already-present"],"resourceVersion":"xxx-123"}}`, string(j))
 	}
 }
 
