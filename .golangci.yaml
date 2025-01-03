@@ -11,6 +11,7 @@ linters:
   #- dupl             # Could be nice in the future.
   #- exhaustive       # Not that useful/false positives.
   #- exhaustruct      # Not that useful/false positives.
+  #- exportloopref    # Deprecated.
   #- forcetypeassert  # We want a panic in situations when a type is asserted.
   #- funlen           # We really like long functions.
   #- gci              # Conflicts with other linters.
@@ -22,7 +23,7 @@ linters:
   #- inamedparam      # Not that useful.
   #- interfacebloat   # WE do bloaty interfaces.
   #- ireturn          # Not that useful/false positives.
-  #- mnd            # The annoy is strong.
+  #- mnd              # The annoy is strong.
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
@@ -47,7 +48,6 @@ linters:
   - errchkjson
   - errname
   - errorlint
-  - exportloopref
   - fatcontext
   - forbidigo
   - ginkgolinter
@@ -155,6 +155,7 @@ linters-settings:
     local-prefixes: package-operator.run
   gosec:
     excludes:
+    - G115 # TODO: Truncating integer conversions.
     - G301 # Poor file permissions used when creating a directory.
     - G302 # Poor file permissions used with chmod.
     - G306 # Poor file permissions used when writing to a new file.

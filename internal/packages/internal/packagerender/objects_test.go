@@ -107,7 +107,7 @@ func TestFilterWithCELAnnotation(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, len(tc.filtered), len(filtered))
 				require.Equal(t, tc.filteredIndexes, filteredIndexes)
-				for i := range len(filtered) {
+				for i := range filtered {
 					assert.Equal(t, tc.filtered[i], filtered[i])
 				}
 			} else {
