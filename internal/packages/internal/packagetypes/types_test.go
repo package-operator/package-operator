@@ -45,7 +45,7 @@ func TestFiles_DeepCopy(t *testing.T) {
 
 func assertFilesCopy(t *testing.T, files, newFiles Files) {
 	t.Helper()
-	assert.NotSame(t, files, newFiles)                 // new map
-	assert.NotSame(t, files["test"], newFiles["test"]) // new slice
-	assert.Equal(t, files, newFiles)                   // equal content
+	assert.NotEqual(t, files, newFiles)                 // new map
+	assert.NotEqual(t, files["test"], newFiles["test"]) // new slice
+	assert.Equal(t, files, newFiles)                    // equal content
 }
