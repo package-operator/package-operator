@@ -8,6 +8,9 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName={"clobjsetphase","cosp"}
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectSetPhase struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -28,8 +31,6 @@ type ClusterObjectSetPhaseList struct {
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 // +kubebuilder:validation:XValidation:rule="has(self.previous) == has(oldSelf.previous)", message="previous is immutable"
 // +kubebuilder:validation:XValidation:rule="has(self.availabilityProbes) == has(oldSelf.availabilityProbes)", message="availabilityProbes is immutable"
-//
-//nolint:lll
 type ClusterObjectSetPhaseSpec struct {
 	// Disables reconciliation of the ClusterObjectSet.
 	// Only Status updates will still be propagated, but object changes will not be reconciled.

@@ -9,6 +9,11 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=pkg
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="Unpacked",type=string,JSONPath=`.status.conditions[?(@.type=="Unpacked")].status`
+// +kubebuilder:printcolumn:name="Invalid",type=string,JSONPath=`.status.conditions[?(@.type=="Invalid")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type Package struct {
 	metav1.TypeMeta   `json:",inline"`
