@@ -1,12 +1,13 @@
 module package-operator.run/apis
 
-go 1.22.0
-
-toolchain go1.22.2
+go 1.23
 
 require k8s.io/apimachinery v0.30.3
 
-require sigs.k8s.io/yaml v1.4.0 // indirect
+require (
+	github.com/stretchr/testify v1.9.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
+)
 
 require (
 	github.com/go-logr/logr v1.4.2 // indirect
