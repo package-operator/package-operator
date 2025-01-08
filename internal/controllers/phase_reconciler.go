@@ -282,6 +282,10 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		if !r.ownerStrategy.IsOwner(owner.ClientObject(), currentObj) {
 			return true, nil
 		}
+
+		// This object is controlled by someone else
+		// so we don't have to delete it for cleanup.
+		// But we still want to remove ourselves as potential owner.
 		object := &unstructured.Unstructured{}
 		object.SetOwnerReferences(currentObj.GetOwnerReferences())
 		r.ownerStrategy.RemoveOwner(owner.ClientObject(), object)

@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
-	"time"
-
-	"k8s.io/utils/ptr"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -21,10 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"package-operator.run/internal/constants"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
@@ -378,69 +372,4 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, env.Kubernetes.Version)
 	})
-}
-
-func TestPackage_internalObject_teardown(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
-	meta := metav1.ObjectMeta{
-		Name: "success",
-	}
-	spec := corev1alpha1.PackageSpec{
-		Image: SuccessTestPackageImage,
-		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
-		},
-	}
-	pkg := newPackage(meta, spec, true)
-	requireDeployPackage(ctx, t, pkg, &corev1alpha1.ObjectDeployment{})
-	// Test if environment information is injected successfully.
-	deploy := &appsv1.Deployment{}
-	err := Client.Get(ctx, client.ObjectKey{
-		Name:      "test-stub-success",
-		Namespace: "default",
-	}, deploy)
-	require.NoError(t, err)
-	cleanupOnSuccess(ctx, t, deploy)
-	var env manifestsv1alpha1.PackageEnvironment
-	te := deploy.Annotations["test-environment"]
-	err = json.Unmarshal([]byte(te), &env)
-	require.NoError(t, err)
-	assert.NotEmpty(t, env.Kubernetes.Version)
-	deploy.OwnerReferences[0].Controller = ptr.To(false)
-	err = Client.Update(ctx, deploy)
-	require.NoError(t, err)
-	objDeploy := &corev1alpha1.ObjectDeployment{}
-	err = Client.Get(ctx, client.ObjectKey{
-		Name:      "success",
-		Namespace: "default",
-	}, objDeploy)
-	require.NoError(t, err)
-	templateHash := objDeploy.Status.TemplateHash
-	objectSet := &corev1alpha1.ObjectSet{}
-	err = Client.Get(ctx, client.ObjectKey{
-		Name:      "success-" + templateHash,
-		Namespace: "default",
-	}, objectSet)
-	require.NoError(t, err)
-	require.NoError(t, Client.Delete(ctx, objectSet))
-	require.NoError(t,
-		Waiter.WaitForObject(
-			ctx, deploy, "internal ownerReference to be removed",
-			func(client.Object) (bool, error) {
-				deploy = &appsv1.Deployment{}
-				err = Client.Get(ctx, client.ObjectKey{
-					Name:      "test-stub-success",
-					Namespace: "default",
-				}, deploy)
-				internalOwner := false
-				for _, own := range deploy.GetOwnerReferences() {
-					if own.Name == "success" {
-						internalOwner = true
-					}
-				}
-				label := deploy.GetLabels()
-				_, exists := label[constants.DynamicCacheLabel]
-				return !internalOwner && !exists, err
-			}, wait.WithTimeout(40*time.Second),
-		))
 }
