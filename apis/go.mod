@@ -5,7 +5,7 @@ go 1.23
 require k8s.io/apimachinery v0.30.3
 
 require (
-	github.com/stretchr/testify v1.9.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
