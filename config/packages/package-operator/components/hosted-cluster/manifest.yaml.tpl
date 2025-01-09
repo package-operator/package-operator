@@ -42,7 +42,7 @@ spec:
         hostedClusterNamespace:
           description: Hosted cluster namespace for leader election
           type: string
-          default: package-operator-system
+          default: openshift-package-operator
         affinity:
           description: Affinity is a group of affinity scheduling rules.
           properties:

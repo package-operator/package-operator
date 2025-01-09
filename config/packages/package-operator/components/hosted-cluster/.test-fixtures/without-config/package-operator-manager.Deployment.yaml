@@ -34,7 +34,7 @@ spec:
         - name: KUBECONFIG
           value: /data/kubeconfig
         - name: PKO_NAMESPACE
-          value: package-operator-system
+          value: openshift-package-operator
         - name: PKO_SERVICE_ACCOUNT_NAMESPACE
           valueFrom:
             fieldRef:

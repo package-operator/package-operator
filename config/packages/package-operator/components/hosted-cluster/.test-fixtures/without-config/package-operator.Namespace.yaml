@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   annotations:
     package-operator.run/phase: namespace
-  name: package-operator-system
+  name: openshift-package-operator
   labels:
     pod-security.kubernetes.io/enforce: 'restricted'
     pod-security.kubernetes.io/audit: 'restricted'
