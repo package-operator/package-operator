@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/google/cel-go v0.17.8
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	k8s.io/apimachinery v0.30.3
 	k8s.io/apiserver v0.30.3
 )
