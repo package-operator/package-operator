@@ -14,12 +14,14 @@ import (
 
 // Flags.
 const (
-	metricsAddrFlagDescription             = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription               = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription               = "The namespace the operator is deployed into."
-	serviceAccountNameFlagDescription      = "Name of the service-account this operator is running under."
-	serviceAccountNamespaceFlagDescription = "Namespace of the service-account this operator is running under."
-	leaderElectionFlagDescription          = "Enable leader election for controller manager. " +
+	metricsAddrFlagDescription        = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription          = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription          = "The namespace the operator is deployed into."
+	serviceAccountNameFlagDescription = "Name of the service-account this operator is running under. " +
+		"Used to resolve potentially attached ImagePullSecrets."
+	serviceAccountNamespaceFlagDescription = "Namespace of the service-account this operator is running under. " +
+		"Used to resolve potentially attached ImagePullSecrets."
+	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
 	probeAddrFlagDescription   = "The address the probe endpoint binds to."
 	versionFlagDescription     = "print version information and exit."
