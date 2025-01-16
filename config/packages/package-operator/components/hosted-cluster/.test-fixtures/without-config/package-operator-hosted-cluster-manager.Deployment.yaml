@@ -36,13 +36,9 @@ spec:
         - name: PKO_NAMESPACE
           value: package-operator-system
         - name: PKO_SERVICE_ACCOUNT_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+          value: package-operator-system
         - name: PKO_SERVICE_ACCOUNT_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.serviceAccountName
+          value: package-operator
         image: registry.package-operator.run/static-image
         securityContext:
           allowPrivilegeEscalation: false
