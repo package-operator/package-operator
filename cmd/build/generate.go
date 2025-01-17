@@ -192,6 +192,48 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 	return os.WriteFile(filepath.Join("config", "self-bootstrap-job.yaml"), []byte(latestJob), os.ModePerm)
 }
 
+func (g Generate) selfBootstrapJobHelm(context.Context) error {
+	latestJobBytes, err := os.ReadFile(filepath.Join("config", "self-bootstrap-job.yaml.tpl"))
+	if err != nil {
+		return err
+	}
+
+	replacements := map[string]string{
+		`##registry-overrides##`: "",
+		`##pko-config##`:         "{{ .Values.Config | mustToJson }}",
+		`##pko-manager-image##`:  `{{ get .Values.Images "package-operator-manager" }}`,
+		`##pko-package-image##`:  `{{ get .Values.Images "package-operator-package" }}`,
+	}
+
+	latestJob := string(latestJobBytes)
+	for replace, with := range replacements {
+		latestJob = strings.ReplaceAll(latestJob, replace, with)
+	}
+
+	return os.WriteFile(
+		filepath.Join(cacheDir, "chart", "templates", "self-bootstrap-job.yaml"), []byte(latestJob), os.ModePerm)
+}
+
+func (g Generate) helmValuesYaml() error {
+	valuesBytes, err := os.ReadFile(filepath.Join("config", "chart", "values.yaml.tpl"))
+	if err != nil {
+		return err
+	}
+
+	replacements := map[string]string{
+		`##pko-manager-image##`: imageURL(imageRegistry(), "package-operator-manager", appVersion),
+		`##pko-package-image##`: imageURL(imageRegistry(), "package-operator-package", appVersion),
+	}
+
+	values := string(valuesBytes)
+	for replace, with := range replacements {
+		values = strings.ReplaceAll(values, replace, with)
+	}
+
+	return os.WriteFile(
+		filepath.Join(cacheDir, "chart", "values.yaml"), []byte(values), os.ModePerm)
+}
+
 // PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
 func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator")
@@ -383,4 +425,23 @@ func (g Generate) includeInPackage(path string, outFilePath string, transform in
 	}
 
 	return nil
+}
+
+func (g Generate) generateChartYaml(outFilePath, chartVersion, appVersion string) error {
+	chartBytes, err := os.ReadFile(filepath.Join("config", "chart", "Chart.yaml.tpl"))
+	if err != nil {
+		return err
+	}
+
+	replacements := map[string]string{
+		`##chart-version##`: chartVersion,
+		`##app-version##`:   appVersion,
+	}
+
+	chart := string(chartBytes)
+	for replace, with := range replacements {
+		chart = strings.ReplaceAll(chart, replace, with)
+	}
+
+	return os.WriteFile(outFilePath, []byte(chart), os.ModePerm)
 }
