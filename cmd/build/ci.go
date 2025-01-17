@@ -44,7 +44,7 @@ func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
 	return shr.Run("crane", append([]string{"auth", "login"}, args...)...)
 }
 
-// Release builds binaries (if not exluded with the 'images-only" arg) and releases the
+// Release builds binaries and helm chart (if not exluded with the 'images-only" arg) and releases the
 // CLI, PKO manager, RP manager, PKO webhooks and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	registry := imageRegistry()
@@ -63,6 +63,8 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 			run.Fn3(compile, "kubectl-package", "linux", "arm64"),
 			run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
 			run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
+			// helm chart
+			run.Meth1(chart, chart.push, []string{}),
 		)
 	}
 

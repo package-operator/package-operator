@@ -21,7 +21,9 @@ var (
 	generate Generate
 	test     Test
 	lint     Lint
-	cluster  = NewCluster("pko",
+	chart    Chart
+
+	cluster = NewCluster("pko",
 		withLocalRegistry(imageRegistryHost(), devClusterRegistryPort, devClusterRegistryAuthPort),
 		withNodeLabels(map[string]string{"hypershift-affinity-test-label": "true"}),
 	)
@@ -47,7 +49,7 @@ func main() {
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
 		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.15.3"),
 		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.3"),
-		mgr.Register(&Dev{}, &CI{}),
+		mgr.Register(&Dev{}, &CI{}, &Chart{}),
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n%s\n", err)
