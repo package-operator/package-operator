@@ -49,24 +49,34 @@ type ownerRefGetter interface {
 	OwnersForGKV(gvk schema.GroupVersionKind) []OwnerReference
 }
 
-func (e *EnqueueWatchingObjects) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Create(_ context.Context, evt event.CreateEvent,
+	q workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Update(_ context.Context, evt event.UpdateEvent,
+	q workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	e.enqueueWatchers(evt.ObjectNew, q)
 	e.enqueueWatchers(evt.ObjectOld, q)
 }
 
-func (e *EnqueueWatchingObjects) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Delete(_ context.Context, evt event.DeleteEvent,
+	q workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) Generic(_ context.Context, evt event.GenericEvent,
+	q workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	e.enqueueWatchers(evt.Object, q)
 }
 
-func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object, q workqueue.RateLimitingInterface) {
+func (e *EnqueueWatchingObjects) enqueueWatchers(obj client.Object,
+	q workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 	if obj == nil {
 		return
 	}
