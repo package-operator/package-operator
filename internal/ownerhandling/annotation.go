@@ -75,7 +75,7 @@ func (s *OwnerStrategyAnnotation) OwnerPatch(owner metav1.Object) ([]byte, error
 
 func (s *OwnerStrategyAnnotation) EnqueueRequestForOwner(
 	ownerType client.Object, _ meta.RESTMapper, isController bool,
-) handler.EventHandler {
+) handler.TypedEventHandler[client.Object, reconcile.Request] {
 	a := &AnnotationEnqueueRequestForOwner{
 		OwnerType:     ownerType,
 		IsController:  isController,
@@ -323,7 +323,7 @@ type AnnotationEnqueueRequestForOwner struct {
 
 // Create implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Create(
-	_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface,
+	_ context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
@@ -332,7 +332,7 @@ func (e *AnnotationEnqueueRequestForOwner) Create(
 
 // Update implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Update(
-	_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface,
+	_ context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	for _, req := range e.getOwnerReconcileRequest(evt.ObjectOld) {
 		q.Add(req)
@@ -344,7 +344,7 @@ func (e *AnnotationEnqueueRequestForOwner) Update(
 
 // Delete implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Delete(
-	_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface,
+	_ context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
@@ -353,7 +353,7 @@ func (e *AnnotationEnqueueRequestForOwner) Delete(
 
 // Generic implements EventHandler.
 func (e *AnnotationEnqueueRequestForOwner) Generic(
-	_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface,
+	_ context.Context, evt event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	for _, req := range e.getOwnerReconcileRequest(evt.Object) {
 		q.Add(req)
