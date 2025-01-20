@@ -97,7 +97,9 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 
 	env := sh.WithEnvironment{
 		"CGO_ENABLED":                          "1",
+		"PKO_TEST_VERSION":                     appVersion,
 		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(imageRegistry(), "test-stub-package", appVersion),
+		"PKO_TEST_SUCCESS_PACKAGE_IMAGE_AUTH":  imageURL("dev-registry.dev-registry.svc.cluster.local:5002/package-operator", "test-stub-package", appVersion), //nolint:lll
 		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(imageRegistry(), "test-stub-multi-package", appVersion),
 		"PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE":   imageURL(imageRegistry(), "test-stub-cel-package", appVersion),
 		"PKO_TEST_STUB_IMAGE":                  imageURL(imageRegistry(), "test-stub", appVersion),

@@ -51,20 +51,26 @@ spec:
         - name: PKO_PACKAGE_HASH_MODIFIER
           value: {{ .config.packageHashModifier | quote }}
 {{- end}}
-{{- if hasKey .config "affinity" }}
+{{- if hasKey .config "subcomponentAffinity" }}
         - name: PKO_SUB_COMPONENT_AFFINITY
-          value: {{ toJson .config.affinity | quote }}
+          value: {{ toJson .config.subcomponentAffinity | quote }}
 {{- end}}
-{{- if hasKey .config "tolerations" }}
+{{- if hasKey .config "subcomponentTolerations" }}
         - name: PKO_SUB_COMPONENT_TOLERATIONS
-          value: {{ toJson .config.tolerations | quote }}
+          value: {{ toJson .config.subcomponentTolerations | quote }}
 {{- end}}
         - name: PKO_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: PKO_IMAGE
-          value: {{ index .images "package-operator-manager" }}
+        - name: PKO_SERVICE_ACCOUNT_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_SERVICE_ACCOUNT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
         - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: {{ .package.image | quote }}
 {{- if hasKey . "environment" }}

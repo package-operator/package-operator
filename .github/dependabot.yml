@@ -7,8 +7,14 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
+  reviewers:
+  - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: gomod
   directory: /apis
   schedule:
@@ -16,8 +22,14 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
+  reviewers:
+  - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: gomod
   directory: /pkg
   schedule:
@@ -25,11 +37,18 @@ updates:
   allow:
   - dependency-type: all
     dependency-name: "*"
-  assignees: [ eqrx ]
+  reviewers:
+  - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100
+  groups:
+    kube:
+      applies-to: version-updates
+      patterns:
+      - k8s.io/*
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
-  assignees: [ eqrx ]
+  reviewers:
+  - package-operator/core-maintainers/dependency-maintainers
   open-pull-requests-limit: 100

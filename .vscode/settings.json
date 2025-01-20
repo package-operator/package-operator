@@ -3,6 +3,8 @@
         // Gopls doesn't handle build tage properly: https://github.com/golang/go/issues/29202
         // This leads to gopls thinking that the magefiles in ./magefiles are referencing non resolvable things, when they in fact correctly reference something in another file in the same package.
         // Manually making it aware of the tags makes it work.
-        "build.buildFlags": ["-tags=integration"]
+        "build.buildFlags": [
+            "-tags=integration,integration_hypershift"
+        ]
     }
 }

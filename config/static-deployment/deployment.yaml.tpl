@@ -30,8 +30,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: PKO_IMAGE
-          value: "quay.io/package-operator/package-operator-manager:latest"
+        - name: PKO_SERVICE_ACCOUNT_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PKO_SERVICE_ACCOUNT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
         - name: PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE
           value: "quay.io/package-operator/package-operator-package:latest"
         ports:

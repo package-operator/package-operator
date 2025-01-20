@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: package-operator-hosted-cluster-manager
   name: package-operator-hosted-cluster-manager
-  namespace: "test"
+  namespace: "another"
 spec:
   replicas: 1
   selector:
@@ -34,9 +34,11 @@ spec:
         - name: KUBECONFIG
           value: /data/kubeconfig
         - name: PKO_NAMESPACE
-          value: package-operator-system
-        - name: PKO_IMAGE
-          value: registry.package-operator.run/static-image
+          value: yet-another
+        - name: PKO_SERVICE_ACCOUNT_NAMESPACE
+          value: yet-another
+        - name: PKO_SERVICE_ACCOUNT_NAME
+          value: package-operator
         image: registry.package-operator.run/static-image
         securityContext:
           allowPrivilegeEscalation: false

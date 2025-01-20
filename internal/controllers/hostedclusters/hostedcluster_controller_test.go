@@ -85,7 +85,7 @@ func TestHostedClusterController_DesiredPackage(t *testing.T) {
 	assert.Equal(t, "remote-phase", pkg.Name)
 	assert.Equal(t, image, pkg.Spec.Image)
 	if assert.NotNil(t, pkg.Spec.Config) {
-		assert.Equal(t, `{"affinity":{},"tolerations":[{}]}`, string(pkg.Spec.Config.Raw))
+		assert.JSONEq(t, `{"affinity":{},"tolerations":[{}]}`, string(pkg.Spec.Config.Raw))
 	}
 }
 

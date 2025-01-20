@@ -29,6 +29,7 @@ type Cluster struct {
 type clusterConfigLocalRegistry struct {
 	hostOverride string
 	hostPort     int32
+	authHostPort int32
 }
 
 type clusterConfig struct {
@@ -37,6 +38,7 @@ type clusterConfig struct {
 		host, endpoint string
 	}
 	localRegistry *clusterConfigLocalRegistry
+	nodeLabels    map[string]string
 }
 
 func (cc *clusterConfig) apply(opts ...clusterOption) {
@@ -46,6 +48,12 @@ func (cc *clusterConfig) apply(opts ...clusterOption) {
 }
 
 type clusterOption func(*clusterConfig)
+
+func withNodeLabels(labels map[string]string) clusterOption {
+	return func(cc *clusterConfig) {
+		cc.nodeLabels = labels
+	}
+}
 
 func withRegistryHostOverride(host, endpoint string) clusterOption {
 	return func(cc *clusterConfig) {
@@ -63,10 +71,11 @@ func withRegistryHostOverrideToOtherCluster(host string, targetCluster Cluster) 
 	return withRegistryHostOverride(host, targetCluster.Name()+"-control-plane")
 }
 
-func withLocalRegistry(hostOverride string, hostPort int32) clusterOption {
+func withLocalRegistry(hostOverride string, hostPort int32, authHostPort int32) clusterOption {
 	return func(cc *clusterConfig) {
 		cc.localRegistry = &clusterConfigLocalRegistry{
 			hostPort:     hostPort,
+			authHostPort: authHostPort,
 			hostOverride: hostOverride,
 		}
 	}
@@ -113,6 +122,12 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 			ListenAddress: "127.0.0.1",
 			Protocol:      "TCP",
 		})
+		extraPortMappings = append(extraPortMappings, kindv1alpha4.PortMapping{
+			ContainerPort: 5002,
+			HostPort:      cfg.localRegistry.authHostPort,
+			ListenAddress: "127.0.0.1",
+			Protocol:      "TCP",
+		})
 	}
 
 	cluster.Cluster = kind.NewCluster(cfg.name,
@@ -120,6 +135,7 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 			ContainerdConfigPatches: containerdConfigPatches,
 			Nodes: []kindv1alpha4.Node{
 				{
+					Labels:            cfg.nodeLabels,
 					Role:              kindv1alpha4.ControlPlaneRole,
 					ExtraPortMappings: extraPortMappings,
 				},

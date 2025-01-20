@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	controllerspackages "package-operator.run/internal/controllers/packages"
@@ -22,9 +23,15 @@ type (
 	}
 )
 
-func ProvideRegistry(log logr.Logger, opts Options) *packages.Registry {
-	return packages.NewRegistry(
-		prepareRegistryHostOverrides(log, opts.RegistryHostOverrides))
+func ProvideRequestManager(log logr.Logger, uncachedClient UncachedClient, opts Options) *packages.RequestManager {
+	return packages.NewRequestManager(
+		prepareRegistryHostOverrides(log, opts.RegistryHostOverrides),
+		uncachedClient.Client,
+		types.NamespacedName{
+			Namespace: opts.ServiceAccountNamespace,
+			Name:      opts.ServiceAccountName,
+		},
+	)
 }
 
 func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]string {
@@ -47,7 +54,7 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 
 func ProvidePackageController(
 	mgr ctrl.Manager, log logr.Logger, uncachedClient UncachedClient,
-	registry *packages.Registry,
+	requestManager *packages.RequestManager,
 	recorder *metrics.Recorder,
 	opts Options,
 ) PackageController {
@@ -57,7 +64,7 @@ func ProvidePackageController(
 			uncachedClient,
 			log.WithName("controllers").WithName("Package"),
 			mgr.GetScheme(),
-			registry, recorder, opts.PackageHashModifier,
+			requestManager, recorder, opts.PackageHashModifier,
 		),
 	}
 }
@@ -65,7 +72,7 @@ func ProvidePackageController(
 func ProvideClusterPackageController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
-	registry *packages.Registry,
+	requestManager *packages.RequestManager,
 	recorder *metrics.Recorder,
 	opts Options,
 ) ClusterPackageController {
@@ -74,7 +81,7 @@ func ProvideClusterPackageController(
 			mgr.GetClient(), uncachedClient.Client,
 			log.WithName("controllers").WithName("ClusterPackage"),
 			mgr.GetScheme(),
-			registry, recorder, opts.PackageHashModifier,
+			requestManager, recorder, opts.PackageHashModifier,
 		),
 	}
 }

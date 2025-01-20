@@ -7,6 +7,9 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName={"objsetphase","osp"}
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectSetPhase struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -27,8 +30,6 @@ type ObjectSetPhaseList struct {
 // ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 // +kubebuilder:validation:XValidation:rule="has(self.previous) == has(oldSelf.previous)", message="previous is immutable"
 // +kubebuilder:validation:XValidation:rule="has(self.availabilityProbes) == has(oldSelf.availabilityProbes)", message="availabilityProbes is immutable"
-//
-//nolint:lll
 type ObjectSetPhaseSpec struct {
 	// Disables reconciliation of the ObjectSet.
 	// Only Status updates will still be propagated, but object changes will not be reconciled.

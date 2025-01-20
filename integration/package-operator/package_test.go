@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -238,7 +239,7 @@ func TestPackage_cel(t *testing.T) {
 		require.NoError(t, err)
 
 		// configMap should not be there
-		cm := &v1.ConfigMap{}
+		cm := &corev1.ConfigMap{}
 		err = Client.Get(ctx, client.ObjectKey{
 			Name:      "test-cm",
 			Namespace: ns,
@@ -253,7 +254,7 @@ func TestPackage_cel(t *testing.T) {
 		require.EqualError(t, err, "configmaps \"ignored-cm\" not found")
 
 		// check that "cel-template-cm" was templated correctly
-		celTemplateCm := &v1.ConfigMap{}
+		celTemplateCm := &corev1.ConfigMap{}
 		err = Client.Get(ctx, client.ObjectKey{
 			Name:      "cel-template-cm",
 			Namespace: ns,
@@ -293,4 +294,82 @@ func TestPackage_nonExistent(t *testing.T) {
 	err := Client.Get(ctx, client.ObjectKey{Name: "non-existent", Namespace: "default"}, existingPackage)
 	require.NoError(t, err)
 	require.Equal(t, "ImagePullBackOff", existingPackage.Status.Conditions[0].Reason)
+}
+
+func TestPackage_NotAuthenticated(t *testing.T) {
+	pkg := &corev1alpha1.Package{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "not-authenticated",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.PackageSpec{
+			Image: SuccessTestPackageImageAuthenticated,
+		},
+	}
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	require.NoError(t, Client.Create(ctx, pkg))
+	cleanupOnSuccess(ctx, t, pkg)
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionFalse))
+
+	existingPackage := &corev1alpha1.Package{}
+	err := Client.Get(ctx, client.ObjectKey{Name: "not-authenticated", Namespace: "default"}, existingPackage)
+	require.NoError(t, err)
+	require.Equal(t, "ImagePullBackOff", existingPackage.Status.Conditions[0].Reason)
+}
+
+func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	require.NoError(t, createAndWaitFromFiles(ctx, []string{
+		filepath.Join("..", "..", "config", "local-registry-pullsecret.yaml"),
+	}))
+
+	require.NoError(t, Client.Patch(ctx, &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "package-operator-system",
+			Name:      "package-operator",
+		},
+		ImagePullSecrets: []corev1.LocalObjectReference{
+			{Name: "dev-registry"},
+		},
+	}, client.Apply, client.FieldOwner("package-operator-integration")))
+
+	meta := metav1.ObjectMeta{
+		Name: "authenticated-with-serviceaccount",
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPackageImageAuthenticated,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+		},
+	}
+
+	testNamespacedAndCluster(t, meta, spec, func(ctx context.Context, t *testing.T, namespace string) {
+		t.Helper()
+
+		if namespace == "" {
+			return
+		}
+
+		// Test if environment information is injected successfully.
+		deploy := &appsv1.Deployment{}
+		err := Client.Get(ctx, client.ObjectKey{
+			Name:      "test-stub-authenticated-with-serviceaccount",
+			Namespace: namespace,
+		}, deploy)
+		require.NoError(t, err)
+
+		var env manifestsv1alpha1.PackageEnvironment
+		te := deploy.Annotations["test-environment"]
+		err = json.Unmarshal([]byte(te), &env)
+		require.NoError(t, err)
+		assert.NotEmpty(t, env.Kubernetes.Version)
+	})
 }

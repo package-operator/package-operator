@@ -392,8 +392,8 @@ status:
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <br>metav1.ObjectMeta |  |
-| `spec` <br><a href="#objectdeploymentspec">ObjectDeploymentSpec</a> | ObjectDeploymentSpec defines the desired state of a ObjectDeployment. |
-| `status` <br><a href="#objectdeploymentstatus">ObjectDeploymentStatus</a> | ObjectDeploymentStatus defines the observed state of a ObjectDeployment. |
+| `spec` <br><a href="#objectdeploymentspec">ObjectDeploymentSpec</a> | ObjectDeploymentSpec defines the desired state of an ObjectDeployment. |
+| `status` <br><a href="#objectdeploymentstatus">ObjectDeploymentStatus</a> | ObjectDeploymentStatus defines the observed state of an ObjectDeployment. |
 
 
 ### ObjectSet
@@ -787,7 +787,7 @@ Used in:
 
 ### ObjectDeploymentSpec
 
-ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
+ObjectDeploymentSpec defines the desired state of an ObjectDeployment.
 
 | Field | Description |
 | ----- | ----------- |
@@ -803,7 +803,7 @@ Used in:
 
 ### ObjectDeploymentStatus
 
-ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
+ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
 
 | Field | Description |
 | ----- | ----------- |
