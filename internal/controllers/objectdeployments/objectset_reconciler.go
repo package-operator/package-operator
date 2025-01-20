@@ -67,6 +67,32 @@ func (o *objectSetReconciler) Reconcile(
 		prevObjectSets = objectSets
 	}
 
+	for _, objectSet := range objectSets {
+		if objectSet.IsArchived() {
+			continue
+		}
+
+		// The pause value in the ObjectDeployment controls the pause value in ObjectSet.
+		// Update only when the values differ.
+		if objectDeployment.GetSpecPaused() != objectSet.GetPausedByParent() {
+			if objectDeployment.GetSpecPaused() {
+				objectSet.SetPausedByParent()
+			} else {
+				objectSet.SetActiveByParent()
+			}
+
+			if err = o.client.Update(ctx, objectSet.ClientObject()); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to unpause objectset: %w", err)
+			}
+		}
+	}
+
+	// Skip subreconcilers when paused
+	if objectDeployment.GetSpecPaused() {
+		o.setObjectDeploymentStatus(ctx, currentObjectSet, prevObjectSets, objectDeployment)
+		return ctrl.Result{}, nil
+	}
+
 	var (
 		res              ctrl.Result
 		subReconcilerErr error
@@ -194,6 +220,8 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	controllerOf = append(controllerOf, getControlledObjRef(currentObjectSet))
 
 	objectDeployment.SetStatusControllerOf(controllerOf)
+
+	updatePausedStatus(currentObjectSet, objectDeployment)
 }
 
 func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectReference {
@@ -245,6 +273,22 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 	return false, ""
 }
 
+func updatePausedStatus(currentObjectSet genericObjectSet, objectDeployment objectDeploymentAccessor) {
+	pausedCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
+		objectDeployment.SetStatusConditions(
+			newPausedCondition(
+				metav1.ConditionTrue,
+				pausedReasonPaused,
+				"Latest revision is paused: "+pausedCond.Message,
+				objectDeployment.GetGeneration(),
+			),
+		)
+	} else {
+		objectDeployment.RemoveStatusConditions(corev1alpha1.ObjectDeploymentPaused)
+	}
+}
+
 func newAvailableCondition(
 	status metav1.ConditionStatus, reason availableReason, msg string, generation int64,
 ) metav1.Condition {
@@ -291,3 +335,25 @@ const (
 	progressingReasonLatestRevPendingSuccess progressingReason = "LatestRevisionPendingSuccess"
 	progressingReasonProgressing             progressingReason = "Progressing"
 )
+
+type pausedReason string
+
+func (r pausedReason) String() string {
+	return string(r)
+}
+
+const (
+	pausedReasonPaused = "Paused"
+)
+
+func newPausedCondition(
+	status metav1.ConditionStatus, reason pausedReason, msg string, generation int64,
+) metav1.Condition {
+	return metav1.Condition{
+		Type:               corev1alpha1.ObjectDeploymentPaused,
+		Status:             status,
+		Reason:             reason.String(),
+		Message:            msg,
+		ObservedGeneration: generation,
+	}
+}
