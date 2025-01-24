@@ -16,13 +16,13 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cel-go v0.22.0
+	github.com/google/cel-go v0.22.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c
-	github.com/operator-framework/api v0.26.0
+	github.com/operator-framework/api v0.29.0
 	github.com/operator-framework/deppy v0.3.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/pterm/pterm v0.12.79
