@@ -60,3 +60,4 @@ updates:
   open-pull-requests-limit: 100
   commit-message:
     prefix: "build(deps)"
+
