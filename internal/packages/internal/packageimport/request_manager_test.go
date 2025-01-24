@@ -114,7 +114,8 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 		for j := maxRequestIndex; j >= 0; j-- {
 			af := pkg[i].Files
 			bf := pkg[j].Files
-			// Iterate over all file keys in the first file.
+			// Iterate over all file keys in the first file map and
+			// assert that the backing byte slices in af[key] and bf[key] reference differing slices.
 			for key := range af {
 				// If the value behind the key is not empty...
 				if len(af[key]) > 0 {
