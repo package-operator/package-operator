@@ -114,7 +114,16 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 		for j := maxRequestIndex; j >= 0; j-- {
 			af := pkg[i].Files
 			bf := pkg[j].Files
-			assert.NotSame(t, af, bf)
+			// Iterate over all file keys in the first file map and
+			// assert that the backing byte slices in af[key] and bf[key] reference differing slices.
+			for key := range af {
+				// If the value behind the key is not empty...
+				if len(af[key]) > 0 {
+					// Ensure that the address of the first element in the value
+					// is not the same in both files.
+					assert.NotSame(t, &af[key][0], &bf[key][0])
+				}
+			}
 		}
 	}
 }
