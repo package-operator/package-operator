@@ -14,9 +14,13 @@ import (
 
 // Flags.
 const (
-	metricsAddrFlagDescription    = "The address the metric endpoint binds to."
-	pprofAddrFlagDescription      = "The address the pprof web endpoint binds to."
-	namespaceFlagDescription      = "The namespace the operator is deployed into."
+	metricsAddrFlagDescription        = "The address the metric endpoint binds to."
+	pprofAddrFlagDescription          = "The address the pprof web endpoint binds to."
+	namespaceFlagDescription          = "The namespace the operator is deployed into."
+	serviceAccountNameFlagDescription = "Name of the service-account this operator is running under. " +
+		"Used to resolve potentially attached ImagePullSecrets."
+	serviceAccountNamespaceFlagDescription = "Namespace of the service-account this operator is running under. " +
+		"Used to resolve potentially attached ImagePullSecrets."
 	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
 	probeAddrFlagDescription   = "The address the probe endpoint binds to."
@@ -46,6 +50,8 @@ type Options struct {
 	MetricsAddr                 string
 	PPROFAddr                   string
 	Namespace                   string
+	ServiceAccountNamespace     string
+	ServiceAccountName          string
 	EnableLeaderElection        bool
 	ProbeAddr                   string
 	RegistryHostOverrides       string
@@ -82,6 +88,14 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.Namespace, "namespace",
 		os.Getenv("PKO_NAMESPACE"),
 		namespaceFlagDescription)
+	flag.StringVar(
+		&opts.ServiceAccountNamespace, "service-account-namespace",
+		os.Getenv("PKO_SERVICE_ACCOUNT_NAMESPACE"),
+		serviceAccountNamespaceFlagDescription)
+	flag.StringVar(
+		&opts.ServiceAccountName, "service-account-name",
+		os.Getenv("PKO_SERVICE_ACCOUNT_NAME"),
+		serviceAccountNameFlagDescription)
 	flag.BoolVar(
 		&opts.EnableLeaderElection, "enable-leader-election",
 		true,

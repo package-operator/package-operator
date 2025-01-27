@@ -6,54 +6,54 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type RateLimitingQueue struct {
+type TypedRateLimitingQueue[T comparable] struct {
 	mock.Mock
 }
 
-func (q *RateLimitingQueue) Add(item any) {
+func (q *TypedRateLimitingQueue[T]) Add(item T) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) Len() int {
+func (q *TypedRateLimitingQueue[T]) Len() int {
 	args := q.Called()
 	return args.Int(0)
 }
 
-func (q *RateLimitingQueue) Get() (item any, shutdown bool) {
+func (q *TypedRateLimitingQueue[T]) Get() (item T, shutdown bool) {
 	args := q.Called()
-	return args.Get(0), args.Bool(1)
+	return args.Get(0).(T), args.Bool(1)
 }
 
-func (q *RateLimitingQueue) Done(item any) {
+func (q *TypedRateLimitingQueue[T]) Done(item T) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) ShutDown() {
+func (q *TypedRateLimitingQueue[T]) ShutDown() {
 	q.Called()
 }
 
-func (q *RateLimitingQueue) ShutDownWithDrain() {
+func (q *TypedRateLimitingQueue[T]) ShutDownWithDrain() {
 	q.Called()
 }
 
-func (q *RateLimitingQueue) ShuttingDown() bool {
+func (q *TypedRateLimitingQueue[T]) ShuttingDown() bool {
 	args := q.Called()
 	return args.Bool(0)
 }
 
-func (q *RateLimitingQueue) AddAfter(item any, duration time.Duration) {
+func (q *TypedRateLimitingQueue[T]) AddAfter(item T, duration time.Duration) {
 	q.Called(item, duration)
 }
 
-func (q *RateLimitingQueue) AddRateLimited(item any) {
+func (q *TypedRateLimitingQueue[T]) AddRateLimited(item T) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) Forget(item any) {
+func (q *TypedRateLimitingQueue[T]) Forget(item T) {
 	q.Called(item)
 }
 
-func (q *RateLimitingQueue) NumRequeues(item any) int {
+func (q *TypedRateLimitingQueue[T]) NumRequeues(item T) int {
 	args := q.Called(item)
 	return args.Int(0)
 }

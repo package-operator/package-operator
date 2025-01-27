@@ -31,7 +31,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	rawPkg := &packages.RawPackage{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(rawPkg, nil)
 	pd.
 		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -100,7 +100,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	rawPkg := &packages.RawPackage{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
 		Return(rawPkg, errTest)
 
 	pkg := &adapters.GenericPackage{

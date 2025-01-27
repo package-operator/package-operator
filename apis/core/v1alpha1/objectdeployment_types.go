@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ObjectDeploymentSpec defines the desired state of a ObjectDeployment.
+// ObjectDeploymentSpec defines the desired state of an ObjectDeployment.
 type ObjectDeploymentSpec struct {
 	// Number of old revisions in the form of archived ObjectSets to keep.
 	// +kubebuilder:default=10
@@ -25,7 +25,7 @@ type ObjectSetTemplate struct {
 	Spec ObjectSetTemplateSpec `json:"spec"`
 }
 
-// ObjectDeploymentStatus defines the observed state of a ObjectDeployment.
+// ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
 type ObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -68,6 +68,9 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName={"objdeploy","od"}
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectDeployment struct {
 	metav1.TypeMeta   `json:",inline"`

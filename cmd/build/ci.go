@@ -31,6 +31,7 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
 		run.Meth(lint, lint.goModTidyAll),
+		run.Meth(lint, lint.govulnCheck),
 	); err != nil {
 		return err
 	}

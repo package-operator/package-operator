@@ -310,7 +310,15 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			Return(false)
 		ownerStrategy.
 			On("IsOwner", ownerObj, currentObj).
+			Return(true)
+
+		ownerStrategy.
+			On("RemoveOwner", ownerObj, currentObj).
 			Return(false)
+
+		testClient.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 
 		ctx := context.Background()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
@@ -328,6 +336,8 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
 		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
 		ownerStrategy.AssertCalled(t, "IsOwner", ownerObj, currentObj)
+		ownerStrategy.AssertCalled(t, "RemoveOwner", ownerObj, currentObj)
+		testClient.AssertExpectations(t)
 	})
 }
 
@@ -892,7 +902,7 @@ func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
 		require.NoError(t, err)
 
 		// ensure patch does NOT contain existing labels
-		assert.Equal(t,
+		assert.JSONEq(t,
 			`{"metadata":{"labels":{"my-cool-label":"hans"}}}`, string(patch))
 	}
 }
@@ -952,7 +962,7 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 		patch, err := patches[0].Data(updatedObj)
 		require.NoError(t, err)
 
-		assert.Equal(t, `{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch)) //nolint: lll
+		assert.JSONEq(t, `{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch)) //nolint: lll
 	}
 }
 

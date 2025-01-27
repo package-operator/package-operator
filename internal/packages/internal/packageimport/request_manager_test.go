@@ -10,22 +10,30 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
+	"package-operator.run/internal/testutil"
 )
 
-func TestRegistry_DelayedPull(t *testing.T) {
+func TestRequestManager_DelayedPull(t *testing.T) {
 	t.Parallel()
 
-	r := NewRegistry(map[string]string{
+	uncachedClient := testutil.NewClient()
+	serviceAccount := types.NamespacedName{
+		Namespace: "package-operator-system",
+		Name:      "package-operator",
+	}
+	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
-	})
+	}, uncachedClient, serviceAccount)
 	ipm := &imagePullerMock{}
 	r.pullImage = ipm.Pull
 
 	pkg := &packagetypes.RawPackage{Files: packagetypes.Files{"test": []byte{}}}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything, mock.IsType("string")).
 		Run(func(mock.Arguments) { time.Sleep(500 * time.Millisecond) }).
 		Return(pkg, nil)
 
@@ -47,10 +55,10 @@ func TestRegistry_DelayedPull(t *testing.T) {
 	wg.Wait()
 
 	ipm.AssertNumberOfCalls(t, "Pull", 1)
-	ipm.AssertCalled(t, "Pull", mock.Anything, "localhost:123/test123:latest", mock.Anything)
+	ipm.AssertCalled(t, "Pull", mock.Anything, mock.Anything, mock.Anything, "localhost:123/test123:latest")
 }
 
-func TestRegistry_DelayedRequests(t *testing.T) {
+func TestRequestManager_DelayedRequests(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -60,13 +68,18 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	ipm.
-		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		On("Pull", mock.Anything, mock.Anything, mock.Anything, mock.IsType("string")).
 		Run(func(mock.Arguments) { time.Sleep(requestDelay) }).
 		Return(&packagetypes.RawPackage{Files: packagetypes.Files{"test": nil}}, nil)
 
-	r := NewRegistry(map[string]string{
+	uncachedClient := testutil.NewClient()
+	serviceAccount := types.NamespacedName{
+		Namespace: "package-operator-system",
+		Name:      "package-operator",
+	}
+	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
-	})
+	}, uncachedClient, serviceAccount)
 	r.pullImage = ipm.Pull
 
 	ctx := context.Background()
@@ -101,7 +114,16 @@ func TestRegistry_DelayedRequests(t *testing.T) {
 		for j := maxRequestIndex; j >= 0; j-- {
 			af := pkg[i].Files
 			bf := pkg[j].Files
-			assert.NotSame(t, af, bf)
+			// Iterate over all file keys in the first file map and
+			// assert that the backing byte slices in af[key] and bf[key] reference differing slices.
+			for key := range af {
+				// If the value behind the key is not empty...
+				if len(af[key]) > 0 {
+					// Ensure that the address of the first element in the value
+					// is not the same in both files.
+					assert.NotSame(t, &af[key][0], &bf[key][0])
+				}
+			}
 		}
 	}
 }
@@ -111,9 +133,11 @@ type imagePullerMock struct {
 }
 
 func (m *imagePullerMock) Pull(
-	ctx context.Context, ref string,
-	opts ...crane.Option,
+	ctx context.Context,
+	uncachedClient client.Client,
+	serviceAccount types.NamespacedName,
+	ref string, _ ...crane.Option,
 ) (*packagetypes.RawPackage, error) {
-	args := m.Called(ctx, ref, opts)
+	args := m.Called(ctx, uncachedClient, serviceAccount, ref)
 	return args.Get(0).(*packagetypes.RawPackage), args.Error(1)
 }

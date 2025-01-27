@@ -914,8 +914,8 @@ spec:
     class: hosted-cluster
   - name: namespace
     class: hosted-cluster
-  #- name: rbac
-  #  class: hosted-cluster
+  - name: rbac
+    class: hosted-cluster
   - name: deploy
   scopes:
   - Namespaced

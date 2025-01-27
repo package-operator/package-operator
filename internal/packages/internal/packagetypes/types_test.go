@@ -16,10 +16,12 @@ func TestPackage_DeepCopy(t *testing.T) {
 		Files:        Files{"test": []byte("xxx")},
 	}
 	newPkg := pkg.DeepCopy()
-	assert.NotSame(t, pkg, newPkg)                           // new instance
-	assert.NotSame(t, pkg.Manifest, newPkg.Manifest)         // new instance
-	assert.NotSame(t, pkg.ManifestLock, newPkg.ManifestLock) // new instance
-	assertFilesCopy(t, pkg.Files, newPkg.Files)
+	assert.NotSame(t, pkg, newPkg)                                     // new instance
+	assert.NotSame(t, pkg.Manifest, newPkg.Manifest)                   // new instance
+	assert.NotSame(t, pkg.ManifestLock, newPkg.ManifestLock)           // new instance
+	assert.NotSame(t, &pkg.Files, &newPkg.Files)                       // new map
+	assert.NotSame(t, &pkg.Files["test"][0], &newPkg.Files["test"][0]) // new slice
+	assert.Equal(t, pkg.Files, newPkg.Files)                           // equal content
 }
 
 func TestRawPackage_DeepCopy(t *testing.T) {
@@ -30,8 +32,10 @@ func TestRawPackage_DeepCopy(t *testing.T) {
 	}
 
 	newRawPkg := rawPkg.DeepCopy()
-	assert.NotSame(t, rawPkg, newRawPkg) // new instance
-	assertFilesCopy(t, rawPkg.Files, newRawPkg.Files)
+	assert.NotSame(t, rawPkg, newRawPkg)                                     // new instance
+	assert.NotSame(t, &rawPkg.Files, &newRawPkg.Files)                       // new map
+	assert.NotSame(t, &rawPkg.Files["test"][0], &newRawPkg.Files["test"][0]) // new slice
+	assert.Equal(t, rawPkg.Files, newRawPkg.Files)                           // equal content
 }
 
 func TestFiles_DeepCopy(t *testing.T) {
@@ -40,12 +44,6 @@ func TestFiles_DeepCopy(t *testing.T) {
 	f := Files{"test": []byte("xxx")}
 
 	newF := f.DeepCopy()
-	assertFilesCopy(t, f, newF)
-}
-
-func assertFilesCopy(t *testing.T, files, newFiles Files) {
-	t.Helper()
-	assert.NotSame(t, files, newFiles)                 // new map
-	assert.NotSame(t, files["test"], newFiles["test"]) // new slice
-	assert.Equal(t, files, newFiles)                   // equal content
+	assert.NotSame(t, &f["test"][0], &newF["test"][0]) // new slice
+	assert.Equal(t, f, newF)                           // equal content
 }

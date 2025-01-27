@@ -61,8 +61,10 @@ spec:
 {{- end}}
         - name: PKO_NAMESPACE
           value: {{ .config.hostedClusterNamespace }}
-        - name: PKO_IMAGE
-          value: {{ index .images "package-operator-manager" }}
+        - name: PKO_SERVICE_ACCOUNT_NAMESPACE
+          value: {{ .config.hostedClusterNamespace }}
+        - name: PKO_SERVICE_ACCOUNT_NAME
+          value: package-operator
 {{- if hasKey . "environment" }}
 {{- if hasKey .environment "proxy" }}
 {{- if hasKey .environment.proxy "httpProxy" }}
@@ -133,8 +135,8 @@ spec:
           items:
             - key: ca-bundle.crt
               path: tls-ca-bundle.pem
-          name: trusted-ca-bundle
-          optional: true
+          name: openshift-config-managed-trusted-ca-bundle
+          optional: false
         name: trusted-ca-bundle
 {{- end}}
 {{- end}}

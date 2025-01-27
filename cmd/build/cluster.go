@@ -29,6 +29,7 @@ type Cluster struct {
 type clusterConfigLocalRegistry struct {
 	hostOverride string
 	hostPort     int32
+	authHostPort int32
 }
 
 type clusterConfig struct {
@@ -70,10 +71,11 @@ func withRegistryHostOverrideToOtherCluster(host string, targetCluster Cluster) 
 	return withRegistryHostOverride(host, targetCluster.Name()+"-control-plane")
 }
 
-func withLocalRegistry(hostOverride string, hostPort int32) clusterOption {
+func withLocalRegistry(hostOverride string, hostPort int32, authHostPort int32) clusterOption {
 	return func(cc *clusterConfig) {
 		cc.localRegistry = &clusterConfigLocalRegistry{
 			hostPort:     hostPort,
+			authHostPort: authHostPort,
 			hostOverride: hostOverride,
 		}
 	}
@@ -117,6 +119,12 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 		extraPortMappings = append(extraPortMappings, kindv1alpha4.PortMapping{
 			ContainerPort: 5001,
 			HostPort:      cfg.localRegistry.hostPort,
+			ListenAddress: "127.0.0.1",
+			Protocol:      "TCP",
+		})
+		extraPortMappings = append(extraPortMappings, kindv1alpha4.PortMapping{
+			ContainerPort: 5002,
+			HostPort:      cfg.localRegistry.authHostPort,
 			ListenAddress: "127.0.0.1",
 			Protocol:      "TCP",
 		})

@@ -13,7 +13,8 @@ const (
 	defaultImageRegistry    = "quay.io/package-operator"
 	imageRegistryEnvvarName = "IMAGE_REGISTRY"
 
-	devClusterRegistryPort int32 = 5001
+	devClusterRegistryPort     int32 = 5001
+	devClusterRegistryAuthPort int32 = 5002
 )
 
 // Get image registry to use for tagging and pushing images

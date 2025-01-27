@@ -129,7 +129,7 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	defer cancel()
 	err := b.bootstrap(ctx, func(ctx context.Context) error {
 		runManagerCalled = true
-		runManagerCtx = ctx
+		runManagerCtx = ctx //nolint:fatcontext
 		<-ctx.Done()
 		t.Log("CONTEXT DONE")
 		return nil
