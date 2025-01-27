@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -375,8 +375,9 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, env.Kubernetes.Version)
 	})
+}
 
-  func TestPackage_pause(t *testing.T) {
+func TestPackage_pause(t *testing.T) {
 	ns := "default"
 
 	meta := metav1.ObjectMeta{
