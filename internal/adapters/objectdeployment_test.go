@@ -52,6 +52,18 @@ func TestObjectDeployment(t *testing.T) {
 	var statusRevision int64 = 2
 	deploy.SetStatusRevision(statusRevision)
 	assert.Equal(t, statusRevision, deploy.GetStatusRevision())
+
+	deploy.SetSpecPaused(true)
+	assert.True(t, deploy.GetSpecPaused())
+	deploy.SetSpecPaused(false)
+	assert.False(t, deploy.GetSpecPaused())
+
+	condition := metav1.Condition{
+		Type: "test-condition",
+	}
+	deploy.Status.Conditions = []metav1.Condition{condition}
+	deploy.RemoveStatusConditions(condition.Type)
+	assert.Empty(t, deploy.Status.Conditions)
 }
 
 func TestClusterObjectDeployment(t *testing.T) {
@@ -96,6 +108,18 @@ func TestClusterObjectDeployment(t *testing.T) {
 	var statusRevision int64 = 2
 	deploy.SetStatusRevision(statusRevision)
 	assert.Equal(t, statusRevision, deploy.GetStatusRevision())
+
+	deploy.SetSpecPaused(true)
+	assert.True(t, deploy.GetSpecPaused())
+	deploy.SetSpecPaused(false)
+	assert.False(t, deploy.GetSpecPaused())
+
+	condition := metav1.Condition{
+		Type: "test-condition",
+	}
+	deploy.Status.Conditions = []metav1.Condition{condition}
+	deploy.RemoveStatusConditions(condition.Type)
+	assert.Empty(t, deploy.Status.Conditions)
 }
 
 func Test_objectDeploymentPhase(t *testing.T) {
