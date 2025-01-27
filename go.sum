@@ -206,8 +206,8 @@ github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQ
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
 github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c h1:0wLFuaZrcH7wnEOiSvAEgZd3hbL0wNxCvjj2xbxWcaQ=
 github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c/go.mod h1:OOh6Qopf21pSzqNVCB5gomomBXb8o5sGKZxG2KNpaXM=
-github.com/operator-framework/api v0.26.0 h1:YVntU2NkVl5zSLLwK5kFcH6P3oSvN9QDgTsY9mb4yUM=
-github.com/operator-framework/api v0.26.0/go.mod h1:3IxOwzVUeGxYlzfwKCcfCyS+q3EEhWA/4kv7UehbeyM=
+github.com/operator-framework/api v0.29.0 h1:TxAR8RCO+I4FjRrY4PSMgnlmbxNWeD8pzHXp7xwHNmw=
+github.com/operator-framework/api v0.29.0/go.mod h1:0whQE4mpMDd2zyHkQe+bFa3DLoRs6oGWCbu8dY/3pyc=
 github.com/operator-framework/deppy v0.3.0 h1:W8wpF0ehcTAdH2WfMyqMPI5Ja0Qv8M5FMO5cXgJvEQ8=
 github.com/operator-framework/deppy v0.3.0/go.mod h1:EHDxZz8fKGvuymCng3G/Ou7wuX14GaLr0cmf2u29Oog=
 github.com/pborman/uuid v1.2.1 h1:+ZZIw58t/ozdjRaXh/3awHfmWRbzYxJoAdNJxe/3pvw=
