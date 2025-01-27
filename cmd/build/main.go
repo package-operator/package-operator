@@ -21,7 +21,9 @@ var (
 	generate Generate
 	test     Test
 	lint     Lint
-	cluster  = NewCluster("pko",
+	chart    Chart
+
+	cluster = NewCluster("pko",
 		withLocalRegistry(imageRegistryHost(), devClusterRegistryPort, devClusterRegistryAuthPort),
 		withNodeLabels(map[string]string{"hypershift-affinity-test-label": "true"}),
 	)
