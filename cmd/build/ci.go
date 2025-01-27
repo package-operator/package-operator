@@ -85,6 +85,7 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
 		run.Fn2(pushPackage, "test-stub-cel", registry),
+		run.Fn2(pushPackage, "test-stub-pause", registry),
 		run.Fn2(pushPackage, "package-operator", registry),
 	)
 }

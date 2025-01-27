@@ -50,6 +50,9 @@ var (
 	// SuccessTestCelPackageImage points to an image to use to test Package installation with CEL annotations.
 	SuccessTestCelPackageImage string
 
+	// SuccessTestPausePackageImage points to an image to use to test Package reconciliation pause.
+	SuccessTestPausePackageImage string
+
 	FailureTestPackageImage = "localhost/does-not-exist"
 
 	LatestSelfBootstrapJobURL string
@@ -67,6 +70,10 @@ func init() {
 	SuccessTestCelPackageImage = os.Getenv("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE")
 	if len(SuccessTestCelPackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE not set!")
+	}
+	SuccessTestPausePackageImage = os.Getenv("PKO_TEST_SUCCESS_PAUSE_PACKAGE_IMAGE")
+	if len(SuccessTestPausePackageImage) == 0 {
+		panic("PKO_TEST_SUCCESS_PAUSE_PACKAGE_IMAGE not set!")
 	}
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
 	if len(TestStubImage) == 0 {
