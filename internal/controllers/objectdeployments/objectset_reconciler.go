@@ -75,14 +75,17 @@ func (o *objectSetReconciler) Reconcile(
 		// The pause value in the ObjectDeployment controls the pause value in ObjectSet.
 		// Update only when the values differ.
 		if objectDeployment.GetSpecPaused() != objectSet.GetPausedByParent() {
+			var pauseChangeMsg string
 			if objectDeployment.GetSpecPaused() {
 				objectSet.SetPausedByParent()
+				pauseChangeMsg = "pause"
 			} else {
 				objectSet.SetActiveByParent()
+				pauseChangeMsg = "unpause"
 			}
 
 			if err = o.client.Update(ctx, objectSet.ClientObject()); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to unpause objectset: %w", err)
+				return ctrl.Result{}, fmt.Errorf("failed to %s objectset: %w", pauseChangeMsg, err)
 			}
 		}
 	}
