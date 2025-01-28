@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -187,6 +188,111 @@ func Test_ObjectSetReconciler(t *testing.T) {
 	}
 }
 
+func Test_ObjectDeploymentPause(t *testing.T) {
+	t.Parallel()
+
+	client := testutil.NewClient()
+
+	// Setup reconciler
+	deploymentController := NewObjectDeploymentController(client, logr.Discard(), testScheme)
+	mockedSubreconciler := &objectSetSubReconcilerMock{}
+	mockedSubreconciler.On(
+		"Reconcile", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Return(ctrl.Result{}, nil)
+
+	r := objectSetReconciler{
+		client:                      client,
+		listObjectSetsForDeployment: deploymentController.listObjectSetsByRevision,
+		reconcilers: []objectSetSubReconciler{
+			mockedSubreconciler,
+		},
+	}
+
+	objectDeploymentmock := makeObjectDeploymentMock(
+		"test",
+		"test",
+		1,
+		"test-hash-od",
+		&[]metav1.Condition{{
+			Type:               corev1alpha1.ObjectDeploymentAvailable,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: 1,
+		}},
+	)
+
+	// Return prepared revisions on client list
+	revisions := []corev1alpha1.ObjectSet{
+		makeObjectSet("rev1", "test", 1, "test-hash-od", true, true, false),
+	}
+	client.On(
+		"List", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Run(func(args mock.Arguments) {
+		objectList := args.Get(1).(*corev1alpha1.ObjectSetList)
+		objectList.Items = revisions
+	}).Return(nil)
+
+	// Pause ObjectDeployment
+	objectDeploymentmock.On("GetSpecPaused").Unset()
+	objectDeploymentmock.On("GetSpecPaused").Return(true)
+
+	// Propagate reconciliation of objectSet to local variable
+	client.On(
+		"Update", mock.Anything, mock.Anything, mock.Anything,
+	).Run(func(args mock.Arguments) {
+		newObjectSet := args.Get(1).(*corev1alpha1.ObjectSet)
+		revisions[0] = *newObjectSet
+	}).Return(nil)
+	res, err := r.Reconcile(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero(), "unexpected requeue")
+
+	// ObjectSet should be paused
+	objectSets, err := r.listObjectSetsForDeployment(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.Len(t, objectSets, 1)
+	assert.True(t, objectSets[0].IsSpecPaused())
+
+	// Set objectSet status to paused
+	revisions[0].Status.Conditions = append(revisions[0].Status.Conditions, metav1.Condition{
+		Type:               corev1alpha1.ObjectSetPaused,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: 1,
+	})
+
+	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero(), "unexpected requeue")
+
+	// ObjectDeployment status should reflect objectSet's paused status
+	objectDeploymentmock.AssertCalled(t, "SetStatusConditions", []metav1.Condition{
+		newPausedCondition(metav1.ConditionTrue, pausedReasonPaused, "Latest revision is paused: ", 1),
+	})
+
+	// Unpause objectDeployment
+	objectDeploymentmock.On("GetSpecPaused").Unset()
+	objectDeploymentmock.On("GetSpecPaused").Return(false)
+
+	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero(), "unexpected requeue")
+
+	// ObjectSet should be un-paused
+	objectSets, err = r.listObjectSetsForDeployment(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.Len(t, objectSets, 1)
+	assert.False(t, objectSets[0].IsSpecPaused())
+
+	// Set objectSet status to un-paused
+	meta.FindStatusCondition(revisions[0].Status.Conditions, corev1alpha1.ObjectSetPaused).Status = metav1.ConditionFalse
+
+	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	require.NoError(t, err)
+	assert.True(t, res.IsZero(), "unexpected requeue")
+
+	// ObjectDeployment status should reflect objectSet's un-paused status
+	objectDeploymentmock.AssertCalled(t, "RemoveStatusConditions", []string{corev1alpha1.ObjectDeploymentPaused})
+}
+
 func makeObjectDeploymentMock(name string, namespace string,
 	generation int64,
 	templateHash string,
@@ -239,6 +345,9 @@ func makeObjectDeploymentMock(name string, namespace string,
 	)
 	res.On("SetStatusControllerOf", mock.Anything).Return()
 	res.On("GetStatusControllerOf").Return(nil)
+	res.On("RemoveStatusConditions", mock.Anything).Return()
+	res.On("GetSpecPaused").Return(false)
+	res.On("SetSpecPaused", mock.Anything).Return()
 	return res
 }
 

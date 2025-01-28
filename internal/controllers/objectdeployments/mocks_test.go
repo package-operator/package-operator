@@ -99,8 +99,30 @@ func (o *genericObjectSetMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateS
 	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
 }
 
+func (o *genericObjectSetMock) SetActiveByParent() {
+	o.Called()
+}
+
+func (o *genericObjectSetMock) SetPausedByParent() {
+	o.Called()
+}
+
+func (o *genericObjectSetMock) GetPausedByParent() bool {
+	args := o.Called()
+	return args.Get(0).(bool)
+}
+
 type genericObjectDeploymentMock struct {
 	mock.Mock
+}
+
+func (o *genericObjectDeploymentMock) GetSpecPaused() bool {
+	args := o.Called()
+	return args.Get(0).(bool)
+}
+
+func (o *genericObjectDeploymentMock) SetSpecPaused(paused bool) {
+	o.Called(paused)
 }
 
 func (o *genericObjectDeploymentMock) SetStatusRevision(r int64) {
@@ -182,8 +204,25 @@ func (o *genericObjectDeploymentMock) GetStatusControllerOf() []corev1alpha1.Con
 	return args.Get(0).([]corev1alpha1.ControlledObjectReference)
 }
 
+func (o *genericObjectDeploymentMock) RemoveStatusConditions(condTypes ...string) {
+	o.Called(condTypes)
+}
+
 type genericObjectSetDeploymentMock struct {
 	mock.Mock
+}
+
+func (o *genericObjectSetDeploymentMock) RemoveStatusConditions(condTypes ...string) {
+	o.Called(condTypes)
+}
+
+func (o *genericObjectSetDeploymentMock) GetSpecPaused() bool {
+	args := o.Called()
+	return args.Get(0).(bool)
+}
+
+func (o *genericObjectSetDeploymentMock) SetSpecPaused(paused bool) {
+	o.Called(paused)
 }
 
 func (o *genericObjectSetDeploymentMock) SetStatusRevision(r int64) {
