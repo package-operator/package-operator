@@ -146,7 +146,6 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// ObjectSet for the current deployment revision should be present
 		currentObjectSet := &corev1alpha1.ObjectSet{}
-		// TODO(reviewer): is this more or less readable?
 		requireClientGet(ctx, t, ExpectedObjectSetName(concernedDeployment), concernedDeployment.Namespace, currentObjectSet)
 
 		// Assert that the ObjectSet for the current revision has the expected availability status
@@ -742,17 +741,6 @@ func requireCondition(
 			wait.WithTimeout(60*time.Second),
 		),
 	)
-
-	var conditions []metav1.Condition
-	if od, ok := object.(*corev1alpha1.ObjectDeployment); ok {
-		conditions = od.Status.Conditions
-	} else {
-		conditions = object.(*corev1alpha1.ObjectSet).Status.Conditions
-	}
-
-	cond := meta.FindStatusCondition(conditions, conditionType)
-	require.NotNil(t, cond, conditionType+" condition is expected to be reported")
-	assert.Equal(t, conditionStatus, cond.Status)
 }
 
 func requireClientGet(ctx context.Context, t *testing.T, name, namespace string, object client.Object) {
