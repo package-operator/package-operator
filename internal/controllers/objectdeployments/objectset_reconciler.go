@@ -346,7 +346,7 @@ func (r pausedReason) String() string {
 }
 
 const (
-	pausedReasonPaused = "Paused"
+	pausedReasonPaused pausedReason = "Paused"
 )
 
 func newPausedCondition(
