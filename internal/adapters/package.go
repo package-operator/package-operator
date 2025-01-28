@@ -24,6 +24,8 @@ type GenericPackageAccessor interface {
 	SetStatusRevision(rev int64)
 	GetStatusRevision() int64
 	GetComponent() string
+	GetSpecPaused() bool
+	SetSpecPaused(paused bool)
 }
 
 type GenericPackageFactory func(scheme *runtime.Scheme) GenericPackageAccessor
@@ -118,6 +120,14 @@ func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
 	}
 }
 
+func (a *GenericPackage) GetSpecPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *GenericPackage) SetSpecPaused(paused bool) {
+	a.Spec.Paused = paused
+}
+
 type GenericClusterPackage struct {
 	corev1alpha1.ClusterPackage
 }
@@ -176,7 +186,20 @@ func (a *GenericClusterPackage) GetUnpackedHash() string {
 	return a.Status.UnpackedHash
 }
 
+func (a *GenericClusterPackage) GetSpecPaused() bool {
+	return a.Spec.Paused
+}
+
+func (a *GenericClusterPackage) SetSpecPaused(paused bool) {
+	a.Spec.Paused = paused
+}
+
 func updatePackagePhase(pkg GenericPackageAccessor) {
+	if meta.IsStatusConditionTrue(*pkg.GetConditions(), string(corev1alpha1.PackagePaused)) {
+		pkg.setStatusPhase(corev1alpha1.PackagePhasePaused)
+		return
+	}
+
 	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.PackageInvalid) {
 		pkg.setStatusPhase(corev1alpha1.PackagePhaseInvalid)
 		return

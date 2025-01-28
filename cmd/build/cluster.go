@@ -302,6 +302,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		run.Fn2(pushPackage, "test-stub", registry),
 		run.Fn2(pushPackage, "test-stub-multi", registry),
 		run.Fn2(pushPackage, "test-stub-cel", registry),
+		run.Fn2(pushPackage, "test-stub-pause", registry),
 		run.Fn2(pushPackage, "package-operator", registry),
 	); err != nil {
 		return err

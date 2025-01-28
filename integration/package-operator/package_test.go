@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -15,9 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -372,4 +375,127 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, env.Kubernetes.Version)
 	})
+}
+
+func TestPackage_pause(t *testing.T) {
+	ns := "default"
+
+	meta := metav1.ObjectMeta{
+		Name:      "success-pause",
+		Namespace: ns,
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPausePackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
+				SuccessTestPausePackageImage, TestStubImage,
+			)),
+		},
+	}
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	testPkg := newPackage(meta, spec, true)
+
+	deploy := &corev1alpha1.ObjectDeployment{}
+	requireDeployPackage(ctx, t, testPkg, deploy)
+
+	// check initial state
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+
+	pauseCm := &corev1.ConfigMap{}
+	err := Client.Get(ctx, client.ObjectKey{
+		Name:      "pause-cm",
+		Namespace: ns,
+	}, pauseCm)
+	require.NoError(t, err)
+
+	v, ok := pauseCm.Data["banana"]
+	require.True(t, ok)
+	assert.Equal(t, "bread", v)
+
+	// should not be paused
+	pkg := &corev1alpha1.Package{}
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+
+	// pause reconciliation
+	patch := `{"spec":{"paused":true}}`
+	if err := Client.Patch(ctx, testPkg, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// package itself should be paused
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, pkg, corev1alpha1.PackagePaused, metav1.ConditionTrue)
+
+	// pause should propagate to deployment
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentPaused, metav1.ConditionTrue)
+
+	patch = `{"data":{"banana":"bread2"}}`
+	if err := Client.Patch(ctx, pauseCm, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// value should change
+	cm := &corev1.ConfigMap{}
+	if err := Client.Get(ctx, client.ObjectKey{Name: "pause-cm", Namespace: ns}, cm); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "bread2", cm.Data["banana"])
+
+	// unpause reconciliation
+	patch = `{"spec":{"paused":false}}`
+	if err := Client.Patch(ctx, testPkg, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// package should be unpaused
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+
+	// deployment should be unpaused
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+
+	// value should be reverted by reconciliation
+	cm = &corev1.ConfigMap{}
+	if err := Client.Get(ctx, client.ObjectKey{Name: "pause-cm", Namespace: ns}, cm); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "bread", cm.Data["banana"])
+}
+
+func requireCondition(
+	ctx context.Context, t *testing.T, object client.Object,
+	conditionType string, conditionStatus metav1.ConditionStatus,
+) {
+	t.Helper()
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx,
+			object, conditionType, conditionStatus,
+			wait.WithTimeout(60*time.Second),
+		),
+	)
+
+	var conditions []metav1.Condition
+	if pkg, ok := object.(*corev1alpha1.Package); ok {
+		conditions = pkg.Status.Conditions
+	} else {
+		conditions = object.(*corev1alpha1.ObjectDeployment).Status.Conditions
+	}
+
+	cond := meta.FindStatusCondition(conditions, conditionType)
+	require.NotNil(t, cond, conditionType+" condition is expected to be reported")
+	assert.Equal(t, conditionStatus, cond.Status)
 }
