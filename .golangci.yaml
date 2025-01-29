@@ -120,6 +120,9 @@ issues:
   - linters:
     - lll
     source: "^//( ?)[+]kubebuilder"
+  - linters:
+    - lll
+    source: "^\t*//( ?)http(s?)://"
   # Integration tests MUST NOT run in parallel.
   - path: 'integration\/.+\.go'
     linters: [paralleltest]

@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,15 +98,22 @@ func ProvideManager(
 	opts Options,
 ) (ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                     scheme,
-		Metrics:                    server.Options{BindAddress: opts.MetricsAddr},
-		HealthProbeBindAddress:     opts.ProbeAddr,
-		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
+		Scheme:                 scheme,
+		Metrics:                server.Options{BindAddress: opts.MetricsAddr},
+		HealthProbeBindAddress: opts.ProbeAddr,
+		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
+
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionNamespace:    opts.Namespace,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
-		MapperProvider:             apiutil.NewDynamicRESTMapper,
+		// Recommended Leader Election values
+		// https://github.com/openshift/enhancements/blob/61581dcd985130357d6e4b0e72b87ee35394bf6e/CONVENTIONS.md#handling-kube-apiserver-disruption
+		LeaseDuration: ptr.To(137 * time.Second),
+		RenewDeadline: ptr.To(107 * time.Second),
+		RetryPeriod:   ptr.To(26 * time.Second),
+
+		MapperProvider: apiutil.NewDynamicRESTMapper,
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// We create Jobs to unpack package images.
