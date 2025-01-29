@@ -52,6 +52,11 @@ func TestGenericPackage(t *testing.T) {
 	var statusPhase corev1alpha1.PackageStatusPhase = "test"
 	pkg.setStatusPhase(statusPhase)
 	assert.Equal(t, statusPhase, p.Status.Phase)
+
+	pkg.SetSpecPaused(true)
+	assert.True(t, pkg.GetSpecPaused())
+	pkg.SetSpecPaused(false)
+	assert.False(t, pkg.GetSpecPaused())
 }
 
 func TestGenericClusterPackage(t *testing.T) {
@@ -96,6 +101,11 @@ func TestGenericClusterPackage(t *testing.T) {
 	var statusPhase corev1alpha1.PackageStatusPhase = "test"
 	pkg.setStatusPhase(statusPhase)
 	assert.Equal(t, statusPhase, p.Status.Phase)
+
+	pkg.SetSpecPaused(true)
+	assert.True(t, pkg.GetSpecPaused())
+	pkg.SetSpecPaused(false)
+	assert.False(t, pkg.GetSpecPaused())
 }
 
 func Test_updatePackagePhase(t *testing.T) {
@@ -157,6 +167,16 @@ func Test_updatePackagePhase(t *testing.T) {
 				},
 			},
 			expected: corev1alpha1.PackagePhaseNotReady,
+		},
+		{
+			name: "Paused",
+			conditions: []metav1.Condition{
+				{
+					Type:   corev1alpha1.PackagePaused,
+					Status: metav1.ConditionTrue,
+				},
+			},
+			expected: corev1alpha1.PackagePaused,
 		},
 	}
 	for i := range tests {
