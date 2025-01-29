@@ -30,6 +30,7 @@ kind: ClusterObjectDeployment
 metadata:
   name: example
 spec:
+  paused: "true"
   revisionHistoryLimit: 10
   selector: metav1.LabelSelector
   template:
@@ -342,6 +343,7 @@ metadata:
   name: example
   namespace: default
 spec:
+  paused: "true"
   revisionHistoryLimit: 10
   selector: metav1.LabelSelector
   template:
@@ -657,6 +659,7 @@ ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployme
 | `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
+| `paused` <br><a href="#bool">bool</a> | If Paused is true, the object and its children will not be reconciled. |
 
 
 Used in:
@@ -791,6 +794,7 @@ ObjectDeploymentSpec defines the desired state of an ObjectDeployment.
 | `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
+| `paused` <br><a href="#bool">bool</a> | If Paused is true, the object and its children will not be reconciled. |
 
 
 Used in:

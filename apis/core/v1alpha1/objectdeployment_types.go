@@ -13,6 +13,8 @@ type ObjectDeploymentSpec struct {
 	Selector metav1.LabelSelector `json:"selector"`
 	// Template to create new ObjectSets from.
 	Template ObjectSetTemplate `json:"template"`
+	// If Paused is true, the object and its children will not be reconciled.
+	Paused bool `json:"paused,omitempty"`
 }
 
 // ObjectSetTemplate describes the template to create new ObjectSets from.
@@ -45,6 +47,7 @@ type ObjectDeploymentStatus struct {
 const (
 	ObjectDeploymentAvailable   = "Available"
 	ObjectDeploymentProgressing = "Progressing"
+	ObjectDeploymentPaused      = "Paused"
 )
 
 // ObjectDeploymentPhase specifies a phase that a deployment is in.
@@ -57,6 +60,7 @@ const (
 	ObjectDeploymentPhaseAvailable   ObjectDeploymentPhase = "Available"
 	ObjectDeploymentPhaseNotReady    ObjectDeploymentPhase = "NotReady"
 	ObjectDeploymentPhaseProgressing ObjectDeploymentPhase = "Progressing"
+	ObjectDeploymentPhasePaused      ObjectDeploymentPhase = "Paused"
 )
 
 // ObjectDeployment is the Schema for the ObjectDeployments API

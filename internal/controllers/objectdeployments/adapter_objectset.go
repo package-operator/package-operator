@@ -12,6 +12,11 @@ import (
 	"package-operator.run/internal/utils"
 )
 
+const (
+	pausedByParentAnnotation = "package-operator.run/paused-by-parent"
+	pausedByParentTrue       = "true"
+)
+
 type genericObjectSet interface {
 	ClientObject() client.Object
 	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
@@ -29,6 +34,9 @@ type genericObjectSet interface {
 	SetPaused()
 	IsSpecPaused() bool
 	IsAvailable() bool
+	SetPausedByParent()
+	SetActiveByParent()
+	GetPausedByParent() bool
 }
 
 type genericObjectSetFactory func(
@@ -201,6 +209,21 @@ func (a *GenericObjectSet) GetObjects() ([]objectIdentifier, error) {
 	return result, nil
 }
 
+func (a *GenericObjectSet) SetPausedByParent() {
+	a.Annotations[pausedByParentAnnotation] = pausedByParentTrue
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+}
+
+func (a *GenericObjectSet) SetActiveByParent() {
+	delete(a.Annotations, pausedByParentAnnotation)
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
+}
+
+func (a *GenericObjectSet) GetPausedByParent() bool {
+	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
+		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
+}
+
 type GenericClusterObjectSet struct {
 	corev1alpha1.ClusterObjectSet
 }
@@ -320,6 +343,21 @@ func (a *GenericClusterObjectSet) GetObjects() ([]objectIdentifier, error) {
 		}
 	}
 	return result, nil
+}
+
+func (a *GenericClusterObjectSet) SetPausedByParent() {
+	a.Annotations[pausedByParentAnnotation] = pausedByParentTrue
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
+}
+
+func (a *GenericClusterObjectSet) SetActiveByParent() {
+	delete(a.Annotations, pausedByParentAnnotation)
+	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
+}
+
+func (a *GenericClusterObjectSet) GetPausedByParent() bool {
+	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
+		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
 }
 
 type objectSetsByRevisionAscending []genericObjectSet
