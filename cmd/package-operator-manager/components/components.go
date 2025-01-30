@@ -107,6 +107,9 @@ func ProvideManager(
 		LeaderElection:             opts.EnableLeaderElection,
 		LeaderElectionNamespace:    opts.Namespace,
 		LeaderElectionID:           "8a4hp84a6s.package-operator-lock",
+		// Caution: enabling `LeaderElectionReleaseOnCancel` requires us to stop the binary
+		// right after the manager ends! (Docstring on the field has more information.)
+		LeaderElectionReleaseOnCancel: true,
 		// Recommended Leader Election values
 		// https://github.com/openshift/enhancements/blob/61581dcd985130357d6e4b0e72b87ee35394bf6e/CONVENTIONS.md#handling-kube-apiserver-disruption
 		LeaseDuration: ptr.To(137 * time.Second),

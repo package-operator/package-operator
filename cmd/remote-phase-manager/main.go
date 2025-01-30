@@ -107,6 +107,9 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "klsdfu452p3.package-operator-lock",
+		// Caution: enabling `LeaderElectionReleaseOnCancel` requires us to stop the binary
+		// right after the manager ends! (Docstring on the field has more information.)
+		LeaderElectionReleaseOnCancel: true,
 		// Recommended Leader Election values
 		// https://github.com/openshift/enhancements/blob/61581dcd985130357d6e4b0e72b87ee35394bf6e/CONVENTIONS.md#handling-kube-apiserver-disruption
 		LeaseDuration: ptr.To(137 * time.Second),
