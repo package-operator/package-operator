@@ -446,8 +446,8 @@ k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6J
 k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e h1:GhnabPP2crMzvHYqbFFTpGwaswsNrDsrWkAVOledVEM=
 pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e/go.mod h1:6KvwNnoJIQcYhLZQ3eVQH/4xQSdSKPc/LhuVtu/7Idk=
-pkg.package-operator.run/cardboard/kubeutils v0.0.3 h1:Zjnrwv1zCC/lrC12HUIahCsT3Z8RodsPkMnZqlapi3Q=
-pkg.package-operator.run/cardboard/kubeutils v0.0.3/go.mod h1:OuVwlFUlvI51Hnlac6T8iFX2Hr0GLRnLne1EOvHnS90=
+pkg.package-operator.run/cardboard/kubeutils v0.0.4 h1:rsDqBsnnqN3NaCI3yUdoePqVzJQUVxjLBY3s0wRSoW4=
+pkg.package-operator.run/cardboard/kubeutils v0.0.4/go.mod h1:Un8SWMuALmnjjPBti2L74ouCSJM27olSGodK/G1kmUk=
 pkg.package-operator.run/cardboard/modules/kind v0.0.3 h1:M3nfRn2DaCjPLH9sOfbr6+A0bd70ewXJfpdt3PppuPs=
 pkg.package-operator.run/cardboard/modules/kind v0.0.3/go.mod h1:L+u4ogwzzku4loz63fGRUDINCffMzJg8eD/8lWdrw/w=
 pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3 h1:VElzc9uqr/YPSLOVXFCAMDYUWDg6YBQ7KXM8VOYx/hU=
