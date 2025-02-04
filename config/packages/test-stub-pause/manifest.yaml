@@ -4,7 +4,6 @@ metadata:
   name: test-stub-pause
 spec:
   scopes:
-  - Cluster
   - Namespaced
   phases:
   - name: namespace
@@ -30,32 +29,3 @@ spec:
       required:
       - testStubImage
       type: object
-test:
-  template:
-  - name: namespace-scope
-    context:
-      config:
-        testStubImage: chicken
-      package:
-        metadata:
-          name: test
-          namespace: test-ns
-      environment:
-        kubernetes:
-          version: v1.27.0
-  - name: cluster-scope
-    context:
-      config:
-        testStubImage: chicken2
-      package:
-        metadata:
-          name: test
-      environment:
-        kubernetes:
-          version: v1.27.0
-        openShift:
-          version: v4.13.0
-        proxy:
-          httpProxy: xxx
-          httpsProxy: xxx
-          noProxy: xxxxx

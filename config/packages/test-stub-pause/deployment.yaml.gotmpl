@@ -2,9 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "test-deployment"
-{{- if eq .package.metadata.namespace ""}}
-  namespace: "{{.package.metadata.name}}"
-{{- end}}
   labels:
     app: test-stub
     instance: "{{.package.metadata.name}}"
