@@ -195,7 +195,7 @@ func (a *GenericClusterPackage) SetSpecPaused(paused bool) {
 }
 
 func updatePackagePhase(pkg GenericPackageAccessor) {
-	if meta.IsStatusConditionTrue(*pkg.GetConditions(), string(corev1alpha1.PackagePaused)) {
+	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.PackagePaused) {
 		pkg.setStatusPhase(corev1alpha1.PackagePhasePaused)
 		return
 	}
