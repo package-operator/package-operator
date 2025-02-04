@@ -410,11 +410,7 @@ func TestPackage_pause(t *testing.T) {
 	assert.Equal(t, "bread", v)
 
 	// should not be paused
-	pkg := &corev1alpha1.Package{}
-	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
-		t.Fatal(err)
-	}
-	requireCondition(ctx, t, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
 
 	// pause reconciliation
 	patch := `{"spec":{"paused":true}}`
@@ -422,17 +418,14 @@ func TestPackage_pause(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// package itself should be paused
-	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
-		t.Fatal(err)
-	}
-	requireCondition(ctx, t, pkg, corev1alpha1.PackagePaused, metav1.ConditionTrue)
-
-	// pause should propagate to deployment
+	// deployment should be paused
 	if err := Client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy); err != nil {
 		t.Fatal(err)
 	}
 	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentPaused, metav1.ConditionTrue)
+
+	// package should be paused
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackagePaused, metav1.ConditionTrue)
 
 	patch = `{"data":{"banana":"bread2"}}`
 	if err := Client.Patch(ctx, pauseCm, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
@@ -453,15 +446,9 @@ func TestPackage_pause(t *testing.T) {
 	}
 
 	// package should be unpaused
-	if err := Client.Get(ctx, client.ObjectKeyFromObject(testPkg), pkg); err != nil {
-		t.Fatal(err)
-	}
-	requireCondition(ctx, t, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
 
 	// deployment should be unpaused
-	if err := Client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy); err != nil {
-		t.Fatal(err)
-	}
 	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
 
 	// value should be reverted by reconciliation
