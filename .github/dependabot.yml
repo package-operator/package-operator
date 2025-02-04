@@ -19,6 +19,11 @@ updates:
       applies-to: version-updates
       patterns:
       - golang.org/x/*
+    cardboard:
+      applies-to: version-updates
+      patterns:
+      - pkg.package-operator.run
+      - pkg.package-operator.run/cardboard/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: gomod
@@ -40,6 +45,11 @@ updates:
       applies-to: version-updates
       patterns:
       - golang.org/x/*
+    cardboard:
+      applies-to: version-updates
+      patterns:
+      - pkg.package-operator.run
+      - pkg.package-operator.run/cardboard/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: gomod
@@ -61,6 +71,11 @@ updates:
       applies-to: version-updates
       patterns:
       - golang.org/x/*
+    cardboard:
+      applies-to: version-updates
+      patterns:
+      - pkg.package-operator.run
+      - pkg.package-operator.run/cardboard/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: github-actions
