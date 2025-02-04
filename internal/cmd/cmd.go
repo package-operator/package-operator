@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"time"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -10,7 +11,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	apis "package-operator.run/apis"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
+
+	"package-operator.run/apis"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
@@ -97,4 +100,12 @@ type DefaultRestConfigFactory struct{}
 
 func (f *DefaultRestConfigFactory) GetConfig() (*rest.Config, error) {
 	return ctrl.GetConfig()
+}
+
+func NewWaiter(client *Client, scheme *runtime.Scheme) *wait.Waiter {
+	return wait.NewWaiter(
+		client.client, scheme,
+		wait.WithTimeout(20*time.Second),
+		wait.WithInterval(time.Second),
+	)
 }
