@@ -15,7 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/metrics"
+	"package-operator.run/internal/packages"
 	"package-operator.run/internal/testutil"
 )
 
@@ -101,6 +103,59 @@ func TestPackageController_NotFound(t *testing.T) {
 	clientMock.StatusMock.AssertNotCalled(
 		t, "Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything,
 	)
+}
+
+func TestPackageController_Paused(t *testing.T) {
+	t.Parallel()
+
+	mr := metrics.NewRecorder()
+	ipm := &imagePullerMock{}
+	clientMock := testutil.NewClient()
+	var hash int32
+	newPausedPackage := func(scheme *runtime.Scheme) adapters.GenericPackageAccessor {
+		obj := adapters.NewGenericPackage(scheme)
+		obj.SetSpecPaused(true)
+		return obj
+	}
+
+	c := newGenericPackageController(
+		newPausedPackage,
+		adapters.NewObjectDeployment,
+		clientMock,
+		clientMock,
+		ctrl.Log.WithName("paused package test"),
+		packageScheme,
+		ipm,
+		packages.NewClusterPackageDeployer(clientMock, packageScheme),
+		mr,
+		&hash,
+	)
+	c.reconciler = nil
+
+	objectKey := client.ObjectKey{}
+
+	clientMock.
+		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.StatusMock.
+		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+		Return(nil)
+
+	ctx := context.Background()
+	res, err := c.Reconcile(ctx, reconcile.Request{
+		NamespacedName: objectKey,
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsZero())
+
+	clientMock.AssertExpectations(t)
+	clientMock.StatusMock.AssertExpectations(t)
 }
 
 func TestPackageController_Reconcile(t *testing.T) {
@@ -218,6 +273,59 @@ func TestClusterOPackageController_NotFound(t *testing.T) {
 	clientMock.StatusMock.AssertNotCalled(
 		t, "Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything,
 	)
+}
+
+func TestClusterPackageController_Paused(t *testing.T) {
+	t.Parallel()
+
+	mr := metrics.NewRecorder()
+	ipm := &imagePullerMock{}
+	clientMock := testutil.NewClient()
+	var hash int32
+	newPausedClusterPackage := func(scheme *runtime.Scheme) adapters.GenericPackageAccessor {
+		obj := adapters.NewGenericClusterPackage(scheme)
+		obj.SetSpecPaused(true)
+		return obj
+	}
+
+	c := newGenericPackageController(
+		newPausedClusterPackage,
+		adapters.NewClusterObjectDeployment,
+		clientMock,
+		clientMock,
+		ctrl.Log.WithName("paused cluster package test"),
+		packageScheme,
+		ipm,
+		packages.NewClusterPackageDeployer(clientMock, packageScheme),
+		mr,
+		&hash,
+	)
+	c.reconciler = nil
+
+	objectKey := client.ObjectKey{}
+
+	clientMock.
+		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.StatusMock.
+		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Return(nil)
+
+	ctx := context.Background()
+	res, err := c.Reconcile(ctx, reconcile.Request{
+		NamespacedName: objectKey,
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsZero())
+
+	clientMock.AssertExpectations(t)
+	clientMock.StatusMock.AssertExpectations(t)
 }
 
 func TestClusterPackageController_Reconcile(t *testing.T) {
