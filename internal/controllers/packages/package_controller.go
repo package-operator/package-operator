@@ -161,9 +161,16 @@ func (c *GenericPackageController) Reconcile(
 	}
 
 	if pkg.GetSpecPaused() != objDep.GetSpecPaused() {
-		objDep.SetSpecPaused(pkg.GetSpecPaused())
+		var pauseChangeMsg string
+		if pkg.GetSpecPaused() {
+			objDep.SetSpecPaused(true)
+			pauseChangeMsg = "pause"
+		} else {
+			objDep.SetSpecPaused(false)
+			pauseChangeMsg = "unpause"
+		}
 		if err = c.client.Update(ctx, objDep.ClientObject()); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to unpause objectdeployment: %w", err)
+			return ctrl.Result{}, fmt.Errorf("failed to %s objectdeployment: %w", pauseChangeMsg, err)
 		}
 	}
 
