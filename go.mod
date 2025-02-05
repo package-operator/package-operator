@@ -32,7 +32,7 @@ require (
 	github.com/yannh/kubeconform v0.6.7
 	go.uber.org/dig v1.18.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
+	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6
 	golang.org/x/net v0.34.0
 	golang.org/x/sys v0.29.0
 	k8s.io/api v0.32.1
@@ -47,7 +47,7 @@ require (
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
 	sigs.k8s.io/controller-runtime v0.20.1
