@@ -15,6 +15,10 @@ updates:
       applies-to: version-updates
       patterns:
       - k8s.io/*
+    golangx:
+      applies-to: version-updates
+      patterns:
+      - golang.org/x/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: gomod
@@ -32,6 +36,10 @@ updates:
       applies-to: version-updates
       patterns:
       - k8s.io/*
+    golangx:
+      applies-to: version-updates
+      patterns:
+      - golang.org/x/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: gomod
@@ -49,6 +57,10 @@ updates:
       applies-to: version-updates
       patterns:
       - k8s.io/*
+    golangx:
+      applies-to: version-updates
+      patterns:
+      - golang.org/x/*
   commit-message:
     prefix: "build(deps)"
 - package-ecosystem: github-actions
@@ -60,4 +72,3 @@ updates:
   open-pull-requests-limit: 100
   commit-message:
     prefix: "build(deps)"
-
