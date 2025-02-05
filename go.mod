@@ -44,7 +44,7 @@ require (
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	package-operator.run/apis v1.13.0
 	package-operator.run/pkg v1.13.0
-	pkg.package-operator.run/cardboard v0.0.4-0.20240425100556-1af956538c1e
+	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.3
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.3
