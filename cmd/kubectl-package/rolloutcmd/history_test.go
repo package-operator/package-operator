@@ -59,7 +59,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"REVISION  SUCCESSFUL  CHANGE-CAUSE",
-				"1         false       ",
+				"1         false                   ",
 				"",
 				"",
 			}, "\n"),
@@ -89,7 +89,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"REVISION  SUCCESSFUL  CHANGE-CAUSE",
-				"1         false       ",
+				"1         false                   ",
 				"",
 				"",
 			}, "\n"),
@@ -120,7 +120,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"REVISION  SUCCESSFUL  CHANGE-CAUSE",
-				"1         false       ",
+				"1         false                   ",
 				"",
 				"",
 			}, "\n"),
@@ -153,7 +153,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"REVISION  SUCCESSFUL  CHANGE-CAUSE",
-				"1         false       ",
+				"1         false                   ",
 				"",
 				"",
 			}, "\n"),
@@ -181,7 +181,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"REVISION  SUCCESSFUL  CHANGE-CAUSE",
-				"1         false       ",
+				"1         false                   ",
 				"",
 				"",
 			}, "\n"),
