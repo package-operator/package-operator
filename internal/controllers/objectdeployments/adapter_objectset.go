@@ -15,7 +15,6 @@ import (
 const (
 	pausedByParentAnnotation = "package-operator.run/paused-by-parent"
 	pausedByParentTrue       = "true"
-	pausedByParentFalse      = "false"
 )
 
 type genericObjectSet interface {
@@ -216,7 +215,7 @@ func (a *GenericObjectSet) SetPausedByParent() {
 }
 
 func (a *GenericObjectSet) SetActiveByParent() {
-	a.Annotations[pausedByParentAnnotation] = pausedByParentFalse
+	delete(a.Annotations, pausedByParentAnnotation)
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
 }
 
@@ -352,7 +351,7 @@ func (a *GenericClusterObjectSet) SetPausedByParent() {
 }
 
 func (a *GenericClusterObjectSet) SetActiveByParent() {
-	a.Annotations[pausedByParentAnnotation] = pausedByParentFalse
+	delete(a.Annotations, pausedByParentAnnotation)
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
 }
 

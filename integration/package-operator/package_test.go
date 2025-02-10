@@ -373,3 +373,88 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 		assert.NotEmpty(t, env.Kubernetes.Version)
 	})
 }
+
+func TestPackage_pause(t *testing.T) {
+	ns := "default"
+
+	meta := metav1.ObjectMeta{
+		Name:      "success-pause",
+		Namespace: ns,
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPausePackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
+				SuccessTestPausePackageImage, TestStubImage,
+			)),
+		},
+	}
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	testPkg := newPackage(meta, spec, true)
+
+	deploy := &corev1alpha1.ObjectDeployment{}
+	requireDeployPackage(ctx, t, testPkg, deploy)
+
+	// check initial state
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+
+	pauseCm := &corev1.ConfigMap{}
+	err := Client.Get(ctx, client.ObjectKey{
+		Name:      "pause-cm",
+		Namespace: ns,
+	}, pauseCm)
+	require.NoError(t, err)
+
+	v, ok := pauseCm.Data["banana"]
+	require.True(t, ok)
+	assert.Equal(t, "bread", v)
+
+	// should not be paused
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+
+	// pause reconciliation
+	patch := `{"spec":{"paused":true}}`
+	if err := Client.Patch(ctx, testPkg, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// deployment should be paused
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy); err != nil {
+		t.Fatal(err)
+	}
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentPaused, metav1.ConditionTrue)
+
+	// package should be paused
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackagePaused, metav1.ConditionTrue)
+
+	patch = `{"data":{"banana":"bread2"}}`
+	if err := Client.Patch(ctx, pauseCm, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// value should change
+	cm := &corev1.ConfigMap{}
+	if err := Client.Get(ctx, client.ObjectKey{Name: "pause-cm", Namespace: ns}, cm); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "bread2", cm.Data["banana"])
+
+	// unpause reconciliation
+	patch = `{"spec":{"paused":false}}`
+	if err := Client.Patch(ctx, testPkg, client.RawPatch(types.MergePatchType, []byte(patch))); err != nil {
+		t.Fatal(err)
+	}
+
+	// package should be unpaused
+	requireCondition(ctx, t, testPkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+
+	// deployment should be unpaused
+	requireCondition(ctx, t, deploy, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
+
+	// value should be reverted by reconciliation
+	cm = &corev1.ConfigMap{}
+	if err := Client.Get(ctx, client.ObjectKey{Name: "pause-cm", Namespace: ns}, cm); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "bread", cm.Data["banana"])
+}

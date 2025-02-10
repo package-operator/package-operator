@@ -21,7 +21,7 @@ func TestEnqueueWatchingObjects(t *testing.T) {
 	t.Parallel()
 
 	ownerRefGetter := &ownerRefGetterMock{}
-	q := &testutil.RateLimitingQueue{}
+	q := &testutil.TypedRateLimitingQueue[reconcile.Request]{}
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 

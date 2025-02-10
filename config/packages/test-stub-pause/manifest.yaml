@@ -1,0 +1,31 @@
+apiVersion: manifests.package-operator.run/v1alpha1
+kind: PackageManifest
+metadata:
+  name: test-stub-pause
+spec:
+  scopes:
+  - Namespaced
+  phases:
+  - name: namespace
+  - name: deploy
+  availabilityProbes:
+  - probes:
+    - condition:
+        type: Available
+        status: "True"
+    - fieldsEqual:
+        fieldA: .status.updatedReplicas
+        fieldB: .status.replicas
+    selector:
+      kind:
+        group: apps
+        kind: Deployment
+  config:
+    openAPIV3Schema:
+      properties:
+        testStubImage:
+          description: TestStubImage provides the container image to use for the Deployment.
+          type: string
+      required:
+      - testStubImage
+      type: object
