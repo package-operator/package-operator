@@ -45,7 +45,7 @@ func TestPrinter_PrintfErr(t *testing.T) {
 func TestPrinter_PrintTable(t *testing.T) {
 	t.Parallel()
 
-	const expected = "One  Two  Three\n1    2    3\n\n"
+	const expected = "One  Two  Three\n1    2    3    \n\n"
 
 	table := cmd.NewDefaultTable(
 		cmd.WithHeaders{
