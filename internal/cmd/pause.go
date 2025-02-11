@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,8 +15,13 @@ import (
 
 const PauseMessageAnnotation = "package-operator.run/pause-message"
 
+var (
+	errPausingPackage   = errors.New("pausing package")
+	errUnpausingPackage = errors.New("unpausing package")
+)
+
 func (c *Client) PackageSetPaused(
-	ctx context.Context, waiter *wait.Waiter,
+	ctx context.Context, waiter Waiter,
 	name, namespace string, pause bool, message string,
 ) error {
 	pkg := &corev1alpha1.Package{
@@ -30,6 +36,10 @@ func (c *Client) PackageSetPaused(
 
 	pkg.Spec.Paused = pause
 	if pause {
+		if pkg.Annotations == nil {
+			pkg.Annotations = map[string]string{}
+		}
+
 		pkg.Annotations[PauseMessageAnnotation] = message
 	} else {
 		delete(pkg.Annotations, PauseMessageAnnotation)
@@ -37,9 +47,9 @@ func (c *Client) PackageSetPaused(
 
 	if err := c.client.Update(ctx, pkg); err != nil {
 		if pause {
-			return fmt.Errorf("pausing package: %w", err)
+			return fmt.Errorf("%w: %w", errPausingPackage, err)
 		}
-		return fmt.Errorf("unpausing package: %w", err)
+		return fmt.Errorf("%w: %w", errUnpausingPackage, err)
 	}
 
 	conditionType := corev1alpha1.PackagePaused

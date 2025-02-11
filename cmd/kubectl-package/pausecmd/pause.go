@@ -54,7 +54,7 @@ func NewGenericPauseCmd(clientFactory internalcmd.ClientFactory, pause bool) *co
 			return fmt.Errorf("%w: expected `clusterpackage`/`package`, got `%s`", errInvalidResource, args.Resource)
 		}
 
-		return client.PackageSetPaused(cmd.Context(), internalcmd.NewWaiter(client, scheme),
+		return client.PackageSetPaused(cmd.Context(), internalcmd.NewDefaultWaiter(client, scheme),
 			args.Name, opts.Namespace, pause, opts.Message,
 		)
 	}

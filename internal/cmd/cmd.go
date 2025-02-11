@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -102,10 +105,36 @@ func (f *DefaultRestConfigFactory) GetConfig() (*rest.Config, error) {
 	return ctrl.GetConfig()
 }
 
-func NewWaiter(client *Client, scheme *runtime.Scheme) *wait.Waiter {
-	return wait.NewWaiter(
-		client.client, scheme,
-		wait.WithTimeout(20*time.Second),
-		wait.WithInterval(time.Second),
-	)
+type Waiter interface {
+	WaitForCondition(
+		ctx context.Context,
+		object client.Object,
+		conditionType string,
+		conditionStatus metav1.ConditionStatus,
+		opts ...wait.Option,
+	) error
+}
+
+type DefaultWaiter struct {
+	waiter *wait.Waiter
+}
+
+func (w *DefaultWaiter) WaitForCondition(
+	ctx context.Context,
+	object client.Object,
+	conditionType string,
+	conditionStatus metav1.ConditionStatus,
+	opts ...wait.Option,
+) error {
+	return w.waiter.WaitForCondition(ctx, object, conditionType, conditionStatus, opts...)
+}
+
+func NewDefaultWaiter(client *Client, scheme *runtime.Scheme) *DefaultWaiter {
+	return &DefaultWaiter{
+		waiter: wait.NewWaiter(
+			client.client, scheme,
+			wait.WithTimeout(20*time.Second),
+			wait.WithInterval(time.Second),
+		),
+	}
 }
