@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -106,6 +107,14 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.enableLeaderElection,
 		LeaderElectionID:           "klsdfu452p3.package-operator-lock",
+		// Caution: enabling `LeaderElectionReleaseOnCancel` requires us to stop the binary
+		// right after the manager ends! (Docstring on the field has more information.)
+		LeaderElectionReleaseOnCancel: true,
+		// Recommended Leader Election values
+		// https://github.com/openshift/enhancements/blob/61581dcd985130357d6e4b0e72b87ee35394bf6e/CONVENTIONS.md#handling-kube-apiserver-disruption
+		LeaseDuration: ptr.To(137 * time.Second),
+		RenewDeadline: ptr.To(107 * time.Second),
+		RetryPeriod:   ptr.To(26 * time.Second),
 	})
 	if err != nil {
 		return fmt.Errorf("creating manager: %w", err)
