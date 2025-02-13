@@ -2,12 +2,11 @@ package rolloutcmd
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"package-operator.run/cmd/kubectl-package/util"
 	"package-operator.run/internal/cli"
 	internalcmd "package-operator.run/internal/cmd"
 )
@@ -31,7 +30,7 @@ func NewHistoryCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 	opts.AddFlags(cmd.Flags())
 
 	cmd.RunE = func(cmd *cobra.Command, rawArgs []string) error {
-		args, err := getArgs(rawArgs)
+		args, err := util.ParseResourceName(rawArgs)
 		if err != nil {
 			return err
 		}
@@ -69,39 +68,6 @@ func NewHistoryCmd(clientFactory internalcmd.ClientFactory) *cobra.Command {
 }
 
 var errRevisionsNotFound = errors.New("revision not found")
-
-func getArgs(args []string) (*arguments, error) {
-	switch len(args) {
-	case 1:
-		parts := strings.SplitN(args[0], "/", 2)
-		if len(parts) < 2 {
-			return nil, fmt.Errorf(
-				"%w: arguments in resource/name form must have a single resource and name",
-				internalcmd.ErrInvalidArgs,
-			)
-		}
-
-		return &arguments{
-			Resource: parts[0],
-			Name:     parts[1],
-		}, nil
-	case 2:
-		return &arguments{
-			Resource: args[0],
-			Name:     args[1],
-		}, nil
-	default:
-		return nil, fmt.Errorf(
-			"%w: no less than 1 and no more than 2 arguments may be provided",
-			internalcmd.ErrInvalidArgs,
-		)
-	}
-}
-
-type arguments struct {
-	Resource string
-	Name     string
-}
 
 type options struct {
 	Namespace string
