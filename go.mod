@@ -50,7 +50,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4
 	pkg.package-operator.run/cardboard/modules/oci v0.0.4
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
-	sigs.k8s.io/controller-runtime v0.20.1
+	sigs.k8s.io/controller-runtime v0.20.2
 	sigs.k8s.io/kind v0.26.0
 	sigs.k8s.io/yaml v1.4.0
 )
