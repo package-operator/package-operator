@@ -43,5 +43,6 @@ func constructors() []any {
 		ProvideRepoCmd,
 		ProvideKickstartCmd,
 		ProvideKickstarter,
+		ProvideRolloutRollbackCmd,
 	}
 }

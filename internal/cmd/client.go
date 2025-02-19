@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -125,6 +126,57 @@ func (c *GetPackageConfig) Option(opts ...GetPackageOption) {
 
 type GetPackageOption interface{ ConfigureGetPackage(*GetPackageConfig) }
 
+func (c *Client) PatchClusterObjectDeployment(
+	ctx context.Context, name string, cobs corev1alpha1.ClusterObjectSet,
+) error {
+	obj := &corev1alpha1.ClusterObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		return fmt.Errorf("getting Clusterobjectdeployment object: %w", err)
+	}
+	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
+		byteval, err := getClusterObjectDeploymentPatch(&cobs.Spec)
+		if err != nil {
+			return fmt.Errorf("error while getting patch : %w", err)
+		}
+
+		if err := c.client.Patch(ctx, obj, client.RawPatch(types.JSONPatchType, byteval)); err != nil {
+			return fmt.Errorf("patching Clusterobjectdeployment: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *Client) PatchObjectDeployment(
+	ctx context.Context, name string, ns string, cobs corev1alpha1.ObjectSet,
+) error {
+	obj := &corev1alpha1.ObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+	}
+
+	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		return fmt.Errorf("getting objectdeployment object: %w", err)
+	}
+	if obj.Status.Phase == corev1alpha1.ObjectDeploymentPhaseAvailable {
+		byteval, err := getObjectDeploymentPatch(&cobs.Spec)
+		if err != nil {
+			return fmt.Errorf("error while getting patch : %w", err)
+		}
+
+		if err := c.client.Patch(ctx, obj, client.RawPatch(types.JSONPatchType, byteval)); err != nil {
+			return fmt.Errorf("patching objectdeployment: %w", err)
+		}
+	}
+	return nil
+}
+
 func (c *Client) GetObjectDeployment(
 	ctx context.Context, name string, opts ...GetObjectDeploymentOption,
 ) (*ObjectDeployment, error) {
@@ -150,7 +202,7 @@ func (c *Client) GetObjectDeployment(
 	}
 
 	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		return nil, fmt.Errorf("getting objectdeployment object: %w", err)
+		return nil, fmt.Errorf("getting [Cluster]objectdeployment object: %w", err)
 	}
 
 	return &ObjectDeployment{
@@ -336,6 +388,20 @@ func (s *ObjectSet) HasSucceeded() bool {
 	return meta.IsStatusConditionTrue(s.getConditions(), corev1alpha1.ObjectSetSucceeded)
 }
 
+func (s *ObjectSet) GetClusterObjectSetType() *corev1alpha1.ClusterObjectSet {
+	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
+		return cos
+	}
+	return nil
+}
+
+func (s *ObjectSet) GetObjectSetType() *corev1alpha1.ObjectSet {
+	if cos, ok := s.obj.(*corev1alpha1.ObjectSet); ok {
+		return cos
+	}
+	return nil
+}
+
 func (s *ObjectSet) getConditions() []metav1.Condition {
 	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
 		return cos.Status.Conditions
@@ -416,4 +482,30 @@ func (l ObjectSetList) RenderTable(headers ...string) Table {
 	}
 
 	return table
+}
+
+func getClusterObjectDeploymentPatch(clusterObjSetspec *corev1alpha1.ClusterObjectSetSpec) (
+	[]byte, error,
+) {
+	// Create a patch of the Deployment that replaces spec.template
+	patch, err := json.Marshal([]interface{}{
+		map[string]interface{}{
+			"op":    "replace",
+			"path":  "/spec/template/spec",
+			"value": clusterObjSetspec,
+		},
+	})
+	return patch, err
+}
+
+func getObjectDeploymentPatch(objSetSpec *corev1alpha1.ObjectSetSpec) ([]byte, error) {
+	// Create a patch of the Deployment that replaces spec.template
+	patch, err := json.Marshal([]interface{}{
+		map[string]interface{}{
+			"op":    "replace",
+			"path":  "/spec/template/spec",
+			"value": objSetSpec,
+		},
+	})
+	return patch, err
 }
