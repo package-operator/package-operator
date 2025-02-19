@@ -29,10 +29,6 @@ type ObjectSetTemplate struct {
 type ObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// This field is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// When evaluating object state in code, use .Conditions instead.
-	Phase ObjectDeploymentPhase `json:"phase,omitempty"`
 	// Count of hash collisions of the ObjectDeployment.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 	// Computed TemplateHash.

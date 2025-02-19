@@ -532,7 +532,6 @@ func TestObjectDeployment_Pause(t *testing.T) {
 	// Wait for ObjectDeployment to be available
 	requireCondition(ctx, t, objectDeployment, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue)
 	requireClientGet(ctx, t, objectDeployment.Name, objectDeployment.Namespace, objectDeployment)
-	assert.Equal(t, corev1alpha1.ObjectDeploymentPhaseAvailable, objectDeployment.Status.Phase)
 
 	// A new revision should be created
 	objectSetList = listObjectSetRevisions(ctx, t, objectDeployment)
