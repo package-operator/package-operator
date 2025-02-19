@@ -113,9 +113,6 @@ namespace/test
 							}},
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: "Available",
-					},
 				},
 			},
 			ShouldFail: false,
@@ -149,10 +146,6 @@ namespace/test
 								},
 							}},
 						},
-					},
-
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
 					},
 				},
 			},
