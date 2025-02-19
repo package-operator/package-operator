@@ -24,7 +24,7 @@ require (
 	github.com/openshift/api v0.0.0-20240806000012-e65e6f54eb3c
 	github.com/operator-framework/api v0.29.0
 	github.com/operator-framework/deppy v0.3.0
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.0
 	github.com/pterm/pterm v0.12.80
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
