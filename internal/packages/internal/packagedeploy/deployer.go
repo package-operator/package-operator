@@ -24,6 +24,7 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/constants"
+	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 	"package-operator.run/internal/packages/internal/packagerender"
 	"package-operator.run/internal/packages/internal/packagestructure"
@@ -45,6 +46,8 @@ type PackageDeployer struct {
 
 	deploymentReconciler deploymentReconciler
 	packageValidators    packagevalidation.PackageValidatorList
+
+	imagePrefixOverrides []imageprefix.Override
 }
 
 type (
@@ -59,7 +62,7 @@ type (
 )
 
 // Returns a new namespace-scoped loader for the Package API.
-func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *runtime.Scheme) *PackageDeployer {
+func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *runtime.Scheme, imagePrefixOverrides []imageprefix.Override) *PackageDeployer {
 	return &PackageDeployer{
 		client:         c,
 		uncachedClient: uncachedClient,
@@ -78,11 +81,12 @@ func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *r
 			packagevalidation.DefaultPackageValidators,
 			packagevalidation.PackageScopeValidator(manifests.PackageManifestScopeNamespaced),
 		),
+		imagePrefixOverrides: imagePrefixOverrides,
 	}
 }
 
 // Returns a new cluster-scoped loader for the ClusterPackage API.
-func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *PackageDeployer {
+func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme, imagePrefixOverrides []imageprefix.Override) *PackageDeployer {
 	return &PackageDeployer{
 		client: c,
 		scheme: scheme,
@@ -102,6 +106,7 @@ func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme) *Package
 			packagevalidation.DefaultPackageValidators,
 			packagevalidation.PackageScopeValidator(manifests.PackageManifestScopeCluster),
 		),
+		imagePrefixOverrides: imagePrefixOverrides,
 	}
 }
 
@@ -165,7 +170,7 @@ func (l *PackageDeployer) Deploy(
 			if err != nil {
 				return err
 			}
-			images[packageImage.Name] = resolvedImage
+			images[packageImage.Name] = imageprefix.Replace(resolvedImage, l.imagePrefixOverrides)
 		}
 	}
 

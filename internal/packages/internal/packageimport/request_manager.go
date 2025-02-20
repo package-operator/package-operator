@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/utils"
 )
@@ -17,6 +18,7 @@ import (
 // Has a (semi) in-cluster dependency because it uses `FromRegistryInCluster`.
 type RequestManager struct {
 	registryHostOverrides map[string]string
+	imagePrefixOverrides  []imageprefix.Override
 
 	pullImage    pullImageFn
 	inFlight     map[string][]chan<- response
@@ -40,10 +42,12 @@ type pullImageFn func(
 // Creates a new request manager instance to de-duplicate parallel container image pulls.
 func NewRequestManager(
 	registryHostOverrides map[string]string,
+	imagePrefixOverrides []imageprefix.Override,
 	uncachedClient client.Client, serviceAccount types.NamespacedName,
 ) *RequestManager {
 	return &RequestManager{
 		registryHostOverrides: registryHostOverrides,
+		imagePrefixOverrides:  imagePrefixOverrides,
 		pullImage:             FromRegistryInCluster,
 		inFlight:              make(map[string][]chan<- response),
 		serviceAccount:        serviceAccount,
@@ -58,6 +62,8 @@ func (r *RequestManager) Pull(
 	if err != nil {
 		return nil, err
 	}
+	// TODO: should this happen before or after the registry host override?
+	image = imageprefix.Replace(image, r.imagePrefixOverrides)
 
 	res := <-r.handleRequest(ctx, image)
 

@@ -26,7 +26,7 @@ func TestUnpackReconciler(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil, nil)
 
 	const image = "test123:latest"
 
@@ -67,7 +67,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil, nil)
 
 	const image = "test123:latest"
 
@@ -94,7 +94,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil, nil)
 
 	const image = "test123:latest"
 
@@ -127,7 +127,7 @@ func TestUnpackReconciler_getEnvironment_error(t *testing.T) {
 	ipm := &imagePullerMock{}
 	sink := &environmentSinkMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil, nil)
 
 	ipm.On("Pull", mock.Anything, mock.Anything).Return(&packages.RawPackage{}, nil)
 	sink.On("GetEnvironment", mock.Anything, mock.Anything).Return(&manifests.PackageEnvironment{}, errTest)
@@ -155,7 +155,7 @@ func TestUnpackReconciler_packageDeploy_error(t *testing.T) {
 	ipm := &imagePullerMock{}
 	sink := &environmentSinkMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil, nil)
 
 	ipm.
 		On("Pull", mock.Anything, mock.Anything, mock.Anything).
