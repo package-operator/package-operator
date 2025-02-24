@@ -197,7 +197,6 @@ func (c *GenericPackageController) Reconcile(
 }
 
 func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapters.GenericPackageAccessor) error {
-	pkg.UpdatePhase()
 	if err := c.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
 		return fmt.Errorf("updating Package status: %w", err)
 	}
