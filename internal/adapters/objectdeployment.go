@@ -11,7 +11,6 @@ import (
 
 type ObjectDeploymentAccessor interface {
 	ClientObject() client.Object
-	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetSelector() metav1.LabelSelector
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
@@ -87,10 +86,6 @@ func (a *ObjectDeployment) GetStatusCollisionCount() *int32 {
 
 func (a *ObjectDeployment) ClientObject() client.Object {
 	return &a.ObjectDeployment
-}
-
-func (a *ObjectDeployment) UpdatePhase() {
-	a.Status.Phase = objectDeploymentPhase(a.Status.Conditions)
 }
 
 func (a *ObjectDeployment) GetConditions() *[]metav1.Condition {
@@ -180,10 +175,6 @@ func (a *ClusterObjectDeployment) SetStatusCollisionCount(cc *int32) {
 
 func (a *ClusterObjectDeployment) ClientObject() client.Object {
 	return &a.ClusterObjectDeployment
-}
-
-func (a *ClusterObjectDeployment) UpdatePhase() {
-	a.Status.Phase = objectDeploymentPhase(a.Status.Conditions)
 }
 
 func (a *ClusterObjectDeployment) GetConditions() *[]metav1.Condition {

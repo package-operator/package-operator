@@ -15,10 +15,7 @@ func TestGenericPackage(t *testing.T) {
 	pkg := NewGenericPackage(testScheme)
 
 	assert.NotNil(t, pkg.ClientObject())
-	pkg.UpdatePhase()
 	p := pkg.ClientObject().(*corev1alpha1.Package)
-	assert.Equal(
-		t, corev1alpha1.PackagePhaseUnpacking, p.Status.Phase)
 
 	p.Spec.Image = "test"
 	assert.Equal(t, p.Spec.Image, pkg.GetImage())
@@ -48,10 +45,6 @@ func TestGenericPackage(t *testing.T) {
 
 	p.Status.Revision = int64(2)
 	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())
-
-	var statusPhase corev1alpha1.PackageStatusPhase = "test"
-	pkg.setStatusPhase(statusPhase)
-	assert.Equal(t, statusPhase, p.Status.Phase)
 
 	pkg.SetSpecPaused(true)
 	assert.True(t, pkg.GetSpecPaused())
@@ -64,10 +57,7 @@ func TestGenericClusterPackage(t *testing.T) {
 	pkg := NewGenericClusterPackage(testScheme)
 
 	assert.NotNil(t, pkg.ClientObject())
-	pkg.UpdatePhase()
 	p := pkg.ClientObject().(*corev1alpha1.ClusterPackage)
-	assert.Equal(
-		t, corev1alpha1.PackagePhaseUnpacking, p.Status.Phase)
 
 	p.Spec.Image = "test"
 	assert.Equal(t, p.Spec.Image, pkg.GetImage())
@@ -98,103 +88,10 @@ func TestGenericClusterPackage(t *testing.T) {
 	p.Status.Revision = int64(2)
 	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())
 
-	var statusPhase corev1alpha1.PackageStatusPhase = "test"
-	pkg.setStatusPhase(statusPhase)
-	assert.Equal(t, statusPhase, p.Status.Phase)
-
 	pkg.SetSpecPaused(true)
 	assert.True(t, pkg.GetSpecPaused())
 	pkg.SetSpecPaused(false)
 	assert.False(t, pkg.GetSpecPaused())
-}
-
-func Test_updatePackagePhase(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name       string
-		conditions []metav1.Condition
-		expected   corev1alpha1.PackageStatusPhase
-	}{
-		{
-			name: "Invalid",
-			conditions: []metav1.Condition{
-				{
-					Type:   corev1alpha1.PackageInvalid,
-					Status: metav1.ConditionTrue,
-				},
-			},
-			expected: corev1alpha1.PackagePhaseInvalid,
-		},
-		{
-			name:       "Unpacking",
-			conditions: []metav1.Condition{},
-			expected:   corev1alpha1.PackagePhaseUnpacking,
-		},
-		{
-			name: "Progressing",
-			conditions: []metav1.Condition{
-				{
-					Type:   corev1alpha1.PackageUnpacked,
-					Status: metav1.ConditionTrue,
-				},
-				{
-					Type:   corev1alpha1.PackageProgressing,
-					Status: metav1.ConditionTrue,
-				},
-			},
-			expected: corev1alpha1.PackagePhaseProgressing,
-		},
-		{
-			name: "Available",
-			conditions: []metav1.Condition{
-				{
-					Type:   corev1alpha1.PackageUnpacked,
-					Status: metav1.ConditionTrue,
-				},
-				{
-					Type:   corev1alpha1.PackageAvailable,
-					Status: metav1.ConditionTrue,
-				},
-			},
-			expected: corev1alpha1.PackagePhaseAvailable,
-		},
-		{
-			name: "NotReady",
-			conditions: []metav1.Condition{
-				{
-					Type:   corev1alpha1.PackageUnpacked,
-					Status: metav1.ConditionTrue,
-				},
-			},
-			expected: corev1alpha1.PackagePhaseNotReady,
-		},
-		{
-			name: "Paused",
-			conditions: []metav1.Condition{
-				{
-					Type:   corev1alpha1.PackagePaused,
-					Status: metav1.ConditionTrue,
-				},
-			},
-			expected: corev1alpha1.PackagePaused,
-		},
-	}
-	for i := range tests {
-		test := tests[i]
-
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			pkg := &GenericPackage{
-				Package: corev1alpha1.Package{
-					Status: corev1alpha1.PackageStatus{
-						Conditions: test.conditions,
-					},
-				},
-			}
-			updatePackagePhase(pkg)
-			assert.Equal(t, test.expected, pkg.Package.Status.Phase)
-		})
-	}
 }
 
 func Test_templateContextObjectMetaFromObjectMeta(t *testing.T) {
