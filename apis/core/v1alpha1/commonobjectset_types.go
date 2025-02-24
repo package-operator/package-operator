@@ -119,24 +119,6 @@ const (
 	ObjectSetInTransition = "InTransition"
 )
 
-// ObjectSetStatusPhase defines the status phase of an object set.
-type ObjectSetStatusPhase string
-
-// Well-known ObjectSet Phases for printing a Status in kubectl,
-// see deprecation notice in ObjectSetStatus for details.
-const (
-	// Default phase, when object is created and has not been serviced by an controller.
-	ObjectSetStatusPhasePending ObjectSetStatusPhase = "Pending"
-	// Available maps to Available condition == True, if not overridden by a more specific status below.
-	ObjectSetStatusPhaseAvailable ObjectSetStatusPhase = "Available"
-	// NotReady maps to Available condition == False, if not overridden by a more specific status below.
-	ObjectSetStatusPhaseNotReady ObjectSetStatusPhase = "NotReady"
-	// Paused maps to the Paused condition.
-	ObjectSetStatusPhasePaused ObjectSetStatusPhase = "Paused"
-	// Archived maps to the Archived condition.
-	ObjectSetStatusPhaseArchived ObjectSetStatusPhase = "Archived"
-)
-
 // ObjectSetProbe define how ObjectSets check their children for their status.
 type ObjectSetProbe struct {
 	// Probe configuration parameters.

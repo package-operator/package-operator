@@ -1,7 +1,6 @@
 package objecttemplate
 
 import (
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,7 +14,6 @@ type genericObjectTemplate interface {
 	GetSources() []corev1alpha1.ObjectTemplateSource
 	GetConditions() *[]metav1.Condition
 	GetGeneration() int64
-	UpdatePhase()
 	SetStatusControllerOf(corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() corev1alpha1.ControlledObjectReference
 }
@@ -74,10 +72,6 @@ func (t *GenericObjectTemplate) GetGeneration() int64 {
 	return t.Generation
 }
 
-func (t *GenericObjectTemplate) UpdatePhase() {
-	t.Status.Phase = getObjectTemplatePhase(t)
-}
-
 func (t *GenericObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {
 	t.Status.ControllerOf = controllerOf
 }
@@ -106,19 +100,8 @@ func (t *GenericClusterObjectTemplate) ClientObject() client.Object {
 	return &t.ClusterObjectTemplate
 }
 
-func (t *GenericClusterObjectTemplate) UpdatePhase() {
-	t.Status.Phase = getObjectTemplatePhase(t)
-}
-
 func (t *GenericClusterObjectTemplate) GetGeneration() int64 {
 	return t.Generation
-}
-
-func getObjectTemplatePhase(objectTemplate genericObjectTemplate) corev1alpha1.ObjectTemplateStatusPhase {
-	if meta.IsStatusConditionTrue(*objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid) {
-		return corev1alpha1.ObjectTemplatePhaseError
-	}
-	return corev1alpha1.ObjectTemplatePhaseActive
 }
 
 func (t *GenericClusterObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {

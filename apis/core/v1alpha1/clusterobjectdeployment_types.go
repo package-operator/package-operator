@@ -38,13 +38,13 @@ type ClusterObjectDeploymentStatus struct {
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ClusterObjectDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ClusterObjectDeploymentSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	Spec   ClusterObjectDeploymentSpec   `json:"spec,omitempty"`
 	Status ClusterObjectDeploymentStatus `json:"status,omitempty"`
 }
 
