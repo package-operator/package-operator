@@ -35,9 +35,6 @@ func TestClient_GetObjectset(t *testing.T) {
 						Name:      "test-objset-archived",
 						Namespace: "default",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 			},
 			Assertion:   require.Error,
@@ -51,17 +48,11 @@ func TestClient_GetObjectset(t *testing.T) {
 						Name:      "test-objset-archived",
 						Namespace: "default",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 				&corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-objset-available",
 						Namespace: "default",
-					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
 					},
 				},
 			},
@@ -76,17 +67,11 @@ func TestClient_GetObjectset(t *testing.T) {
 						Name:      "test-objset-archived",
 						Namespace: "default",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 				&corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-objset-available",
 						Namespace: "default",
-					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseNotReady,
 					},
 				},
 			},
@@ -100,17 +85,11 @@ func TestClient_GetObjectset(t *testing.T) {
 						Name:      "test-objset-archived",
 						Namespace: "default",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 				&corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-objset-available",
 						Namespace: "pkomax",
-					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
 					},
 				},
 			},
@@ -158,9 +137,6 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-archived",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 			},
 			Assertion:          require.Error,
@@ -172,16 +148,10 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-archived",
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 				&corev1alpha1.ClusterObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-available",
-					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
 					},
 				},
 			},
@@ -194,16 +164,10 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-archived",
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
-					},
 				},
 				&corev1alpha1.ClusterObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-available",
-					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseNotReady,
 					},
 				},
 			},

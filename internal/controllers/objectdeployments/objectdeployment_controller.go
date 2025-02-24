@@ -134,7 +134,6 @@ func (od *GenericObjectDeploymentController) Reconcile(
 	if err != nil {
 		return res, err
 	}
-	objectDeployment.UpdatePhase()
 	return res, od.client.Status().Update(ctx, objectDeployment.ClientObject())
 }
 

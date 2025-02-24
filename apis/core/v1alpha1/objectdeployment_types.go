@@ -72,8 +72,7 @@ type ObjectDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ObjectDeploymentSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	Spec   ObjectDeploymentSpec   `json:"spec,omitempty"`
 	Status ObjectDeploymentStatus `json:"status,omitempty"`
 }
 

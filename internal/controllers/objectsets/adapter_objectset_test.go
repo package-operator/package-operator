@@ -60,37 +60,6 @@ var tests = []struct {
 	},
 }
 
-func TestGenericObjectSet_UpdateStatusPhase(t *testing.T) {
-	t.Parallel()
-
-	for i := range tests {
-		test := tests[i]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			clusterObjectSet := GenericObjectSet{}
-			clusterObjectSet.Status.Conditions = test.startConditions
-			clusterObjectSet.UpdateStatusPhase()
-			assert.Equal(t, test.expectedStatusPhase, clusterObjectSet.Status.Phase)
-		})
-	}
-}
-
-func TestGenericClusterObjectSet_UpdateStatusPhase(t *testing.T) {
-	t.Parallel()
-
-	for i := range tests {
-		test := tests[i]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			clusterObjectSet := GenericClusterObjectSet{}
-			clusterObjectSet.Status.Conditions = test.startConditions
-			clusterObjectSet.UpdateStatusPhase()
-			assert.Equal(t, test.expectedStatusPhase, clusterObjectSet.Status.Phase)
-		})
-	}
-}
-
 func TestGenericObjectSet(t *testing.T) {
 	t.Parallel()
 

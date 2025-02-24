@@ -35,7 +35,7 @@ func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*cor
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
 	for i := range objreslist.Items {
-		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(
+		if strings.Contains(
 			objreslist.Items[i].Name, name) && (objreslist.Items[i].Namespace == ns) {
 			obj := &corev1alpha1.Package{
 				ObjectMeta: metav1.ObjectMeta{
@@ -66,7 +66,7 @@ func (c *Client) GetClusterObjectset(ctx context.Context, name string,
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
 	for i := range objreslist.Items {
-		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
+		if strings.Contains(objreslist.Items[i].Name, name) {
 			obj = &corev1alpha1.ClusterPackage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objreslist.Items[i].Name,
