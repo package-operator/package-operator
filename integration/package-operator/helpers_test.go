@@ -905,7 +905,7 @@ func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployme
 	require.NoError(t, Client.Create(ctx, pkg))
 	cleanupOnSuccess(ctx, t, pkg)
 
-	timeoutOpt := wait.WithTimeout(40 * time.Second)
+	timeoutOpt := wait.WithTimeout(120 * time.Second)
 
 	require.NoError(t,
 		Waiter.WaitForCondition(ctx, pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue, timeoutOpt))

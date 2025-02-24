@@ -50,13 +50,6 @@ func run(opts components.Options) error {
 		return nil
 	}
 
-	if len(opts.CopyTo) > 0 {
-		if err := runCopyTo(opts.CopyTo); err != nil {
-			return fmt.Errorf("unable to run copy-to: %w", err)
-		}
-		return nil
-	}
-
 	ctx := logr.NewContext(ctrl.SetupSignalHandler(), ctrl.Log)
 	if len(opts.SelfBootstrap) > 0 {
 		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {

@@ -25,7 +25,6 @@ const (
 		"Enabling this will ensure there is only one active controller manager."
 	probeAddrFlagDescription   = "The address the probe endpoint binds to."
 	versionFlagDescription     = "print version information and exit."
-	copyToFlagDescription      = "(internal) copy this binary to a new location"
 	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
 		" to load a package mounted at /package"
 	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
@@ -62,7 +61,6 @@ type Options struct {
 	SelfBootstrap       string
 	SelfBootstrapConfig string
 	PrintVersion        io.Writer
-	CopyTo              string
 
 	// Sub component Settings
 	SubComponentAffinity    *corev1.Affinity
@@ -105,9 +103,6 @@ func ProvideOptions() (opts Options, err error) {
 	flag.BoolVar(
 		&printVersion, "version", false,
 		versionFlagDescription)
-	flag.StringVar(
-		&opts.CopyTo, "copy-to", "",
-		copyToFlagDescription)
 	flag.StringVar(
 		&opts.PackageOperatorPackageImage, "package-operator-package-image",
 		os.Getenv("PKO_PACKAGE_OPERATOR_PACKAGE_IMAGE"),
