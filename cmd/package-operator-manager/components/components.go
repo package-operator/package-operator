@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	"go.uber.org/dig"
-	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -18,7 +17,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -117,17 +115,6 @@ func ProvideManager(
 		RetryPeriod:   ptr.To(26 * time.Second),
 
 		MapperProvider: apiutil.NewDynamicRESTMapper,
-		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				// We create Jobs to unpack package images.
-				// Limit caches to only contain Jobs that we create ourselves.
-				&batchv1.Job{}: {
-					Label: labels.SelectorFromSet(labels.Set{
-						constants.DynamicCacheLabel: "True",
-					}),
-				},
-			},
-		},
 	})
 	if err != nil {
 		return nil, err
