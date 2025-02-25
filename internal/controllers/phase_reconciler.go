@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/csaupgrade"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -316,7 +317,14 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		"namespace", currentObj.GetNamespace(),
 		"name", currentObj.GetName())
 
-	err = r.writer.Delete(ctx, currentObj)
+	// Delete object with preconditions, enforcing that `currentObj` corresponds
+	// to the latest api revision of this object.
+	// This should make it impossible to accidentally delete orphaned children
+	// in case we missed the orphan finalizer.
+	err = r.writer.Delete(ctx, currentObj, client.Preconditions{
+		UID:             ptr.To(currentObj.GetUID()),
+		ResourceVersion: ptr.To(currentObj.GetResourceVersion()),
+	})
 	if err != nil && apimachineryerrors.IsNotFound(err) {
 		return true, nil
 	}
