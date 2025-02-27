@@ -20,18 +20,18 @@ var (
 	errUnpausingPackage = errors.New("unpausing package")
 )
 
-func (c *Client) PackageSetPaused(
-	ctx context.Context, waiter Waiter,
-	name, namespace string, pause bool, message string,
-) error {
+func packageSetPausedNamespaced(
+	ctx context.Context, c client.Client, name,
+	namespace string, pause bool, message string,
+) (client.Object, error) {
 	pkg := &corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
-		return fmt.Errorf("getting package object: %w", err)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
+		return pkg, fmt.Errorf("getting package object: %w", err)
 	}
 
 	pkg.Spec.Paused = pause
@@ -43,6 +43,53 @@ func (c *Client) PackageSetPaused(
 		pkg.Annotations[PauseMessageAnnotation] = message
 	} else {
 		delete(pkg.Annotations, PauseMessageAnnotation)
+	}
+
+	return pkg, nil
+}
+
+func packageSetPausedCluster(
+	ctx context.Context, c client.Client,
+	name string, pause bool, message string,
+) (client.Object, error) {
+	pkg := &corev1alpha1.ClusterPackage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
+		return pkg, fmt.Errorf("getting clusterpackage object: %w", err)
+	}
+
+	pkg.Spec.Paused = pause
+	if pause {
+		if pkg.Annotations == nil {
+			pkg.Annotations = map[string]string{}
+		}
+
+		pkg.Annotations[PauseMessageAnnotation] = message
+	} else {
+		delete(pkg.Annotations, PauseMessageAnnotation)
+	}
+
+	return pkg, nil
+}
+
+func (c *Client) PackageSetPaused(
+	ctx context.Context, waiter Waiter,
+	name, namespace string, pause bool, message string,
+) error {
+	var (
+		pkg client.Object
+		err error
+	)
+	if namespace == "" {
+		pkg, err = packageSetPausedCluster(ctx, c.client, name, pause, message)
+	} else {
+		pkg, err = packageSetPausedNamespaced(ctx, c.client, name, namespace, pause, message)
+	}
+	if err != nil {
+		return err
 	}
 
 	if err := c.client.Update(ctx, pkg); err != nil {
