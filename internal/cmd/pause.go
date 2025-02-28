@@ -10,6 +10,8 @@ import (
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/adapters"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
@@ -22,30 +24,41 @@ var (
 
 func (c *Client) PackageSetPaused(
 	ctx context.Context, waiter Waiter,
-	name, namespace string, pause bool, message string,
+	kind, name, namespace string, pause bool, message string,
 ) error {
-	pkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+	var pkg adapters.GenericPackageAccessor
+	switch kind {
+	case "package":
+		pkg = adapters.NewGenericPackage(c.client.Scheme())
+	case "clusterpackage":
+		pkg = adapters.NewGenericClusterPackage(c.client.Scheme())
+	default:
+		panic("This path must never be taken. Caller has to check for valid kind!")
 	}
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
+
+	if err := c.client.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, pkg.ClientObject()); err != nil {
 		return fmt.Errorf("getting package object: %w", err)
 	}
 
-	pkg.Spec.Paused = pause
+	pkg.SetSpecPaused(pause)
+	pkgObj := pkg.ClientObject()
 	if pause {
-		if pkg.Annotations == nil {
-			pkg.Annotations = map[string]string{}
+		annotations := pkgObj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
 		}
-
-		pkg.Annotations[PauseMessageAnnotation] = message
+		annotations[PauseMessageAnnotation] = message
+		pkgObj.SetAnnotations(annotations)
 	} else {
-		delete(pkg.Annotations, PauseMessageAnnotation)
+		annotations := pkgObj.GetAnnotations()
+		delete(annotations, PauseMessageAnnotation)
+		pkgObj.SetAnnotations(annotations)
 	}
 
-	if err := c.client.Update(ctx, pkg); err != nil {
+	if err := c.client.Update(ctx, pkgObj); err != nil {
 		if pause {
 			return fmt.Errorf("%w: %w", errPausingPackage, err)
 		}
@@ -57,7 +70,7 @@ func (c *Client) PackageSetPaused(
 		conditionType = corev1alpha1.PackageAvailable
 	}
 
-	return waiter.WaitForCondition(ctx, pkg,
+	return waiter.WaitForCondition(ctx, pkgObj,
 		conditionType, metav1.ConditionTrue,
 		wait.WithTimeout(60*time.Second),
 	)
