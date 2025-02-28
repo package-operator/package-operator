@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +19,14 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/testutil"
 )
+
+var testScheme = runtime.NewScheme()
+
+func init() {
+	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+}
 
 func TestPackageSetPaused_NotFound(t *testing.T) {
 	t.Parallel()
@@ -35,12 +45,16 @@ func TestPackageSetPaused_NotFound(t *testing.T) {
 				Resource: tc.resource,
 			}, objectKey.Name)
 
+			clientMock.On("Scheme").Return(testScheme)
 			clientMock.
 				On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1."+tc.resource), mock.Anything).
 				Return(notFoundErr)
 
 			require.ErrorIs(t,
-				c.PackageSetPaused(context.Background(), w, objectKey.Name, objectKey.Namespace, true, "banana"),
+				c.PackageSetPaused(
+					context.Background(), w, strings.ToLower(tc.resource),
+					objectKey.Name, objectKey.Namespace, true, "banana",
+				),
 				notFoundErr,
 			)
 
@@ -64,6 +78,7 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 
 			pkg := newPackage("test-pkg", tc.namespace)
 
+			clientMock.On("Scheme").Return(testScheme)
 			clientMock.
 				On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
 					mock.AnythingOfType("*v1alpha1."+tc.resource), mock.Anything).
@@ -73,11 +88,17 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 				On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1."+tc.resource), mock.Anything).
 				Return(errUpdate)
 
-			err := c.PackageSetPaused(context.Background(), w, pkg.GetName(), pkg.GetNamespace(), true, "banana")
+			err := c.PackageSetPaused(
+				context.Background(), w, strings.ToLower(tc.resource),
+				pkg.GetName(), pkg.GetNamespace(), true, "banana",
+			)
 			require.ErrorIs(t, err, errPausingPackage)
 			require.ErrorIs(t, err, errUpdate)
 
-			err = c.PackageSetPaused(context.Background(), w, pkg.GetName(), pkg.GetNamespace(), false, "banana")
+			err = c.PackageSetPaused(
+				context.Background(), w, strings.ToLower(tc.resource),
+				pkg.GetName(), pkg.GetNamespace(), false, "banana",
+			)
 			require.ErrorIs(t, err, errUnpausingPackage)
 			require.ErrorIs(t, err, errUpdate)
 
@@ -94,9 +115,14 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 
 	pkg := newPackage("test-pkg", "test-pkg-ns")
 
+	clientMock.On("Scheme").Return(testScheme)
 	clientMock.
 		On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
 			mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			pkgObj := args.Get(2).(*corev1alpha1.Package)
+			*pkgObj = *pkg.(*corev1alpha1.Package)
+		}).
 		Return(nil)
 
 	var updatedPkg *corev1alpha1.Package
@@ -134,7 +160,7 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 
 			testMsg := "test message"
 			require.NoError(t, c.PackageSetPaused(
-				context.Background(), w, pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
+				context.Background(), w, "package", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)
 			assert.Equal(t, pkg.GetNamespace(), updatedPkg.Namespace)
@@ -160,9 +186,14 @@ func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 
 	pkg := newPackage("test-pkg", "")
 
+	clientMock.On("Scheme").Return(testScheme)
 	clientMock.
 		On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
 			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+		Run(func(args mock.Arguments) {
+			pkgObj := args.Get(2).(*corev1alpha1.ClusterPackage)
+			*pkgObj = *pkg.(*corev1alpha1.ClusterPackage)
+		}).
 		Return(nil)
 
 	var updatedPkg *corev1alpha1.ClusterPackage
@@ -200,7 +231,7 @@ func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 
 			testMsg := "test message"
 			require.NoError(t, c.PackageSetPaused(
-				context.Background(), w, pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
+				context.Background(), w, "clusterpackage", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)
 			assert.Equal(t, pkg.GetNamespace(), updatedPkg.Namespace)

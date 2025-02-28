@@ -10,6 +10,8 @@ import (
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/adapters"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
@@ -20,79 +22,43 @@ var (
 	errUnpausingPackage = errors.New("unpausing package")
 )
 
-func packageSetPausedNamespaced(
-	ctx context.Context, c client.Client, name,
-	namespace string, pause bool, message string,
-) (client.Object, error) {
-	pkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	if err := c.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
-		return pkg, fmt.Errorf("getting package object: %w", err)
-	}
-
-	pkg.Spec.Paused = pause
-	if pause {
-		if pkg.Annotations == nil {
-			pkg.Annotations = map[string]string{}
-		}
-
-		pkg.Annotations[PauseMessageAnnotation] = message
-	} else {
-		delete(pkg.Annotations, PauseMessageAnnotation)
-	}
-
-	return pkg, nil
-}
-
-func packageSetPausedCluster(
-	ctx context.Context, c client.Client,
-	name string, pause bool, message string,
-) (client.Object, error) {
-	pkg := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	if err := c.Get(ctx, client.ObjectKeyFromObject(pkg), pkg); err != nil {
-		return pkg, fmt.Errorf("getting clusterpackage object: %w", err)
-	}
-
-	pkg.Spec.Paused = pause
-	if pause {
-		if pkg.Annotations == nil {
-			pkg.Annotations = map[string]string{}
-		}
-
-		pkg.Annotations[PauseMessageAnnotation] = message
-	} else {
-		delete(pkg.Annotations, PauseMessageAnnotation)
-	}
-
-	return pkg, nil
-}
-
 func (c *Client) PackageSetPaused(
 	ctx context.Context, waiter Waiter,
-	name, namespace string, pause bool, message string,
+	kind, name, namespace string, pause bool, message string,
 ) error {
-	var (
-		pkg client.Object
-		err error
-	)
-	if namespace == "" {
-		pkg, err = packageSetPausedCluster(ctx, c.client, name, pause, message)
-	} else {
-		pkg, err = packageSetPausedNamespaced(ctx, c.client, name, namespace, pause, message)
-	}
-	if err != nil {
-		return err
+	var pkg adapters.GenericPackageAccessor
+	switch kind {
+	case "package":
+		pkg = adapters.NewGenericPackage(c.client.Scheme())
+	case "clusterpackage":
+		pkg = adapters.NewGenericClusterPackage(c.client.Scheme())
+	default:
+		panic("This path must never be taken. Caller has to check for valid kind!")
 	}
 
-	if err := c.client.Update(ctx, pkg); err != nil {
+	if err := c.client.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}, pkg.ClientObject()); err != nil {
+		return fmt.Errorf("getting package object: %w", err)
+	}
+
+	pkg.SetSpecPaused(pause)
+	pkgObj := pkg.ClientObject()
+	if pause {
+		annotations := pkgObj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[PauseMessageAnnotation] = message
+		pkgObj.SetAnnotations(annotations)
+	} else {
+		annotations := pkgObj.GetAnnotations()
+		delete(annotations, PauseMessageAnnotation)
+		pkgObj.SetAnnotations(annotations)
+	}
+
+	if err := c.client.Update(ctx, pkgObj); err != nil {
 		if pause {
 			return fmt.Errorf("%w: %w", errPausingPackage, err)
 		}
@@ -104,7 +70,7 @@ func (c *Client) PackageSetPaused(
 		conditionType = corev1alpha1.PackageAvailable
 	}
 
-	return waiter.WaitForCondition(ctx, pkg,
+	return waiter.WaitForCondition(ctx, pkgObj,
 		conditionType, metav1.ConditionTrue,
 		wait.WithTimeout(60*time.Second),
 	)

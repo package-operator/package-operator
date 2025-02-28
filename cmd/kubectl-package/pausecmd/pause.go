@@ -44,7 +44,8 @@ func NewGenericPauseCmd(clientFactory internalcmd.ClientFactory, pause bool) *co
 			return err
 		}
 
-		switch strings.ToLower(args.Resource) {
+		kind := strings.ToLower(args.Resource)
+		switch kind {
 		case "package":
 			if opts.Namespace == "" {
 				opts.Namespace = "default"
@@ -55,7 +56,7 @@ func NewGenericPauseCmd(clientFactory internalcmd.ClientFactory, pause bool) *co
 		}
 
 		return client.PackageSetPaused(cmd.Context(), internalcmd.NewDefaultWaiter(client, scheme),
-			args.Name, opts.Namespace, pause, opts.Message,
+			kind, args.Name, opts.Namespace, pause, opts.Message,
 		)
 	}
 
