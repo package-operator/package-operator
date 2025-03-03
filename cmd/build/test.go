@@ -32,7 +32,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 
 	var f string
 	if len(filter) > 0 {
-		f = "-run " + filter
+		f = fmt.Sprintf(`-run "%s"`, filter)
 	}
 
 	cl, err := cluster.Clients()
@@ -85,7 +85,9 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	// Deploy the secret with the new kubeconfig.
-	_ = cl.CtrlClient.Delete(ctx, secret)
+	if err := client.IgnoreNotFound(cl.CtrlClient.Delete(ctx, secret)); err != nil {
+		return fmt.Errorf("deleting kubeconfig secret: %w", err)
+	}
 	if err := cl.CtrlClient.Create(ctx, secret); err != nil {
 		return fmt.Errorf("deploy kubeconfig secret: %w", err)
 	}
