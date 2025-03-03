@@ -154,7 +154,7 @@ var _ = ginkgo.DescribeTable("tree subcommand",
 	ginkgo.Entry("using '--config-path' flag with invalid path",
 		subCommandTestCase{
 			Args: []string{
-				"--config-path", "dne",
+				"--config-path", "aoigda-aoishasoiah",
 				sourcePathFixture("valid_with_config"),
 			},
 			ExpectedExitCode: 1,
@@ -166,7 +166,7 @@ var _ = ginkgo.DescribeTable("tree subcommand",
 	ginkgo.Entry("using '--config-path' flag with invalid path in multi component package",
 		subCommandTestCase{
 			Args: []string{
-				"--config-path", "dne",
+				"--config-path", "aoigda-apsiodynkld",
 				sourcePathFixture("valid_with_config_multi"),
 			},
 			ExpectedExitCode: 1,
