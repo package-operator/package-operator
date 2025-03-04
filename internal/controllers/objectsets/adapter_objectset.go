@@ -11,7 +11,6 @@ import (
 
 type genericObjectSet interface {
 	ClientObject() client.Object
-	UpdateStatusPhase()
 	GetConditions() *[]metav1.Condition
 	IsArchived() bool
 	IsPaused() bool
@@ -69,10 +68,6 @@ type GenericObjectSet struct {
 
 func (a *GenericObjectSet) ClientObject() client.Object {
 	return &a.ObjectSet
-}
-
-func (a *GenericObjectSet) UpdateStatusPhase() {
-	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericObjectSet) GetConditions() *[]metav1.Condition {
@@ -137,10 +132,6 @@ type GenericClusterObjectSet struct {
 
 func (a *GenericClusterObjectSet) ClientObject() client.Object {
 	return &a.ClusterObjectSet
-}
-
-func (a *GenericClusterObjectSet) UpdateStatusPhase() {
-	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericClusterObjectSet) GetConditions() *[]metav1.Condition {
