@@ -1,6 +1,7 @@
 package components
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,9 +37,20 @@ func TestUncachedClient(t *testing.T) {
 }
 
 func TestProvideRestConfig(t *testing.T) {
-	t.Setenv("KUBECONFIG", "")
+	// Create temporary empty kubeconfig file and point KUBECONFIG to it.
+	// Otherise this test can accidentally pick up one of:
+	// - current value of KUBECONFIG
+	// - default kubeconfig at ~/.kube/config
+	f, err := os.CreateTemp("", "empty-kubeconfig-")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	defer func() {
+		require.NoError(t, os.Remove(f.Name()))
+	}()
 
-	_, err := ProvideRestConfig()
+	t.Setenv("KUBECONFIG", f.Name())
+
+	_, err = ProvideRestConfig()
 	require.EqualError(t, err, "invalid configuration: no configuration has been provided"+
 		", try setting KUBERNETES_MASTER environment variable")
 }
