@@ -919,3 +919,17 @@ func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployme
 		Name: pkg.GetName(), Namespace: pkg.GetNamespace(),
 	}, objectDeployment))
 }
+
+func requireCondition(
+	ctx context.Context, t *testing.T, object client.Object,
+	conditionType string, conditionStatus metav1.ConditionStatus,
+) {
+	t.Helper()
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx,
+			object, conditionType, conditionStatus,
+			wait.WithTimeout(60*time.Second),
+		),
+	)
+}
