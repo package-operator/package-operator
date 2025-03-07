@@ -1037,3 +1037,17 @@ func clusterPackageTemplate(name string) client.Object {
 		Spec:       spec,
 	}
 }
+
+func requireCondition(
+	ctx context.Context, t *testing.T, object client.Object,
+	conditionType string, conditionStatus metav1.ConditionStatus,
+) {
+	t.Helper()
+
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx,
+			object, conditionType, conditionStatus,
+			wait.WithTimeout(60*time.Second),
+		),
+	)
+}

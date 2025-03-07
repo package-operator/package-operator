@@ -19,6 +19,7 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -169,6 +170,115 @@ func TestHyperShift(t *testing.T) {
 		assert.Equal(t, testNodeSelector, hcDeployment.Spec.Template.Spec.NodeSelector,
 			"hosted-cluster deployment should have the correct nodeSelector")
 	})
+}
+
+func TestObjectSetPhaseImmutability(t *testing.T) {
+	namespace := "default-pko-hs-hc"
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	rpPkg := &corev1alpha1.Package{}
+	err := Client.Get(ctx, client.ObjectKey{Name: "remote-phase", Namespace: namespace}, rpPkg)
+	require.NoError(t, err)
+
+	// Wait for roll-out of remote phase package
+	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
+	// few seconds for leader election.
+	err = Waiter.WaitForCondition(
+		ctx, rpPkg, corev1alpha1.PackageAvailable,
+		metav1.ConditionTrue, wait.WithTimeout(300*time.Second),
+	)
+	require.NoError(t, err)
+
+	cm4 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "cm-4",
+			Labels:      map[string]string{"test.package-operator.run/test": "True"},
+			Annotations: map[string]string{"name": "cm-4"},
+		},
+		Data: map[string]string{
+			"banana": "bread",
+		},
+	}
+	cmGVK, err := apiutil.GVKForObject(cm4, Scheme)
+	require.NoError(t, err)
+	cm4.SetGroupVersionKind(cmGVK)
+
+	cm5 := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cm-5",
+		},
+	}
+	cm5.SetGroupVersionKind(cmGVK)
+
+	objectSet, err := defaultObjectSet(cm4, cm5, namespace, "hosted-cluster")
+	require.NoError(t, err)
+
+	require.NoError(t, Client.Create(ctx, objectSet))
+	cleanupOnSuccess(ctx, t, objectSet)
+
+	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+	objectSetPhase := &corev1alpha1.ObjectSetPhase{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectSet.Name + "-phase-1",
+			Namespace: namespace,
+		},
+	}
+	require.NoError(t,
+		Client.Get(ctx, client.ObjectKeyFromObject(objectSetPhase), objectSetPhase),
+	)
+
+	for _, tc := range []struct {
+		field  string
+		modify func(*corev1alpha1.ObjectSetPhase)
+	}{
+		{
+			field: "revision",
+			modify: func(phase *corev1alpha1.ObjectSetPhase) {
+				phase.Spec.Revision += 1
+			},
+		},
+		{
+			field: "availabilityProbes",
+			modify: func(phase *corev1alpha1.ObjectSetPhase) {
+				phase.Spec.AvailabilityProbes =
+					append(phase.Spec.AvailabilityProbes, corev1alpha1.ObjectSetProbe{
+						Probes: []corev1alpha1.Probe{{
+							Condition: &corev1alpha1.ProbeConditionSpec{
+								Type:   "Available",
+								Status: "True",
+							},
+						}},
+						Selector: corev1alpha1.ProbeSelector{
+							Kind: &corev1alpha1.PackageProbeKindSpec{
+								Group: "v1",
+								Kind:  "ConfigMap",
+							},
+						},
+					})
+			},
+		},
+		{
+			field: "previous",
+			modify: func(phase *corev1alpha1.ObjectSetPhase) {
+				phase.Spec.Previous = []corev1alpha1.PreviousRevisionReference{{
+					Name: "test-previous",
+				}}
+			},
+		},
+		{
+			field: "objects",
+			modify: func(phase *corev1alpha1.ObjectSetPhase) {
+				phase.Spec.Objects = []corev1alpha1.ObjectSetObject{}
+			},
+		},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			newObjectSetPhase := objectSetPhase.DeepCopy()
+			tc.modify(newObjectSetPhase)
+			require.ErrorContains(t, Client.Update(ctx, newObjectSetPhase), tc.field+" is immutable")
+		})
+	}
 }
 
 func hostedClusterHandlers() (client.Client, *wait.Waiter, error) {
