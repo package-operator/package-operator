@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -22,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -727,20 +725,6 @@ func listObjectSetRevisions(
 	require.NoError(t, err)
 
 	return objectSetList
-}
-
-func requireCondition(
-	ctx context.Context, t *testing.T, object client.Object,
-	conditionType string, conditionStatus metav1.ConditionStatus,
-) {
-	t.Helper()
-
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx,
-			object, conditionType, conditionStatus,
-			wait.WithTimeout(60*time.Second),
-		),
-	)
 }
 
 func requireClientGet(ctx context.Context, t *testing.T, name, namespace string, object client.Object) {
