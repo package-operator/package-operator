@@ -457,8 +457,8 @@ pkg.package-operator.run/cardboard/modules/oci v0.0.4 h1:qXVzGZjv/d0T66eVT2C1YS+
 pkg.package-operator.run/cardboard/modules/oci v0.0.4/go.mod h1:lbxXXbU5W8rGmYrwxsnKKFbGTKUGowa1lB7Cl/IAJkY=
 pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339 h1:FUmtfBZwLMkaMuY8veNgKANjWO+f2t4TYA7SuMRACnQ=
 pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339/go.mod h1:Bt5XABGYPxvkX0zK0OKOvGqBRbJ+aumZJS3OjXjBtOc=
-sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 h1:jpcvIRr3GLoUoEKRkHKSmGjxb6lWwrBlJsXc+eUYQHM=
-sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
+sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.3 h1:PouPS/YVHiGXLJTXH/mtNybmnuSvjeh92wUkqIU4uCk=
+sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.3/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/controller-runtime v0.20.2 h1:/439OZVxoEc02psi1h4QO3bHzTgu49bb347Xp4gW1pc=
 sigs.k8s.io/controller-runtime v0.20.2/go.mod h1:xg2XB0K5ShQzAgsoujxuKN4LNXR2LfwwHsPj7Iaw+XY=
 sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 h1:/Rv+M11QRah1itp8VhT6HoVx1Ray9eB4DBr+K+/sCJ8=
