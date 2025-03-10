@@ -57,7 +57,8 @@ func NewPackageController(
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
-		c, uncachedClient, log, scheme, imagePuller, packages.NewPackageDeployer(c, uncachedClient, scheme, imagePrefixOverrides),
+		c, uncachedClient, log, scheme, imagePuller,
+		packages.NewPackageDeployer(c, uncachedClient, scheme, imagePrefixOverrides),
 		metricsRecorder, packageHashModifier, imagePrefixOverrides,
 	)
 }

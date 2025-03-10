@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -42,6 +43,7 @@ type initializer struct {
 	packageOperatorNamespace string
 	selfBootstrapImage       string
 	selfConfig               string
+	imagePrefixOverrides     string
 }
 
 func newInitializer(
@@ -54,6 +56,7 @@ func newInitializer(
 	packageOperatorNamespace string,
 	selfBootstrapImage string,
 	selfConfig string,
+	imagePrefixOverrides string,
 ) *initializer {
 	return &initializer{
 		client:    client,
@@ -64,6 +67,7 @@ func newInitializer(
 		packageOperatorNamespace: packageOperatorNamespace,
 		selfBootstrapImage:       selfBootstrapImage,
 		selfConfig:               selfConfig,
+		imagePrefixOverrides:     imagePrefixOverrides,
 	}
 }
 
@@ -220,6 +224,18 @@ func (init *initializer) config() *runtime.RawExtension {
 		packageConfig = &runtime.RawExtension{
 			Raw: []byte(init.selfConfig),
 		}
+	}
+	if len(init.imagePrefixOverrides) > 0 {
+		rawConfig := make(map[string]any)
+		if err := json.Unmarshal(packageConfig.Raw, &rawConfig); err != nil {
+			panic(err)
+		}
+		rawConfig["imagePrefixOverrides"] = init.imagePrefixOverrides
+		jsonConfig, err := json.Marshal(&rawConfig)
+		if err != nil {
+			panic(err)
+		}
+		packageConfig.Raw = jsonConfig
 	}
 	return packageConfig
 }

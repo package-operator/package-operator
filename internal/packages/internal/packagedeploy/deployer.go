@@ -62,7 +62,11 @@ type (
 )
 
 // Returns a new namespace-scoped loader for the Package API.
-func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *runtime.Scheme, imagePrefixOverrides []imageprefix.Override) *PackageDeployer {
+func NewPackageDeployer(
+	c client.Client, uncachedClient client.Client,
+	scheme *runtime.Scheme,
+	imagePrefixOverrides []imageprefix.Override,
+) *PackageDeployer {
 	return &PackageDeployer{
 		client:         c,
 		uncachedClient: uncachedClient,
@@ -86,7 +90,11 @@ func NewPackageDeployer(c client.Client, uncachedClient client.Client, scheme *r
 }
 
 // Returns a new cluster-scoped loader for the ClusterPackage API.
-func NewClusterPackageDeployer(c client.Client, scheme *runtime.Scheme, imagePrefixOverrides []imageprefix.Override) *PackageDeployer {
+func NewClusterPackageDeployer(
+	c client.Client,
+	scheme *runtime.Scheme,
+	imagePrefixOverrides []imageprefix.Override,
+) *PackageDeployer {
 	return &PackageDeployer{
 		client: c,
 		scheme: scheme,
