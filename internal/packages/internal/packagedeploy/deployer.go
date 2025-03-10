@@ -174,11 +174,13 @@ func (l *PackageDeployer) Deploy(
 	images := map[string]string{}
 	if pkg.ManifestLock != nil {
 		for _, packageImage := range pkg.ManifestLock.Spec.Images {
-			resolvedImage, err := ImageWithDigest(packageImage.Image, packageImage.Digest)
+			replacedImage := imageprefix.Replace(packageImage.Image, l.imagePrefixOverrides)
+
+			resolvedImage, err := ImageWithDigest(replacedImage, packageImage.Digest)
 			if err != nil {
 				return err
 			}
-			images[packageImage.Name] = imageprefix.Replace(resolvedImage, l.imagePrefixOverrides)
+			images[packageImage.Name] = resolvedImage
 		}
 	}
 

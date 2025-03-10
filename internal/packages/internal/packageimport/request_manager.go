@@ -58,12 +58,11 @@ func NewRequestManager(
 func (r *RequestManager) Pull(
 	ctx context.Context, image string,
 ) (*packagetypes.RawPackage, error) {
+	image = imageprefix.Replace(image, r.imagePrefixOverrides)
 	image, err := r.applyOverride(image)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: should this happen before or after the registry host override?
-	image = imageprefix.Replace(image, r.imagePrefixOverrides)
 
 	res := <-r.handleRequest(ctx, image)
 
