@@ -110,29 +110,6 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 	t.Parallel()
 
-	clientMock := testutil.NewClient()
-	c := Client{client: clientMock}
-
-	pkg := newPackage("test-pkg", "test-pkg-ns")
-
-	clientMock.On("Scheme").Return(testScheme)
-	clientMock.
-		On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
-			mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			pkgObj := args.Get(2).(*corev1alpha1.Package)
-			*pkgObj = *pkg.(*corev1alpha1.Package)
-		}).
-		Return(nil)
-
-	var updatedPkg *corev1alpha1.Package
-	clientMock.
-		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			updatedPkg = args.Get(1).(*corev1alpha1.Package)
-		}).
-		Return(nil)
-
 	for _, tc := range []struct {
 		testName      string
 		pause         bool
@@ -151,6 +128,29 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 	} {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
+
+			clientMock := testutil.NewClient()
+			c := Client{client: clientMock}
+
+			pkg := newPackage("test-pkg", "test-pkg-ns")
+
+			clientMock.On("Scheme").Return(testScheme)
+			clientMock.
+				On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
+					mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+				Run(func(args mock.Arguments) {
+					pkgObj := args.Get(2).(*corev1alpha1.Package)
+					*pkgObj = *pkg.(*corev1alpha1.Package)
+				}).
+				Return(nil)
+
+			var updatedPkg *corev1alpha1.Package
+			clientMock.
+				On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
+				Run(func(args mock.Arguments) {
+					updatedPkg = args.Get(1).(*corev1alpha1.Package)
+				}).
+				Return(nil)
 
 			w := &waiterMock{}
 			w.On(
@@ -181,29 +181,6 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 	t.Parallel()
 
-	clientMock := testutil.NewClient()
-	c := Client{client: clientMock}
-
-	pkg := newPackage("test-pkg", "")
-
-	clientMock.On("Scheme").Return(testScheme)
-	clientMock.
-		On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
-			mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			pkgObj := args.Get(2).(*corev1alpha1.ClusterPackage)
-			*pkgObj = *pkg.(*corev1alpha1.ClusterPackage)
-		}).
-		Return(nil)
-
-	var updatedPkg *corev1alpha1.ClusterPackage
-	clientMock.
-		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
-		Run(func(args mock.Arguments) {
-			updatedPkg = args.Get(1).(*corev1alpha1.ClusterPackage)
-		}).
-		Return(nil)
-
 	for _, tc := range []struct {
 		testName      string
 		pause         bool
@@ -222,6 +199,29 @@ func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 	} {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
+
+			clientMock := testutil.NewClient()
+			c := Client{client: clientMock}
+
+			pkg := newPackage("test-pkg", "")
+
+			clientMock.On("Scheme").Return(testScheme)
+			clientMock.
+				On("Get", mock.Anything, client.ObjectKeyFromObject(pkg),
+					mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+				Run(func(args mock.Arguments) {
+					pkgObj := args.Get(2).(*corev1alpha1.ClusterPackage)
+					*pkgObj = *pkg.(*corev1alpha1.ClusterPackage)
+				}).
+				Return(nil)
+
+			var updatedPkg *corev1alpha1.ClusterPackage
+			clientMock.
+				On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
+				Run(func(args mock.Arguments) {
+					updatedPkg = args.Get(1).(*corev1alpha1.ClusterPackage)
+				}).
+				Return(nil)
 
 			w := &waiterMock{}
 			w.On(
