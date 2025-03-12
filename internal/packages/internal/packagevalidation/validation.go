@@ -2,7 +2,6 @@ package packagevalidation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -34,7 +33,14 @@ func (l PackageValidatorList) ValidatePackage(ctx context.Context, pkg *packaget
 			errs = append(errs, err)
 		}
 	}
-	return errors.Join(errs...)
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return joinErrorsReadable(true, errs...)
+	}
 }
 
 // Validates PackageManifests and PackageManifestLock.
