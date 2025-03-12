@@ -115,7 +115,7 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 			assert.InDelta(t,
 				test.expectedAvailability,
 				testutil.ToFloat64(recorder.packageAvailability.WithLabelValues(
-					test.pkg.GetName(), test.pkg.GetNamespace(),
+					test.pkg.GetName(), test.pkg.GetNamespace(), test.pkg.Spec.Image,
 				)),
 				0.01,
 			)
