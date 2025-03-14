@@ -46,7 +46,7 @@ func NewRecorder() *Recorder {
 		prometheus.GaugeOpts{
 			Name: "package_operator_package_availability",
 			Help: "Package availability 0=Unavailable,1=Available,2=Unknown.",
-		}, []string{"pko_name", "pko_namespace"},
+		}, []string{"pko_name", "pko_namespace", "image"},
 	)
 	packageCreated := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -107,6 +107,7 @@ func (r *Recorder) Register() {
 
 type GenericPackage interface {
 	ClientObject() client.Object
+	GetImage() string
 	GetConditions() *[]metav1.Condition
 	GetStatusRevision() int64
 }
@@ -135,9 +136,20 @@ func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 		}
 	}
 
+	// Delete all old availability timeseries for this package first.
+	// This is needed because changes to the image label will introduce a new timeseries
+	// and we only want 1 timeseries for any given package.
+	// This is racy, because scraping could happen in between and result in 0 timeseries.
+	// OLM does the same though:
+	// https://github.com/operator-framework/operator-lifecycle-manager/blob/abd99636e779f0bfbce31225e377d6bfd4fa3b9b/pkg/metrics/metrics.go#L302-L324
+	r.packageAvailability.DeletePartialMatch(prometheus.Labels{
+		"pko_name":      obj.GetName(),
+		"pko_namespace": obj.GetNamespace(),
+	})
 	r.packageAvailability.WithLabelValues(
-		obj.GetName(), obj.GetNamespace(),
+		obj.GetName(), obj.GetNamespace(), pkg.GetImage(),
 	).Set(float64(healthStatus))
+
 	r.packageCreated.WithLabelValues(
 		obj.GetName(), obj.GetNamespace(),
 	).Set(float64(obj.GetCreationTimestamp().Unix()))

@@ -115,7 +115,7 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 			assert.InDelta(t,
 				test.expectedAvailability,
 				testutil.ToFloat64(recorder.packageAvailability.WithLabelValues(
-					test.pkg.GetName(), test.pkg.GetNamespace(),
+					test.pkg.GetName(), test.pkg.GetNamespace(), test.pkg.Spec.Image,
 				)),
 				0.01,
 			)
@@ -134,6 +134,43 @@ func TestRecorder_RecordPackageMetrics(t *testing.T) {
 				0.01,
 			)
 		})
+	}
+}
+
+// Ensures that only a single package availability timeseries is exposed after image changes.
+func TestRecorder_RecordPackageMetrics_updateImage(t *testing.T) {
+	t.Parallel()
+
+	newPackage := func(image string) *adapters.GenericPackage {
+		return &adapters.GenericPackage{
+			Package: corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test",
+					Namespace:         "test-ns",
+					CreationTimestamp: metav1.Time{Time: time.Date(2022, 5, 27, 15, 37, 19, 0, time.UTC)},
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image: image,
+				},
+			},
+		}
+	}
+
+	recorder := NewRecorder()
+
+	for _, image := range []string{
+		"image:a",
+		"image:b",
+		"image:c",
+	} {
+		pkg := newPackage(image)
+		recorder.RecordPackageMetrics(pkg)
+
+		// Assert that only a single timeseries is present. (Timeseries with a previous image label must be dropped.)
+		assert.Equal(t, 1, testutil.CollectAndCount(recorder.packageAvailability))
+		// Assert that the present timeseries is using the correct up-to-date label.
+		assert.Equal(t, 1, testutil.CollectAndCount(
+			recorder.packageAvailability.WithLabelValues(pkg.Name, pkg.Namespace, pkg.Spec.Image)))
 	}
 }
 
