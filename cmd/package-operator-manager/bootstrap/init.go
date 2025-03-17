@@ -114,7 +114,7 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 
 	log := logr.FromContextOrDiscard(ctx)
 	if bootstrapClusterPackage.Spec.Image != existingClusterPackage.Spec.Image {
-		log.Info("image has been updated",
+		log.V(1).Info("image has been updated",
 			"from", existingClusterPackage.Spec.Image,
 			"to", bootstrapClusterPackage.Spec.Image)
 
@@ -129,7 +129,7 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 
 	if !equality.Semantic.DeepEqual(
 		bootstrapClusterPackage.Spec, existingClusterPackage.Spec) {
-		log.Info("patching PackageOperator ClusterPackage")
+		log.V(1).Info("patching PackageOperator ClusterPackage")
 		if err := init.client.Patch(ctx, bootstrapClusterPackage, client.Merge); err != nil {
 			return false, err
 		}
@@ -141,10 +141,10 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 	}
 	if isAvailable {
 		// PKO is available. Skip bootstrap.
-		log.Info("PackageOperator is available")
+		log.V(1).Info("PackageOperator is available")
 		return false, nil
 	}
-	log.Info("PackageOperator is NOT available")
+	log.V(1).Info("PackageOperator is NOT available")
 	return true, nil
 }
 
@@ -253,7 +253,7 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		labels[constants.DynamicCacheLabel] = "True"
 		crd.SetLabels(labels)
 
-		log.Info("ensuring CRD", "name", crd.GetName())
+		log.V(1).Info("ensuring CRD", "name", crd.GetName())
 		if err := init.client.Create(ctx, &crd); err != nil &&
 			!errors.IsAlreadyExists(err) {
 			return err

@@ -50,7 +50,7 @@ func (h *hypershift) Start(ctx context.Context) error {
 		_, err := h.mapper.RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
 		switch {
 		case err == nil:
-			h.log.Info("detected hypershift installation after setup completed, restarting operator")
+			h.log.V(1).Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
 		case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
 			discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):

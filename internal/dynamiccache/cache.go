@@ -351,7 +351,7 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 			Kind:    gvk.Kind + "List",
 		})
 		if err := c.list(ctx, listObj); err != nil {
-			log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
+			log.V(0).Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
 			continue
 		}
 		c.recorder.RecordDynamicCacheObjects(gvk, len(listObj.Items))
