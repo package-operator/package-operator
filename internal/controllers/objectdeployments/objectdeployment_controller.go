@@ -113,7 +113,7 @@ func (od *GenericObjectDeploymentController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := od.log.WithValues("ObjectDeployment", req.String())
-	defer log.Info("reconciled")
+	defer log.V(1).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 	objectDeployment := od.newObjectDeployment(od.scheme)
 	if err := od.client.Get(ctx, req.NamespacedName, objectDeployment.ClientObject()); err != nil {

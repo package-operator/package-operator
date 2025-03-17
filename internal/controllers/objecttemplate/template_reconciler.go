@@ -157,7 +157,7 @@ func (r *templateReconciler) getValuesFromSources(
 			return false, err
 		}
 		if !found {
-			log.Info(fmt.Sprintf("optional source not found, retry in %s", defaultMissingResourceRetryInterval),
+			log.V(1).Info(fmt.Sprintf("optional source not found, retry in %s", defaultMissingResourceRetryInterval),
 				"source", fmt.Sprintf("%s %s/%s", src.Kind, src.Namespace, src.Name))
 			retryLater = true
 			continue

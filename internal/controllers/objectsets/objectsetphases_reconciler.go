@@ -272,7 +272,7 @@ func (r *objectSetPhasesReconciler) Teardown(
 		} else if !cleanupDone {
 			return false, nil
 		}
-		log.Info("cleanup done", "phase", phase.Name)
+		log.V(1).Info("cleanup done", "phase", phase.Name)
 	}
 
 	return true, nil
