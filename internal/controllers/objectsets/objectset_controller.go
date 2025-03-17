@@ -165,7 +165,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 			c.dynamicCache.Source(
 				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.Info(
+					c.log.V(1).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),
@@ -180,7 +180,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 
 func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := c.log.WithValues("ObjectSet", req.String())
-	defer log.Info("reconciled")
+	defer log.V(1).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
 	objectSet := c.newObjectSet(c.scheme)

@@ -41,7 +41,7 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 		return nil
 	}
 
-	log.WithName("Registry").Info("registry host overrides active", "overrides", flag)
+	log.WithName("Registry").V(1).Info("registry host overrides active", "overrides", flag)
 	out := map[string]string{}
 	overrides := strings.Split(flag, ",")
 	for _, or := range overrides {
