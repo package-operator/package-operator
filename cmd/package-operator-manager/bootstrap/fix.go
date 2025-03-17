@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap/fix"
+	"package-operator.run/internal/constants"
 )
 
 type runChecker interface {
@@ -55,7 +56,7 @@ func (f *fixer) fix(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("check failed for fix %s: %w", fixName, err)
 		}
-		log.Info("checked", "applicable", applicable)
+		log.V(constants.LogLevelInfo).Info("checked", "applicable", applicable)
 
 		// skip fix, if `.Check(...)` said that the fix is not applicable
 		if !applicable {
@@ -66,7 +67,7 @@ func (f *fixer) fix(ctx context.Context) error {
 		if err := fixRunChecker.Run(ctx, fc); err != nil {
 			return fmt.Errorf("fix failed for fix %s: %w", fixName, err)
 		}
-		log.Info("executed")
+		log.V(constants.LogLevelInfo).Info("executed")
 	}
 
 	return nil

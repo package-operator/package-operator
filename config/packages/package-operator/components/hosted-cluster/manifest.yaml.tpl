@@ -27,6 +27,11 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        logLevel:
+          description: Log levels for package operator
+          x-kubernetes-int-or-string: true
+          oneOf:
+            - enum: [debug, info, error, 1, 2, 3, 4, 5]
         packageHashModifier:
           description: A value that is used when creating the package hash.
             This parameter can be used to force the redeployment of all packages by

@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,6 +70,16 @@ func main() {
 	flag.StringVar(&opts.targetClusterKubeconfigFile, "target-cluster-kubeconfig-file", "", targetClusterFlagDescription)
 	flag.StringVar(&opts.class, "class", "hosted-cluster", classFlagDescription)
 	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
+	zapOpts := zap.Options{
+		Development: false,
+		Level:       zapcore.ErrorLevel,
+	}
+	if lvlStr := os.Getenv("LOG_LEVEL"); lvlStr != "" {
+		if lvl, err := zapcore.ParseLevel(lvlStr); err == nil {
+			zapOpts.Level = lvl
+		}
+	}
+	zapOpts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	if opts.printVersion {
@@ -76,7 +88,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 
 	ourScheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
@@ -229,7 +241,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
-	log.Info("starting manager")
+	log.V(constants.LogLevelInfo).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}

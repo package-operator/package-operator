@@ -19,6 +19,11 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        logLevel:
+          description: Log levels for remote phase manager
+          x-kubernetes-int-or-string: true
+          oneOf:
+            - enum: [debug, info, error, 1, 2, 3, 4, 5]
         affinity:
           description: Affinity is a group of affinity scheduling rules.
           properties:
