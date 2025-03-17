@@ -40,6 +40,9 @@ spec:
           type: string
         objectTemplateResourceRetryInterval:
           type: string
+        logLevel:
+          description: Log level. Default is -1 (warn). Higher numbers increase verbosity (e.g., 0 = info, 1 = debug)
+          type: integer
         objectTemplateOptionalResourceRetryInterval:
           type: string
         namespace:

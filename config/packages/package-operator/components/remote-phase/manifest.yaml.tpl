@@ -19,6 +19,9 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        logLevel:
+          description: Log level. Default is -1 (warn). Higher numbers increase verbosity (e.g., 0 = info, 1 = debug)
+          type: integer
         affinity:
           description: Affinity is a group of affinity scheduling rules.
           properties:

@@ -37,10 +37,17 @@ spec:
       containers:
       - args:
         - --enable-leader-election
+        {{- if hasKey .config "logLevel" }}
+        - --log-level={{ .config.logLevel }}
+        {{- end }}
         ports:
         - name: metrics
           containerPort: 8080
         env:
+{{- if hasKey .config "logLevel" }}
+        - name: LOG_LEVEL
+          value: "{{ .config.logLevel }}"
+{{- end}}
         - name: KUBECONFIG
           value: /data/kubeconfig
 {{- if hasKey .config "registryHostOverrides" }}
