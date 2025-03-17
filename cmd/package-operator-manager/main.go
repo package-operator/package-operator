@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
@@ -30,7 +32,11 @@ const (
 var di *dig.Container
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	opts := zap.Options{
+		Development: false,
+		Level:       zapcore.Level(1),
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var err error
 	di, err = components.NewComponents()
