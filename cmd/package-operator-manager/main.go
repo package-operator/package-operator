@@ -32,12 +32,6 @@ const (
 var di *dig.Container
 
 func main() {
-	opts := zap.Options{
-		Development: false,
-		Level:       zapcore.Level(1),
-	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
 	var err error
 	di, err = components.NewComponents()
 	if err != nil {
@@ -50,6 +44,12 @@ func main() {
 }
 
 func run(opts components.Options) error {
+	zapLevel := zapcore.Level(-1 * opts.LogLevel)
+	zapOpts := zap.Options{
+		Development: false,
+		Level:       zapLevel,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 	if opts.PrintVersion != nil {
 		_ = version.Get().Write(opts.PrintVersion)
 

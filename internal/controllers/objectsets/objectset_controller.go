@@ -168,7 +168,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 			c.accessManager.Source(
 				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.Info(
+					c.log.V(constants.LogLevelDebug).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),

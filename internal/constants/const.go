@@ -21,6 +21,9 @@ const (
 	FieldOwner = "package-operator"
 	// OwnerStrategyAnnotationKey is the k8s annotation key that denotes the owner of a resource.
 	OwnerStrategyAnnotationKey = "package-operator.run/owners"
+
+	// Verbosity level for Info logs that are hidden by default.
+	LogLevelDebug = 1
 )
 
 func StaticCacheOwner() *corev1alpha1.ObjectDeployment {

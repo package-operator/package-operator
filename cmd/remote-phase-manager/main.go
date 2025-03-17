@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap/zapcore"
@@ -46,6 +47,7 @@ type opts struct {
 	class                       string
 	targetClusterKubeconfigFile string
 	printVersion                bool
+	logLevel                    int
 }
 
 const (
@@ -70,17 +72,23 @@ func main() {
 	flag.StringVar(&opts.targetClusterKubeconfigFile, "target-cluster-kubeconfig-file", "", targetClusterFlagDescription)
 	flag.StringVar(&opts.class, "class", "hosted-cluster", classFlagDescription)
 	flag.BoolVar(&opts.printVersion, "version", false, versionFlagDescription)
+	defaultLogLevel := -1
+	if lvl, err := strconv.Atoi(os.Getenv("LOG_LEVEL")); err == nil {
+		defaultLogLevel = lvl
+	}
+	flag.IntVar(
+		&opts.logLevel, "log-level", defaultLogLevel,
+		"Log level. Default is -1 (warn). Higher numbers increase verbosity (e.g., 0 = info, 1 = debug)")
 	flag.Parse()
-
+	zapLevel := zapcore.Level(-1 * opts.logLevel)
+	zapOpts := zap.Options{
+		Development: false,
+		Level:       zapLevel,
+	}
 	if opts.printVersion {
 		_ = version.Get().Write(os.Stderr)
 
 		os.Exit(2)
-	}
-
-	zapOpts := zap.Options{
-		Development: false,
-		Level:       zapcore.Level(1),
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 
