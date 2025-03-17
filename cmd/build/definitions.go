@@ -10,7 +10,7 @@ import (
 const (
 	cacheDir = ".cache"
 
-	defaultImageRegistry    = "quay.io/package-operator"
+	defaultImageRegistry    = "dev.package-operator.run/package-operator"
 	imageRegistryEnvvarName = "IMAGE_REGISTRY"
 
 	devClusterRegistryPort     int32 = 5001
