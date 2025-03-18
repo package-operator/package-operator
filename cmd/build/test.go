@@ -184,7 +184,7 @@ func (Test) makeGoIntTestCmd(tags string, filter string, jsonOutput bool) string
 	)
 
 	if jsonOutput {
-		args = append(args, "|", "gotestfmt", "--hide=empty-packages")
+		args = append(args, "|", "gotestfmt", "--hide=all")
 	}
 
 	return strings.Join(args, " ")
@@ -208,6 +208,6 @@ func (t Test) Unit(_ context.Context, filter string) error {
 		sh.WithEnvironment{"CGO_ENABLED": "1"},
 	).Bash(
 		"set -euo pipefail",
-		fmt.Sprintf(`go test %s ./... 2>&1 | tee "%s" | gotestfmt --hide=empty-packages`, argStr, logPath),
+		fmt.Sprintf(`go test %s ./... 2>&1 | tee "%s" | gotestfmt --hide=all`, argStr, logPath),
 	)
 }
