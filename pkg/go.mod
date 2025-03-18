@@ -7,8 +7,8 @@ toolchain go1.24.1
 require (
 	github.com/google/cel-go v0.22.1
 	github.com/stretchr/testify v1.10.0
-	k8s.io/apimachinery v0.32.2
-	k8s.io/apiserver v0.32.2
+	k8s.io/apimachinery v0.32.3
+	k8s.io/apiserver v0.32.3
 )
 
 require (
@@ -51,8 +51,8 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.32.2 // indirect
-	k8s.io/component-base v0.32.2 // indirect
+	k8s.io/api v0.32.3 // indirect
+	k8s.io/component-base v0.32.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
