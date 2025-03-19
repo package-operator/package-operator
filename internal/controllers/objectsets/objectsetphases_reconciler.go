@@ -8,11 +8,16 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"pkg.package-operator.run/boxcutter"
+	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
@@ -182,6 +187,15 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	return
 }
 
+type probeAdapter struct {
+	probe probing.Prober
+}
+
+func (a *probeAdapter) Probe(obj client.Object) (success bool, message []string) {
+	success, msg := a.probe.Probe(obj.(*unstructured.Unstructured))
+	return success, []string{msg}
+}
+
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet genericObjectSet,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
@@ -196,7 +210,64 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
+	pe := machinery.NewPhaseEngine(nil, nil)
+	re := machinery.NewRevisionEngine(pe, nil, nil)
+
+	opts := []boxcutter.RevisionReconcileOption{
+		boxcutter.WithProbe(boxcutter.ProgressProbeType, &probeAdapter{probe: probe}),
+	}
+	phases := make([]boxcutter.Phase, 0, len(objectSet.GetPhases()))
+	for _, phase := range objectSet.GetPhases() {
+		objects := make([]unstructured.Unstructured, 0, len(phase.Objects))
+		for _, obj := range phase.Objects {
+			// TODO:
+			// obj.ConditionMappings
+			// ---------------------
+			opts = append(opts, boxcutter.WithObjectReconcileOptions(
+				&obj.Object,
+				boxcutter.WithCollisionProtection(obj.CollisionProtection),
+			))
+			objects = append(objects, obj.Object)
+		}
+
+		phases = append(phases, boxcutter.Phase{
+			Name:    phase.Name,
+			Objects: objects,
+		})
+	}
+	rev := boxcutter.Revision{
+		Name:     objectSet.ClientObject().GetName(),
+		Revision: objectSet.GetRevision(),
+		Owner:    objectSet.ClientObject(),
+		Phases:   phases,
+	}
+
+	res, err := re.Reconcile(ctx, rev, opts...)
+	if err != nil {
+		return nil, controllers.ProbingResult{}, err
+	}
+
 	var controllerOfAll []corev1alpha1.ControlledObjectReference
+	for _, p := range res.GetPhases() {
+		for _, o := range p.GetObjects() {
+			switch o.Action() {
+			case machinery.ActionUpdated,
+				machinery.ActionCreated,
+				machinery.ActionRecovered,
+				machinery.ActionIdle:
+				gvk := o.Object().GetObjectKind().GroupVersionKind()
+				controllerOfAll = append(
+					controllerOfAll,
+					corev1alpha1.ControlledObjectReference{
+						Kind:      gvk.Kind,
+						Group:     gvk.Group,
+						Name:      o.Object().GetName(),
+						Namespace: o.Object().GetNamespace(),
+					})
+			}
+		}
+	}
+
 	for _, phase := range objectSet.GetPhases() {
 		controllerOf, probingResult, err := r.reconcilePhase(
 			ctx, objectSet, phase, probe, previous)
@@ -214,6 +285,50 @@ func (r *objectSetPhasesReconciler) reconcile(
 	}
 
 	return controllerOfAll, controllers.ProbingResult{}, nil
+}
+
+// remoteEnabledPhaseEngine outsources reconciliation to the ObjectSetPhase API
+// when .phase.class is set.
+type remoteEnabledPhaseEngine struct {
+	pe                    *machinery.PhaseEngine
+	remotePhaseReconciler remotePhaseReconciler
+}
+
+func (pe *remoteEnabledPhaseEngine) hasClass(owner client.Object, phase boxcutter.Phase) bool {
+	var phases []corev1alpha1.ObjectSetTemplatePhase
+	switch o := owner.(type) {
+	case *corev1alpha1.ObjectSet:
+		phases = o.Spec.Phases
+	case *corev1alpha1.ClusterObjectSet:
+		phases = o.Spec.Phases
+	}
+
+	for _, p := range phases {
+		if p.Name == phase.Name && len(p.Class) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (pe *remoteEnabledPhaseEngine) Teardown(
+	ctx context.Context,
+	owner client.Object,
+	revision int64,
+	phase boxcutter.Phase,
+	opts ...types.PhaseTeardownOption,
+) (machinery.PhaseTeardownResult, error) {
+	return nil, nil
+}
+
+func (pe *remoteEnabledPhaseEngine) Reconcile(
+	ctx context.Context,
+	owner client.Object,
+	revision int64,
+	phase types.Phase,
+	opts ...types.PhaseReconcileOption,
+) (machinery.PhaseResult, error) {
+	return nil, nil
 }
 
 func (r *objectSetPhasesReconciler) reconcilePhase(
