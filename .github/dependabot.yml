@@ -1,89 +1,40 @@
 version: 2
 updates:
-- package-ecosystem: gomod
-  directory: /
-  schedule:
-    interval: daily
-  allow:
-  - dependency-type: all
-    dependency-name: "*"
-  reviewers:
-  - package-operator/core-maintainers/dependency-maintainers
-  open-pull-requests-limit: 100
-  groups:
-    kube:
-      applies-to: version-updates
-      patterns:
-      - k8s.io/*
-    golangx:
-      applies-to: version-updates
-      patterns:
-      - golang.org/x/*
-    cardboard:
-      applies-to: version-updates
-      patterns:
-      - pkg.package-operator.run
-      - pkg.package-operator.run/cardboard/*
-  commit-message:
-    prefix: "build(deps)"
-- package-ecosystem: gomod
-  directory: /apis
-  schedule:
-    interval: daily
-  allow:
-  - dependency-type: all
-    dependency-name: "*"
-  reviewers:
-  - package-operator/core-maintainers/dependency-maintainers
-  open-pull-requests-limit: 100
-  groups:
-    kube:
-      applies-to: version-updates
-      patterns:
-      - k8s.io/*
-    golangx:
-      applies-to: version-updates
-      patterns:
-      - golang.org/x/*
-    cardboard:
-      applies-to: version-updates
-      patterns:
-      - pkg.package-operator.run
-      - pkg.package-operator.run/cardboard/*
-  commit-message:
-    prefix: "build(deps)"
-- package-ecosystem: gomod
-  directory: /pkg
-  schedule:
-    interval: daily
-  allow:
-  - dependency-type: all
-    dependency-name: "*"
-  reviewers:
-  - package-operator/core-maintainers/dependency-maintainers
-  open-pull-requests-limit: 100
-  groups:
-    kube:
-      applies-to: version-updates
-      patterns:
-      - k8s.io/*
-    golangx:
-      applies-to: version-updates
-      patterns:
-      - golang.org/x/*
-    cardboard:
-      applies-to: version-updates
-      patterns:
-      - pkg.package-operator.run
-      - pkg.package-operator.run/cardboard/*
-  commit-message:
-    prefix: "build(deps)"
-- package-ecosystem: github-actions
-  directory: /
-  schedule:
-    interval: daily
-  reviewers:
-  - package-operator/core-maintainers/dependency-maintainers
-  open-pull-requests-limit: 100
-  commit-message:
-    prefix: "build(deps)"
+  - package-ecosystem: gomod
+    directories:
+      - '/'
+      - '/apis'
+      - '/pkg'
+    schedule:
+      interval: daily
+    allow:
+      - dependency-type: all
+        dependency-name: "*"
+    reviewers:
+      - package-operator/core-maintainers/dependency-maintainers
+    open-pull-requests-limit: 100
+    groups:
+      kube:
+        applies-to: version-updates
+        patterns:
+          - k8s.io/*
+      golangx:
+        applies-to: version-updates
+        patterns:
+          - golang.org/x/*
+      cardboard:
+        applies-to: version-updates
+        patterns:
+          - pkg.package-operator.run
+          - pkg.package-operator.run/cardboard/*
+    commit-message:
+      prefix: "build(deps)"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    reviewers:
+      - package-operator/core-maintainers/dependency-maintainers
+    open-pull-requests-limit: 100
+    commit-message:
+      prefix: "build(deps)"
