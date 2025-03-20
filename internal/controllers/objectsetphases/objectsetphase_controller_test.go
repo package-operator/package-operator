@@ -22,8 +22,9 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/testutil"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type dynamicCacheMock struct {
