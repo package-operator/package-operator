@@ -1,32 +1,54 @@
 package probing
 
 import (
-	"strings"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Prober check Kubernetes objects for certain conditions and report success or failure with a failure message.
+// Prober check Kubernetes objects for certain conditions and report success or failure with failure messages.
 type Prober interface {
-	Probe(obj *unstructured.Unstructured) (success bool, message string)
+	Probe(obj client.Object) (success bool, messages []string)
 }
 
 // And combines multiple Prober, only passing if all given Probers succeed.
-// Messages of failing Probers will be joined with ", ", returning a single string.
+// Messages of failing Probers will be joined together.
 type And []Prober
 
 var _ Prober = (And)(nil)
 
 // Probe executes the probe.
-func (p And) Probe(obj *unstructured.Unstructured) (success bool, message string) {
-	var messages []string
+func (p And) Probe(obj client.Object) (success bool, messages []string) {
+	var allMsgs []string
 	for _, probe := range p {
-		if success, message := probe.Probe(obj); !success {
-			messages = append(messages, message)
+		if success, msgs := probe.Probe(obj); !success {
+			allMsgs = append(allMsgs, msgs...)
 		}
 	}
-	if len(messages) > 0 {
-		return false, strings.Join(messages, ", ")
+	if len(allMsgs) > 0 {
+		return false, allMsgs
 	}
-	return true, ""
+	return true, nil
+}
+
+func toUnstructured(obj client.Object) *unstructured.Unstructured {
+	unstr, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	if err != nil {
+		panic(fmt.Sprintf("can't convert to unstructured: %v", err))
+	}
+	return &unstructured.Unstructured{Object: unstr}
+}
+
+func probeUnstructuredSingleMsg(
+	obj client.Object,
+	probe func(obj *unstructured.Unstructured) (success bool, message string),
+) (success bool, messages []string) {
+	unst := toUnstructured(obj)
+	success, msg := probe(unst)
+	if success {
+		return success, nil
+	}
+	return success, []string{msg}
 }

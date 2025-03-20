@@ -18,7 +18,7 @@ func TestKindSelector(t *testing.T) {
 		prober := &proberMock{}
 		prober.
 			On("Probe", mock.Anything).
-			Return(true, "")
+			Return(true, []string{})
 
 		gk := schema.GroupKind{
 			Kind: "Pod",
@@ -31,7 +31,7 @@ func TestKindSelector(t *testing.T) {
 		}
 		success, message := s.Probe(obj)
 		assert.True(t, success)
-		assert.Equal(t, "", message)
+		assert.Empty(t, message)
 		prober.AssertCalled(t, "Probe", mock.Anything)
 	})
 
@@ -53,7 +53,7 @@ func TestKindSelector(t *testing.T) {
 		}
 		success, message := s.Probe(obj)
 		assert.True(t, success)
-		assert.Equal(t, "", message)
+		assert.Nil(t, message)
 		prober.AssertNotCalled(t, "Probe", mock.Anything)
 	})
 }
@@ -66,7 +66,7 @@ func TestLabelSelector(t *testing.T) {
 		prober := &proberMock{}
 		prober.
 			On("Probe", mock.Anything).
-			Return(true, "")
+			Return(true, []string{})
 
 		obj := &unstructured.Unstructured{}
 		s := &LabelSelector{
@@ -75,7 +75,7 @@ func TestLabelSelector(t *testing.T) {
 		}
 		success, message := s.Probe(obj)
 		assert.True(t, success)
-		assert.Equal(t, "", message)
+		assert.Empty(t, message)
 		prober.AssertCalled(t, "Probe", mock.Anything)
 	})
 
@@ -94,7 +94,7 @@ func TestLabelSelector(t *testing.T) {
 		}
 		success, message := s.Probe(obj)
 		assert.True(t, success)
-		assert.Equal(t, "", message)
+		assert.Nil(t, message)
 		prober.AssertNotCalled(t, "Probe", mock.Anything)
 	})
 }

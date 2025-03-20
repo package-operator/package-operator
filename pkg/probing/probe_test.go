@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ Prober = (*proberMock)(nil)
@@ -14,11 +15,11 @@ type proberMock struct {
 	mock.Mock
 }
 
-func (m *proberMock) Probe(obj *unstructured.Unstructured) (
-	success bool, message string,
+func (m *proberMock) Probe(obj client.Object) (
+	success bool, messages []string,
 ) {
 	args := m.Called(obj)
-	return args.Bool(0), args.String(1)
+	return args.Bool(0), args.Get(1).([]string)
 }
 
 func TestAnd(t *testing.T) {
@@ -30,16 +31,16 @@ func TestAnd(t *testing.T) {
 
 		prober1.
 			On("Probe", mock.Anything).
-			Return(false, "error from prober1")
+			Return(false, []string{"error from prober1"})
 		prober2.
 			On("Probe", mock.Anything).
-			Return(false, "error from prober2")
+			Return(false, []string{"error from prober2"})
 
 		l := And{prober1, prober2}
 
 		s, m := l.Probe(&unstructured.Unstructured{})
 		assert.False(t, s)
-		assert.Equal(t, "error from prober1, error from prober2", m)
+		assert.Equal(t, []string{"error from prober1", "error from prober2"}, m)
 	})
 	t.Run("succeeds when all subprobes succeed", func(t *testing.T) {
 		t.Parallel()
@@ -48,15 +49,15 @@ func TestAnd(t *testing.T) {
 
 		prober1.
 			On("Probe", mock.Anything).
-			Return(true, "")
+			Return(true, []string{})
 		prober2.
 			On("Probe", mock.Anything).
-			Return(true, "")
+			Return(true, []string{})
 
 		l := And{prober1, prober2}
 
 		s, m := l.Probe(&unstructured.Unstructured{})
 		assert.True(t, s)
-		assert.Equal(t, "", m)
+		assert.Nil(t, m)
 	})
 }

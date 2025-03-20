@@ -18,16 +18,17 @@ func Test_NewCELProbe(t *testing.T) {
 func Test_celProbe(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name          string
-		rule, message string
-		obj           *unstructured.Unstructured
+		name     string
+		rule     string
+		messages []string
+		obj      *unstructured.Unstructured
 
 		success bool
 	}{
 		{
-			name:    "simple success",
-			rule:    `self.metadata.name == "hans"`,
-			message: "aaaaaah!",
+			name:     "simple success",
+			rule:     `self.metadata.name == "hans"`,
+			messages: []string{"aaaaaah!"},
 			obj: &unstructured.Unstructured{
 				Object: map[string]any{
 					"metadata": map[string]any{
@@ -38,9 +39,9 @@ func Test_celProbe(t *testing.T) {
 			success: true,
 		},
 		{
-			name:    "simple failure",
-			rule:    `self.metadata.name == "hans"`,
-			message: "aaaaaah!",
+			name:     "simple failure",
+			rule:     `self.metadata.name == "hans"`,
+			messages: []string{"aaaaaah!"},
 			obj: &unstructured.Unstructured{
 				Object: map[string]any{
 					"metadata": map[string]any{
@@ -51,9 +52,9 @@ func Test_celProbe(t *testing.T) {
 			success: false,
 		},
 		{
-			name:    "OpenShift Route success simple",
-			rule:    `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
-			message: "aaaaaah!",
+			name:     "OpenShift Route success simple",
+			rule:     `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
+			messages: []string{"aaaaaah!"},
 			obj: &unstructured.Unstructured{
 				Object: map[string]any{
 					"status": map[string]any{
@@ -75,9 +76,9 @@ func Test_celProbe(t *testing.T) {
 			success: true,
 		},
 		{
-			name:    "OpenShift Route failure",
-			rule:    `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
-			message: "aaaaaah!",
+			name:     "OpenShift Route failure",
+			rule:     `self.status.ingress.all(i, i.conditions.all(c, c.type == "Ready" && c.status == "True"))`,
+			messages: []string{"aaaaaah!"},
 			obj: &unstructured.Unstructured{
 				Object: map[string]any{
 					"status": map[string]any{
@@ -112,12 +113,16 @@ func Test_celProbe(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := NewCELProbe(test.rule, test.message)
+			p, err := NewCELProbe(test.rule, test.messages[0])
 			require.NoError(t, err)
 
 			success, outMsg := p.Probe(test.obj)
 			assert.Equal(t, test.success, success)
-			assert.Equal(t, test.message, outMsg)
+			if test.success {
+				assert.Empty(t, outMsg)
+			} else {
+				assert.Equal(t, test.messages, outMsg)
+			}
 		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ConditionProbe checks if the object's condition is set and in a certain status.
@@ -14,7 +15,11 @@ type ConditionProbe struct {
 var _ Prober = (*ConditionProbe)(nil)
 
 // Probe executes the probe.
-func (cp *ConditionProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cp *ConditionProbe) Probe(obj client.Object) (success bool, messages []string) {
+	return probeUnstructuredSingleMsg(obj, cp.probe)
+}
+
+func (cp *ConditionProbe) probe(obj *unstructured.Unstructured) (success bool, message string) {
 	defer func() {
 		if success {
 			return

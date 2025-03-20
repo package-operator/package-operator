@@ -8,6 +8,7 @@ import (
 	"github.com/google/cel-go/ext"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apiserver/pkg/cel/library"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CELProbe uses the common expression language for probing.
@@ -61,7 +62,11 @@ func NewCELProbe(rule, message string) (
 }
 
 // Probe executes the probe.
-func (p *CELProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (p *CELProbe) Probe(obj client.Object) (success bool, messages []string) {
+	return probeUnstructuredSingleMsg(obj, p.probe)
+}
+
+func (p *CELProbe) probe(obj *unstructured.Unstructured) (success bool, message string) {
 	val, _, err := p.Program.Eval(map[string]any{
 		"self": obj.Object,
 	})

@@ -1,9 +1,9 @@
 package probing
 
 import (
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GroupKindSelector wraps a Probe object and only executes the probe
@@ -17,7 +17,7 @@ type GroupKindSelector struct {
 var _ Prober = (*GroupKindSelector)(nil)
 
 // Probe executes the probe.
-func (kp *GroupKindSelector) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (kp *GroupKindSelector) Probe(obj client.Object) (success bool, messages []string) {
 	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	if kp.GroupKind == gk {
 		return kp.Prober.Probe(obj)
@@ -25,7 +25,7 @@ func (kp *GroupKindSelector) Probe(obj *unstructured.Unstructured) (success bool
 
 	// We want to _skip_ objects, that don't match.
 	// So this probe succeeds by default.
-	return true, ""
+	return true, nil
 }
 
 // LabelSelector wraps a Probe object and only executes the probe
@@ -39,11 +39,11 @@ type LabelSelector struct {
 var _ Prober = (*LabelSelector)(nil)
 
 // Probe executes the probe.
-func (ss *LabelSelector) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (ss *LabelSelector) Probe(obj client.Object) (success bool, messages []string) {
 	if !ss.Selector.Matches(labels.Set(obj.GetLabels())) {
 		// We want to _skip_ objects, that don't match.
 		// So this probe succeeds by default.
-		return true, ""
+		return true, nil
 	}
 
 	return ss.Prober.Probe(obj)
