@@ -22,7 +22,8 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/internal/ownerhandling"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type HostedClusterController struct {
@@ -43,6 +44,8 @@ type ownerStrategy interface {
 	) handler.EventHandler
 }
 
+const ownerStrategyAnnotationKey = "package-operator.run/owners"
+
 func NewHostedClusterController(
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	packageOperatorPackageImage string,
@@ -57,7 +60,7 @@ func NewHostedClusterController(
 		// Using Annotation Owner-Handling,
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
-		ownerStrategy: ownerhandling.NewAnnotation(scheme),
+		ownerStrategy: ownerhandling.NewAnnotation(scheme, ownerStrategyAnnotationKey),
 
 		remotePhaseAffinity:    remotePhaseAffinity,
 		remotePhaseTolerations: remotePhaseTolerations,

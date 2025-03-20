@@ -52,8 +52,6 @@ type ownerStrategy interface {
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
-	OwnerPatch(owner metav1.Object) ([]byte, error)
-	HasController(obj metav1.Object) bool
 }
 
 type adoptionChecker interface {
@@ -728,7 +726,7 @@ func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object
 		// I hope the user knows what he is doing ;)
 		return true, nil
 	case corev1alpha1.CollisionProtectionIfNoController:
-		if !c.ownerStrategy.HasController(obj) {
+		if !c.ownerStrategy.IsController(owner.ClientObject(), obj) {
 			return true, nil
 		}
 	}
