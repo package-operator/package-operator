@@ -18,7 +18,7 @@ func TestFieldsEqual(t *testing.T) {
 		name     string
 		obj      *unstructured.Unstructured
 		succeeds bool
-		message  string
+		messages []string
 	}{
 		{
 			name: "simple succeeds",
@@ -43,7 +43,7 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": "test" != "not test"`,
+			messages: []string{`".spec.fieldA" == ".spec.fieldB": "test" != "not test"`},
 		},
 		{
 			name: "complex succeeds",
@@ -76,7 +76,7 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": "map[fk:fv]" != "map[fk:something else]"`,
+			messages: []string{`".spec.fieldA" == ".spec.fieldB": "map[fk:fv]" != "map[fk:something else]"`},
 		},
 		{
 			name: "int not equal",
@@ -93,7 +93,7 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": "map[fk:1]" != "map[fk:2]"`,
+			messages: []string{`".spec.fieldA" == ".spec.fieldB": "map[fk:1]" != "map[fk:2]"`},
 		},
 		{
 			name: "fieldA missing",
@@ -105,7 +105,7 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": ".spec.fieldA" missing`,
+			messages: []string{`".spec.fieldA" == ".spec.fieldB": ".spec.fieldA" missing`},
 		},
 		{
 			name: "fieldB missing",
@@ -117,7 +117,7 @@ func TestFieldsEqual(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  `".spec.fieldA" == ".spec.fieldB": ".spec.fieldB" missing`,
+			messages: []string{`".spec.fieldA" == ".spec.fieldB": ".spec.fieldB" missing`},
 		},
 	}
 
@@ -128,7 +128,7 @@ func TestFieldsEqual(t *testing.T) {
 			t.Parallel()
 			s, m := fe.Probe(test.obj)
 			assert.Equal(t, test.succeeds, s)
-			assert.Equal(t, test.message, m)
+			assert.Equal(t, test.messages, m)
 		})
 	}
 }

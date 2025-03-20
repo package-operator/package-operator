@@ -15,13 +15,13 @@ func TestStatusObservedGeneration(t *testing.T) {
 		Prober: properMock,
 	}
 
-	properMock.On("Probe", mock.Anything).Return(true, "banana")
+	properMock.On("Probe", mock.Anything).Return(true, []string{"banana"})
 
 	tests := []struct {
 		name     string
 		obj      *unstructured.Unstructured
 		succeeds bool
-		message  string
+		messages []string
 	}{
 		{
 			name: "outdated",
@@ -36,7 +36,7 @@ func TestStatusObservedGeneration(t *testing.T) {
 				},
 			},
 			succeeds: false,
-			message:  ".status outdated",
+			messages: []string{".status outdated"},
 		},
 		{
 			name: "up-to-date",
@@ -51,7 +51,7 @@ func TestStatusObservedGeneration(t *testing.T) {
 				},
 			},
 			succeeds: true,
-			message:  "banana",
+			messages: []string{"banana"},
 		},
 		{
 			name: "not reported",
@@ -64,7 +64,7 @@ func TestStatusObservedGeneration(t *testing.T) {
 				},
 			},
 			succeeds: true,
-			message:  "banana",
+			messages: []string{"banana"},
 		},
 	}
 
@@ -75,7 +75,7 @@ func TestStatusObservedGeneration(t *testing.T) {
 			t.Parallel()
 			s, m := og.Probe(test.obj)
 			assert.Equal(t, test.succeeds, s)
-			assert.Equal(t, test.message, m)
+			assert.Equal(t, test.messages, m)
 		})
 	}
 }

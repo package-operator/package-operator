@@ -133,12 +133,12 @@ func (p *recordingProbe) Probe(obj *unstructured.Unstructured) {
 }
 
 func (p *recordingProbe) RecordMissingObject(obj *unstructured.Unstructured) {
-	p.recordForObj(obj, "not found")
+	p.recordForObj(obj, []string{"not found"})
 }
 
-func (p *recordingProbe) recordForObj(obj *unstructured.Unstructured, msg string) {
+func (p *recordingProbe) recordForObj(obj *unstructured.Unstructured, msgs []string) {
 	gvk := obj.GroupVersionKind()
-	msg = fmt.Sprintf("%s %s %s/%s: %s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName(), msg)
+	msg := fmt.Sprintf("%s %s %s/%s: %s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName(), strings.Join(msgs, ", "))
 
 	p.failures = append(p.failures, msg)
 }

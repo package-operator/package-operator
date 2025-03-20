@@ -1,6 +1,9 @@
 package probing
 
-import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 // ObservedGenerationProbe wraps the given Prober and ensures that .status.observedGeneration is equal to
 // .metadata.generation, before running the given probe. If the probed object does not contain the
@@ -12,11 +15,12 @@ type ObservedGenerationProbe struct {
 var _ Prober = (*ObservedGenerationProbe)(nil)
 
 // Probe executes the probe.
-func (cg *ObservedGenerationProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (cg *ObservedGenerationProbe) Probe(obj client.Object) (success bool, messages []string) {
+	unstr := toUnstructured(obj)
 	if observedGeneration, ok, err := unstructured.NestedInt64(
-		obj.Object, "status", "observedGeneration",
+		unstr.Object, "status", "observedGeneration",
 	); err == nil && ok && observedGeneration != obj.GetGeneration() {
-		return false, ".status outdated"
+		return false, []string{".status outdated"}
 	}
 	return cg.Prober.Probe(obj)
 }

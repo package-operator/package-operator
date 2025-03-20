@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // FieldsEqualProbe checks if the values of the fields under the given json paths are equal.
@@ -16,7 +17,11 @@ type FieldsEqualProbe struct {
 var _ Prober = (*FieldsEqualProbe)(nil)
 
 // Probe executes the probe.
-func (fe *FieldsEqualProbe) Probe(obj *unstructured.Unstructured) (success bool, message string) {
+func (fe *FieldsEqualProbe) Probe(obj client.Object) (success bool, messages []string) {
+	return probeUnstructuredSingleMsg(obj, fe.probe)
+}
+
+func (fe *FieldsEqualProbe) probe(obj *unstructured.Unstructured) (success bool, message string) {
 	fieldAPath := strings.Split(strings.Trim(fe.FieldA, "."), ".")
 	fieldBPath := strings.Split(strings.Trim(fe.FieldB, "."), ".")
 
