@@ -129,13 +129,15 @@ func (l *PackageDeployer) Deploy(
 	pkg, err := l.structuralLoader.LoadComponent(ctx, rawPkg, apiPkg.GetComponent())
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
+		// Explicitly do not return an error here to avoid re-pulling
+		// and deploying a broken package over and over again.
 		return nil
 	}
 
 	// Check constraints
 	if err := validateConstraints(ctx, l.uncachedClient, apiPkg, pkg.Manifest, env); err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
-		return nil
+		return err
 	}
 
 	// prepare package render/template context
@@ -152,8 +154,9 @@ func (l *PackageDeployer) Deploy(
 		return fmt.Errorf("validate Package configuration: %w", err)
 	}
 	if len(validationErrors) > 0 {
-		setInvalidConditionBasedOnLoadError(apiPkg, validationErrors.ToAggregate())
-		return nil
+		aggregateErr := validationErrors.ToAggregate()
+		setInvalidConditionBasedOnLoadError(apiPkg, aggregateErr)
+		return aggregateErr
 	}
 	images := map[string]string{}
 	if pkg.ManifestLock != nil {
@@ -177,7 +180,7 @@ func (l *PackageDeployer) Deploy(
 		}, l.packageValidators, packagevalidation.DefaultObjectValidators)
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
-		return nil
+		return err
 	}
 
 	desiredDeploy, err := l.desiredObjectDeployment(ctx, apiPkg, pkgInstance)
