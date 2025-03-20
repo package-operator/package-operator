@@ -14,6 +14,7 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/environment"
 	"package-operator.run/internal/packages"
 	"package-operator.run/internal/testutil"
 )
@@ -25,14 +26,13 @@ func TestUnpackReconciler(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
 
 	const image = "test123:latest"
 
-	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything, mock.Anything).
-		Return(rawPkg, nil)
+		Return(&packages.RawPackage{}, nil)
 	pd.
 		On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
@@ -67,7 +67,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
 
 	const image = "test123:latest"
 
@@ -94,14 +94,13 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 
 	ipm := &imagePullerMock{}
 	pd := &packageDeployerMock{}
-	ur := newUnpackReconciler(c, uc, ipm, pd, nil, nil)
+	ur := newUnpackReconciler(uc, ipm, pd, nil, environment.NewSink(c), nil)
 
 	const image = "test123:latest"
 
-	rawPkg := &packages.RawPackage{}
 	ipm.
 		On("Pull", mock.Anything, mock.Anything, mock.Anything).
-		Return(rawPkg, errTest)
+		Return(&packages.RawPackage{}, errTest)
 
 	pkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{
@@ -119,6 +118,66 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	assert.True(t,
 		meta.IsStatusConditionFalse(*pkg.GetConditions(),
 			corev1alpha1.PackageUnpacked))
+}
+
+func TestUnpackReconciler_getEnvironment_error(t *testing.T) {
+	t.Parallel()
+	uc := testutil.NewClient()
+
+	ipm := &imagePullerMock{}
+	sink := &environmentSinkMock{}
+	pd := &packageDeployerMock{}
+	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil)
+
+	ipm.On("Pull", mock.Anything, mock.Anything).Return(&packages.RawPackage{}, nil)
+	sink.On("GetEnvironment", mock.Anything, mock.Anything).Return(&manifests.PackageEnvironment{}, errTest)
+
+	const image = "test123:latest"
+
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			Spec: corev1alpha1.PackageSpec{
+				Image: image,
+			},
+		},
+	}
+	ctx := context.Background()
+	res, err := ur.Reconcile(ctx, pkg)
+	require.ErrorIs(t, err, errTest)
+	assert.True(t, res.IsZero())
+	sink.AssertExpectations(t)
+}
+
+func TestUnpackReconciler_packageDeploy_error(t *testing.T) {
+	t.Parallel()
+	uc := testutil.NewClient()
+
+	ipm := &imagePullerMock{}
+	sink := &environmentSinkMock{}
+	pd := &packageDeployerMock{}
+	ur := newUnpackReconciler(uc, ipm, pd, nil, sink, nil)
+
+	ipm.
+		On("Pull", mock.Anything, mock.Anything, mock.Anything).
+		Return(&packages.RawPackage{}, nil)
+
+	sink.On("GetEnvironment", mock.Anything, mock.Anything).Return(&manifests.PackageEnvironment{}, nil)
+
+	pd.On("Deploy", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errTest)
+
+	const image = "test123:latest"
+
+	pkg := &adapters.GenericPackage{
+		Package: corev1alpha1.Package{
+			Spec: corev1alpha1.PackageSpec{
+				Image: image,
+			},
+		},
+	}
+	ctx := context.Background()
+	res, err := ur.Reconcile(ctx, pkg)
+	require.ErrorIs(t, err, errTest)
+	assert.True(t, res.IsZero())
 }
 
 type imagePullerMock struct {
@@ -144,4 +203,19 @@ func (m *packageDeployerMock) Deploy(
 ) error {
 	args := m.Called(ctx, apiPkg, rawPkg, env)
 	return args.Error(0)
+}
+
+type environmentSinkMock struct {
+	mock.Mock
+}
+
+func (m *environmentSinkMock) GetEnvironment(ctx context.Context, namespace string) (
+	*manifests.PackageEnvironment, error,
+) {
+	args := m.Called(ctx, namespace)
+	return args.Get(0).(*manifests.PackageEnvironment), args.Error(1)
+}
+
+func (m *environmentSinkMock) SetEnvironment(env *manifests.PackageEnvironment) {
+	m.Called(env)
 }
