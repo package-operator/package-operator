@@ -27,6 +27,7 @@ linters:
   #- nakedret         # Naked return good return.
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
+  #- recvcheck        # Not that useful/false positives.
   #- tagliatelle      # Reports issues that are not right for us.
   #- testpackage      # Could be nice in the future.
   #- unparam          # Not that useful/false positives.
@@ -48,6 +49,7 @@ linters:
   - errchkjson
   - errname
   - errorlint
+  - exptostd
   - fatcontext
   - forbidigo
   - ginkgolinter
@@ -80,6 +82,7 @@ linters:
   - musttag
   - nestif
   - nilerr
+  - nilnesserr
   - nilnil
   - noctx
   - nolintlint
@@ -99,7 +102,6 @@ linters:
   - staticcheck
   - stylecheck
   - tagalign
-  - tenv
   - testableexamples
   - testifylint
   - thelper
@@ -108,6 +110,7 @@ linters:
   - unconvert
   - unused
   - usestdlibvars
+  - usetesting
   - wastedassign
   - whitespace
   - zerologlint

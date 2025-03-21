@@ -141,7 +141,7 @@ func TestUpdate(t *testing.T) {
 				WithDigestResolver{Resolver: mResolver},
 			)
 
-			data, err := update.GenerateLockData(context.Background(), "src")
+			data, err := update.GenerateLockData(t.Context(), "src")
 			require.ErrorIs(t, err, tc.Expected.Error)
 
 			assert.Equal(t, tc.Expected.LockData, string(data))

@@ -73,7 +73,7 @@ func TestBootstrapperBootstrap(t *testing.T) {
 		}).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx, cancel := context.WithTimeout(ctx, testBootstrapTimeout)
 	defer cancel()
 	err := b.Bootstrap(
@@ -125,7 +125,7 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 		Return(nil)
 
 	ctx, cancel := context.WithTimeout(
-		context.Background(), testBootstrapTimeout)
+		t.Context(), testBootstrapTimeout)
 	defer cancel()
 	err := b.bootstrap(ctx, func(ctx context.Context) error {
 		runManagerCalled = true

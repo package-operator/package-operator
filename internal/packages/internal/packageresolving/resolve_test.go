@@ -26,7 +26,7 @@ func TestResolveNothing(t *testing.T) {
 
 func TestResolveBasic(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -65,7 +65,7 @@ func TestResolveBasic(t *testing.T) {
 
 func TestResolveNoCandidatesAnyVersion(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -90,7 +90,7 @@ func TestResolveNoCandidatesAnyVersion(t *testing.T) {
 
 func TestResolveNoCandidatesSpecificVersion(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -115,7 +115,7 @@ func TestResolveNoCandidatesSpecificVersion(t *testing.T) {
 
 func TestResolvePlatformMatches(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -164,7 +164,7 @@ func TestResolvePlatformMatches(t *testing.T) {
 
 func TestResolvePlatformNotMatching(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -207,7 +207,7 @@ func TestResolvePlatformNotMatching(t *testing.T) {
 
 func TestResolvePlatformNotSupported(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},
@@ -247,7 +247,7 @@ func TestResolvePlatformNotSupported(t *testing.T) {
 
 func TestResolvePlatformBrokenVersion(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	pkg := &manifests.PackageManifest{
 		ObjectMeta: metav1.ObjectMeta{Name: "mainpkg"},

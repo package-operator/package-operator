@@ -1,7 +1,6 @@
 package rolloutcmd
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -239,7 +238,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 
 			getter := newObjectSetGetter(internalcmd.NewClient(c))
 
-			list, err := getter.GetObjectSets(context.Background(), tc.Type, tc.Name, tc.Namespace)
+			list, err := getter.GetObjectSets(t.Context(), tc.Type, tc.Name, tc.Namespace)
 			tc.Expected.ErrorAssertion(t, err)
 
 			requireEqualObjectSetLists(t, tc.Expected.ObjectSetList, list)

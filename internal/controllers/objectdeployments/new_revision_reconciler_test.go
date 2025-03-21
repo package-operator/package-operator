@@ -1,7 +1,6 @@
 package objectdeployments
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -22,7 +21,7 @@ import (
 func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 	t.Parallel()
 	log := testr.New(t)
-	ctx := logr.NewContext(context.Background(), log)
+	ctx := logr.NewContext(t.Context(), log)
 	clientMock := testutil.NewClient()
 	deploymentController := NewObjectDeploymentController(clientMock, log, testScheme)
 	r := newRevisionReconciler{
@@ -128,7 +127,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			log := testr.New(t)
-			ctx := logr.NewContext(context.Background(), log)
+			ctx := logr.NewContext(t.Context(), log)
 			clientMock := testCase.client
 			// Setup reconciler
 			deploymentController := NewObjectDeploymentController(testCase.client, log, testScheme)

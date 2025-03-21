@@ -1,7 +1,6 @@
 package objectsets
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -88,7 +87,7 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectSlice"), mock.Anything).
 		Return(nil)
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	res, err := r.Reconcile(ctx, objectSet)
 	require.NoError(t, err)
 	require.True(t, res.IsZero())

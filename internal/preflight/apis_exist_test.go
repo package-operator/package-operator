@@ -39,7 +39,7 @@ func TestAPIExistenceExists(t *testing.T) {
 
 	m := &mapper{}
 	s := &sub{}
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "blorb"}}
 	obj := &appsv1.Deployment{TypeMeta: metav1.TypeMeta{Kind: "kind", APIVersion: "3"}}
 
@@ -60,7 +60,7 @@ func TestAPIExistenceNotExists(t *testing.T) {
 
 	m := &mapper{}
 	s := &sub{}
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "blorb"}}
 	obj := &appsv1.Deployment{TypeMeta: metav1.TypeMeta{Kind: "kind", APIVersion: "3"}}
 
@@ -80,7 +80,7 @@ func TestAPIExistenceErr(t *testing.T) {
 
 	m := &mapper{}
 	s := &sub{}
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "blorb"}}
 	obj := &appsv1.Deployment{TypeMeta: metav1.TypeMeta{Kind: "kind", APIVersion: "3"}}
 

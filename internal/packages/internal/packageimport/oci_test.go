@@ -1,7 +1,6 @@
 package packageimport
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -26,7 +25,7 @@ func TestFromOCI(t *testing.T) {
 		packagetypes.OCIPathPrefix + "/bla/.xxx/something.yml":        {11, 12},
 	})
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	rawPkg, err := FromOCI(ctx, image)
 	require.NoError(t, err)
 
@@ -40,7 +39,7 @@ func TestFromOCI_EmptyImage(t *testing.T) {
 
 	image := testutil.BuildImage(t, map[string][]byte{})
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	_, err := FromOCI(ctx, image)
 	require.EqualError(t, err, packagetypes.ErrEmptyPackage.Error())
 }

@@ -1,7 +1,6 @@
 package preflight_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -38,7 +37,7 @@ func TestDryRun(t *testing.T) {
 	obj.SetKind("Hans")
 
 	dr := preflight.NewDryRun(c)
-	v, err := dr.Check(context.Background(), obj, obj)
+	v, err := dr.Check(t.Context(), obj, obj)
 	require.Error(t, err)
 	assert.Empty(t, v)
 	// MUST create an internal DeepCopy or the DryRun hook may have changed the object.
@@ -77,7 +76,7 @@ func TestDryRunViolations(t *testing.T) {
 			obj.SetKind("Hans")
 
 			dr := preflight.NewDryRun(c)
-			v, err := dr.Check(context.Background(), obj, obj)
+			v, err := dr.Check(t.Context(), obj, obj)
 			require.NoError(t, err)
 			assert.Len(t, v, 1)
 		})
@@ -104,7 +103,7 @@ func TestDryRun_alreadyExists(t *testing.T) {
 	obj.SetKind("Hans")
 
 	dr := preflight.NewDryRun(c)
-	v, err := dr.Check(context.Background(), obj, obj)
+	v, err := dr.Check(t.Context(), obj, obj)
 	require.NoError(t, err)
 	assert.Empty(t, v)
 	// MUST create an internal DeepCopy or the DryRun hook may have changed the object.
@@ -129,7 +128,7 @@ func TestDryRun_notFround(t *testing.T) {
 	obj.SetKind("Hans")
 
 	dr := preflight.NewDryRun(c)
-	v, err := dr.Check(context.Background(), obj, obj)
+	v, err := dr.Check(t.Context(), obj, obj)
 	require.NoError(t, err)
 	assert.Len(t, v, 1)
 }
@@ -150,7 +149,7 @@ func TestDryRun_emptyreason(t *testing.T) {
 	obj.SetKind("Hans")
 
 	dr := preflight.NewDryRun(c)
-	v, err := dr.Check(context.Background(), obj, obj)
+	v, err := dr.Check(t.Context(), obj, obj)
 	require.NoError(t, err)
 	require.Len(t, v, 1)
 	require.Contains(t, v[0].Error, e.ErrStatus.Message)
