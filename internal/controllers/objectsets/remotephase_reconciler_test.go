@@ -1,7 +1,6 @@
 package objectsets
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -206,7 +205,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 
 			test.mockPrepare(t, objectSet, clientMock, uncachedClient)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			cleanupDone, err := r.Teardown(ctx, genObjectSet, phase)
 			if test.expectedErr == nil {
 				require.NoError(t, err)
@@ -269,7 +268,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
 func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 
@@ -327,7 +326,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectSet(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 

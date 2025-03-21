@@ -1,7 +1,6 @@
 package packagekickstart
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,7 +56,7 @@ spec:
   sweet: True
 `
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 3, res.ObjectCount)
@@ -85,7 +84,7 @@ metadata:
   name: aaah
   namespace: b`
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rawPkg, res, err := KickstartFromBytes(ctx, "my-pkg", []byte(manifest), []string{"namespaces"})
 	require.NoError(t, err)
 	assert.Equal(t, 2, res.ObjectCount)
@@ -148,7 +147,7 @@ func TestKickStartFromBytes_ErrorReporting(t *testing.T) {
 	for _, tcase := range errorReportingTestCases {
 		t.Run(tcase.filename, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 
 			wd, err := os.Getwd()
 			require.NoError(t, err)

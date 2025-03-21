@@ -1,7 +1,6 @@
 package preflight
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +24,7 @@ func TestObjectDuplicate(t *testing.T) {
 
 	od := NewObjectDuplicate()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	v, err := od.Check(ctx, phases)
 	require.NoError(t, err)
 	assert.Len(t, v, 1)

@@ -1,7 +1,6 @@
 package packageimport
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -12,7 +11,7 @@ import (
 
 func TestFromFolder(t *testing.T) {
 	t.Parallel()
-	ctx := logr.NewContext(context.Background(), testr.NewWithOptions(t, testr.Options{
+	ctx := logr.NewContext(t.Context(), testr.NewWithOptions(t, testr.Options{
 		Verbosity: 99,
 	}))
 

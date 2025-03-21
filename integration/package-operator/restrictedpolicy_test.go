@@ -3,7 +3,6 @@
 package packageoperator
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -34,7 +33,7 @@ func TestRestrictedPolicyPodCreation(t *testing.T) {
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	err := Client.Create(ctx, pod)
 	require.ErrorContains(t, err, `forbidden: violates PodSecurity "restricted:latest": `)
 	defer cleanupOnSuccess(ctx, t, pod)

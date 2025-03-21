@@ -63,7 +63,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 
 	objectTemplate := &corev1alpha1.ObjectTemplate{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	srcObj, _, err := r.getSourceObject(
 		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{})
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 
 	objectTemplate := &corev1alpha1.ObjectTemplate{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, _, err := r.getSourceObject(
 		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{
 			Kind:      "ConfigMap",
@@ -264,7 +264,7 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 				"auth_password": "hunter2",
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			err = r.templateObject(ctx, sourcesConfig, &objectTemplate, pkg)
 
 			require.NoError(t, err)
@@ -356,7 +356,7 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 			objectTemplate := &GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -431,7 +431,7 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 				On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once().Maybe()
 
-			res, err := r.Reconcile(context.Background(), objectTemplate)
+			res, err := r.Reconcile(t.Context(), objectTemplate)
 			assert.Empty(t, res)
 			require.NoError(t, err)
 		})
@@ -610,7 +610,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 				},
 			},
 		}
-		res, err := r.Reconcile(context.Background(), objectTemplate)
+		res, err := r.Reconcile(t.Context(), objectTemplate)
 		require.False(t, res.IsZero())
 		assert.Equal(t, optionalResourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
@@ -658,7 +658,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 				},
 			},
 		}
-		res, err := r.Reconcile(context.Background(), objectTemplate)
+		res, err := r.Reconcile(t.Context(), objectTemplate)
 		require.False(t, res.IsZero())
 		assert.Equal(t, resourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
@@ -708,7 +708,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 				},
 			},
 		}
-		res, err := r.Reconcile(context.Background(), objectTemplate)
+		res, err := r.Reconcile(t.Context(), objectTemplate)
 		require.True(t, res.IsZero())
 		require.Error(t, err)
 	})

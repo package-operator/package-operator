@@ -1,7 +1,6 @@
 package packagemanifestvalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,7 +75,7 @@ func TestValidatePackageManifestLock(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 			ferrs, err := ValidatePackageManifestLock(ctx, test.manifest)
 			require.NoError(t, err)
 			require.Len(t, ferrs, len(test.expectedErrors))

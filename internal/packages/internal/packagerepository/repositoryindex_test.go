@@ -77,7 +77,7 @@ func TestLoadRepositoryFromFile(t *testing.T) {
 		}
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ri, err := LoadRepositoryFromFile(ctx, repoPath)
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestLoadRepositoryFromFile(t *testing.T) {
 
 func TestSaveRepositoryToFile(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := repositoryToSave(ctx)
 	require.NoError(t, err)
 
@@ -142,7 +142,7 @@ func TestSaveRepositoryToFile(t *testing.T) {
 
 func TestSaveAndLoadRepositoryToOCI(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := repositoryToSave(ctx)
 	require.NoError(t, err)
 

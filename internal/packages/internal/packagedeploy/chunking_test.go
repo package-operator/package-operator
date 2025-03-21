@@ -1,7 +1,6 @@
 package packagedeploy
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -64,7 +63,7 @@ func Test_determineChunkingStrategyForPackage(t *testing.T) {
 func TestNoOpChunker(t *testing.T) {
 	t.Parallel()
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	c := &NoOpChunker{}
 	chunks, err := c.Chunk(ctx, &corev1alpha1.ObjectSetTemplatePhase{})
@@ -75,7 +74,7 @@ func TestNoOpChunker(t *testing.T) {
 func TestEachObjectChunker(t *testing.T) {
 	t.Parallel()
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	c := &EachObjectChunker{}
 	chunks, err := c.Chunk(ctx, &corev1alpha1.ObjectSetTemplatePhase{
@@ -147,7 +146,7 @@ func TestBinpackNextFitChunker(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := logr.NewContext(context.Background(), testr.New(t))
+			ctx := logr.NewContext(t.Context(), testr.New(t))
 
 			c := &BinpackNextFitChunker{}
 

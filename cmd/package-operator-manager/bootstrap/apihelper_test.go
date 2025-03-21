@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +31,7 @@ func TestIsPKOAvailable(t *testing.T) {
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
 		isPKOAvailable, err := isPKOAvailable(
-			context.Background(), c, "")
+			t.Context(), c, "")
 		require.NoError(t, err)
 		assert.False(t, isPKOAvailable)
 	})
@@ -47,7 +46,7 @@ func TestIsPKOAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOAvailable, err := isPKOAvailable(
-			context.Background(), c, "")
+			t.Context(), c, "")
 		require.NoError(t, err)
 		assert.False(t, isPKOAvailable)
 	})
@@ -82,7 +81,7 @@ func TestIsPKOAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOAvailable, err := isPKOAvailable(
-			context.Background(), c, "")
+			t.Context(), c, "")
 		require.NoError(t, err)
 		assert.True(t, isPKOAvailable)
 	})
@@ -101,7 +100,7 @@ func TestIsPKOAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOAvailable, err := isPKOAvailable(
-			context.Background(), c, "")
+			t.Context(), c, "")
 		require.NoError(t, err)
 		assert.False(t, isPKOAvailable)
 	})
@@ -121,7 +120,7 @@ func TestIsPKOAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOAvailable, err := isPKOAvailable(
-			context.Background(), c, "")
+			t.Context(), c, "")
 		require.NoError(t, err)
 		assert.False(t, isPKOAvailable)
 	})
@@ -140,7 +139,7 @@ func TestIsPKOClusterPackageAvailable(t *testing.T) {
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 
 		isPKOClusterPackageAvailable, err := isPKOClusterPackageAvailable(
-			context.Background(),
+			t.Context(),
 			c,
 		)
 
@@ -167,7 +166,7 @@ func TestIsPKOClusterPackageAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOClusterPackageAvailable, err := isPKOClusterPackageAvailable(
-			context.Background(),
+			t.Context(),
 			c,
 		)
 
@@ -194,7 +193,7 @@ func TestIsPKOClusterPackageAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOClusterPackageAvailable, err := isPKOClusterPackageAvailable(
-			context.Background(),
+			t.Context(),
 			c,
 		)
 
@@ -221,7 +220,7 @@ func TestIsPKOClusterPackageAvailable(t *testing.T) {
 			Return(nil)
 
 		isPKOClusterPackageAvailable, err := isPKOClusterPackageAvailable(
-			context.Background(),
+			t.Context(),
 			c,
 		)
 

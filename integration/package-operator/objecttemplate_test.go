@@ -3,7 +3,6 @@
 package packageoperator
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -146,7 +145,7 @@ spec:
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	err = Client.Create(ctx, &cm1)
 	require.NoError(t, err)
 	defer cleanupOnSuccess(ctx, t, &cm1)
@@ -274,7 +273,7 @@ func createCMAndObjectTemplateSource(
 const pw = "password"
 
 func TestObjectTemplate_secretBase64Encoded(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	secretName := "object-template-secret"
 	secretKey := pw
 	secretDestination := pw
@@ -361,7 +360,7 @@ spec:
 }
 
 func TestObjectTemplate_waitsForSource(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	secretName := "secret"
 	secretKey := pw
 	secretDestination := pw

@@ -40,15 +40,15 @@ func main() {
 
 	err := errors.Join(
 		// Required by cardboard itself.
-		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.2"),
+		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.3"),
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
-		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.17.0"),
-		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.29.4"),
-		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.63.3"),
+		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.17.2"),
+		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.32.3"),
+		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.64.8"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.2"),
-		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.15.3"),
-		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.3"),
+		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.17.2"),
+		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.4"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {

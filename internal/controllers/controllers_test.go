@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +21,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	const finalizer = "test-finalizer"
 	clientMock := testutil.NewClient()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			ResourceVersion: "xxx-123",
@@ -57,7 +56,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	const finalizer = "test-finalizer"
 	clientMock := testutil.NewClient()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			ResourceVersion: "xxx-123",
@@ -87,7 +86,7 @@ func TestRemoveFinalizer(t *testing.T) {
 
 func TestReportOwnActiveObjects(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	ownerStrategy := &ownerStrategyMock{}
 	ownerStrategy.
 		On("IsController", mock.Anything, mock.AnythingOfType("*v1.Secret")).
@@ -189,7 +188,7 @@ func TestMapConditions(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 			var destConditions []metav1.Condition
 			MapConditions(
 				ctx, test.srcGeneration, test.srcConditions,
@@ -222,7 +221,7 @@ func TestDeleteMappedConditions(t *testing.T) {
 			Type: "test/Available",
 		},
 	}
-	DeleteMappedConditions(context.Background(), &conditions)
+	DeleteMappedConditions(t.Context(), &conditions)
 
 	assert.Equal(t, []metav1.Condition{
 		{Type: "Available"},
@@ -248,7 +247,7 @@ func TestAddDynamicCacheLabel(t *testing.T) {
 		).
 		Return(nil)
 
-	updated, err := AddDynamicCacheLabel(context.Background(), c, object)
+	updated, err := AddDynamicCacheLabel(t.Context(), c, object)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedLabels, updated.GetLabels())
@@ -279,7 +278,7 @@ func TestRemoveDynamicCacheLabel(t *testing.T) {
 		).
 		Return(nil)
 
-	updated, err := RemoveDynamicCacheLabel(context.Background(), c, object)
+	updated, err := RemoveDynamicCacheLabel(t.Context(), c, object)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedLabels, updated.GetLabels())

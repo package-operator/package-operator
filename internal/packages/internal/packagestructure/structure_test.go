@@ -1,7 +1,6 @@
 package packagestructure
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -19,7 +18,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 
 	t.Run("components-disabled", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-disabled")
 		require.NoError(t, err)
 
@@ -31,7 +30,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 
 	t.Run("root", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
 		require.NoError(t, err)
 
@@ -48,7 +47,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 
 	t.Run("subcomponent", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
 		require.NoError(t, err)
 
@@ -65,7 +64,7 @@ func TestStructuralLoader_LoadComponent(t *testing.T) {
 
 	t.Run("non-existing-subcomponent", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
 		require.NoError(t, err)
 
@@ -85,7 +84,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("base", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/base")
 		require.NoError(t, err)
 
@@ -104,7 +103,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("components-disabled", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-disabled")
 		require.NoError(t, err)
 
@@ -124,7 +123,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("components-enabled/valid", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/valid")
 		require.NoError(t, err)
 
@@ -149,7 +148,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("components-enabled/nested", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/multi-component/components-enabled/nested-components")
 		require.NoError(t, err)
 
@@ -162,7 +161,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("components-enabled/invalid-files-in-components-dir", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(
 			ctx,
 			"testdata/multi-component/components-enabled/invalid-files-in-components-dir",
@@ -178,7 +177,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("duplicated-manifest", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/duplicated-manifest")
 		require.NoError(t, err)
 
@@ -190,7 +189,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("duplicated-manifest-lock", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/duplicated-manifest-lock")
 		require.NoError(t, err)
 
@@ -202,7 +201,7 @@ func TestStructuralLoader_Load(t *testing.T) {
 
 	t.Run("missing-manifest", func(t *testing.T) {
 		t.Parallel()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		rawPkg, err := packageimport.FromFolder(ctx, "testdata/missing-manifest")
 		require.NoError(t, err)
 

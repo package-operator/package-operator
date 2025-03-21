@@ -68,7 +68,7 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 		On("Check", mock.Anything, mock.Anything, mock.Anything).
 		Return([]preflight.Violation{{}}, nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
@@ -116,7 +116,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
 			Return([]preflight.Violation{}, nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
@@ -177,7 +177,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("Delete", mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
@@ -247,7 +247,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("Delete", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
@@ -320,7 +320,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
@@ -364,7 +364,7 @@ func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	desired := &unstructured.Unstructured{}
 	actual, err := r.reconcileObject(ctx, owner, desired, nil, corev1alpha1.CollisionProtectionPrevent)
 	require.NoError(t, err)
@@ -418,7 +418,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	obj := &unstructured.Unstructured{}
 	// set owner refs so we don't run into the panic
 	obj.SetOwnerReferences([]metav1.OwnerReference{{}})
@@ -456,7 +456,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 		mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
 	ownerObj.SetLabels(map[string]string{
@@ -503,7 +503,7 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 		mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
 	ownerObj.SetNamespace("my-owner-ns")
@@ -861,7 +861,7 @@ func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
 	r := &defaultPatcher{
 		writer: clientMock,
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var patches []client.Patch
 	clientMock.
@@ -914,7 +914,7 @@ func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
 	r := &defaultPatcher{
 		writer: clientMock,
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var patches []client.Patch
 	clientMock.
@@ -973,7 +973,7 @@ func Test_defaultPatcher_fixFieldManagers(t *testing.T) {
 	r := &defaultPatcher{
 		writer: clientMock,
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	clientMock.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -1007,7 +1007,7 @@ func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
 	r := &defaultPatcher{
 		writer: clientMock,
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	clientMock.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -1041,7 +1041,7 @@ func Test_defaultPatcher_fixFieldManagers_nowork(t *testing.T) {
 
 	clientMock := testutil.NewClient()
 	r := &defaultPatcher{writer: clientMock}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	currentObj := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -1160,7 +1160,7 @@ func Test_mapConditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 			owner := &phaseObjectOwnerMock{}
 			ownerObj := &unstructured.Unstructured{
 				Object: map[string]any{
@@ -1217,7 +1217,7 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, _, err := pr.ReconcilePhase(
 		ctx, owner, phase, nil, nil)
 	var pErr *preflight.Error
@@ -1307,7 +1307,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 		objectSet := &objectSetOrPhaseStub{}
 
 		um := &testUpdateMock{}
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest, um.Update)
 
 		require.EqualError(t, err, errTest.Error())
@@ -1324,7 +1324,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 
 		um.On("Update", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{}, um.Update)
 
 		require.NoError(t, err)
@@ -1346,7 +1346,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 
 		um.On("Update", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &ObjectNotOwnedByPreviousRevisionError{}, um.Update)
 
 		require.NoError(t, err)

@@ -1,7 +1,6 @@
 package packageexport
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -33,7 +32,7 @@ func TestToOCI(t *testing.T) {
 }
 
 func TestToOCIFile(t *testing.T) { //nolint:paralleltest
-	f, err := os.CreateTemp("", "pko-*.tar.gz")
+	f, err := os.CreateTemp(t.TempDir(), "pko-*.tar.gz")
 	require.NoError(t, err)
 
 	defer func() { require.NoError(t, os.Remove(f.Name())) }()
@@ -50,7 +49,7 @@ func TestToOCIFile(t *testing.T) { //nolint:paralleltest
 }
 
 func TestToPushedOCI(t *testing.T) { //nolint:paralleltest
-	ctx := context.Background()
+	ctx := t.Context()
 
 	reg := testutil.NewInMemoryRegistry()
 

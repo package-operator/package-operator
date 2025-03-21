@@ -1,7 +1,6 @@
 package packagevalidation
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -78,7 +77,7 @@ func TestTemplateTestValidator(t *testing.T) {
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	ttv := NewTemplateTestValidator(validatorPath)
 
 	originalFileMap := packagetypes.Files{
@@ -154,7 +153,7 @@ func TestTemplateTestValidator_errorUnknownFile(t *testing.T) {
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	ttv := NewTemplateTestValidator(validatorPath)
 
 	originalFileMap := packagetypes.Files{
@@ -206,8 +205,7 @@ func Test_generateStaticImages(t *testing.T) {
 
 func Test_renderTemplateFiles(t *testing.T) {
 	t.Parallel()
-	path, err := os.MkdirTemp(os.TempDir(), "pko-test-renderTemplateFiles")
-	require.NoError(t, err)
+	path := t.TempDir()
 	defer func() {
 		require.NoError(t, os.RemoveAll(path))
 	}()
@@ -223,7 +221,7 @@ func Test_renderTemplateFiles(t *testing.T) {
 		"test3.yaml": nil,
 	}
 
-	err = renderTemplateFiles(path, files, filteredIndexMap)
+	err := renderTemplateFiles(path, files, filteredIndexMap)
 	require.NoError(t, err)
 
 	testContent, err := os.ReadFile(filepath.Join(path, "test.yaml"))

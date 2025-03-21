@@ -35,7 +35,7 @@ const (
 )
 
 func TestUpgrade(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, deleteExistingPKO(ctx))
 

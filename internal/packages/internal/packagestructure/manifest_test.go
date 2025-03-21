@@ -1,7 +1,6 @@
 package packagestructure
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +49,7 @@ func Test_manifestFromFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 			path := "xxx.yml"
 			m, err := manifestFromFile(ctx, scheme, path, test.yamlBytes)
 			assert.Nil(t, m)
@@ -102,7 +101,7 @@ func Test_manifestLockFromFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 			path := "xxx.yml"
 			m, err := manifestLockFromFile(ctx, scheme, path, test.yamlBytes)
 			assert.Nil(t, m)

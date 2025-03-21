@@ -1,7 +1,6 @@
 package packagevalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -22,7 +21,7 @@ func TestLockfileDigestLookupValidator(t *testing.T) {
 	m.On("Digest", "index.docker.io/library/nginx@01234", mock.Anything).
 		Return(testDigest, nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	v := &LockfileDigestLookupValidator{
 		digestLookupFn: m.Digest,
 	}
@@ -90,7 +89,7 @@ func TestLockfileConsistencyValidator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 			v := &LockfileConsistencyValidator{}
 			err := v.ValidatePackage(ctx, tc.pkg)
 			if tc.expectedError != "" {
