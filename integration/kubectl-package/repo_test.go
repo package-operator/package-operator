@@ -67,7 +67,7 @@ func img(host, path, tag string) string {
 func TestRepoCmdCorrectRun(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	const testDataDir = "testdata"
 	_, err := os.Stat(testDataDir)

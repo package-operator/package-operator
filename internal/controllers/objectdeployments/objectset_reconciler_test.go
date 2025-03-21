@@ -1,7 +1,6 @@
 package objectdeployments
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -144,7 +143,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 			}).Return(nil)
 
 			// Invoke reconciler
-			res, err := r.Reconcile(context.Background(), objectDeploymentmock)
+			res, err := r.Reconcile(t.Context(), objectDeploymentmock)
 
 			require.NoError(t, err, "unexpected error")
 			require.True(t, res.IsZero(), "unexpected requeue")
@@ -242,12 +241,12 @@ func Test_ObjectDeploymentPause(t *testing.T) {
 		newObjectSet := args.Get(1).(*corev1alpha1.ObjectSet)
 		revisions[0] = *newObjectSet
 	}).Return(nil)
-	res, err := r.Reconcile(context.Background(), objectDeploymentmock)
+	res, err := r.Reconcile(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "unexpected requeue")
 
 	// ObjectSet should be paused
-	objectSets, err := r.listObjectSetsForDeployment(context.Background(), objectDeploymentmock)
+	objectSets, err := r.listObjectSetsForDeployment(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.Len(t, objectSets, 1)
 	assert.True(t, objectSets[0].IsSpecPaused())
@@ -259,7 +258,7 @@ func Test_ObjectDeploymentPause(t *testing.T) {
 		ObservedGeneration: 1,
 	})
 
-	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	res, err = r.Reconcile(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "unexpected requeue")
 
@@ -272,12 +271,12 @@ func Test_ObjectDeploymentPause(t *testing.T) {
 	objectDeploymentmock.On("GetSpecPaused").Unset()
 	objectDeploymentmock.On("GetSpecPaused").Return(false)
 
-	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	res, err = r.Reconcile(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "unexpected requeue")
 
 	// ObjectSet should be un-paused
-	objectSets, err = r.listObjectSetsForDeployment(context.Background(), objectDeploymentmock)
+	objectSets, err = r.listObjectSetsForDeployment(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.Len(t, objectSets, 1)
 	assert.False(t, objectSets[0].IsSpecPaused())
@@ -285,7 +284,7 @@ func Test_ObjectDeploymentPause(t *testing.T) {
 	// Set objectSet status to un-paused
 	meta.FindStatusCondition(revisions[0].Status.Conditions, corev1alpha1.ObjectSetPaused).Status = metav1.ConditionFalse
 
-	res, err = r.Reconcile(context.Background(), objectDeploymentmock)
+	res, err = r.Reconcile(t.Context(), objectDeploymentmock)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "unexpected requeue")
 

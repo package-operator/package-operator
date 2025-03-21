@@ -64,7 +64,7 @@ func TestValidateEachComponent(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			validateFnCount := 0
 			validateFn := func(context.Context, *Package, bool) error {

@@ -1,7 +1,6 @@
 package packagemanifestvalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestValidatePackageConfiguration(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 			ferrs, err := ValidatePackageConfiguration(ctx, test.packageManifestConfig, test.config, nil)
 			require.NoError(t, err)
 
@@ -112,7 +111,7 @@ func TestPackageManifest_Validate(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	for i := range tests {
 		test := tests[i]
@@ -135,7 +134,7 @@ func TestPackageManifest_Validate(t *testing.T) {
 func TestAdmitPackageConfiguration_Prune(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	inputCfg := map[string]any{"chicken": "🐔", "banana": "🍌"}
 	expectedOutputConfig := map[string]any{"chicken": "🐔"}
@@ -160,7 +159,7 @@ func TestAdmitPackageConfiguration_Prune(t *testing.T) {
 func TestAdmitPackageConfiguration_Default(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	inputCfg := map[string]any{"banana": "🍌"}
 	expectedOutputConfig := map[string]any{"chicken": "🐔"}
@@ -185,7 +184,7 @@ func TestAdmitPackageConfiguration_Default(t *testing.T) {
 func TestAdmitPackageConfigurationTemplating_Default(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	inputCfg := map[string]any{"banana": "🍌"}
 	expectedOutputConfig := map[string]any{"chicken": "🐔"}

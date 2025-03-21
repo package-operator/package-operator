@@ -3,7 +3,6 @@
 package packageoperator
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -82,7 +81,7 @@ func TestVerifyOwnership(t *testing.T) {
 
 	// deploy package
 	objectDeployment := &adapters.ObjectDeployment{}
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	requireDeployPackage(ctx, t, pkg, objectDeployment.ClientObject())
 
 	// objectDeployment should reference its objectSet in '.status.controllerOf'

@@ -69,11 +69,9 @@ func (Generate) code() error {
 
 	// conversion generator
 	if err := shr.Run(
-		"conversion-gen", "--input-dirs", "./internal/apis/manifests",
+		"conversion-gen",
 		"--extra-peer-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
-		"--output-base=./",
-		"--output-file-base=zz_generated.conversion",
-		"-h", "/dev/null"); err != nil {
+		"--output-file=zz_generated.conversion.go", "./internal/apis/manifests"); err != nil {
 		return (fmt.Errorf("generating conversion methods: %w", err))
 	}
 	// conversion-gen expects the SchemeBuilder to be called "localSchemeBuilder"

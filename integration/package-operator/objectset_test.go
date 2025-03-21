@@ -3,7 +3,6 @@
 package packageoperator
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ import (
 )
 
 func TestCollisionPreventionPreventUnowned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	existing := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -76,7 +75,7 @@ func TestCollisionPreventionPreventUnowned(t *testing.T) {
 }
 
 func TestCollisionPreventionPreventOwned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	existing := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-collision-prevention-prevent-owned-cm",
@@ -135,7 +134,7 @@ func TestCollisionPreventionPreventOwned(t *testing.T) {
 }
 
 func TestCollisionPreventionInvalidSet(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	objectSetCM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -186,7 +185,7 @@ func TestCollisionPreventionInvalidSet(t *testing.T) {
 }
 
 func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	existing := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -247,7 +246,7 @@ func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
 }
 
 func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-if-no-controller-unowned-cm", Namespace: "default"},
@@ -305,7 +304,7 @@ func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
 }
 
 func TestCollisionPreventionNoneUnowned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -374,7 +373,7 @@ func TestCollisionPreventionNoneUnowned(t *testing.T) {
 }
 
 func TestCollisionPreventionNoneOwned(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-none-owned-cm", Namespace: "default"},
@@ -503,7 +502,7 @@ func TestObjectSet_orphanCascadeDeletion(t *testing.T) {
 }
 
 func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

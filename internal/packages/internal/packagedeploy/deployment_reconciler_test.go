@@ -1,7 +1,6 @@
 package packagedeploy
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -31,7 +30,7 @@ func Test_DeploymentReconciler_Reconcile(t *testing.T) {
 		adapters.NewObjectSlice,
 		adapters.NewObjectSliceList,
 		newGenericObjectSetList)
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	deploy := &adapters.ObjectDeployment{
 		ObjectDeployment: corev1alpha1.ObjectDeployment{
@@ -149,7 +148,7 @@ func TestDeploymentReconciler_reconcileSlice_hashCollision(t *testing.T) {
 		adapters.NewObjectSlice,
 		adapters.NewObjectSliceList,
 		newGenericObjectSetList)
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	deploy := &adapters.ObjectDeployment{
 		ObjectDeployment: corev1alpha1.ObjectDeployment{
@@ -214,7 +213,7 @@ func TestDeploymentReconciler_sliceGarbageCollection(t *testing.T) {
 		adapters.NewObjectSlice,
 		adapters.NewObjectSliceList,
 		newGenericObjectSetList)
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	deploy := &adapters.ObjectDeployment{
 		ObjectDeployment: corev1alpha1.ObjectDeployment{

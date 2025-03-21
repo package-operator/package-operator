@@ -28,7 +28,7 @@ func TestNamespaceEscalation(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name               string
@@ -100,7 +100,7 @@ func TestNamespaceEscalation_restMapper(t *testing.T) {
 			Scope: meta.RESTScopeRoot,
 		}, nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	v, err := ne.Check(ctx, owner, obj)
 	require.NoError(t, err)
 	assert.Equal(t, []Violation{

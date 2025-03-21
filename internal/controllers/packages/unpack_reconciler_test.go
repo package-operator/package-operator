@@ -44,7 +44,7 @@ func TestUnpackReconciler(t *testing.T) {
 			},
 		},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	ur.SetEnvironment(&manifests.PackageEnvironment{
 		Kubernetes: manifests.PackageEnvironmentKubernetes{
 			Version: "v11111",
@@ -79,7 +79,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 		},
 	}
 	pkg.Package.Status.UnpackedHash = pkg.GetSpecHash(nil)
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
@@ -111,7 +111,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)
 	assert.Equal(t, controllers.DefaultInitialBackoff, res.RequeueAfter)

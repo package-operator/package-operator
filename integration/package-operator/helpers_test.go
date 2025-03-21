@@ -335,7 +335,7 @@ func runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(
 	objectSet, err := simpleObjectSet(cm, namespace, class)
 	require.NoError(t, err)
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	cleanupOnSuccess(ctx, t, cm)
 
 	require.NoError(t, Client.Create(ctx, objectSet))
@@ -422,7 +422,7 @@ func runObjectSetHandoverTestWithCustomHandlers(
 	objectSetRev2, err := defaultObjectSetRev2(cm1, cm3, objectSetRev1, namespace, class)
 	require.NoError(t, err)
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, objectSetRev1))
 	cleanupOnSuccess(ctx, t, objectSetRev1)
@@ -590,7 +590,7 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 		Name: cm5.Name, Namespace: objectSet.Namespace,
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
