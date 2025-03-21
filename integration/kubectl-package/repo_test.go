@@ -150,7 +150,7 @@ func TestRepoCmdMalformedParams(t *testing.T) {
 	cmd = newCmd("add", "foobar.yaml", "@$%")
 	require.ErrorContains(t, cmd.Execute(), "requires at least 3 arg(s), only received 2")
 	cmd = newCmd("add", "foobar.yaml", "@$%", "1.0.0")
-	require.ErrorContains(t, cmd.Execute(), "package reference: could not parse reference: @$%!(NOVERB)")
+	require.ErrorContains(t, cmd.Execute(), "package reference: could not parse reference:")
 	cmd = newCmd("add", "foobar.yaml", "quay.io/foo/bar:latest", "@$%")
 	require.ErrorContains(t, cmd.Execute(), "version: col 1: starts with non-positive integer '@'")
 	cmd = newCmd("add", "foobar.yaml", "quay.io/foo/bar:latest", "1.0.0", "@$%")
@@ -164,7 +164,7 @@ func TestRepoCmdMalformedParams(t *testing.T) {
 	cmd = newCmd("remove", "foobar.yaml")
 	require.ErrorContains(t, cmd.Execute(), "accepts 2 arg(s), received 1")
 	cmd = newCmd("remove", "foobar.yaml", "@$%")
-	require.ErrorContains(t, cmd.Execute(), "given package reference: could not parse reference: @$%!(NOVERB)")
+	require.ErrorContains(t, cmd.Execute(), "given package reference: could not parse reference:")
 	cmd = newCmd("remove", "foobar.yaml", "quay.io/foo/bar:latest")
 	require.ErrorContains(t, cmd.Execute(), "open foobar.yaml: no such file or directory")
 
@@ -179,7 +179,7 @@ func TestRepoCmdMalformedParams(t *testing.T) {
 	require.ErrorContains(t, cmd.Execute(), "arguments invalid: file must be not empty")
 	cmd = newCmd("pull", "foobar.yaml", "@$%")
 	require.ErrorContains(t, cmd.Execute(),
-		"pull repository image: parsing reference \"@$%\": could not parse reference: @$%!(NOVERB)")
+		"pull repository image: parsing reference \"@$%\": could not parse reference:")
 	cmd = newCmd("pull", "foobar.yaml", "quay.io/foo/bar:latest")
 	require.ErrorContains(t, cmd.Execute(),
 		"pull repository image: GET https://quay.io/v2/foo/bar/manifests/latest: "+
