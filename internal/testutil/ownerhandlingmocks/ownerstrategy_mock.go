@@ -12,14 +12,9 @@ type OwnerStrategyMock struct {
 	mock.Mock
 }
 
-func (m *OwnerStrategyMock) OwnerPatch(obj metav1.Object) ([]byte, error) {
+func (m *OwnerStrategyMock) GetController(obj metav1.Object) (metav1.OwnerReference, bool) {
 	args := m.Called(obj)
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-func (m *OwnerStrategyMock) HasController(obj metav1.Object) bool {
-	args := m.Called(obj)
-	return args.Bool(0)
+	return args.Get(0).(metav1.OwnerReference), args.Bool(1)
 }
 
 func (m *OwnerStrategyMock) IsController(owner, obj metav1.Object) bool {
