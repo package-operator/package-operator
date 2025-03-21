@@ -1,7 +1,6 @@
 package objecttemplate
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -54,7 +53,7 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := controller.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -97,7 +96,7 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 		On("Free", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := controller.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})

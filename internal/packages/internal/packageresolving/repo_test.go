@@ -80,7 +80,7 @@ func TestLoadRepo(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mri, err := loadRepo(ctx, test.repos)
 			if test.expErr == "" {
 				require.NoError(t, err)

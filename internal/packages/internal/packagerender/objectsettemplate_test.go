@@ -1,7 +1,6 @@
 package packagerender
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -20,7 +19,7 @@ var testDataPath = filepath.Join("testdata", "base")
 func TestTemplateSpecFromPackage(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	rawPkg, err := packageimport.FromFolder(ctx, testDataPath)
 	require.NoError(t, err)

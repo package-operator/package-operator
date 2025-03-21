@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"golang.org/x/net/context"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"package-operator.run/internal/apis/manifests"
@@ -35,7 +33,7 @@ func TestValidRepositoryEntryValidation(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	errorList, err := ValidateRepositoryEntry(ctx, &entry)
 	require.NoError(t, err)
@@ -65,7 +63,7 @@ func TestBrokenRepositoryEntryValidation(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	errorList, err := ValidateRepositoryEntry(ctx, &entry)
 	require.NoError(t, err)

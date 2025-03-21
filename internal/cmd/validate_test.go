@@ -120,7 +120,7 @@ func TestValidate_ValidatePackage(t *testing.T) {
 				WithPuller{Pull: mPuller.Pull},
 			)
 
-			tc.Assertion(t, validate.ValidatePackage(context.Background(), tc.Options...))
+			tc.Assertion(t, validate.ValidatePackage(t.Context(), tc.Options...))
 		})
 	}
 }

@@ -16,7 +16,7 @@ import (
 func TestBuildOutput(t *testing.T) {
 	t.Parallel()
 
-	f, err := os.CreateTemp("", "pko-*.tar.gz")
+	f, err := os.CreateTemp(t.TempDir(), "pko-*.tar.gz")
 	require.NoError(t, err)
 
 	defer func() { require.NoError(t, os.Remove(f.Name())) }()

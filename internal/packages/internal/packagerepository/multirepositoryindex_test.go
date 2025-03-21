@@ -41,7 +41,7 @@ metadata:
 func TestLoad(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mri := NewMultiRepositoryIndex()
 	require.NoError(t, mri.LoadRepository(ctx, strings.NewReader(multiRepositoryIndexFileSeed)))
 
@@ -51,7 +51,7 @@ func TestLoad(t *testing.T) {
 func TestLoadError(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mri := NewMultiRepositoryIndex()
 	require.Error(t, mri.LoadRepository(ctx, strings.NewReader("foobar")))
 }
@@ -68,7 +68,7 @@ func TestLoadFromFile(t *testing.T) {
 		}
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mri := NewMultiRepositoryIndex()
 	require.NoError(t,
 		mri.LoadRepositoryFromFile(ctx, hansRepoFile))
@@ -94,7 +94,7 @@ func TestLoadFromFile(t *testing.T) {
 func TestLoadFromFileError(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mri := NewMultiRepositoryIndex()
 	require.Error(t, mri.LoadRepositoryFromFile(ctx, "foobar.xyz"))
 }
@@ -102,7 +102,7 @@ func TestLoadFromFileError(t *testing.T) {
 func TestLoadFromOCI(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	idx, err := LoadRepository(ctx, strings.NewReader(multiRepositoryIndexFileSeed))
 	require.NoError(t, err)
 	ociImg, err := SaveRepositoryToOCI(ctx, idx)
@@ -117,7 +117,7 @@ func TestLoadFromOCI(t *testing.T) {
 func TestLoadFromOCIError(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mri := NewMultiRepositoryIndex()
 	require.Error(t, mri.LoadRepositoryFromOCI(ctx, empty.Image))
 }

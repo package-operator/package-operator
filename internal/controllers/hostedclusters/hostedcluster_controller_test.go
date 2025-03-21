@@ -1,7 +1,6 @@
 package hostedclusters
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -59,7 +58,7 @@ func TestHostedClusterController_noop(t *testing.T) {
 		}).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := controller.Reconcile(ctx, ctrl.Request{
 		NamespacedName: client.ObjectKeyFromObject(hc),
 	})
@@ -111,7 +110,7 @@ func TestHostedClusterController_Reconcile_GetHostedClusterError(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1beta1.HostedCluster"), mock.Anything).
 		Return(fooErr)
 
-	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	res, err := c.Reconcile(t.Context(), ctrl.Request{})
 	require.EqualError(t, err, fooErr.Error())
 	assert.Empty(t, res)
 
@@ -134,7 +133,7 @@ func TestHostedClusterController_Reconcile_DontHandleDeleted(t *testing.T) {
 		}).
 		Return(nil)
 
-	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	res, err := c.Reconcile(t.Context(), ctrl.Request{})
 	require.NoError(t, err)
 	assert.Empty(t, res)
 
@@ -157,7 +156,7 @@ func TestHostedClusterController_Reconcile_waitsForClusterReady(t *testing.T) {
 		On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	res, err := c.Reconcile(t.Context(), ctrl.Request{})
 	require.NoError(t, err)
 	assert.Empty(t, res)
 
@@ -188,7 +187,7 @@ func TestHostedClusterController_Reconcile_createsPackage(t *testing.T) {
 		On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
-	res, err := c.Reconcile(context.Background(), ctrl.Request{})
+	res, err := c.Reconcile(t.Context(), ctrl.Request{})
 	require.NoError(t, err)
 	assert.Empty(t, res)
 
@@ -335,7 +334,7 @@ func TestHostedClusterController_Reconcile_updatesPackageSpec(t *testing.T) {
 			}).
 			Return(nil)
 
-		res, err := c.Reconcile(context.Background(), ctrl.Request{})
+		res, err := c.Reconcile(t.Context(), ctrl.Request{})
 		require.NoError(t, err)
 		assert.Empty(t, res)
 

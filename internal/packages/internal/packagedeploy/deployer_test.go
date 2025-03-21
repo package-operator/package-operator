@@ -39,7 +39,7 @@ func TestNewPackageDeployer(t *testing.T) {
 func TestUniqueConstraint(t *testing.T) {
 	t.Parallel()
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	uc := testutil.NewClient()
 	pAPIPkg := &adapters.GenericPackage{
 		Package: corev1alpha1.Package{
@@ -142,7 +142,7 @@ func TestPackageDeployer_Deploy(t *testing.T) {
 		deploymentReconciler: deploymentReconcilerMock,
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	obj1 := unstructured.Unstructured{Object: map[string]any{}}
 	obj1.SetAnnotations(map[string]string{
@@ -217,7 +217,7 @@ func TestPackageDeployer_Deploy_Error(t *testing.T) {
 		deploymentReconciler: deploymentReconcilerMock,
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	structuralLoaderMock.
 		On("LoadComponent", mock.Anything, mock.Anything, mock.Anything).
@@ -297,7 +297,7 @@ func TestImageWithDigestError(t *testing.T) {
 func Test_validateConstraints(t *testing.T) {
 	t.Parallel()
 	cli := testutil.NewClient()
-	ctx := context.Background()
+	ctx := t.Context()
 	tests := []struct {
 		name        string
 		apiPkg      *adapters.GenericPackage

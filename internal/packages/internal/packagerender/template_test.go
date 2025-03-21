@@ -1,7 +1,6 @@
 package packagerender
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +35,7 @@ func TestRenderTemplates(t *testing.T) {
 			Manifest: &manifests.PackageManifest{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		err := RenderTemplates(ctx, pkg, tmplCtx)
 		require.NoError(t, err)
 
@@ -66,7 +65,7 @@ func TestRenderTemplates(t *testing.T) {
 			Manifest: &manifests.PackageManifest{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		err := RenderTemplates(ctx, pkg, tmplCtx)
 		require.Error(t, err)
 	})
@@ -91,7 +90,7 @@ func TestRenderTemplates(t *testing.T) {
 			Manifest: &manifests.PackageManifest{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		err := RenderTemplates(ctx, pkg, tmplCtx)
 		require.Error(t, err)
 	})
@@ -163,7 +162,7 @@ func TestRenderTemplates_CelFunction(t *testing.T) {
 				},
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			err := RenderTemplates(ctx, pkg, tc.tmplCtx)
 
 			if tc.err == nil {

@@ -35,7 +35,7 @@ func TestHypershift_start_foundImmediately(t *testing.T) {
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	clk.Step(hyperShiftPollInterval)
 	require.ErrorIs(t, h.Start(ctx), ErrHypershiftAPIPostSetup)
@@ -56,7 +56,7 @@ func TestHypershift_start_foundOnSecondPoll(t *testing.T) {
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	clk.Step(hyperShiftPollInterval)
 	require.ErrorIs(t, h.Start(ctx), ErrHypershiftAPIPostSetup)
@@ -72,7 +72,7 @@ func TestHypershift_start_someerr(t *testing.T) {
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	clk.Step(hyperShiftPollInterval)
 	require.ErrorIs(t, h.Start(ctx), errTest)
@@ -88,7 +88,7 @@ func TestHypershift_start_cancel(t *testing.T) {
 
 	h := newHypershift(testr.New(t), restMock, clk.NewTicker(hyperShiftPollInterval))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Nanosecond)
 	defer cancel()
 
 	err := h.Start(ctx)

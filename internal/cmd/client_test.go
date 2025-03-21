@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -133,7 +132,7 @@ func TestClient_GetObjectset(t *testing.T) {
 			c := NewClient(fakeClient)
 
 			// Test fetching object set
-			res, err := c.GetObjectset(context.Background(), tc.PackageName, tc.Namespace)
+			res, err := c.GetObjectset(t.Context(), tc.PackageName, tc.Namespace)
 			t.Log(res, err)
 			tc.Assertion(t, err)
 		})
@@ -225,7 +224,7 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 			c := NewClient(fakeClient)
 
 			// Test fetching cluster object set
-			res, err := c.GetClusterObjectset(context.Background(), tc.ClusterPackageName)
+			res, err := c.GetClusterObjectset(t.Context(), tc.ClusterPackageName)
 			t.Log(res, err)
 			tc.Assertion(t, err)
 		})
@@ -285,7 +284,7 @@ func TestClient_GetPackage(t *testing.T) {
 				Build()
 
 			c := NewClient(fakeClient)
-			_, err = c.GetPackage(context.Background(), tc.PackageName, tc.Options...)
+			_, err = c.GetPackage(t.Context(), tc.PackageName, tc.Options...)
 			tc.Assertion(t, err)
 		})
 	}
@@ -344,7 +343,7 @@ func TestClient_GetObjectDeployment(t *testing.T) {
 				Build()
 
 			c := NewClient(fakeClient)
-			_, err = c.GetObjectDeployment(context.Background(), tc.ObjectDeploymentName, tc.Options...)
+			_, err = c.GetObjectDeployment(t.Context(), tc.ObjectDeploymentName, tc.Options...)
 			tc.Assertion(t, err)
 		})
 	}
@@ -476,7 +475,7 @@ func TestPackage(t *testing.T) {
 			assert.Equal(t, tc.Expected.Namespace, pkg.Namespace())
 			assert.Equal(t, tc.Expected.CurrentRevision, pkg.CurrentRevision())
 
-			sets, err := pkg.ObjectSets(context.Background())
+			sets, err := pkg.ObjectSets(t.Context())
 			require.NoError(t, err)
 
 			assert.Len(t, sets, tc.Expected.NumObjectSets)
@@ -616,7 +615,7 @@ func TestObjectDeployment(t *testing.T) {
 			assert.Equal(t, tc.Expected.Namespace, dep.Namespace())
 			assert.Equal(t, tc.Expected.CurrentRevision, dep.CurrentRevision())
 
-			sets, err := dep.ObjectSets(context.Background())
+			sets, err := dep.ObjectSets(t.Context())
 			require.NoError(t, err)
 
 			assert.Len(t, sets, tc.Expected.NumObjectSets)

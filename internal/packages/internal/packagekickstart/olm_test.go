@@ -1,7 +1,6 @@
 package packagekickstart
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,7 +63,7 @@ func TestImportOLMBundleImage(t *testing.T) {
 		olmManifestFolder + "/test.clusterserviceversion.yaml": []byte(olmBundleCSV),
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	objects, reg, err := ImportOLMBundleImage(ctx, image)
 	require.NoError(t, err)
 

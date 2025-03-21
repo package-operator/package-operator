@@ -1,7 +1,6 @@
 package environment
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -69,7 +68,7 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 
 	mgr := NewManager(c, dc, rm)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 
@@ -150,7 +149,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 
 	mgr := NewManager(c, dc, rm)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 
@@ -187,7 +186,7 @@ func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
 		).
 		Return(&meta.NoKindMatchError{})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mgr := NewManager(c, nil, nil)
 	openShiftEnv, isOpenShift, err := mgr.openShiftEnvironment(ctx)
 	require.NoError(t, err)
@@ -206,7 +205,7 @@ func TestManager_openShiftEnvironment_error(t *testing.T) {
 		).
 		Return(errExample)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mgr := NewManager(c, nil, nil)
 	_, _, err := mgr.openShiftEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
@@ -242,7 +241,7 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 				).
 				Return(test.err)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mgr := NewManager(c, nil, nil)
 			proxyEnv, hasProxy, err := mgr.openShiftProxyEnvironment(ctx)
 			require.NoError(t, err)
@@ -263,7 +262,7 @@ func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
 		).
 		Return(errExample)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mgr := NewManager(c, nil, nil)
 	_, _, err := mgr.openShiftProxyEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
@@ -319,7 +318,7 @@ func TestSink(t *testing.T) {
 				Version: "v12345",
 			},
 		}
-		ctx := context.Background()
+		ctx := t.Context()
 
 		s.SetEnvironment(env)
 		gotEnv, err := s.GetEnvironment(ctx, "")
@@ -364,7 +363,7 @@ func TestSink(t *testing.T) {
 			},
 			HyperShift: &manifests.PackageEnvironmentHyperShift{},
 		}
-		ctx := context.Background()
+		ctx := t.Context()
 
 		s.SetEnvironment(env)
 		gotEnv, err := s.GetEnvironment(ctx, "clusters-ban-ana")

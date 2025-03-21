@@ -68,7 +68,7 @@ func TestPackageManifestValidator(t *testing.T) {
 				ManifestLock: pkgManLock,
 			}
 
-			err := manifestV.ValidatePackage(context.Background(), pkg)
+			err := manifestV.ValidatePackage(t.Context(), pkg)
 			require.Equal(t, tc.ExpectedErr, err)
 			require.Equal(t, 1, valPkgManCount)
 			require.Equal(t, expectedValPkgManLockCount, valPkgManLockCount)
@@ -125,7 +125,7 @@ func TestPackageScopeValidator(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := t.Context()
 
 			var components []packagetypes.Package
 			if tc.componentScopes != nil {
@@ -202,7 +202,7 @@ func TestPackageStaticFilesWithoutTestCasesValidator(t *testing.T) {
 			t.Parallel()
 
 			v := &PackageStaticFilesWithoutTestCasesValidator{}
-			ctx := context.Background()
+			ctx := t.Context()
 			err := v.ValidatePackage(ctx, test.pkg)
 			if len(test.err) == 0 {
 				assert.NoError(t, err)

@@ -87,7 +87,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
 	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
-	res, err := r.Reconcile(context.Background(), os)
+	res, err := r.Reconcile(t.Context(), os)
 	assert.Empty(t, res)
 	require.NoError(t, err)
 
@@ -133,7 +133,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
 	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
-	res, err := r.Reconcile(context.Background(), os)
+	res, err := r.Reconcile(t.Context(), os)
 	require.NoError(t, err)
 
 	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
@@ -188,7 +188,7 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 			pr.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).
 				Return(true, nil).Maybe()
 
-			done, err := r.Teardown(context.Background(), os)
+			done, err := r.Teardown(t.Context(), os)
 			assert.Equal(t, test.firstTeardownFinish, done)
 			require.NoError(t, err)
 			remotePr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything, phase2)
@@ -294,7 +294,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 					Clock: cm,
 				},
 			)
-			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
+			_, err := rec.Reconcile(t.Context(), tc.ObjectSet)
 			require.NoError(t, err)
 
 			require.Equal(t, len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetConditions()), tc.ObjectSet.GetConditions())

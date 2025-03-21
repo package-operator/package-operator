@@ -1,7 +1,6 @@
 package packages
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +50,7 @@ func TestPackageController_Err(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
 		Return(fooErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, ctrl.Request{})
 
 	require.Error(t, err)
@@ -91,7 +90,7 @@ func TestPackageController_NotFound(t *testing.T) {
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
 		Return(notFoundErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -147,7 +146,7 @@ func TestPackageController_Paused(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -188,7 +187,7 @@ func TestPackageController_Reconcile(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -221,7 +220,7 @@ func TestClusterPackageController_Err(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Return(fooErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, ctrl.Request{})
 
 	require.Error(t, err)
@@ -261,7 +260,7 @@ func TestClusterOPackageController_NotFound(t *testing.T) {
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Return(notFoundErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -317,7 +316,7 @@ func TestClusterPackageController_Paused(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -358,7 +357,7 @@ func TestClusterPackageController_Reconcile(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})

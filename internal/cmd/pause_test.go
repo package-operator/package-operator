@@ -52,7 +52,7 @@ func TestPackageSetPaused_NotFound(t *testing.T) {
 
 			require.ErrorIs(t,
 				c.PackageSetPaused(
-					context.Background(), w, strings.ToLower(tc.resource),
+					t.Context(), w, strings.ToLower(tc.resource),
 					objectKey.Name, objectKey.Namespace, true, "banana",
 				),
 				notFoundErr,
@@ -89,14 +89,14 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 				Return(errUpdate)
 
 			err := c.PackageSetPaused(
-				context.Background(), w, strings.ToLower(tc.resource),
+				t.Context(), w, strings.ToLower(tc.resource),
 				pkg.GetName(), pkg.GetNamespace(), true, "banana",
 			)
 			require.ErrorIs(t, err, errPausingPackage)
 			require.ErrorIs(t, err, errUpdate)
 
 			err = c.PackageSetPaused(
-				context.Background(), w, strings.ToLower(tc.resource),
+				t.Context(), w, strings.ToLower(tc.resource),
 				pkg.GetName(), pkg.GetNamespace(), false, "banana",
 			)
 			require.ErrorIs(t, err, errUnpausingPackage)
@@ -160,7 +160,7 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 
 			testMsg := "test message"
 			require.NoError(t, c.PackageSetPaused(
-				context.Background(), w, "package", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
+				t.Context(), w, "package", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)
 			assert.Equal(t, pkg.GetNamespace(), updatedPkg.Namespace)
@@ -231,7 +231,7 @@ func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 
 			testMsg := "test message"
 			require.NoError(t, c.PackageSetPaused(
-				context.Background(), w, "clusterpackage", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
+				t.Context(), w, "clusterpackage", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)
 			assert.Equal(t, pkg.GetNamespace(), updatedPkg.Namespace)
