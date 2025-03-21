@@ -303,7 +303,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 		t.Run(subTest.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := logr.NewContext(context.Background(), testr.New(t))
+			ctx := logr.NewContext(t.Context(), testr.New(t))
 			c := testutil.NewClient()
 
 			subTest.t(t, c, ctx, testScheme)
@@ -424,7 +424,7 @@ func TestEnsureCRDGone(t *testing.T) {
 			t.Parallel()
 			t.Helper()
 
-			ctx := logr.NewContext(context.Background(), testr.New(t))
+			ctx := logr.NewContext(t.Context(), testr.New(t))
 			c := testutil.NewClient()
 
 			subTest.t(t, c, ctx, testScheme)

@@ -1,7 +1,6 @@
 package packagevalidation
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +25,7 @@ func TestObjectPhaseAnnotationValidator(t *testing.T) {
 		manifests.PackagePhaseAnnotation: "deploy",
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	manifest := &manifests.PackageManifest{
 		Spec: manifests.PackageManifestSpec{
 			Phases: []manifests.PackageManifestPhase{{Name: "deploy"}},
@@ -52,7 +51,7 @@ func TestObjectDuplicateValidator(t *testing.T) {
 		manifests.PackagePhaseAnnotation: "something",
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	manifest := &manifests.PackageManifest{}
 	err := odv.ValidateObjects(
 		ctx, manifest,
@@ -73,7 +72,7 @@ func TestObjectGVKValidator(t *testing.T) {
 		Kind:    "Secret",
 	})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	manifest := &manifests.PackageManifest{}
 	err := ogvkv.ValidateObjects(
 		ctx, manifest,
@@ -91,7 +90,7 @@ func TestObjectLabelsValidator(t *testing.T) {
 	failObj := unstructured.Unstructured{}
 	failObj.SetLabels(map[string]string{"/123": "test"})
 
-	ctx := context.Background()
+	ctx := t.Context()
 	manifest := &manifests.PackageManifest{}
 	err := olv.ValidateObjects(
 		ctx, manifest,

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,7 @@ func TestPreviousRevisionLookup(t *testing.T) {
 
 	rl := NewPreviousRevisionLookup(nil, factory.New, clientMock)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	prev := &previousObjectSetMock{}
 	prev.

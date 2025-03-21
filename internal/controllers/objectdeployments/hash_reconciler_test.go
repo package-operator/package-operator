@@ -1,7 +1,6 @@
 package objectdeployments
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,7 +22,7 @@ func TestHashReconciler(t *testing.T) {
 			client: testClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 
 		objectSetDeployment := &genericObjectSetDeploymentMock{}
 		objectSetDeployment.On("GetObjectSetTemplate").Return(corev1alpha1.ObjectSetTemplate{})

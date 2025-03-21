@@ -15,7 +15,7 @@ import (
 
 func TestCheckAll(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &unstructured.Unstructured{}
 
 	violations, err := CheckAll(
@@ -29,7 +29,7 @@ func TestCheckAll(t *testing.T) {
 
 func TestCheckAllInPhase(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := &unstructured.Unstructured{}
 
 	violations, err := CheckAllInPhase(
@@ -45,7 +45,7 @@ func TestCheckAllInPhase(t *testing.T) {
 
 func Test_addPositionToViolations(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	obj := &unstructured.Unstructured{}
 	obj.SetName("test")
 	obj.SetNamespace("testns")
@@ -61,7 +61,7 @@ func Test_addPositionToViolations(t *testing.T) {
 
 func Test_addPositionToViolations_withPhase(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = NewContextWithPhase(ctx, corev1alpha1.ObjectSetTemplatePhase{
 		Name: "123",
 	})
@@ -92,7 +92,7 @@ func TestList(t *testing.T) {
 
 	owner := &unstructured.Unstructured{}
 	obj := &unstructured.Unstructured{}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := list.Check(ctx, owner, obj)
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestPreflightListOk(t *testing.T) {
 	phases := []corev1alpha1.ObjectSetTemplatePhase{
 		{Name: "test"},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := list.Check(ctx, phases)
 	require.NoError(t, err)
@@ -160,7 +160,7 @@ func TestPreflightListWithError(t *testing.T) {
 	phases := []corev1alpha1.ObjectSetTemplatePhase{
 		{Name: "test"},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := list.Check(ctx, phases)
 	require.ErrorIs(t, err, errChecker)
