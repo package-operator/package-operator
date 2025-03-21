@@ -92,8 +92,8 @@ func newGenericPackageController(
 		log:                 log,
 		scheme:              scheme,
 		unpackReconciler: newUnpackReconciler(
-			client, uncachedClient, imagePuller, packageDeployer,
-			metricsRecorder, packageHashModifier,
+			uncachedClient, imagePuller, packageDeployer,
+			metricsRecorder, environment.NewSink(client), packageHashModifier,
 		),
 		objDepStatusReconciler: &objectDeploymentStatusReconciler{
 			client:              client,

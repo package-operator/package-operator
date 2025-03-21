@@ -16,14 +16,13 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/packages"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
 type unpackReconciler struct {
-	*environment.Sink
+	environmentSink
 
 	uncachedClient client.Client
 
@@ -35,17 +34,22 @@ type unpackReconciler struct {
 	packageHashModifier *int32
 }
 
+type environmentSink interface {
+	GetEnvironment(ctx context.Context, namespace string) (*manifests.PackageEnvironment, error)
+	SetEnvironment(env *manifests.PackageEnvironment)
+}
+
 type packageLoadRecorder interface {
 	RecordPackageLoadMetric(
 		pkg metrics.GenericPackage, d time.Duration)
 }
 
 func newUnpackReconciler(
-	c client.Client,
 	uncachedClient client.Client,
 	imagePuller imagePuller,
 	packageDeployer packageDeployer,
 	packageLoadRecorder packageLoadRecorder,
+	environmentSink environmentSink,
 	packageHashModifier *int32,
 	opts ...unpackReconcilerOption,
 ) *unpackReconciler {
@@ -55,7 +59,7 @@ func newUnpackReconciler(
 	cfg.Default()
 
 	return &unpackReconciler{
-		environment.NewSink(c),
+		environmentSink,
 
 		uncachedClient,
 		imagePuller,
@@ -114,6 +118,10 @@ func (r *unpackReconciler) Reconcile(
 	}
 
 	env, err := r.GetEnvironment(ctx, pkg.ClientObject().GetNamespace())
+	if err != nil {
+		return res, fmt.Errorf("getting environment: %w", err)
+	}
+
 	if err := r.packageDeployer.Deploy(ctx, pkg, rawPkg, *env); err != nil {
 		return res, fmt.Errorf("deploying package: %w", err)
 	}
