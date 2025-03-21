@@ -6,56 +6,126 @@ on:
   merge_group:
   push:
     branches: [main]
+env:
+  GO_VERSION: '>=1.23.x'
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 
 jobs:
+  update-go-modules:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    outputs:
+      UPDATE: ${{ steps.detect_changes.outputs.UPDATE }}
+    env:
+      PAT_TOKEN: ${{ secrets.PAT_TOKEN}}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
+
+      - name: Run go work sync
+        run: go work sync
+
+      - name: Detect Go modules
+        id: detect_modules
+        run: |
+          echo "Finding all Go modules..."
+          MODULES=$(find . -mindepth 1 -name "go.mod" | sort | xargs -n1 dirname)
+          MODULES=". $MODULES"
+          MODULES=$(echo "$MODULES" | tr '\n' ' ')  # Convert newlines to spaces
+          echo "Detected modules: $MODULES"
+          echo "MODULES=$MODULES" >> $GITHUB_ENV
+
+      - name: Run go mod tidy for all modules
+        id: detect_changes
+        run: |
+          UPDATE=""
+          for module in $MODULES; do
+            echo "Processing module: $module"
+            pushd "$module" || exit 1
+            go mod tidy
+            if ! git diff --quiet; then
+              echo "Detected changes in $module"
+              UPDATE="true"
+              git add go.mod go.sum
+            fi
+            popd
+          done
+          echo "UPDATE=$UPDATE" >> $GITHUB_ENV
+          echo "update=${UPDATE:-false}" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: env.UPDATE == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix: sync dependencies with go mod tidy / go work sync" || echo "No changes to commit"
+          git push https://x-access-token:${{ env.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+
   lint-unit-int:
+    needs: [ update-go-modules ]
+    env:
+      UPDATE: ${{ needs.update-go-modules.outputs.UPDATE }}
+    if: ${{ github.event_name != 'pull_request' || needs.update-go-modules.result == 'skipped' || (success() && needs.update-go-modules.outputs.UPDATE == 'false') }}
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.23.x'
-        cache-dependency-path: "**/*.sum"
-        check-latest: true
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
 
-    - name: Ensure code is sanitized
-      run: ./do CI:PostPush
+      - name: Ensure code is sanitized
+        run: ./do CI:PostPush
 
-    - name: Unit
-      run: ./do CI:Unit
+      - name: Unit tests
+        run: ./do CI:Unit
 
-    - name: Integration tests
-      run: ./do CI:Integration
-      env:
-        CARDBOARD_CONTAINER_RUNTIME: docker
+      - name: Integration tests
+        run: ./do CI:Integration
+        env:
+          CARDBOARD_CONTAINER_RUNTIME: docker
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        files: .cache/unit/cover.txt,.cache/integration/cover.txt
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
-        verbose: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: .cache/unit/cover.txt,.cache/integration/cover.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
+          verbose: true
 
-    - name: Archive unit test results
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: unit-test-results
-        path: .cache/unit
+      - name: Archive unit test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: unit-test-results
+          path: .cache/unit
 
-    - name: Archive integration test results
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: integration-test-results
-        path: .cache/integration
+      - name: Archive integration test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: integration-test-results
+          path: .cache/integration
