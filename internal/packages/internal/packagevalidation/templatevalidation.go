@@ -58,7 +58,7 @@ func (v TemplateTestValidator) doValidatePackage(
 	}
 
 	for _, templateTestCase := range pkg.Manifest.Test.Template {
-		log.Info("running template test case", "name", templateTestCase.Name)
+		log.V(1).Info("running template test case", "name", templateTestCase.Name)
 		if err := v.runTestCase(ctx, pkg, templateTestCase, kcV, subDir); err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func (v TemplateTestValidator) runTestCase(
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
 		// generate fixtures now
-		log.Info("no fixture found for test case, generating...", "name", testCase.Name)
+		log.V(1).Info("no fixture found for test case, generating...", "name", testCase.Name)
 		return renderTemplateFiles(testFixturePath, pkg.Files, pathFilteredIndex)
 	}
 

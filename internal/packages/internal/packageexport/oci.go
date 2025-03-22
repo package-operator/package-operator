@@ -87,7 +87,7 @@ func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.Raw
 	opts = append(opts, crane.WithContext(ctx))
 	verboseLogger := logr.FromContextOrDiscard(ctx).V(1)
 	for _, ref := range references {
-		verboseLogger.Info("pushing image", "reference", ref)
+		verboseLogger.V(1).Info("pushing image", "reference", ref)
 		err := crane.Push(image, ref, opts...)
 		if err != nil {
 			return fmt.Errorf("push: %w", err)

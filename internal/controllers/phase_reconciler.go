@@ -311,7 +311,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		return true, nil
 	}
 
-	log.Info("deleting managed object",
+	log.V(1).Info("deleting managed object",
 		"apiVersion", currentObj.GetAPIVersion(),
 		"kind", currentObj.GroupVersionKind().Kind,
 		"namespace", currentObj.GetNamespace(),
@@ -585,7 +585,7 @@ func (r *PhaseReconciler) reconcileObject(
 	// Take over object ownership by patching metadata.
 	if needsAdoption {
 		log := logr.FromContextOrDiscard(ctx)
-		log.Info("adopting object",
+		log.V(1).Info("adopting object",
 			"OwnerKey", client.ObjectKeyFromObject(owner.ClientObject()),
 			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
 			"ObjectKey", client.ObjectKeyFromObject(desiredObj),

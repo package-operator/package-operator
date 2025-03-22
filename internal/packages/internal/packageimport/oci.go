@@ -46,7 +46,7 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 		}
 
 		if isFilePathToBeExcluded(path) {
-			verboseLog.Info("skipping file in source", "path", path)
+			verboseLog.V(1).Info("skipping file in source", "path", path)
 			continue
 		}
 

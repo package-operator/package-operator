@@ -109,7 +109,7 @@ func (m *Manager) do(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info("detected environment", "environment", env)
+	log.V(1).Info("detected environment", "environment", env)
 
 	for _, sink := range m.sinks {
 		sink.SetEnvironment(env)
