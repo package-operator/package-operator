@@ -33,7 +33,7 @@ var _ = ginkgo.DescribeTable("build subcommand",
 	ginkgo.Entry("given '--output' with a not previsouly existing path",
 		subCommandTestCase{
 			Args: []string{
-				"--output", filepath.Join("dne", "dne"),
+				"--output", filepath.Join(".cache", "dne", "dne"),
 				"--tag", "test",
 				sourcePathFixture("valid_without_config"),
 			},
