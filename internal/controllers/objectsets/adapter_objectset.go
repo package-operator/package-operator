@@ -1,7 +1,6 @@
 package objectsets
 
 import (
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,7 +10,6 @@ import (
 
 type genericObjectSet interface {
 	ClientObject() client.Object
-	UpdateStatusPhase()
 	GetConditions() *[]metav1.Condition
 	IsArchived() bool
 	IsPaused() bool
@@ -69,10 +67,6 @@ type GenericObjectSet struct {
 
 func (a *GenericObjectSet) ClientObject() client.Object {
 	return &a.ObjectSet
-}
-
-func (a *GenericObjectSet) UpdateStatusPhase() {
-	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
 }
 
 func (a *GenericObjectSet) GetConditions() *[]metav1.Condition {
@@ -139,10 +133,6 @@ func (a *GenericClusterObjectSet) ClientObject() client.Object {
 	return &a.ClusterObjectSet
 }
 
-func (a *GenericClusterObjectSet) UpdateStatusPhase() {
-	a.Status.Phase = objectSetStatusPhase(a.Status.Conditions)
-}
-
 func (a *GenericClusterObjectSet) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
@@ -197,29 +187,4 @@ func (a *GenericClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alp
 
 func (a *GenericClusterObjectSet) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
 	return a.Status.ControllerOf
-}
-
-func objectSetStatusPhase(conditions []metav1.Condition) corev1alpha1.ObjectSetStatusPhase {
-	if meta.IsStatusConditionTrue(
-		conditions,
-		corev1alpha1.ObjectSetArchived,
-	) {
-		return corev1alpha1.ObjectSetStatusPhaseArchived
-	}
-
-	if meta.IsStatusConditionTrue(
-		conditions,
-		corev1alpha1.ObjectSetPaused,
-	) {
-		return corev1alpha1.ObjectSetStatusPhasePaused
-	}
-
-	if meta.IsStatusConditionTrue(
-		conditions,
-		corev1alpha1.ObjectSetAvailable,
-	) {
-		return corev1alpha1.ObjectSetStatusPhaseAvailable
-	}
-
-	return corev1alpha1.ObjectSetStatusPhaseNotReady
 }

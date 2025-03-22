@@ -471,7 +471,6 @@ func (r *PhaseReconciler) desiredObject(
 type ObjectSetOrPhase interface {
 	ClientObject() client.Object
 	GetConditions() *[]metav1.Condition
-	UpdateStatusPhase()
 }
 
 func UpdateObjectSetOrPhaseStatusFromError(

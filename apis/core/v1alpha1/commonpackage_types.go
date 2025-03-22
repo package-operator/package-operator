@@ -9,10 +9,6 @@ import (
 type PackageStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// This field is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// When evaluating object state in code, use .Conditions instead.
-	Phase PackageStatusPhase `json:"phase,omitempty"`
 	// Hash of image + config that was successfully unpacked.
 	UnpackedHash string `json:"unpackedHash,omitempty"`
 	// Package revision as reported by the ObjectDeployment.
