@@ -182,11 +182,7 @@ func (r *PhaseReconciler) ReconcilePhase(
 ) (actualObjects []client.Object, res ProbingResult, err error) {
 	desiredObjects := make([]unstructured.Unstructured, len(phase.Objects))
 	for i, phaseObject := range phase.Objects {
-		desired, err := r.desiredObject(ctx, owner, phaseObject)
-		if err != nil {
-			return nil, res, fmt.Errorf("%s: %w", phaseObject, err)
-		}
-		desiredObjects[i] = *desired
+		desiredObjects[i] = *r.desiredObject(ctx, owner, phaseObject)
 	}
 
 	violations, err := preflight.CheckAllInPhase(
@@ -247,10 +243,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
-	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
-	if err != nil {
-		return false, fmt.Errorf("building desired object: %w", err)
-	}
+	desiredObj := r.desiredObject(ctx, owner, phaseObject)
 
 	// Preflight checker during teardown prevents the deletion of resources in different namespaces and
 	// unblocks teardown when APIs have been removed.
@@ -432,7 +425,7 @@ func mapConditions(
 func (r *PhaseReconciler) desiredObject(
 	_ context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
-) (desiredObj *unstructured.Unstructured, err error) {
+) (desiredObj *unstructured.Unstructured) {
 	desiredObj = phaseObject.Object.DeepCopy()
 
 	// Default namespace to the owners namespace
@@ -461,7 +454,7 @@ func (r *PhaseReconciler) desiredObject(
 
 	setObjectRevision(desiredObj, owner.GetRevision())
 
-	return desiredObj, nil
+	return desiredObj
 }
 
 // updateStatusError(ctx context.Context, objectSet genericObjectSet,

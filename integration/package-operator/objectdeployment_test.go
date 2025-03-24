@@ -183,7 +183,6 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 }
 
-//nolint:maintidx
 func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
@@ -217,7 +216,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       1,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -245,7 +244,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       2,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -275,7 +274,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       3,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -311,7 +310,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       4,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -345,7 +344,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionFalse,
 			expectedObjectSetCount:       5,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -379,7 +378,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					},
 				},
 			},
-			probes:                       archivalTestprobesTemplate(".metadata.name", ".data.name"),
+			probes:                       newArchivalTestProbes(),
 			expectedRevisionAvailability: metav1.ConditionTrue,
 			expectedObjectSetCount:       6,
 			expectedDeploymentConditions: map[string]metav1.ConditionStatus{
@@ -644,7 +643,7 @@ func deploymentTemplate(deploymentName string, podImage string, t require.Testin
 	return unstructured.Unstructured{Object: resObj}
 }
 
-func archivalTestprobesTemplate(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
+func newArchivalTestProbes() []corev1alpha1.ObjectSetProbe {
 	return []corev1alpha1.ObjectSetProbe{
 		{
 			Selector: corev1alpha1.ProbeSelector{
@@ -655,8 +654,8 @@ func archivalTestprobesTemplate(configmapFieldA, configmapFieldB string) []corev
 			Probes: []corev1alpha1.Probe{
 				{
 					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-						FieldA: configmapFieldA,
-						FieldB: configmapFieldB,
+						FieldA: ".metadata.name",
+						FieldB: ".data.name",
 					},
 				},
 			},

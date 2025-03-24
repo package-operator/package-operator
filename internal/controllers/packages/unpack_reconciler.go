@@ -51,11 +51,9 @@ func newUnpackReconciler(
 	packageLoadRecorder packageLoadRecorder,
 	environmentSink environmentSink,
 	packageHashModifier *int32,
-	opts ...unpackReconcilerOption,
 ) *unpackReconciler {
 	var cfg unpackReconcilerConfig
 
-	cfg.Option(opts...)
 	cfg.Default()
 
 	return &unpackReconciler{

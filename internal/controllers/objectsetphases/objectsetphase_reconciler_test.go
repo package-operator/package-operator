@@ -39,7 +39,11 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 	previousObject := newGenericObjectSet(scheme)
 	previousObject.ClientObject().SetName("test")
 	previousList := []controllers.PreviousObjectSet{previousObject}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+	lookup := func(
+		_ context.Context, _ controllers.PreviousOwner,
+	) (
+		[]controllers.PreviousObjectSet, error, //nolint: unparam
+	) {
 		return previousList, nil
 	}
 

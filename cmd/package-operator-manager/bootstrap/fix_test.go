@@ -75,7 +75,9 @@ func newRunCheckerMock() *runCheckerMock {
 	return &runCheckerMock{}
 }
 
-func (s *runCheckerMock) program(t *testing.T, checkResult bool, checkErr error, runErr error) *runCheckerMock {
+func (s *runCheckerMock) program(
+	t *testing.T, checkResult bool, checkErr error, runErr error, //nolint: unparam
+) *runCheckerMock {
 	t.Helper()
 
 	isTypeFixCtx := mock.IsType(fix.Context{})

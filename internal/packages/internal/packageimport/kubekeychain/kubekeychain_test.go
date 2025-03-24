@@ -22,7 +22,9 @@ import (
 	"package-operator.run/internal/testutil"
 )
 
-func newExpectedSecret(namespace, name string) *corev1.Secret {
+const namespace = "package-operator-system"
+
+func newExpectedSecret(name string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -36,7 +38,7 @@ func TestResolveSecrets_Success(t *testing.T) {
 
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "package-operator-system",
+			Namespace: namespace,
 			Name:      "package-operator",
 		},
 		ImagePullSecrets: []corev1.LocalObjectReference{
@@ -47,10 +49,10 @@ func TestResolveSecrets_Success(t *testing.T) {
 		},
 	}
 	expectedSecrets := []*corev1.Secret{
-		newExpectedSecret("package-operator-system", "a"),
-		newExpectedSecret("package-operator-system", "b"),
-		newExpectedSecret("package-operator-system", "c"),
-		newExpectedSecret("package-operator-system", "d"),
+		newExpectedSecret("a"),
+		newExpectedSecret("b"),
+		newExpectedSecret("c"),
+		newExpectedSecret("d"),
 	}
 
 	c := testutil.NewClient()

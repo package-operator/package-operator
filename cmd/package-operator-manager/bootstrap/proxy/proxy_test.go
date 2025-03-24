@@ -106,7 +106,7 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 			mockedExecutable := mockExecutable(expectedExecutablePath, nil)
 
 			execveCalled := false
-			execve := func(argv0 string, args []string, env []string) error {
+			execve := func(argv0 string, args []string, env []string) error { //nolint:unparam
 				execveCalled = true
 
 				assert.Equal(t, expectedExecutablePath, argv0)

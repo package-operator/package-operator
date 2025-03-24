@@ -67,9 +67,9 @@ func (bc *bufferCloser) Close() error {
 func runKubeconformForFile(
 	path string, file []byte,
 	kcV kubeconformValidator,
-) (validationErrors []error, err error) {
+) (validationErrors []error) {
 	if !packagetypes.IsYAMLFile(path) {
-		return nil, nil
+		return nil
 	}
 
 	buf := bytes.NewBuffer(file)
@@ -84,5 +84,5 @@ func runKubeconformForFile(
 			})
 		}
 	}
-	return validationErrors, nil
+	return validationErrors
 }
