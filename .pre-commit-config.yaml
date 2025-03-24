@@ -1,3 +1,7 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 exclude: |
   (?x)(
     (^vendor/)|
@@ -20,6 +24,13 @@ repos:
     args:
     - --autofix
   - id: trailing-whitespace
+
+- repo: https://github.com/compilerla/conventional-pre-commit
+  rev: v4.0.0
+  hooks:
+    - id: conventional-pre-commit
+      stages: [commit-msg]
+      args: []
 
 - repo: local
   hooks:
