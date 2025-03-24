@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 
@@ -114,7 +113,6 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		namespaces[opts.namespace] = cache.Config{}
 	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		WebhookServer:              webhook.NewServer(webhook.Options{Port: 9443}),
 		Cache:                      cache.Options{DefaultNamespaces: namespaces},
 		Metrics:                    server.Options{BindAddress: opts.metricsAddr},
 		Scheme:                     scheme,
