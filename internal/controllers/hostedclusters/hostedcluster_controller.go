@@ -21,8 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/internal/ownerhandling"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type HostedClusterController struct {
@@ -57,7 +59,7 @@ func NewHostedClusterController(
 		// Using Annotation Owner-Handling,
 		// because Package objects will live in the hosted-clusters "execution" namespace.
 		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
-		ownerStrategy: ownerhandling.NewAnnotation(scheme),
+		ownerStrategy: ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 
 		remotePhaseAffinity:    remotePhaseAffinity,
 		remotePhaseTolerations: remotePhaseTolerations,

@@ -16,10 +16,11 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
 	internalprobing "package-operator.run/internal/probing"
 	"package-operator.run/pkg/probing"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
