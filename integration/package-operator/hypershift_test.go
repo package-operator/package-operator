@@ -43,15 +43,6 @@ func TestHyperShift(t *testing.T) {
 	err := Client.Get(ctx, client.ObjectKey{Name: "remote-phase", Namespace: namespace}, rpPkg)
 	require.NoError(t, err)
 
-	// Wait for roll-out of remote phase package
-	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
-	// few seconds for leader election.
-	err = Waiter.WaitForCondition(
-		ctx, rpPkg, corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue, wait.WithTimeout(300*time.Second),
-	)
-	require.NoError(t, err)
-
 	pkgImage := rpPkg.Spec.Image
 
 	hClient, hWaiter, err := hostedClusterHandlers()
@@ -131,19 +122,6 @@ func TestHyperShift(t *testing.T) {
 func TestObjectSetPhaseImmutability(t *testing.T) {
 	namespace := "default-pko-hs-hc"
 	ctx := logr.NewContext(context.Background(), testr.New(t))
-
-	rpPkg := &corev1alpha1.Package{}
-	err := Client.Get(ctx, client.ObjectKey{Name: "remote-phase", Namespace: namespace}, rpPkg)
-	require.NoError(t, err)
-
-	// Wait for roll-out of remote phase package
-	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
-	// few seconds for leader election.
-	err = Waiter.WaitForCondition(
-		ctx, rpPkg, corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue, wait.WithTimeout(300*time.Second),
-	)
-	require.NoError(t, err)
 
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
