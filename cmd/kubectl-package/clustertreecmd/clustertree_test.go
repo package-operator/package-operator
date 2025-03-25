@@ -113,6 +113,14 @@ namespace/test
 							}},
 						},
 					},
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
 				},
 			},
 			ShouldFail: false,
@@ -145,6 +153,14 @@ namespace/test
 									},
 								},
 							}},
+						},
+					},
+					Status: corev1alpha1.ObjectSetStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
 						},
 					},
 				},

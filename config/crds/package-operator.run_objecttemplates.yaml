@@ -18,9 +18,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
     - jsonPath: .status.conditions[?(@.type=="package-operator.run/Invalid")].status
       name: Invalid
       type: string

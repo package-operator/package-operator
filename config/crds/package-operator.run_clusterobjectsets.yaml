@@ -332,8 +332,6 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
           status:
-            default:
-              phase: Pending
             description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:
               conditions:

@@ -28,7 +28,9 @@ type Client struct {
 	client client.Client
 }
 
-func (c *Client) GetObjectset(ctx context.Context, packageName string,
+func (c *Client) GetObjectset(
+	ctx context.Context,
+	packageName string,
 	packageNamespace string,
 ) (*corev1alpha1.ObjectSet, error) {
 	objreslist := &corev1alpha1.ObjectSetList{}
@@ -44,8 +46,9 @@ func (c *Client) GetObjectset(ctx context.Context, packageName string,
 	return nil, errors.New("ObjectSet could not be found") //nolint: err113
 }
 
-func (c *Client) GetClusterObjectset(ctx context.Context, packageName string,
-	_ ...GetPackageOption,
+func (c *Client) GetClusterObjectset(
+	ctx context.Context,
+	packageName string,
 ) (*corev1alpha1.ClusterObjectSet, error) {
 	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
 	if err := c.client.List(ctx, clusterObjectSetList); err != nil {

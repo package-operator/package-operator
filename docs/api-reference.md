@@ -151,7 +151,17 @@ spec:
   - name: previous-revision
   successDelaySeconds: 42
 status:
-  phase: Pending
+  conditions:
+  - metav1.Condition
+  controllerOf:
+  - group: amet
+    kind: sit
+    name: consetetur
+    namespace: sadipscing
+  remotePhases:
+  - name: dolor
+    uid: types.UID
+  revision: 42
 
 ```
 
@@ -199,8 +209,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: sit
-      sourceType: dolor
+    - destinationType: sed
+      sourceType: elitr
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -215,10 +225,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+  - group: nonumy
+    kind: diam
+    name: eirmod
+    namespace: tempor
 
 ```
 
@@ -247,8 +257,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: diam
-    sourceType: sed
+  - destinationType: ipsum
+    sourceType: lorem
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -280,23 +290,23 @@ metadata:
   name: example
 spec:
   sources:
-  - apiVersion: eirmod
+  - apiVersion: sit
     items:
-    - destination: sit
-      key: dolor
-    kind: tempor
-    name: ipsum
-    namespace: lorem
+    - destination: sed
+      key: elitr
+    kind: amet
+    name: sadipscing
+    namespace: consetetur
     optional: "true"
-  template: nonumy
+  template: dolor
 status:
   conditions:
   - metav1.Condition
   controllerOf:
-    group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
+    group: nonumy
+    kind: diam
+    name: eirmod
+    namespace: tempor
 
 ```
 
@@ -321,12 +331,15 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  component: diam
+  component: ipsum
   config: runtime.RawExtension
-  image: sed
+  image: lorem
   paused: "true"
 status:
-  phase: Pending
+  conditions:
+  - metav1.Condition
+  revision: 42
+  unpackedHash: dolor
 
 ```
 
@@ -377,32 +390,32 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: eirmod
-        name: nonumy
+      - class: amet
+        name: sit
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: lorem
-            sourceType: tempor
+          - destinationType: sadipscing
+            sourceType: consetetur
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - ipsum
+        - elitr
       successDelaySeconds: 42
 status:
   collisionCount: 42
   conditions:
   - metav1.Condition
   controllerOf:
-  - group: amet
-    kind: sit
-    name: consetetur
-    namespace: sadipscing
+  - group: nonumy
+    kind: diam
+    name: eirmod
+    namespace: tempor
   revision: 42
-  templateHash: dolor
+  templateHash: sed
 
 ```
 
@@ -456,25 +469,35 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: sed
-    name: elitr
+  - class: ipsum
+    name: lorem
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: nonumy
-        sourceType: diam
+      - destinationType: sit
+        sourceType: dolor
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - eirmod
+    - amet
   previous:
   - name: previous-revision
   successDelaySeconds: 42
 status:
-  phase: Pending
+  conditions:
+  - metav1.Condition
+  controllerOf:
+  - group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
+  remotePhases:
+  - name: consetetur
+    uid: types.UID
+  revision: 42
 
 ```
 
@@ -522,8 +545,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: lorem
-      sourceType: tempor
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -538,10 +561,10 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: dolor
-    kind: ipsum
-    name: sit
-    namespace: amet
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -571,8 +594,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: sadipscing
-    sourceType: consetetur
+  - destinationType: amet
+    sourceType: sit
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -605,23 +628,23 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sed
+  - apiVersion: sadipscing
     items:
-    - destination: lorem
-      key: tempor
-    kind: diam
-    name: eirmod
-    namespace: nonumy
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
     optional: "true"
-  template: elitr
+  template: consetetur
 status:
   conditions:
   - metav1.Condition
   controllerOf:
-    group: dolor
-    kind: ipsum
-    name: sit
-    namespace: amet
+    group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
 
 ```
 
@@ -647,12 +670,15 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: sadipscing
+  component: amet
   config: runtime.RawExtension
-  image: consetetur
+  image: sit
   paused: "true"
 status:
-  phase: Pending
+  conditions:
+  - metav1.Condition
+  revision: 42
+  unpackedHash: consetetur
 
 ```
 

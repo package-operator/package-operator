@@ -332,8 +332,6 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
           status:
-            default:
-              phase: Pending
             description: ObjectSetStatus defines the observed state of a ObjectSet.
             properties:
               conditions:

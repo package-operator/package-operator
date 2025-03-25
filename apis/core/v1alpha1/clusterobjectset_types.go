@@ -25,8 +25,7 @@ type ClusterObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ClusterObjectSetSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   ClusterObjectSetSpec   `json:"spec,omitempty"`
 	Status ClusterObjectSetStatus `json:"status,omitempty"`
 }
 

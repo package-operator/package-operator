@@ -27,8 +27,7 @@ type ObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ObjectSetSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   ObjectSetSpec   `json:"spec,omitempty"`
 	Status ObjectSetStatus `json:"status,omitempty"`
 }
 

@@ -18,8 +18,7 @@ type ClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec PackageSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   PackageSpec   `json:"spec,omitempty"`
 	Status PackageStatus `json:"status,omitempty"`
 }
 
