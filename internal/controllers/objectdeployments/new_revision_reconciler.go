@@ -47,7 +47,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, nil
 	}
 
-	if err != nil && !errors.IsAlreadyExists(err) {
+	if !errors.IsAlreadyExists(err) {
 		return ctrl.Result{}, fmt.Errorf("errored while creating new ObjectSet: %w", err)
 	}
 

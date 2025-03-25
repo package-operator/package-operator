@@ -471,8 +471,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 			Object: map[string]any{"kind": "test"},
 		},
 	}
-	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
-	require.NoError(t, err)
+	desiredObj := r.desiredObject(ctx, owner, phaseObject)
 
 	assert.Equal(t, &unstructured.Unstructured{
 		Object: map[string]any{
@@ -515,8 +514,7 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 			Object: map[string]any{"kind": "test"},
 		},
 	}
-	desiredObj, err := r.desiredObject(ctx, owner, phaseObject)
-	require.NoError(t, err)
+	desiredObj := r.desiredObject(ctx, owner, phaseObject)
 
 	assert.Equal(t, &unstructured.Unstructured{
 		Object: map[string]any{

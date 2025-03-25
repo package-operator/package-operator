@@ -65,9 +65,7 @@ func (v TemplateTestValidator) doValidatePackage(
 	}
 
 	for path, file := range pkg.Files {
-		if verrs, err := runKubeconformForFile(path, file, kcV); err != nil {
-			return err
-		} else if len(verrs) > 0 {
+		if verrs := runKubeconformForFile(path, file, kcV); len(verrs) > 0 {
 			return errors.Join(verrs...)
 		}
 	}
@@ -155,10 +153,7 @@ func (v TemplateTestValidator) runTestCase(
 			continue
 		}
 
-		verrs, err := runKubeconformForFile(path, pkg.Files[path], kcV)
-		if err != nil {
-			return err
-		}
+		verrs := runKubeconformForFile(path, pkg.Files[path], kcV)
 		violations = append(violations, verrs...)
 
 		fixtureFilePath := filepath.Join(testFixturePath, path)

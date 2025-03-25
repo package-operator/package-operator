@@ -47,7 +47,7 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 	t.Parallel()
 
-	hashCollisionOS := makeObjectSet("test-xyz", "test", 1, "xyz", true, true, false)
+	hashCollisionOS := newObjectSet("test-xyz", 1, "xyz", true, true, false)
 	hashCollisionOS.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		{}, {},
 	}
@@ -66,10 +66,10 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			name:   "success",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, true, false),
-				makeObjectSet("rev1", "test", 1, "xyz", false, true, false),
-				makeObjectSet("rev2", "test", 2, "pqr", false, true, false),
-				makeObjectSet("rev4", "test", 4, "abc", true, true, false),
+				newObjectSet("rev3", 3, "abcd", false, true, false),
+				newObjectSet("rev1", 1, "xyz", false, true, false),
+				newObjectSet("rev2", 2, "pqr", false, true, false),
+				newObjectSet("rev4", 4, "abc", true, true, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "test1",
@@ -80,10 +80,10 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			name:   "hash collision",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
-				makeObjectSet("rev1", "test", 1, "xyz", true, true, false),
-				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
-				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
+				newObjectSet("rev3", 3, "abcd", false, false, false),
+				newObjectSet("rev1", 1, "xyz", true, true, false),
+				newObjectSet("rev2", 2, "pqr", false, false, false),
+				newObjectSet("rev4", 4, "abc", false, false, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "xyz",
@@ -95,30 +95,30 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			name:   "hash collision - slow cache",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
-				makeObjectSet("rev1", "test", 1, "xyz", true, true, false),
-				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
-				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
+				newObjectSet("rev3", 3, "abcd", false, false, false),
+				newObjectSet("rev1", 1, "xyz", true, true, false),
+				newObjectSet("rev2", 2, "pqr", false, false, false),
+				newObjectSet("rev4", 4, "abc", false, false, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "xyz",
 			conflict:                   true,
-			conflictObject:             makeObjectSet("test-xyz", "test", 4, "xyz", true, true, false),
+			conflictObject:             newObjectSet("test-xyz", 4, "xyz", true, true, false),
 			expectedHashCollisionCount: 0,
 		},
 		{
 			name:   "hash collision archived",
 			client: testutil.NewClient(),
 			prevRevisions: []corev1alpha1.ObjectSet{
-				makeObjectSet("rev3", "test", 3, "abcd", false, false, false),
-				makeObjectSet("rev1", "test", 1, "xyz", true, true, true),
-				makeObjectSet("rev2", "test", 2, "pqr", false, false, false),
-				makeObjectSet("rev4", "test", 4, "abc", false, false, false),
+				newObjectSet("rev3", 3, "abcd", false, false, false),
+				newObjectSet("rev1", 1, "xyz", true, true, true),
+				newObjectSet("rev2", 2, "pqr", false, false, false),
+				newObjectSet("rev4", 4, "abc", false, false, false),
 			},
 			deploymentGeneration:       5,
 			deploymentHash:             "xyz",
 			conflict:                   true,
-			conflictObject:             makeObjectSet("test-xyz", "test", 1, "xyz", true, true, true),
+			conflictObject:             newObjectSet("test-xyz", 1, "xyz", true, true, true),
 			expectedHashCollisionCount: 1,
 		},
 	}
@@ -139,8 +139,8 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			}
 
 			objectDeployment := adapters.NewObjectDeployment(testScheme)
-			objectDeployment.ClientObject().SetName("test")
-			objectDeployment.ClientObject().SetNamespace("test")
+			objectDeployment.ClientObject().SetName(objectDeploymentName)
+			objectDeployment.ClientObject().SetNamespace(testNamespace)
 			objectDeployment.ClientObject().SetGeneration(testCase.deploymentGeneration)
 			objectDeployment.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},

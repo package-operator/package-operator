@@ -49,7 +49,7 @@ func (l *StructuralLoader) LoadComponent(
 
 	var cFiles packagetypes.Files
 	if len(componentName) == 0 {
-		cFiles, err = rootFiles(rawPkg.Files)
+		cFiles = rootFiles(rawPkg.Files)
 	} else {
 		cFiles, err = componentFiles(rawPkg.Files, componentName)
 	}
@@ -164,7 +164,7 @@ func (l *StructuralLoader) load(
 	return pkg, nil
 }
 
-func rootFiles(files packagetypes.Files) (packagetypes.Files, error) {
+func rootFiles(files packagetypes.Files) packagetypes.Files {
 	out := packagetypes.Files{}
 	componentPathPrefix := packagetypes.ComponentsFolder + "/"
 	for path, file := range files {
@@ -174,7 +174,7 @@ func rootFiles(files packagetypes.Files) (packagetypes.Files, error) {
 		}
 		out[path] = file
 	}
-	return out, nil
+	return out
 }
 
 func componentFiles(files packagetypes.Files, componentName string) (packagetypes.Files, error) {

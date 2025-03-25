@@ -97,11 +97,7 @@ func init() {
 		panic(err)
 	}
 
-	var err error
-	PackageOperatorNamespace, err = findPackageOperatorNamespace(ctx)
-	if err != nil {
-		panic(err)
-	}
+	PackageOperatorNamespace = findPackageOperatorNamespace(ctx)
 
 	Waiter = wait.NewWaiter(Client, Scheme, wait.WithTimeout(defaultWaitTimeout), wait.WithInterval(defaultWaitInterval))
 }
@@ -137,10 +133,7 @@ func initClients(_ context.Context) error {
 	return nil
 }
 
-func findPackageOperatorNamespace(ctx context.Context) (
-	packageOperatorNamespace string,
-	err error,
-) {
+func findPackageOperatorNamespace(ctx context.Context) string {
 	// discover packageOperator Namespace
 	deploymentList := &appsv1.DeploymentList{}
 	// We can't use a label-selector, because OLM is overriding the deployment labels...
@@ -157,9 +150,8 @@ func findPackageOperatorNamespace(ctx context.Context) (
 	case 0:
 		panic("no packageOperator deployment found on the cluster")
 	case 1:
-		packageOperatorNamespace = packageOperatorDeployments[0].Namespace
+		return packageOperatorDeployments[0].Namespace
 	default:
 		panic("multiple packageOperator deployments found on the cluster")
 	}
-	return
 }

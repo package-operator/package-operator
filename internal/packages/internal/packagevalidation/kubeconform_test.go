@@ -29,8 +29,7 @@ func Test_runKubeconformForFile(t *testing.T) {
 			},
 		})
 
-	verrs, err := runKubeconformForFile("xxx.yaml", nil, kvm)
-	require.NoError(t, err)
+	verrs := runKubeconformForFile("xxx.yaml", nil, kvm)
 	if assert.Len(t, verrs, 1) {
 		var verr packagetypes.ViolationError
 		require.ErrorAs(t, verrs[0], &verr)

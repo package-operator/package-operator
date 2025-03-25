@@ -28,8 +28,7 @@ linters:
   #- nlreturn         # Could be nice in the future.
   #- nonamedreturns   # Named return good return.
   #- tagliatelle      # Reports issues that are not right for us.
-  #- testpackage      # Could be nice in the future.
-  #- unparam          # Not that useful/false positives.
+  #- testpackage      # Whitebox testing is fine too.
   #- varnamelen       # Not that useful/false positives.
   #- wrapcheck        # Not that useful/false positives.
   #- wsl              # Not that useful/false positives.
@@ -106,6 +105,7 @@ linters:
   - tparallel
   - typecheck
   - unconvert
+  - unparam
   - unused
   - usestdlibvars
   - wastedassign

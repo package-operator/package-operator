@@ -33,11 +33,9 @@ func newObjectSetPhaseReconciler(
 	phaseReconciler phaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
 	ownerStrategy ownerStrategy,
-	opts ...objectSetPhaseReconcilerOption,
 ) *objectSetPhaseReconciler {
 	var cfg objectSetPhaseReconcilerConfig
 
-	cfg.Option(opts...)
 	cfg.Default()
 
 	return &objectSetPhaseReconciler{

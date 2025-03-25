@@ -121,13 +121,10 @@ func Test_ArchivalReconciler(t *testing.T) {
 			// Setup revisions
 
 			// Unavailable
-			latestRevision := makeObjectSetMock(
+			latestRevision := newObjectSetMock(
 				8,
-				"",
 				makeControllerOfObjects("a", "b"),
 				makeObjects("a", "b"),
-				nil,
-				false,
 				false,
 				false,
 				Unavailable,
@@ -135,36 +132,36 @@ func Test_ArchivalReconciler(t *testing.T) {
 
 			prevs := []*genericObjectSetMock{
 				// should be archived
-				makeObjectSetMock(
-					7, "", makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
-					nil, false, false, false, Unavailable,
+				newObjectSetMock(
+					7, makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
+					false, false, Unavailable,
 				),
 				// Should not be archived
-				makeObjectSetMock(
-					6, "", makeControllerOfObjects("d", "e"), makeObjects("c", "a", "d", "e"),
-					nil, false, false, false, Unavailable,
+				newObjectSetMock(
+					6, makeControllerOfObjects("d", "e"), makeObjects("c", "a", "d", "e"),
+					false, false, Unavailable,
 				),
 				// Should be archived
-				makeObjectSetMock(5, "", makeControllerOfObjects("f"), makeObjects("f", "g"),
-					nil, false, false, false, Unavailable),
+				newObjectSetMock(5, makeControllerOfObjects("f"), makeObjects("f", "g"),
+					false, false, Unavailable),
 				// Should not be archived
-				makeObjectSetMock(
-					4, "", makeControllerOfObjects("g"), makeObjects("g", "h"),
-					nil, false, false, false, Unavailable,
+				newObjectSetMock(
+					4, makeControllerOfObjects("g"), makeObjects("g", "h"),
+					false, false, Unavailable,
 				),
 				// No common objects but should not be archived as its available
-				makeObjectSetMock(
-					3, "", makeControllerOfObjects("x", "y"), makeObjects("x", "y"),
-					nil, false, false, false, available,
+				newObjectSetMock(
+					3, makeControllerOfObjects("x", "y"), makeObjects("x", "y"),
+					false, false, available,
 				),
 				// Even though the rev 5, 6 have common objects, we expect them to be paused/archived as rev 4 is available
-				makeObjectSetMock(
-					2, "", makeControllerOfObjects("p"), makeObjects("p", "q"),
-					nil, false, false, false, Unavailable,
+				newObjectSetMock(
+					2, makeControllerOfObjects("p"), makeObjects("p", "q"),
+					false, false, Unavailable,
 				),
-				makeObjectSetMock(
-					1, "", makeControllerOfObjects("q"), makeObjects("q", "z"),
-					nil, false, false, false, Unavailable,
+				newObjectSetMock(
+					1, makeControllerOfObjects("q"), makeObjects("q", "z"),
+					false, false, Unavailable,
 				),
 			}
 
@@ -272,13 +269,10 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 	// Setup revisions
 
 	// Unavailable
-	latestRevision := makeObjectSetMock(
+	latestRevision := newObjectSetMock(
 		8,
-		"",
 		makeControllerOfObjects("a", "b"),
 		makeObjects("a", "b"),
-		nil,
-		false,
 		false,
 		false,
 		Unavailable,
@@ -286,38 +280,38 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 
 	prevs := []*genericObjectSetMock{
 		// should be archived
-		makeObjectSetMock(
-			7, "", makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			7, makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
+			alreadyPaused, false, Unavailable,
 		),
 		// Should not be archived
-		makeObjectSetMock(
-			6, "", makeControllerOfObjects("d", "e"), makeObjects("c", "a", "d", "e"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			6, makeControllerOfObjects("d", "e"), makeObjects("c", "a", "d", "e"),
+			alreadyPaused, false, Unavailable,
 		),
 		// Should be archived
-		makeObjectSetMock(
-			5, "", makeControllerOfObjects("f"), makeObjects("f", "g"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			5, makeControllerOfObjects("f"), makeObjects("f", "g"),
+			alreadyPaused, false, Unavailable,
 		),
 		// Should not be archived
-		makeObjectSetMock(
-			4, "", makeControllerOfObjects("g"), makeObjects("g", "h"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			4, makeControllerOfObjects("g"), makeObjects("g", "h"),
+			alreadyPaused, false, Unavailable,
 		),
 		// No common objects but should not be archived as its available
-		makeObjectSetMock(
-			3, "", makeControllerOfObjects("x", "y"), makeObjects("x", "y"),
-			nil, alreadyPaused, false, false, available,
+		newObjectSetMock(
+			3, makeControllerOfObjects("x", "y"), makeObjects("x", "y"),
+			alreadyPaused, false, available,
 		),
 		// Even though the rev 5, 6 have common objects, we expect them to be paused/archived as rev 4 is available
-		makeObjectSetMock(
-			2, "", makeControllerOfObjects("p"), makeObjects("p", "q"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			2, makeControllerOfObjects("p"), makeObjects("p", "q"),
+			alreadyPaused, false, Unavailable,
 		),
-		makeObjectSetMock(
-			1, "", makeControllerOfObjects("q"), makeObjects("q", "z"),
-			nil, alreadyPaused, false, false, Unavailable,
+		newObjectSetMock(
+			1, makeControllerOfObjects("q"), makeObjects("q", "z"),
+			alreadyPaused, false, Unavailable,
 		),
 	}
 
@@ -391,14 +385,14 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	).Return(nil)
 
 	// Setup revisions
-	latestAvailableRevision := makeObjectSetMock(5, "", nil, nil, nil, false, false, false, true)
+	latestAvailableRevision := newObjectSetMock(5, nil, nil, false, false, true)
 
 	prevs := []*genericObjectSetMock{
-		makeObjectSetMock(3, "", nil, nil, nil, alreadyPaused, false, false, false),
+		newObjectSetMock(3, nil, nil, alreadyPaused, false, false),
 		// This intermediate is already archived so the reconciler
 		// should leave it alone.
-		makeObjectSetMock(1, "", nil, nil, nil, alreadyPaused, false, true, false),
-		makeObjectSetMock(2, "", nil, nil, nil, alreadyPaused, false, false, false),
+		newObjectSetMock(1, nil, nil, alreadyPaused, true, false),
+		newObjectSetMock(2, nil, nil, alreadyPaused, false, false),
 	}
 
 	prevCasted := make([]genericObjectSet, len(prevs))
@@ -471,15 +465,15 @@ func testDeleteArchive(t *testing.T) {
 	).Return(nil)
 
 	// Setup revisions
-	latestAvailableRevision := makeObjectSetMock(5, "", nil, nil, nil, false, false, false, true)
+	latestAvailableRevision := newObjectSetMock(5, nil, nil, false, false, true)
 
 	prevs := []*genericObjectSetMock{
 		// Already archived
-		makeObjectSetMock(1, "", nil, nil, nil, true, false, true, false),
-		makeObjectSetMock(2, "", nil, nil, nil, true, false, true, false),
-		makeObjectSetMock(2, "", nil, nil, nil, true, false, true, false),
+		newObjectSetMock(1, nil, nil, true, true, false),
+		newObjectSetMock(2, nil, nil, true, true, false),
+		newObjectSetMock(2, nil, nil, true, true, false),
 		// Paused and ready to be archived
-		makeObjectSetMock(4, "", nil, nil, nil, true, false, false, false),
+		newObjectSetMock(4, nil, nil, true, false, false),
 	}
 
 	prevCasted := make([]genericObjectSet, len(prevs))
@@ -528,14 +522,11 @@ func makeControllerOfObjects(ids ...string) []objectIdentifier {
 	return makeObjectIdentifiers(ids...)
 }
 
-func makeObjectSetMock(
+func newObjectSetMock(
 	revision int,
-	hash string,
 	activeReconciled []objectIdentifier,
 	objects []objectIdentifier,
-	getObjectsErr error,
 	isStatusPaused bool,
-	isSpecPaused bool,
 	isArchived bool,
 	isAvailable bool,
 ) *genericObjectSetMock {
@@ -545,13 +536,13 @@ func makeObjectSetMock(
 	clientObj.SetAnnotations(map[string]string{
 		"important_for_mock_to_not_confuse_calls": strconv.Itoa(revision),
 		// Use revision as the hash in tests
-		ObjectSetHashAnnotation: hash,
+		ObjectSetHashAnnotation: "",
 	})
 	mock.On("ClientObject").Return(clientObj)
 	mock.On("GetActivelyReconciledObjects").Return(activeReconciled)
-	mock.On("GetObjects").Return(objects, getObjectsErr)
+	mock.On("GetObjects").Return(objects, nil)
 	mock.On("IsStatusPaused").Return(isStatusPaused)
-	mock.On("IsSpecPaused").Return(isSpecPaused)
+	mock.On("IsSpecPaused").Return(false)
 	mock.On("IsAvailable").Return(isAvailable)
 	mock.On("IsArchived").Return(isArchived)
 	mock.On("SetPaused").Return()
