@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -101,6 +103,23 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	// hypershift integration tests
 	if err := mgr.SerialDeps(ctx, self,
 		run.Meth2(hypershiftHostedCluster, hypershiftHostedCluster.createHostedCluster, &cluster, []string{}),
+	); err != nil {
+		return err
+	}
+
+	rpPkg := &corev1alpha1.Package{}
+	if err = cl.CtrlClient.Get(
+		ctx, client.ObjectKey{Name: "remote-phase", Namespace: "default-pko-hs-hc"}, rpPkg,
+	); err != nil {
+		return err
+	}
+
+	// Wait for roll-out of remote phase package
+	// longer timeout because PKO is restarting to enable HyperShift integration and needs a
+	// few seconds for leader election.
+	if err = cl.Waiter.WaitForCondition(
+		ctx, rpPkg, corev1alpha1.PackageAvailable,
+		metav1.ConditionTrue, wait.WithTimeout(300*time.Second),
 	); err != nil {
 		return err
 	}
