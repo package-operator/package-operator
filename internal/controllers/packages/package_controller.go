@@ -129,7 +129,7 @@ func (c *GenericPackageController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (res ctrl.Result, err error) {
 	log := c.log.WithValues("Package", req.String())
-	defer log.Info("reconciled")
+	defer log.V(1).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
 	pkg := c.newPackage(c.scheme)

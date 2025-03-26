@@ -40,7 +40,7 @@ func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDir
 			// continue at root
 
 		case strings.HasPrefix(entry.Name(), "."):
-			verboseLog.Info("skipping file in source", "path", path)
+			verboseLog.V(1).Info("skipping file in source", "path", path)
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -50,7 +50,7 @@ func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDir
 			// no special handling for directories
 
 		default:
-			verboseLog.Info("adding source file", "path", path)
+			verboseLog.V(1).Info("adding source file", "path", path)
 			data, err := fs.ReadFile(src, path)
 			if err != nil {
 				return fmt.Errorf("read file %s: %w", path, err)
