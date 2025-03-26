@@ -241,7 +241,6 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
-	objectSet.UpdateStatusPhase()
 	if err := c.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSet status: %w", err)
 	}

@@ -18,14 +18,14 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Available")].status
       name: Available
       type: string
     - jsonPath: .status.conditions[?(@.type=="Progressing")].status
       name: Progressing
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Paused")].status
+      name: Paused
       type: string
     - jsonPath: .status.revision
       name: Revision
@@ -371,8 +371,6 @@ spec:
             - template
             type: object
           status:
-            default:
-              phase: Pending
             description: ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
             properties:
               collisionCount:
@@ -461,12 +459,6 @@ spec:
                   - name
                   type: object
                 type: array
-              phase:
-                description: |-
-                  This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions!
-                  When evaluating object state in code, use .Conditions instead.
-                type: string
               revision:
                 description: Deployment revision.
                 format: int64

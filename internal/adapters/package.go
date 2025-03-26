@@ -1,7 +1,6 @@
 package adapters
 
 import (
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,13 +12,11 @@ import (
 
 type GenericPackageAccessor interface {
 	ClientObject() client.Object
-	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetImage() string
 	GetSpecHash(packageHashModifier *int32) string
 	GetUnpackedHash() string
 	SetUnpackedHash(hash string)
-	setStatusPhase(phase corev1alpha1.PackageStatusPhase)
 	TemplateContext() manifests.TemplateContext
 	SetStatusRevision(rev int64)
 	GetStatusRevision() int64
@@ -78,10 +75,6 @@ func (a *GenericPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericPackage) UpdatePhase() {
-	updatePackagePhase(a)
-}
-
 func (a *GenericPackage) GetImage() string {
 	return a.Spec.Image
 }
@@ -104,10 +97,6 @@ func (a *GenericPackage) SetStatusRevision(rev int64) {
 
 func (a *GenericPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
-}
-
-func (a *GenericPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
-	a.Status.Phase = phase
 }
 
 func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
@@ -144,10 +133,6 @@ func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericClusterPackage) UpdatePhase() {
-	updatePackagePhase(a)
-}
-
 func (a *GenericClusterPackage) GetImage() string {
 	return a.Spec.Image
 }
@@ -162,10 +147,6 @@ func (a *GenericClusterPackage) SetStatusRevision(rev int64) {
 
 func (a *GenericClusterPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
-}
-
-func (a *GenericClusterPackage) setStatusPhase(phase corev1alpha1.PackageStatusPhase) {
-	a.Status.Phase = phase
 }
 
 func (a *GenericClusterPackage) TemplateContext() manifests.TemplateContext {
@@ -192,42 +173,6 @@ func (a *GenericClusterPackage) GetSpecPaused() bool {
 
 func (a *GenericClusterPackage) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
-}
-
-func updatePackagePhase(pkg GenericPackageAccessor) {
-	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.PackagePaused) {
-		pkg.setStatusPhase(corev1alpha1.PackagePhasePaused)
-		return
-	}
-
-	if meta.IsStatusConditionTrue(*pkg.GetConditions(), corev1alpha1.PackageInvalid) {
-		pkg.setStatusPhase(corev1alpha1.PackagePhaseInvalid)
-		return
-	}
-
-	unpackCond := meta.FindStatusCondition(*pkg.GetConditions(), corev1alpha1.PackageUnpacked)
-	if unpackCond == nil {
-		pkg.setStatusPhase(corev1alpha1.PackagePhaseUnpacking)
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		*pkg.GetConditions(),
-		corev1alpha1.PackageProgressing,
-	) {
-		pkg.setStatusPhase(corev1alpha1.PackagePhaseProgressing)
-		return
-	}
-
-	if meta.IsStatusConditionTrue(
-		*pkg.GetConditions(),
-		corev1alpha1.PackageAvailable,
-	) {
-		pkg.setStatusPhase(corev1alpha1.PackagePhaseAvailable)
-		return
-	}
-
-	pkg.setStatusPhase(corev1alpha1.PackagePhaseNotReady)
 }
 
 func templateContextObjectMetaFromObjectMeta(om metav1.ObjectMeta) manifests.TemplateContextObjectMeta {

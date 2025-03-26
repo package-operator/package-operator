@@ -18,9 +18,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
     - jsonPath: .status.conditions[?(@.type=="package-operator.run/Invalid")].status
       name: Invalid
       type: string
@@ -184,12 +181,6 @@ spec:
                 - kind
                 - name
                 type: object
-              phase:
-                description: |-
-                  This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions!
-                  When evaluating object state in code, use .Conditions instead.
-                type: string
             type: object
         type: object
     served: true

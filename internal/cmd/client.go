@@ -28,57 +28,39 @@ type Client struct {
 	client client.Client
 }
 
-func (c *Client) GetObjectset(ctx context.Context, name string, ns string) (*corev1alpha1.ObjectSet, error) {
-	objres := &corev1alpha1.ObjectSet{}
+func (c *Client) GetObjectset(
+	ctx context.Context,
+	packageName string,
+	packageNamespace string,
+) (*corev1alpha1.ObjectSet, error) {
 	objreslist := &corev1alpha1.ObjectSetList{}
-	if err := c.client.List(ctx, objreslist); err != nil {
+	if err := c.client.List(ctx, objreslist, client.InNamespace(packageNamespace)); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
-	for i := range objreslist.Items {
-		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(
-			objreslist.Items[i].Name, name) && (objreslist.Items[i].Namespace == ns) {
-			obj := &corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      objreslist.Items[i].Name,
-					Namespace: objreslist.Items[i].Namespace,
-				},
-			}
-
-			if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
-				return nil, fmt.Errorf("getting package objecset: %w", err)
-			}
-			return objres, nil
+	for _, objectSet := range objreslist.Items {
+		if meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable) &&
+			strings.Contains(objectSet.Name, packageName) {
+			return &objectSet, nil
 		}
 	}
 	return nil, errors.New("ObjectSet could not be found") //nolint: err113
 }
 
-func (c *Client) GetClusterObjectset(ctx context.Context, name string,
-	_ ...GetPackageOption,
+func (c *Client) GetClusterObjectset(
+	ctx context.Context,
+	packageName string,
 ) (*corev1alpha1.ClusterObjectSet, error) {
-	obj := &corev1alpha1.ClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "",
-		},
-	}
-	objreslist := &corev1alpha1.ClusterObjectSetList{}
-	if err := c.client.List(ctx, objreslist); err != nil {
+	clusterObjectSetList := &corev1alpha1.ClusterObjectSetList{}
+	if err := c.client.List(ctx, clusterObjectSetList); err != nil {
 		return nil, fmt.Errorf("getting package objectsetlist : %w", err)
 	}
-	for i := range objreslist.Items {
-		if objreslist.Items[i].Status.Phase == "Available" && strings.Contains(objreslist.Items[i].Name, name) {
-			obj = &corev1alpha1.ClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objreslist.Items[i].Name,
-				},
-			}
+	for _, clusterObjectSet := range clusterObjectSetList.Items {
+		if meta.IsStatusConditionTrue(clusterObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable) &&
+			strings.Contains(clusterObjectSet.Name, packageName) {
+			return &clusterObjectSet, nil
 		}
 	}
-	objres := &corev1alpha1.ClusterObjectSet{}
-	if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), objres); err != nil {
-		return nil, fmt.Errorf("getting package objecset: %w", err)
-	}
-	return objres, nil
+	return nil, errors.New("ClusterObjectSet could not be found") //nolint: err113
 }
 
 func (c *Client) GetPackage(ctx context.Context, name string, opts ...GetPackageOption) (*Package, error) {

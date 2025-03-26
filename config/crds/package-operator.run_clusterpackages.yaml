@@ -17,9 +17,6 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Available")].status
       name: Available
       type: string
@@ -84,8 +81,6 @@ spec:
             - image
             type: object
           status:
-            default:
-              phase: Pending
             description: PackageStatus defines the observed state of a Package.
             properties:
               conditions:
@@ -146,12 +141,6 @@ spec:
                   - type
                   type: object
                 type: array
-              phase:
-                description: |-
-                  This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions!
-                  When evaluating object state in code, use .Conditions instead.
-                type: string
               revision:
                 description: Package revision as reported by the ObjectDeployment.
                 format: int64

@@ -9,7 +9,6 @@ import (
 
 type objectDeploymentAccessor interface {
 	ClientObject() client.Object
-	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetSelector() metav1.LabelSelector
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate

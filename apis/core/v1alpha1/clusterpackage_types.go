@@ -8,7 +8,6 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=clpkg
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
 // +kubebuilder:printcolumn:name="Unpacked",type=string,JSONPath=`.status.conditions[?(@.type=="Unpacked")].status`
@@ -19,8 +18,7 @@ type ClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec PackageSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   PackageSpec   `json:"spec,omitempty"`
 	Status PackageStatus `json:"status,omitempty"`
 }
 

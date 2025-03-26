@@ -14,7 +14,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName={"clobjset","cos"}
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
 // +kubebuilder:printcolumn:name="Archived",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Archived")].status`
@@ -26,8 +25,7 @@ type ClusterObjectSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ClusterObjectSetSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   ClusterObjectSetSpec   `json:"spec,omitempty"`
 	Status ClusterObjectSetStatus `json:"status,omitempty"`
 }
 
@@ -62,10 +60,6 @@ type ClusterObjectSetSpec struct {
 type ClusterObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Phase is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// When evaluating object state in code, use .Conditions instead.
-	Phase ObjectSetStatusPhase `json:"phase,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`
 	// Remote phases aka ClusterObjectSetPhase objects.
