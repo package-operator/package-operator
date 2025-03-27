@@ -1,7 +1,6 @@
 package probing
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ import (
 
 func TestParse(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	kind := "Test"
 	group := "test-group"
 	osp := []corev1alpha1.ObjectSetProbe{
@@ -43,7 +42,7 @@ func TestParse(t *testing.T) {
 
 func TestParseSelector(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+	ctx := t.Context()
 	p, err := ParseSelector(ctx, corev1alpha1.ProbeSelector{
 		Kind: &corev1alpha1.PackageProbeKindSpec{
 			Kind:  "Test",
@@ -84,7 +83,7 @@ func TestParseProbes(t *testing.T) {
 	}
 	emptyConfigProbe := corev1alpha1.Probe{}
 
-	p, err := ParseProbes(context.Background(), []corev1alpha1.Probe{
+	p, err := ParseProbes(t.Context(), []corev1alpha1.Probe{
 		fep, cp, cel, emptyConfigProbe,
 	})
 	require.NoError(t, err)

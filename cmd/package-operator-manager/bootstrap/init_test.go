@@ -263,7 +263,7 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 
 	for _, subTest := range subTests {
 		c := testutil.NewClient()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		t.Run(subTest.name, func(t *testing.T) {
 			t.Parallel()
 			subTest.t(
@@ -318,7 +318,7 @@ func Test_initializer_ensurePKORevisionsPaused(t *testing.T) {
 		updatedCOS = append(updatedCOS, *cos)
 	}).Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err := init.ensurePKORevisionsPaused(ctx, &corev1alpha1.ClusterPackage{
 		Spec: corev1alpha1.PackageSpec{
 			Image: "quay.io/xxx",
@@ -381,7 +381,7 @@ func Test_initializer_ensureDeploymentGone(t *testing.T) {
 
 	for _, subTest := range subTests {
 		c := testutil.NewClient()
-		ctx := logr.NewContext(context.Background(), testr.New(t))
+		ctx := logr.NewContext(t.Context(), testr.New(t))
 		t.Run(subTest.name, func(t *testing.T) {
 			t.Parallel()
 			subTest.t(
@@ -399,7 +399,7 @@ func Test_initializer_ensureDeploymentGone(t *testing.T) {
 func Test_initializer_ensureCRDs(t *testing.T) {
 	t.Parallel()
 	c := testutil.NewClient()
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	b := &initializer{client: c}
 

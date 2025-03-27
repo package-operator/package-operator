@@ -27,7 +27,7 @@ func TestCache_Start(t *testing.T) {
 
 	cacheSource.On("blockNewRegistrations")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err := c.Start(ctx)
 	require.NoError(t, err)
 
@@ -81,7 +81,7 @@ func TestCache_Watch(t *testing.T) {
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		owner := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test42",
@@ -117,7 +117,7 @@ func TestCache_Watch(t *testing.T) {
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		owner := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test42",
@@ -159,7 +159,7 @@ func TestCache_Free(t *testing.T) {
 		On("Delete", mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err = c.Free(ctx, owner)
 	require.NoError(t, err)
 
@@ -194,7 +194,7 @@ func TestCache_Reader(t *testing.T) {
 	t.Run("Get", func(t *testing.T) {
 		obj := &corev1.Secret{}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		key := client.ObjectKey{Name: "test42", Namespace: "test"}
 		err = c.Get(ctx, key, obj)
 		require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestCache_Reader(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		obj := &corev1.SecretList{}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		err = c.List(ctx, obj)
 		require.NoError(t, err)
 
@@ -219,7 +219,7 @@ func TestCache_Reader(t *testing.T) {
 	t.Run("Get no informer", func(t *testing.T) {
 		obj := &corev1.Secret{}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		key := client.ObjectKey{Name: "test42", Namespace: "test"}
 		err = c.Get(ctx, key, obj)
 		require.ErrorIs(t, err, &CacheNotStartedError{})
@@ -228,7 +228,7 @@ func TestCache_Reader(t *testing.T) {
 	t.Run("List no informer", func(t *testing.T) {
 		obj := &corev1.SecretList{}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		err = c.List(ctx, obj)
 		require.ErrorIs(t, err, &CacheNotStartedError{})
 	})
@@ -270,7 +270,7 @@ func TestCache_sampleMetrics(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, reader, nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	c.sampleMetrics(ctx)
 	recorderMock.AssertCalled(t, "RecordDynamicCacheInformers", 2)

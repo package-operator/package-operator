@@ -31,7 +31,7 @@ import (
 )
 
 func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	testCases := []struct {
 		deploymentRevision int
@@ -184,7 +184,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 }
 
 func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	testCases := []struct {
 		revision string
 		phases   []corev1alpha1.ObjectSetTemplatePhase
@@ -452,7 +452,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 }
 
 func TestObjectDeployment_Pause(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	testConfigMap := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
