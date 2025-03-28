@@ -1,6 +1,8 @@
 // The package v1beta1 contains some API Schema definitions for the v1beta1 version of some Hypershift API group.
 // https://github.com/openshift/hypershift does not put its API definitions in a submodule, so we took what we needed
-// from https://github.com/openshift/hypershift/blob/main/api/v1beta1/hostedcluster_types.go to avoid having to
+// from
+// https://github.com/openshift/hypershift/blob/ab40031a6e551e5c9e674c4cfaf524f566898fce/api/hypershift/v1beta1/hostedcluster_types.go
+// to avoid having to
 // import all of Hypershift.
 // +kubebuilder:object:generate=true
 // +groupName=hypershift.openshift.io
@@ -28,7 +30,21 @@ func init() {
 	SchemeBuilder.Register(&HostedCluster{}, &HostedClusterList{})
 }
 
-// More conditions at https://github.com/openshift/hypershift/blob/main/api/v1alpha1/conditions.go
+// HostedClusterSpec is the desired behavior of a HostedCluster.
+type HostedClusterSpec struct {
+	// NodeSelector when specified, is propagated to all control plane Deployments
+	// and Stateful sets running management side.
+	// It must be satisfied by the management Nodes for the pods to be scheduled.
+	// Otherwise the HostedCluster will enter a degraded state.
+	// Changes to this field will propagate to existing Deployments and StatefulSets.
+	// +kubebuilder:validation:XValidation:rule="size(self) <= 20",message="nodeSelector map can have at most 20 entries"
+	// TODO(alberto): add additional validation for the map key/values.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+}
+
+// More conditions at
+// https://github.com/openshift/hypershift/blob/ab40031a6e551e5c9e674c4cfaf524f566898fce/api/hypershift/v1beta1/hostedcluster_conditions.go
 // HostedCluster conditions.
 const (
 	// HostedClusterAvailable indicates whether the HostedCluster has a healthy
@@ -65,6 +81,9 @@ type HostedClusterStatus struct {
 type HostedCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// HostedClusterSpec is the desired behavior of a HostedCluster.
+	Spec HostedClusterSpec `json:"spec,omitempty"`
 
 	// Status is the latest observed status of the HostedCluster.
 	Status HostedClusterStatus `json:"status,omitempty"`
