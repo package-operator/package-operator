@@ -2,6 +2,8 @@ module package-operator.run
 
 go 1.24.0
 
+toolchain go1.24.1
+
 replace (
 	package-operator.run/apis => ./apis
 	package-operator.run/pkg => ./pkg
@@ -31,7 +33,7 @@ require (
 	go.uber.org/dig v1.18.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/sys v0.31.0
 	k8s.io/api v0.32.3
 	k8s.io/apiextensions-apiserver v0.32.3
