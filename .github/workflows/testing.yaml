@@ -12,6 +12,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  update-go-modules:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      UPDATE: ${{ steps.detect_changes.outputs.UPDATE }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
+
+      - name: Run go work sync
+        run: go work sync
+
+      - name: Run go mod tidy for each module
+        run: |
+          go mod tidy
+          for mod in ./pkg ./apis; do
+            if [ -f "$mod/go.mod" ]; then
+              (cd "$mod" && go mod tidy)
+            fi
+          done
+
+      - name: Detect changes
+        id: detect_changes
+        run: |
+          if git diff --quiet; then
+            echo "UPDATE=false" >> "$GITHUB_ENV"
+          else
+            echo "UPDATE=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Commit and push changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN}}
+        if: env.UPDATE == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: sync dependencies with go work sync"
+          git push https://x-access-token:${{ env.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+
   lint-unit-int:
     runs-on: ubuntu-latest
     steps:
