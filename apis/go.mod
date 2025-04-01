@@ -1,11 +1,10 @@
 module package-operator.run/apis
 
 go 1.24.0
-
 require k8s.io/apimachinery v0.32.3
 
 require (
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
