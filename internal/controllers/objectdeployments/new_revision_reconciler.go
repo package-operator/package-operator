@@ -33,7 +33,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 
 	if len(objectDeployment.GetObjectSetTemplate().Spec.Phases) == 0 {
 		// ObjectDeployment is empty. Don't create a ObjectSet, wait for spec.
-		log.Info("empty ObjectDeployment, waiting for initialization")
+		log.V(1).Info("empty ObjectDeployment, waiting for initialization")
 		return ctrl.Result{}, nil
 	}
 
@@ -58,7 +58,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
 	}
-	log.Info("collision revision",
+	log.V(1).Info("collision revision",
 		"collisionRev", conflictingObjectSet.GetRevision(),
 		"latestRev", latestRevisionNumber)
 	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
@@ -70,11 +70,11 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the
 		// desired new ObjectSet. So no conflict :) This case can happen if the local cache is a little bit slow to
 		// record the ObjectSet Create event.
-		log.Info("Slow cache, no collision")
+		log.V(1).Info("Slow cache, no collision")
 		return ctrl.Result{}, nil
 	}
 
-	log.Info("Got hash collision")
+	log.V(1).Info("Got hash collision")
 	// Hash collision, we update the collision counter of the objectdeployment
 	currentCollisionCount := objectDeployment.GetStatusCollisionCount()
 	if currentCollisionCount == nil {

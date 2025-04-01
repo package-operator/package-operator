@@ -55,7 +55,7 @@ func (f *fixer) fix(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("check failed for fix %s: %w", fixName, err)
 		}
-		log.Info("checked", "applicable", applicable)
+		log.V(1).Info("checked", "applicable", applicable)
 
 		// skip fix, if `.Check(...)` said that the fix is not applicable
 		if !applicable {
@@ -66,7 +66,7 @@ func (f *fixer) fix(ctx context.Context) error {
 		if err := fixRunChecker.Run(ctx, fc); err != nil {
 			return fmt.Errorf("fix failed for fix %s: %w", fixName, err)
 		}
-		log.Info("executed")
+		log.V(1).Info("executed")
 	}
 
 	return nil

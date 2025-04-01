@@ -126,7 +126,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := c.log.WithValues("ObjectTemplate", req.String())
-	defer log.Info("reconciled")
+	defer log.V(1).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
 	objectTemplate := c.newObjectTemplate(c.scheme)
@@ -187,7 +187,7 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 			c.dynamicCache.Source(
 				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme()),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.Info(
+					c.log.V(1).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),

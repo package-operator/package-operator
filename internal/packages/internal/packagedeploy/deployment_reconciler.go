@@ -226,7 +226,7 @@ func (r *DeploymentReconciler) chunkPhase(
 		return fmt.Errorf("chunking strategy: %w", err)
 	}
 	if len(objectsForSlices) == 0 {
-		log.Info("no chunking taking place", "phase", phase.Name)
+		log.V(1).Info("no chunking taking place", "phase", phase.Name)
 		return nil
 	}
 
@@ -245,7 +245,7 @@ func (r *DeploymentReconciler) chunkPhase(
 		}
 		sliceNames[i] = slice.ClientObject().GetName()
 
-		log.Info("reconciled Slice for phase",
+		log.V(1).Info("reconciled Slice for phase",
 			"phase", phase.Name,
 			"ObjectDeployment", client.ObjectKeyFromObject(deploy.ClientObject()),
 			"ObjectSlice", client.ObjectKeyFromObject(slice.ClientObject()))
@@ -317,7 +317,7 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	}
 
 	log := logr.FromContextOrDiscard(ctx)
-	log.Info(
+	log.V(1).Info(
 		"ObjectSlice hash collision",
 		"ObjectSlice", sliceKey,
 		"isController", isController,
