@@ -14,6 +14,8 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 )
 
+const MetricsFinalizer = "package-operator.run/metrics"
+
 // Recorder stores all the metrics related to Addons.
 type Recorder struct {
 	dynamicCacheInformers prometheus.Gauge
