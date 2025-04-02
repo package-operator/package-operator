@@ -20,6 +20,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -918,4 +919,121 @@ func requireDeployPackage(ctx context.Context, t *testing.T, pkg, objectDeployme
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name: pkg.GetName(), Namespace: pkg.GetNamespace(),
 	}, objectDeployment))
+}
+
+func hashCollisionTestProbe() []corev1alpha1.ObjectSetProbe {
+	return []corev1alpha1.ObjectSetProbe{
+		{
+			Selector: corev1alpha1.ProbeSelector{
+				Kind: &corev1alpha1.PackageProbeKindSpec{
+					Kind: "ConfigMap",
+				},
+			},
+			Probes: []corev1alpha1.Probe{
+				{
+					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
+						FieldA: ".metadata.name",
+						FieldB: ".data.name",
+					},
+				},
+			},
+		},
+	}
+}
+
+func cmTemplate(name string, data map[string]string, t require.TestingT) unstructured.Unstructured {
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+		},
+		Data: data,
+	}
+	GVK, err := apiutil.GVKForObject(&cm, Scheme)
+	require.NoError(t, err)
+	cm.SetGroupVersionKind(GVK)
+
+	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cm)
+	require.NoError(t, err)
+	return unstructured.Unstructured{Object: resObj}
+}
+
+func objectDeploymentTemplate(
+	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
+	probes []corev1alpha1.ObjectSetProbe, name string, revisionHistoryLimit int32,
+) *corev1alpha1.ObjectDeployment {
+	label := "test.package-operator.run/" + name
+	return &corev1alpha1.ObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectDeploymentSpec{
+			RevisionHistoryLimit: &revisionHistoryLimit,
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{label: "True"},
+			},
+			Template: corev1alpha1.ObjectSetTemplate{
+				Metadata: metav1.ObjectMeta{
+					Labels: map[string]string{label: "True"},
+				},
+				Spec: corev1alpha1.ObjectSetTemplateSpec{
+					Phases:             objectSetPhases,
+					AvailabilityProbes: probes,
+				},
+			},
+		},
+	}
+}
+
+func deploymentTemplate(deploymentName string, podImage string, t require.TestingT) unstructured.Unstructured {
+	obj := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   deploymentName,
+			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"test.package-operator.run/test-1": "True"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "nginx",
+					Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: podImage,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	GVK, err := apiutil.GVKForObject(&obj, Scheme)
+	require.NoError(t, err)
+	obj.SetGroupVersionKind(GVK)
+	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+	require.NoError(t, err)
+	return unstructured.Unstructured{Object: resObj}
+}
+
+func clusterPackageTemplate(name string) client.Object {
+	meta := metav1.ObjectMeta{
+		Name: name,
+	}
+	spec := corev1alpha1.PackageSpec{
+		Image: SuccessTestPackageImage,
+		Config: &runtime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+		},
+	}
+
+	return &corev1alpha1.ClusterPackage{
+		ObjectMeta: meta,
+		Spec:       spec,
+	}
 }

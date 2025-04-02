@@ -192,12 +192,25 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 		ctx, req.NamespacedName, objectSet.ClientObject()); err != nil {
 		return res, client.IgnoreNotFound(err)
 	}
+
 	defer func() {
 		if err != nil {
 			return
 		}
+		// Add the metrics finalizer if the object doesn't have a deletion timestamp
+		if objectSet.ClientObject().GetDeletionTimestamp().IsZero() {
+			if err = controllers.EnsureFinalizer(ctx, c.client,
+				objectSet.ClientObject(), constants.MetricsFinalizer); err != nil {
+				return
+			}
+		}
 		if c.recorder != nil {
 			c.recorder.RecordObjectSetMetrics(objectSet)
+		}
+		// If the objectset has a deletion timestamp, remove the metrics finalizer
+		if !objectSet.ClientObject().GetDeletionTimestamp().IsZero() {
+			err = client.IgnoreNotFound(controllers.RemoveFinalizer(
+				ctx, c.client, objectSet.ClientObject(), constants.MetricsFinalizer))
 		}
 	}()
 
@@ -212,13 +225,11 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 			return res, err
 		}
 
-		if !objectSet.IsArchived() {
-			// Object was deleted and not just archived.
-			// no way to update status now :)
-			return res, nil
+		// only try to update status if the object was archived, not if it was deleted
+		if objectSet.ClientObject().GetDeletionTimestamp().IsZero() {
+			err = c.updateStatus(ctx, objectSet)
 		}
-
-		return res, c.updateStatus(ctx, objectSet)
+		return res, err
 	}
 
 	if err := controllers.EnsureCachedFinalizer(ctx, c.client, objectSet.ClientObject()); err != nil {
