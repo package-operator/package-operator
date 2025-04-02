@@ -43,6 +43,9 @@ const (
 		"getting optional source resource for an ObjectTemplate."
 	objectTemplateResourceRetryIntervalFlagDescription = "The interval at which the controller will retry " +
 		"getting source resource for an ObjectTemplate."
+	imagePrefixOverrides = "List of image prefix overrides to change during image pulling. " +
+		"e.g. quay.io/foo=quay.io/bar/qux,<source-prefix>=<target-prefix>. If multiple prefixes match" +
+		"an image address, the most specific match wins."
 )
 
 type Options struct {
@@ -56,6 +59,7 @@ type Options struct {
 	RegistryHostOverrides       string
 	PackageHashModifier         *int32
 	PackageOperatorPackageImage string
+	ImagePrefixOverrides        string
 
 	// sub commands
 	SelfBootstrap       string
@@ -124,7 +128,10 @@ func ProvideOptions() (opts Options, err error) {
 		&opts.ObjectTemplateOptionalResourceRetryInterval,
 		"object-template-optional-resource-retry-interval",
 		time.Second*60, objectTemplateOptionalResourceRetryIntervalFlagDescription)
-
+	flag.StringVar(
+		&opts.ImagePrefixOverrides, "image-prefix-overrides",
+		os.Getenv("PKO_IMAGE_PREFIX_OVERRIDES"),
+		imagePrefixOverrides)
 	var (
 		subComponentAffinityJSON    string
 		subComponentTolerationsJSON string

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/packages/internal/packagetypes"
 	"package-operator.run/internal/testutil"
 )
@@ -27,7 +28,9 @@ func TestRequestManager_DelayedPull(t *testing.T) {
 	}
 	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
-	}, uncachedClient, serviceAccount)
+	},
+		[]imageprefix.Override{},
+		uncachedClient, serviceAccount)
 	ipm := &imagePullerMock{}
 	r.pullImage = ipm.Pull
 
@@ -79,7 +82,9 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 	}
 	r := NewRequestManager(map[string]string{
 		"quay.io": "localhost:123",
-	}, uncachedClient, serviceAccount)
+	},
+		[]imageprefix.Override{},
+		uncachedClient, serviceAccount)
 	r.pullImage = ipm.Pull
 
 	ctx := context.Background()

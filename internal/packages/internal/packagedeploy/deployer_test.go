@@ -32,7 +32,7 @@ func TestNewPackageDeployer(t *testing.T) {
 
 	c := testutil.NewClient()
 	uc := testutil.NewClient()
-	l := NewPackageDeployer(c, uc, testScheme)
+	l := NewPackageDeployer(c, uc, testScheme, nil)
 	assert.NotNil(t, l)
 }
 
@@ -121,7 +121,7 @@ func TestNewClustePackageDeployer(t *testing.T) {
 	t.Parallel()
 
 	c := testutil.NewClient()
-	l := NewClusterPackageDeployer(c, testScheme)
+	l := NewClusterPackageDeployer(c, testScheme, nil)
 	assert.NotNil(t, l)
 }
 

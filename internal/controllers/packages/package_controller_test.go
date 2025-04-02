@@ -45,6 +45,7 @@ func TestPackageController_Err(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 
 	clientMock.
@@ -77,6 +78,7 @@ func TestPackageController_NotFound(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 
@@ -126,9 +128,10 @@ func TestPackageController_Paused(t *testing.T) {
 		ctrl.Log.WithName("paused package test"),
 		packageScheme,
 		ipm,
-		packages.NewClusterPackageDeployer(clientMock, packageScheme),
+		packages.NewClusterPackageDeployer(clientMock, packageScheme, nil),
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 
@@ -173,6 +176,7 @@ func TestPackageController_Reconcile(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 
@@ -216,6 +220,7 @@ func TestClusterPackageController_Err(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 	clientMock.
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
@@ -247,6 +252,7 @@ func TestClusterOPackageController_NotFound(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 
@@ -296,9 +302,10 @@ func TestClusterPackageController_Paused(t *testing.T) {
 		ctrl.Log.WithName("paused cluster package test"),
 		packageScheme,
 		ipm,
-		packages.NewClusterPackageDeployer(clientMock, packageScheme),
+		packages.NewClusterPackageDeployer(clientMock, packageScheme, nil),
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 
@@ -343,6 +350,7 @@ func TestClusterPackageController_Reconcile(t *testing.T) {
 		ipm,
 		mr,
 		&hash,
+		nil,
 	)
 	c.reconciler = nil
 

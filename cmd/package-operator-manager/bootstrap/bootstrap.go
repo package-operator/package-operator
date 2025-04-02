@@ -41,7 +41,7 @@ func NewBootstrapper(
 	c := uncachedClient
 	init := newInitializer(
 		c, scheme, &packageObjectLoad{},
-		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig,
+		registry.Pull, opts.Namespace, opts.SelfBootstrap, opts.SelfBootstrapConfig, opts.ImagePrefixOverrides,
 	)
 	fixer := newFixer(c, log, opts.Namespace)
 
