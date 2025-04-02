@@ -15,6 +15,7 @@ import (
 
 	apis "package-operator.run/apis"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 )
 
 var testScheme *runtime.Scheme
@@ -35,7 +36,7 @@ func genObjectSet(
 	namespace string,
 	phaseAndObjectMap map[string][]client.Object,
 	controllerOf []corev1alpha1.ControlledObjectReference,
-) GenericObjectSet {
+) objectSetGetter {
 	objectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -58,9 +59,9 @@ func genObjectSet(
 		phases = append(phases, currPhase)
 	}
 	objectSet.Spec.ObjectSetTemplateSpec.Phases = phases
-	return GenericObjectSet{
-		*objectSet,
-	}
+	return newObjectSetGetter(&adapters.ObjectSet{
+		ObjectSet: *objectSet,
+	})
 }
 
 func clientObjs2ObjectSetObjects(runtimeObjs []client.Object) []corev1alpha1.ObjectSetObject {
@@ -78,10 +79,10 @@ func clientObjs2ObjectSetObjects(runtimeObjs []client.Object) []corev1alpha1.Obj
 	return res
 }
 
-func TestGenericObjectSet_GetObjects(t *testing.T) {
+func TestGetObjectSetObjects(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		objectSet         GenericObjectSet
+		objectSet         objectSetGetter
 		expectedObjectIDs []string
 	}{
 		{
@@ -126,7 +127,7 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		objects, err := testCase.objectSet.GetObjects()
+		objects, err := testCase.objectSet.getObjects()
 		require.NoError(t, err)
 		resObjectIDs := make([]string, len(objects))
 		for i := range objects {
@@ -137,10 +138,10 @@ func TestGenericObjectSet_GetObjects(t *testing.T) {
 	}
 }
 
-func TestGenericObjectSet_GetActivelyReconciledObjects(t *testing.T) {
+func TestGetActivelyReconciledObjects(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		objectSet               GenericObjectSet
+		objectSet               objectSetGetter
 		expectedControllerOfRef []string
 	}{
 		{
@@ -162,7 +163,7 @@ func TestGenericObjectSet_GetActivelyReconciledObjects(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		currentControllerOfRefs := testCase.objectSet.GetActivelyReconciledObjects()
+		currentControllerOfRefs := testCase.objectSet.getActivelyReconciledObjects()
 		res := make([]string, 0)
 		for _, ref := range currentControllerOfRefs {
 			res = append(res, ref.UniqueIdentifier())

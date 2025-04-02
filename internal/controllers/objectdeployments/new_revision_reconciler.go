@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/internal/adapters"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -16,13 +18,13 @@ import (
 
 type newRevisionReconciler struct {
 	client       client.Client
-	newObjectSet genericObjectSetFactory
+	newObjectSet adapters.ObjectSetAccessorFactory
 	scheme       *runtime.Scheme
 }
 
 func (r *newRevisionReconciler) Reconcile(ctx context.Context,
-	currentObject genericObjectSet,
-	prevObjectSets []genericObjectSet,
+	currentObject adapters.ObjectSetAccessor,
+	prevObjectSets []adapters.ObjectSetAccessor,
 	objectDeployment objectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	if currentObject != nil {
@@ -92,8 +94,8 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 // template hash, previous revision references and ownership set.
 func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	objectDeployment objectDeploymentAccessor,
-	prevObjectSets []genericObjectSet,
-) (genericObjectSet, error) {
+	prevObjectSets []adapters.ObjectSetAccessor,
+) (adapters.ObjectSetAccessor, error) {
 	deploymentClientObj := objectDeployment.ClientObject()
 	newObjectSet := r.newObjectSet(r.scheme)
 	newObjectSetClientObj := newObjectSet.ClientObject()
@@ -123,7 +125,7 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	return newObjectSet, nil
 }
 
-func latestRevisionNumber(prevObjectSets []genericObjectSet) int64 {
+func latestRevisionNumber(prevObjectSets []adapters.ObjectSetAccessor) int64 {
 	if len(prevObjectSets) == 0 {
 		return 0
 	}

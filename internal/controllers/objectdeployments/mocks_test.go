@@ -9,108 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 )
 
 var (
-	_ genericObjectSet         = (*genericObjectSetMock)(nil)
 	_ objectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
 	_ objectSetSubReconciler   = (*objectSetSubReconcilerMock)(nil)
 	_ objectDeploymentAccessor = (*genericObjectSetDeploymentMock)(nil)
 )
-
-type genericObjectSetMock struct {
-	mock.Mock
-}
-
-func (o *genericObjectSetMock) ClientObject() client.Object {
-	args := o.Called()
-	return args.Get(0).(client.Object)
-}
-
-func (o *genericObjectSetMock) GetRevision() int64 {
-	args := o.Called()
-	return args.Get(0).(int64)
-}
-
-func (o *genericObjectSetMock) GetGeneration() int64 {
-	args := o.Called()
-	return args.Get(0).(int64)
-}
-
-func (o *genericObjectSetMock) IsStatusPaused() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
-func (o *genericObjectSetMock) IsSpecPaused() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
-func (o *genericObjectSetMock) SetPaused() {
-	o.Called()
-}
-
-func (o *genericObjectSetMock) IsAvailable() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
-func (o *genericObjectSetMock) GetConditions() []metav1.Condition {
-	args := o.Called()
-	return args.Get(0).([]metav1.Condition)
-}
-
-func (o *genericObjectSetMock) IsArchived() bool {
-	args := o.Called()
-	return args.Bool(0)
-}
-
-func (o *genericObjectSetMock) SetArchived() {
-	o.Called()
-}
-
-func (o *genericObjectSetMock) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
-	args := o.Called()
-	return args.Get(0).([]corev1alpha1.ObjectSetTemplatePhase)
-}
-
-func (o *genericObjectSetMock) GetActivelyReconciledObjects() []objectIdentifier {
-	args := o.Called()
-	return args.Get(0).([]objectIdentifier)
-}
-
-func (o *genericObjectSetMock) GetObjects() ([]objectIdentifier, error) {
-	args := o.Called()
-	err, _ := args.Get(1).(error)
-	return args.Get(0).([]objectIdentifier), err
-}
-
-func (o *genericObjectSetMock) SetPreviousRevisions(prev []genericObjectSet) {
-	o.Called(prev)
-}
-
-func (o *genericObjectSetMock) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
-	o.Called(templateSpec)
-}
-
-func (o *genericObjectSetMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
-	args := o.Called()
-	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
-}
-
-func (o *genericObjectSetMock) SetActiveByParent() {
-	o.Called()
-}
-
-func (o *genericObjectSetMock) SetPausedByParent() {
-	o.Called()
-}
-
-func (o *genericObjectSetMock) GetPausedByParent() bool {
-	args := o.Called()
-	return args.Get(0).(bool)
-}
 
 type genericObjectDeploymentMock struct {
 	mock.Mock
@@ -179,10 +85,6 @@ func (o *genericObjectDeploymentMock) GetStatusCollisionCount() *int32 {
 func (o *genericObjectDeploymentMock) GetSelector() metav1.LabelSelector {
 	args := o.Called()
 	return args.Get(0).(metav1.LabelSelector)
-}
-
-func (o *genericObjectDeploymentMock) UpdatePhase() {
-	o.Called()
 }
 
 func (o *genericObjectDeploymentMock) GetConditions() *[]metav1.Condition {
@@ -281,10 +183,6 @@ func (o *genericObjectSetDeploymentMock) GetSelector() metav1.LabelSelector {
 	return args.Get(0).(metav1.LabelSelector)
 }
 
-func (o *genericObjectSetDeploymentMock) UpdatePhase() {
-	o.Called()
-}
-
 func (o *genericObjectSetDeploymentMock) GetConditions() *[]metav1.Condition {
 	args := o.Called()
 	return args.Get(0).(*[]metav1.Condition)
@@ -308,8 +206,9 @@ type objectSetSubReconcilerMock struct {
 	mock.Mock
 }
 
-func (o *objectSetSubReconcilerMock) Reconcile(ctx context.Context,
-	currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+func (o *objectSetSubReconcilerMock) Reconcile(
+	ctx context.Context, currentObjectSet adapters.ObjectSetAccessor,
+	prevObjectSets []adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	args := o.Called(ctx, currentObjectSet, prevObjectSets, objectDeployment)
 	err, _ := args.Get(1).(error)

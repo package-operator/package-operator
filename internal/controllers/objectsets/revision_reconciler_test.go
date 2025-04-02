@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
 )
 
@@ -32,12 +33,12 @@ func Test_revisionReconciler(t *testing.T) {
 
 		r := &revisionReconciler{
 			scheme:       testScheme,
-			newObjectSet: newGenericObjectSet,
+			newObjectSet: adapters.NewObjectSet,
 			client:       testClient,
 		}
 
-		objectSet := &GenericObjectSet{
-			corev1alpha1.ObjectSet{},
+		objectSet := &adapters.ObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
 		ctx := context.Background()
@@ -56,7 +57,7 @@ func Test_revisionReconciler(t *testing.T) {
 
 		r := &revisionReconciler{
 			scheme:       testScheme,
-			newObjectSet: newGenericObjectSet,
+			newObjectSet: adapters.NewObjectSet,
 			client:       testClient,
 		}
 
@@ -92,8 +93,8 @@ func Test_revisionReconciler(t *testing.T) {
 			}).
 			Return(nil)
 
-		objectSet := &GenericObjectSet{
-			corev1alpha1.ObjectSet{
+		objectSet := &adapters.ObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "xxx",
 				},
@@ -126,7 +127,7 @@ func Test_revisionReconciler(t *testing.T) {
 
 		r := &revisionReconciler{
 			scheme:       testScheme,
-			newObjectSet: newGenericObjectSet,
+			newObjectSet: adapters.NewObjectSet,
 			client:       testClient,
 		}
 
@@ -146,8 +147,8 @@ func Test_revisionReconciler(t *testing.T) {
 			}).
 			Return(nil)
 
-		objectSet := &GenericObjectSet{
-			corev1alpha1.ObjectSet{
+		objectSet := &adapters.ObjectSet{
+			ObjectSet: corev1alpha1.ObjectSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "xxx",
 				},
