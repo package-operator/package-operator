@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/adapters"
+	adapters "package-operator.run/internal/adapters"
 )
 
 var (
@@ -208,7 +208,7 @@ type objectSetSubReconcilerMock struct {
 
 func (o *objectSetSubReconcilerMock) Reconcile(
 	ctx context.Context, currentObjectSet adapters.ObjectSetAccessor,
-	prevObjectSets []adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor,
+	prevObjectSets []adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	args := o.Called(ctx, currentObjectSet, prevObjectSets, objectDeployment)
 	err, _ := args.Get(1).(error)

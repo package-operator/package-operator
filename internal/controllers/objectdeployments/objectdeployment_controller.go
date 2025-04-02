@@ -23,7 +23,7 @@ const (
 )
 
 type reconciler interface {
-	Reconcile(ctx context.Context, objectSetDeployment objectDeploymentAccessor) (ctrl.Result, error)
+	Reconcile(ctx context.Context, objectSetDeployment adapters.ObjectDeploymentAccessor) (ctrl.Result, error)
 }
 
 type GenericObjectDeploymentController struct {
@@ -149,7 +149,7 @@ func (od *GenericObjectDeploymentController) SetupWithManager(mgr ctrl.Manager) 
 
 func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	ctx context.Context,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) ([]adapters.ObjectSetAccessor, error) {
 	labelSelector := objectDeployment.GetSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)

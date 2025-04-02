@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	adapters "package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 )
 
@@ -24,16 +25,16 @@ type objectSetReconciler struct {
 type objectSetSubReconciler interface {
 	Reconcile(
 		ctx context.Context, currentObjectSet adapters.ObjectSetAccessor,
-		prevObjectSets []adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor,
+		prevObjectSets []adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor,
 	) (ctrl.Result, error)
 }
 
 type listObjectSetsForDeploymentFn func(
 	ctx context.Context, objectDeployment objectDeploymentAccessor,
-) ([]adapters.ObjectSetAccessor, error)
+) ([]genericObjectSet, error)
 
 func (o *objectSetReconciler) Reconcile(
-	ctx context.Context, objectDeployment objectDeploymentAccessor,
+	ctx context.Context, objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	objectSets, err := o.listObjectSetsForDeployment(ctx, objectDeployment)
 	if err != nil {
@@ -133,7 +134,7 @@ func (o *objectSetReconciler) Reconcile(
 func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	currentObjectSet adapters.ObjectSetAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) {
 	if currentObjectSet == nil {
 		objectDeployment.SetStatusConditions(
@@ -278,7 +279,7 @@ func findAvailableRevision(objectSets ...adapters.ObjectSetAccessor) (bool, stri
 	return false, ""
 }
 
-func updatePausedStatus(currentObjectSet adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor) {
+func updatePausedStatus(currentObjectSet adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor) {
 	pausedCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
 	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
 		objectDeployment.SetStatusConditions(

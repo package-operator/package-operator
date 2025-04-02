@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	adapters "package-operator.run/internal/adapters"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,7 +22,7 @@ type archiveReconciler struct {
 func (a *archiveReconciler) Reconcile(ctx context.Context,
 	currentObjectSet adapters.ObjectSetAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	if currentObjectSet == nil {
 		return ctrl.Result{}, nil
@@ -44,7 +45,7 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	previousObjectSets []adapters.ObjectSetAccessor,
 	objectsToArchive []adapters.ObjectSetAccessor,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	if len(objectsToArchive) == 0 {
 		return nil
@@ -223,7 +224,7 @@ func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
 }
 
 func (a *archiveReconciler) garbageCollectRevisions(
-	ctx context.Context, previousObjectSets []adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor,
+	ctx context.Context, previousObjectSets []adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	revisionLimit := defaultRevisionLimit
 	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()

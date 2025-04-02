@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	adapters "package-operator.run/internal/adapters"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -25,7 +26,7 @@ type newRevisionReconciler struct {
 func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	currentObject adapters.ObjectSetAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	if currentObject != nil {
 		// There is an objectset already for the current revision, we do nothing.
@@ -93,7 +94,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 // Creates and returns a new objectset in memory with the correct objectset template,
 // template hash, previous revision references and ownership set.
 func (r *newRevisionReconciler) newObjectSetFromDeployment(
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
 ) (adapters.ObjectSetAccessor, error) {
 	deploymentClientObj := objectDeployment.ClientObject()
