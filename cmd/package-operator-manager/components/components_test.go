@@ -41,7 +41,7 @@ func TestProvideRestConfig(t *testing.T) {
 	// Otherise this test can accidentally pick up one of:
 	// - current value of KUBECONFIG
 	// - default kubeconfig at ~/.kube/config
-	f, err := os.CreateTemp("", "empty-kubeconfig-")
+	f, err := os.CreateTemp(t.TempDir(), "empty-kubeconfig-")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 	defer func() {

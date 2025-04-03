@@ -1,7 +1,6 @@
 package packagerepository
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +31,7 @@ func Test_packageIndex(t *testing.T) {
 	assertEmptyPackageIndex(t, pi)
 
 	// Add something
-	ctx := context.Background()
+	ctx := t.Context()
 	require.NoError(t, pi.Add(ctx, entry1))
 
 	// Index populated

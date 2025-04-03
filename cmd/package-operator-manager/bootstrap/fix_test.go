@@ -27,7 +27,7 @@ func Test_fixer_happy_path(t *testing.T) {
 		fixRunNoErr,
 	})
 
-	err := fixer.fix(context.Background())
+	err := fixer.fix(t.Context())
 	require.NoError(t, err)
 }
 
@@ -50,7 +50,7 @@ func Test_fixer_stops_at_error(t *testing.T) {
 		fixShouldntCheckOrRun,
 	})
 
-	err := fixer.fix(context.Background())
+	err := fixer.fix(t.Context())
 	require.ErrorIs(t, err, errTest)
 }
 

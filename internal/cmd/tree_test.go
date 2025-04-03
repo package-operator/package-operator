@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -65,7 +64,7 @@ func TestTree_RenderPackage(t *testing.T) {
 
 			tree := NewTree(scheme)
 
-			output, err := tree.RenderPackage(context.Background(), tc.SourcePath, tc.Options...)
+			output, err := tree.RenderPackage(t.Context(), tc.SourcePath, tc.Options...)
 			tc.Assertion(t, err)
 
 			assert.Equal(t, tc.ExpectedOutput, output)

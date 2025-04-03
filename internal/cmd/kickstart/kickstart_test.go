@@ -1,7 +1,6 @@
 package kickstart
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestKickstart(t *testing.T) {
 		}
 	}()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	k := NewKickstarter(nil)
 	msg, err := k.Kickstart(ctx, "my-pkg", []string{"testdata/all-the-objects.yaml"}, "", nil)
 	require.NoError(t, err)

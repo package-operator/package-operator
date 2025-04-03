@@ -89,7 +89,7 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 					Once()
 			}
 
-			res, err := r.Reconcile(context.Background(), objectSetPhase)
+			res, err := r.Reconcile(t.Context(), objectSetPhase)
 			assert.Empty(t, res)
 			require.NoError(t, err)
 
@@ -125,7 +125,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil)).
 		Once()
 
-	res, err := r.Reconcile(context.Background(), objectSetPhase)
+	res, err := r.Reconcile(t.Context(), objectSetPhase)
 	require.NoError(t, err)
 
 	assert.Equal(t, reconcile.Result{
@@ -145,7 +145,7 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 	m := &phaseReconcilerMock{}
 	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
 	r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
-	_, err := r.Teardown(context.Background(), objectSetPhase)
+	_, err := r.Teardown(t.Context(), objectSetPhase)
 	require.NoError(t, err)
 	m.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
 }
