@@ -289,7 +289,20 @@ type PackageEnvironmentHyperShift struct {
 // https://github.com/openshift/hypershift
 type PackageEnvironmentHyperShiftHostedCluster struct {
 	TemplateContextObjectMeta `json:"metadata"`
-	HostedClusterNamespace    string `json:"hostedClusterNamespace"`
+
+	// The control-plane namespace of this hosted cluster.
+	// Note: This should actually be named HostedControlPlaneNamespace.
+	HostedClusterNamespace string `json:"hostedClusterNamespace"`
+
+	// NodeSelector when specified in HostedCluster.spec.nodeSelector, is propagated to all control plane Deployments
+	// and Stateful sets running management side.
+	//
+	// Note: Upstream docs of this field specify that changing it will re-deploy
+	// existing control-plane workloads. This is not something that PKO currently supports.
+	// Idea: Can we make the template engine track accesses to .environment and
+	// store hashes of the accessed fields in the Package resource?
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.
