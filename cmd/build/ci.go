@@ -73,8 +73,7 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		run.Fn3(pushImage, "cli", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
-		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
-		run.Fn3(pushImage, "test-stub", registry, "amd64"),
+		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64")
 	)
 
 	if err := mgr.ParallelDeps(ctx, self, deps...); err != nil {
@@ -85,10 +84,6 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		// Package images have to be built after binary images have been
 		// because the package lockfiles have to be generated from the image manifest hashes
 		// and these are only known after pushing to the target registry.
-		run.Fn2(pushPackage, "test-stub", registry),
-		run.Fn2(pushPackage, "test-stub-multi", registry),
-		run.Fn2(pushPackage, "test-stub-cel", registry),
-		run.Fn2(pushPackage, "test-stub-pause", registry),
 		run.Fn2(pushPackage, "package-operator", registry),
 	)
 }
