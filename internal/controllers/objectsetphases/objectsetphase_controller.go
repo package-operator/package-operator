@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/ownerhandling"
@@ -85,7 +86,7 @@ func NewMultiClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
-		newGenericObjectSet,
+		adapters.NewObjectSet,
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
@@ -110,7 +111,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
-		newGenericClusterObjectSet,
+		adapters.NewClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
@@ -134,7 +135,7 @@ func NewSameClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
-		newGenericObjectSet,
+		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
@@ -159,7 +160,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
-		newGenericClusterObjectSet,
+		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
@@ -175,7 +176,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
-	newObjectSet genericObjectSetFactory,
+	newObjectSet adapters.ObjectSetAccessorFactory,
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,

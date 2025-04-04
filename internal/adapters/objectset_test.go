@@ -1,18 +1,19 @@
-package objectsets
+package adapters
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-func TestGenericObjectSet(t *testing.T) {
+func TestObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := newGenericObjectSet(testScheme).(*GenericObjectSet)
+	objectSet := NewObjectSet(testScheme).(*ObjectSet)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ObjectSet{}, co)
@@ -53,10 +54,10 @@ func TestGenericObjectSet(t *testing.T) {
 	assert.Equal(t, controllerOf, objectSet.Status.ControllerOf)
 }
 
-func TestGenericClusterObjectSet(t *testing.T) {
+func TestClusterObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := newGenericClusterObjectSet(testScheme).(*GenericClusterObjectSet)
+	objectSet := NewClusterObjectSet(testScheme).(*ClusterObjectSet)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ClusterObjectSet{}, co)

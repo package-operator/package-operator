@@ -5,8 +5,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/internal/controllers/objectsets"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -193,7 +191,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 		},
 	}
 
-	objectSet := objectsets.GenericObjectSet{
+	objectSet := adapters.ObjectSet{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -228,7 +226,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	assert.True(t, isOwner)
 
 	// multiple objectSets
-	otherObjectSet := objectsets.GenericObjectSet{
+	otherObjectSet := adapters.ObjectSet{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -247,7 +245,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	})
 	otherObjectSet.SetOwnerReferences(newOwnerReferences(objectDeployment.ClientObject()))
 
-	for _, os := range []objectsets.GenericObjectSet{objectSet, otherObjectSet} {
+	for _, os := range []adapters.ObjectSet{objectSet, otherObjectSet} {
 		isOwner, err = VerifyOwnership(os.ClientObject(), objectDeployment.ClientObject())
 		require.NoError(t, err)
 		assert.True(t, isOwner)
@@ -257,7 +255,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 func TestVerifyOwnership_ObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := objectsets.GenericObjectSet{
+	objectSet := adapters.ObjectSet{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",

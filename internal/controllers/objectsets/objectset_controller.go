@@ -28,7 +28,7 @@ import (
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
 type GenericObjectSetController struct {
-	newObjectSet      genericObjectSetFactory
+	newObjectSet      adapters.ObjectSetAccessorFactory
 	newObjectSetPhase genericObjectSetPhaseFactory
 
 	client     client.Client
@@ -42,7 +42,7 @@ type GenericObjectSetController struct {
 }
 
 type reconciler interface {
-	Reconcile(ctx context.Context, objectSet genericObjectSet) (ctrl.Result, error)
+	Reconcile(ctx context.Context, objectSet adapters.ObjectSetAccessor) (ctrl.Result, error)
 }
 
 type dynamicCache interface {
@@ -54,7 +54,7 @@ type dynamicCache interface {
 
 type teardownHandler interface {
 	Teardown(
-		ctx context.Context, objectSet genericObjectSet,
+		ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	) (cleanupDone bool, err error)
 }
 
@@ -69,7 +69,7 @@ func NewObjectSetController(
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
-		newGenericObjectSet,
+		adapters.NewObjectSet,
 		newGenericObjectSetPhase,
 		adapters.NewObjectSlice,
 		c, log, scheme, dw, uc, r,
@@ -84,7 +84,7 @@ func NewClusterObjectSetController(
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
-		newGenericClusterObjectSet,
+		adapters.NewClusterObjectSet,
 		newGenericClusterObjectSetPhase,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, uc, r,
@@ -93,7 +93,7 @@ func NewClusterObjectSetController(
 }
 
 func newGenericObjectSetController(
-	newObjectSet genericObjectSetFactory,
+	newObjectSet adapters.ObjectSetAccessorFactory,
 	newObjectSetPhase genericObjectSetPhaseFactory,
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
@@ -240,14 +240,16 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 	return res, c.updateStatus(ctx, objectSet)
 }
 
-func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet genericObjectSet) error {
+func (c *GenericObjectSetController) updateStatus(ctx context.Context, objectSet adapters.ObjectSetAccessor) error {
 	if err := c.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSet status: %w", err)
 	}
 	return nil
 }
 
-func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, objectSet genericObjectSet) error {
+func (c *GenericObjectSetController) reportPausedCondition(
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+) error {
 	var phasesArePaused, unknown bool
 	if len(objectSet.GetRemotePhases()) > 0 {
 		var err error
@@ -290,7 +292,7 @@ func (c *GenericObjectSetController) reportPausedCondition(ctx context.Context, 
 }
 
 func (c *GenericObjectSetController) areRemotePhasesPaused(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (arePaused, unknown bool, err error) {
 	var pausedPhases int
 	for _, phaseRef := range objectSet.GetRemotePhases() {
@@ -317,7 +319,7 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(
 }
 
 func (c *GenericObjectSetController) handleDeletionAndArchival(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) error {
 	// always make sure to remove Available condition
 	defer meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)

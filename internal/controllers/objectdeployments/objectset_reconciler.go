@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"package-operator.run/internal/adapters"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -21,14 +23,14 @@ type objectSetReconciler struct {
 
 type objectSetSubReconciler interface {
 	Reconcile(
-		ctx context.Context, currentObjectSet genericObjectSet,
-		prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+		ctx context.Context, currentObjectSet adapters.ObjectSetAccessor,
+		prevObjectSets []adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor,
 	) (ctrl.Result, error)
 }
 
 type listObjectSetsForDeploymentFn func(
 	ctx context.Context, objectDeployment objectDeploymentAccessor,
-) ([]genericObjectSet, error)
+) ([]adapters.ObjectSetAccessor, error)
 
 func (o *objectSetReconciler) Reconcile(
 	ctx context.Context, objectDeployment objectDeploymentAccessor,
@@ -48,8 +50,8 @@ func (o *objectSetReconciler) Reconcile(
 	// objectSets is already sorted ascending by .status.revision
 	// check if the latest revision is up-to-date, by comparing their hash.
 	var (
-		currentObjectSet genericObjectSet
-		prevObjectSets   []genericObjectSet
+		currentObjectSet adapters.ObjectSetAccessor
+		prevObjectSets   []adapters.ObjectSetAccessor
 	)
 	if len(objectSets) > 0 {
 		maybeCurrentObjectSet := objectSets[len(objectSets)-1]
@@ -129,8 +131,8 @@ func (o *objectSetReconciler) Reconcile(
 // ______N -> ObjectDeployment Available = False
 // ____Y -> ObjectDeployment Available = True.
 func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
-	currentObjectSet genericObjectSet,
-	prevObjectSets []genericObjectSet,
+	currentObjectSet adapters.ObjectSetAccessor,
+	prevObjectSets []adapters.ObjectSetAccessor,
 	objectDeployment objectDeploymentAccessor,
 ) {
 	if currentObjectSet == nil {
@@ -156,16 +158,16 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	controllers.DeleteMappedConditions(ctx, objectDeployment.GetConditions())
 	controllers.MapConditions(
 		ctx,
-		currentObjectSet.ClientObject().GetGeneration(), currentObjectSet.GetConditions(),
+		currentObjectSet.ClientObject().GetGeneration(), *currentObjectSet.GetConditions(),
 		objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetConditions(),
 	)
 
-	if !meta.IsStatusConditionTrue(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
+	if !meta.IsStatusConditionTrue(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
 		var conds []metav1.Condition
 
 		msg := "Latest Revision Status Unknown"
 
-		availableCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		availableCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
 		if availableCond != nil {
 			if availableCond.Status == metav1.ConditionFalse {
 				conds = append(conds, conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
@@ -227,7 +229,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 	updatePausedStatus(currentObjectSet, objectDeployment)
 }
 
-func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectReference {
+func getControlledObjRef(os adapters.ObjectSetAccessor) corev1alpha1.ControlledObjectReference {
 	obj := os.ClientObject()
 	return corev1alpha1.ControlledObjectReference{
 		Kind:      obj.GetObjectKind().GroupVersionKind().Kind,
@@ -237,7 +239,7 @@ func getControlledObjRef(os genericObjectSet) corev1alpha1.ControlledObjectRefer
 	}
 }
 
-func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...genericObjectSet) metav1.Condition {
+func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...adapters.ObjectSetAccessor) metav1.Condition {
 	found, rev := findAvailableRevision(prevObjectSets...)
 	if !found {
 		return newAvailableCondition(
@@ -256,9 +258,9 @@ func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...generic
 	)
 }
 
-func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
+func findAvailableRevision(objectSets ...adapters.ObjectSetAccessor) (bool, string) {
 	for _, os := range objectSets {
-		availableCond := meta.FindStatusCondition(os.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		availableCond := meta.FindStatusCondition(*os.GetConditions(), corev1alpha1.ObjectSetAvailable)
 		if availableCond == nil {
 			continue
 		}
@@ -276,8 +278,8 @@ func findAvailableRevision(objectSets ...genericObjectSet) (bool, string) {
 	return false, ""
 }
 
-func updatePausedStatus(currentObjectSet genericObjectSet, objectDeployment objectDeploymentAccessor) {
-	pausedCond := meta.FindStatusCondition(currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+func updatePausedStatus(currentObjectSet adapters.ObjectSetAccessor, objectDeployment objectDeploymentAccessor) {
+	pausedCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
 	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
 		objectDeployment.SetStatusConditions(
 			newPausedCondition(
