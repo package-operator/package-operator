@@ -142,15 +142,10 @@ func (a *ObjectSet) IsArchived() bool {
 }
 
 func (a *ObjectSet) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
-	prevRefs := make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
+	a.Spec.Previous = make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
 	for i := range prevObjectSets {
-		prevObjSet := prevObjectSets[i]
-		currPrevRef := corev1alpha1.PreviousRevisionReference{
-			Name: prevObjSet.ClientObject().GetName(),
-		}
-		prevRefs[i] = currPrevRef
+		a.Spec.Previous[i].Name = prevObjectSets[i].ClientObject().GetName()
 	}
-	a.Spec.Previous = prevRefs
 }
 
 func (a *ObjectSet) SetPausedByParent() {
@@ -217,15 +212,10 @@ func (a *ClusterObjectSet) SetArchived() {
 }
 
 func (a *ClusterObjectSet) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
-	prevRefs := make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
+	a.Spec.Previous = make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
 	for i := range prevObjectSets {
-		prevObjSet := prevObjectSets[i]
-		currPrevRef := corev1alpha1.PreviousRevisionReference{
-			Name: prevObjSet.ClientObject().GetName(),
-		}
-		prevRefs[i] = currPrevRef
+		a.Spec.Previous[i].Name = prevObjectSets[i].ClientObject().GetName()
 	}
-	a.Spec.Previous = prevRefs
 }
 
 func (a *ClusterObjectSet) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
