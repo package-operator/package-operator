@@ -53,13 +53,14 @@ jobs:
 
       - name: Commit and push changes
         env:
-          GITHUB_TOKEN: ${{ secrets.UPDATE_GO_MODULES_PAT }}
+          UPDATE_GO_MODULES_PAT: ${{ secrets.UPDATE_GO_MODULES_PAT }}
         if: env.UPDATE == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix: sync dependencies with go work sync"
+          git config --global credential.helper "!f() { sleep 1; echo \"username=git token=$UPDATE_GO_MODULES_PAT\"; }; f"
           git push
 
   lint-unit-int:
