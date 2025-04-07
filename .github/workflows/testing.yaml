@@ -15,8 +15,6 @@ jobs:
   update-go-modules:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       UPDATE: ${{ steps.detect_changes.outputs.UPDATE }}
     steps:
@@ -24,7 +22,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.UPDATE_GO_MODULES_PAT }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -56,14 +53,14 @@ jobs:
 
       - name: Commit and push changes
         env:
-          UPDATE_GO_MODULES_PAT: ${{ secrets.UPDATE_GO_MODULES_PAT}}
+          UPDATE_GO_MODULES_PAT: "${{ secrets.UPDATE_GO_MODULES_PAT}}"
         if: env.UPDATE == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix: sync dependencies with go work sync"
-          git push https://x-access-token:${{ env.UPDATE_GO_MODULES_PAT }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+          git push "https://x-access-token:${{ env.UPDATE_GO_MODULES_PAT }}@github.com/${{ github.repository }}.git" "HEAD:${{ github.head_ref }}"
 
   lint-unit-int:
     runs-on: ubuntu-latest
