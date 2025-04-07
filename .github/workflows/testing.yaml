@@ -60,8 +60,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix: sync dependencies with go work sync"
-          export GITHUB_TOKEN="$UPDATE_GO_MODULES_PAT"
-          git push
+          git push "https://git:$UPDATE_GO_MODULES_PAT@github.com/${{ github.repository }}.git" HEAD:${{ github.head_ref }}
 
   lint-unit-int:
     runs-on: ubuntu-latest
