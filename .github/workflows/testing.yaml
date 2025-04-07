@@ -60,7 +60,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix: sync dependencies with go work sync"
-          git config --global credential.helper "!f() { sleep 1; echo \"username=git token=$UPDATE_GO_MODULES_PAT\"; }; f"
+          export GITHUB_TOKEN="$UPDATE_GO_MODULES_PAT"
           git push
 
   lint-unit-int:
