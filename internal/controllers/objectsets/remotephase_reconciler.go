@@ -223,7 +223,7 @@ func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 	desiredObjectSetPhase.SetAvailabilityProbes(objectSet.GetAvailabilityProbes())
 	desiredObjectSetPhase.SetRevision(objectSet.GetRevision())
 	desiredObjectSetPhase.SetPrevious(objectSet.GetPrevious())
-	if objectSet.IsPaused() {
+	if objectSet.IsSpecPaused() {
 		// ObjectSetPhases don't have to support archival.
 		desiredObjectSetPhase.SetPaused(true)
 	}

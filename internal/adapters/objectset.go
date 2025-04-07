@@ -32,7 +32,6 @@ type ObjectSetAccessor interface {
 	SetPausedByParent()
 	SetActiveByParent()
 	GetPausedByParent() bool
-	IsPaused() bool
 	GetPrevious() []corev1alpha1.PreviousRevisionReference
 	SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase)
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
@@ -149,6 +148,9 @@ func (a *ObjectSet) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
 }
 
 func (a *ObjectSet) SetPausedByParent() {
+	if a.Annotations == nil {
+		a.Annotations = map[string]string{}
+	}
 	a.Annotations[pausedByParentAnnotation] = pausedByParentTrue
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
@@ -161,10 +163,6 @@ func (a *ObjectSet) SetActiveByParent() {
 func (a *ObjectSet) GetPausedByParent() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
 		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
-}
-
-func (a *ObjectSet) IsPaused() bool {
-	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
 func (a *ObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionReference {
@@ -273,6 +271,9 @@ func (a *ClusterObjectSet) IsSpecPaused() bool {
 }
 
 func (a *ClusterObjectSet) SetPausedByParent() {
+	if a.Annotations == nil {
+		a.Annotations = map[string]string{}
+	}
 	a.Annotations[pausedByParentAnnotation] = pausedByParentTrue
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
@@ -285,10 +286,6 @@ func (a *ClusterObjectSet) SetActiveByParent() {
 func (a *ClusterObjectSet) GetPausedByParent() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
 		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
-}
-
-func (a *ClusterObjectSet) IsPaused() bool {
-	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
 func (a *ClusterObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionReference {

@@ -258,13 +258,13 @@ func (c *GenericObjectSetController) reportPausedCondition(
 			return fmt.Errorf("getting status of remote phases: %w", err)
 		}
 	} else {
-		phasesArePaused = objectSet.IsPaused()
+		phasesArePaused = objectSet.IsSpecPaused()
 	}
 
 	switch {
 	case unknown ||
-		objectSet.IsPaused() && !phasesArePaused ||
-		!objectSet.IsPaused() && phasesArePaused:
+		objectSet.IsSpecPaused() && !phasesArePaused ||
+		!objectSet.IsSpecPaused() && phasesArePaused:
 		// Could not get status of all remote ObjectSetPhases or they disagree with their parent.
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
@@ -274,7 +274,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 			Message:            "Waiting for ObjectSetPhases.",
 		})
 
-	case objectSet.IsPaused() && phasesArePaused:
+	case objectSet.IsSpecPaused() && phasesArePaused:
 		// Everything is paused!
 		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
@@ -284,7 +284,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 			Message:            "Lifecycle state set to paused.",
 		})
 
-	case !objectSet.IsPaused() && !phasesArePaused:
+	case !objectSet.IsSpecPaused() && !phasesArePaused:
 		// Nothing is paused!
 		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
 	}

@@ -108,7 +108,7 @@ type PhaseObjectOwner interface {
 	ClientObject() client.Object
 	GetRevision() int64
 	GetConditions() *[]metav1.Condition
-	IsPaused() bool
+	IsSpecPaused() bool
 }
 
 func newRecordingProbe(name string, probe probing.Prober) recordingProbe {
@@ -345,7 +345,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return nil, fmt.Errorf("watching new resource: %w", err)
 	}
 
-	if owner.IsPaused() {
+	if owner.IsSpecPaused() {
 		actualObj = desiredObj.DeepCopy()
 		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
 			return nil, fmt.Errorf("looking up object while paused: %w", err)

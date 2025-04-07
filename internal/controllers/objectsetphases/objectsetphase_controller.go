@@ -270,7 +270,7 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 func (c *GenericObjectSetPhaseController) reportPausedCondition(
 	_ context.Context, objectSetPhase genericObjectSetPhase,
 ) {
-	if objectSetPhase.IsPaused() {
+	if objectSetPhase.IsSpecPaused() {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPhasePaused,
 			Status:             metav1.ConditionTrue,

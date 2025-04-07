@@ -21,11 +21,11 @@ func TestObjectSet(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{{}}
 	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
 
-	assert.False(t, objectSet.IsPaused())
+	assert.False(t, objectSet.IsSpecPaused())
 	assert.False(t, objectSet.IsArchived())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
-	assert.True(t, objectSet.IsPaused())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+	objectSet.SetPaused()
+	assert.True(t, objectSet.IsSpecPaused())
+	objectSet.SetArchived()
 	assert.True(t, objectSet.IsArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
@@ -51,7 +51,31 @@ func TestObjectSet(t *testing.T) {
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
-	assert.Equal(t, controllerOf, objectSet.Status.ControllerOf)
+	assert.Equal(t, controllerOf, objectSet.GetStatusControllerOf())
+
+	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
+		SuccessDelaySeconds: 42,
+	}
+	objectSet.SetTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetPaused,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsStatusPaused())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetAvailable,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsAvailable())
+
+	objectSet.SetPausedByParent()
+	assert.True(t, objectSet.GetPausedByParent())
+	objectSet.SetActiveByParent()
+	assert.False(t, objectSet.GetPausedByParent())
 }
 
 func TestClusterObjectSet(t *testing.T) {
@@ -65,11 +89,11 @@ func TestClusterObjectSet(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{{}}
 	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
 
-	assert.False(t, objectSet.IsPaused())
+	assert.False(t, objectSet.IsSpecPaused())
 	assert.False(t, objectSet.IsArchived())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
-	assert.True(t, objectSet.IsPaused())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+	objectSet.SetPaused()
+	assert.True(t, objectSet.IsSpecPaused())
+	objectSet.SetArchived()
 	assert.True(t, objectSet.IsArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
@@ -95,5 +119,29 @@ func TestClusterObjectSet(t *testing.T) {
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
-	assert.Equal(t, controllerOf, objectSet.Status.ControllerOf)
+	assert.Equal(t, controllerOf, objectSet.GetStatusControllerOf())
+
+	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
+		SuccessDelaySeconds: 42,
+	}
+	objectSet.SetTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetPaused,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsStatusPaused())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetAvailable,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsAvailable())
+
+	objectSet.SetPausedByParent()
+	assert.True(t, objectSet.GetPausedByParent())
+	objectSet.SetActiveByParent()
+	assert.False(t, objectSet.GetPausedByParent())
 }

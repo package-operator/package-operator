@@ -15,11 +15,6 @@ type ObjectSetMock struct {
 	mock.Mock
 }
 
-func (o *ObjectSetMock) IsPaused() bool {
-	args := o.Called()
-	return args.Get(0).(bool)
-}
-
 func (o *ObjectSetMock) GetPrevious() []corev1alpha1.PreviousRevisionReference {
 	args := o.Called()
 	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
