@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
@@ -109,7 +110,7 @@ func (m *Manager) do(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.V(1).Info("detected environment", "environment", env)
+	log.V(constants.LogLevelInfo).Info("detected environment", "environment", env)
 
 	for _, sink := range m.sinks {
 		sink.SetEnvironment(env)

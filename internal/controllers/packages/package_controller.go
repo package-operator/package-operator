@@ -13,6 +13,7 @@ import (
 
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/imageprefix"
@@ -135,7 +136,7 @@ func (c *GenericPackageController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (res ctrl.Result, err error) {
 	log := c.log.WithValues("Package", req.String())
-	defer log.V(1).Info("reconciled")
+	defer log.V(constants.LogLevelInfo).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
 	pkg := c.newPackage(c.scheme)

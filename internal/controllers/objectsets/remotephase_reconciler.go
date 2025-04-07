@@ -18,6 +18,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 )
 
@@ -53,7 +54,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
-	defer log.V(1).Info("teardown of remote phase", "phase", phase.Name, "cleanupDone", cleanupDone)
+	defer log.V(constants.LogLevelInfo).Info("teardown of remote phase", "phase", phase.Name, "cleanupDone", cleanupDone)
 	objectSetPhase := r.newObjectSetPhase(r.scheme)
 	err = r.uncachedClient.Get(ctx, client.ObjectKey{
 		Name:      objectSetPhaseName(objectSet, phase),
@@ -68,7 +69,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	}
 
 	if !metav1.IsControlledBy(objectSetPhase.ClientObject(), objectSet.ClientObject()) {
-		log.V(1).Info("orphaned remote phase",
+		log.V(constants.LogLevelInfo).Info("orphaned remote phase",
 			"namespace", objectSetPhase.ClientObject().GetNamespace(),
 			"name", objectSetPhase.ClientObject().GetName())
 		// Phase has been orphaned -> not cleaning up.
@@ -89,7 +90,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 		}
 
 		if !ns.DeletionTimestamp.IsZero() {
-			log.V(1).Info("removing finalizer from phase object since containing namespace is in deletion")
+			log.V(constants.LogLevelInfo).Info("removing finalizer from phase object since containing namespace is in deletion")
 			objectSetPhase.ClientObject().SetFinalizers(nil)
 			err := r.client.Update(ctx, objectSetPhase.ClientObject())
 			return err != nil, err
