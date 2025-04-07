@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"package-operator.run/internal/constants"
 	controllerspackages "package-operator.run/internal/controllers/packages"
 	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/metrics"
@@ -41,7 +42,7 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 		return nil
 	}
 
-	log.WithName("Registry").V(1).Info("registry host overrides active", "overrides", flag)
+	log.WithName("Registry").V(constants.LogLevelInfo).Info("registry host overrides active", "overrides", flag)
 	out := map[string]string{}
 	overrides := strings.Split(flag, ",")
 	for _, or := range overrides {

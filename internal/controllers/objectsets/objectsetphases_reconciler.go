@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	internalprobing "package-operator.run/internal/probing"
@@ -272,7 +273,7 @@ func (r *objectSetPhasesReconciler) Teardown(
 		} else if !cleanupDone {
 			return false, nil
 		}
-		log.V(1).Info("cleanup done", "phase", phase.Name)
+		log.V(constants.LogLevelInfo).Info("cleanup done", "phase", phase.Name)
 	}
 
 	return true, nil

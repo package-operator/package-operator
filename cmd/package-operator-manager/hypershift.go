@@ -13,6 +13,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
@@ -50,7 +51,7 @@ func (h *hypershift) Start(ctx context.Context) error {
 		_, err := h.mapper.RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
 		switch {
 		case err == nil:
-			h.log.V(1).Info("detected hypershift installation after setup completed, restarting operator")
+			h.log.V(constants.LogLevelInfo).Info("detected hypershift installation after setup completed, restarting operator")
 			return ErrHypershiftAPIPostSetup
 		case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
 			discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):

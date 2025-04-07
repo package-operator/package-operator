@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -85,9 +86,9 @@ func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.Raw
 	}
 
 	opts = append(opts, crane.WithContext(ctx))
-	verboseLogger := logr.FromContextOrDiscard(ctx).V(1)
+	verboseLogger := logr.FromContextOrDiscard(ctx).V(constants.LogLevelInfo)
 	for _, ref := range references {
-		verboseLogger.V(1).Info("pushing image", "reference", ref)
+		verboseLogger.V(constants.LogLevelInfo).Info("pushing image", "reference", ref)
 		err := crane.Push(image, ref, opts...)
 		if err != nil {
 			return fmt.Errorf("push: %w", err)
