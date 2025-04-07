@@ -118,7 +118,7 @@ func (r *unpackReconciler) Reconcile(
 		backoffID := string(pkg.ClientObject().GetUID())
 		r.backoff.Next(backoffID, r.backoff.Clock.Now())
 		backoff := r.backoff.Get(backoffID)
-		log.V(0).Error(err, "pulling image", "backoff", backoff)
+		log.Error(err, "pulling image", "backoff", backoff)
 
 		return ctrl.Result{
 			RequeueAfter: backoff,

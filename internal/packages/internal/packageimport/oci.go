@@ -13,6 +13,7 @@ import (
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -22,7 +23,7 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 ) {
 	files := packagetypes.Files{}
 	reader := mutate.Extract(image)
-	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
+	verboseLog := logr.FromContextOrDiscard(ctx).V(constants.LogLevelInfo)
 
 	defer func() {
 		if cErr := reader.Close(); err == nil && cErr != nil {
@@ -46,7 +47,7 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 		}
 
 		if isFilePathToBeExcluded(path) {
-			verboseLog.V(1).Info("skipping file in source", "path", path)
+			verboseLog.V(constants.LogLevelInfo).Info("skipping file in source", "path", path)
 			continue
 		}
 

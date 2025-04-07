@@ -220,7 +220,7 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := c.log.WithValues("ObjectSetPhase", req.String())
-	defer log.V(1).Info("reconciled")
+	defer log.V(constants.LogLevelInfo).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
 	objectSetPhase := c.newObjectSetPhase(c.scheme)
@@ -327,7 +327,7 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 			c.dynamicCache.Source(
 				c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.V(1).Info(
+					c.log.V(constants.LogLevelInfo).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),

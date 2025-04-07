@@ -59,7 +59,8 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonNotFound:
 			return []Violation{{Error: err.Error()}}, nil
 		case "":
-			logr.FromContextOrDiscard(ctx).V(1).Info("API status error with empty reason string", "err", apiErr.Status())
+			logr.FromContextOrDiscard(ctx).V(constants.LogLevelInfo).Info(
+				"API status error with empty reason string", "err", apiErr.Status())
 
 			if strings.Contains(apiErr.Status().Message, "failed to create typed patch object") {
 				return []Violation{{Error: err.Error()}}, nil

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
 
@@ -30,7 +31,7 @@ func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 }
 
 func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDirFunc {
-	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
+	verboseLog := logr.FromContextOrDiscard(ctx).V(constants.LogLevelInfo)
 	return func(path string, entry fs.DirEntry, ioErr error) error {
 		switch {
 		case ioErr != nil:
@@ -40,7 +41,7 @@ func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDir
 			// continue at root
 
 		case strings.HasPrefix(entry.Name(), "."):
-			verboseLog.V(1).Info("skipping file in source", "path", path)
+			verboseLog.V(constants.LogLevelInfo).Info("skipping file in source", "path", path)
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -50,7 +51,7 @@ func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDir
 			// no special handling for directories
 
 		default:
-			verboseLog.V(1).Info("adding source file", "path", path)
+			verboseLog.V(constants.LogLevelInfo).Info("adding source file", "path", path)
 			data, err := fs.ReadFile(src, path)
 			if err != nil {
 				return fmt.Errorf("read file %s: %w", path, err)

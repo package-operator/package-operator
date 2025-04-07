@@ -94,7 +94,7 @@ func main() {
 	}
 
 	if err := run(setupLog, ourScheme, opts); err != nil {
-		setupLog.V(0).Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 }
@@ -235,7 +235,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
-	log.V(1).Info("starting manager")
+	log.V(constants.LogLevelInfo).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}
