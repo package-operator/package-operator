@@ -16,8 +16,10 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/packages"
+	"package-operator.run/internal/utils"
 )
 
 // Loads/unpack and templates packages into an ObjectDeployment.
@@ -30,8 +32,9 @@ type unpackReconciler struct {
 	packageDeployer     packageDeployer
 	packageLoadRecorder packageLoadRecorder
 
-	backoff             *flowcontrol.Backoff
-	packageHashModifier *int32
+	backoff              *flowcontrol.Backoff
+	packageHashModifier  *int32
+	imagePrefixOverrides []imageprefix.Override
 }
 
 type environmentSink interface {
@@ -51,6 +54,7 @@ func newUnpackReconciler(
 	packageLoadRecorder packageLoadRecorder,
 	environmentSink environmentSink,
 	packageHashModifier *int32,
+	imagePrefixOverrides []imageprefix.Override,
 ) *unpackReconciler {
 	var cfg unpackReconcilerConfig
 
@@ -65,6 +69,7 @@ func newUnpackReconciler(
 		packageLoadRecorder,
 		cfg.GetBackoff(),
 		packageHashModifier,
+		imagePrefixOverrides,
 	}
 }
 
@@ -88,6 +93,11 @@ func (r *unpackReconciler) Reconcile(
 	defer r.backoff.GC()
 
 	specHash := pkg.GetSpecHash(r.packageHashModifier)
+	if len(r.imagePrefixOverrides) > 0 {
+		// upgrading from PKO without overrides won't cause repulls
+		specHash += utils.ComputeSHA256Hash(r.imagePrefixOverrides, nil)
+	}
+
 	if pkg.GetUnpackedHash() == specHash {
 		// We have already unpacked this package \o/
 		return res, nil
