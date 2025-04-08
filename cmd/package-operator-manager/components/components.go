@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	apis "package-operator.run/apis"
 	"package-operator.run/internal/constants"
@@ -99,7 +98,6 @@ func ProvideManager(
 		Scheme:                 scheme,
 		Metrics:                server.Options{BindAddress: opts.MetricsAddr},
 		HealthProbeBindAddress: opts.ProbeAddr,
-		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
 
 		LeaderElectionResourceLock: "leases",
 		LeaderElection:             opts.EnableLeaderElection,
