@@ -53,8 +53,6 @@ jobs:
           fi
 
       - name: Commit and push changes
-        env:
-          UPDATE_GO_MODULES_PAT: ${{ secrets.UPDATE_GO_MODULES_PAT }}
         if: env.UPDATE == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
