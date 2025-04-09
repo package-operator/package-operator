@@ -9,13 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	adapters "package-operator.run/internal/adapters"
 )
 
 var (
-	_ genericObjectSet         = (*genericObjectSetMock)(nil)
-	_ objectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
-	_ objectSetSubReconciler   = (*objectSetSubReconcilerMock)(nil)
-	_ objectDeploymentAccessor = (*genericObjectSetDeploymentMock)(nil)
+	_ genericObjectSet                  = (*genericObjectSetMock)(nil)
+	_ adapters.ObjectDeploymentAccessor = (*genericObjectDeploymentMock)(nil)
+	_ objectSetSubReconciler            = (*objectSetSubReconcilerMock)(nil)
+	_ adapters.ObjectDeploymentAccessor = (*genericObjectSetDeploymentMock)(nil)
 )
 
 type genericObjectSetMock struct {
@@ -309,7 +310,7 @@ type objectSetSubReconcilerMock struct {
 }
 
 func (o *objectSetSubReconcilerMock) Reconcile(ctx context.Context,
-	currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+	currentObjectSet genericObjectSet, prevObjectSets []genericObjectSet, objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	args := o.Called(ctx, currentObjectSet, prevObjectSets, objectDeployment)
 	err, _ := args.Get(1).(error)
