@@ -122,6 +122,7 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 
 	type cfg struct {
 		RegistryHostOverrides                       string              `json:"registryHostOverrides"`
+		ImagePrefixOverrides                        string              `json:"imagePrefixOverrides"`
 		ObjectTemplateOptionalResourceRetryInterval string              `json:"objectTemplateOptionalResourceRetryInterval"`
 		ObjectTemplateResourceRetryInterval         string              `json:"objectTemplateResourceRetryInterval"`
 		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity,omitempty"`
@@ -150,6 +151,7 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		SubcomponentTolerations: []corev1.Toleration{
 			{Effect: "NoSchedule", Key: "node-role.kubernetes.io/infra"},
 		},
+		ImagePrefixOverrides: "",
 	})
 	if err != nil {
 		return err

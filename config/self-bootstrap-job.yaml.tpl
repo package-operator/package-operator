@@ -53,6 +53,8 @@ spec:
         env:
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: "##registry-overrides##"
+        - name: PKO_IMAGE_PREFIX_OVERRIDES
+          value: ""
         - name: PKO_CONFIG
           value: '##pko-config##'
         - name: PKO_NAMESPACE

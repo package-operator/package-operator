@@ -406,9 +406,6 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	ownerStrategy.
 		On("IsController", mock.Anything, mock.Anything).
 		Return(true)
-	ownerStrategy.
-		On("OwnerPatch", mock.Anything).
-		Return([]byte(nil), nil)
 
 	testClient.
 		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -712,8 +709,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", ownerObj, mock.Anything).
 					Return(false)
 				osm.
-					On("HasController", mock.Anything).
-					Return(false)
+					On("GetController", mock.Anything).
+					Return(metav1.OwnerReference{}, false)
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
@@ -739,8 +736,8 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					Object: map[string]interface{}{},
 				}
 				osm.
-					On("HasController", mock.Anything).
-					Return(true)
+					On("GetController", mock.Anything).
+					Return(metav1.OwnerReference{}, true)
 				owner.On("ClientObject").Return(ownerObj)
 				owner.On("GetRevision").Return(int64(1))
 			},

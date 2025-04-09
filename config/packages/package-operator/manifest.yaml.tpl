@@ -36,6 +36,8 @@ spec:
           format: int32
         registryHostOverrides:
           type: string
+        imagePrefixOverrides:
+          type: string
         objectTemplateResourceRetryInterval:
           type: string
         objectTemplateOptionalResourceRetryInterval:

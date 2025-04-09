@@ -117,7 +117,9 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.Anything,
 				).Run(func(args mock.Arguments) {
 					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
-					*pkg = *i.newPKOClusterPackage()
+					clPkg, err := i.newPKOClusterPackage()
+					require.NoError(t, err)
+					*pkg = *clPkg
 				}).Return(nil)
 
 				// it has to check if PKO deployment is available
@@ -151,7 +153,9 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 					mock.Anything,
 				).Run(func(args mock.Arguments) {
 					pkg := args.Get(2).(*corev1alpha1.ClusterPackage)
-					*pkg = *i.newPKOClusterPackage()
+					clPkg, err := i.newPKOClusterPackage()
+					require.NoError(t, err)
+					*pkg = *clPkg
 					pkg.Generation = 5
 					meta.SetStatusCondition(&pkg.Status.Conditions, metav1.Condition{
 						Type:               corev1alpha1.PackageAvailable,
@@ -186,7 +190,8 @@ func Test_initializer_ensureUpdatedPKO(t *testing.T) {
 				t.Helper()
 
 				// mock existing ClusterPackage with different spec
-				existingPkg := i.newPKOClusterPackage()
+				existingPkg, err := i.newPKOClusterPackage()
+				require.NoError(t, err)
 				existingPkg.Spec.Image = "thisimagedoesnotexist.com"
 
 				c.On("Get",

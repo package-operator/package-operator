@@ -22,8 +22,9 @@ import (
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/metrics"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.

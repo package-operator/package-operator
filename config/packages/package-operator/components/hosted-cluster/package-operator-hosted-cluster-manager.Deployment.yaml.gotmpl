@@ -47,6 +47,10 @@ spec:
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: {{ .config.registryHostOverrides }}
 {{- end}}
+{{- if hasKey .config "imagePrefixOverrides" }}
+        - name: PKO_IMAGE_PREFIX_OVERRIDES
+          value: {{ .config.imagePrefixOverrides }}
+{{- end}}
 {{- if hasKey .config "packageHashModifier" }}
         - name: PKO_PACKAGE_HASH_MODIFIER
           value: {{ .config.packageHashModifier | quote }}
