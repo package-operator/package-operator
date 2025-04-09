@@ -18,8 +18,9 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type reconciler interface {
@@ -34,14 +35,13 @@ type dynamicCache interface {
 }
 
 type ownerStrategy interface {
+	GetController(obj metav1.Object) (metav1.OwnerReference, bool)
 	IsController(owner, obj metav1.Object) bool
 	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
-	HasController(obj metav1.Object) bool
-	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
 		ownerType client.Object, mapper meta.RESTMapper, isController bool,
 	) handler.EventHandler
@@ -86,7 +86,7 @@ func NewMultiClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
 		newGenericObjectSet,
-		ownerhandling.NewAnnotation(scheme),
+		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.NewAPIExistence(
@@ -111,7 +111,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
 		newGenericClusterObjectSet,
-		ownerhandling.NewAnnotation(scheme),
+		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.NewAPIExistence(

@@ -19,8 +19,9 @@ import (
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/utils"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type (
@@ -294,7 +295,8 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 	if err == nil {
 		return nil
 	}
-	if err != nil && !apimachineryerrors.IsAlreadyExists(err) {
+
+	if !apimachineryerrors.IsAlreadyExists(err) {
 		return fmt.Errorf("creating new ObjectSlice: %w", err)
 	}
 
