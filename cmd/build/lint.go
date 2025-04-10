@@ -39,5 +39,9 @@ func (Lint) govulnCheck() error {
 }
 
 func (Lint) validateGitClean() error {
-	return shr.Run("git", "diff", "--quiet", "--exit-code")
+	return shr.Run("git", "diff", "--exit-code")
+}
+
+func (Lint) goWorkSync() error {
+	return shr.Run("go", "work", "sync")
 }
