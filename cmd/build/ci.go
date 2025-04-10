@@ -30,8 +30,8 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
-		run.Meth(lint, lint.goModTidyAll),
 		run.Meth(lint, lint.goWorkSync),
+		run.Meth(lint, lint.goModTidyAll),
 	); err != nil {
 		return err
 	}
