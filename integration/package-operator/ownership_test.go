@@ -17,13 +17,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/autoimpersonation/ownership"
-	"package-operator.run/internal/controllers/objectsets"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 var typeMetaType = reflect.TypeOf(metav1.TypeMeta{})
@@ -90,7 +89,7 @@ func TestVerifyOwnership(t *testing.T) {
 	require.Len(t, controllerOf, 1)
 	objectSetReference := controllerOf[0]
 
-	objectSet := &objectsets.GenericObjectSet{}
+	objectSet := &adapters.ObjectSet{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name:      objectSetReference.Name,
 		Namespace: objectSetReference.Namespace,

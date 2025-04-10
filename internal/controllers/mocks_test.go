@@ -44,7 +44,7 @@ func (m *phaseObjectOwnerMock) GetRevision() int64 {
 	return args.Get(0).(int64)
 }
 
-func (m *phaseObjectOwnerMock) IsPaused() bool {
+func (m *phaseObjectOwnerMock) IsSpecPaused() bool {
 	args := m.Called()
 	return args.Bool(0)
 }

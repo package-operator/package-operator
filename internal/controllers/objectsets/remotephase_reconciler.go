@@ -17,6 +17,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 )
 
@@ -47,7 +48,7 @@ const noStatusProbeFailure = "no status reported"
 // Teardown just ensures the remote ObjectSetPhase object
 // has been deleted from the cluster.
 func (r *objectSetRemotePhaseReconciler) Teardown(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
@@ -108,7 +109,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 }
 
 func (r *objectSetRemotePhaseReconciler) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) == 0 {
@@ -206,7 +207,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 }
 
 func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
-	objectSet genericObjectSet,
+	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (genericObjectSetPhase, error) {
 	objectSetObj := objectSet.ClientObject()
@@ -222,7 +223,7 @@ func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 	desiredObjectSetPhase.SetAvailabilityProbes(objectSet.GetAvailabilityProbes())
 	desiredObjectSetPhase.SetRevision(objectSet.GetRevision())
 	desiredObjectSetPhase.SetPrevious(objectSet.GetPrevious())
-	if objectSet.IsPaused() {
+	if objectSet.IsSpecPaused() {
 		// ObjectSetPhases don't have to support archival.
 		desiredObjectSetPhase.SetPaused(true)
 	}
@@ -235,7 +236,7 @@ func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 }
 
 func objectSetPhaseName(
-	objectSet genericObjectSet,
+	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) string {
 	return objectSet.ClientObject().GetName() + "-" + phase.Name
