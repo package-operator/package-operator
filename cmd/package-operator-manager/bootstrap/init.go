@@ -235,14 +235,19 @@ func (init *initializer) config() (*runtime.RawExtension, error) {
 	// If imagePrefixOverrides are set, they have to be injected into the package configuration of the PKO installation,
 	// we're about to set up.
 	if len(init.imagePrefixOverrides) > 0 {
+		if packageConfig == nil {
+			packageConfig = &runtime.RawExtension{
+				Raw: []byte("{}"),
+			}
+		}
 		rawConfig := make(map[string]any)
 		if err := json.Unmarshal(packageConfig.Raw, &rawConfig); err != nil {
-			return nil, fmt.Errorf("parsing package config: %w", err)
+			return nil, fmt.Errorf("unmarshaling package config: %w", err)
 		}
 		rawConfig["imagePrefixOverrides"] = init.imagePrefixOverrides
 		jsonConfig, err := json.Marshal(&rawConfig)
 		if err != nil {
-			return nil, fmt.Errorf("parsing package config: %w", err)
+			return nil, fmt.Errorf("marshaling package config: %w", err)
 		}
 		packageConfig.Raw = jsonConfig
 	}
