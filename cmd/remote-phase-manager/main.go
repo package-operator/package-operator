@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,7 +78,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	zapOpts := zap.Options{
+		Development: false,
+		Level:       zapcore.ErrorLevel,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 
 	ourScheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
@@ -229,7 +235,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		}
 	}
 
-	log.Info("starting manager")
+	log.V(constants.LogLevelInfo).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}

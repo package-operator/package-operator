@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/packages/internal/packageimport"
 	"package-operator.run/internal/packages/internal/packagemanifestvalidation"
 	"package-operator.run/internal/packages/internal/packagerender"
@@ -45,7 +46,7 @@ func (v TemplateTestValidator) ValidatePackage(
 func (v TemplateTestValidator) doValidatePackage(
 	ctx context.Context, pkg *packagetypes.Package, isComponent bool,
 ) error {
-	log := logr.FromContextOrDiscard(ctx).V(1)
+	log := logr.FromContextOrDiscard(ctx).V(constants.LogLevelInfo)
 
 	kcV, err := kubeconformValidatorFromManifest(pkg.Manifest)
 	if err != nil {
@@ -58,7 +59,7 @@ func (v TemplateTestValidator) doValidatePackage(
 	}
 
 	for _, templateTestCase := range pkg.Manifest.Test.Template {
-		log.Info("running template test case", "name", templateTestCase.Name)
+		log.V(constants.LogLevelInfo).Info("running template test case", "name", templateTestCase.Name)
 		if err := v.runTestCase(ctx, pkg, templateTestCase, kcV, subDir); err != nil {
 			return err
 		}
@@ -116,7 +117,7 @@ func (v TemplateTestValidator) runTestCase(
 	if errors.Is(err, os.ErrNotExist) {
 		// no fixtures generated
 		// generate fixtures now
-		log.Info("no fixture found for test case, generating...", "name", testCase.Name)
+		log.V(constants.LogLevelInfo).Info("no fixture found for test case, generating...", "name", testCase.Name)
 		return renderTemplateFiles(testFixturePath, pkg.Files, pathFilteredIndex)
 	}
 

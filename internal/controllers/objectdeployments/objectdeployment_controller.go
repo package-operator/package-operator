@@ -14,6 +14,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/constants"
 )
 
 const (
@@ -113,7 +114,7 @@ func (od *GenericObjectDeploymentController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := od.log.WithValues("ObjectDeployment", req.String())
-	defer log.Info("reconciled")
+	defer log.V(constants.LogLevelInfo).Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 	objectDeployment := od.newObjectDeployment(od.scheme)
 	if err := od.client.Get(ctx, req.NamespacedName, objectDeployment.ClientObject()); err != nil {
