@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
@@ -67,7 +68,7 @@ func newTemplateReconciler(
 }
 
 func (r *templateReconciler) Reconcile(
-	ctx context.Context, objectTemplate genericObjectTemplate,
+	ctx context.Context, objectTemplate adapters.GenericObjectTemplateAccessor,
 ) (res ctrl.Result, err error) {
 	defer func() {
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
@@ -147,7 +148,7 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 }
 
 func (r *templateReconciler) getValuesFromSources(
-	ctx context.Context, objectTemplate genericObjectTemplate,
+	ctx context.Context, objectTemplate adapters.GenericObjectTemplateAccessor,
 	sourcesConfig map[string]any,
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
@@ -292,7 +293,7 @@ func copySourceItem(
 
 func (r *templateReconciler) templateObject(
 	ctx context.Context, sourcesConfig map[string]any,
-	objectTemplate genericObjectTemplate, object client.Object,
+	objectTemplate adapters.GenericObjectTemplateAccessor, object client.Object,
 ) error {
 	env, err := r.getEnvironment(ctx, objectTemplate.ClientObject().GetNamespace())
 	if err != nil {
@@ -351,7 +352,7 @@ func (r *templateReconciler) getEnvironment(ctx context.Context, namespace strin
 }
 
 func updateStatusConditionsFromOwnedObject(
-	_ context.Context, objectTemplate genericObjectTemplate, existingObj *unstructured.Unstructured,
+	_ context.Context, objectTemplate adapters.GenericObjectTemplateAccessor, existingObj *unstructured.Unstructured,
 ) error {
 	statusObservedGeneration, ok, err := unstructured.NestedInt64(existingObj.Object, "status", "observedGeneration")
 	if err != nil {
@@ -400,7 +401,7 @@ func updateStatusConditionsFromOwnedObject(
 	return nil
 }
 
-func setObjectTemplateConditionBasedOnError(objectTemplate genericObjectTemplate, err error) error {
+func setObjectTemplateConditionBasedOnError(objectTemplate adapters.GenericObjectTemplateAccessor, err error) error {
 	var sourceError *SourceError
 	if errors.As(err, &sourceError) {
 		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{

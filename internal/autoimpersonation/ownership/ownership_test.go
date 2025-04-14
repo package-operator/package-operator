@@ -16,7 +16,6 @@ import (
 	"package-operator.run/apis"
 	"package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/controllers/objecttemplate"
 )
 
 var testScheme = runtime.NewScheme()
@@ -128,7 +127,7 @@ func TestVerifyOwnership_ClusterPackage(t *testing.T) {
 func TestVerifyOwnership_ObjectTemplate(t *testing.T) {
 	t.Parallel()
 
-	objectTemplate := objecttemplate.GenericObjectTemplate{
+	objectTemplate := adapters.GenericObjectTemplate{
 		ObjectTemplate: v1alpha1.ObjectTemplate{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectTemplate",

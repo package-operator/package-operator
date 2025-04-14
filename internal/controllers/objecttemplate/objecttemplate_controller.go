@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/dynamiccache"
@@ -31,7 +32,7 @@ type dynamicCache interface {
 }
 
 type reconciler interface {
-	Reconcile(ctx context.Context, pkg genericObjectTemplate) (ctrl.Result, error)
+	Reconcile(ctx context.Context, pkg adapters.GenericObjectTemplateAccessor) (ctrl.Result, error)
 }
 
 type preflightChecker interface {
@@ -43,7 +44,7 @@ type preflightChecker interface {
 var _ environment.Sinker = (*GenericObjectTemplateController)(nil)
 
 type GenericObjectTemplateController struct {
-	newObjectTemplate  genericObjectTemplateFactory
+	newObjectTemplate  adapters.GenericObjectTemplateFactory
 	log                logr.Logger
 	scheme             *runtime.Scheme
 	client             client.Client
@@ -73,7 +74,7 @@ func NewObjectTemplateController(
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, dynamicCache, scheme,
-		restMapper, newGenericObjectTemplate, cfg)
+		restMapper, adapters.NewGenericObjectTemplate, cfg)
 }
 
 func NewClusterObjectTemplateController(
@@ -86,7 +87,7 @@ func NewClusterObjectTemplateController(
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, dynamicCache, scheme,
-		restMapper, newGenericClusterObjectTemplate, cfg)
+		restMapper, adapters.NewGenericClusterObjectTemplate, cfg)
 }
 
 func newGenericObjectTemplateController(
@@ -95,7 +96,7 @@ func newGenericObjectTemplateController(
 	dynamicCache dynamicCache,
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
-	newObjectTemplate genericObjectTemplateFactory,
+	newObjectTemplate adapters.GenericObjectTemplateFactory,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	controller := &GenericObjectTemplateController{
@@ -164,7 +165,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 }
 
 func (c *GenericObjectTemplateController) updateStatus(
-	ctx context.Context, objectTemplate genericObjectTemplate,
+	ctx context.Context, objectTemplate adapters.GenericObjectTemplateAccessor,
 ) error {
 	if err := c.client.Status().Update(ctx, objectTemplate.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectTemplate status: %w", err)

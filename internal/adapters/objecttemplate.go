@@ -1,4 +1,4 @@
-package objecttemplate
+package adapters
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -8,7 +8,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type genericObjectTemplate interface {
+type GenericObjectTemplateAccessor interface {
 	ClientObject() client.Object
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
@@ -18,15 +18,15 @@ type genericObjectTemplate interface {
 	GetStatusControllerOf() corev1alpha1.ControlledObjectReference
 }
 
-type genericObjectTemplateFactory func(
-	scheme *runtime.Scheme) genericObjectTemplate
+type GenericObjectTemplateFactory func(
+	scheme *runtime.Scheme) GenericObjectTemplateAccessor
 
 var (
 	objectTemplateGVK        = corev1alpha1.GroupVersion.WithKind("ObjectTemplate")
 	clusterObjectTemplateGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectTemplate")
 )
 
-func newGenericObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
+func NewGenericObjectTemplate(scheme *runtime.Scheme) GenericObjectTemplateAccessor {
 	obj, err := scheme.New(objectTemplateGVK)
 	if err != nil {
 		panic(err)
@@ -37,7 +37,7 @@ func newGenericObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
 	}
 }
 
-func newGenericClusterObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
+func NewGenericClusterObjectTemplate(scheme *runtime.Scheme) GenericObjectTemplateAccessor {
 	obj, err := scheme.New(clusterObjectTemplateGVK)
 	if err != nil {
 		panic(err)
