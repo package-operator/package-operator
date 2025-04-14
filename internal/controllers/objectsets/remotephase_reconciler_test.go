@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
 )
 
@@ -195,7 +196,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 				newObjectSetPhase: newGenericObjectSetPhase,
 			}
 
-			genObjectSet := newGenericObjectSet(testScheme)
+			genObjectSet := adapters.NewObjectSet(testScheme)
 			objectSet := genObjectSet.ClientObject().(*corev1alpha1.ObjectSet)
 			objectSet.Name = "my-stuff"
 			objectSet.Namespace = "my-namespace"
@@ -227,7 +228,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
 
-	genObjectSet := newGenericObjectSet(testScheme)
+	genObjectSet := adapters.NewObjectSet(testScheme)
 	objectSet := genObjectSet.ClientObject().(*corev1alpha1.ObjectSet)
 	objectSet.Name = "my-stuff"
 	objectSet.Namespace = "my-namespace"
@@ -310,8 +311,8 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
 
-	objectSet := &GenericObjectSet{
-		corev1alpha1.ObjectSet{
+	objectSet := &adapters.ObjectSetAdapter{
+		ObjectSet: corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "chickenspace",
 			},
@@ -368,8 +369,8 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
 
-	objectSet := &GenericObjectSet{
-		corev1alpha1.ObjectSet{
+	objectSet := &adapters.ObjectSetAdapter{
+		ObjectSet: corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "",
 			},

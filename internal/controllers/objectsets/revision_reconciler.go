@@ -9,6 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"package-operator.run/internal/adapters"
 )
 
 const revisionReconcilerRequeueDelay = 10 * time.Second
@@ -16,12 +18,12 @@ const revisionReconcilerRequeueDelay = 10 * time.Second
 // revisionReconciler determines the .status.revision number by checking previous revisions.
 type revisionReconciler struct {
 	scheme       *runtime.Scheme
-	newObjectSet genericObjectSetFactory
+	newObjectSet adapters.ObjectSetAccessorFactory
 	client       client.Client
 }
 
 func (r *revisionReconciler) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	if objectSet.GetRevision() != 0 {
 		// .status.revision is already set.

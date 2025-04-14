@@ -6,33 +6,13 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
-
-type genericObjectSetMock struct {
-	mock.Mock
-}
-
-func (m *genericObjectSetMock) ClientObject() client.Object {
-	args := m.Called()
-	return args.Get(0).(client.Object)
-}
-
-func (m *genericObjectSetMock) GetConditions() *[]metav1.Condition {
-	args := m.Called()
-	return args.Get(0).(*[]metav1.Condition)
-}
-
-func (m *genericObjectSetMock) GetRevision() int64 {
-	args := m.Called()
-	return args.Get(0).(int64)
-}
 
 func TestRecorder_RecordPackageMetrics(t *testing.T) {
 	t.Parallel()
@@ -246,7 +226,7 @@ func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
 			obj := &unstructured.Unstructured{}
 			obj.SetCreationTimestamp(metav1.NewTime(creationTimestamp))
 
-			osMock := &genericObjectSetMock{}
+			osMock := &adaptermocks.ObjectSetMock{}
 			osMock.On("ClientObject").Return(obj)
 			osMock.On("GetConditions").Return(&test.conditions)
 

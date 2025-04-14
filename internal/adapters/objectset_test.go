@@ -1,18 +1,19 @@
-package objectsets
+package adapters
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-func TestGenericObjectSet(t *testing.T) {
+func TestObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := newGenericObjectSet(testScheme).(*GenericObjectSet)
+	objectSet := NewObjectSet(testScheme).(*ObjectSetAdapter)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ObjectSet{}, co)
@@ -20,11 +21,11 @@ func TestGenericObjectSet(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{{}}
 	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
 
-	assert.False(t, objectSet.IsPaused())
+	assert.False(t, objectSet.IsSpecPaused())
 	assert.False(t, objectSet.IsArchived())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
-	assert.True(t, objectSet.IsPaused())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+	objectSet.SetPaused()
+	assert.True(t, objectSet.IsSpecPaused())
+	objectSet.SetArchived()
 	assert.True(t, objectSet.IsArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
@@ -50,13 +51,37 @@ func TestGenericObjectSet(t *testing.T) {
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
-	assert.Equal(t, controllerOf, objectSet.Status.ControllerOf)
+	assert.Equal(t, controllerOf, objectSet.GetStatusControllerOf())
+
+	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
+		SuccessDelaySeconds: 42,
+	}
+	objectSet.SetTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetPaused,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsStatusPaused())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetAvailable,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsAvailable())
+
+	objectSet.SetPausedByParent()
+	assert.True(t, objectSet.GetPausedByParent())
+	objectSet.SetActiveByParent()
+	assert.False(t, objectSet.GetPausedByParent())
 }
 
-func TestGenericClusterObjectSet(t *testing.T) {
+func TestClusterObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := newGenericClusterObjectSet(testScheme).(*GenericClusterObjectSet)
+	objectSet := NewClusterObjectSet(testScheme).(*ClusterObjectSetAdapter)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ClusterObjectSet{}, co)
@@ -64,11 +89,11 @@ func TestGenericClusterObjectSet(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{{}}
 	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
 
-	assert.False(t, objectSet.IsPaused())
+	assert.False(t, objectSet.IsSpecPaused())
 	assert.False(t, objectSet.IsArchived())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
-	assert.True(t, objectSet.IsPaused())
-	objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+	objectSet.SetPaused()
+	assert.True(t, objectSet.IsSpecPaused())
+	objectSet.SetArchived()
 	assert.True(t, objectSet.IsArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
@@ -94,5 +119,29 @@ func TestGenericClusterObjectSet(t *testing.T) {
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
-	assert.Equal(t, controllerOf, objectSet.Status.ControllerOf)
+	assert.Equal(t, controllerOf, objectSet.GetStatusControllerOf())
+
+	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
+		SuccessDelaySeconds: 42,
+	}
+	objectSet.SetTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetPaused,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsStatusPaused())
+
+	objectSet.Status.Conditions = []metav1.Condition{{
+		Type:   corev1alpha1.ObjectSetAvailable,
+		Status: metav1.ConditionTrue,
+	}}
+	assert.True(t, objectSet.IsAvailable())
+
+	objectSet.SetPausedByParent()
+	assert.True(t, objectSet.GetPausedByParent())
+	objectSet.SetActiveByParent()
+	assert.False(t, objectSet.GetPausedByParent())
 }

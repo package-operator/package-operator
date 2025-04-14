@@ -181,7 +181,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				).Return(nil)
 			}
 
-			revisions := make([]genericObjectSet, len(testCase.prevRevisions))
+			revisions := make([]adapters.ObjectSetAccessor, len(testCase.prevRevisions))
 
 			for i := range testCase.prevRevisions {
 				obj := &testCase.prevRevisions[i]
@@ -190,8 +190,8 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				revisions[i] = &GenericObjectSet{
-					testCase.prevRevisions[i],
+				revisions[i] = &adapters.ObjectSetAdapter{
+					ObjectSet: testCase.prevRevisions[i],
 				}
 			}
 

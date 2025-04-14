@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil/controllersmocks"
@@ -28,7 +29,7 @@ type remotePhaseReconcilerMock struct {
 }
 
 func (m *remotePhaseReconcilerMock) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	args := m.Called(ctx, objectSet, phase)
@@ -38,7 +39,7 @@ func (m *remotePhaseReconcilerMock) Reconcile(
 }
 
 func (m *remotePhaseReconcilerMock) Teardown(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	args := m.Called(ctx, objectSet, phase)
@@ -75,7 +76,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		Class: "class",
 	}
 
-	os := &GenericObjectSet{}
+	os := &adapters.ObjectSetAdapter{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		phase1,
 		phase2,
@@ -120,7 +121,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	checker := &phasesCheckerMock{}
 	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
 
-	os := &GenericObjectSet{}
+	os := &adapters.ObjectSetAdapter{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name: "phase1",
@@ -178,7 +179,7 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 				Class: "class",
 			}
 
-			os := &GenericObjectSet{}
+			os := &adapters.ObjectSetAdapter{}
 			os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 				phase1,
 				phase2,
@@ -203,12 +204,12 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		ObjectSet                 genericObjectSet
+		ObjectSet                 adapters.ObjectSetAccessor
 		TimeSinceAvailable        time.Duration
 		ExpectedConditionStatuses map[string]metav1.ConditionStatus
 	}{
 		"success delay default": {
-			ObjectSet: &GenericObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -227,7 +228,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			},
 		},
 		"success delay 2s/time since available 1s": {
-			ObjectSet: &GenericObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -247,7 +248,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			},
 		},
 		"success delay 1s/time since available 2s": {
-			ObjectSet: &GenericObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -326,7 +327,7 @@ func Test_isObjectSetInTransition(t *testing.T) {
 	})
 	examplePod.SetName("pod-1")
 
-	testObjectSet1 := newGenericObjectSet(testScheme)
+	testObjectSet1 := adapters.NewObjectSet(testScheme)
 	testObjectSet1.ClientObject().SetNamespace("test-ns")
 	testObjectSet1.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{
 		{
@@ -339,20 +340,20 @@ func Test_isObjectSetInTransition(t *testing.T) {
 		},
 	})
 
-	testObjectSetArchived := &GenericObjectSet{
+	testObjectSetArchived := &adapters.ObjectSetAdapter{
 		ObjectSet: *testObjectSet1.ClientObject().DeepCopyObject().(*corev1alpha1.ObjectSet),
 	}
 	testObjectSetArchived.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
 
 	tests := []struct {
 		name         string
-		objectSet    genericObjectSet
+		objectSet    adapters.ObjectSetAccessor
 		controllerOf []corev1alpha1.ControlledObjectReference
 		expected     bool
 	}{
 		{
 			name:      "empty",
-			objectSet: newGenericObjectSet(testScheme),
+			objectSet: adapters.NewObjectSet(testScheme),
 			expected:  false,
 		},
 		{

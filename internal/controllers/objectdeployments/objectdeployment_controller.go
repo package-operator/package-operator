@@ -33,8 +33,8 @@ type GenericObjectDeploymentController struct {
 	log                 logr.Logger
 	scheme              *runtime.Scheme
 	newObjectDeployment adapters.ObjectDeploymentFactory
-	newObjectSet        genericObjectSetFactory
-	newObjectSetList    genericObjectSetListFactory
+	newObjectSet        adapters.ObjectSetAccessorFactory
+	newObjectSetList    adapters.ObjectSetListAccessorFactory
 	reconciler          []reconciler
 }
 
@@ -43,8 +43,8 @@ func newGenericObjectDeploymentController(
 	childGVK schema.GroupVersionKind,
 	c client.Client, log logr.Logger, scheme *runtime.Scheme,
 	newObjectDeployment adapters.ObjectDeploymentFactory,
-	newObjectSet genericObjectSetFactory,
-	newObjectSetList genericObjectSetListFactory,
+	newObjectSet adapters.ObjectSetAccessorFactory,
+	newObjectSetList adapters.ObjectSetListAccessorFactory,
 ) *GenericObjectDeploymentController {
 	controller := &GenericObjectDeploymentController{
 		gvk:                 gvk,
@@ -89,8 +89,8 @@ func NewObjectDeploymentController(
 		log,
 		scheme,
 		adapters.NewObjectDeployment,
-		newGenericObjectSet,
-		newGenericObjectSetList,
+		adapters.NewObjectSet,
+		adapters.NewObjectSetList,
 	)
 }
 
@@ -104,8 +104,8 @@ func NewClusterObjectDeploymentController(
 		log,
 		scheme,
 		adapters.NewClusterObjectDeployment,
-		newGenericClusterObjectSet,
-		newGenericClusterObjectSetList,
+		adapters.NewClusterObjectSet,
+		adapters.NewClusterObjectSetList,
 	)
 }
 
@@ -150,7 +150,7 @@ func (od *GenericObjectDeploymentController) SetupWithManager(mgr ctrl.Manager) 
 func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	ctx context.Context,
 	objectDeployment objectDeploymentAccessor,
-) ([]genericObjectSet, error) {
+) ([]adapters.ObjectSetAccessor, error) {
 	labelSelector := objectDeployment.GetSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
