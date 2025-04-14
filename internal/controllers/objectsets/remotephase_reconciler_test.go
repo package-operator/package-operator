@@ -311,7 +311,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
 
-	objectSet := &adapters.ObjectSet{
+	objectSet := &adapters.ObjectSetAdapter{
 		ObjectSet: corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "chickenspace",
@@ -369,7 +369,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 		newObjectSetPhase: newGenericObjectSetPhase,
 	}
 
-	objectSet := &adapters.ObjectSet{
+	objectSet := &adapters.ObjectSetAdapter{
 		ObjectSet: corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "",

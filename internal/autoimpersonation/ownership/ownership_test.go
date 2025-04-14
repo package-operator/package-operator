@@ -191,7 +191,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 		},
 	}
 
-	objectSet := adapters.ObjectSet{
+	objectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -226,7 +226,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	assert.True(t, isOwner)
 
 	// multiple objectSets
-	otherObjectSet := adapters.ObjectSet{
+	otherObjectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -245,7 +245,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	})
 	otherObjectSet.SetOwnerReferences(newOwnerReferences(objectDeployment.ClientObject()))
 
-	for _, os := range []adapters.ObjectSet{objectSet, otherObjectSet} {
+	for _, os := range []adapters.ObjectSetAdapter{objectSet, otherObjectSet} {
 		isOwner, err = VerifyOwnership(os.ClientObject(), objectDeployment.ClientObject())
 		require.NoError(t, err)
 		assert.True(t, isOwner)
@@ -255,7 +255,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 func TestVerifyOwnership_ObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := adapters.ObjectSet{
+	objectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",

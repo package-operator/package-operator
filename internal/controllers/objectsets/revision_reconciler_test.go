@@ -37,7 +37,7 @@ func Test_revisionReconciler(t *testing.T) {
 			client:       testClient,
 		}
 
-		objectSet := &adapters.ObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
@@ -93,7 +93,7 @@ func Test_revisionReconciler(t *testing.T) {
 			}).
 			Return(nil)
 
-		objectSet := &adapters.ObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "xxx",
@@ -147,7 +147,7 @@ func Test_revisionReconciler(t *testing.T) {
 			}).
 			Return(nil)
 
-		objectSet := &adapters.ObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "xxx",

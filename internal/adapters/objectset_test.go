@@ -13,7 +13,7 @@ import (
 func TestObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := NewObjectSet(testScheme).(*ObjectSet)
+	objectSet := NewObjectSet(testScheme).(*ObjectSetAdapter)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ObjectSet{}, co)
@@ -81,7 +81,7 @@ func TestObjectSet(t *testing.T) {
 func TestClusterObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := NewClusterObjectSet(testScheme).(*ClusterObjectSet)
+	objectSet := NewClusterObjectSet(testScheme).(*ClusterObjectSetAdapter)
 
 	co := objectSet.ClientObject()
 	assert.IsType(t, &corev1alpha1.ClusterObjectSet{}, co)

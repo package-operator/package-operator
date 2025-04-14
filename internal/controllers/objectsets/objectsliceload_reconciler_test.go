@@ -45,7 +45,7 @@ func TestObjectSliceLoadReconciler(t *testing.T) {
 		},
 	}
 
-	objectSet := &adapters.ObjectSet{
+	objectSet := &adapters.ObjectSetAdapter{
 		ObjectSet: corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",

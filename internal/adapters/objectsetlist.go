@@ -58,7 +58,7 @@ func (a *ObjectSetList) ClientObjectList() client.ObjectList {
 func (a *ObjectSetList) GetItems() []ObjectSetAccessor {
 	out := make([]ObjectSetAccessor, len(a.Items))
 	for i := range a.Items {
-		out[i] = &ObjectSet{
+		out[i] = &ObjectSetAdapter{
 			ObjectSet: a.Items[i],
 		}
 	}
@@ -76,7 +76,7 @@ func (a *ClusterObjectSetList) ClientObjectList() client.ObjectList {
 func (a *ClusterObjectSetList) GetItems() []ObjectSetAccessor {
 	out := make([]ObjectSetAccessor, len(a.Items))
 	for i := range a.Items {
-		out[i] = &ClusterObjectSet{
+		out[i] = &ClusterObjectSetAdapter{
 			ClusterObjectSet: a.Items[i],
 		}
 	}

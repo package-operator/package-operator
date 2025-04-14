@@ -43,8 +43,7 @@ type ObjectSetAccessor interface {
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 }
 
-type ObjectSetAccessorFactory func(
-	scheme *runtime.Scheme) ObjectSetAccessor
+type ObjectSetAccessorFactory func(scheme *runtime.Scheme) ObjectSetAccessor
 
 var (
 	objectSetGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSet")
@@ -57,7 +56,7 @@ func NewObjectSet(scheme *runtime.Scheme) ObjectSetAccessor {
 		panic(err)
 	}
 
-	return &ObjectSet{
+	return &ObjectSetAdapter{
 		ObjectSet: *obj.(*corev1alpha1.ObjectSet),
 	}
 }
@@ -68,103 +67,103 @@ func NewClusterObjectSet(scheme *runtime.Scheme) ObjectSetAccessor {
 		panic(err)
 	}
 
-	return &ClusterObjectSet{
+	return &ClusterObjectSetAdapter{
 		ClusterObjectSet: *obj.(*corev1alpha1.ClusterObjectSet),
 	}
 }
 
 var (
-	_ ObjectSetAccessor = (*ObjectSet)(nil)
-	_ ObjectSetAccessor = (*ClusterObjectSet)(nil)
+	_ ObjectSetAccessor = (*ObjectSetAdapter)(nil)
+	_ ObjectSetAccessor = (*ClusterObjectSetAdapter)(nil)
 )
 
-type ObjectSet struct {
+type ObjectSetAdapter struct {
 	corev1alpha1.ObjectSet
 }
 
-func (a *ObjectSet) ClientObject() client.Object {
+func (a *ObjectSetAdapter) ClientObject() client.Object {
 	return &a.ObjectSet
 }
 
-func (a *ObjectSet) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (a *ObjectSetAdapter) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	return a.Spec.ObjectSetTemplateSpec
 }
 
-func (a *ObjectSet) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
+func (a *ObjectSetAdapter) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
 	a.Spec.ObjectSetTemplateSpec = templateSpec
 }
 
-func (a *ObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (a *ObjectSetAdapter) GetPrevious() []corev1alpha1.PreviousRevisionReference {
 	return a.Spec.Previous
 }
 
-func (a *ObjectSet) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
+func (a *ObjectSetAdapter) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
 	a.Spec.Previous = make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
 	for i := range prevObjectSets {
 		a.Spec.Previous[i].Name = prevObjectSets[i].ClientObject().GetName()
 	}
 }
 
-func (a *ObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+func (a *ObjectSetAdapter) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.ObjectSetTemplateSpec.Phases
 }
 
-func (a *ObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+func (a *ObjectSetAdapter) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
 	a.Spec.Phases = phases
 }
 
-func (a *ObjectSet) GetConditions() *[]metav1.Condition {
+func (a *ObjectSetAdapter) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *ObjectSet) GetRevision() int64 {
+func (a *ObjectSetAdapter) GetRevision() int64 {
 	return a.Status.Revision
 }
 
-func (a *ObjectSet) SetRevision(revision int64) {
+func (a *ObjectSetAdapter) SetRevision(revision int64) {
 	a.Status.Revision = revision
 }
 
-func (a *ObjectSet) GetGeneration() int64 {
+func (a *ObjectSetAdapter) GetGeneration() int64 {
 	return a.Generation
 }
 
-func (a *ObjectSet) IsArchived() bool {
+func (a *ObjectSetAdapter) IsArchived() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived
 }
 
-func (a *ObjectSet) SetArchived() {
+func (a *ObjectSetAdapter) SetArchived() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
 }
 
-func (a *ObjectSet) IsStatusPaused() bool {
+func (a *ObjectSetAdapter) IsStatusPaused() bool {
 	return meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetPaused,
 	)
 }
 
-func (a *ObjectSet) IsSpecPaused() bool {
+func (a *ObjectSetAdapter) IsSpecPaused() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ObjectSet) SetPaused() {
+func (a *ObjectSetAdapter) SetPaused() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ObjectSet) IsAvailable() bool {
+func (a *ObjectSetAdapter) IsAvailable() bool {
 	return meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetAvailable,
 	)
 }
 
-func (a *ObjectSet) GetPausedByParent() bool {
+func (a *ObjectSetAdapter) GetPausedByParent() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
 		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
 }
 
-func (a *ObjectSet) SetPausedByParent() {
+func (a *ObjectSetAdapter) SetPausedByParent() {
 	if a.Annotations == nil {
 		a.Annotations = map[string]string{}
 	}
@@ -172,122 +171,122 @@ func (a *ObjectSet) SetPausedByParent() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ObjectSet) SetActiveByParent() {
+func (a *ObjectSetAdapter) SetActiveByParent() {
 	delete(a.Annotations, pausedByParentAnnotation)
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
 }
 
-func (a *ObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
+func (a *ObjectSetAdapter) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
 	return a.Spec.AvailabilityProbes
 }
 
-func (a *ObjectSet) GetSuccessDelaySeconds() int32 {
+func (a *ObjectSetAdapter) GetSuccessDelaySeconds() int32 {
 	return a.Spec.SuccessDelaySeconds
 }
 
-func (a *ObjectSet) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+func (a *ObjectSetAdapter) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
 	return a.Status.RemotePhases
 }
 
-func (a *ObjectSet) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
+func (a *ObjectSetAdapter) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
 	a.Status.RemotePhases = remotes
 }
 
-func (a *ObjectSet) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+func (a *ObjectSetAdapter) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
 	return a.Status.ControllerOf
 }
 
-func (a *ObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+func (a *ObjectSetAdapter) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
 }
 
-type ClusterObjectSet struct {
+type ClusterObjectSetAdapter struct {
 	corev1alpha1.ClusterObjectSet
 }
 
-func (a *ClusterObjectSet) ClientObject() client.Object {
+func (a *ClusterObjectSetAdapter) ClientObject() client.Object {
 	return &a.ClusterObjectSet
 }
 
-func (a *ClusterObjectSet) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (a *ClusterObjectSetAdapter) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	return a.Spec.ObjectSetTemplateSpec
 }
 
-func (a *ClusterObjectSet) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
+func (a *ClusterObjectSetAdapter) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
 	a.Spec.ObjectSetTemplateSpec = templateSpec
 }
 
-func (a *ClusterObjectSet) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (a *ClusterObjectSetAdapter) GetPrevious() []corev1alpha1.PreviousRevisionReference {
 	return a.Spec.Previous
 }
 
-func (a *ClusterObjectSet) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
+func (a *ClusterObjectSetAdapter) SetPreviousRevisions(prevObjectSets []ObjectSetAccessor) {
 	a.Spec.Previous = make([]corev1alpha1.PreviousRevisionReference, len(prevObjectSets))
 	for i := range prevObjectSets {
 		a.Spec.Previous[i].Name = prevObjectSets[i].ClientObject().GetName()
 	}
 }
 
-func (a *ClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+func (a *ClusterObjectSetAdapter) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.ObjectSetTemplateSpec.Phases
 }
 
-func (a *ClusterObjectSet) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+func (a *ClusterObjectSetAdapter) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
 	a.Spec.Phases = phases
 }
 
-func (a *ClusterObjectSet) GetConditions() *[]metav1.Condition {
+func (a *ClusterObjectSetAdapter) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *ClusterObjectSet) GetRevision() int64 {
+func (a *ClusterObjectSetAdapter) GetRevision() int64 {
 	return a.Status.Revision
 }
 
-func (a *ClusterObjectSet) SetRevision(revision int64) {
+func (a *ClusterObjectSetAdapter) SetRevision(revision int64) {
 	a.Status.Revision = revision
 }
 
-func (a *ClusterObjectSet) GetGeneration() int64 {
+func (a *ClusterObjectSetAdapter) GetGeneration() int64 {
 	return a.Generation
 }
 
-func (a *ClusterObjectSet) IsArchived() bool {
+func (a *ClusterObjectSetAdapter) IsArchived() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived
 }
 
-func (a *ClusterObjectSet) SetArchived() {
+func (a *ClusterObjectSetAdapter) SetArchived() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
 }
 
-func (a *ClusterObjectSet) IsStatusPaused() bool {
+func (a *ClusterObjectSetAdapter) IsStatusPaused() bool {
 	return meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetPaused,
 	)
 }
 
-func (a *ClusterObjectSet) IsSpecPaused() bool {
+func (a *ClusterObjectSetAdapter) IsSpecPaused() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ClusterObjectSet) SetPaused() {
+func (a *ClusterObjectSetAdapter) SetPaused() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ClusterObjectSet) IsAvailable() bool {
+func (a *ClusterObjectSetAdapter) IsAvailable() bool {
 	return meta.IsStatusConditionTrue(
 		a.Status.Conditions,
 		corev1alpha1.ObjectSetAvailable,
 	)
 }
 
-func (a *ClusterObjectSet) GetPausedByParent() bool {
+func (a *ClusterObjectSetAdapter) GetPausedByParent() bool {
 	return a.Spec.LifecycleState == corev1alpha1.ObjectSetLifecycleStatePaused &&
 		a.Annotations[pausedByParentAnnotation] == pausedByParentTrue
 }
 
-func (a *ClusterObjectSet) SetPausedByParent() {
+func (a *ClusterObjectSetAdapter) SetPausedByParent() {
 	if a.Annotations == nil {
 		a.Annotations = map[string]string{}
 	}
@@ -295,31 +294,31 @@ func (a *ClusterObjectSet) SetPausedByParent() {
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 }
 
-func (a *ClusterObjectSet) SetActiveByParent() {
+func (a *ClusterObjectSetAdapter) SetActiveByParent() {
 	delete(a.Annotations, pausedByParentAnnotation)
 	a.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateActive
 }
 
-func (a *ClusterObjectSet) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
+func (a *ClusterObjectSetAdapter) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
 	return a.Spec.AvailabilityProbes
 }
 
-func (a *ClusterObjectSet) GetSuccessDelaySeconds() int32 {
+func (a *ClusterObjectSetAdapter) GetSuccessDelaySeconds() int32 {
 	return a.Spec.SuccessDelaySeconds
 }
 
-func (a *ClusterObjectSet) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+func (a *ClusterObjectSetAdapter) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
 	return a.Status.RemotePhases
 }
 
-func (a *ClusterObjectSet) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
+func (a *ClusterObjectSetAdapter) SetRemotePhases(remotes []corev1alpha1.RemotePhaseReference) {
 	a.Status.RemotePhases = remotes
 }
 
-func (a *ClusterObjectSet) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
+func (a *ClusterObjectSetAdapter) GetStatusControllerOf() []corev1alpha1.ControlledObjectReference {
 	return a.Status.ControllerOf
 }
 
-func (a *ClusterObjectSet) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
+func (a *ClusterObjectSetAdapter) SetStatusControllerOf(controllerOf []corev1alpha1.ControlledObjectReference) {
 	a.Status.ControllerOf = controllerOf
 }

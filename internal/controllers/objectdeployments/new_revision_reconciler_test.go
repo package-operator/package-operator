@@ -190,7 +190,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				revisions[i] = &adapters.ObjectSet{
+				revisions[i] = &adapters.ObjectSetAdapter{
 					ObjectSet: testCase.prevRevisions[i],
 				}
 			}

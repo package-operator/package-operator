@@ -163,7 +163,7 @@ func Test_ObjectSetReconciler(t *testing.T) {
 					if len(testCase.expectedCurrentRevision) == 0 {
 						return item == nil
 					}
-					obj := item.(*adapters.ObjectSet)
+					obj := item.(*adapters.ObjectSetAdapter)
 					return obj.Name == testCase.expectedCurrentRevision
 				}),
 				mock.MatchedBy(func(obj any) bool {

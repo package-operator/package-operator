@@ -112,7 +112,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-			objectSet := adapters.ObjectSet{
+			objectSet := adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
@@ -228,7 +228,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 				}).
 				Return(nil).Once()
 
-			objectSet := &adapters.ObjectSet{}
+			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
 			arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
 			assert.Equal(t, test.arePausedExpected, arePaused)
@@ -243,7 +243,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	controller, c, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-	objectSet := &adapters.ObjectSet{}
+	objectSet := &adapters.ObjectSetAdapter{}
 	objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
 	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
 	assert.False(t, arePaused)
@@ -314,7 +314,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 				}).
 				Return(test.getPhaseError).Once()
 
-			objectSet := &adapters.ObjectSet{}
+			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 1)
 			if test.objectSetPaused {
 				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
@@ -377,7 +377,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-			objectSet := &adapters.ObjectSet{
+			objectSet := &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
@@ -423,7 +423,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	t.Run("just returns error", func(t *testing.T) {
 		t.Parallel()
 
-		objectSet := &adapters.ObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
@@ -439,7 +439,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	t.Run("reports preflight error", func(t *testing.T) {
 		t.Parallel()
 
-		objectSet := &adapters.ObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 

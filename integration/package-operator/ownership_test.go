@@ -89,7 +89,7 @@ func TestVerifyOwnership(t *testing.T) {
 	require.Len(t, controllerOf, 1)
 	objectSetReference := controllerOf[0]
 
-	objectSet := &adapters.ObjectSet{}
+	objectSet := &adapters.ObjectSetAdapter{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKey{
 		Name:      objectSetReference.Name,
 		Namespace: objectSetReference.Namespace,

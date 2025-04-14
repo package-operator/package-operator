@@ -76,7 +76,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		Class: "class",
 	}
 
-	os := &adapters.ObjectSet{}
+	os := &adapters.ObjectSetAdapter{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		phase1,
 		phase2,
@@ -121,7 +121,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	checker := &phasesCheckerMock{}
 	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
 
-	os := &adapters.ObjectSet{}
+	os := &adapters.ObjectSetAdapter{}
 	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name: "phase1",
@@ -179,7 +179,7 @@ func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
 				Class: "class",
 			}
 
-			os := &adapters.ObjectSet{}
+			os := &adapters.ObjectSetAdapter{}
 			os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 				phase1,
 				phase2,
@@ -209,7 +209,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 		ExpectedConditionStatuses map[string]metav1.ConditionStatus
 	}{
 		"success delay default": {
-			ObjectSet: &adapters.ObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -228,7 +228,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			},
 		},
 		"success delay 2s/time since available 1s": {
-			ObjectSet: &adapters.ObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -248,7 +248,7 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			},
 		},
 		"success delay 1s/time since available 2s": {
-			ObjectSet: &adapters.ObjectSet{
+			ObjectSet: &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					Spec: corev1alpha1.ObjectSetSpec{
 						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -340,7 +340,7 @@ func Test_isObjectSetInTransition(t *testing.T) {
 		},
 	})
 
-	testObjectSetArchived := &adapters.ObjectSet{
+	testObjectSetArchived := &adapters.ObjectSetAdapter{
 		ObjectSet: *testObjectSet1.ClientObject().DeepCopyObject().(*corev1alpha1.ObjectSet),
 	}
 	testObjectSetArchived.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived

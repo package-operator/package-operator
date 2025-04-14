@@ -17,9 +17,9 @@ type objectSetGetter interface {
 
 func newObjectSetGetter(objectSet adapters.ObjectSetAccessor) objectSetGetter {
 	switch os := objectSet.(type) {
-	case *adapters.ObjectSet:
+	case *adapters.ObjectSetAdapter:
 		return &defaultObjectSetGetter{objectSet}
-	case *adapters.ClusterObjectSet:
+	case *adapters.ClusterObjectSetAdapter:
 		return &defaultObjectSetGetter{objectSet}
 	case *adaptersmock.ObjectSetMock:
 		return &objectSetGetterMock{objectSet: os}
