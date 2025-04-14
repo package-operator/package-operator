@@ -11,7 +11,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	adaptermock "package-operator.run/internal/testutil/adapters"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 func TestRecorder_RecordPackageMetrics(t *testing.T) {
@@ -226,7 +226,7 @@ func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
 			obj := &unstructured.Unstructured{}
 			obj.SetCreationTimestamp(metav1.NewTime(creationTimestamp))
 
-			osMock := &adaptermock.ObjectSetMock{}
+			osMock := &adaptermocks.ObjectSetMock{}
 			osMock.On("ClientObject").Return(obj)
 			osMock.On("GetConditions").Return(&test.conditions)
 

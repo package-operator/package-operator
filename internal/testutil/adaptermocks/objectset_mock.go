@@ -1,4 +1,4 @@
-package adapters
+package adaptermocks
 
 import (
 	"github.com/stretchr/testify/mock"

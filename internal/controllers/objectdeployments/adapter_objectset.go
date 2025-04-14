@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"package-operator.run/internal/adapters"
-	adaptersmock "package-operator.run/internal/testutil/adapters"
+	"package-operator.run/internal/testutil/adaptermocks"
 	"package-operator.run/internal/utils"
 )
 
@@ -21,7 +21,7 @@ func newObjectSetGetter(objectSet adapters.ObjectSetAccessor) objectSetGetter {
 		return &defaultObjectSetGetter{objectSet}
 	case *adapters.ClusterObjectSetAdapter:
 		return &defaultObjectSetGetter{objectSet}
-	case *adaptersmock.ObjectSetMock:
+	case *adaptermocks.ObjectSetMock:
 		return &objectSetGetterMock{objectSet: os}
 	default:
 		panic("invalid objectSet type")
@@ -79,7 +79,7 @@ func (os *defaultObjectSetGetter) getObjects() ([]objectIdentifier, error) {
 }
 
 type objectSetGetterMock struct {
-	objectSet *adaptersmock.ObjectSetMock
+	objectSet *adaptermocks.ObjectSetMock
 	mock.Mock
 }
 
