@@ -17,6 +17,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 const (
@@ -299,8 +300,8 @@ func newObjectDeploymentMock(
 	generation int64,
 	templateHash string,
 	initialConditions *[]metav1.Condition,
-) *genericObjectDeploymentMock {
-	res := &genericObjectDeploymentMock{}
+) *adaptermocks.ObjectDeploymentMock {
+	res := &adaptermocks.ObjectDeploymentMock{}
 	obj := &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       objectDeploymentName,

@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	adapters "package-operator.run/internal/adapters"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -224,7 +223,9 @@ func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
 }
 
 func (a *archiveReconciler) garbageCollectRevisions(
-	ctx context.Context, previousObjectSets []adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor,
+	ctx context.Context,
+	previousObjectSets []adapters.ObjectSetAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	revisionLimit := defaultRevisionLimit
 	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()

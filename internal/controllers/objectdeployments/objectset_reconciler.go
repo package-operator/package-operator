@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	adapters "package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 )
 
@@ -30,8 +29,8 @@ type objectSetSubReconciler interface {
 }
 
 type listObjectSetsForDeploymentFn func(
-	ctx context.Context, objectDeployment objectDeploymentAccessor,
-) ([]genericObjectSet, error)
+	ctx context.Context, objectDeployment adapters.ObjectDeploymentAccessor,
+) ([]adapters.ObjectSetAccessor, error)
 
 func (o *objectSetReconciler) Reconcile(
 	ctx context.Context, objectDeployment adapters.ObjectDeploymentAccessor,
@@ -279,7 +278,10 @@ func findAvailableRevision(objectSets ...adapters.ObjectSetAccessor) (bool, stri
 	return false, ""
 }
 
-func updatePausedStatus(currentObjectSet adapters.ObjectSetAccessor, objectDeployment adapters.ObjectDeploymentAccessor) {
+func updatePausedStatus(
+	currentObjectSet adapters.ObjectSetAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
+) {
 	pausedCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
 	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
 		objectDeployment.SetStatusConditions(

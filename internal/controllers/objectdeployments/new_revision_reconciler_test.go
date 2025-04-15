@@ -17,6 +17,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
@@ -31,7 +32,7 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 		scheme:       testScheme,
 	}
 
-	objectDeploymentMock := &genericObjectDeploymentMock{}
+	objectDeploymentMock := &adaptermocks.ObjectDeploymentMock{}
 	objectDeploymentMock.
 		On("GetObjectSetTemplate").
 		Return(corev1alpha1.ObjectSetTemplate{})

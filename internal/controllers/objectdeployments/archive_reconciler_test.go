@@ -40,7 +40,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			prevs[i] = obj
 		}
 
-		objectDeployment := &genericObjectDeploymentMock{}
+		objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 		res, err := r.Reconcile(ctx, nil, prevs, objectDeployment)
 		require.NoError(t, err)
 		assert.True(t, res.IsZero(), "unexpected requeue")
@@ -77,7 +77,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			arch1,
 			arch2,
 		}
-		objectDeployment := &genericObjectDeploymentMock{}
+		objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 		res, err := r.Reconcile(ctx, latestAvailable, prevs, objectDeployment)
 		require.NoError(t, err)
 		assert.True(t, res.IsZero(), "unexpected requeue")
@@ -116,7 +116,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 		"does not archive anything if there are errors when pausing revision/s to be archived", func(t *testing.T) {
 			t.Parallel()
 			// setup Objectdeployment
-			objectDeployment := &genericObjectDeploymentMock{}
+			objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 			revisionLimit := int32(10)
 			objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -256,7 +256,7 @@ func assertShouldNotBePaused(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -374,7 +374,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -447,7 +447,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 func testDeleteArchive(t *testing.T) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(3)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
