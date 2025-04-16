@@ -32,7 +32,7 @@ type dynamicCache interface {
 }
 
 type reconciler interface {
-	Reconcile(ctx context.Context, pkg adapters.GenericObjectTemplateAccessor) (ctrl.Result, error)
+	Reconcile(ctx context.Context, pkg adapters.ObjectTemplateAccessor) (ctrl.Result, error)
 }
 
 type preflightChecker interface {
@@ -165,7 +165,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 }
 
 func (c *GenericObjectTemplateController) updateStatus(
-	ctx context.Context, objectTemplate adapters.GenericObjectTemplateAccessor,
+	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 ) error {
 	if err := c.client.Status().Update(ctx, objectTemplate.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectTemplate status: %w", err)

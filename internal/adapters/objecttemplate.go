@@ -8,7 +8,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type GenericObjectTemplateAccessor interface {
+type ObjectTemplateAccessor interface {
 	ClientObject() client.Object
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
@@ -19,14 +19,14 @@ type GenericObjectTemplateAccessor interface {
 }
 
 type GenericObjectTemplateFactory func(
-	scheme *runtime.Scheme) GenericObjectTemplateAccessor
+	scheme *runtime.Scheme) ObjectTemplateAccessor
 
 var (
 	objectTemplateGVK        = corev1alpha1.GroupVersion.WithKind("ObjectTemplate")
 	clusterObjectTemplateGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectTemplate")
 )
 
-func NewGenericObjectTemplate(scheme *runtime.Scheme) GenericObjectTemplateAccessor {
+func NewGenericObjectTemplate(scheme *runtime.Scheme) ObjectTemplateAccessor {
 	obj, err := scheme.New(objectTemplateGVK)
 	if err != nil {
 		panic(err)
@@ -37,7 +37,7 @@ func NewGenericObjectTemplate(scheme *runtime.Scheme) GenericObjectTemplateAcces
 	}
 }
 
-func NewGenericClusterObjectTemplate(scheme *runtime.Scheme) GenericObjectTemplateAccessor {
+func NewGenericClusterObjectTemplate(scheme *runtime.Scheme) ObjectTemplateAccessor {
 	obj, err := scheme.New(clusterObjectTemplateGVK)
 	if err != nil {
 		panic(err)
