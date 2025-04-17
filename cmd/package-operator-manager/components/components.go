@@ -37,7 +37,7 @@ func NewComponents() (*dig.Container, error) {
 	providers := []any{
 		ProvideScheme, ProvideRestConfig, ProvideManager,
 		ProvideMetricsRecorder, ProvideDynamicCache,
-		ProvideUncachedClient, ProvideOptions, ProvideLogger,
+		ProvideUncachedClient, ProvideLogger,
 		ProvideRequestManager, ProvideDiscoveryClient, ProvideEnvironmentManager,
 
 		// -----------
