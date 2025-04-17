@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
@@ -18,6 +20,7 @@ import (
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap"
 	"package-operator.run/cmd/package-operator-manager/components"
+	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/version"
@@ -30,7 +33,11 @@ const (
 var di *dig.Container
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	opts := zap.Options{
+		Development: false,
+		Level:       zapcore.ErrorLevel,
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	var err error
 	di, err = components.NewComponents()
@@ -141,7 +148,7 @@ func newPackageOperatorManager(
 func (pkoMgr *packageOperatorManager) Start(ctx context.Context) error {
 	log := pkoMgr.log
 	ctx = logr.NewContext(ctx, log)
-	log.Info("starting manager")
+	log.V(constants.LogLevelInfo).Info("starting manager")
 
 	if err := pkoMgr.probeHyperShiftIntegration(ctx); err != nil {
 		return fmt.Errorf("setting up HyperShift integration: %w", err)
@@ -178,7 +185,7 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 	case err == nil:
 		// HyperShift HostedCluster API is present on the cluster
 		// Auto-Enable HyperShift integration controller:
-		log.Info("detected HostedCluster API, enabling HyperShift integration")
+		log.V(constants.LogLevelInfo).Info("detected HostedCluster API, enabling HyperShift integration")
 		if err = pkoMgr.hostedClusterController.
 			SetupWithManager(pkoMgr.mgr); err != nil {
 			return fmt.Errorf(
