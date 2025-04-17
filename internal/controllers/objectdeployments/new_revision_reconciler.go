@@ -25,7 +25,7 @@ type newRevisionReconciler struct {
 func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	currentObject adapters.ObjectSetAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	if currentObject != nil {
 		// There is an objectset already for the current revision, we do nothing.
@@ -93,7 +93,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 // Creates and returns a new objectset in memory with the correct objectset template,
 // template hash, previous revision references and ownership set.
 func (r *newRevisionReconciler) newObjectSetFromDeployment(
-	objectDeployment objectDeploymentAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 	prevObjectSets []adapters.ObjectSetAccessor,
 ) (adapters.ObjectSetAccessor, error) {
 	deploymentClientObj := objectDeployment.ClientObject()
