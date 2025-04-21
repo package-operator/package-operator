@@ -21,39 +21,8 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
-	"package-operator.run/internal/testutil/dynamiccachemocks"
+	"package-operator.run/internal/testutil/controllersmocks"
 )
-
-type dynamicCacheMock = dynamiccachemocks.DynamicCacheMock
-
-type objectSetPhasesReconcilerMock struct {
-	mock.Mock
-}
-
-func (r *objectSetPhasesReconcilerMock) Reconcile(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-) (res ctrl.Result, err error) {
-	args := r.Called(ctx, objectSet)
-	return args.Get(0).(ctrl.Result), args.Error(1)
-}
-
-func (r *objectSetPhasesReconcilerMock) Teardown(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-) (cleanupDone bool, err error) {
-	args := r.Called(ctx, objectSet)
-	return args.Bool(0), args.Error(1)
-}
-
-type revisionReconcilerMock struct {
-	mock.Mock
-}
-
-func (r *revisionReconcilerMock) Reconcile(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-) (res ctrl.Result, err error) {
-	args := r.Called(ctx, objectSet)
-	return args.Get(0).(ctrl.Result), args.Error(1)
-}
 
 func TestGenericObjectSetController_Reconcile(t *testing.T) {
 	t.Parallel()
@@ -463,27 +432,27 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 func newControllerAndMocks() (
 	*GenericObjectSetController,
 	*testutil.CtrlClient,
-	*dynamicCacheMock,
-	*objectSetPhasesReconcilerMock,
-	*revisionReconcilerMock,
+	*controllersmocks.DynamicCacheMock,
+	*controllersmocks.ObjectSetPhasesReconcilerMock,
+	*controllersmocks.RevisionReconcilerMock,
 ) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
-	dc := &dynamicCacheMock{}
+	dc := &controllersmocks.DynamicCacheMock{}
 
 	controller := &GenericObjectSetController{
 		newObjectSet:      adapters.NewObjectSet,
-		newObjectSetPhase: newGenericObjectSetPhase,
+		newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 		client:            c,
 		log:               ctrl.Log.WithName("controllers"),
 		scheme:            scheme,
 		dynamicCache:      dc,
 	}
-	pr := &objectSetPhasesReconcilerMock{}
+	pr := &controllersmocks.ObjectSetPhasesReconcilerMock{}
 
 	controller.teardownHandler = pr
 
-	rr := &revisionReconcilerMock{}
+	rr := &controllersmocks.RevisionReconcilerMock{}
 	controller.reconciler = []reconciler{
 		rr,
 		pr,

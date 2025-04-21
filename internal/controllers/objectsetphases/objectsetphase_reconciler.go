@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	internalprobing "package-operator.run/internal/probing"
 	"package-operator.run/pkg/probing"
@@ -65,7 +66,7 @@ type lookupPreviousRevisions func(
 ) ([]controllers.PreviousObjectSet, error)
 
 func (r *objectSetPhaseReconciler) Reconcile(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 
@@ -125,7 +126,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 }
 
 func (r *objectSetPhaseReconciler) Teardown(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (cleanupDone bool, err error) {
 	// objectSetPhase is deleted with the `orphan` cascade option, so we don't need to delete the owned objects.
 	if controllerutil.ContainsFinalizer(objectSetPhase.ClientObject(), "orphan") {
@@ -138,7 +139,7 @@ func (r *objectSetPhaseReconciler) Teardown(
 
 // Sets .status.activeObjects to all objects actively reconciled and controlled by this Phase.
 func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
-	ctx context.Context, objectSetPhase genericObjectSetPhase, actualObjects []client.Object,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor, actualObjects []client.Object,
 ) error {
 	activeObjects, err := controllers.GetControllerOf(
 		ctx, r.scheme, r.ownerStrategy,

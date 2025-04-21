@@ -193,7 +193,7 @@ func TestObjectSetRemotePhaseReconciler_Teardown(t *testing.T) {
 				client:            clientMock,
 				uncachedClient:    uncachedClient,
 				scheme:            testScheme,
-				newObjectSetPhase: newGenericObjectSetPhase,
+				newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 			}
 
 			genObjectSet := adapters.NewObjectSet(testScheme)
@@ -225,7 +225,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
 	t.Parallel()
 	r := &objectSetRemotePhaseReconciler{
 		scheme:            testScheme,
-		newObjectSetPhase: newGenericObjectSetPhase,
+		newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 	}
 
 	genObjectSet := adapters.NewObjectSet(testScheme)
@@ -308,7 +308,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ObjectSet(t *t
 		client:            c,
 		uncachedClient:    uncachedClient,
 		scheme:            testScheme,
-		newObjectSetPhase: newGenericObjectSetPhase,
+		newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 	}
 
 	objectSet := &adapters.ObjectSetAdapter{
@@ -366,7 +366,7 @@ func TestObjectSetRemotePhaseReconciler_TeardownNamespaceDeletion_ClusterObjectS
 		client:            c,
 		uncachedClient:    uncachedClient,
 		scheme:            testScheme,
-		newObjectSetPhase: newGenericObjectSetPhase,
+		newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 	}
 
 	objectSet := &adapters.ObjectSetAdapter{

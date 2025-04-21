@@ -72,7 +72,7 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			objectSetPhase := newGenericObjectSetPhase(scheme)
+			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
 			m := &phaseReconcilerMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
@@ -115,7 +115,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 		return previousList, nil
 	}
 
-	objectSetPhase := newGenericObjectSetPhase(scheme)
+	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	m := &phaseReconcilerMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
@@ -141,7 +141,7 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 		return []controllers.PreviousObjectSet{}, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	objectSetPhase := newGenericObjectSetPhase(scheme)
+	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	m := &phaseReconcilerMock{}
 	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)

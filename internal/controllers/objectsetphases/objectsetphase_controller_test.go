@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
 
@@ -53,14 +54,14 @@ type objectSetPhaseReconcilerMock struct {
 }
 
 func (c *objectSetPhaseReconcilerMock) Reconcile(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (res ctrl.Result, err error) {
 	args := c.Called(ctx, objectSetPhase)
 	return args.Get(0).(ctrl.Result), args.Error(1)
 }
 
 func (c *objectSetPhaseReconcilerMock) Teardown(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (cleanupDone bool, err error) {
 	args := c.Called(ctx, objectSetPhase)
 	return args.Bool(0), args.Error(1)
@@ -75,7 +76,7 @@ func newControllerAndMocks() (
 	c := testutil.NewClient()
 	// NewSameClusterObjectSetPhaseController
 	controller := &GenericObjectSetPhaseController{
-		newObjectSetPhase: newGenericObjectSetPhase,
+		newObjectSetPhase: adapters.NewObjectSetPhaseAccessor,
 
 		class:  "default",
 		log:    ctrl.Log.WithName("controllers"),
@@ -147,7 +148,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-			objectSetPhase := GenericObjectSetPhase{}
+			objectSetPhase := adapters.ObjectSetPhaseAdapter{}
 			objectSetPhase.Finalizers = []string{
 				constants.CachedFinalizer,
 			}
@@ -217,7 +218,7 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 			dc.On("Free", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
-			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{
+			err := controller.handleDeletionAndArchival(context.Background(), &adapters.ObjectSetPhaseAdapter{
 				ObjectSetPhase: corev1alpha1.ObjectSetPhase{
 					ObjectMeta: metav1.ObjectMeta{Finalizers: []string{
 						constants.CachedFinalizer,
@@ -265,7 +266,7 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 
 			controller, _, _, _ := newControllerAndMocks()
 
-			p := &GenericObjectSetPhase{}
+			p := &adapters.ObjectSetPhaseAdapter{}
 			p.Spec.Paused = test.phasePaused
 			p.Status.Conditions = test.startingConditions
 
