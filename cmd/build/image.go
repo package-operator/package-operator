@@ -36,7 +36,7 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 
 	self := run.Fn3(buildImage, name, registry, goarch)
 	if err := mgr.SerialDeps(ctx, self,
-		run.Fn3(compile, binaryName, "linux", goarch),
+		run.Meth3(compile, compile.compile, binaryName, "linux", goarch),
 	); err != nil {
 		return err
 	}

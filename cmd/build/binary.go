@@ -12,10 +12,12 @@ import (
 	"pkg.package-operator.run/cardboard/sh"
 )
 
+type Compile struct{}
+
 // compiles code in /cmd/<cmd> for the given OS and ARCH.
 // Binaries will be put in /bin/<cmd>_<os>_<arch>.
-func compile(ctx context.Context, cmd string, goos, goarch string) error {
-	self := run.Fn3(compile, cmd, goos, goarch)
+func (c Compile) compile(ctx context.Context, cmd string, goos, goarch string) error {
+	self := run.Meth3(c, c.compile, cmd, goos, goarch)
 	err := mgr.SerialDeps(ctx,
 		self,
 		run.Meth(generate, generate.All),
