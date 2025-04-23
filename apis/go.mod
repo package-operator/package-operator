@@ -2,7 +2,7 @@ module package-operator.run/apis
 
 go 1.23.0
 
-require k8s.io/apimachinery v0.32.3
+require k8s.io/apimachinery v0.32.4
 
 require (
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
@@ -26,7 +26,7 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/apiextensions-apiserver v0.32.3
+	k8s.io/apiextensions-apiserver v0.32.4
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
