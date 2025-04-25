@@ -12,11 +12,11 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +30,6 @@ import (
 	apis "package-operator.run/apis"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/objectsetphases"
-	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/version"
 )
@@ -187,17 +186,29 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	recorder := metrics.NewRecorder()
 	recorder.Register()
 
-	dc := dynamiccache.NewCache(
-		targetCfg, scheme, targetMapper, recorder,
-		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,
-			// so we prevent our caches from exploding!
-			schema.GroupVersionKind{}: dynamiccache.Selector{
-				Label: labels.SelectorFromSet(labels.Set{
-					constants.DynamicCacheLabel: "True",
-				}),
-			},
-		})
+	mapper := func(
+		_ context.Context, _ client.Object,
+		c *rest.Config, o cache.Options,
+	) (*rest.Config, cache.Options, error) {
+		return c, o, nil
+	}
+
+	cacheManager := managedcache.NewObjectBoundAccessManager(
+		log,
+		mapper,
+		targetCfg,
+		cache.Options{
+			Scheme: scheme,
+			Mapper: targetMapper,
+			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{
+				constants.DynamicCacheLabel: "True",
+			}),
+		},
+	)
+
+	if err := mgr.Add(cacheManager); err != nil {
+		return fmt.Errorf("unable to start cache manager: %w", err)
+	}
 
 	// Create a remote client that does not cache resources cluster-wide.
 	uncachedTargetClient, err := client.New(
@@ -210,7 +221,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 
 	if err = objectsetphases.NewMultiClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
-		mgr.GetScheme(), dc, uncachedTargetClient,
+		mgr.GetScheme(), cacheManager, uncachedTargetClient,
 		opts.class, managementClusterClient,
 		targetClient, targetMapper,
 	).SetupWithManager(mgr); err != nil {
@@ -221,7 +232,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		// Only start the Cluster-Scoped controller, when we are running cluster scoped.
 		if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
 			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-			mgr.GetScheme(), dc, uncachedTargetClient,
+			mgr.GetScheme(), cacheManager, uncachedTargetClient,
 			opts.class, managementClusterClient,
 			targetClient, targetMapper,
 		).SetupWithManager(mgr); err != nil {
