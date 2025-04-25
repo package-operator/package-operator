@@ -16,11 +16,13 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	internalprobing "package-operator.run/internal/probing"
 	"package-operator.run/pkg/probing"
 
+	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
@@ -28,7 +30,8 @@ import (
 type objectSetPhasesReconciler struct {
 	cfg                     objectSetPhasesReconcilerConfig
 	scheme                  *runtime.Scheme
-	phaseReconciler         phaseReconciler
+	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
+	phaseReconcilerFactory  controllers.PhaseReconcilerFactory
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
 	ownerStrategy           ownerStrategy
@@ -49,7 +52,8 @@ type phasesChecker interface {
 
 func newObjectSetPhasesReconciler(
 	scheme *runtime.Scheme,
-	phaseReconciler phaseReconciler,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
+	phaseReconcilerFactory controllers.PhaseReconcilerFactory,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
 	checker phasesChecker,
@@ -63,7 +67,8 @@ func newObjectSetPhasesReconciler(
 	return &objectSetPhasesReconciler{
 		cfg:                     cfg,
 		scheme:                  scheme,
-		phaseReconciler:         phaseReconciler,
+		accessManager:           accessManager,
+		phaseReconcilerFactory:  phaseReconcilerFactory,
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerhandling.NewNative(scheme),
@@ -87,23 +92,13 @@ type lookupPreviousRevisions func(
 	ctx context.Context, owner controllers.PreviousOwner,
 ) ([]controllers.PreviousObjectSet, error)
 
-type phaseReconciler interface {
-	ReconcilePhase(
-		ctx context.Context, owner controllers.PhaseObjectOwner,
-		phase corev1alpha1.ObjectSetTemplatePhase,
-		probe probing.Prober, previous []controllers.PreviousObjectSet,
-	) ([]client.Object, controllers.ProbingResult, error)
-
-	TeardownPhase(
-		ctx context.Context, owner controllers.PhaseObjectOwner,
-		phase corev1alpha1.ObjectSetTemplatePhase,
-	) (cleanupDone bool, err error)
-}
-
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
+	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
+	log.Info("reconcile")
+	defer log.Info("reconciled")
 
 	violations, err := r.preflightChecker.Check(ctx, objectSet.GetPhases())
 	if err != nil {
@@ -187,6 +182,8 @@ func (r *objectSetPhasesReconciler) Reconcile(
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
+	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
+
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
 		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
@@ -198,10 +195,25 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
+	log.Info("getting cache accessor")
+	cache, err := r.accessManager.GetWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectSet,
+		aggregateLocalObjects(objectSet),
+	)
+	if err != nil {
+		return nil, controllers.ProbingResult{}, fmt.Errorf("getting cache: %w", err)
+	}
+
+	log.Info("getting phaseReconciler")
+	phaseReconciler := r.phaseReconcilerFactory.New(cache)
+
 	var controllerOfAll []corev1alpha1.ControlledObjectReference
 	for _, phase := range objectSet.GetPhases() {
-		controllerOf, probingResult, err := r.reconcilePhase(
-			ctx, objectSet, phase, probe, previous)
+		log.Info("reconciling phase", "name", phase.Name, "class", phase.Class)
+
+		controllerOf, probingResult, err := r.reconcilePhase(ctx, phaseReconciler, objectSet, phase, probe, previous)
 		if err != nil {
 			return nil, controllers.ProbingResult{}, err
 		}
@@ -219,7 +231,9 @@ func (r *objectSetPhasesReconciler) reconcile(
 }
 
 func (r *objectSetPhasesReconciler) reconcilePhase(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+	ctx context.Context,
+	phaseReconciler controllers.PhaseReconciler,
+	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
@@ -229,17 +243,19 @@ func (r *objectSetPhasesReconciler) reconcilePhase(
 			ctx, objectSet, phase)
 	}
 	return r.reconcileLocalPhase(
-		ctx, objectSet, phase, probe, previous)
+		ctx, phaseReconciler, objectSet, phase, probe, previous)
 }
 
 // Reconciles the Phase directly in-process.
 func (r *objectSetPhasesReconciler) reconcileLocalPhase(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+	ctx context.Context,
+	phaseReconciler controllers.PhaseReconciler,
+	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	actualObjects, probingResult, err := r.phaseReconciler.ReconcilePhase(
+	actualObjects, probingResult, err := phaseReconciler.ReconcilePhase(
 		ctx, objectSet, phase, probe, previous)
 	if err != nil {
 		return nil, probingResult, err
@@ -267,8 +283,20 @@ func (r *objectSetPhasesReconciler) Teardown(
 	phases := objectSet.GetPhases()
 	reverse(phases) // teardown in reverse order
 
+	cache, err := r.accessManager.GetWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectSet,
+		aggregateLocalObjects(objectSet),
+	)
+	if err != nil {
+		return false, fmt.Errorf("getting cache: %w", err)
+	}
+
+	phaseReconciler := r.phaseReconcilerFactory.New(cache)
+
 	for _, phase := range phases {
-		if cleanupDone, err := r.teardownPhase(ctx, objectSet, phase); err != nil {
+		if cleanupDone, err := r.teardownPhase(ctx, phaseReconciler, objectSet, phase); err != nil {
 			return false, fmt.Errorf("error archiving phase: %w", err)
 		} else if !cleanupDone {
 			return false, nil
@@ -276,17 +304,27 @@ func (r *objectSetPhasesReconciler) Teardown(
 		log.Info("cleanup done", "phase", phase.Name)
 	}
 
+	if err := r.accessManager.FreeWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectSet,
+	); err != nil {
+		return false, fmt.Errorf("freewithuser: %w", err)
+	}
+
 	return true, nil
 }
 
 func (r *objectSetPhasesReconciler) teardownPhase(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+	ctx context.Context,
+	phaseReconciler controllers.PhaseReconciler,
+	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	if len(phase.Class) > 0 {
 		return r.remotePhase.Teardown(ctx, objectSet, phase)
 	}
-	return r.phaseReconciler.TeardownPhase(ctx, objectSet, phase)
+	return phaseReconciler.TeardownPhase(ctx, objectSet, phase)
 }
 
 // reverse the order of a slice.
@@ -409,4 +447,17 @@ type defaultClock struct{}
 
 func (c defaultClock) Now() time.Time {
 	return time.Now()
+}
+
+func aggregateLocalObjects(objectSet adapters.ObjectSetAccessor) []client.Object {
+	objectsInSet := []client.Object{}
+	for _, phase := range objectSet.GetPhases() {
+		if phase.Class != "" {
+			continue
+		}
+		for _, object := range phase.Objects {
+			objectsInSet = append(objectsInSet, &object.Object)
+		}
+	}
+	return objectsInSet
 }

@@ -2,6 +2,12 @@
 // They live in a separate package to avoid circular dependencies between packages that contain functional code.
 package constants
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+)
+
 const (
 	// DynamicCacheLabel is set on all dynamic objects to limit caches.
 	DynamicCacheLabel = "package-operator.run/cache"
@@ -16,3 +22,11 @@ const (
 	// OwnerStrategyAnnotationKey is the k8s annotation key that denotes the owner of a resource.
 	OwnerStrategyAnnotationKey = "package-operator.run/owners"
 )
+
+func StaticCacheOwner() *corev1alpha1.ObjectDeployment {
+	return &corev1alpha1.ObjectDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "123-456",
+		},
+	}
+}

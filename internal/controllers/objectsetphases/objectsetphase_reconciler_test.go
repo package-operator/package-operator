@@ -18,6 +18,7 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/controllersmocks"
+	"package-operator.run/internal/testutil/managedcachemocks"
 	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
 
@@ -74,17 +75,24 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			t.Parallel()
 			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
-			m := &phaseReconcilerMock{}
+			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
+			accessor := &managedcachemocks.AccessorMock{}
+			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
+			phaseReconciler := &phaseReconcilerMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-			r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
+
+			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(accessor, nil)
+			factory.On("New", accessor).Return(phaseReconciler)
 
 			if test.condition.Reason == "ProbeFailure" {
-				m.
+				phaseReconciler.
 					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
 					Return([]client.Object{}, controllers.ProbingResult{PhaseName: "this"}, nil).
 					Once()
 			} else {
-				m.
+				phaseReconciler.
 					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
 					Return([]client.Object{}, controllers.ProbingResult{}, nil).
 					Once()
@@ -117,11 +125,19 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
-	m := &phaseReconcilerMock{}
-	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
+	accessor := &managedcachemocks.AccessorMock{}
+	factory := &controllersmocks.PhaseReconcilerFactoryMock{}
+	phaseReconciler := &phaseReconcilerMock{}
 
-	m.
+	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
+	r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
+
+	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(accessor, nil)
+	factory.On("New", accessor).Return(phaseReconciler)
+
+	phaseReconciler.
 		On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
 		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil)).
 		Once()
@@ -137,16 +153,45 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 func TestPhaseReconciler_Teardown(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-		return []controllers.PreviousObjectSet{}, nil
+	for _, teardownDone := range []bool{true, false} {
+		name := "NotDone"
+		if teardownDone {
+			name = "Done"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+				return []controllers.PreviousObjectSet{}, nil
+			}
+			scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
+			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
+			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
+			accessor := &managedcachemocks.AccessorMock{}
+			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
+			phaseReconciler := &phaseReconcilerMock{}
+
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
+
+			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(accessor, nil)
+			accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			factory.On("New", accessor).Return(phaseReconciler)
+
+			phaseReconciler.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(teardownDone, nil)
+
+			_, err := r.Teardown(context.Background(), objectSetPhase)
+			require.NoError(t, err)
+
+			phaseReconciler.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
+
+			if teardownDone {
+				accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
+			} else {
+				accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
+			}
+		})
 	}
-	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
-	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	m := &phaseReconcilerMock{}
-	m.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-	r := newObjectSetPhaseReconciler(testScheme, m, lookup, ownerStrategy)
-	_, err := r.Teardown(context.Background(), objectSetPhase)
-	require.NoError(t, err)
-	m.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
 }

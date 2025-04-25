@@ -2,10 +2,11 @@ package components
 
 import (
 	"github.com/go-logr/logr"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/controllers/objectsets"
-	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/metrics"
 )
 
@@ -18,7 +19,7 @@ type (
 
 func ProvideObjectSetController(
 	mgr ctrl.Manager, log logr.Logger,
-	dc *dynamiccache.Cache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
 ) ObjectSetController {
@@ -26,7 +27,7 @@ func ProvideObjectSetController(
 		objectsets.NewObjectSetController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ObjectSet"),
-			mgr.GetScheme(), dc, uncachedClient, recorder,
+			mgr.GetScheme(), accessManager, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
 		),
 	}
@@ -34,7 +35,7 @@ func ProvideObjectSetController(
 
 func ProvideClusterObjectSetController(
 	mgr ctrl.Manager, log logr.Logger,
-	dc *dynamiccache.Cache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
 ) ClusterObjectSetController {
@@ -42,7 +43,7 @@ func ProvideClusterObjectSetController(
 		objectsets.NewClusterObjectSetController(
 			mgr.GetClient(),
 			log.WithName("controllers").WithName("ObjectSet"),
-			mgr.GetScheme(), dc, uncachedClient, recorder,
+			mgr.GetScheme(), accessManager, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
 		),
 	}

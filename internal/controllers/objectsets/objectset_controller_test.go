@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -22,6 +23,7 @@ import (
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/controllersmocks"
+	"package-operator.run/internal/testutil/managedcachemocks"
 )
 
 func TestGenericObjectSetController_Reconcile(t *testing.T) {
@@ -62,11 +64,11 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, c, dc, pr, rr := newControllerAndMocks()
+			controller, c, accessManager, pr, rr := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
-			c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			c.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
 			pr.On("Reconcile", mock.Anything, mock.Anything).
@@ -79,7 +81,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			rr.On("Teardown", mock.Anything).
 				Return(true, nil).Once().Maybe()
 
-			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+			accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 			objectSet := adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
@@ -108,27 +110,28 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 			if test.getObjectSetPhaseError != nil || test.condition.Type == corev1alpha1.ObjectSetArchived {
 				pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
-				c.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				c.StatusMock.AssertNotCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
+				accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything)
 				return
 			}
 
 			if test.deletionTimestamp != nil || test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
-				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
 				if test.deletionTimestamp == nil {
-					c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+					c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
 				}
+				accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything)
 				return
 			}
 
-			//  "run all the way through"
+			// "run all the way through"
 			pr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			pr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
 			rr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything)
 			rr.AssertNotCalled(t, "Teardown", mock.Anything, mock.Anything)
-			dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
-			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything)
+			c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }
@@ -339,11 +342,11 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, client, dc, pr, _ := newControllerAndMocks()
+			controller, client, accessManager, pr, _ := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
 				Return(test.teardownDone, nil).Maybe()
-			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
+			accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 			objectSet := &adapters.ObjectSetAdapter{
@@ -368,9 +371,9 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			conds := *objectSet.GetConditions()
 
 			if test.teardownDone {
-				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
+				accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
 			} else {
-				dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+				accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
 			}
 
 			if test.lifecycleState == corev1alpha1.ObjectSetLifecycleStateArchived {
@@ -415,7 +418,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 		c, client, _, _, _ := newControllerAndMocks()
 
 		client.StatusMock.
-			On("Update", mock.Anything, mock.Anything, mock.Anything).
+			On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		ctx := context.Background()
@@ -432,13 +435,14 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 func newControllerAndMocks() (
 	*GenericObjectSetController,
 	*testutil.CtrlClient,
-	*controllersmocks.DynamicCacheMock,
+	*managedcachemocks.ObjectBoundAccessManagerMock[client.Object],
 	*controllersmocks.ObjectSetPhasesReconcilerMock,
 	*controllersmocks.RevisionReconcilerMock,
 ) {
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
-	dc := &controllersmocks.DynamicCacheMock{}
+
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 
 	controller := &GenericObjectSetController{
 		newObjectSet:      adapters.NewObjectSet,
@@ -446,7 +450,7 @@ func newControllerAndMocks() (
 		client:            c,
 		log:               ctrl.Log.WithName("controllers"),
 		scheme:            scheme,
-		dynamicCache:      dc,
+		accessManager:     accessManager,
 	}
 	pr := &controllersmocks.ObjectSetPhasesReconcilerMock{}
 
@@ -457,5 +461,5 @@ func newControllerAndMocks() (
 		rr,
 		pr,
 	}
-	return controller, c, dc, pr, rr
+	return controller, c, accessManager, pr, rr
 }

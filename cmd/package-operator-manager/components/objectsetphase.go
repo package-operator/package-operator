@@ -2,10 +2,11 @@ package components
 
 import (
 	"github.com/go-logr/logr"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/controllers/objectsetphases"
-	"package-operator.run/internal/dynamiccache"
 )
 
 // Type alias for dependency injector to differentiate
@@ -19,13 +20,13 @@ const defaultObjectSetPhaseClass = "default"
 
 func ProvideObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
-	dc *dynamiccache.Cache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 ) ObjectSetPhaseController {
 	return ObjectSetPhaseController{
 		objectsetphases.NewSameClusterObjectSetPhaseController(
 			log.WithName("controllers").WithName("ObjectSetPhase"),
-			mgr.GetScheme(), dc, uncachedClient,
+			mgr.GetScheme(), accessManager, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
 		),
@@ -34,13 +35,13 @@ func ProvideObjectSetPhaseController(
 
 func ProvideClusterObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
-	dc *dynamiccache.Cache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 ) ClusterObjectSetPhaseController {
 	return ClusterObjectSetPhaseController{
 		objectsetphases.NewSameClusterClusterObjectSetPhaseController(
 			log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-			mgr.GetScheme(), dc, uncachedClient,
+			mgr.GetScheme(), accessManager, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
 		),

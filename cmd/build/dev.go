@@ -19,6 +19,12 @@ import (
 // Dev focused commands using local development environment.
 type Dev struct{}
 
+// PrintVersion prints app version.
+func (dev *Dev) PrintVersion(_ context.Context, _ []string) error {
+	fmt.Println(appVersion) //nolint:forbidigo
+	return nil
+}
+
 // PreCommit runs linters and code-gens for pre-commit.
 func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 	self := run.Meth1(dev, dev.PreCommit, args)

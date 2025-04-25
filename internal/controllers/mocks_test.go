@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/testutil"
-	"package-operator.run/internal/testutil/ownerhandlingmocks"
+	"package-operator.run/internal/preflight"
 )
 
 type previousOwnerMock struct {
@@ -27,8 +27,6 @@ func (m *previousOwnerMock) GetPrevious() []corev1alpha1.PreviousRevisionReferen
 	args := m.Called()
 	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
 }
-
-type ownerStrategyMock = ownerhandlingmocks.OwnerStrategyMock
 
 type phaseObjectOwnerMock struct {
 	mock.Mock
@@ -52,17 +50,6 @@ func (m *phaseObjectOwnerMock) IsSpecPaused() bool {
 func (m *phaseObjectOwnerMock) GetConditions() *[]metav1.Condition {
 	args := m.Called()
 	return args.Get(0).(*[]metav1.Condition)
-}
-
-type dynamicCacheMock struct {
-	testutil.CtrlClient
-}
-
-func (c *dynamicCacheMock) Watch(
-	ctx context.Context, owner client.Object, obj runtime.Object,
-) error {
-	args := c.Called(ctx, owner, obj)
-	return args.Error(0)
 }
 
 type adoptionCheckerMock struct {
@@ -120,3 +107,36 @@ func (m *previousObjectSetMockFactory) New(*runtime.Scheme) PreviousObjectSet {
 	args := m.Called()
 	return args.Get(0).(PreviousObjectSet)
 }
+
+type preflightCheckerMock struct {
+	mock.Mock
+}
+
+func (m *preflightCheckerMock) Check(
+	ctx context.Context, owner, obj client.Object,
+) (violations []preflight.Violation, err error) {
+	args := m.Called(ctx, owner, obj)
+	return args.Get(0).([]preflight.Violation), args.Error(1)
+}
+
+type testUpdateMock struct {
+	mock.Mock
+}
+
+func (m *testUpdateMock) Update(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+type objectSetOrPhaseStub struct {
+	ObjectSet corev1alpha1.ObjectSet
+}
+
+func (s *objectSetOrPhaseStub) ClientObject() client.Object {
+	return &s.ObjectSet
+}
+
+func (s *objectSetOrPhaseStub) GetConditions() *[]metav1.Condition {
+	return &s.ObjectSet.Status.Conditions
+}
+func (s *objectSetOrPhaseStub) UpdateStatusPhase() {}

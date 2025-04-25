@@ -15,6 +15,7 @@ const (
 )
 
 type ObjectSetAccessor interface {
+	client.Object
 	ClientObject() client.Object
 	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
 	SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec)

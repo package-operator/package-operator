@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -24,6 +23,7 @@ import (
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/preflight"
 
+	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
@@ -38,19 +38,12 @@ type GenericObjectSetController struct {
 	reconciler []reconciler
 
 	recorder        metricsRecorder
-	dynamicCache    dynamicCache
+	accessManager   managedcache.ObjectBoundAccessManager[client.Object]
 	teardownHandler teardownHandler
 }
 
 type reconciler interface {
 	Reconcile(ctx context.Context, objectSet adapters.ObjectSetAccessor) (ctrl.Result, error)
-}
-
-type dynamicCache interface {
-	client.Reader
-	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
-	Free(ctx context.Context, obj client.Object) error
-	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 }
 
 type teardownHandler interface {
@@ -66,14 +59,14 @@ type metricsRecorder interface {
 func NewObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dw dynamicCache, uc client.Reader,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object], uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewObjectSet,
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSlice,
-		c, log, scheme, dw, uc, r,
+		c, log, scheme, accessManager, uc, r,
 		restMapper,
 	)
 }
@@ -81,14 +74,14 @@ func NewObjectSetController(
 func NewClusterObjectSetController(
 	c client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dw dynamicCache, uc client.Reader,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object], uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewClusterObjectSet,
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSlice,
-		c, log, scheme, dw, uc, r,
+		c, log, scheme, accessManager, uc, r,
 		restMapper,
 	)
 }
@@ -99,25 +92,25 @@ func newGenericObjectSetController(
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
-	dynamicCache dynamicCache, uncachedClient client.Reader,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object], uncachedClient client.Reader,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
 ) *GenericObjectSetController {
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
 		newObjectSetPhase: newObjectSetPhase,
 
-		client:       client,
-		log:          log,
-		scheme:       scheme,
-		dynamicCache: dynamicCache,
-		recorder:     recorder,
+		client:        client,
+		log:           log,
+		scheme:        scheme,
+		accessManager: accessManager,
+		recorder:      recorder,
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
-		controllers.NewPhaseReconciler(
-			scheme, client,
-			dynamicCache,
+		accessManager,
+		controllers.NewPhaseReconcilerFactory(
+			scheme,
 			uncachedClient,
 			ownerhandling.NewNative(scheme),
 			preflight.NewAPIExistence(restMapper,
@@ -159,10 +152,20 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 	objectSetPhase := c.newObjectSetPhase(c.scheme).ClientObject()
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(objectSet, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
+		For(objectSet, builder.WithPredicates(
+			&predicate.GenerationChangedPredicate{},
+			predicate.NewPredicateFuncs(func(object client.Object) bool {
+				c.log.Info(
+					"processing cache event",
+					"gvk", object.GetObjectKind().GroupVersionKind(),
+					"object", client.ObjectKeyFromObject(object),
+				)
+				return true
+			}),
+		)).
 		Owns(objectSetPhase).
 		WatchesRawSource(
-			c.dynamicCache.Source(
+			c.accessManager.Source(
 				handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), objectSet),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.Info(
@@ -180,6 +183,7 @@ func (c *GenericObjectSetController) SetupWithManager(mgr ctrl.Manager) error {
 
 func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := c.log.WithValues("ObjectSet", req.String())
+	log.Info("reconcile")
 	defer log.Info("reconciled")
 	ctx = logr.NewContext(ctx, log)
 
@@ -351,8 +355,12 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		return nil
 	}
 
-	if err := controllers.FreeCacheAndRemoveFinalizer(
-		ctx, c.client, objectSet.ClientObject(), c.dynamicCache); err != nil {
+	if err := c.accessManager.FreeWithUser(ctx, constants.StaticCacheOwner(), objectSet); err != nil {
+		return fmt.Errorf("freeing cache: %w", err)
+	}
+
+	if err := controllers.RemoveCacheFinalizer(
+		ctx, c.client, objectSet.ClientObject()); err != nil {
 		return err
 	}
 

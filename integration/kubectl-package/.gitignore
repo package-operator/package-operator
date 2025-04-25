@@ -1,0 +1,3 @@
+# Weird integration test artifact.
+# TODO: refactor test to create the artifact somewhere under .cache/
+dne/

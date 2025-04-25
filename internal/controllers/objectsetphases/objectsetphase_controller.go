@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -21,18 +20,12 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 
+	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type reconciler interface {
 	Reconcile(ctx context.Context, objectSet adapters.ObjectSetPhaseAccessor) (ctrl.Result, error)
-}
-
-type dynamicCache interface {
-	client.Reader
-	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
-	Free(ctx context.Context, obj client.Object) error
-	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
 }
 
 type ownerStrategy interface {
@@ -68,7 +61,7 @@ type GenericObjectSetPhaseController struct {
 	log             logr.Logger
 	scheme          *runtime.Scheme
 	client          client.Client // client to get and update ObjectSetPhases.
-	dynamicCache    dynamicCache
+	accessManager   managedcache.ObjectBoundAccessManager[client.Object]
 	ownerStrategy   ownerStrategy
 	teardownHandler teardownHandler
 
@@ -77,7 +70,7 @@ type GenericObjectSetPhaseController struct {
 
 func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
@@ -88,8 +81,8 @@ func NewMultiClusterObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, dynamicCache, uncachedClient,
-		class, client, targetWriter,
+		log, scheme, accessManager, uncachedClient,
+		class, client,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
 			preflight.List{
@@ -102,7 +95,7 @@ func NewMultiClusterObjectSetPhaseController(
 
 func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
@@ -113,8 +106,8 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, dynamicCache, uncachedClient,
-		class, client, targetWriter,
+		log, scheme, accessManager, uncachedClient,
+		class, client,
 		preflight.NewAPIExistence(
 			targetRESTMapper,
 			preflight.List{
@@ -127,7 +120,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 
 func NewSameClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
@@ -137,8 +130,8 @@ func NewSameClusterObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, dynamicCache, uncachedClient,
-		class, client, client,
+		log, scheme, accessManager, uncachedClient,
+		class, client,
 		preflight.NewAPIExistence(
 			restMapper,
 			preflight.List{
@@ -152,7 +145,7 @@ func NewSameClusterObjectSetPhaseController(
 
 func NewSameClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
@@ -162,8 +155,8 @@ func NewSameClusterClusterObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, dynamicCache, uncachedClient,
-		class, client, client,
+		log, scheme, accessManager, uncachedClient,
+		class, client,
 		preflight.NewAPIExistence(
 			restMapper,
 			preflight.List{
@@ -179,11 +172,10 @@ func NewGenericObjectSetPhaseController(
 	newObjectSet adapters.ObjectSetAccessorFactory,
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
-	targetWriter client.Writer, // client to patch objects with.
 	preflightChecker preflightChecker,
 ) *GenericObjectSetPhaseController {
 	controller := &GenericObjectSetPhaseController{
@@ -194,14 +186,15 @@ func NewGenericObjectSetPhaseController(
 		scheme: scheme,
 
 		client:        client,
-		dynamicCache:  dynamicCache,
 		ownerStrategy: ownerStrategy,
+		accessManager: accessManager,
 	}
 
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
-		controllers.NewPhaseReconciler(
-			scheme, targetWriter, dynamicCache, uncachedClient, ownerStrategy, preflightChecker),
+		accessManager,
+		controllers.NewPhaseReconcilerFactory(
+			scheme, uncachedClient, ownerStrategy, preflightChecker),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
@@ -297,8 +290,6 @@ func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 ) error {
 	done := true
 
-	// When removing the finalizer this function may be called one last time.
-	// .Teardown may allocate new watches and leave dangling watches.
 	if controllerutil.ContainsFinalizer(
 		objectSetPhase.ClientObject(), constants.CachedFinalizer) {
 		var err error
@@ -313,7 +304,7 @@ func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
 		return nil
 	}
 
-	return controllers.FreeCacheAndRemoveFinalizer(ctx, c.client, objectSetPhase.ClientObject(), c.dynamicCache)
+	return controllers.RemoveCacheFinalizer(ctx, c.client, objectSetPhase.ClientObject())
 }
 
 func (c *GenericObjectSetPhaseController) SetupWithManager(
@@ -324,7 +315,7 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectSetPhase).
 		WatchesRawSource(
-			c.dynamicCache.Source(
+			c.accessManager.Source(
 				c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.Info(
