@@ -15,6 +15,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
 
 func TestEnsureFinalizer(t *testing.T) {
@@ -88,7 +89,7 @@ func TestRemoveFinalizer(t *testing.T) {
 func TestReportOwnActiveObjects(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	ownerStrategy := &ownerStrategyMock{}
+	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	ownerStrategy.
 		On("IsController", mock.Anything, mock.AnythingOfType("*v1.Secret")).
 		Return(true)

@@ -36,7 +36,7 @@ func (m *AccessorMock) Update(ctx context.Context, obj client.Object, opts ...cl
 }
 
 func (m *AccessorMock) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-	args := m.Called(ctx, obj, opts)
+	args := m.Called(ctx, obj, patch, opts)
 	return args.Error(0)
 }
 
