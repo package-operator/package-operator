@@ -5,8 +5,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"package-operator.run/internal/controllers/objectsets"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -16,7 +14,6 @@ import (
 	"package-operator.run/apis"
 	"package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/controllers/objecttemplate"
 )
 
 var testScheme = runtime.NewScheme()
@@ -128,7 +125,7 @@ func TestVerifyOwnership_ClusterPackage(t *testing.T) {
 func TestVerifyOwnership_ObjectTemplate(t *testing.T) {
 	t.Parallel()
 
-	objectTemplate := objecttemplate.GenericObjectTemplate{
+	objectTemplate := adapters.GenericObjectTemplate{
 		ObjectTemplate: v1alpha1.ObjectTemplate{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectTemplate",
@@ -193,7 +190,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 		},
 	}
 
-	objectSet := objectsets.GenericObjectSet{
+	objectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -228,7 +225,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	assert.True(t, isOwner)
 
 	// multiple objectSets
-	otherObjectSet := objectsets.GenericObjectSet{
+	otherObjectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",
@@ -247,7 +244,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 	})
 	otherObjectSet.SetOwnerReferences(newOwnerReferences(objectDeployment.ClientObject()))
 
-	for _, os := range []objectsets.GenericObjectSet{objectSet, otherObjectSet} {
+	for _, os := range []adapters.ObjectSetAdapter{objectSet, otherObjectSet} {
 		isOwner, err = VerifyOwnership(os.ClientObject(), objectDeployment.ClientObject())
 		require.NoError(t, err)
 		assert.True(t, isOwner)
@@ -257,7 +254,7 @@ func TestVerifyOwnership_ObjectDeployment(t *testing.T) {
 func TestVerifyOwnership_ObjectSet(t *testing.T) {
 	t.Parallel()
 
-	objectSet := objectsets.GenericObjectSet{
+	objectSet := adapters.ObjectSetAdapter{
 		ObjectSet: v1alpha1.ObjectSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ObjectSet",

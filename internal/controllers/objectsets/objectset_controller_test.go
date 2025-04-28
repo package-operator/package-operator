@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
@@ -30,14 +31,14 @@ type objectSetPhasesReconcilerMock struct {
 }
 
 func (r *objectSetPhasesReconcilerMock) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	args := r.Called(ctx, objectSet)
 	return args.Get(0).(ctrl.Result), args.Error(1)
 }
 
 func (r *objectSetPhasesReconcilerMock) Teardown(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (cleanupDone bool, err error) {
 	args := r.Called(ctx, objectSet)
 	return args.Bool(0), args.Error(1)
@@ -48,7 +49,7 @@ type revisionReconcilerMock struct {
 }
 
 func (r *revisionReconcilerMock) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	args := r.Called(ctx, objectSet)
 	return args.Get(0).(ctrl.Result), args.Error(1)
@@ -111,7 +112,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-			objectSet := GenericObjectSet{
+			objectSet := adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
@@ -227,7 +228,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 				}).
 				Return(nil).Once()
 
-			objectSet := &GenericObjectSet{}
+			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
 			arePaused, unknown, err := controller.areRemotePhasesPaused(t.Context(), objectSet)
 			assert.Equal(t, test.arePausedExpected, arePaused)
@@ -242,7 +243,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 	controller, c, _, _, _ := newControllerAndMocks()
 	c.On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-	objectSet := &GenericObjectSet{}
+	objectSet := &adapters.ObjectSetAdapter{}
 	objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
 	arePaused, unknown, err := controller.areRemotePhasesPaused(t.Context(), objectSet)
 	assert.False(t, arePaused)
@@ -313,7 +314,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 				}).
 				Return(test.getPhaseError).Once()
 
-			objectSet := &GenericObjectSet{}
+			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 1)
 			if test.objectSetPaused {
 				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
@@ -376,7 +377,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-			objectSet := &GenericObjectSet{
+			objectSet := &adapters.ObjectSetAdapter{
 				ObjectSet: corev1alpha1.ObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
@@ -422,7 +423,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	t.Run("just returns error", func(t *testing.T) {
 		t.Parallel()
 
-		objectSet := &GenericObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
@@ -438,7 +439,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 	t.Run("reports preflight error", func(t *testing.T) {
 		t.Parallel()
 
-		objectSet := &GenericObjectSet{
+		objectSet := &adapters.ObjectSetAdapter{
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
@@ -471,7 +472,7 @@ func newControllerAndMocks() (
 	dc := &dynamicCacheMock{}
 
 	controller := &GenericObjectSetController{
-		newObjectSet:      newGenericObjectSet,
+		newObjectSet:      adapters.NewObjectSet,
 		newObjectSetPhase: newGenericObjectSetPhase,
 		client:            c,
 		log:               ctrl.Log.WithName("controllers"),

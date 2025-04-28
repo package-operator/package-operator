@@ -114,7 +114,12 @@ namespace/test
 						},
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: "Available",
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -150,9 +155,13 @@ namespace/test
 							}},
 						},
 					},
-
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},

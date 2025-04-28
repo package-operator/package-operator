@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 const (
@@ -30,14 +32,14 @@ func Test_ArchivalReconciler(t *testing.T) {
 		}
 
 		ctx := t.Context()
-		prevs := make([]genericObjectSet, 2)
+		prevs := make([]adapters.ObjectSetAccessor, 2)
 		for i := range prevs {
-			obj := &genericObjectSetMock{}
+			obj := &adaptermocks.ObjectSetMock{}
 			obj.AssertNotCalled(t, "IsAvailable")
 			prevs[i] = obj
 		}
 
-		objectDeployment := &genericObjectDeploymentMock{}
+		objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 		res, err := r.Reconcile(ctx, nil, prevs, objectDeployment)
 		require.NoError(t, err)
 		assert.True(t, res.IsZero(), "unexpected requeue")
@@ -52,9 +54,9 @@ func Test_ArchivalReconciler(t *testing.T) {
 		}
 
 		ctx := t.Context()
-		arch1 := &genericObjectSetMock{}
-		arch2 := &genericObjectSetMock{}
-		latestAvailable := &genericObjectSetMock{}
+		arch1 := &adaptermocks.ObjectSetMock{}
+		arch2 := &adaptermocks.ObjectSetMock{}
+		latestAvailable := &adaptermocks.ObjectSetMock{}
 
 		// Return same revision number for all
 		arch1.On("GetRevision").Return(int64(1))
@@ -70,11 +72,11 @@ func Test_ArchivalReconciler(t *testing.T) {
 		arch1.On("IsArchived").Return(false)
 		arch2.On("IsArchived").Return(false)
 		latestAvailable.On("IsAvailable").Return(true)
-		prevs := []genericObjectSet{
+		prevs := []adapters.ObjectSetAccessor{
 			arch1,
 			arch2,
 		}
-		objectDeployment := &genericObjectDeploymentMock{}
+		objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 		res, err := r.Reconcile(ctx, latestAvailable, prevs, objectDeployment)
 		require.NoError(t, err)
 		assert.True(t, res.IsZero(), "unexpected requeue")
@@ -113,7 +115,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 		"does not archive anything if there are errors when pausing revision/s to be archived", func(t *testing.T) {
 			t.Parallel()
 			// setup Objectdeployment
-			objectDeployment := &genericObjectDeploymentMock{}
+			objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 			revisionLimit := int32(10)
 			objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -129,7 +131,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 				Unavailable,
 			)
 
-			prevs := []*genericObjectSetMock{
+			prevs := []*adaptermocks.ObjectSetMock{
 				// should be archived
 				newObjectSetMock(
 					7, makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
@@ -181,7 +183,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 				mock.Anything,
 			).Return(nil)
 
-			prevCasted := make([]genericObjectSet, len(prevs))
+			prevCasted := make([]adapters.ObjectSetAccessor, len(prevs))
 			for i := range prevs {
 				prevCasted[i] = prevs[i]
 			}
@@ -228,24 +230,24 @@ func contains(source []int, obj int) bool {
 	return false
 }
 
-func assertShouldNotBeArchived(t *testing.T, obj *genericObjectSetMock) {
+func assertShouldNotBeArchived(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
 	obj.AssertNotCalled(t, "SetArchived")
 }
 
-func assertShouldBeArchived(t *testing.T, obj *genericObjectSetMock) {
+func assertShouldBeArchived(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
 	obj.AssertNumberOfCalls(t, "SetArchived", 1)
 	obj.AssertCalled(t, "SetArchived")
 }
 
-func assertShouldBePaused(t *testing.T, obj *genericObjectSetMock) {
+func assertShouldBePaused(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
 	obj.AssertNumberOfCalls(t, "SetPaused", 1)
 	obj.AssertCalled(t, "SetPaused")
 }
 
-func assertShouldNotBePaused(t *testing.T, obj *genericObjectSetMock) {
+func assertShouldNotBePaused(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
 	obj.AssertNotCalled(t, "SetPaused")
 }
@@ -253,7 +255,7 @@ func assertShouldNotBePaused(t *testing.T, obj *genericObjectSetMock) {
 func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -277,7 +279,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 		Unavailable,
 	)
 
-	prevs := []*genericObjectSetMock{
+	prevs := []*adaptermocks.ObjectSetMock{
 		// should be archived
 		newObjectSetMock(
 			7, makeControllerOfObjects("c"), makeObjects("c", "a", "d"),
@@ -314,7 +316,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 		),
 	}
 
-	prevCasted := make([]genericObjectSet, len(prevs))
+	prevCasted := make([]adapters.ObjectSetAccessor, len(prevs))
 	for i := range prevs {
 		prevCasted[i] = prevs[i]
 	}
@@ -343,7 +345,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 
 	expectedRevisionsToBeArchivedOrPaused := []int{0, 2, 5, 6}
 
-	assertPausedOrArchived := func(alreadyPaused bool, revision *genericObjectSetMock) {
+	assertPausedOrArchived := func(alreadyPaused bool, revision *adaptermocks.ObjectSetMock) {
 		if alreadyPaused {
 			assertShouldBeArchived(t, revision)
 		} else {
@@ -351,7 +353,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 		}
 	}
 
-	assertNotPausedOrArchived := func(alreadyPaused bool, revision *genericObjectSetMock) {
+	assertNotPausedOrArchived := func(alreadyPaused bool, revision *adaptermocks.ObjectSetMock) {
 		if alreadyPaused {
 			assertShouldNotBeArchived(t, revision)
 		} else {
@@ -371,7 +373,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -386,7 +388,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	// Setup revisions
 	latestAvailableRevision := newObjectSetMock(5, nil, nil, false, false, true)
 
-	prevs := []*genericObjectSetMock{
+	prevs := []*adaptermocks.ObjectSetMock{
 		newObjectSetMock(3, nil, nil, alreadyPaused, false, false),
 		// This intermediate is already archived so the reconciler
 		// should leave it alone.
@@ -394,7 +396,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 		newObjectSetMock(2, nil, nil, alreadyPaused, false, false),
 	}
 
-	prevCasted := make([]genericObjectSet, len(prevs))
+	prevCasted := make([]adapters.ObjectSetAccessor, len(prevs))
 	for i := range prevs {
 		prevCasted[i] = prevs[i]
 	}
@@ -444,7 +446,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 func testDeleteArchive(t *testing.T) {
 	t.Helper()
 	// setup Objectdeployment
-	objectDeployment := &genericObjectDeploymentMock{}
+	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(3)
 	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
 
@@ -466,7 +468,7 @@ func testDeleteArchive(t *testing.T) {
 	// Setup revisions
 	latestAvailableRevision := newObjectSetMock(5, nil, nil, false, false, true)
 
-	prevs := []*genericObjectSetMock{
+	prevs := []*adaptermocks.ObjectSetMock{
 		// Already archived
 		newObjectSetMock(1, nil, nil, true, true, false),
 		newObjectSetMock(2, nil, nil, true, true, false),
@@ -475,7 +477,7 @@ func testDeleteArchive(t *testing.T) {
 		newObjectSetMock(4, nil, nil, true, false, false),
 	}
 
-	prevCasted := make([]genericObjectSet, len(prevs))
+	prevCasted := make([]adapters.ObjectSetAccessor, len(prevs))
 	for i := range prevs {
 		prevCasted[i] = prevs[i]
 	}
@@ -528,8 +530,8 @@ func newObjectSetMock(
 	isStatusPaused bool,
 	isArchived bool,
 	isAvailable bool,
-) *genericObjectSetMock {
-	mock := &genericObjectSetMock{}
+) *adaptermocks.ObjectSetMock {
+	mock := &adaptermocks.ObjectSetMock{}
 	mock.On("GetRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{

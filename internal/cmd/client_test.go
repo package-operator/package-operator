@@ -35,7 +35,12 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetArchived,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -51,7 +56,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 				&corev1alpha1.ObjectSet{
@@ -60,7 +74,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -76,7 +99,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectDeploymentProgressing,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 				&corev1alpha1.ObjectSet{
@@ -85,7 +117,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseNotReady,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectDeploymentProgressing,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -100,7 +141,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectDeploymentProgressing,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 				&corev1alpha1.ObjectSet{
@@ -109,7 +159,16 @@ func TestClient_GetObjectset(t *testing.T) {
 						Namespace: "pkomax",
 					},
 					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -153,12 +212,17 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 		},
 		"Archived cluster Object Set with cluster Package present": {
 			ActualObjects: []client.Object{
-				&corev1alpha1.ObjectSet{
+				&corev1alpha1.ClusterObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-objset-archived",
 					},
-					Status: corev1alpha1.ObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+					Status: corev1alpha1.ClusterObjectSetStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetArchived,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -172,7 +236,12 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 						Name: "test-objset-archived",
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetArchived,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 				&corev1alpha1.ClusterObjectSet{
@@ -180,7 +249,12 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 						Name: "test-objset-available",
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseAvailable,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},
@@ -194,7 +268,12 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 						Name: "test-objset-archived",
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseArchived,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetArchived,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 				&corev1alpha1.ClusterObjectSet{
@@ -202,7 +281,12 @@ func TestClient_GetClusterObjectset(t *testing.T) {
 						Name: "test-objset-available",
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
-						Phase: corev1alpha1.ObjectSetStatusPhaseNotReady,
+						Conditions: []metav1.Condition{
+							{
+								Type:   corev1alpha1.ObjectSetInTransition,
+								Status: metav1.ConditionTrue,
+							},
+						},
 					},
 				},
 			},

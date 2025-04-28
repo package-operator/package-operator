@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/environment"
@@ -246,7 +247,7 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 			template, err := os.ReadFile(filepath.Join("testdata", test.packageFile))
 			require.NoError(t, err)
 
-			objectTemplate := GenericObjectTemplate{
+			objectTemplate := adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -357,7 +358,7 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 			t.Parallel()
 
 			ctx := t.Context()
-			objectTemplate := &GenericObjectTemplate{
+			objectTemplate := &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Generation: 4,
@@ -412,7 +413,7 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 
 			template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 			require.NoError(t, err)
-			objectTemplate := &GenericObjectTemplate{
+			objectTemplate := &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{
@@ -467,14 +468,14 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		objectTemplate     *GenericObjectTemplate
+		objectTemplate     *adapters.GenericObjectTemplate
 		err                error
 		expectedConditions []metav1.Condition
 		expectedErr        error
 	}{
 		{
 			name: "sets invalid condition for SourceError",
-			objectTemplate: &GenericObjectTemplate{
+			objectTemplate: &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{},
 			},
 			err: &SourceError{
@@ -492,7 +493,7 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 		},
 		{
 			name: "sets invalid condition for TemplateError",
-			objectTemplate: &GenericObjectTemplate{
+			objectTemplate: &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{},
 			},
 			err: &TemplateError{Err: errTest},
@@ -508,7 +509,7 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 		},
 		{
 			name: "removes invalid condition",
-			objectTemplate: &GenericObjectTemplate{
+			objectTemplate: &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{
 					Status: corev1alpha1.ObjectTemplateStatus{
 						Conditions: []metav1.Condition{
@@ -528,7 +529,7 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 		},
 		{
 			name: "just returns other errors",
-			objectTemplate: &GenericObjectTemplate{
+			objectTemplate: &adapters.GenericObjectTemplate{
 				ObjectTemplate: corev1alpha1.ObjectTemplate{},
 			},
 			err:                errTest,
@@ -597,7 +598,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 
 		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 		require.NoError(t, err)
-		objectTemplate := &GenericObjectTemplate{
+		objectTemplate := &adapters.GenericObjectTemplate{
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{
@@ -645,7 +646,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 
 		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 		require.NoError(t, err)
-		objectTemplate := &GenericObjectTemplate{
+		objectTemplate := &adapters.GenericObjectTemplate{
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{
@@ -695,7 +696,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 
 		template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 		require.NoError(t, err)
-		objectTemplate := &GenericObjectTemplate{
+		objectTemplate := &adapters.GenericObjectTemplate{
 			ObjectTemplate: corev1alpha1.ObjectTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: []string{

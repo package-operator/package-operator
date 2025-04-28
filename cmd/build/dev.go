@@ -29,8 +29,9 @@ func (dev *Dev) PreCommit(ctx context.Context, args []string) error {
 		return err
 	}
 
-	return mgr.ParallelDeps(ctx, self,
+	return mgr.SerialDeps(ctx, self,
 		run.Meth(lint, lint.glciFix),
+		run.Meth(lint, lint.goWorkSync),
 		run.Meth(lint, lint.goModTidyAll),
 	)
 }

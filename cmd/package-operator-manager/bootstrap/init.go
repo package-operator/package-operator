@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -42,6 +43,7 @@ type initializer struct {
 	packageOperatorNamespace string
 	selfBootstrapImage       string
 	selfConfig               string
+	imagePrefixOverrides     string
 }
 
 func newInitializer(
@@ -54,6 +56,7 @@ func newInitializer(
 	packageOperatorNamespace string,
 	selfBootstrapImage string,
 	selfConfig string,
+	imagePrefixOverrides string,
 ) *initializer {
 	return &initializer{
 		client:    client,
@@ -64,6 +67,7 @@ func newInitializer(
 		packageOperatorNamespace: packageOperatorNamespace,
 		selfBootstrapImage:       selfBootstrapImage,
 		selfConfig:               selfConfig,
+		imagePrefixOverrides:     imagePrefixOverrides,
 	}
 }
 
@@ -84,23 +88,30 @@ func (init *initializer) Init(ctx context.Context) (needsBootstrap bool, err err
 	return needsBootstrap, nil
 }
 
-func (init *initializer) newPKOClusterPackage() *corev1alpha1.ClusterPackage {
+func (init *initializer) newPKOClusterPackage() (*corev1alpha1.ClusterPackage, error) {
+	cfg, err := init.config()
+	if err != nil {
+		return nil, err
+	}
 	return &corev1alpha1.ClusterPackage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: packageOperatorClusterPackageName,
 		},
 		Spec: corev1alpha1.PackageSpec{
 			Image:  init.selfBootstrapImage,
-			Config: init.config(),
+			Config: cfg,
 		},
-	}
+	}, nil
 }
 
 // ensureUpdatedPKO compares new and old PKO ClusterPackages, looks at PKO availability,
 // it handles eventual PKO shutdown, update of the PKO ClusterPackage and decides if
 // bootstrap should be executed or not.
 func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
-	bootstrapClusterPackage := init.newPKOClusterPackage()
+	bootstrapClusterPackage, err := init.newPKOClusterPackage()
+	if err != nil {
+		return false, fmt.Errorf("creating new ClusterPackage: %w", err)
+	}
 
 	existingClusterPackage := &corev1alpha1.ClusterPackage{}
 	if err := init.client.Get(ctx, client.ObjectKey{
@@ -214,14 +225,33 @@ func (init *initializer) ensurePKODeploymentGone(ctx context.Context) error {
 	return waiter.WaitToBeGone(ctx, deployment, func(client.Object) (bool, error) { return false, nil })
 }
 
-func (init *initializer) config() *runtime.RawExtension {
+func (init *initializer) config() (*runtime.RawExtension, error) {
 	var packageConfig *runtime.RawExtension
 	if len(init.selfConfig) > 0 {
 		packageConfig = &runtime.RawExtension{
 			Raw: []byte(init.selfConfig),
 		}
 	}
-	return packageConfig
+	// If imagePrefixOverrides are set, they have to be injected into the package configuration of the PKO installation,
+	// we're about to set up.
+	if len(init.imagePrefixOverrides) > 0 {
+		if packageConfig == nil {
+			packageConfig = &runtime.RawExtension{
+				Raw: []byte("{}"),
+			}
+		}
+		rawConfig := make(map[string]any)
+		if err := json.Unmarshal(packageConfig.Raw, &rawConfig); err != nil {
+			return nil, fmt.Errorf("unmarshaling package config: %w", err)
+		}
+		rawConfig["imagePrefixOverrides"] = init.imagePrefixOverrides
+		jsonConfig, err := json.Marshal(&rawConfig)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling package config: %w", err)
+		}
+		packageConfig.Raw = jsonConfig
+	}
+	return packageConfig, nil
 }
 
 func (init *initializer) crdsFromPackage(ctx context.Context) (

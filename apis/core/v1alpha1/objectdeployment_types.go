@@ -29,10 +29,6 @@ type ObjectSetTemplate struct {
 type ObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// This field is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// When evaluating object state in code, use .Conditions instead.
-	Phase ObjectDeploymentPhase `json:"phase,omitempty"`
 	// Count of hash collisions of the ObjectDeployment.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 	// Computed TemplateHash.
@@ -50,34 +46,20 @@ const (
 	ObjectDeploymentPaused      = "Paused"
 )
 
-// ObjectDeploymentPhase specifies a phase that a deployment is in.
-type ObjectDeploymentPhase string
-
-// Well-known ObjectDeployment Phases for printing a Status in kubectl,
-// see deprecation notice in ObjectDeploymentStatus for details.
-const (
-	ObjectDeploymentPhasePending     ObjectDeploymentPhase = "Pending"
-	ObjectDeploymentPhaseAvailable   ObjectDeploymentPhase = "Available"
-	ObjectDeploymentPhaseNotReady    ObjectDeploymentPhase = "NotReady"
-	ObjectDeploymentPhaseProgressing ObjectDeploymentPhase = "Progressing"
-	ObjectDeploymentPhasePaused      ObjectDeploymentPhase = "Paused"
-)
-
 // ObjectDeployment is the Schema for the ObjectDeployments API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName={"objdeploy","od"}
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="Paused",type=string,JSONPath=`.status.conditions[?(@.type=="Paused")].status`
 // +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type ObjectDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ObjectDeploymentSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase:Pending}
+	Spec   ObjectDeploymentSpec   `json:"spec,omitempty"`
 	Status ObjectDeploymentStatus `json:"status,omitempty"`
 }
 

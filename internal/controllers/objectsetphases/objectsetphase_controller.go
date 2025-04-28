@@ -16,10 +16,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 type reconciler interface {
@@ -34,14 +36,13 @@ type dynamicCache interface {
 }
 
 type ownerStrategy interface {
+	GetController(obj metav1.Object) (metav1.OwnerReference, bool)
 	IsController(owner, obj metav1.Object) bool
 	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
-	HasController(obj metav1.Object) bool
-	OwnerPatch(owner metav1.Object) ([]byte, error)
 	EnqueueRequestForOwner(
 		ownerType client.Object, mapper meta.RESTMapper, isController bool,
 	) handler.EventHandler
@@ -85,8 +86,8 @@ func NewMultiClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
-		newGenericObjectSet,
-		ownerhandling.NewAnnotation(scheme),
+		adapters.NewObjectSet,
+		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.NewAPIExistence(
@@ -110,8 +111,8 @@ func NewMultiClusterClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
-		newGenericClusterObjectSet,
-		ownerhandling.NewAnnotation(scheme),
+		adapters.NewClusterObjectSet,
+		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, targetWriter,
 		preflight.NewAPIExistence(
@@ -134,7 +135,7 @@ func NewSameClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericObjectSetPhase,
-		newGenericObjectSet,
+		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
@@ -159,7 +160,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		newGenericClusterObjectSetPhase,
-		newGenericClusterObjectSet,
+		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
 		class, client, client,
@@ -175,7 +176,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase genericObjectSetPhaseFactory,
-	newObjectSet genericObjectSetFactory,
+	newObjectSet adapters.ObjectSetAccessorFactory,
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	dynamicCache dynamicCache,
@@ -269,7 +270,7 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 func (c *GenericObjectSetPhaseController) reportPausedCondition(
 	_ context.Context, objectSetPhase genericObjectSetPhase,
 ) {
-	if objectSetPhase.IsPaused() {
+	if objectSetPhase.IsSpecPaused() {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPhasePaused,
 			Status:             metav1.ConditionTrue,

@@ -23,11 +23,15 @@ func (l Lint) goModTidyAll(ctx context.Context) error {
 }
 
 func (Lint) glciFix() error {
-	return shr.Run("golangci-lint", "run", "--timeout=3m", "--fix", "./...", "./apis/...", "./pkg/...")
+	return shr.Run("golangci-lint", "run", "--timeout=3m",
+		"--build-tags=integration,integration_hypershift", "--fix",
+		"./...", "./apis/...", "./pkg/...")
 }
 
 func (Lint) glciCheck() error {
-	return shr.Run("golangci-lint", "run", "--timeout=3m", "./...", "./apis/...", "./pkg/...")
+	return shr.Run("golangci-lint", "run", "--timeout=3m",
+		"--build-tags=integration,integration_hypershift",
+		"./...", "./apis/...", "./pkg/...")
 }
 
 func (Lint) govulnCheck() error {
@@ -35,5 +39,9 @@ func (Lint) govulnCheck() error {
 }
 
 func (Lint) validateGitClean() error {
-	return shr.Run("git", "diff", "--quiet", "--exit-code")
+	return shr.Run("git", "diff", "--exit-code")
+}
+
+func (Lint) goWorkSync() error {
+	return shr.Run("go", "work", "sync")
 }

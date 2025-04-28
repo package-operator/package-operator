@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	"pkg.package-operator.run/cardboard/run"
 )
@@ -27,10 +28,15 @@ func (ci *CI) Lint(_ context.Context, _ []string) error {
 // PostPush runs autofixes in CI and validates that the repo is clean afterwards.
 func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.PostPush, args)
-	if err := mgr.ParallelDeps(ctx, self,
+	if err := mgr.SerialDeps(ctx, self,
 		run.Meth(generate, generate.All),
 		run.Meth(lint, lint.glciFix),
+		run.Meth(lint, lint.goWorkSync),
 		run.Meth(lint, lint.goModTidyAll),
+	); err != nil {
+		return err
+	}
+	if err := mgr.ParallelDeps(ctx, self,
 		run.Meth(lint, lint.govulnCheck),
 	); err != nil {
 		return err
@@ -59,10 +65,10 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 			// bootstrap job manifests
 			run.Meth(generate, generate.selfBootstrapJob),
 			// binaries
-			run.Fn3(compile, "kubectl-package", "linux", "amd64"),
-			run.Fn3(compile, "kubectl-package", "linux", "arm64"),
-			run.Fn3(compile, "kubectl-package", "darwin", "amd64"),
-			run.Fn3(compile, "kubectl-package", "darwin", "arm64"),
+			run.Meth3(compile, compile.compile, "kubectl-package", "linux", "amd64"),
+			run.Meth3(compile, compile.compile, "kubectl-package", "linux", "arm64"),
+			run.Meth3(compile, compile.compile, "kubectl-package", "darwin", "amd64"),
+			run.Meth3(compile, compile.compile, "kubectl-package", "darwin", "arm64"),
 			// helm chart
 			run.Meth1(chart, chart.push, []string{}),
 		)
@@ -100,4 +106,14 @@ func (ci *CI) RegistryLoginAndReleaseOnlyImages(ctx context.Context, args []stri
 		run.Meth1(ci, ci.RegistryLogin, args),
 		run.Meth1(ci, ci.Release, []string{"images-only"}),
 	)
+}
+
+var errInvalidArguments = errors.New("invalid number of arguments, usage: ./do CI:Compile <cmd> <os> <arch>")
+
+// Compiles code in /cmd/<cmd> for the given OS and ARCH. Binaries will be put in /bin/<cmd>_<os>_<arch>.
+func (ci *CI) Compile(ctx context.Context, args []string) error {
+	if len(args) < 3 {
+		return errInvalidArguments
+	}
+	return compile.compile(ctx, args[0], args[1], args[2])
 }

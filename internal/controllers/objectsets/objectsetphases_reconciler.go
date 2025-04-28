@@ -15,11 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/ownerhandling"
 	"package-operator.run/internal/preflight"
 	internalprobing "package-operator.run/internal/probing"
 	"package-operator.run/pkg/probing"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
@@ -72,11 +74,11 @@ func newObjectSetPhasesReconciler(
 
 type remotePhaseReconciler interface {
 	Reconcile(
-		ctx context.Context, objectSet genericObjectSet,
+		ctx context.Context, objectSet adapters.ObjectSetAccessor,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error)
 	Teardown(
-		ctx context.Context, objectSet genericObjectSet,
+		ctx context.Context, objectSet adapters.ObjectSetAccessor,
 		phase corev1alpha1.ObjectSetTemplatePhase,
 	) (cleanupDone bool, err error)
 }
@@ -99,7 +101,7 @@ type phaseReconciler interface {
 }
 
 func (r *objectSetPhasesReconciler) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 
@@ -183,7 +185,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 }
 
 func (r *objectSetPhasesReconciler) reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
@@ -217,7 +219,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 }
 
 func (r *objectSetPhasesReconciler) reconcilePhase(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
@@ -232,7 +234,7 @@ func (r *objectSetPhasesReconciler) reconcilePhase(
 
 // Reconciles the Phase directly in-process.
 func (r *objectSetPhasesReconciler) reconcileLocalPhase(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober,
 	previous []controllers.PreviousObjectSet,
@@ -253,7 +255,7 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 }
 
 func (r *objectSetPhasesReconciler) Teardown(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (cleanupDone bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -278,7 +280,7 @@ func (r *objectSetPhasesReconciler) Teardown(
 }
 
 func (r *objectSetPhasesReconciler) teardownPhase(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
 	if len(phase.Class) > 0 {
@@ -300,7 +302,7 @@ func reverse[T any](s []T) {
 // This state is true until the ObjectSet has finished a successful rollout
 // or from the moment a newer revision is taking ownership until it has been archived.
 func isObjectSetInTransition(
-	objectSet genericObjectSet,
+	objectSet adapters.ObjectSetAccessor,
 	controllerOf []corev1alpha1.ControlledObjectReference,
 ) bool {
 	if objectSet.IsArchived() {
@@ -351,7 +353,7 @@ func isObjectSetInTransition(
 	return len(allObjectsThatMayBeUnderManagement) > 0
 }
 
-func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet genericObjectSet) bool {
+func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet adapters.ObjectSetAccessor) bool {
 	availCond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
 	if availCond == nil {
 		return false

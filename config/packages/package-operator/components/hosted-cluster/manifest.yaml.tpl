@@ -35,6 +35,8 @@ spec:
           format: int32
         registryHostOverrides:
           type: string
+        imagePrefixOverrides:
+          type: string
         namespace:
           description: Namespace to install package operator into. If empty, the Package namespace will be used.
           type: string

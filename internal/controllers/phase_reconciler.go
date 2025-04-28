@@ -46,14 +46,13 @@ type PhaseReconciler struct {
 }
 
 type ownerStrategy interface {
+	GetController(obj metav1.Object) (metav1.OwnerReference, bool)
 	IsController(owner, obj metav1.Object) bool
 	IsOwner(owner, obj metav1.Object) bool
 	ReleaseController(obj metav1.Object)
 	RemoveOwner(owner, obj metav1.Object)
 	SetOwnerReference(owner, obj metav1.Object) error
 	SetControllerReference(owner, obj metav1.Object) error
-	OwnerPatch(owner metav1.Object) ([]byte, error)
-	HasController(obj metav1.Object) bool
 }
 
 type adoptionChecker interface {
@@ -108,7 +107,7 @@ type PhaseObjectOwner interface {
 	ClientObject() client.Object
 	GetRevision() int64
 	GetConditions() *[]metav1.Condition
-	IsPaused() bool
+	IsSpecPaused() bool
 }
 
 func newRecordingProbe(name string, probe probing.Prober) recordingProbe {
@@ -345,7 +344,7 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return nil, fmt.Errorf("watching new resource: %w", err)
 	}
 
-	if owner.IsPaused() {
+	if owner.IsSpecPaused() {
 		actualObj = desiredObj.DeepCopy()
 		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
 			return nil, fmt.Errorf("looking up object while paused: %w", err)
@@ -464,7 +463,6 @@ func (r *PhaseReconciler) desiredObject(
 type ObjectSetOrPhase interface {
 	ClientObject() client.Object
 	GetConditions() *[]metav1.Condition
-	UpdateStatusPhase()
 }
 
 func UpdateObjectSetOrPhaseStatusFromError(
@@ -721,7 +719,7 @@ func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object
 		// I hope the user knows what he is doing ;)
 		return true, nil
 	case corev1alpha1.CollisionProtectionIfNoController:
-		if !c.ownerStrategy.HasController(obj) {
+		if _, hasController := c.ownerStrategy.GetController(obj); !hasController {
 			return true, nil
 		}
 	}

@@ -14,7 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 const (
@@ -161,11 +163,11 @@ func Test_ObjectSetReconciler(t *testing.T) {
 					if len(testCase.expectedCurrentRevision) == 0 {
 						return item == nil
 					}
-					obj := item.(*GenericObjectSet)
+					obj := item.(*adapters.ObjectSetAdapter)
 					return obj.Name == testCase.expectedCurrentRevision
 				}),
 				mock.MatchedBy(func(obj any) bool {
-					objs := obj.([]genericObjectSet)
+					objs := obj.([]adapters.ObjectSetAccessor)
 					if len(objs) != len(testCase.expectedPrevRevisions) {
 						return false
 					}
@@ -297,8 +299,8 @@ func newObjectDeploymentMock(
 	generation int64,
 	templateHash string,
 	initialConditions *[]metav1.Condition,
-) *genericObjectDeploymentMock {
-	res := &genericObjectDeploymentMock{}
+) *adaptermocks.ObjectDeploymentMock {
+	res := &adaptermocks.ObjectDeploymentMock{}
 	obj := &corev1alpha1.ObjectDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       objectDeploymentName,

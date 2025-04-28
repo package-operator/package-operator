@@ -11,7 +11,6 @@ import (
 
 type ObjectDeploymentAccessor interface {
 	ClientObject() client.Object
-	UpdatePhase()
 	GetConditions() *[]metav1.Condition
 	GetSelector() metav1.LabelSelector
 	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
@@ -87,10 +86,6 @@ func (a *ObjectDeployment) GetStatusCollisionCount() *int32 {
 
 func (a *ObjectDeployment) ClientObject() client.Object {
 	return &a.ObjectDeployment
-}
-
-func (a *ObjectDeployment) UpdatePhase() {
-	a.Status.Phase = objectDeploymentPhase(a.Status.Conditions)
 }
 
 func (a *ObjectDeployment) GetConditions() *[]metav1.Condition {
@@ -182,10 +177,6 @@ func (a *ClusterObjectDeployment) ClientObject() client.Object {
 	return &a.ClusterObjectDeployment
 }
 
-func (a *ClusterObjectDeployment) UpdatePhase() {
-	a.Status.Phase = objectDeploymentPhase(a.Status.Conditions)
-}
-
 func (a *ClusterObjectDeployment) GetConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
@@ -261,23 +252,4 @@ func (a *ClusterObjectDeployment) GetSpecPaused() bool {
 
 func (a *ClusterObjectDeployment) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
-}
-
-func objectDeploymentPhase(conditions []metav1.Condition) corev1alpha1.ObjectDeploymentPhase {
-	pausedCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentPaused)
-	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
-		return corev1alpha1.ObjectDeploymentPhasePaused
-	}
-
-	availableCond := meta.FindStatusCondition(conditions, corev1alpha1.ObjectDeploymentAvailable)
-
-	if availableCond != nil {
-		if availableCond.Status == metav1.ConditionTrue {
-			return corev1alpha1.ObjectDeploymentPhaseAvailable
-		}
-		if availableCond.Status == metav1.ConditionFalse {
-			return corev1alpha1.ObjectDeploymentPhaseNotReady
-		}
-	}
-	return corev1alpha1.ObjectDeploymentPhaseProgressing
 }

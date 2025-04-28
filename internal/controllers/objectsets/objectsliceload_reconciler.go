@@ -10,7 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/ownerhandling"
+
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // objectSliceLoadReconciler loads ObjectSlices to inline all objects into the ObjectSet again.
@@ -35,7 +36,7 @@ func newObjectSliceLoadReconciler(
 }
 
 func (r *objectSliceLoadReconciler) Reconcile(
-	ctx context.Context, objectSet genericObjectSet,
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	phases := objectSet.GetPhases()
 	for i := range phases {

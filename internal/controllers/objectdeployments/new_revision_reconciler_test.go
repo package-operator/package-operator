@@ -16,6 +16,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 )
 
 func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
@@ -30,7 +31,7 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 		scheme:       testScheme,
 	}
 
-	objectDeploymentMock := &genericObjectDeploymentMock{}
+	objectDeploymentMock := &adaptermocks.ObjectDeploymentMock{}
 	objectDeploymentMock.
 		On("GetObjectSetTemplate").
 		Return(corev1alpha1.ObjectSetTemplate{})
@@ -180,7 +181,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 				).Return(nil)
 			}
 
-			revisions := make([]genericObjectSet, len(testCase.prevRevisions))
+			revisions := make([]adapters.ObjectSetAccessor, len(testCase.prevRevisions))
 
 			for i := range testCase.prevRevisions {
 				obj := &testCase.prevRevisions[i]
@@ -189,8 +190,8 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				revisions[i] = &GenericObjectSet{
-					testCase.prevRevisions[i],
+				revisions[i] = &adapters.ObjectSetAdapter{
+					ObjectSet: testCase.prevRevisions[i],
 				}
 			}
 

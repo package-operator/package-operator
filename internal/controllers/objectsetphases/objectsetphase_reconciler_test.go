@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/controllersmocks"
@@ -36,7 +37,7 @@ type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 func TestPhaseReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := newGenericObjectSet(scheme)
+	previousObject := adapters.NewObjectSet(scheme)
 	previousObject.ClientObject().SetName("test")
 	previousList := []controllers.PreviousObjectSet{previousObject}
 	lookup := func(
@@ -107,7 +108,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := newGenericObjectSet(scheme)
+	previousObject := adapters.NewObjectSet(scheme)
 	previousObject.ClientObject().SetName("test")
 	previousList := []controllers.PreviousObjectSet{previousObject}
 	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {

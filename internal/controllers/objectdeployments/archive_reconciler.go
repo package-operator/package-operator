@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"package-operator.run/internal/adapters"
 )
 
 const defaultRevisionLimit int32 = 10
@@ -17,9 +19,9 @@ type archiveReconciler struct {
 }
 
 func (a *archiveReconciler) Reconcile(ctx context.Context,
-	currentObjectSet genericObjectSet,
-	prevObjectSets []genericObjectSet,
-	objectDeployment objectDeploymentAccessor,
+	currentObjectSet adapters.ObjectSetAccessor,
+	prevObjectSets []adapters.ObjectSetAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
 	if currentObjectSet == nil {
 		return ctrl.Result{}, nil
@@ -40,9 +42,9 @@ func (a *archiveReconciler) Reconcile(ctx context.Context,
 }
 
 func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
-	previousObjectSets []genericObjectSet,
-	objectsToArchive []genericObjectSet,
-	objectDeployment objectDeploymentAccessor,
+	previousObjectSets []adapters.ObjectSetAccessor,
+	objectsToArchive []adapters.ObjectSetAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	if len(objectsToArchive) == 0 {
 		return nil
@@ -69,11 +71,11 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 
 func (a *archiveReconciler) objectSetsToBeArchived(
 	ctx context.Context,
-	allObjectSets []genericObjectSet,
-) ([]genericObjectSet, error) {
+	allObjectSets []adapters.ObjectSetAccessor,
+) ([]adapters.ObjectSetAccessor, error) {
 	// Sort all ObjectSets by their ascending revision number.
 	sort.Sort(objectSetsByRevisionAscending(allObjectSets))
-	objectSetsToArchive := make([]genericObjectSet, 0)
+	objectSetsToArchive := make([]adapters.ObjectSetAccessor, 0)
 	for j := len(allObjectSets) - 1; j >= 0; j-- {
 		currentLatestRevision := allObjectSets[j]
 
@@ -83,7 +85,7 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 		if currentLatestRevision.IsAvailable() {
 			prevRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
 			if err != nil {
-				return []genericObjectSet{}, err
+				return []adapters.ObjectSetAccessor{}, err
 			}
 			return append(objectSetsToArchive, prevRevisionsToArchive...), nil
 		}
@@ -111,7 +113,7 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 				currentLatestRevision,
 			)
 			if err != nil {
-				return []genericObjectSet{}, err
+				return []adapters.ObjectSetAccessor{}, err
 			}
 			if shouldArchive {
 				objectSetsToArchive = append(objectSetsToArchive, previousRevision)
@@ -123,10 +125,10 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 
 func (a *archiveReconciler) archiveAllLaterRevisions(
 	ctx context.Context,
-	currentLatest genericObjectSet,
-	laterRevisions []genericObjectSet,
-) ([]genericObjectSet, error) {
-	res := make([]genericObjectSet, 0)
+	currentLatest adapters.ObjectSetAccessor,
+	laterRevisions []adapters.ObjectSetAccessor,
+) ([]adapters.ObjectSetAccessor, error) {
+	res := make([]adapters.ObjectSetAccessor, 0)
 	for _, currPrev := range laterRevisions {
 		// revision already archived, we just skip.
 		if currPrev.IsArchived() {
@@ -138,7 +140,7 @@ func (a *archiveReconciler) archiveAllLaterRevisions(
 		if currPrev.GetRevision() < currentLatest.GetRevision() {
 			isPaused, err := a.ensurePaused(ctx, currPrev)
 			if err != nil {
-				return []genericObjectSet{}, err
+				return []adapters.ObjectSetAccessor{}, err
 			}
 			if isPaused {
 				res = append(res, currPrev)
@@ -149,13 +151,13 @@ func (a *archiveReconciler) archiveAllLaterRevisions(
 }
 
 func (a *archiveReconciler) intermediateRevisionCanBeArchived(
-	ctx context.Context, previousRevision, currentLatestRevision genericObjectSet,
+	ctx context.Context, previousRevision, currentLatestRevision adapters.ObjectSetAccessor,
 ) (bool, error) {
-	latestRevisionObjects, err := currentLatestRevision.GetObjects()
+	latestRevisionObjects, err := newObjectSetGetter(currentLatestRevision).getObjects()
 	if err != nil {
 		return false, err
 	}
-	previousRevisionActivelyReconciledObjects := previousRevision.GetActivelyReconciledObjects()
+	previousRevisionActivelyReconciledObjects := newObjectSetGetter(previousRevision).getActivelyReconciledObjects()
 	// Actively reconciled status is not yet updated
 	if previousRevisionActivelyReconciledObjects == nil {
 		// Skip for now, this previousRevision's archival candidature will be checked
@@ -187,7 +189,7 @@ func (a *archiveReconciler) intermediateRevisionCanBeArchived(
 	return false, nil
 }
 
-func (a *archiveReconciler) ensurePaused(ctx context.Context, objectset genericObjectSet) (bool, error) {
+func (a *archiveReconciler) ensurePaused(ctx context.Context, objectset adapters.ObjectSetAccessor) (bool, error) {
 	if objectset.IsStatusPaused() {
 		return true, nil
 	}
@@ -221,7 +223,9 @@ func intersection(a, b []objectIdentifier) (res []objectIdentifier) {
 }
 
 func (a *archiveReconciler) garbageCollectRevisions(
-	ctx context.Context, previousObjectSets []genericObjectSet, objectDeployment objectDeploymentAccessor,
+	ctx context.Context,
+	previousObjectSets []adapters.ObjectSetAccessor,
+	objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	revisionLimit := defaultRevisionLimit
 	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()

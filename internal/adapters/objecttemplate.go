@@ -1,7 +1,6 @@
-package objecttemplate
+package adapters
 
 import (
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -9,26 +8,25 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-type genericObjectTemplate interface {
+type ObjectTemplateAccessor interface {
 	ClientObject() client.Object
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
 	GetConditions() *[]metav1.Condition
 	GetGeneration() int64
-	UpdatePhase()
 	SetStatusControllerOf(corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() corev1alpha1.ControlledObjectReference
 }
 
-type genericObjectTemplateFactory func(
-	scheme *runtime.Scheme) genericObjectTemplate
+type GenericObjectTemplateFactory func(
+	scheme *runtime.Scheme) ObjectTemplateAccessor
 
 var (
 	objectTemplateGVK        = corev1alpha1.GroupVersion.WithKind("ObjectTemplate")
 	clusterObjectTemplateGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectTemplate")
 )
 
-func newGenericObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
+func NewGenericObjectTemplate(scheme *runtime.Scheme) ObjectTemplateAccessor {
 	obj, err := scheme.New(objectTemplateGVK)
 	if err != nil {
 		panic(err)
@@ -39,7 +37,7 @@ func newGenericObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
 	}
 }
 
-func newGenericClusterObjectTemplate(scheme *runtime.Scheme) genericObjectTemplate {
+func NewGenericClusterObjectTemplate(scheme *runtime.Scheme) ObjectTemplateAccessor {
 	obj, err := scheme.New(clusterObjectTemplateGVK)
 	if err != nil {
 		panic(err)
@@ -74,10 +72,6 @@ func (t *GenericObjectTemplate) GetGeneration() int64 {
 	return t.Generation
 }
 
-func (t *GenericObjectTemplate) UpdatePhase() {
-	t.Status.Phase = getObjectTemplatePhase(t)
-}
-
 func (t *GenericObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {
 	t.Status.ControllerOf = controllerOf
 }
@@ -106,19 +100,8 @@ func (t *GenericClusterObjectTemplate) ClientObject() client.Object {
 	return &t.ClusterObjectTemplate
 }
 
-func (t *GenericClusterObjectTemplate) UpdatePhase() {
-	t.Status.Phase = getObjectTemplatePhase(t)
-}
-
 func (t *GenericClusterObjectTemplate) GetGeneration() int64 {
 	return t.Generation
-}
-
-func getObjectTemplatePhase(objectTemplate genericObjectTemplate) corev1alpha1.ObjectTemplateStatusPhase {
-	if meta.IsStatusConditionTrue(*objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid) {
-		return corev1alpha1.ObjectTemplatePhaseError
-	}
-	return corev1alpha1.ObjectTemplatePhaseActive
 }
 
 func (t *GenericClusterObjectTemplate) SetStatusControllerOf(controllerOf corev1alpha1.ControlledObjectReference) {

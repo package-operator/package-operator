@@ -7,6 +7,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/adaptermocks"
 	"package-operator.run/internal/utils"
 )
 
@@ -24,7 +25,7 @@ func TestHashReconciler(t *testing.T) {
 
 		ctx := t.Context()
 
-		objectSetDeployment := &genericObjectSetDeploymentMock{}
+		objectSetDeployment := &adaptermocks.ObjectSetDeploymentMock{}
 		objectSetDeployment.On("GetObjectSetTemplate").Return(corev1alpha1.ObjectSetTemplate{})
 		objectSetDeployment.On("GetStatusCollisionCount").Return(1)
 

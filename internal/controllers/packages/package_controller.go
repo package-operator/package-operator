@@ -15,6 +15,7 @@ import (
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
+	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/packages"
 )
@@ -52,11 +53,13 @@ func NewPackageController(
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	imagePrefixOverrides []imageprefix.Override,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericPackage, adapters.NewObjectDeployment,
-		c, uncachedClient, log, scheme, imagePuller, packages.NewPackageDeployer(c, uncachedClient, scheme),
-		metricsRecorder, packageHashModifier,
+		c, uncachedClient, log, scheme, imagePuller,
+		packages.NewPackageDeployer(c, uncachedClient, scheme, imagePrefixOverrides),
+		metricsRecorder, packageHashModifier, imagePrefixOverrides,
 	)
 }
 
@@ -66,11 +69,12 @@ func NewClusterPackageController(
 	imagePuller imagePuller,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	imagePrefixOverrides []imageprefix.Override,
 ) *GenericPackageController {
 	return newGenericPackageController(
 		adapters.NewGenericClusterPackage, adapters.NewClusterObjectDeployment,
-		c, uncachedClient, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme),
-		metricsRecorder, packageHashModifier,
+		c, uncachedClient, log, scheme, imagePuller, packages.NewClusterPackageDeployer(c, scheme, imagePrefixOverrides),
+		metricsRecorder, packageHashModifier, imagePrefixOverrides,
 	)
 }
 
@@ -83,6 +87,7 @@ func newGenericPackageController(
 	packageDeployer packageDeployer,
 	metricsRecorder metricsRecorder,
 	packageHashModifier *int32,
+	imagePrefixOverrides []imageprefix.Override,
 ) *GenericPackageController {
 	controller := &GenericPackageController{
 		newPackage:          newPackage,
@@ -94,6 +99,7 @@ func newGenericPackageController(
 		unpackReconciler: newUnpackReconciler(
 			uncachedClient, imagePuller, packageDeployer,
 			metricsRecorder, environment.NewSink(client), packageHashModifier,
+			imagePrefixOverrides,
 		),
 		objDepStatusReconciler: &objectDeploymentStatusReconciler{
 			client:              client,
@@ -197,7 +203,6 @@ func (c *GenericPackageController) Reconcile(
 }
 
 func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapters.GenericPackageAccessor) error {
-	pkg.UpdatePhase()
 	if err := c.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
 		return fmt.Errorf("updating Package status: %w", err)
 	}
