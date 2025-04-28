@@ -22,6 +22,7 @@ var (
 	test     Test
 	lint     Lint
 	chart    Chart
+	compile  Compile
 
 	cluster = NewCluster("pko",
 		withLocalRegistry(imageRegistryHost(), devClusterRegistryPort, devClusterRegistryAuthPort),
