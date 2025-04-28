@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -79,10 +81,18 @@ func main() {
 
 	ourScheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
-	if err := scheme.AddToScheme(ourScheme); err != nil {
-		panic(err)
+	schemeBuilder := runtime.SchemeBuilder{
+		scheme.AddToScheme,
+		apis.AddToScheme,
+		// why do i need to add these to avoid
+		/*
+			having the manager explode on CRDs not being in the scheme?
+			why was this not an issue before?
+		*/
+		apiextensions.AddToScheme,
+		apiextensionsv1.AddToScheme,
 	}
-	if err := apis.AddToScheme(ourScheme); err != nil {
+	if err := schemeBuilder.AddToScheme(ourScheme); err != nil {
 		panic(err)
 	}
 
