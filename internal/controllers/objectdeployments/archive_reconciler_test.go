@@ -1,7 +1,6 @@
 package objectdeployments
 
 import (
-	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -32,7 +31,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			client: testClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prevs := make([]adapters.ObjectSetAccessor, 2)
 		for i := range prevs {
 			obj := &adaptermocks.ObjectSetMock{}
@@ -54,7 +53,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			client: testClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		arch1 := &adaptermocks.ObjectSetMock{}
 		arch2 := &adaptermocks.ObjectSetMock{}
 		latestAvailable := &adaptermocks.ObjectSetMock{}
@@ -193,7 +192,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			r := archiveReconciler{
 				client: client,
 			}
-			res, err := r.Reconcile(context.Background(), latestRevision, prevCasted, objectDeployment)
+			res, err := r.Reconcile(t.Context(), latestRevision, prevCasted, objectDeployment)
 			require.ErrorContains(t, err, "Failed to update revision 5 for pausing")
 			assert.True(t, res.IsZero(), "Unexpected requeue")
 
@@ -326,7 +325,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 	r := archiveReconciler{
 		client: client,
 	}
-	res, err := r.Reconcile(context.Background(), latestRevision, prevCasted, objectDeployment)
+	res, err := r.Reconcile(t.Context(), latestRevision, prevCasted, objectDeployment)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "Unexpected requeue")
 
@@ -406,7 +405,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	r := archiveReconciler{
 		client: client,
 	}
-	res, err := r.Reconcile(context.Background(), latestAvailableRevision, prevCasted, objectDeployment)
+	res, err := r.Reconcile(t.Context(), latestAvailableRevision, prevCasted, objectDeployment)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "Unexpected requeue")
 
@@ -487,7 +486,7 @@ func testDeleteArchive(t *testing.T) {
 	r := archiveReconciler{
 		client: client,
 	}
-	res, err := r.Reconcile(context.Background(), latestAvailableRevision, prevCasted, objectDeployment)
+	res, err := r.Reconcile(t.Context(), latestAvailableRevision, prevCasted, objectDeployment)
 	require.NoError(t, err)
 	assert.True(t, res.IsZero(), "Unexpected requeue")
 

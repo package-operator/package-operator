@@ -1,7 +1,6 @@
 package objectsets
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +40,7 @@ func Test_revisionReconciler(t *testing.T) {
 			ObjectSet: corev1alpha1.ObjectSet{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := r.Reconcile(ctx, objectSet)
 		require.NoError(t, err)
 
@@ -111,7 +110,7 @@ func Test_revisionReconciler(t *testing.T) {
 			},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := r.Reconcile(ctx, objectSet)
 		require.NoError(t, err)
 
@@ -162,7 +161,7 @@ func Test_revisionReconciler(t *testing.T) {
 			},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		res, err := r.Reconcile(ctx, objectSet)
 		require.NoError(t, err)
 

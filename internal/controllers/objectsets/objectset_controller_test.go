@@ -132,7 +132,7 @@ func TestGenericObjectSetController_Reconcile(t *testing.T) {
 				}).
 				Return(test.getObjectSetPhaseError)
 
-			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
+			res, err := controller.Reconcile(t.Context(), ctrl.Request{})
 			assert.Empty(t, res)
 			require.NoError(t, err)
 
@@ -230,7 +230,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_AllPhasesFound(t *test
 
 			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
-			arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
+			arePaused, unknown, err := controller.areRemotePhasesPaused(t.Context(), objectSet)
 			assert.Equal(t, test.arePausedExpected, arePaused)
 			assert.False(t, unknown)
 			require.NoError(t, err)
@@ -245,7 +245,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_PhaseNotFound(t *testi
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 	objectSet := &adapters.ObjectSetAdapter{}
 	objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 2)
-	arePaused, unknown, err := controller.areRemotePhasesPaused(context.Background(), objectSet)
+	arePaused, unknown, err := controller.areRemotePhasesPaused(t.Context(), objectSet)
 	assert.False(t, arePaused)
 	assert.True(t, unknown)
 	require.NoError(t, err)
@@ -320,7 +320,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 			}
 			objectSet.Status.Conditions = test.startingConditions
-			err := controller.reportPausedCondition(context.Background(), objectSet)
+			err := controller.reportPausedCondition(t.Context(), objectSet)
 			require.NoError(t, err)
 			conds := *objectSet.GetConditions()
 			if test.pausedConditionStatus != "" {
@@ -394,7 +394,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 				},
 			}
 
-			err := controller.handleDeletionAndArchival(context.Background(), objectSet)
+			err := controller.handleDeletionAndArchival(t.Context(), objectSet)
 			require.NoError(t, err)
 			conds := *objectSet.GetConditions()
 
@@ -428,7 +428,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 		}
 
 		c, _, _, _, _ := newControllerAndMocks()
-		ctx := context.Background()
+		ctx := t.Context()
 		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, errTest,
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)
@@ -449,7 +449,7 @@ func TestGenericObjectSetController_updateStatusError(t *testing.T) {
 			On("Update", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		_, err := controllers.UpdateObjectSetOrPhaseStatusFromError(ctx, objectSet, &preflight.Error{},
 			func(ctx context.Context) error {
 				return c.updateStatus(ctx, objectSet)

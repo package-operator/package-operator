@@ -162,7 +162,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 				}).
 				Return(test.getObjectSetPhaseError)
 
-			res, err := controller.Reconcile(context.Background(), ctrl.Request{})
+			res, err := controller.Reconcile(t.Context(), ctrl.Request{})
 			assert.Empty(t, res)
 			require.NoError(t, err)
 
@@ -217,7 +217,7 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 			dc.On("Free", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 
-			err := controller.handleDeletionAndArchival(context.Background(), &GenericObjectSetPhase{
+			err := controller.handleDeletionAndArchival(t.Context(), &GenericObjectSetPhase{
 				ObjectSetPhase: corev1alpha1.ObjectSetPhase{
 					ObjectMeta: metav1.ObjectMeta{Finalizers: []string{
 						constants.CachedFinalizer,
@@ -269,7 +269,7 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			p.Spec.Paused = test.phasePaused
 			p.Status.Conditions = test.startingConditions
 
-			controller.reportPausedCondition(context.Background(), p)
+			controller.reportPausedCondition(t.Context(), p)
 			conds := *p.GetConditions()
 			if test.phasePaused {
 				assert.Len(t, conds, 1)

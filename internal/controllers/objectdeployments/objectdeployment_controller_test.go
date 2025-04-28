@@ -1,7 +1,6 @@
 package objectdeployments
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +38,7 @@ func TestObjectDeploymentController_Err(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
 		Return(fooErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, ctrl.Request{})
 
 	require.Error(t, err)
@@ -69,7 +68,7 @@ func TestObjectDeploymentController_NotFound(t *testing.T) {
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
 		Return(notFoundErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -100,7 +99,7 @@ func TestObjectDeploymentController_Reconcile(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -124,7 +123,7 @@ func TestClusterObjectDeploymentController_Err(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
 		Return(fooErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, ctrl.Request{})
 
 	require.Error(t, err)
@@ -154,7 +153,7 @@ func TestClusterObjectDeploymentController_NotFound(t *testing.T) {
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
 		Return(notFoundErr)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})
@@ -185,7 +184,7 @@ func TestClusterObjectDeploymentController_Reconcile(t *testing.T) {
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := c.Reconcile(ctx, reconcile.Request{
 		NamespacedName: objectKey,
 	})

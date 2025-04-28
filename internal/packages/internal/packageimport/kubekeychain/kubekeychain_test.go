@@ -1,10 +1,10 @@
 package kubekeychain
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,7 +79,7 @@ func TestResolveSecrets_Success(t *testing.T) {
 		}).Return(nil)
 	}
 
-	actual, err := resolveSecrets(context.Background(), client.ObjectKeyFromObject(serviceAccount), c)
+	actual, err := resolveSecrets(t.Context(), client.ObjectKeyFromObject(serviceAccount), c)
 	require.NoError(t, err)
 	assert.Equal(t, expectedSecrets, actual)
 }
@@ -98,7 +97,7 @@ func TestResolveSecrets_GetServiceAccountError(t *testing.T) {
 	c.On("Get", mock.Anything, key, mock.IsType(&corev1.ServiceAccount{}), mock.Anything).
 		Return(k8sapierrors.NewNotFound(schema.GroupResource{}, ""))
 
-	_, err := resolveSecrets(context.Background(), key, c)
+	_, err := resolveSecrets(t.Context(), key, c)
 	require.Error(t, err)
 	assert.True(t, k8sapierrors.IsNotFound(err))
 }
@@ -137,7 +136,7 @@ func TestResolveSecrets_GetSecretError(t *testing.T) {
 			Return(k8sapierrors.NewBadRequest(""))
 	}
 
-	_, err := resolveSecrets(context.Background(), client.ObjectKeyFromObject(serviceAccount), c)
+	_, err := resolveSecrets(t.Context(), client.ObjectKeyFromObject(serviceAccount), c)
 	require.Error(t, err)
 	assert.True(t, k8sapierrors.IsBadRequest(err))
 }
@@ -171,7 +170,7 @@ func TestResolveSecrets_GetSecretError_IgnoreNotFound(t *testing.T) {
 	c.On("Get", mock.Anything, mock.Anything, mock.IsType(&corev1.Secret{}), mock.Anything).
 		Return(k8sapierrors.NewNotFound(schema.GroupResource{}, ""))
 
-	secrets, err := resolveSecrets(context.Background(), client.ObjectKeyFromObject(serviceAccount), c)
+	secrets, err := resolveSecrets(t.Context(), client.ObjectKeyFromObject(serviceAccount), c)
 	require.NoError(t, err)
 	assert.Empty(t, secrets)
 }

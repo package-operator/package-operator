@@ -40,7 +40,7 @@ func TestRequestManager_DelayedPull(t *testing.T) {
 		Run(func(mock.Arguments) { time.Sleep(500 * time.Millisecond) }).
 		Return(pkg, nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	var wg sync.WaitGroup
 	for range 5 {
 		wg.Add(1)
@@ -87,7 +87,7 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 		uncachedClient, serviceAccount)
 	r.pullImage = ipm.Pull
 
-	ctx := context.Background()
+	ctx := t.Context()
 	var (
 		wg sync.WaitGroup
 

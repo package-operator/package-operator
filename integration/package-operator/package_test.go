@@ -60,7 +60,7 @@ func testNamespacedAndCluster(
 		{"namespaced", "default", newPackage(meta, spec, true), &corev1alpha1.ObjectDeployment{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := logr.NewContext(context.Background(), testr.New(t))
+			ctx := logr.NewContext(t.Context(), testr.New(t))
 
 			requireDeployPackage(ctx, t, tc.pkg, tc.objectDeployment)
 
@@ -283,7 +283,7 @@ func TestPackage_nonExistent(t *testing.T) {
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	require.NoError(t, Client.Create(ctx, pkg))
 	cleanupOnSuccess(ctx, t, pkg)
 
@@ -307,7 +307,7 @@ func TestPackage_NotAuthenticated(t *testing.T) {
 		},
 	}
 
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	require.NoError(t, Client.Create(ctx, pkg))
 	cleanupOnSuccess(ctx, t, pkg)
 
@@ -321,7 +321,7 @@ func TestPackage_NotAuthenticated(t *testing.T) {
 }
 
 func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 
 	require.NoError(t, createAndWaitFromFiles(ctx, []string{
 		filepath.Join("..", "..", "config", "local-registry-pullsecret.yaml"),
@@ -389,7 +389,7 @@ func TestPackage_pause(t *testing.T) {
 			)),
 		},
 	}
-	ctx := logr.NewContext(context.Background(), testr.New(t))
+	ctx := logr.NewContext(t.Context(), testr.New(t))
 	testPkg := newPackage(meta, spec, true)
 
 	deploy := &corev1alpha1.ObjectDeployment{}
