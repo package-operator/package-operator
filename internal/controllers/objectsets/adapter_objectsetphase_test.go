@@ -20,9 +20,9 @@ func TestGenericObjectSetPhase(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{
 		{},
 	}
-	assert.Equal(t, objectSet.Status.Conditions, objectSet.GetConditions())
+	assert.Equal(t, objectSet.Status.Conditions, objectSet.GetSpecConditions())
 
-	objectSet.SetPaused(true)
+	objectSet.SetSpecPaused(true)
 	assert.True(t, objectSet.IsPaused())
 
 	phase := corev1alpha1.ObjectSetTemplatePhase{
@@ -45,7 +45,7 @@ func TestGenericObjectSetPhase(t *testing.T) {
 	assert.Equal(t, probes, objectSet.Spec.AvailabilityProbes)
 
 	var revision int64 = 34
-	objectSet.SetRevision(revision)
+	objectSet.SetStatusRevision(revision)
 	assert.Equal(t, revision, objectSet.Spec.Revision)
 
 	previous := []corev1alpha1.PreviousRevisionReference{
@@ -65,9 +65,9 @@ func TestGenericClusterObjectSetPhase(t *testing.T) {
 	objectSet.Status.Conditions = []metav1.Condition{
 		{},
 	}
-	assert.Equal(t, objectSet.Status.Conditions, objectSet.GetConditions())
+	assert.Equal(t, objectSet.Status.Conditions, objectSet.GetSpecConditions())
 
-	objectSet.SetPaused(true)
+	objectSet.SetSpecPaused(true)
 	assert.True(t, objectSet.IsPaused())
 
 	phase := corev1alpha1.ObjectSetTemplatePhase{
@@ -90,7 +90,7 @@ func TestGenericClusterObjectSetPhase(t *testing.T) {
 	assert.Equal(t, probes, objectSet.Spec.AvailabilityProbes)
 
 	var revision int64 = 34
-	objectSet.SetRevision(revision)
+	objectSet.SetStatusRevision(revision)
 	assert.Equal(t, revision, objectSet.Spec.Revision)
 
 	previous := []corev1alpha1.PreviousRevisionReference{

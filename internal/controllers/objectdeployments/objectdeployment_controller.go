@@ -151,7 +151,7 @@ func (od *GenericObjectDeploymentController) listObjectSetsByRevision(
 	ctx context.Context,
 	objectDeployment adapters.ObjectDeploymentAccessor,
 ) ([]adapters.ObjectSetAccessor, error) {
-	labelSelector := objectDeployment.GetSelector()
+	labelSelector := objectDeployment.GetSpecSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
 		return nil, fmt.Errorf("invalid selector: %w", err)

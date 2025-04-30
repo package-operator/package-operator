@@ -10,12 +10,12 @@ import (
 
 type genericObjectSetPhase interface {
 	ClientObject() client.Object
-	GetConditions() []metav1.Condition
+	GetSpecConditions() []metav1.Condition
 	IsPaused() bool
 	SetPhase(phase corev1alpha1.ObjectSetTemplatePhase)
-	SetPaused(paused bool)
+	SetSpecPaused(paused bool)
 	SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe)
-	SetRevision(revision int64)
+	SetStatusRevision(revision int64)
 	SetPrevious([]corev1alpha1.PreviousRevisionReference)
 	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 }
@@ -63,11 +63,11 @@ func (a *GenericObjectSetPhase) ClientObject() client.Object {
 	return &a.ObjectSetPhase
 }
 
-func (a *GenericObjectSetPhase) GetConditions() []metav1.Condition {
+func (a *GenericObjectSetPhase) GetSpecConditions() []metav1.Condition {
 	return a.Status.Conditions
 }
 
-func (a *GenericObjectSetPhase) SetPaused(paused bool) {
+func (a *GenericObjectSetPhase) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
 }
 
@@ -87,7 +87,7 @@ func (a *GenericObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemplatePha
 	a.Spec.Objects = phase.Objects
 }
 
-func (a *GenericObjectSetPhase) SetRevision(revision int64) {
+func (a *GenericObjectSetPhase) SetStatusRevision(revision int64) {
 	a.Spec.Revision = revision
 }
 
@@ -107,11 +107,11 @@ func (a *GenericClusterObjectSetPhase) ClientObject() client.Object {
 	return &a.ClusterObjectSetPhase
 }
 
-func (a *GenericClusterObjectSetPhase) GetConditions() []metav1.Condition {
+func (a *GenericClusterObjectSetPhase) GetSpecConditions() []metav1.Condition {
 	return a.Status.Conditions
 }
 
-func (a *GenericClusterObjectSetPhase) SetPaused(paused bool) {
+func (a *GenericClusterObjectSetPhase) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
 }
 
@@ -131,7 +131,7 @@ func (a *GenericClusterObjectSetPhase) SetPhase(phase corev1alpha1.ObjectSetTemp
 	a.Spec.Objects = phase.Objects
 }
 
-func (a *GenericClusterObjectSetPhase) SetRevision(revision int64) {
+func (a *GenericClusterObjectSetPhase) SetStatusRevision(revision int64) {
 	a.Spec.Revision = revision
 }
 

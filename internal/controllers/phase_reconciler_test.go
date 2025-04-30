@@ -50,7 +50,7 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	owner := &phaseObjectOwnerMock{}
 	ownerObj := &unstructured.Unstructured{}
 	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(5))
+	owner.On("GetStatusRevision").Return(int64(5))
 
 	ownerStrategy.
 		On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -98,7 +98,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -147,7 +147,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -217,7 +217,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		ownerStrategy.
 			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
@@ -283,7 +283,7 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
+		owner.On("GetStatusRevision").Return(int64(5))
 
 		preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -389,7 +389,7 @@ func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
 	}
 	owner := &phaseObjectOwnerMock{}
 	owner.On("ClientObject").Return(&unstructured.Unstructured{})
-	owner.On("GetRevision").Return(int64(3))
+	owner.On("GetStatusRevision").Return(int64(3))
 
 	acMock.
 		On("Check", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -461,7 +461,7 @@ func TestPhaseReconciler_desiredObject(t *testing.T) {
 		manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
 	})
 	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(5))
+	owner.On("GetStatusRevision").Return(int64(5))
 
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
@@ -504,7 +504,7 @@ func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
 	ownerObj := &unstructured.Unstructured{}
 	ownerObj.SetNamespace("my-owner-ns")
 	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(5))
+	owner.On("GetStatusRevision").Return(int64(5))
 
 	phaseObject := corev1alpha1.ObjectSetObject{
 		Object: unstructured.Unstructured{
@@ -560,11 +560,10 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetRevision").Return(int64(34))
+					On("GetStatusRevision").Return(int64(34))
 			},
 			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{}),
+				newPreviousObjectSetMockWithoutRemotes(&unstructured.Unstructured{}),
 			},
 			object: &unstructured.Unstructured{
 				Object: map[string]any{
@@ -616,7 +615,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetRevision").Return(int64(34))
+					On("GetStatusRevision").Return(int64(34))
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
@@ -647,7 +646,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					Object: map[string]any{},
 				}
 				owner.On("ClientObject").Return(ownerObj)
-				owner.On("GetRevision").Return(int64(1))
+				owner.On("GetStatusRevision").Return(int64(1))
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
@@ -676,7 +675,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("IsController", mock.AnythingOfType("*v1.ConfigMap"), mock.Anything).
 					Return(true)
 				owner.
-					On("GetRevision").Return(int64(100))
+					On("GetStatusRevision").Return(int64(100))
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
@@ -703,7 +702,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 				ownerObj := &unstructured.Unstructured{}
 				owner.On("ClientObject").Return(ownerObj)
 				owner.
-					On("GetRevision").Return(int64(100))
+					On("GetStatusRevision").Return(int64(100))
 
 				osm.
 					On("IsController", ownerObj, mock.Anything).
@@ -739,7 +738,7 @@ func Test_defaultAdoptionChecker_Check(t *testing.T) {
 					On("GetController", mock.Anything).
 					Return(metav1.OwnerReference{}, true)
 				owner.On("ClientObject").Return(ownerObj)
-				owner.On("GetRevision").Return(int64(1))
+				owner.On("GetStatusRevision").Return(int64(1))
 			},
 			previous: []PreviousObjectSet{
 				newPreviousObjectSetMockWithoutRemotes(
@@ -823,7 +822,7 @@ func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
 
 			previous := &previousObjectSetMock{}
 			previous.On("ClientObject").Return(test.obj)
-			previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
+			previous.On("GetStatusRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
 				{
 					Name: "phase-1",
 				},
@@ -1166,7 +1165,7 @@ func Test_mapConditions(t *testing.T) {
 			}
 			var conditions []metav1.Condition
 			owner.On("ClientObject").Return(ownerObj)
-			owner.On("GetConditions").Return(&conditions)
+			owner.On("GetStatusConditions").Return(&conditions)
 
 			err := mapConditions(ctx, owner, []corev1alpha1.ConditionMapping{
 				{
@@ -1198,7 +1197,7 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 	ownerObj := &unstructured.Unstructured{}
 	owner := &phaseObjectOwnerMock{}
 	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(12))
+	owner.On("GetStatusRevision").Return(int64(12))
 
 	pcm.
 		On("Check", mock.Anything, mock.Anything, mock.Anything).
@@ -1288,7 +1287,7 @@ func (s *objectSetOrPhaseStub) ClientObject() client.Object {
 	return &s.ObjectSet
 }
 
-func (s *objectSetOrPhaseStub) GetConditions() *[]metav1.Condition {
+func (s *objectSetOrPhaseStub) GetStatusConditions() *[]metav1.Condition {
 	return &s.ObjectSet.Status.Conditions
 }
 func (s *objectSetOrPhaseStub) UpdateStatusPhase() {}
@@ -1307,7 +1306,7 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 
 		require.EqualError(t, err, errTest.Error())
 		assert.True(t, res.IsZero())
-		assert.Empty(t, objectSet.GetConditions())
+		assert.Empty(t, objectSet.GetStatusConditions())
 	})
 
 	t.Run("reports preflight error", func(t *testing.T) {
@@ -1324,8 +1323,8 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
-		if assert.NotEmpty(t, objectSet.GetConditions()) {
-			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		if assert.NotEmpty(t, objectSet.GetStatusConditions()) {
+			cond := meta.FindStatusCondition(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetAvailable)
 			assert.Equal(t, "PreflightError", cond.Reason)
 		}
 
@@ -1346,8 +1345,8 @@ func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, DefaultGlobalMissConfigurationRetry, res.RequeueAfter)
-		if assert.NotEmpty(t, objectSet.GetConditions()) {
-			cond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		if assert.NotEmpty(t, objectSet.GetStatusConditions()) {
+			cond := meta.FindStatusCondition(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetAvailable)
 			assert.Equal(t, "CollisionDetected", cond.Reason)
 		}
 

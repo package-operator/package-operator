@@ -34,7 +34,7 @@ func Test_newRevisionReconciler_delaysObjectSetCreation(t *testing.T) {
 
 	objectDeploymentMock := &adaptermocks.ObjectDeploymentMock{}
 	objectDeploymentMock.
-		On("GetObjectSetTemplate").
+		On("GetSpecObjectSetTemplate").
 		Return(corev1alpha1.ObjectSetTemplate{})
 
 	res, err := r.Reconcile(ctx, nil, nil, objectDeploymentMock)
@@ -143,7 +143,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 			objectDeployment.ClientObject().SetName(objectDeploymentName)
 			objectDeployment.ClientObject().SetNamespace(testNamespace)
 			objectDeployment.ClientObject().SetGeneration(testCase.deploymentGeneration)
-			objectDeployment.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{
+			objectDeployment.SetSpecTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
 			})
 			objectDeployment.SetStatusTemplateHash(testCase.deploymentHash)

@@ -26,14 +26,14 @@ func TestGenericObjectTemplate(t *testing.T) {
 	assert.Equal(t, controlledObj, ot.GetStatusControllerOf())
 
 	ot.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, ot.Status.Conditions, *ot.GetConditions())
+	assert.Equal(t, ot.Status.Conditions, *ot.GetSpecConditions())
 
 	sources := []corev1alpha1.ObjectTemplateSource{}
 	ot.Spec.Sources = sources
-	assert.Equal(t, sources, ot.GetSources())
+	assert.Equal(t, sources, ot.GetSpecSources())
 
 	ot.Spec.Template = ""
-	assert.Equal(t, ot.Spec.Template, ot.GetTemplate())
+	assert.Equal(t, ot.Spec.Template, ot.GetSpecTemplate())
 }
 
 func TestGenericClusterObjectTemplate(t *testing.T) {
@@ -53,12 +53,12 @@ func TestGenericClusterObjectTemplate(t *testing.T) {
 	assert.Equal(t, controlledObj, ot.GetStatusControllerOf())
 
 	ot.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, ot.Status.Conditions, *ot.GetConditions())
+	assert.Equal(t, ot.Status.Conditions, *ot.GetSpecConditions())
 
 	sources := []corev1alpha1.ObjectTemplateSource{}
 	ot.Spec.Sources = sources
-	assert.Equal(t, sources, ot.GetSources())
+	assert.Equal(t, sources, ot.GetSpecSources())
 
 	ot.Spec.Template = ""
-	assert.Equal(t, ot.Spec.Template, ot.GetTemplate())
+	assert.Equal(t, ot.Spec.Template, ot.GetSpecTemplate())
 }

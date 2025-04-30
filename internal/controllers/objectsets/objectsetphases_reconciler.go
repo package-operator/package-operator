@@ -105,7 +105,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 
-	violations, err := r.preflightChecker.Check(ctx, objectSet.GetPhases())
+	violations, err := r.preflightChecker.Check(ctx, objectSet.GetSpecPhases())
 	if err != nil {
 		return res, err
 	}
@@ -116,7 +116,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		return res, preflightErr
 	}
 
-	controllers.DeleteMappedConditions(ctx, objectSet.GetConditions())
+	controllers.DeleteMappedConditions(ctx, objectSet.GetStatusConditions())
 
 	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
 	if controllers.IsExternalResourceNotFound(err) {
@@ -134,7 +134,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 	inTransition := isObjectSetInTransition(objectSet, controllerOf)
 	if inTransition {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetInTransition,
 			Status:             metav1.ConditionTrue,
 			Reason:             "InTransition",
@@ -142,11 +142,11 @@ func (r *objectSetPhasesReconciler) Reconcile(
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 	} else {
-		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetInTransition)
+		meta.RemoveStatusCondition(objectSet.GetStatusConditions(), corev1alpha1.ObjectSetInTransition)
 	}
 
 	if !probingResult.IsZero() {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "ProbeFailure",
@@ -157,7 +157,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		return res, nil
 	}
 
-	meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+	meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 		Type:               corev1alpha1.ObjectSetAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Available",
@@ -166,13 +166,13 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	})
 
 	if r.hasSurvivedDelay(objectSet) && !meta.IsStatusConditionTrue(
-		*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) &&
+		*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetSucceeded) &&
 		// we don't want to record Succeeded during transition,
 		// because the object may become Available due to external
 		// (e.g. other ObjectSets) involvement.
 		!inTransition {
 		// Remember that this rollout worked!
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetSucceeded,
 			Status:             metav1.ConditionTrue,
 			Reason:             "RolloutSuccess",
@@ -193,13 +193,13 @@ func (r *objectSetPhasesReconciler) reconcile(
 	}
 
 	probe, err := internalprobing.Parse(
-		ctx, objectSet.GetAvailabilityProbes())
+		ctx, objectSet.GetSpecAvailabilityProbes())
 	if err != nil {
 		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
 	}
 
 	var controllerOfAll []corev1alpha1.ControlledObjectReference
-	for _, phase := range objectSet.GetPhases() {
+	for _, phase := range objectSet.GetSpecPhases() {
 		controllerOf, probingResult, err := r.reconcilePhase(
 			ctx, objectSet, phase, probe, previous)
 		if err != nil {
@@ -264,7 +264,7 @@ func (r *objectSetPhasesReconciler) Teardown(
 		return true, nil
 	}
 
-	phases := objectSet.GetPhases()
+	phases := objectSet.GetSpecPhases()
 	reverse(phases) // teardown in reverse order
 
 	for _, phase := range phases {
@@ -305,13 +305,13 @@ func isObjectSetInTransition(
 	objectSet adapters.ObjectSetAccessor,
 	controllerOf []corev1alpha1.ControlledObjectReference,
 ) bool {
-	if objectSet.IsArchived() {
+	if objectSet.IsSpecArchived() {
 		return false
 	}
 
 	// Build a lookup map of all objects that may be managed by this ObjectSet.
 	allObjectsThatMayBeUnderManagement := map[corev1alpha1.ControlledObjectReference]struct{}{}
-	for _, phase := range objectSet.GetPhases() {
+	for _, phase := range objectSet.GetSpecPhases() {
 		for _, obj := range phase.Objects {
 			gvk := obj.Object.GroupVersionKind()
 			ns := obj.Object.GetNamespace()
@@ -354,15 +354,17 @@ func isObjectSetInTransition(
 }
 
 func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet adapters.ObjectSetAccessor) bool {
-	availCond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
+	availCond := meta.FindStatusCondition(*objectSet.GetStatusConditions(), corev1alpha1.ObjectDeploymentAvailable)
 	if availCond == nil {
 		return false
 	}
 
 	var (
 		available   = availCond.Status == metav1.ConditionTrue
-		noDelay     = objectSet.GetSuccessDelaySeconds() == 0
-		delayTarget = availCond.LastTransitionTime.Add(time.Duration(objectSet.GetSuccessDelaySeconds() * int32(time.Second)))
+		noDelay     = objectSet.GetSpecSuccessDelaySeconds() == 0
+		delayTarget = availCond.LastTransitionTime.Add(
+			time.Duration(objectSet.GetSpecSuccessDelaySeconds() * int32(time.Second)),
+		)
 	)
 
 	// noDelay avoids false negative for edgecase where objectSet

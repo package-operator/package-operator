@@ -152,7 +152,7 @@ func (r *templateReconciler) getValuesFromSources(
 	sourcesConfig map[string]any,
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
-	for _, src := range objectTemplate.GetSources() {
+	for _, src := range objectTemplate.GetSpecSources() {
 		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src)
 		if err != nil {
 			return false, err
@@ -299,7 +299,7 @@ func (r *templateReconciler) templateObject(
 	if err != nil {
 		return fmt.Errorf("getting environment: %w", err)
 	}
-	templateContext := TemplateContext{
+	templateContext := GetSpecTemplateContext{
 		Config:      sourcesConfig,
 		Environment: env,
 	}
@@ -307,7 +307,7 @@ func (r *templateReconciler) templateObject(
 	if err != nil {
 		return fmt.Errorf("creating transformer: %w", err)
 	}
-	renderedTemplate, err := transformer.transform(ctx, []byte(objectTemplate.GetTemplate()))
+	renderedTemplate, err := transformer.transform(ctx, []byte(objectTemplate.GetSpecTemplate()))
 	if err != nil {
 		return fmt.Errorf("rendering template: %w", err)
 	}
@@ -396,7 +396,7 @@ func updateStatusConditionsFromOwnedObject(
 			Reason:             condMap["reason"].(string),
 			Message:            condMap["message"].(string),
 		}
-		meta.SetStatusCondition(objectTemplate.GetConditions(), newCond)
+		meta.SetStatusCondition(objectTemplate.GetSpecConditions(), newCond)
 	}
 	return nil
 }
@@ -404,7 +404,7 @@ func updateStatusConditionsFromOwnedObject(
 func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTemplateAccessor, err error) error {
 	var sourceError *SourceError
 	if errors.As(err, &sourceError) {
-		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectTemplate.GetSpecConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: objectTemplate.GetGeneration(),
@@ -415,7 +415,7 @@ func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTempla
 	}
 	var templateError *TemplateError
 	if errors.As(err, &templateError) {
-		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectTemplate.GetSpecConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: objectTemplate.GetGeneration(),
@@ -426,7 +426,7 @@ func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTempla
 	}
 
 	if err == nil {
-		meta.RemoveStatusCondition(objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid)
+		meta.RemoveStatusCondition(objectTemplate.GetSpecConditions(), corev1alpha1.ObjectTemplateInvalid)
 	}
 	return err
 }

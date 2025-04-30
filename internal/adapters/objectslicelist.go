@@ -7,18 +7,21 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+var (
+	objectSliceListGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSliceList")
+	clusterObjectSliceListGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSliceList")
+)
+
+// ObjectSliceListAccessor is an adapter interface to access an ObjectSlice.
+//
+// Reason for this interface is that it allows accessing an ObjectSlice in two scopes:
+// The regular ObjectSlice and the ClusterObjectSlice.
 type ObjectSliceListAccessor interface {
 	ClientObjectList() client.ObjectList
 	GetItems() []ObjectSliceAccessor
 }
 
-type ObjectSliceListFactory func(
-	scheme *runtime.Scheme) ObjectSliceListAccessor
-
-var (
-	objectSliceListGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSliceList")
-	clusterObjectSliceListGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSliceList")
-)
+type ObjectSliceListFactory func(scheme *runtime.Scheme) ObjectSliceListAccessor
 
 func NewObjectSliceList(scheme *runtime.Scheme) ObjectSliceListAccessor {
 	obj, err := scheme.New(objectSliceListGVK)

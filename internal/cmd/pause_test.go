@@ -28,7 +28,7 @@ func init() {
 	}
 }
 
-func TestPackageSetPaused_NotFound(t *testing.T) {
+func TestPackageSetSpecPaused_NotFound(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range getScopedTestCases() {
@@ -51,7 +51,7 @@ func TestPackageSetPaused_NotFound(t *testing.T) {
 				Return(notFoundErr)
 
 			require.ErrorIs(t,
-				c.PackageSetPaused(
+				c.PackageSetSpecPaused(
 					context.Background(), w, strings.ToLower(tc.resource),
 					objectKey.Name, objectKey.Namespace, true, "banana",
 				),
@@ -65,7 +65,7 @@ func TestPackageSetPaused_NotFound(t *testing.T) {
 
 var errUpdate = errors.New("test error: oops")
 
-func TestPackageSetPaused_UpdateError(t *testing.T) {
+func TestPackageSetSpecPaused_UpdateError(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range getScopedTestCases() {
@@ -88,14 +88,14 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 				On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1."+tc.resource), mock.Anything).
 				Return(errUpdate)
 
-			err := c.PackageSetPaused(
+			err := c.PackageSetSpecPaused(
 				context.Background(), w, strings.ToLower(tc.resource),
 				pkg.GetName(), pkg.GetNamespace(), true, "banana",
 			)
 			require.ErrorIs(t, err, errPausingPackage)
 			require.ErrorIs(t, err, errUpdate)
 
-			err = c.PackageSetPaused(
+			err = c.PackageSetSpecPaused(
 				context.Background(), w, strings.ToLower(tc.resource),
 				pkg.GetName(), pkg.GetNamespace(), false, "banana",
 			)
@@ -107,7 +107,7 @@ func TestPackageSetPaused_UpdateError(t *testing.T) {
 	}
 }
 
-func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
+func TestPackageSetSpecPaused_Success_Namespaced(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -159,7 +159,7 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 			).Return(nil)
 
 			testMsg := "test message"
-			require.NoError(t, c.PackageSetPaused(
+			require.NoError(t, c.PackageSetSpecPaused(
 				context.Background(), w, "package", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)
@@ -178,7 +178,7 @@ func TestPackageSetPaused_Success_Namespaced(t *testing.T) {
 	}
 }
 
-func TestPackageSetPaused_Success_Cluster(t *testing.T) {
+func TestPackageSetSpecPaused_Success_Cluster(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -230,7 +230,7 @@ func TestPackageSetPaused_Success_Cluster(t *testing.T) {
 			).Return(nil)
 
 			testMsg := "test message"
-			require.NoError(t, c.PackageSetPaused(
+			require.NoError(t, c.PackageSetSpecPaused(
 				context.Background(), w, "clusterpackage", pkg.GetName(), pkg.GetNamespace(), tc.pause, testMsg))
 
 			assert.Equal(t, pkg.GetName(), updatedPkg.Name)

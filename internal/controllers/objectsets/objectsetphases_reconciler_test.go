@@ -96,7 +96,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	remotePr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything, phase2)
 	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
-	conds := *os.GetConditions()
+	conds := *os.GetStatusConditions()
 	require.Len(t, conds, 2)
 	var succeededCond, availableCond metav1.Condition
 	for _, cond := range conds {
@@ -298,11 +298,15 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
 			require.NoError(t, err)
 
-			require.Equal(t, len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetConditions()), tc.ObjectSet.GetConditions())
+			require.Equal(
+				t,
+				len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetStatusConditions()),
+				tc.ObjectSet.GetStatusConditions(),
+			)
 			checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
 			for cond, stat := range tc.ExpectedConditionStatuses {
-				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetConditions(), cond, stat))
+				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetStatusConditions(), cond, stat))
 			}
 		})
 	}
@@ -329,7 +333,7 @@ func Test_isObjectSetInTransition(t *testing.T) {
 
 	testObjectSet1 := adapters.NewObjectSet(testScheme)
 	testObjectSet1.ClientObject().SetNamespace("test-ns")
-	testObjectSet1.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{
+	testObjectSet1.SetSpecPhases([]corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name: "a",
 			Objects: []corev1alpha1.ObjectSetObject{
@@ -340,10 +344,10 @@ func Test_isObjectSetInTransition(t *testing.T) {
 		},
 	})
 
-	testObjectSetArchived := &adapters.ObjectSetAdapter{
+	testObjectSetSpecArchived := &adapters.ObjectSetAdapter{
 		ObjectSet: *testObjectSet1.ClientObject().DeepCopyObject().(*corev1alpha1.ObjectSet),
 	}
-	testObjectSetArchived.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
+	testObjectSetSpecArchived.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStateArchived
 
 	tests := []struct {
 		name         string
@@ -372,7 +376,7 @@ func Test_isObjectSetInTransition(t *testing.T) {
 		{
 			// clone of "pod in transition" test, but with archived lifecycle state.
 			name:      "archived is never in transition",
-			objectSet: testObjectSetArchived,
+			objectSet: testObjectSetSpecArchived,
 			expected:  false,
 		},
 		{

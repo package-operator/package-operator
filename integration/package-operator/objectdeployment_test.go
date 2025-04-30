@@ -163,13 +163,13 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Expect ObjectSet to be created
 		// Expect concerned ObjectSet to be created
-		currObjectSetList := listObjectSetRevisions(ctx, t, concernedDeployment)
+		currObjectSetList := listObjectSetStatusRevisions(ctx, t, concernedDeployment)
 		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
-			currObjectSetRevision := currObjectSet.Status.Revision
-			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
+			currObjectSetStatusRevision := currObjectSet.Status.Revision
+			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetStatusRevision, 10)) {
 				requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
 				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
@@ -429,20 +429,20 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 			currentObjectSet.Status.Revision)
 
 		// Expect concerned ObjectSet to be created
-		currObjectSetList := listObjectSetRevisions(ctx, t, concernedDeployment)
+		currObjectSetList := listObjectSetStatusRevisions(ctx, t, concernedDeployment)
 		require.Len(t, currObjectSetList.Items, testCase.expectedObjectSetCount)
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
-			currObjectSetRevision := currObjectSet.Status.Revision
-			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
+			currObjectSetStatusRevision := currObjectSet.Status.Revision
+			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetStatusRevision, 10)) {
 				requireCondition(ctx, t, &currObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
 				require.Equal(t, corev1alpha1.ObjectSetLifecycleStateActive, currObjectSet.Spec.LifecycleState)
 			}
 
 			// Assert that expected revision is available
-			if strconv.FormatInt(currObjectSetRevision, 10) == testCase.expectedAvailableRevision {
+			if strconv.FormatInt(currObjectSetStatusRevision, 10) == testCase.expectedAvailableRevision {
 				availableCond := meta.FindStatusCondition(currObjectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
 				require.NotNil(t, availableCond, "Available condition is expected to be reported")
 				require.Equal(t, metav1.ConditionTrue, availableCond.Status)
@@ -520,7 +520,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 	)
 
 	// No new revisions should be created
-	objectSetList := listObjectSetRevisions(ctx, t, objectDeployment)
+	objectSetList := listObjectSetStatusRevisions(ctx, t, objectDeployment)
 	assert.Len(t, objectSetList.Items, 1)
 
 	// Unpause ObjectDeployment
@@ -535,7 +535,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 	assert.False(t, meta.IsStatusConditionTrue(objectSet.Status.Conditions, corev1alpha1.ObjectDeploymentProgressing))
 
 	// A new revision should be created
-	objectSetList = listObjectSetRevisions(ctx, t, objectDeployment)
+	objectSetList = listObjectSetStatusRevisions(ctx, t, objectDeployment)
 	assert.Len(t, objectSetList.Items, 2)
 
 	// New config map should be there
@@ -706,7 +706,7 @@ func hashCollisionTestProbe(configmapFieldA, configmapFieldB string) []corev1alp
 	}
 }
 
-func listObjectSetRevisions(
+func listObjectSetStatusRevisions(
 	ctx context.Context, t *testing.T,
 	objectDeployment *corev1alpha1.ObjectDeployment,
 ) *corev1alpha1.ObjectSetList {

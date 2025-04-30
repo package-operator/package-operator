@@ -42,7 +42,7 @@ func (o *objectSetReconciler) Reconcile(
 
 	// Delay any action until all ObjectSets under management report .status.revision
 	for _, objectSet := range objectSets {
-		if objectSet.GetRevision() == 0 {
+		if objectSet.GetStatusRevision() == 0 {
 			return ctrl.Result{}, nil
 		}
 	}
@@ -70,19 +70,19 @@ func (o *objectSetReconciler) Reconcile(
 	}
 
 	for _, objectSet := range objectSets {
-		if objectSet.IsArchived() {
+		if objectSet.IsSpecArchived() {
 			continue
 		}
 
 		// The pause value in the ObjectDeployment controls the pause value in ObjectSet.
 		// Update only when the values differ.
-		if objectDeployment.GetSpecPaused() != objectSet.GetPausedByParent() {
+		if objectDeployment.GetSpecPaused() != objectSet.GetSpecPausedByParent() {
 			var pauseChangeMsg string
 			if objectDeployment.GetSpecPaused() {
-				objectSet.SetPausedByParent()
+				objectSet.SetSpecPausedByParent()
 				pauseChangeMsg = "pause"
 			} else {
-				objectSet.SetActiveByParent()
+				objectSet.SetSpecActiveByParent()
 				pauseChangeMsg = "unpause"
 			}
 
@@ -146,28 +146,28 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
 		)
 		if len(prevObjectSets) > 0 {
-			objectDeployment.SetStatusRevision(prevObjectSets[0].GetRevision())
+			objectDeployment.SetStatusRevision(prevObjectSets[0].GetStatusRevision())
 		}
 		return
 	}
 
-	objectDeployment.SetStatusRevision(currentObjectSet.GetRevision())
+	objectDeployment.SetStatusRevision(currentObjectSet.GetStatusRevision())
 
 	// map conditions
 	// -> copy mapped status conditions
-	controllers.DeleteMappedConditions(ctx, objectDeployment.GetConditions())
+	controllers.DeleteMappedConditions(ctx, objectDeployment.GetStatusConditions())
 	controllers.MapConditions(
 		ctx,
-		currentObjectSet.ClientObject().GetGeneration(), *currentObjectSet.GetConditions(),
-		objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetConditions(),
+		currentObjectSet.ClientObject().GetGeneration(), *currentObjectSet.GetStatusConditions(),
+		objectDeployment.ClientObject().GetGeneration(), objectDeployment.GetStatusConditions(),
 	)
 
-	if !meta.IsStatusConditionTrue(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded) {
+	if !meta.IsStatusConditionTrue(*currentObjectSet.GetStatusConditions(), corev1alpha1.ObjectSetSucceeded) {
 		var conds []metav1.Condition
 
 		msg := "Latest Revision Status Unknown"
 
-		availableCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		availableCond := meta.FindStatusCondition(*currentObjectSet.GetStatusConditions(), corev1alpha1.ObjectSetAvailable)
 		if availableCond != nil {
 			if availableCond.Status == metav1.ConditionFalse {
 				conds = append(conds, conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...))
@@ -200,7 +200,7 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 		),
 	)
 
-	if !currentObjectSet.IsAvailable() {
+	if !currentObjectSet.IsSpecAvailable() {
 		objectDeployment.SetStatusConditions(
 			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
 		)
@@ -260,7 +260,7 @@ func conditionFromPreviousObjectSets(generation int64, prevObjectSets ...adapter
 
 func findAvailableRevision(objectSets ...adapters.ObjectSetAccessor) (bool, string) {
 	for _, os := range objectSets {
-		availableCond := meta.FindStatusCondition(*os.GetConditions(), corev1alpha1.ObjectSetAvailable)
+		availableCond := meta.FindStatusCondition(*os.GetStatusConditions(), corev1alpha1.ObjectSetAvailable)
 		if availableCond == nil {
 			continue
 		}
@@ -282,7 +282,7 @@ func updatePausedStatus(
 	currentObjectSet adapters.ObjectSetAccessor,
 	objectDeployment adapters.ObjectDeploymentAccessor,
 ) {
-	pausedCond := meta.FindStatusCondition(*currentObjectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+	pausedCond := meta.FindStatusCondition(*currentObjectSet.GetStatusConditions(), corev1alpha1.ObjectSetPaused)
 	if pausedCond != nil && pausedCond.Status == metav1.ConditionTrue {
 		objectDeployment.SetStatusConditions(
 			newPausedCondition(
