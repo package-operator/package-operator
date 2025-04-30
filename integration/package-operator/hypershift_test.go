@@ -213,27 +213,26 @@ func TestObjectSetPhaseImmutability(t *testing.T) {
 		{
 			field: "revision",
 			modify: func(phase *corev1alpha1.ObjectSetPhase) {
-				phase.Spec.Revision += 1
+				phase.Spec.Revision++
 			},
 		},
 		{
 			field: "availabilityProbes",
 			modify: func(phase *corev1alpha1.ObjectSetPhase) {
-				phase.Spec.AvailabilityProbes =
-					append(phase.Spec.AvailabilityProbes, corev1alpha1.ObjectSetProbe{
-						Probes: []corev1alpha1.Probe{{
-							Condition: &corev1alpha1.ProbeConditionSpec{
-								Type:   "Available",
-								Status: "True",
-							},
-						}},
-						Selector: corev1alpha1.ProbeSelector{
-							Kind: &corev1alpha1.PackageProbeKindSpec{
-								Group: "v1",
-								Kind:  "ConfigMap",
-							},
+				phase.Spec.AvailabilityProbes = append(phase.Spec.AvailabilityProbes, corev1alpha1.ObjectSetProbe{
+					Probes: []corev1alpha1.Probe{{
+						Condition: &corev1alpha1.ProbeConditionSpec{
+							Type:   "Available",
+							Status: "True",
 						},
-					})
+					}},
+					Selector: corev1alpha1.ProbeSelector{
+						Kind: &corev1alpha1.PackageProbeKindSpec{
+							Group: "v1",
+							Kind:  "ConfigMap",
+						},
+					},
+				})
 			},
 		},
 		{
