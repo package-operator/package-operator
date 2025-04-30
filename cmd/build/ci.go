@@ -73,7 +73,7 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		run.Fn3(pushImage, "cli", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
-		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64")
+		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
 	)
 
 	if err := mgr.ParallelDeps(ctx, self, deps...); err != nil {
