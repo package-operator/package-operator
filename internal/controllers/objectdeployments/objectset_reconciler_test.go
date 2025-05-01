@@ -323,10 +323,10 @@ func newObjectDeploymentMock(
 		},
 	}
 	res.On("SetStatusRevision", mock.Anything).Return()
-	res.On("GetSelector").Return(labelSelector)
+	res.On("GetSpecSelector").Return(labelSelector)
 	res.On("GetGeneration").Return(generation)
 	res.On("GetStatusTemplateHash").Return(templateHash)
-	res.On("GetConditions").Return(initialConditions)
+	res.On("GetStatusConditions").Return(initialConditions)
 	res.On("GetName").Return(objectDeploymentName)
 	res.On("SetStatusConditions", mock.Anything).Run(func(args mock.Arguments) {
 		conds := args.Get(0).([]metav1.Condition)
@@ -341,7 +341,7 @@ func newObjectDeploymentMock(
 	res.On("GetStatusCollisionCount").Return(nil)
 	res.On("GetNamespace").Return(testNamespace)
 	res.On("GetAnnotations").Return(map[string]string{})
-	res.On("GetObjectSetTemplate").Return(
+	res.On("GetSpecObjectSetTemplate").Return(
 		corev1alpha1.ObjectSetTemplate{Spec: corev1alpha1.ObjectSetTemplateSpec{
 			Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
 		}},

@@ -15,7 +15,7 @@ type hashReconciler struct{ client client.Client }
 func (h *hashReconciler) Reconcile(
 	_ context.Context, objectSetDeployment adapters.ObjectDeploymentAccessor,
 ) (ctrl.Result, error) {
-	objectSetTemplate := objectSetDeployment.GetObjectSetTemplate()
+	objectSetTemplate := objectSetDeployment.GetSpecObjectSetTemplate()
 	templateHash := utils.ComputeFNV32Hash(objectSetTemplate, objectSetDeployment.GetStatusCollisionCount())
 	objectSetDeployment.SetStatusTemplateHash(templateHash)
 	return ctrl.Result{}, nil

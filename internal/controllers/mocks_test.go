@@ -23,7 +23,7 @@ func (m *previousOwnerMock) ClientObject() client.Object {
 	return args.Get(0).(client.Object)
 }
 
-func (m *previousOwnerMock) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (m *previousOwnerMock) GetSpecPrevious() []corev1alpha1.PreviousRevisionReference {
 	args := m.Called()
 	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
 }
@@ -39,7 +39,7 @@ func (m *phaseObjectOwnerMock) ClientObject() client.Object {
 	return args.Get(0).(client.Object)
 }
 
-func (m *phaseObjectOwnerMock) GetRevision() int64 {
+func (m *phaseObjectOwnerMock) GetStatusRevision() int64 {
 	args := m.Called()
 	return args.Get(0).(int64)
 }
@@ -49,7 +49,7 @@ func (m *phaseObjectOwnerMock) IsSpecPaused() bool {
 	return args.Bool(0)
 }
 
-func (m *phaseObjectOwnerMock) GetConditions() *[]metav1.Condition {
+func (m *phaseObjectOwnerMock) GetStatusConditions() *[]metav1.Condition {
 	args := m.Called()
 	return args.Get(0).(*[]metav1.Condition)
 }
@@ -98,7 +98,7 @@ func newPreviousObjectSetMockWithoutRemotes(
 ) *previousObjectSetMock {
 	m := &previousObjectSetMock{}
 	m.On("ClientObject").Return(obj)
-	m.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{})
+	m.On("GetStatusRemotePhases").Return([]corev1alpha1.RemotePhaseReference{})
 	return m
 }
 
@@ -107,7 +107,7 @@ func (m *previousObjectSetMock) ClientObject() client.Object {
 	return args.Get(0).(client.Object)
 }
 
-func (m *previousObjectSetMock) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+func (m *previousObjectSetMock) GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference {
 	args := m.Called()
 	return args.Get(0).([]corev1alpha1.RemotePhaseReference)
 }

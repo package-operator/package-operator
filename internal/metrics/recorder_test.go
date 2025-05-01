@@ -228,7 +228,7 @@ func TestRecorder_RecordObjectSetMetrics(t *testing.T) {
 
 			osMock := &adaptermocks.ObjectSetMock{}
 			osMock.On("ClientObject").Return(obj)
-			osMock.On("GetConditions").Return(&test.conditions)
+			osMock.On("GetStatusConditions").Return(&test.conditions)
 
 			recorder := NewRecorder()
 			recorder.RecordObjectSetMetrics(osMock)

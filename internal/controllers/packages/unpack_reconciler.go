@@ -80,14 +80,14 @@ type imagePuller interface {
 type packageDeployer interface {
 	Deploy(
 		ctx context.Context,
-		apiPkg adapters.GenericPackageAccessor,
+		apiPkg adapters.PackageAccessor,
 		rawPkg *packages.RawPackage,
 		env manifests.PackageEnvironment,
 	) error
 }
 
 func (r *unpackReconciler) Reconcile(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
+	ctx context.Context, pkg adapters.PackageAccessor,
 ) (res ctrl.Result, err error) {
 	// run back off garbage collection to prevent stale data building up.
 	defer r.backoff.GC()
@@ -98,17 +98,17 @@ func (r *unpackReconciler) Reconcile(
 		specHash += utils.ComputeSHA256Hash(r.imagePrefixOverrides, nil)
 	}
 
-	if pkg.GetUnpackedHash() == specHash {
+	if pkg.GetStatusUnpackedHash() == specHash {
 		// We have already unpacked this package \o/
 		return res, nil
 	}
 
 	pullStart := time.Now()
 	log := logr.FromContextOrDiscard(ctx)
-	rawPkg, err := r.imagePuller.Pull(ctx, pkg.GetImage())
+	rawPkg, err := r.imagePuller.Pull(ctx, pkg.GetSpecImage())
 	if err != nil {
 		meta.SetStatusCondition(
-			pkg.GetConditions(), metav1.Condition{
+			pkg.GetSpecConditions(), metav1.Condition{
 				Type:               corev1alpha1.PackageUnpacked,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ImagePullBackOff",
@@ -138,9 +138,9 @@ func (r *unpackReconciler) Reconcile(
 		r.packageLoadRecorder.RecordPackageLoadMetric(
 			pkg, time.Since(pullStart))
 	}
-	pkg.SetUnpackedHash(specHash)
+	pkg.SetStatusUnpackedHash(specHash)
 	meta.SetStatusCondition(
-		pkg.GetConditions(), metav1.Condition{
+		pkg.GetSpecConditions(), metav1.Condition{
 			Type:               corev1alpha1.PackageUnpacked,
 			Status:             metav1.ConditionTrue,
 			Reason:             "UnpackSuccess",

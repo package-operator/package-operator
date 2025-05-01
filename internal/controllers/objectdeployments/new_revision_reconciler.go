@@ -33,7 +33,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 	}
 	log := logr.FromContextOrDiscard(ctx)
 
-	if len(objectDeployment.GetObjectSetTemplate().Spec.Phases) == 0 {
+	if len(objectDeployment.GetSpecObjectSetTemplate().Spec.Phases) == 0 {
 		// ObjectDeployment is empty. Don't create a ObjectSet, wait for spec.
 		log.Info("empty ObjectDeployment, waiting for initialization")
 		return ctrl.Result{}, nil
@@ -61,14 +61,14 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
 	}
 	log.Info("collision revision",
-		"collisionRev", conflictingObjectSet.GetRevision(),
+		"collisionRev", conflictingObjectSet.GetStatusRevision(),
 		"latestRev", latestRevisionNumber)
 	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
-	if !conflictingObjectSet.IsArchived() &&
-		conflictingObjectSet.GetRevision() >= latestRevisionNumber &&
+	if !conflictingObjectSet.IsSpecArchived() &&
+		conflictingObjectSet.GetStatusRevision() >= latestRevisionNumber &&
 		controllerRef != nil &&
 		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
-		equality.Semantic.DeepEqual(newObjectSet.GetTemplateSpec(), conflictingObjectSet.GetTemplateSpec()) {
+		equality.Semantic.DeepEqual(newObjectSet.GetSpecTemplateSpec(), conflictingObjectSet.GetSpecTemplateSpec()) {
 		// This ObjectDeployment is controller of the conflicting ObjectSet and the ObjectSet is deep equal to the
 		// desired new ObjectSet. So no conflict :) This case can happen if the local cache is a little bit slow to
 		// record the ObjectSet Create event.
@@ -102,11 +102,11 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	newObjectSetClientObj.SetName(deploymentClientObj.GetName() + "-" + objectDeployment.GetStatusTemplateHash())
 	newObjectSetClientObj.SetNamespace(deploymentClientObj.GetNamespace())
 	newObjectSetClientObj.SetAnnotations(deploymentClientObj.GetAnnotations())
-	newObjectSetClientObj.SetLabels(objectDeployment.GetObjectSetTemplate().Metadata.Labels)
-	newObjectSet.SetTemplateSpec(
-		objectDeployment.GetObjectSetTemplate().Spec,
+	newObjectSetClientObj.SetLabels(objectDeployment.GetSpecObjectSetTemplate().Metadata.Labels)
+	newObjectSet.SetSpecTemplateSpec(
+		objectDeployment.GetSpecObjectSetTemplate().Spec,
 	)
-	newObjectSet.SetPreviousRevisions(prevObjectSets)
+	newObjectSet.SetSpecPreviousRevisions(prevObjectSets)
 
 	if newObjectSetClientObj.GetLabels() == nil {
 		newObjectSetClientObj.SetLabels(map[string]string{})
@@ -129,5 +129,5 @@ func latestRevisionNumber(prevObjectSets []adapters.ObjectSetAccessor) int64 {
 	if len(prevObjectSets) == 0 {
 		return 0
 	}
-	return prevObjectSets[len(prevObjectSets)-1].GetRevision()
+	return prevObjectSets[len(prevObjectSets)-1].GetStatusRevision()
 }

@@ -266,7 +266,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 		name                  string
 		phase                 corev1alpha1.ObjectSetPhase
 		getPhaseError         error
-		objectSetPaused       bool
+		objectSetSpecPaused   bool
 		pausedConditionStatus metav1.ConditionStatus
 		startingConditions    []metav1.Condition
 	}{
@@ -277,25 +277,25 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 		},
 		{
 			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
-			objectSetPaused:       true,
+			objectSetSpecPaused:   true,
 			phase:                 pausedPhase,
 			pausedConditionStatus: metav1.ConditionTrue,
 		},
 		{
-			name:               "areRemotePhasesPaused false",
-			objectSetPaused:    false,
-			phase:              unpausedPhase,
-			startingConditions: []metav1.Condition{pausedCond},
+			name:                "areRemotePhasesPaused false",
+			objectSetSpecPaused: false,
+			phase:               unpausedPhase,
+			startingConditions:  []metav1.Condition{pausedCond},
 		},
 		{
 			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
-			objectSetPaused:       true,
+			objectSetSpecPaused:   true,
 			phase:                 unpausedPhase,
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
 		{
 			name:                  "areRemotePhasesPaused true, ObjectSet isPaused false",
-			objectSetPaused:       false,
+			objectSetSpecPaused:   false,
 			phase:                 pausedPhase,
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
@@ -316,13 +316,13 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 
 			objectSet := &adapters.ObjectSetAdapter{}
 			objectSet.Status.RemotePhases = make([]corev1alpha1.RemotePhaseReference, 1)
-			if test.objectSetPaused {
+			if test.objectSetSpecPaused {
 				objectSet.Spec.LifecycleState = corev1alpha1.ObjectSetLifecycleStatePaused
 			}
 			objectSet.Status.Conditions = test.startingConditions
 			err := controller.reportPausedCondition(context.Background(), objectSet)
 			require.NoError(t, err)
-			conds := *objectSet.GetConditions()
+			conds := *objectSet.GetStatusConditions()
 			if test.pausedConditionStatus != "" {
 				assert.Len(t, conds, 1)
 				assert.Equal(t, corev1alpha1.ObjectSetPaused, conds[0].Type)
@@ -396,7 +396,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 
 			err := controller.handleDeletionAndArchival(context.Background(), objectSet)
 			require.NoError(t, err)
-			conds := *objectSet.GetConditions()
+			conds := *objectSet.GetStatusConditions()
 
 			if test.teardownDone {
 				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)

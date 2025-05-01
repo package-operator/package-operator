@@ -69,7 +69,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 
-	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetConditions())
+	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetStatusConditions())
 
 	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	}
 
 	probe, err := internalprobing.Parse(
-		ctx, objectSetPhase.GetAvailabilityProbes())
+		ctx, objectSetPhase.GetSpecAvailabilityProbes())
 	if err != nil {
 		return res, fmt.Errorf("parsing probes: %w", err)
 	}
@@ -102,7 +102,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	if !probingResult.IsZero() {
 		meta.SetStatusCondition(
-			objectSetPhase.GetConditions(), metav1.Condition{
+			objectSetPhase.GetStatusConditions(), metav1.Condition{
 				Type:               corev1alpha1.ObjectSetAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ProbeFailure",
@@ -113,7 +113,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, nil
 	}
 
-	meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
+	meta.SetStatusCondition(objectSetPhase.GetStatusConditions(), metav1.Condition{
 		Type:               corev1alpha1.ObjectSetPhaseAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Available",

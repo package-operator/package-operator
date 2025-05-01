@@ -8,7 +8,7 @@ import (
 	"package-operator.run/internal/transform"
 )
 
-type TemplateContext struct {
+type GetSpecTemplateContext struct {
 	Config      map[string]any `json:"config"`
 	Environment map[string]any `json:"environment"`
 }
@@ -17,7 +17,7 @@ type TemplateTransformer struct {
 	tctx map[string]any
 }
 
-func NewTemplateTransformer(tmplCtx TemplateContext) (*TemplateTransformer, error) {
+func NewTemplateTransformer(tmplCtx GetSpecTemplateContext) (*TemplateTransformer, error) {
 	p, err := json.Marshal(tmplCtx)
 	if err != nil {
 		return nil, err
