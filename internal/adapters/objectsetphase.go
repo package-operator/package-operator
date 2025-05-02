@@ -92,6 +92,11 @@ func (a *ObjectSetPhaseAdapter) GetPhase() corev1alpha1.ObjectSetTemplatePhase {
 }
 
 func (a *ObjectSetPhaseAdapter) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
+	if a.Labels == nil {
+		a.Labels = map[string]string{}
+	}
+
+	a.Labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
 	a.Spec.Objects = phase.Objects
 }
 
@@ -162,6 +167,11 @@ func (a *ClusterObjectSetPhaseAdapter) GetPhase() corev1alpha1.ObjectSetTemplate
 }
 
 func (a *ClusterObjectSetPhaseAdapter) SetPhase(phase corev1alpha1.ObjectSetTemplatePhase) {
+	if a.Labels == nil {
+		a.Labels = map[string]string{}
+	}
+
+	a.Labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
 	a.Spec.Objects = phase.Objects
 }
 

@@ -217,12 +217,7 @@ func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 	desired.SetName(objectSetPhaseName(objectSet, phase))
 	desired.SetNamespace(objectSetObj.GetNamespace())
 	desired.SetAnnotations(objectSetObj.GetAnnotations())
-	labels := objectSetObj.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
-	desired.SetLabels(labels)
+	desired.SetLabels(objectSetObj.GetLabels())
 
 	desiredObjectSetPhase.SetPhase(phase)
 	desiredObjectSetPhase.SetAvailabilityProbes(objectSet.GetAvailabilityProbes())
