@@ -30,7 +30,7 @@ import (
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
 type GenericObjectSetController struct {
 	newObjectSet      adapters.ObjectSetAccessorFactory
-	newObjectSetPhase genericObjectSetPhaseFactory
+	newObjectSetPhase adapters.ObjectSetPhaseFactory
 
 	client     client.Client
 	log        logr.Logger
@@ -71,7 +71,7 @@ func NewObjectSetController(
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewObjectSet,
-		newGenericObjectSetPhase,
+		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSlice,
 		c, log, scheme, dw, uc, r,
 		restMapper,
@@ -86,7 +86,7 @@ func NewClusterObjectSetController(
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewClusterObjectSet,
-		newGenericClusterObjectSetPhase,
+		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, dw, uc, r,
 		restMapper,
@@ -95,7 +95,7 @@ func NewClusterObjectSetController(
 
 func newGenericObjectSetController(
 	newObjectSet adapters.ObjectSetAccessorFactory,
-	newObjectSetPhase genericObjectSetPhaseFactory,
+	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
 	scheme *runtime.Scheme,
@@ -311,7 +311,7 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(
 			return false, false, fmt.Errorf("get ObjectSetPhase: %w", err)
 		}
 
-		if meta.IsStatusConditionTrue(phase.GetConditions(), corev1alpha1.ObjectSetPhasePaused) {
+		if meta.IsStatusConditionTrue(*phase.GetConditions(), corev1alpha1.ObjectSetPhasePaused) {
 			pausedPhases++
 		}
 	}

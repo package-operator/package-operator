@@ -71,7 +71,7 @@ func TestLoadRepo(t *testing.T) {
 		},
 		{
 			name:   "invalid container image",
-			repos:  []manifests.PackageManifestRepository{{Image: "quay.io/package-operator/test-stub:v1.9.3"}},
+			repos:  []manifests.PackageManifestRepository{{Image: "quay.io/package-operator/package-operator-manager:v1.9.3"}},
 			expErr: "read from image tar: EOF",
 		},
 	}

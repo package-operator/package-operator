@@ -25,7 +25,7 @@ import (
 )
 
 type reconciler interface {
-	Reconcile(ctx context.Context, objectSet genericObjectSetPhase) (ctrl.Result, error)
+	Reconcile(ctx context.Context, objectSet adapters.ObjectSetPhaseAccessor) (ctrl.Result, error)
 }
 
 type dynamicCache interface {
@@ -50,7 +50,7 @@ type ownerStrategy interface {
 
 type teardownHandler interface {
 	Teardown(
-		ctx context.Context, objectSetPhase genericObjectSetPhase,
+		ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 	) (cleanupDone bool, err error)
 }
 
@@ -62,7 +62,7 @@ type preflightChecker interface {
 
 // Generic reconciler for both ObjectSetPhase and ClusterObjectSetPhase objects.
 type GenericObjectSetPhaseController struct {
-	newObjectSetPhase genericObjectSetPhaseFactory
+	newObjectSetPhase adapters.ObjectSetPhaseFactory
 
 	class           string // Phase class this controller is operating for.
 	log             logr.Logger
@@ -85,7 +85,7 @@ func NewMultiClusterObjectSetPhaseController(
 	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
-		newGenericObjectSetPhase,
+		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
@@ -110,7 +110,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	targetRESTMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
-		newGenericClusterObjectSetPhase,
+		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, dynamicCache, uncachedClient,
@@ -134,7 +134,7 @@ func NewSameClusterObjectSetPhaseController(
 	restMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
-		newGenericObjectSetPhase,
+		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
@@ -159,7 +159,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 	restMapper meta.RESTMapper,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
-		newGenericClusterObjectSetPhase,
+		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
 		log, scheme, dynamicCache, uncachedClient,
@@ -175,7 +175,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 }
 
 func NewGenericObjectSetPhaseController(
-	newObjectSetPhase genericObjectSetPhaseFactory,
+	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSet adapters.ObjectSetAccessorFactory,
 	ownerStrategy ownerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
@@ -268,7 +268,7 @@ func (c *GenericObjectSetPhaseController) Reconcile(
 }
 
 func (c *GenericObjectSetPhaseController) reportPausedCondition(
-	_ context.Context, objectSetPhase genericObjectSetPhase,
+	_ context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) {
 	if objectSetPhase.IsSpecPaused() {
 		meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
@@ -284,7 +284,7 @@ func (c *GenericObjectSetPhaseController) reportPausedCondition(
 }
 
 func (c *GenericObjectSetPhaseController) updateStatus(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) error {
 	if err := c.client.Status().Update(ctx, objectSetPhase.ClientObject()); err != nil {
 		return fmt.Errorf("updating ObjectSetPhase status: %w", err)
@@ -293,7 +293,7 @@ func (c *GenericObjectSetPhaseController) updateStatus(
 }
 
 func (c *GenericObjectSetPhaseController) handleDeletionAndArchival(
-	ctx context.Context, objectSetPhase genericObjectSetPhase,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) error {
 	done := true
 

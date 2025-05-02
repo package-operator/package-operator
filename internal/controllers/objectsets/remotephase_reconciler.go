@@ -26,14 +26,14 @@ type objectSetRemotePhaseReconciler struct {
 	client            client.Client
 	uncachedClient    client.Reader
 	scheme            *runtime.Scheme
-	newObjectSetPhase genericObjectSetPhaseFactory
+	newObjectSetPhase adapters.ObjectSetPhaseFactory
 }
 
 func newObjectSetRemotePhaseReconciler(
 	client client.Client,
 	uncachedClient client.Reader,
 	scheme *runtime.Scheme,
-	newObjectSetPhase genericObjectSetPhaseFactory,
+	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 ) *objectSetRemotePhaseReconciler {
 	return &objectSetRemotePhaseReconciler{
 		client:            client,
@@ -113,7 +113,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	if len(phase.Class) == 0 {
-		return nil, controllers.ProbingResult{}, nil
+		panic("aaahoaohaioahiaohaohaoh")
 	}
 
 	desiredObjectSetPhase, err := r.desiredObjectSetPhase(objectSet, phase)
@@ -146,14 +146,14 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	objectSet.SetRemotePhases(addRemoteObjectSetPhase(remotes, ref))
 
 	// Pause/Unpause
-	if currentObjectSetPhase.IsPaused() != desiredObjectSetPhase.IsPaused() {
+	if currentObjectSetPhase.IsSpecPaused() != desiredObjectSetPhase.IsSpecPaused() {
 		current := currentObjectSetPhase.ClientObject()
 		patch := map[string]any{
 			"metadata": map[string]any{
 				"resourceVersion": current.GetResourceVersion(),
 			},
 			"spec": map[string]any{
-				"paused": desiredObjectSetPhase.IsPaused(),
+				"paused": desiredObjectSetPhase.IsSpecPaused(),
 			},
 		}
 		patchJSON, err := json.Marshal(patch)
@@ -170,13 +170,13 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	// -> copy mapped status conditions
 	controllers.MapConditions(
 		ctx,
-		currentObjectSetPhase.ClientObject().GetGeneration(), currentObjectSetPhase.GetConditions(),
+		currentObjectSetPhase.ClientObject().GetGeneration(), *currentObjectSetPhase.GetConditions(),
 		objectSet.ClientObject().GetGeneration(), objectSet.GetConditions(),
 	)
 
 	// -> check status
 	availableCond := meta.FindStatusCondition(
-		currentObjectSetPhase.GetConditions(),
+		*currentObjectSetPhase.GetConditions(),
 		corev1alpha1.ObjectSetAvailable,
 	)
 	activeObjects := currentObjectSetPhase.GetStatusControllerOf()
@@ -209,7 +209,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 	objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-) (genericObjectSetPhase, error) {
+) (adapters.ObjectSetPhaseAccessor, error) {
 	objectSetObj := objectSet.ClientObject()
 
 	desiredObjectSetPhase := r.newObjectSetPhase(r.scheme)
