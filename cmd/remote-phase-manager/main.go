@@ -10,15 +10,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
-	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"pkg.package-operator.run/boxcutter/managedcache"
 
 	apis "package-operator.run/apis"
 	"package-operator.run/internal/constants"
@@ -84,13 +83,6 @@ func main() {
 	schemeBuilder := runtime.SchemeBuilder{
 		scheme.AddToScheme,
 		apis.AddToScheme,
-		// why do i need to add these to avoid
-		/*
-			having the manager explode on CRDs not being in the scheme?
-			why was this not an issue before?
-		*/
-		apiextensions.AddToScheme,
-		apiextensionsv1.AddToScheme,
 	}
 	if err := schemeBuilder.AddToScheme(ourScheme); err != nil {
 		panic(err)
