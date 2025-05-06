@@ -115,7 +115,10 @@ type GenericPackage interface {
 func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 	obj := pkg.ClientObject()
 	if !obj.GetDeletionTimestamp().IsZero() {
-		r.packageAvailability.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
+		r.packageAvailability.DeletePartialMatch(prometheus.Labels{
+			"pko_name":      obj.GetName(),
+			"pko_namespace": obj.GetNamespace(),
+		})
 		r.packageCreated.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
 		r.packageLoadDuration.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
 		r.packageRevision.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
