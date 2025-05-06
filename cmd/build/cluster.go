@@ -287,7 +287,6 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 
 	if err := mgr.ParallelDeps(ctx, self,
 		run.Fn3(pushImage, "package-operator-manager", registry, runtime.GOARCH),
-		run.Fn3(pushImage, "package-operator-webhook", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "remote-phase-manager", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "test-stub", registry, runtime.GOARCH),
 	); err != nil {
