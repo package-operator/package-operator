@@ -71,7 +71,7 @@ func (c *HostedClusterController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := c.log.WithValues("HostedCluster", req.String())
-	defer log.Info("reconciled")
+	defer log.V(constants.LogLevelInfo).Info("reconciled")
 
 	ctx = logr.NewContext(ctx, log)
 	hostedCluster := &v1beta1.HostedCluster{}
@@ -81,12 +81,12 @@ func (c *HostedClusterController) Reconcile(
 	}
 
 	if !hostedCluster.DeletionTimestamp.IsZero() {
-		log.Info("HostedCluster is deleting")
+		log.V(constants.LogLevelInfo).Info("HostedCluster is deleting")
 		return ctrl.Result{}, nil
 	}
 
 	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1beta1.HostedClusterAvailable) {
-		log.Info("waiting for HostedCluster to become ready")
+		log.V(constants.LogLevelInfo).Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil
 	}
 

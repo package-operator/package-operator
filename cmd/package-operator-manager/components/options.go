@@ -146,6 +146,9 @@ func ProvideOptions() (opts Options, err error) {
 		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
 		subCmpntAffinityFlagDescription,
 	)
+	if os.Getenv("LOG_LEVEL") != "" {
+		os.Args = append(os.Args, "--zap-log-level="+os.Getenv("LOG_LEVEL"))
+	}
 	if len(subComponentAffinityJSON) > 0 {
 		if err := json.Unmarshal([]byte(subComponentAffinityJSON), &opts.SubComponentAffinity); err != nil {
 			return Options{}, err

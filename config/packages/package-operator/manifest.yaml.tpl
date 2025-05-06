@@ -40,6 +40,11 @@ spec:
           type: string
         objectTemplateResourceRetryInterval:
           type: string
+        logLevel:
+          description: Log levels for package operator
+          x-kubernetes-int-or-string: true
+          oneOf:
+            - enum: [debug, info, error, 1, 2, 3, 4, 5]
         objectTemplateOptionalResourceRetryInterval:
           type: string
         namespace:
