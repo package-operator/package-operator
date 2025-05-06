@@ -330,6 +330,7 @@ func (s *Sink) GetEnvironment(ctx context.Context, namespace string) (*manifests
 				Annotations: hc.Annotations,
 			},
 			HostedClusterNamespace: hcNamespace,
+			NodeSelector:           hc.Spec.NodeSelector,
 		}
 		return env, nil
 	}
