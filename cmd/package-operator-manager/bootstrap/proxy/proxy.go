@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 )
 
 const (
@@ -51,7 +52,7 @@ func restartPKOWithEnvvarsIfNeeded(
 	apiEnv *manifests.PackageEnvironment,
 ) error {
 	if apiEnv.Proxy == nil {
-		log.Info("no proxy configured via PackageEnvironment")
+		log.V(constants.LogLevelInfo).Info("no proxy configured via PackageEnvironment")
 		// no restart needed
 		return nil
 	}
@@ -63,7 +64,7 @@ func restartPKOWithEnvvarsIfNeeded(
 	}
 
 	if !vars.differentFrom(*apiEnv.Proxy) {
-		log.Info("proxy settings in environment variables match those in PackageEnvironment config")
+		log.V(constants.LogLevelInfo).Info("proxy settings in environment variables match those in PackageEnvironment config")
 		// no restart needed
 		return nil
 	}
@@ -72,8 +73,9 @@ func restartPKOWithEnvvarsIfNeeded(
 	vars.httpsProxy = apiEnv.Proxy.HTTPSProxy
 	vars.noProxy = apiEnv.Proxy.NoProxy
 
-	log.Info("proxy settings in environment variables do not match those in PackageEnvironment config")
-	log.Info("restarting with updated proxy envvars")
+	log.V(constants.LogLevelInfo).Info(
+		"proxy settings in environment variables do not match those in PackageEnvironment config")
+	log.V(constants.LogLevelInfo).Info("restarting with updated proxy envvars")
 	executable, err := getAndResolveArgv0()
 	if err != nil {
 		return fmt.Errorf("resolving executable path: %w", err)

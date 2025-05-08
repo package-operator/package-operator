@@ -69,8 +69,8 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, runManager func(ctx contex
 		return err
 	}
 
-	log.Info("running self-bootstrap")
-	defer log.Info("self-bootstrap done")
+	log.V(constants.LogLevelInfo).Info("running self-bootstrap")
+	defer log.V(constants.LogLevelInfo).Info("self-bootstrap done")
 
 	needsBootstrap, err := b.init(ctx)
 	if err != nil {
@@ -120,13 +120,13 @@ func (b *Bootstrapper) cancelWhenPackageAvailable(
 			if err != nil {
 				return false, err
 			}
-			log.Info("waiting for PKO to become available", "available", available)
+			log.V(constants.LogLevelInfo).Info("waiting for PKO to become available", "available", available)
 			return available, nil
 		})
 	if err != nil {
 		panic(err)
 	}
 
-	log.Info("Package Operator bootstrapped successfully!")
+	log.V(constants.LogLevelInfo).Info("Package Operator bootstrapped successfully!")
 	cancel()
 }
