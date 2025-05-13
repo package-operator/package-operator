@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,7 +78,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	zapOpts := zap.Options{
+		Development: false,
+		Level:       zapcore.Level(1),
+	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 
 	ourScheme := runtime.NewScheme()
 	setupLog := ctrl.Log.WithName("setup")
