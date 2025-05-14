@@ -330,60 +330,88 @@ func TestSink(t *testing.T) {
 	t.Run("OpenShift", func(t *testing.T) {
 		t.Parallel()
 
-		hc := hypershiftv1beta1.HostedCluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ban.ana",
-				Namespace: "clusters",
-				Labels: map[string]string{
-					"test": "test",
-				},
-				Annotations: map[string]string{
-					"test": "test",
-				},
-			},
-		}
-		c := testutil.NewClient()
-		c.
-			On(
-				"List", mock.Anything,
-				mock.AnythingOfType("*v1beta1.HostedClusterList"),
-				mock.Anything,
-			).
-			Run(func(args mock.Arguments) {
-				list := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
-				*list = hypershiftv1beta1.HostedClusterList{
-					Items: []hypershiftv1beta1.HostedCluster{hc},
-				}
-			}).
-			Return(nil)
+		for _, withNodeSelector := range []bool{false, true} {
+			name := "WithoutNodeSelector"
+			if withNodeSelector {
+				name = "WithNodeSelector"
+			}
 
-		s := NewSink(c)
-		env := &manifests.PackageEnvironment{
-			Kubernetes: manifests.PackageEnvironmentKubernetes{
-				Version: "v12345",
-			},
-			HyperShift: &manifests.PackageEnvironmentHyperShift{},
-		}
-		ctx := context.Background()
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
 
-		s.SetEnvironment(env)
-		gotEnv, err := s.GetEnvironment(ctx, "clusters-ban-ana")
-		require.NoError(t, err)
-		assert.Equal(t, &manifests.PackageEnvironment{
-			Kubernetes: manifests.PackageEnvironmentKubernetes{
-				Version: "v12345",
-			},
-			HyperShift: &manifests.PackageEnvironmentHyperShift{
-				HostedCluster: &manifests.PackageEnvironmentHyperShiftHostedCluster{
-					TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
-						Name:        hc.Name,
-						Namespace:   hc.Namespace,
-						Labels:      hc.Labels,
-						Annotations: hc.Annotations,
+				hc := hypershiftv1beta1.HostedCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ban.ana",
+						Namespace: "clusters",
+						Labels: map[string]string{
+							"test": "test",
+						},
+						Annotations: map[string]string{
+							"test": "test",
+						},
 					},
-					HostedClusterNamespace: "clusters-ban-ana",
-				},
-			},
-		}, gotEnv)
+					Spec: hypershiftv1beta1.HostedClusterSpec{},
+				}
+
+				if withNodeSelector {
+					hc.Spec.NodeSelector = map[string]string{
+						"apple": "pie",
+					}
+				}
+
+				c := testutil.NewClient()
+				c.
+					On(
+						"List", mock.Anything,
+						mock.AnythingOfType("*v1beta1.HostedClusterList"),
+						mock.Anything,
+					).
+					Run(func(args mock.Arguments) {
+						list := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+						*list = hypershiftv1beta1.HostedClusterList{
+							Items: []hypershiftv1beta1.HostedCluster{hc},
+						}
+					}).
+					Return(nil)
+
+				s := NewSink(c)
+				env := &manifests.PackageEnvironment{
+					Kubernetes: manifests.PackageEnvironmentKubernetes{
+						Version: "v12345",
+					},
+					HyperShift: &manifests.PackageEnvironmentHyperShift{},
+				}
+				ctx := context.Background()
+
+				s.SetEnvironment(env)
+				gotEnv, err := s.GetEnvironment(ctx, "clusters-ban-ana")
+				require.NoError(t, err)
+
+				expectedResult := &manifests.PackageEnvironment{
+					Kubernetes: manifests.PackageEnvironmentKubernetes{
+						Version: "v12345",
+					},
+					HyperShift: &manifests.PackageEnvironmentHyperShift{
+						HostedCluster: &manifests.PackageEnvironmentHyperShiftHostedCluster{
+							TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{
+								Name:        hc.Name,
+								Namespace:   hc.Namespace,
+								Labels:      hc.Labels,
+								Annotations: hc.Annotations,
+							},
+							HostedClusterNamespace: "clusters-ban-ana",
+						},
+					},
+				}
+
+				if withNodeSelector {
+					expectedResult.HyperShift.HostedCluster.NodeSelector = map[string]string{
+						"apple": "pie",
+					}
+				}
+
+				assert.Equal(t, expectedResult, gotEnv)
+			})
+		}
 	})
 }
