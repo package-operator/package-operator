@@ -1,8 +1,6 @@
 module package-operator.run
 
-go 1.23.0
-
-toolchain go1.23.8
+go 1.24
 
 replace (
 	package-operator.run/apis => ./apis
@@ -29,7 +27,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	github.com/yannh/kubeconform v0.6.7
+	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/dig v1.18.2
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
@@ -55,7 +53,10 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require go.uber.org/automaxprocs v1.6.0 // indirect
+require (
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
+	go.uber.org/automaxprocs v1.6.0 // indirect
+)
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
@@ -131,7 +132,6 @@ require (
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.8.0 // indirect
@@ -155,7 +155,7 @@ require (
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
