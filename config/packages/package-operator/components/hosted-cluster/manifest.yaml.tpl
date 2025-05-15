@@ -27,6 +27,9 @@ spec:
   config:
     openAPIV3Schema:
       properties:
+        logLevel:
+          description: Log level. Default is -1 (warn). Higher numbers increase verbosity (e.g., 0 = info, 1 = debug)
+          type: integer
         packageHashModifier:
           description: A value that is used when creating the package hash.
             This parameter can be used to force the redeployment of all packages by
