@@ -137,8 +137,12 @@ func (c *GenericObjectTemplateController) Reconcile(
 	}
 
 	if !objectTemplate.ClientObject().GetDeletionTimestamp().IsZero() {
-		if err := controllers.FreeCacheAndRemoveFinalizer(
-			ctx, c.client, objectTemplate.ClientObject(), c.dynamicCache); err != nil {
+		if err := c.dynamicCache.Free(ctx, objectTemplate.ClientObject()); err != nil {
+			return ctrl.Result{}, fmt.Errorf("free cache: %w", err)
+		}
+
+		if err := controllers.RemoveCacheFinalizer(
+			ctx, c.client, objectTemplate.ClientObject()); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
