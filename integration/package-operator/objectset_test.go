@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 )
 
@@ -583,21 +584,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 func TestObjectSet_immutability(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-immutability",
-			Namespace: "default",
-		},
-		Data: map[string]string{
-			"banana": "bread",
-		},
-	}
-
-	cmGVK, err := apiutil.GVKForObject(configMap, Scheme)
-	require.NoError(t, err)
-	configMap.SetGroupVersionKind(cmGVK)
-
-	unstructuredCM, err := runtime.DefaultUnstructuredConverter.ToUnstructured(configMap)
+	configMap, err := createConfigMap(t, "test-immutability", "default", map[string]string{"banana": "bread"})
 	require.NoError(t, err)
 
 	objectSet := &corev1alpha1.ObjectSet{
@@ -606,41 +593,45 @@ func TestObjectSet_immutability(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
-			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-				Phases: []corev1alpha1.ObjectSetTemplatePhase{
-					{
-						Name: "phase-1",
-						Objects: []corev1alpha1.ObjectSetObject{
-							{
-								CollisionProtection: "Prevent",
-								Object:              unstructured.Unstructured{Object: unstructuredCM},
-							},
-						},
-					},
-				},
-			},
+			ObjectSetTemplateSpec: createTemplateSpec(t, *configMap),
 		},
 	}
-
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
+	clusterConfigMap, err := createConfigMap(t, "cl-test-immutability", "default", map[string]string{"banana": "bread"})
+	require.NoError(t, err)
+
+	clusterObjectSet := &corev1alpha1.ClusterObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cl-test-immutability",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ClusterObjectSetSpec{
+			ObjectSetTemplateSpec: createTemplateSpec(t, *clusterConfigMap),
+		},
+	}
+	require.NoError(t, Client.Create(ctx, clusterObjectSet))
+	cleanupOnSuccess(ctx, t, clusterObjectSet)
+	requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
 	for _, tc := range []struct {
 		field  string
-		modify func(*corev1alpha1.ObjectSet)
+		modify func(adapters.ObjectSetAccessor)
 	}{
 		{
 			field: "phases",
-			modify: func(os *corev1alpha1.ObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{}
+			modify: func(os adapters.ObjectSetAccessor) {
+				os.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{})
 			},
 		},
 		{
 			field: "availabilityProbes",
-			modify: func(os *corev1alpha1.ObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.AvailabilityProbes = append(
-					os.Spec.ObjectSetTemplateSpec.AvailabilityProbes,
+			modify: func(os adapters.ObjectSetAccessor) {
+				ts := os.GetTemplateSpec()
+				ts.AvailabilityProbes = append(
+					ts.AvailabilityProbes,
 					corev1alpha1.ObjectSetProbe{
 						Probes: []corev1alpha1.Probe{{
 							Condition: &corev1alpha1.ProbeConditionSpec{
@@ -656,128 +647,71 @@ func TestObjectSet_immutability(t *testing.T) {
 						},
 					},
 				)
+				os.SetTemplateSpec(ts)
 			},
 		},
 		{
 			field: "successDelaySeconds",
-			modify: func(os *corev1alpha1.ObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.SuccessDelaySeconds += 42
+			modify: func(os adapters.ObjectSetAccessor) {
+				ts := os.GetTemplateSpec()
+				ts.SuccessDelaySeconds += 42
+				os.SetTemplateSpec(ts)
 			},
 		},
 		{
 			field: "previous",
-			modify: func(os *corev1alpha1.ObjectSet) {
-				os.Spec.Previous = []corev1alpha1.PreviousRevisionReference{{
-					Name: "test-previous",
-				}}
+			modify: func(os adapters.ObjectSetAccessor) {
+				os.SetPreviousRevisions([]adapters.ObjectSetAccessor{os})
 			},
 		},
 	} {
 		t.Run(tc.field, func(t *testing.T) {
 			newObjectSet := objectSet.DeepCopy()
-			tc.modify(newObjectSet)
-			require.ErrorContains(t, Client.Update(ctx, newObjectSet), tc.field+" is immutable")
+			newObjectSetAdapter := &adapters.ObjectSetAdapter{
+				ObjectSet: *newObjectSet,
+			}
+			tc.modify(newObjectSetAdapter)
+			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ObjectSet), tc.field+" is immutable")
+		})
+		t.Run(tc.field+"-cluster", func(t *testing.T) {
+			newObjectSet := clusterObjectSet.DeepCopy()
+			newObjectSetAdapter := &adapters.ClusterObjectSetAdapter{
+				ClusterObjectSet: *newObjectSet,
+			}
+			tc.modify(newObjectSetAdapter)
+			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ClusterObjectSet), tc.field+" is immutable")
 		})
 	}
 }
 
-func TestClusterObjectSet_immutability(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), testr.New(t))
-
+func createConfigMap(t *testing.T, name, namespace string, data map[string]string) (*corev1.ConfigMap, error) {
+	t.Helper()
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-immutability",
-			Namespace: "default",
+			Name:      name,
+			Namespace: namespace,
 		},
-		Data: map[string]string{
-			"banana": "bread",
-		},
+		Data: data,
 	}
-
 	cmGVK, err := apiutil.GVKForObject(configMap, Scheme)
-	require.NoError(t, err)
-	configMap.SetGroupVersionKind(cmGVK)
-
-	unstructuredCM, err := runtime.DefaultUnstructuredConverter.ToUnstructured(configMap)
-	require.NoError(t, err)
-
-	objectSet := &corev1alpha1.ClusterObjectSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-immutability",
-			Namespace: "default",
-		},
-		Spec: corev1alpha1.ClusterObjectSetSpec{
-			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-				Phases: []corev1alpha1.ObjectSetTemplatePhase{
-					{
-						Name: "phase-1",
-						Objects: []corev1alpha1.ObjectSetObject{
-							{
-								CollisionProtection: "Prevent",
-								Object:              unstructured.Unstructured{Object: unstructuredCM},
-							},
-						},
-					},
-				},
-			},
-		},
+	if err != nil {
+		return nil, err
 	}
+	configMap.SetGroupVersionKind(cmGVK)
+	return configMap, nil
+}
 
-	require.NoError(t, Client.Create(ctx, objectSet))
-	cleanupOnSuccess(ctx, t, objectSet)
-	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-
-	for _, tc := range []struct {
-		field  string
-		modify func(*corev1alpha1.ClusterObjectSet)
-	}{
-		{
-			field: "phases",
-			modify: func(os *corev1alpha1.ClusterObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{}
-			},
-		},
-		{
-			field: "availabilityProbes",
-			modify: func(os *corev1alpha1.ClusterObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.AvailabilityProbes = append(
-					os.Spec.ObjectSetTemplateSpec.AvailabilityProbes,
-					corev1alpha1.ObjectSetProbe{
-						Probes: []corev1alpha1.Probe{{
-							Condition: &corev1alpha1.ProbeConditionSpec{
-								Type:   "Available",
-								Status: "True",
-							},
-						}},
-						Selector: corev1alpha1.ProbeSelector{
-							Kind: &corev1alpha1.PackageProbeKindSpec{
-								Group: "v1",
-								Kind:  "ConfigMap",
-							},
-						},
-					},
-				)
-			},
-		},
-		{
-			field: "successDelaySeconds",
-			modify: func(os *corev1alpha1.ClusterObjectSet) {
-				os.Spec.ObjectSetTemplateSpec.SuccessDelaySeconds += 42
-			},
-		},
-		{
-			field: "previous",
-			modify: func(os *corev1alpha1.ClusterObjectSet) {
-				os.Spec.Previous = []corev1alpha1.PreviousRevisionReference{{
-					Name: "test-previous",
-				}}
-			},
-		},
-	} {
-		t.Run(tc.field, func(t *testing.T) {
-			newObjectSet := objectSet.DeepCopy()
-			tc.modify(newObjectSet)
-			require.ErrorContains(t, Client.Update(ctx, newObjectSet), tc.field+" is immutable")
-		})
+func createTemplateSpec(t *testing.T, cm corev1.ConfigMap) corev1alpha1.ObjectSetTemplateSpec {
+	t.Helper()
+	cmObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cm)
+	require.NoError(t, err)
+	return corev1alpha1.ObjectSetTemplateSpec{
+		Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+			Name: "phase-1",
+			Objects: []corev1alpha1.ObjectSetObject{{
+				CollisionProtection: "Prevent",
+				Object:              unstructured.Unstructured{Object: cmObj},
+			}},
+		}},
 	}
 }
