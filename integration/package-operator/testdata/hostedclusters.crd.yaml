@@ -6352,13 +6352,6 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-            required:
-            - networking
-            - platform
-            - pullSecret
-            - release
-            - services
-            - sshKey
             type: object
           status:
             description: Status is the latest observed status of the HostedCluster.
