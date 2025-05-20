@@ -20,184 +20,186 @@ import (
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil/controllersmocks"
+	"package-operator.run/internal/testutil/managedcachemocks"
 )
-
-type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
-
-type remotePhaseReconcilerMock struct {
-	mock.Mock
-}
-
-func (m *remotePhaseReconcilerMock) Reconcile(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	args := m.Called(ctx, objectSet, phase)
-	return args.Get(0).([]corev1alpha1.ControlledObjectReference),
-		args.Get(1).(controllers.ProbingResult),
-		args.Error(2)
-}
-
-func (m *remotePhaseReconcilerMock) Teardown(
-	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-) (cleanupDone bool, err error) {
-	args := m.Called(ctx, objectSet, phase)
-	return args.Bool(0), args.Error(1)
-}
-
-type phasesCheckerMock struct {
-	mock.Mock
-}
-
-func (pc *phasesCheckerMock) Check(
-	ctx context.Context, phases []corev1alpha1.ObjectSetTemplatePhase,
-) (violations []preflight.Violation, err error) {
-	args := pc.Called(ctx, phases)
-	return args.Get(0).([]preflight.Violation), args.Error(1)
-}
 
 func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
 
-	pr := &phaseReconcilerMock{}
-	remotePr := &remotePhaseReconcilerMock{}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-		return []controllers.PreviousObjectSet{}, nil
-	}
-	checker := &phasesCheckerMock{}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
-
-	phase1 := corev1alpha1.ObjectSetTemplatePhase{
-		Name: "phase1",
-	}
-	phase2 := corev1alpha1.ObjectSetTemplatePhase{
-		Name:  "phase2",
-		Class: "class",
+	type prepared struct {
+		accessManager             *managedcachemocks.ObjectBoundAccessManagerMock[client.Object]
+		accessor                  *managedcachemocks.AccessorMock
+		factory                   *controllersmocks.PhaseReconcilerFactoryMock
+		checker                   *phasesCheckerMock
+		phaseReconciler           *phaseReconcilerMock
+		remotePhaseReconciler     *remotePhaseReconcilerMock
+		objectSetPhasesReconciler *objectSetPhasesReconciler
 	}
 
-	os := &adapters.ObjectSetAdapter{}
-	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
-		phase1,
-		phase2,
-	}
+	prepare := func() *prepared {
+		accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
+		accessor := &managedcachemocks.AccessorMock{}
+		factory := &controllersmocks.PhaseReconcilerFactoryMock{}
+		phaseReconciler := &phaseReconcilerMock{}
+		remotePhaseReconciler := &remotePhaseReconcilerMock{}
 
-	pr.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return([]client.Object{}, controllers.ProbingResult{}, nil)
-	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
-		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
-	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
+		accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(accessor, nil)
+		factory.On("New", accessor).Return(phaseReconciler)
 
-	res, err := r.Reconcile(context.Background(), os)
-	assert.Empty(t, res)
-	require.NoError(t, err)
+		lookup := func(_ context.Context, _ controllers.PreviousOwner) (
+			[]controllers.PreviousObjectSet,
+			error,
+		) {
+			return []controllers.PreviousObjectSet{}, nil
+		}
+		checker := &phasesCheckerMock{}
+		objectSetPhasesReconciler := newObjectSetPhasesReconciler(
+			testScheme,
+			accessManager,
+			factory,
+			remotePhaseReconciler,
+			lookup,
+			checker,
+		)
 
-	pr.AssertCalled(t, "ReconcilePhase", mock.Anything, mock.Anything, phase1, mock.Anything, mock.Anything)
-	remotePr.AssertCalled(t, "Reconcile", mock.Anything, mock.Anything, phase2)
-	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
-
-	conds := *os.GetConditions()
-	require.Len(t, conds, 2)
-	var succeededCond, availableCond metav1.Condition
-	for _, cond := range conds {
-		if cond.Type == corev1alpha1.ObjectSetSucceeded {
-			succeededCond = cond
-		} else if cond.Type == corev1alpha1.ObjectSetAvailable {
-			availableCond = cond
+		return &prepared{
+			accessManager:             accessManager,
+			accessor:                  accessor,
+			factory:                   factory,
+			phaseReconciler:           phaseReconciler,
+			remotePhaseReconciler:     remotePhaseReconciler,
+			checker:                   checker,
+			objectSetPhasesReconciler: objectSetPhasesReconciler,
 		}
 	}
-	assert.Equal(t, metav1.ConditionTrue, succeededCond.Status)
-	assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
-}
 
-func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
-	t.Parallel()
+	t.Run("Reconcile", func(t *testing.T) {
+		t.Parallel()
 
-	pr := &phaseReconcilerMock{}
-	remotePr := &remotePhaseReconcilerMock{}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-		return []controllers.PreviousObjectSet{}, nil
-	}
-	checker := &phasesCheckerMock{}
-	r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
+		p := prepare()
 
-	os := &adapters.ObjectSetAdapter{}
-	os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
-		{
+		phase1 := corev1alpha1.ObjectSetTemplatePhase{
 			Name: "phase1",
-		},
-	}
+		}
+		phase2 := corev1alpha1.ObjectSetTemplatePhase{
+			Name:  "phase2",
+			Class: "class",
+		}
 
-	pr.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil))
-	remotePr.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
-		Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
-	checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
+		os := &adapters.ObjectSetAdapter{}
+		os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+			phase1,
+			phase2,
+		}
 
-	res, err := r.Reconcile(context.Background(), os)
-	require.NoError(t, err)
+		p.phaseReconciler.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return([]client.Object{}, controllers.ProbingResult{}, nil)
+		p.remotePhaseReconciler.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+			Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+		p.checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
-	checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
-	assert.Equal(t, reconcile.Result{
-		RequeueAfter: controllers.DefaultInitialBackoff,
-	}, res)
-}
+		res, err := p.objectSetPhasesReconciler.Reconcile(context.Background(), os)
+		assert.Empty(t, res)
+		require.NoError(t, err)
 
-func TestObjectSetPhasesReconciler_Teardown(t *testing.T) {
-	t.Parallel()
+		p.phaseReconciler.AssertCalled(t, "ReconcilePhase", mock.Anything, os, phase1, mock.Anything, mock.Anything)
+		p.remotePhaseReconciler.AssertCalled(t, "Reconcile", mock.Anything, os, phase2)
+		p.checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
-	tests := []struct {
-		name                string
-		firstTeardownFinish bool
-	}{
-		{
-			"confirm phase2 torndown first",
-			false,
-		},
-		{
-			"all teardowns finish",
-			true,
-		},
-	}
-	for i := range tests {
-		test := tests[i]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			pr := &phaseReconcilerMock{}
-			remotePr := &remotePhaseReconcilerMock{}
-			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
-				return []controllers.PreviousObjectSet{}, nil
+		conds := *os.GetConditions()
+		require.Len(t, conds, 2)
+		var succeededCond, availableCond metav1.Condition
+		for _, cond := range conds {
+			if cond.Type == corev1alpha1.ObjectSetSucceeded {
+				succeededCond = cond
+			} else if cond.Type == corev1alpha1.ObjectSetAvailable {
+				availableCond = cond
 			}
-			checker := &phasesCheckerMock{}
-			r := newObjectSetPhasesReconciler(testScheme, pr, remotePr, lookup, checker)
+		}
+		assert.Equal(t, metav1.ConditionTrue, succeededCond.Status)
+		assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+	})
 
-			phase1 := corev1alpha1.ObjectSetTemplatePhase{
+	t.Run("ReconcileBackoff", func(t *testing.T) {
+		t.Parallel()
+
+		p := prepare()
+
+		os := &adapters.ObjectSetAdapter{}
+		os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+			{
 				Name: "phase1",
-			}
-			phase2 := corev1alpha1.ObjectSetTemplatePhase{
-				Name:  "phase2",
-				Class: "class",
-			}
+			},
+		}
 
-			os := &adapters.ObjectSetAdapter{}
-			os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
-				phase1,
-				phase2,
-			}
-			remotePr.On("Teardown", mock.Anything, mock.Anything, mock.Anything).
-				Return(test.firstTeardownFinish, nil).Once()
-			pr.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).
-				Return(true, nil).Maybe()
+		p.phaseReconciler.On("ReconcilePhase", mock.Anything, os, os.Spec.Phases[0], mock.Anything, mock.Anything).
+			Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil))
+		p.checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
-			done, err := r.Teardown(context.Background(), os)
-			assert.Equal(t, test.firstTeardownFinish, done)
-			require.NoError(t, err)
-			remotePr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything, phase2)
-			if test.firstTeardownFinish {
-				pr.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, phase1)
-			}
-		})
-	}
+		res, err := p.objectSetPhasesReconciler.Reconcile(context.Background(), os)
+		require.NoError(t, err)
+
+		p.checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
+		assert.Equal(t, reconcile.Result{
+			RequeueAfter: controllers.DefaultInitialBackoff,
+		}, res)
+	})
+
+	t.Run("Teardown", func(t *testing.T) {
+		tests := []struct {
+			name                string
+			firstTeardownFinish bool
+		}{
+			{
+				"confirm phase2 torndown first",
+				false,
+			},
+			{
+				"all teardowns finish",
+				true,
+			},
+		}
+		for i := range tests {
+			test := tests[i]
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := prepare()
+
+				phase1 := corev1alpha1.ObjectSetTemplatePhase{
+					Name: "phase1",
+				}
+				phase2 := corev1alpha1.ObjectSetTemplatePhase{
+					Name:  "phase2",
+					Class: "class",
+				}
+
+				os := &adapters.ObjectSetAdapter{}
+				os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+					phase1,
+					phase2,
+				}
+
+				p.remotePhaseReconciler.On("Teardown", mock.Anything, os, mock.Anything).
+					Return(test.firstTeardownFinish, nil).Once()
+				p.phaseReconciler.On("TeardownPhase", mock.Anything, os, mock.Anything).
+					Return(true, nil).Maybe()
+				p.accessManager.On("FreeWithUser", mock.Anything, mock.Anything, os).Return(nil)
+
+				done, err := p.objectSetPhasesReconciler.Teardown(context.Background(), os)
+				assert.Equal(t, test.firstTeardownFinish, done)
+				require.NoError(t, err)
+				p.remotePhaseReconciler.AssertCalled(t, "Teardown", mock.Anything, os, phase2)
+				if test.firstTeardownFinish {
+					p.phaseReconciler.AssertCalled(t, "TeardownPhase", mock.Anything, os, phase1)
+					p.accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, os)
+				} else {
+					p.accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything, os)
+				}
+			})
+		}
+	})
 }
 
 func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
@@ -274,25 +276,42 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			cm := &clockMock{}
-			prm := &phaseReconcilerMock{}
-			rprm := &remotePhaseReconcilerMock{}
-			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]controllers.PreviousObjectSet, error) {
+			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
+			accessor := &managedcachemocks.AccessorMock{}
+			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
+			phaseReconciler := &phaseReconcilerMock{}
+			remotePhaseReconciler := &remotePhaseReconcilerMock{}
+
+			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(accessor, nil)
+			factory.On("New", accessor).Return(phaseReconciler)
+
+			lookup := func(_ context.Context, _ controllers.PreviousOwner) (
+				[]controllers.PreviousObjectSet,
+				error,
+			) {
 				return []controllers.PreviousObjectSet{}, nil
 			}
 			checker := &phasesCheckerMock{}
 
-			cm.On("Now").Return(time.Now().Add(tc.TimeSinceAvailable))
-			prm.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			clock := &clockMock{}
+
+			clock.On("Now").Return(time.Now().Add(tc.TimeSinceAvailable))
+			phaseReconciler.On("ReconcilePhase", mock.Anything, tc.ObjectSet, mock.Anything, mock.Anything, mock.Anything).
 				Return([]client.Object{}, controllers.ProbingResult{}, nil)
-			rprm.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+			remotePhaseReconciler.On("Reconcile", mock.Anything, tc.ObjectSet, mock.Anything, mock.Anything).
 				Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
 			checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 			rec := newObjectSetPhasesReconciler(
-				testScheme, prm, rprm, lookup, checker,
+				testScheme,
+				accessManager,
+				factory,
+				remotePhaseReconciler,
+				lookup,
+				checker,
 				withClock{
-					Clock: cm,
+					Clock: clock,
 				},
 			)
 			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
@@ -306,16 +325,6 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			}
 		})
 	}
-}
-
-type clockMock struct {
-	mock.Mock
-}
-
-func (m *clockMock) Now() time.Time {
-	args := m.Called()
-
-	return args.Get(0).(time.Time)
 }
 
 func Test_isObjectSetInTransition(t *testing.T) {

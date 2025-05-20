@@ -12,42 +12,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/managedcachemocks"
 
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
-
-type dynamicCacheMock struct {
-	testutil.CtrlClient
-}
-
-func (c *dynamicCacheMock) Watch(
-	ctx context.Context, owner client.Object, obj runtime.Object,
-) error {
-	args := c.Called(ctx, owner, obj)
-	return args.Error(0)
-}
-
-func (c *dynamicCacheMock) Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
-	args := c.Called(handler, predicates)
-	return args.Get(0).(source.Source)
-}
-
-func (c *dynamicCacheMock) Free(ctx context.Context, obj client.Object) error {
-	args := c.Called(ctx, obj)
-	return args.Error(0)
-}
 
 type objectSetPhaseReconcilerMock struct {
 	mock.Mock
@@ -68,9 +44,11 @@ func (c *objectSetPhaseReconcilerMock) Teardown(
 }
 
 func newControllerAndMocks() (
-	*GenericObjectSetPhaseController, *testutil.CtrlClient, *dynamicCacheMock, *objectSetPhaseReconcilerMock,
+	*GenericObjectSetPhaseController,
+	*testutil.CtrlClient,
+	*objectSetPhaseReconcilerMock,
 ) {
-	dc := &dynamicCacheMock{}
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
@@ -83,7 +61,7 @@ func newControllerAndMocks() (
 		scheme: scheme,
 
 		client:        c,
-		dynamicCache:  dc,
+		accessManager: accessManager,
 		ownerStrategy: ownerhandling.NewNative(scheme),
 	}
 
@@ -93,7 +71,7 @@ func newControllerAndMocks() (
 		pr,
 	}
 
-	return controller, c, dc, pr
+	return controller, c, pr
 }
 
 func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
@@ -134,7 +112,7 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			controller, c, dc, pr := newControllerAndMocks()
+			controller, c, pr := newControllerAndMocks()
 
 			c.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
@@ -145,8 +123,6 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 				Return(true, nil).Once().Maybe()
 			pr.On("Reconcile", mock.Anything, mock.Anything).
 				Return(ctrl.Result{}, nil).Maybe()
-
-			dc.On("Free", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 			objectSetPhase := adapters.ObjectSetPhaseAdapter{}
 			objectSetPhase.Finalizers = []string{
@@ -177,7 +153,6 @@ func TestGenericObjectSetPhaseController_Reconcile(t *testing.T) {
 			if test.deletionTimestamp != nil {
 				pr.AssertCalled(t, "Teardown", mock.Anything, mock.Anything)
 				pr.AssertNotCalled(t, "Reconcile", mock.Anything, mock.Anything)
-				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
 				c.StatusMock.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 				return
 			}
@@ -209,14 +184,11 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			controller, client, dc, pr := newControllerAndMocks()
+			controller, client, pr := newControllerAndMocks()
 
 			pr.On("Teardown", mock.Anything, mock.Anything).
 				Return(test.teardownDone, nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-			dc.On("Free", mock.Anything, mock.Anything).
-				Return(nil).Maybe()
 
 			err := controller.handleDeletionAndArchival(context.Background(), &adapters.ObjectSetPhaseAdapter{
 				ObjectSetPhase: corev1alpha1.ObjectSetPhase{
@@ -226,10 +198,12 @@ func TestGenericObjectSetPhaseController_handleDeletionAndArchival(t *testing.T)
 				},
 			})
 			require.NoError(t, err)
+
+			// Assert that finalizer was only removed when teardown was previously completed.
 			if test.teardownDone {
-				dc.AssertCalled(t, "Free", mock.Anything, mock.Anything)
+				client.AssertCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			} else {
-				dc.AssertNotCalled(t, "Free", mock.Anything, mock.Anything)
+				client.AssertNotCalled(t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			}
 		})
 	}
@@ -264,7 +238,7 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			controller, _, _, _ := newControllerAndMocks()
+			controller, _, _ := newControllerAndMocks()
 
 			p := &adapters.ObjectSetPhaseAdapter{}
 			p.Spec.Paused = test.phasePaused
@@ -288,7 +262,7 @@ func TestInitializers(t *testing.T) {
 
 	log := testr.New(t)
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	dc := &dynamicCacheMock{}
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	client := testutil.NewClient()
 	class := "default"
 	mapper := meta.NewDefaultRESTMapper(scheme.PreferredVersionAllGroups())
@@ -298,7 +272,7 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client, client,
+			accessManager, client, class, client, client,
 			mapper,
 		)
 
@@ -310,7 +284,7 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client, client,
+			accessManager, client, class, client, client,
 			mapper,
 		)
 
@@ -322,7 +296,7 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client,
+			accessManager, client, class, client,
 			mapper,
 		)
 
@@ -334,7 +308,7 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterClusterObjectSetPhaseController(
 			log, scheme,
-			dc, client, class, client,
+			accessManager, client, class, client,
 			mapper,
 		)
 

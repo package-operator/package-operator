@@ -79,19 +79,11 @@ func EnsureCachedFinalizer(
 	return EnsureFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
 
-type cacheFreer interface {
-	Free(ctx context.Context, obj client.Object) error
-}
-
-// Frees caches and removes the associated finalizer.
-func FreeCacheAndRemoveFinalizer(
+// Removes the associated cache finalizer.
+func RemoveCacheFinalizer(
 	ctx context.Context, c client.Client,
-	obj client.Object, cache cacheFreer,
+	obj client.Object,
 ) error {
-	if err := cache.Free(ctx, obj); err != nil {
-		return fmt.Errorf("free cache: %w", err)
-	}
-
 	return RemoveFinalizer(ctx, c, obj, constants.CachedFinalizer)
 }
 

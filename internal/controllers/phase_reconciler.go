@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"pkg.package-operator.run/boxcutter/managedcache"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/constants"
@@ -32,12 +34,26 @@ import (
 )
 
 // PhaseReconciler reconciles objects within a ObjectSet phase.
-type PhaseReconciler struct {
-	scheme *runtime.Scheme
-	// just specify a writer, because we don't want to ever read from another source than
-	// the dynamic cache that is managed to hold the objects we are reconciling.
-	writer           client.Writer
-	dynamicCache     dynamicCache
+type PhaseReconciler interface {
+	ReconcilePhase(
+		ctx context.Context, owner PhaseObjectOwner,
+		phase corev1alpha1.ObjectSetTemplatePhase,
+		probe probing.Prober, previous []PreviousObjectSet,
+	) ([]client.Object, ProbingResult, error)
+
+	TeardownPhase(
+		ctx context.Context, owner PhaseObjectOwner,
+		phase corev1alpha1.ObjectSetTemplatePhase,
+	) (cleanupDone bool, err error)
+}
+
+type phaseReconciler struct {
+	scheme   *runtime.Scheme
+	accessor managedcache.Accessor
+	// Dangerous: the uncached client here is not scoped by
+	// the mapper passed to managedcache.ObjectBoundAccessManager!
+	// This warning will be removed when the rest of PKO will be refactored
+	// to use boxcutter's {Revision,Phase,Object}Engines.
 	uncachedClient   client.Reader
 	ownerStrategy    ownerStrategy
 	adoptionChecker  adoptionChecker
@@ -70,37 +86,10 @@ type patcher interface {
 	) error
 }
 
-type dynamicCache interface {
-	client.Reader
-	Watch(
-		ctx context.Context, owner client.Object, obj runtime.Object,
-	) error
-}
-
 type preflightChecker interface {
 	Check(
 		ctx context.Context, owner, obj client.Object,
 	) (violations []preflight.Violation, err error)
-}
-
-func NewPhaseReconciler(
-	scheme *runtime.Scheme,
-	writer client.Writer,
-	dynamicCache dynamicCache,
-	uncachedClient client.Reader,
-	ownerStrategy ownerStrategy,
-	preflightChecker preflightChecker,
-) *PhaseReconciler {
-	return &PhaseReconciler{
-		scheme:           scheme,
-		writer:           writer,
-		dynamicCache:     dynamicCache,
-		uncachedClient:   uncachedClient,
-		ownerStrategy:    ownerStrategy,
-		adoptionChecker:  &defaultAdoptionChecker{ownerStrategy: ownerStrategy, scheme: scheme},
-		patcher:          &defaultPatcher{writer: writer},
-		preflightChecker: preflightChecker,
-	}
 }
 
 type PhaseObjectOwner interface {
@@ -174,7 +163,7 @@ func (e *ProbingResult) String() string {
 		e.PhaseName, e.StringWithoutPhase())
 }
 
-func (r *PhaseReconciler) ReconcilePhase(
+func (r *phaseReconciler) ReconcilePhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 	probe probing.Prober, previous []PreviousObjectSet,
@@ -216,7 +205,7 @@ func (r *PhaseReconciler) ReconcilePhase(
 	return actualObjects, rec.Result(), nil
 }
 
-func (r *PhaseReconciler) TeardownPhase(
+func (r *phaseReconciler) TeardownPhase(
 	ctx context.Context, owner PhaseObjectOwner,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
@@ -236,7 +225,7 @@ func (r *PhaseReconciler) TeardownPhase(
 	return cleanupCounter == objectsToCleanup, nil
 }
 
-func (r *PhaseReconciler) teardownPhaseObject(
+func (r *phaseReconciler) teardownPhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (cleanupDone bool, err error) {
@@ -250,13 +239,6 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		return false, fmt.Errorf("running preflight validation: %w", err)
 	} else if len(v) > 0 {
 		return true, nil
-	}
-
-	// Ensure to watch this type of object, also during teardown!
-	// If the controller was restarted or crashed during deletion, we might not have a cache in memory anymore.
-	if err := r.dynamicCache.Watch(
-		ctx, owner.ClientObject(), desiredObj); err != nil {
-		return false, fmt.Errorf("watching new resource: %w", err)
 	}
 
 	currentObj := desiredObj.DeepCopy()
@@ -294,7 +276,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 		if err != nil {
 			return false, fmt.Errorf("creating patch: %w", err)
 		}
-		if err = r.writer.Patch(ctx, currentObj, client.RawPatch(
+		if err = r.accessor.Patch(ctx, currentObj, client.RawPatch(
 			types.MergePatchType, objectPatchJSON,
 		)); err != nil {
 			return false, fmt.Errorf("removing external object owner reference: %w", err)
@@ -313,10 +295,11 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	// to the latest api revision of this object.
 	// This should make it impossible to accidentally delete orphaned children
 	// in case we missed the orphan finalizer.
-	err = r.writer.Delete(ctx, currentObj, client.Preconditions{
+	err = r.accessor.Delete(ctx, currentObj, client.Preconditions{
 		UID:             ptr.To(currentObj.GetUID()),
 		ResourceVersion: ptr.To(currentObj.GetResourceVersion()),
 	})
+	// TODO - not found with uid does not return IsNotFound but preconditionfailed
 	if err != nil && apimachineryerrors.IsNotFound(err) {
 		return true, nil
 	}
@@ -327,7 +310,7 @@ func (r *PhaseReconciler) teardownPhaseObject(
 	return false, nil
 }
 
-func (r *PhaseReconciler) reconcilePhaseObject(
+func (r *phaseReconciler) reconcilePhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 	desiredObj *unstructured.Unstructured,
@@ -338,15 +321,9 @@ func (r *PhaseReconciler) reconcilePhaseObject(
 		return nil, fmt.Errorf("set controller reference: %w", err)
 	}
 
-	// Ensure to watch this type of object.
-	if err := r.dynamicCache.Watch(
-		ctx, owner.ClientObject(), desiredObj); err != nil {
-		return nil, fmt.Errorf("watching new resource: %w", err)
-	}
-
 	if owner.IsSpecPaused() {
 		actualObj = desiredObj.DeepCopy()
-		if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
+		if err := r.accessor.Get(ctx, client.ObjectKeyFromObject(desiredObj), actualObj); err != nil {
 			return nil, fmt.Errorf("looking up object while paused: %w", err)
 		}
 		return actualObj, nil
@@ -421,7 +398,7 @@ func mapConditions(
 
 // Builds an object as specified in a phase.
 // Includes system labels, namespace and owner reference.
-func (r *PhaseReconciler) desiredObject(
+func (r *phaseReconciler) desiredObject(
 	_ context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (desiredObj *unstructured.Unstructured) {
@@ -527,14 +504,14 @@ func (e *RevisionCollisionError) Error() string {
 	return fmt.Sprintf("refusing adoption, revision collision on %s %s", e.ObjectGVK, e.ObjectKey)
 }
 
-func (r *PhaseReconciler) reconcileObject(
+func (r *phaseReconciler) reconcileObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	desiredObj *unstructured.Unstructured, previous []PreviousObjectSet,
 	collisionProtection corev1alpha1.CollisionProtection,
 ) (actualObj *unstructured.Unstructured, err error) {
 	objKey := client.ObjectKeyFromObject(desiredObj)
 	currentObj := desiredObj.DeepCopy()
-	err = r.dynamicCache.Get(ctx, objKey, currentObj)
+	err = r.accessor.Get(ctx, objKey, currentObj)
 	if err != nil && !apimachineryerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("getting %s: %w", desiredObj.GroupVersionKind(), err)
 	}
@@ -547,7 +524,7 @@ func (r *PhaseReconciler) reconcileObject(
 	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
 		// just create it using desired state!
-		err := r.writer.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(constants.FieldOwner))
+		err := r.accessor.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(constants.FieldOwner))
 		if apimachineryerrors.IsAlreadyExists(err) {
 			// object already exists, but was not in our cache.
 			// get object via uncached client directly from the API server.

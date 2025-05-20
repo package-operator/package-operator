@@ -3,6 +3,7 @@ package adaptermocks
 import (
 	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -12,6 +13,8 @@ import (
 var _ adapters.ObjectSetAccessor = (*ObjectSetMock)(nil)
 
 type ObjectSetMock struct {
+	metav1.ObjectMeta
+	metav1.TypeMeta
 	mock.Mock
 }
 
@@ -133,4 +136,9 @@ func (o *ObjectSetMock) SetPausedByParent() {
 func (o *ObjectSetMock) GetPausedByParent() bool {
 	args := o.Called()
 	return args.Get(0).(bool)
+}
+
+func (o *ObjectSetMock) DeepCopyObject() runtime.Object {
+	args := o.Called()
+	return args.Get(0).(runtime.Object)
 }

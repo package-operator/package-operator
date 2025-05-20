@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/go-logr/logr"
 	"go.uber.org/dig"
+	"go.uber.org/zap/zapcore"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
 	"k8s.io/utils/clock"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap"
@@ -81,9 +81,15 @@ func run(opts components.Options) error {
 			// Lazy create manager after boot strapper is finished or
 			// the RESTMapper will not pick up the new CRDs in the cluster.
 			return di.Invoke(func(
-				mgr ctrl.Manager, bootstrapControllers components.BootstrapControllers,
+				mgr ctrl.Manager,
+				bootstrapControllers components.BootstrapControllers,
+				accessManager managedcache.ObjectBoundAccessManager[client.Object],
 				_ discovery.DiscoveryInterface,
 			) error {
+				// TODO: refactor?
+				if err := mgr.Add(accessManager); err != nil {
+					return err
+				}
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
 					return err
 				}
@@ -105,7 +111,15 @@ func run(opts components.Options) error {
 	if err := di.Provide(newPackageOperatorManager); err != nil {
 		return err
 	}
-	return di.Invoke(func(pkoMgr *packageOperatorManager) error {
+	return di.Invoke(func(
+		pkoMgr *packageOperatorManager,
+		accessManager managedcache.ObjectBoundAccessManager[client.Object],
+	) error {
+		// TODO: refactor?
+		if err := pkoMgr.mgr.Add(accessManager); err != nil {
+			return err
+		}
+
 		return pkoMgr.Start(ctx)
 	})
 }

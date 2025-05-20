@@ -24,9 +24,14 @@ import (
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/managedcachemocks"
+	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
 
-var testScheme = runtime.NewScheme()
+var (
+	testScheme = runtime.NewScheme()
+	errTest    = errors.New("xxx")
+)
 
 func init() {
 	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
@@ -39,12 +44,23 @@ func init() {
 
 func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	t.Parallel()
-	dynamicCache := &dynamicCacheMock{}
-	ownerStrategy := &ownerStrategyMock{}
+
+	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
+	accessor := &managedcachemocks.AccessorMock{}
+	uncachedClient := testutil.NewClient()
+
+	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	preflightChecker := &preflightCheckerMock{}
-	r := &PhaseReconciler{
-		dynamicCache:     dynamicCache,
-		ownerStrategy:    ownerStrategy,
+	r := &phaseReconciler{
+		scheme:         scheme,
+		accessor:       accessor,
+		uncachedClient: uncachedClient,
+		ownerStrategy:  ownerStrategy,
+		adoptionChecker: &defaultAdoptionChecker{
+			ownerStrategy: ownerStrategy,
+			scheme:        scheme,
+		},
+		patcher:          &defaultPatcher{writer: accessor},
 		preflightChecker: preflightChecker,
 	}
 	owner := &phaseObjectOwnerMock{}
@@ -53,22 +69,15 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	owner.On("GetRevision").Return(int64(5))
 
 	ownerStrategy.
-		On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		On("SetControllerReference", mock.Anything, mock.Anything).
 		Return(nil)
-
-	dynamicCache.
-		On("Watch", mock.Anything, ownerObj, mock.Anything).
-		Return(nil)
-
-	dynamicCache.
-		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-
-	preflightChecker.
-		On("Check", mock.Anything, mock.Anything, mock.Anything).
-		Return([]preflight.Violation{{}}, nil)
 
 	ctx := context.Background()
+
+	preflightChecker.
+		On("Check", ctx, ownerObj, mock.Anything).
+		Return([]preflight.Violation{{}}, nil)
+
 	done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
@@ -78,46 +87,79 @@ func TestPhaseReconciler_TeardownPhase_failing_preflight(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.True(t, done)
-	dynamicCache.AssertNotCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
 }
 
 func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 	t.Parallel()
-	t.Run("already gone", func(t *testing.T) {
-		t.Parallel()
-		dynamicCache := &dynamicCacheMock{}
+
+	type prepared struct {
+		scheme           *runtime.Scheme
+		accessor         *managedcachemocks.AccessorMock
+		uncachedClient   *testutil.CtrlClient
+		ownerStrategy    *ownerhandlingmocks.OwnerStrategyMock
+		preflightChecker *preflightCheckerMock
+		owner            *phaseObjectOwnerMock
+		ownerObj         *unstructured.Unstructured
+		r                *phaseReconciler
+	}
+
+	prepare := func() *prepared {
+		scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
+		accessor := &managedcachemocks.AccessorMock{}
 		uncachedClient := testutil.NewClient()
-		ownerStrategy := &ownerStrategyMock{}
+		ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 		preflightChecker := &preflightCheckerMock{}
-		r := &PhaseReconciler{
-			dynamicCache:     dynamicCache,
-			uncachedClient:   uncachedClient,
-			ownerStrategy:    ownerStrategy,
+
+		r := &phaseReconciler{
+			scheme:         scheme,
+			accessor:       accessor,
+			uncachedClient: uncachedClient,
+			ownerStrategy:  ownerStrategy,
+			adoptionChecker: &defaultAdoptionChecker{
+				ownerStrategy: ownerStrategy,
+				scheme:        scheme,
+			},
+			patcher:          &defaultPatcher{writer: accessor},
 			preflightChecker: preflightChecker,
 		}
+
 		owner := &phaseObjectOwnerMock{}
 		ownerObj := &unstructured.Unstructured{}
 		owner.On("ClientObject").Return(ownerObj)
 		owner.On("GetRevision").Return(int64(5))
 
-		ownerStrategy.
-			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		return &prepared{
+			scheme:           scheme,
+			accessor:         accessor,
+			uncachedClient:   uncachedClient,
+			ownerStrategy:    ownerStrategy,
+			preflightChecker: preflightChecker,
+			owner:            owner,
+			ownerObj:         ownerObj,
+			r:                r,
+		}
+	}
+
+	t.Run("already gone", func(t *testing.T) {
+		t.Parallel()
+
+		p := prepare()
+
+		p.ownerStrategy.
+			On("SetControllerReference", mock.Anything, mock.Anything).
 			Return(nil)
-
-		dynamicCache.
-			On("Watch", mock.Anything, ownerObj, mock.Anything).
-			Return(nil)
-
-		uncachedClient.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-
-		preflightChecker.
-			On("Check", mock.Anything, mock.Anything, mock.Anything).
-			Return([]preflight.Violation{}, nil)
 
 		ctx := context.Background()
-		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+
+		p.uncachedClient.
+			On("Get", ctx, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+		p.preflightChecker.
+			On("Check", ctx, p.ownerObj, mock.Anything).
+			Return([]preflight.Violation{}, nil)
+
+		done, err := p.r.TeardownPhase(ctx, p.owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
 					Object: unstructured.Unstructured{},
@@ -126,59 +168,42 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
-		uncachedClient.AssertExpectations(t)
+		p.preflightChecker.AssertExpectations(t)
+		p.uncachedClient.AssertExpectations(t)
 	})
 
 	t.Run("already gone on delete", func(t *testing.T) {
 		t.Parallel()
-		testClient := testutil.NewClient()
-		dynamicCache := &dynamicCacheMock{}
-		uncachedClient := testutil.NewClient()
-		ownerStrategy := &ownerStrategyMock{}
-		preflightChecker := &preflightCheckerMock{}
-		r := &PhaseReconciler{
-			writer:           testClient,
-			dynamicCache:     dynamicCache,
-			uncachedClient:   uncachedClient,
-			ownerStrategy:    ownerStrategy,
-			preflightChecker: preflightChecker,
-		}
-		owner := &phaseObjectOwnerMock{}
-		ownerObj := &unstructured.Unstructured{}
-		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
 
-		preflightChecker.
+		p := prepare()
+
+		p.preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
 			Return([]preflight.Violation{}, nil)
 
-		ownerStrategy.
-			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		p.ownerStrategy.
+			On("SetControllerReference", mock.Anything, mock.Anything).
 			Return(nil)
 
-		dynamicCache.
-			On("Watch", mock.Anything, ownerObj, mock.Anything).
-			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		uncachedClient.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		p.uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
 			}).
 			Return(nil)
 
-		ownerStrategy.
-			On("IsController", ownerObj, currentObj).
+		p.ownerStrategy.
+			On("IsController", p.ownerObj, currentObj).
 			Return(true)
 
-		testClient.
+		p.accessor.
 			On("Delete", mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
 		ctx := context.Background()
-		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+		done, err := p.r.TeardownPhase(ctx, p.owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
 					Object: unstructured.Unstructured{},
@@ -187,68 +212,51 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
-		uncachedClient.AssertExpectations(t)
+
+		p.accessor.AssertExpectations(t)
+		p.uncachedClient.AssertExpectations(t)
 
 		// Ensure that IsController was called with currentObj and not desiredObj.
 		// If checking desiredObj, IsController will _always_ return true, which could lead to really nasty behavior.
-		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
+		p.ownerStrategy.AssertCalled(t, "IsController", p.ownerObj, currentObj)
 	})
 
 	t.Run("delete waits", func(t *testing.T) {
 		t.Parallel()
+
 		// delete returns false first,
 		// we are only really done when the object is gone
 		// from the apiserver after all finalizers are handled.
-		testClient := testutil.NewClient()
-		dynamicCache := &dynamicCacheMock{}
-		uncachedClient := testutil.NewClient()
-		ownerStrategy := &ownerStrategyMock{}
-		preflightChecker := &preflightCheckerMock{}
 
-		r := &PhaseReconciler{
-			writer:           testClient,
-			dynamicCache:     dynamicCache,
-			uncachedClient:   uncachedClient,
-			ownerStrategy:    ownerStrategy,
-			preflightChecker: preflightChecker,
-		}
+		p := prepare()
 
-		owner := &phaseObjectOwnerMock{}
-		ownerObj := &unstructured.Unstructured{}
-		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
-
-		ownerStrategy.
-			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		p.ownerStrategy.
+			On("SetControllerReference", mock.Anything, mock.Anything).
 			Return(nil)
 
-		preflightChecker.
+		p.preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
 			Return([]preflight.Violation{}, nil)
 
-		dynamicCache.
-			On("Watch", mock.Anything, ownerObj, mock.Anything).
-			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		uncachedClient.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		p.uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
 			}).
 			Return(nil)
 
-		ownerStrategy.
-			On("IsController", ownerObj, currentObj).
+		p.ownerStrategy.
+			On("IsController", p.ownerObj, currentObj).
 			Return(true)
 
-		testClient.
+		p.accessor.
 			On("Delete", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		ctx := context.Background()
-		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+		done, err := p.r.TeardownPhase(ctx, p.owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
 					Object: unstructured.Unstructured{},
@@ -257,71 +265,51 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.False(t, done) // wait for delete confirm
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
-		uncachedClient.AssertExpectations(t)
+		p.uncachedClient.AssertExpectations(t)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
-		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
+		p.ownerStrategy.AssertCalled(t, "IsController", p.ownerObj, currentObj)
 	})
 
 	t.Run("not controller", func(t *testing.T) {
 		t.Parallel()
 
-		dynamicCache := &dynamicCacheMock{}
-		uncachedClient := testutil.NewClient()
-		ownerStrategy := &ownerStrategyMock{}
-		testClient := testutil.NewClient()
-		preflightChecker := &preflightCheckerMock{}
-		r := &PhaseReconciler{
-			dynamicCache:     dynamicCache,
-			uncachedClient:   uncachedClient,
-			ownerStrategy:    ownerStrategy,
-			writer:           testClient,
-			preflightChecker: preflightChecker,
-		}
+		p := prepare()
 
-		owner := &phaseObjectOwnerMock{}
-		ownerObj := &unstructured.Unstructured{}
-		owner.On("ClientObject").Return(ownerObj)
-		owner.On("GetRevision").Return(int64(5))
-
-		preflightChecker.
+		p.preflightChecker.
 			On("Check", mock.Anything, mock.Anything, mock.Anything).
 			Return([]preflight.Violation{}, nil)
 
-		ownerStrategy.
-			On("SetControllerReference", mock.Anything, mock.Anything, mock.Anything).
+		p.ownerStrategy.
+			On("SetControllerReference", mock.Anything, mock.Anything).
 			Return(nil)
 
-		dynamicCache.
-			On("Watch", mock.Anything, ownerObj, mock.Anything).
-			Return(nil)
 		currentObj := &unstructured.Unstructured{}
-		uncachedClient.
-			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		p.uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				out := args.Get(2).(*unstructured.Unstructured)
 				*out = *currentObj
 			}).
 			Return(nil)
 
-		ownerStrategy.
-			On("IsController", ownerObj, currentObj).
+		p.ownerStrategy.
+			On("IsController", p.ownerObj, currentObj).
 			Return(false)
-		ownerStrategy.
-			On("IsOwner", ownerObj, currentObj).
+		p.ownerStrategy.
+			On("IsOwner", p.ownerObj, currentObj).
 			Return(true)
 
-		ownerStrategy.
-			On("RemoveOwner", ownerObj, currentObj).
+		p.ownerStrategy.
+			On("RemoveOwner", p.ownerObj, currentObj).
 			Return(false)
 
-		testClient.
+		p.accessor.
 			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		ctx := context.Background()
-		done, err := r.TeardownPhase(ctx, owner, corev1alpha1.ObjectSetTemplatePhase{
+		done, err := p.r.TeardownPhase(ctx, p.owner, corev1alpha1.ObjectSetTemplatePhase{
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
 					Object: unstructured.Unstructured{},
@@ -330,729 +318,757 @@ func TestPhaseReconciler_TeardownPhase(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.True(t, done)
-		dynamicCache.AssertCalled(t, "Watch", mock.Anything, ownerObj, mock.Anything)
-		uncachedClient.AssertExpectations(t)
+		p.uncachedClient.AssertExpectations(t)
 
 		// It's super important that we don't check ownership on desiredObj on accident, because that will always return true.
-		ownerStrategy.AssertCalled(t, "IsController", ownerObj, currentObj)
-		ownerStrategy.AssertCalled(t, "IsOwner", ownerObj, currentObj)
-		ownerStrategy.AssertCalled(t, "RemoveOwner", ownerObj, currentObj)
-		testClient.AssertExpectations(t)
+		p.ownerStrategy.AssertCalled(t, "IsController", p.ownerObj, currentObj)
+		p.ownerStrategy.AssertCalled(t, "IsOwner", p.ownerObj, currentObj)
+		p.ownerStrategy.AssertCalled(t, "RemoveOwner", p.ownerObj, currentObj)
+		p.accessor.AssertExpectations(t)
 	})
 }
 
-func TestPhaseReconciler_reconcileObject_create(t *testing.T) {
+func TestPhaseReconciler_reconcileObject(t *testing.T) {
 	t.Parallel()
 
-	testClient := testutil.NewClient()
-	dynamicCacheMock := &dynamicCacheMock{}
-	clientMock := &testutil.CtrlClient{}
-	r := &PhaseReconciler{
-		writer:         testClient,
-		dynamicCache:   dynamicCacheMock,
-		uncachedClient: clientMock,
+	type prepared struct {
+		accessor        *managedcachemocks.AccessorMock
+		uncachedClient  *testutil.CtrlClient
+		ownerStrategy   *ownerhandlingmocks.OwnerStrategyMock
+		owner           *phaseObjectOwnerMock
+		adoptionChecker *adoptionCheckerMock
+		patcher         *patcherMock
+		r               *phaseReconciler
 	}
-	owner := &phaseObjectOwnerMock{}
 
-	dynamicCacheMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-	clientMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
-	testClient.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+	prepare := func() *prepared {
+		accessor := &managedcachemocks.AccessorMock{}
+		uncachedClient := testutil.NewClient()
+		ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
+		adoptionChecker := &adoptionCheckerMock{}
+		patcher := &patcherMock{}
 
-	ctx := context.Background()
-	desired := &unstructured.Unstructured{}
-	actual, err := r.reconcileObject(ctx, owner, desired, nil, corev1alpha1.CollisionProtectionPrevent)
-	require.NoError(t, err)
+		r := &phaseReconciler{
+			accessor:        accessor,
+			uncachedClient:  uncachedClient,
+			adoptionChecker: adoptionChecker,
+			ownerStrategy:   ownerStrategy,
+			patcher:         patcher,
+		}
 
-	assert.Same(t, desired, actual)
-}
+		owner := &phaseObjectOwnerMock{}
 
-func TestPhaseReconciler_reconcileObject_update(t *testing.T) {
-	t.Parallel()
-
-	testClient := testutil.NewClient()
-	dynamicCacheMock := &dynamicCacheMock{}
-	acMock := &adoptionCheckerMock{}
-	ownerStrategy := &ownerStrategyMock{}
-	patcher := &patcherMock{}
-	r := &PhaseReconciler{
-		writer:          testClient,
-		dynamicCache:    dynamicCacheMock,
-		adoptionChecker: acMock,
-		ownerStrategy:   ownerStrategy,
-		patcher:         patcher,
+		return &prepared{
+			accessor:        accessor,
+			uncachedClient:  uncachedClient,
+			ownerStrategy:   ownerStrategy,
+			owner:           owner,
+			adoptionChecker: adoptionChecker,
+			patcher:         patcher,
+			r:               r,
+		}
 	}
-	owner := &phaseObjectOwnerMock{}
-	owner.On("ClientObject").Return(&unstructured.Unstructured{})
-	owner.On("GetRevision").Return(int64(3))
 
-	acMock.
-		On("Check", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil)
+	t.Run("create", func(t *testing.T) {
+		t.Parallel()
 
-	dynamicCacheMock.
-		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		p := prepare()
 
-	ownerStrategy.On("ReleaseController", mock.Anything)
-	ownerStrategy.
-		On("SetControllerReference", mock.Anything, mock.Anything).
-		Return(nil)
-	ownerStrategy.
-		On("IsController", mock.Anything, mock.Anything).
-		Return(true)
+		p.accessor.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+		p.uncachedClient.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+		p.accessor.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 
-	testClient.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		ctx := context.Background()
+		desired := &unstructured.Unstructured{}
+		actual, err := p.r.reconcileObject(ctx, p.owner, desired, nil, corev1alpha1.CollisionProtectionPrevent)
+		require.NoError(t, err)
 
-	patcher.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		assert.Same(t, desired, actual)
+	})
 
-	ctx := context.Background()
-	obj := &unstructured.Unstructured{}
-	// set owner refs so we don't run into the panic
-	obj.SetOwnerReferences([]metav1.OwnerReference{{}})
-	actual, err := r.reconcileObject(ctx, owner, obj, nil, corev1alpha1.CollisionProtectionPrevent)
-	require.NoError(t, err)
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"annotations": map[string]any{
-					corev1alpha1.ObjectSetRevisionAnnotation: "3",
-				},
-				"ownerReferences": []any{
-					map[string]any{
-						"apiVersion": "",
-						"kind":       "",
-						"name":       "",
-						"uid":        "",
+		p := prepare()
+
+		p.owner.On("ClientObject").Return(&unstructured.Unstructured{})
+		p.owner.On("GetRevision").Return(int64(3))
+
+		p.adoptionChecker.
+			On("Check", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(true, nil)
+
+		p.accessor.
+			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		p.ownerStrategy.On("ReleaseController", mock.Anything)
+		p.ownerStrategy.
+			On("SetControllerReference", mock.Anything, mock.Anything).
+			Return(nil)
+		p.ownerStrategy.
+			On("IsController", mock.Anything, mock.Anything).
+			Return(true)
+
+		p.patcher.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		p.patcher.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		ctx := context.Background()
+		obj := &unstructured.Unstructured{}
+		// set owner refs so we don't run into the panic
+		obj.SetOwnerReferences([]metav1.OwnerReference{{}})
+		actual, err := p.r.reconcileObject(ctx, p.owner, obj, nil, corev1alpha1.CollisionProtectionPrevent)
+		require.NoError(t, err)
+
+		p.patcher.AssertExpectations(t)
+		p.adoptionChecker.AssertExpectations(t)
+		p.ownerStrategy.AssertExpectations(t)
+		p.accessor.AssertExpectations(t)
+
+		assert.Equal(t, &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"annotations": map[string]any{
+						corev1alpha1.ObjectSetRevisionAnnotation: "3",
+					},
+					"ownerReferences": []any{
+						map[string]any{
+							"apiVersion": "",
+							"kind":       "",
+							"name":       "",
+							"uid":        "",
+						},
 					},
 				},
 			},
-		},
-	}, actual)
+		}, actual)
+	})
 }
 
 func TestPhaseReconciler_desiredObject(t *testing.T) {
 	t.Parallel()
 
-	os := &ownerStrategyMock{}
-	r := &PhaseReconciler{
-		ownerStrategy: os,
-	}
+	t.Run("forwardLabels", func(t *testing.T) {
+		t.Parallel()
 
-	os.On("SetControllerReference",
-		mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
+		r := &phaseReconciler{}
 
-	ctx := context.Background()
-	owner := &phaseObjectOwnerMock{}
-	ownerObj := &unstructured.Unstructured{}
-	ownerObj.SetLabels(map[string]string{
-		manifestsv1alpha1.PackageLabel:         "pkg-label",
-		manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+		ctx := context.Background()
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		ownerObj.SetLabels(map[string]string{
+			manifestsv1alpha1.PackageLabel:         "pkg-label",
+			manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+		})
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetRevision").Return(int64(5))
+
+		phaseObject := corev1alpha1.ObjectSetObject{
+			Object: unstructured.Unstructured{
+				Object: map[string]any{"kind": "test"},
+			},
+		}
+		desiredObj := r.desiredObject(ctx, owner, phaseObject)
+
+		assert.Equal(t, &unstructured.Unstructured{
+			Object: map[string]any{
+				"kind": "test",
+				"metadata": map[string]any{
+					"annotations": map[string]any{
+						corev1alpha1.ObjectSetRevisionAnnotation: "5",
+					},
+					"labels": map[string]any{
+						constants.DynamicCacheLabel:            "True",
+						manifestsv1alpha1.PackageLabel:         "pkg-label",
+						manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+					},
+				},
+			},
+		}, desiredObj)
 	})
-	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(5))
 
-	phaseObject := corev1alpha1.ObjectSetObject{
-		Object: unstructured.Unstructured{
-			Object: map[string]any{"kind": "test"},
-		},
-	}
-	desiredObj := r.desiredObject(ctx, owner, phaseObject)
+	t.Run("defaultNamespace", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]any{
-			"kind": "test",
-			"metadata": map[string]any{
-				"annotations": map[string]any{
-					corev1alpha1.ObjectSetRevisionAnnotation: "5",
-				},
-				"labels": map[string]any{
-					constants.DynamicCacheLabel:            "True",
-					manifestsv1alpha1.PackageLabel:         "pkg-label",
-					manifestsv1alpha1.PackageInstanceLabel: "pkg-instance-label",
+		r := &phaseReconciler{}
+
+		ctx := context.Background()
+		owner := &phaseObjectOwnerMock{}
+		ownerObj := &unstructured.Unstructured{}
+		ownerObj.SetNamespace("my-owner-ns")
+		owner.On("ClientObject").Return(ownerObj)
+		owner.On("GetRevision").Return(int64(5))
+
+		phaseObject := corev1alpha1.ObjectSetObject{
+			Object: unstructured.Unstructured{
+				Object: map[string]any{"kind": "test"},
+			},
+		}
+		desiredObj := r.desiredObject(ctx, owner, phaseObject)
+
+		assert.Equal(t, &unstructured.Unstructured{
+			Object: map[string]any{
+				"kind": "test",
+				"metadata": map[string]any{
+					"annotations": map[string]any{
+						corev1alpha1.ObjectSetRevisionAnnotation: "5",
+					},
+					"labels": map[string]any{
+						constants.DynamicCacheLabel: "True",
+					},
+					"namespace": "my-owner-ns",
 				},
 			},
-		},
-	}, desiredObj)
+		}, desiredObj)
+	})
 }
 
-func TestPhaseReconciler_desiredObject_defaultsNamespace(t *testing.T) {
+// TODO: refactor and simplify at some point
+//
+//nolint:maintidx
+func Test_defaultAdoptionChecker(t *testing.T) {
 	t.Parallel()
 
-	os := &ownerStrategyMock{}
-	r := &PhaseReconciler{
-		ownerStrategy: os,
-	}
+	t.Run("Check", func(t *testing.T) {
+		t.Parallel()
 
-	os.On("SetControllerReference",
-		mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-
-	ctx := context.Background()
-	owner := &phaseObjectOwnerMock{}
-	ownerObj := &unstructured.Unstructured{}
-	ownerObj.SetNamespace("my-owner-ns")
-	owner.On("ClientObject").Return(ownerObj)
-	owner.On("GetRevision").Return(int64(5))
-
-	phaseObject := corev1alpha1.ObjectSetObject{
-		Object: unstructured.Unstructured{
-			Object: map[string]any{"kind": "test"},
-		},
-	}
-	desiredObj := r.desiredObject(ctx, owner, phaseObject)
-
-	assert.Equal(t, &unstructured.Unstructured{
-		Object: map[string]any{
-			"kind": "test",
-			"metadata": map[string]any{
-				"annotations": map[string]any{
-					corev1alpha1.ObjectSetRevisionAnnotation: "5",
+		tests := []struct {
+			name                string
+			mockPrepare         func(*ownerhandlingmocks.OwnerStrategyMock, *phaseObjectOwnerMock)
+			object              client.Object
+			previous            []PreviousObjectSet
+			collisionProtection corev1alpha1.CollisionProtection
+			errorAs             error
+			needsAdoption       bool
+		}{
+			{
+				// Object is of revision 15, while our current revision is 34.
+				// Expect to confirm adoption with no error.
+				name: "owned by older revision",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					ownerObj := &unstructured.Unstructured{
+						Object: map[string]any{},
+					}
+					owner.On("ClientObject").Return(ownerObj)
+					osm.
+						On("IsController", ownerObj, mock.Anything).
+						Return(false)
+					osm.
+						On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
+						Return(true)
+					owner.
+						On("GetRevision").Return(int64(34))
 				},
-				"labels": map[string]any{
-					constants.DynamicCacheLabel: "True",
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&unstructured.Unstructured{}),
 				},
-				"namespace": "my-owner-ns",
-			},
-		},
-	}, desiredObj)
-}
-
-func Test_defaultAdoptionChecker_Check(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name                string
-		mockPrepare         func(*ownerStrategyMock, *phaseObjectOwnerMock)
-		object              client.Object
-		previous            []PreviousObjectSet
-		collisionProtection corev1alpha1.CollisionProtection
-		errorAs             error
-		needsAdoption       bool
-	}{
-		{
-			// Object is of revision 15, while our current revision is 34.
-			// Expect to confirm adoption with no error.
-			name: "owned by older revision",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				ownerObj := &unstructured.Unstructured{
-					Object: map[string]any{},
-				}
-				owner.On("ClientObject").Return(ownerObj)
-				osm.
-					On("IsController", ownerObj, mock.Anything).
-					Return(false)
-				osm.
-					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
-					Return(true)
-				owner.
-					On("GetRevision").Return(int64(34))
-			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{}),
-			},
-			object: &unstructured.Unstructured{
-				Object: map[string]any{
-					"metadata": map[string]any{
-						"annotations": map[string]any{
-							corev1alpha1.ObjectSetRevisionAnnotation: "15",
+				object: &unstructured.Unstructured{
+					Object: map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
+								corev1alpha1.ObjectSetRevisionAnnotation: "15",
+							},
 						},
 					},
 				},
+				needsAdoption: true,
 			},
-			needsAdoption: true,
-		},
-		{
-			// Object is already controlled my this owner.
-			// ->no op
-			name: "already controller",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				ownerObj := &unstructured.Unstructured{
+			{
+				// Object is already controlled my this owner.
+				// ->no op
+				name: "already controller",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					ownerObj := &unstructured.Unstructured{
+						Object: map[string]any{},
+					}
+					owner.On("ClientObject").Return(ownerObj)
+					osm.
+						On("IsController", ownerObj, mock.Anything).
+						Return(true)
+				},
+				object: &unstructured.Unstructured{
 					Object: map[string]any{},
-				}
-				owner.On("ClientObject").Return(ownerObj)
-				osm.
-					On("IsController", ownerObj, mock.Anything).
-					Return(true)
+				},
+				needsAdoption: false,
 			},
-			object: &unstructured.Unstructured{
-				Object: map[string]any{},
-			},
-			needsAdoption: false,
-		},
-		{
-			// Object is owned by a newer revision than owner.
-			name: "owned by newer revision",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				ownerObj := &unstructured.Unstructured{
-					Object: map[string]any{},
-				}
-				owner.On("ClientObject").Return(ownerObj)
-				osm.
-					On("IsController", ownerObj, mock.Anything).
-					Return(false)
-				osm.
-					On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
-					Return(true)
-				owner.
-					On("GetRevision").Return(int64(34))
-			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{}),
-			},
-			object: &unstructured.Unstructured{
-				Object: map[string]any{
-					"metadata": map[string]any{
-						"annotations": map[string]any{
-							corev1alpha1.ObjectSetRevisionAnnotation: "100",
+			{
+				// Object is owned by a newer revision than owner.
+				name: "owned by newer revision",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					ownerObj := &unstructured.Unstructured{
+						Object: map[string]any{},
+					}
+					owner.On("ClientObject").Return(ownerObj)
+					osm.
+						On("IsController", ownerObj, mock.Anything).
+						Return(false)
+					osm.
+						On("IsController", mock.AnythingOfType("*unstructured.Unstructured"), mock.Anything).
+						Return(true)
+					owner.
+						On("GetRevision").Return(int64(34))
+				},
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&unstructured.Unstructured{}),
+				},
+				object: &unstructured.Unstructured{
+					Object: map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
+								corev1alpha1.ObjectSetRevisionAnnotation: "100",
+							},
 						},
 					},
 				},
+				needsAdoption: false,
 			},
-			needsAdoption: false,
-		},
-		{
-			// Object owner is not in previous revision list.
-			name: "object not owned by previous revision",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				osm.
-					On("IsController", mock.Anything, mock.Anything).
-					Return(false)
-				ownerObj := &unstructured.Unstructured{
+			{
+				// Object owner is not in previous revision list.
+				name: "object not owned by previous revision",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					osm.
+						On("IsController", mock.Anything, mock.Anything).
+						Return(false)
+					ownerObj := &unstructured.Unstructured{
+						Object: map[string]any{},
+					}
+					owner.On("ClientObject").Return(ownerObj)
+					owner.On("GetRevision").Return(int64(1))
+				},
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&unstructured.Unstructured{}),
+				},
+				object: &unstructured.Unstructured{
 					Object: map[string]any{},
-				}
-				owner.On("ClientObject").Return(ownerObj)
-				owner.On("GetRevision").Return(int64(1))
+				},
+				errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
+				needsAdoption: false,
 			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{}),
-			},
-			object: &unstructured.Unstructured{
-				Object: map[string]any{},
-			},
-			errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
-			needsAdoption: false,
-		},
-		{
-			// both the object and the owner have the same revision number,
-			// but the owner is not the same.
-			name: "revision collision",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				ownerObj := &unstructured.Unstructured{}
-				owner.On("ClientObject").Return(ownerObj)
-				osm.
-					On("IsController", ownerObj, mock.Anything).
-					Return(false)
-				osm.
-					On("IsController", mock.AnythingOfType("*v1.ConfigMap"), mock.Anything).
-					Return(true)
-				owner.
-					On("GetRevision").Return(int64(100))
-			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&corev1.ConfigMap{}),
-			},
-			object: &unstructured.Unstructured{
-				Object: map[string]any{
-					"metadata": map[string]any{
-						"annotations": map[string]any{
-							corev1alpha1.ObjectSetRevisionAnnotation: "100",
+			{
+				// both the object and the owner have the same revision number,
+				// but the owner is not the same.
+				name: "revision collision",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					ownerObj := &unstructured.Unstructured{}
+					owner.On("ClientObject").Return(ownerObj)
+					osm.
+						On("IsController", ownerObj, mock.Anything).
+						Return(false)
+					osm.
+						On("IsController", mock.AnythingOfType("*v1.ConfigMap"), mock.Anything).
+						Return(true)
+					owner.
+						On("GetRevision").Return(int64(100))
+				},
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&corev1.ConfigMap{}),
+				},
+				object: &unstructured.Unstructured{
+					Object: map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
+								corev1alpha1.ObjectSetRevisionAnnotation: "100",
+							},
 						},
 					},
 				},
+				errorAs:       &RevisionCollisionError{},
+				needsAdoption: false,
 			},
-			errorAs:       &RevisionCollisionError{},
-			needsAdoption: false,
-		},
-		{
-			name: "collision protection IfNoController positive",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				ownerObj := &unstructured.Unstructured{}
-				owner.On("ClientObject").Return(ownerObj)
-				owner.
-					On("GetRevision").Return(int64(100))
+			{
+				name: "collision protection IfNoController positive",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					ownerObj := &unstructured.Unstructured{}
+					owner.On("ClientObject").Return(ownerObj)
+					owner.
+						On("GetRevision").Return(int64(100))
 
-				osm.
-					On("IsController", ownerObj, mock.Anything).
-					Return(false)
-				osm.
-					On("GetController", mock.Anything).
-					Return(metav1.OwnerReference{}, false)
-			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&corev1.ConfigMap{}),
-			},
-			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
-			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{},
-			},
-			needsAdoption: true,
-		},
-		{
-			// Object owner is not in previous revision list.
-			name: "collision protection IfNoController negative",
-			mockPrepare: func(
-				osm *ownerStrategyMock,
-				owner *phaseObjectOwnerMock,
-			) {
-				osm.
-					On("IsController", mock.Anything, mock.Anything).
-					Return(false)
-				ownerObj := &unstructured.Unstructured{
+					osm.
+						On("IsController", ownerObj, mock.Anything).
+						Return(false)
+					osm.
+						On("GetController", mock.Anything).
+						Return(metav1.OwnerReference{}, false)
+				},
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&corev1.ConfigMap{}),
+				},
+				collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+				object: &unstructured.Unstructured{
 					Object: map[string]interface{}{},
-				}
-				osm.
-					On("GetController", mock.Anything).
-					Return(metav1.OwnerReference{}, true)
-				owner.On("ClientObject").Return(ownerObj)
-				owner.On("GetRevision").Return(int64(1))
-			},
-			previous: []PreviousObjectSet{
-				newPreviousObjectSetMockWithoutRemotes(
-					&unstructured.Unstructured{}),
-			},
-			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
-			object: &unstructured.Unstructured{
-				Object: map[string]interface{}{},
-			},
-			errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
-			needsAdoption: false,
-		},
-	}
-
-	for i := range tests {
-		test := tests[i]
-
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			os := &ownerStrategyMock{}
-			c := &defaultAdoptionChecker{
-				ownerStrategy: os,
-				scheme:        testScheme,
-			}
-			owner := &phaseObjectOwnerMock{}
-
-			test.mockPrepare(os, owner)
-
-			needsAdoption, err := c.Check(
-				owner, test.object, test.previous, test.collisionProtection)
-			if test.errorAs == nil {
-				require.NoError(t, err)
-			} else {
-				require.ErrorAs(t, err, &test.errorAs) //nolint: testifylint
-			}
-			assert.Equal(t, test.needsAdoption, needsAdoption)
-		})
-	}
-}
-
-func Test_defaultAdoptionChecker_isControlledByPreviousRevision(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		obj  client.Object
-	}{
-		{
-			name: "ObjectSet",
-			obj:  &corev1alpha1.ObjectSet{},
-		},
-		{
-			name: "ClusterObjectSet",
-			obj:  &corev1alpha1.ClusterObjectSet{},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			os := &ownerStrategyMock{}
-			ac := &defaultAdoptionChecker{
-				scheme:        testScheme,
-				ownerStrategy: os,
-			}
-
-			os.On("IsController",
-				mock.AnythingOfType("*v1alpha1.ObjectSet"),
-				mock.Anything,
-			).Return(false)
-
-			os.On("IsController",
-				mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
-				mock.Anything,
-			).Return(false)
-
-			os.On("IsController",
-				mock.AnythingOfType("*unstructured.Unstructured"),
-				mock.Anything,
-			).Return(true)
-
-			previous := &previousObjectSetMock{}
-			previous.On("ClientObject").Return(test.obj)
-			previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
-				{
-					Name: "phase-1",
 				},
-			})
+				needsAdoption: true,
+			},
+			{
+				// Object owner is not in previous revision list.
+				name: "collision protection IfNoController negative",
+				mockPrepare: func(
+					osm *ownerhandlingmocks.OwnerStrategyMock,
+					owner *phaseObjectOwnerMock,
+				) {
+					osm.
+						On("IsController", mock.Anything, mock.Anything).
+						Return(false)
+					ownerObj := &unstructured.Unstructured{
+						Object: map[string]interface{}{},
+					}
+					osm.
+						On("GetController", mock.Anything).
+						Return(metav1.OwnerReference{}, true)
+					owner.On("ClientObject").Return(ownerObj)
+					owner.On("GetRevision").Return(int64(1))
+				},
+				previous: []PreviousObjectSet{
+					newPreviousObjectSetMockWithoutRemotes(
+						&unstructured.Unstructured{}),
+				},
+				collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+				object: &unstructured.Unstructured{
+					Object: map[string]interface{}{},
+				},
+				errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
+				needsAdoption: false,
+			},
+		}
 
-			obj := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: corev1alpha1.GroupVersion.String(),
-							Kind:       "ObjectSetPhase",
-							Name:       "phase-1",
-							Controller: ptr.To(true),
+		for i := range tests {
+			test := tests[i]
+
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				os := &ownerhandlingmocks.OwnerStrategyMock{}
+				c := &defaultAdoptionChecker{
+					ownerStrategy: os,
+					scheme:        testScheme,
+				}
+				owner := &phaseObjectOwnerMock{}
+
+				test.mockPrepare(os, owner)
+
+				needsAdoption, err := c.Check(
+					owner, test.object, test.previous, test.collisionProtection)
+				if test.errorAs == nil {
+					require.NoError(t, err)
+				} else {
+					require.ErrorAs(t, err, &test.errorAs) //nolint: testifylint
+				}
+				assert.Equal(t, test.needsAdoption, needsAdoption)
+			})
+		}
+	})
+
+	t.Run("isControlledByPreviousRevision", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name string
+			obj  client.Object
+		}{
+			{
+				name: "ObjectSet",
+				obj:  &corev1alpha1.ObjectSet{},
+			},
+			{
+				name: "ClusterObjectSet",
+				obj:  &corev1alpha1.ClusterObjectSet{},
+			},
+		}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+				os := &ownerhandlingmocks.OwnerStrategyMock{}
+				ac := &defaultAdoptionChecker{
+					scheme:        testScheme,
+					ownerStrategy: os,
+				}
+
+				os.On("IsController",
+					mock.AnythingOfType("*v1alpha1.ObjectSet"),
+					mock.Anything,
+				).Return(false)
+
+				os.On("IsController",
+					mock.AnythingOfType("*v1alpha1.ClusterObjectSet"),
+					mock.Anything,
+				).Return(false)
+
+				os.On("IsController",
+					mock.AnythingOfType("*unstructured.Unstructured"),
+					mock.Anything,
+				).Return(true)
+
+				previous := &previousObjectSetMock{}
+				previous.On("ClientObject").Return(test.obj)
+				previous.On("GetRemotePhases").Return([]corev1alpha1.RemotePhaseReference{
+					{
+						Name: "phase-1",
+					},
+				})
+
+				obj := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: corev1alpha1.GroupVersion.String(),
+								Kind:       "ObjectSetPhase",
+								Name:       "phase-1",
+								Controller: ptr.To(true),
+							},
 						},
 					},
-				},
-			}
+				}
 
-			isController := ac.isControlledByPreviousRevision(
-				obj, []PreviousObjectSet{previous})
-			assert.True(t, isController)
+				isController := ac.isControlledByPreviousRevision(
+					obj, []PreviousObjectSet{previous})
+				assert.True(t, isController)
+			})
+		}
+	})
+}
+
+func Test_defaultPatcher(t *testing.T) {
+	t.Parallel()
+
+	t.Run("patchObject_update_metadata", func(t *testing.T) {
+		t.Parallel()
+
+		clientMock := testutil.NewClient()
+		r := &defaultPatcher{
+			writer: clientMock,
+		}
+		ctx := context.Background()
+
+		var patches []client.Patch
+		clientMock.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				patches = append(patches, args.Get(2).(client.Patch))
+			}).
+			Return(nil)
+
+		// no need to patch anything, all objects are the same
+		desiredObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"labels": map[string]any{
+						"my-cool-label": "hans",
+					},
+				},
+			},
+		}
+		currentObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"resourceVersion": "123",
+					"labels": map[string]any{
+						"banana": "hans",
+					},
+				},
+			},
+		}
+		updatedObj := currentObj.DeepCopy()
+
+		err := r.Patch(ctx, desiredObj, currentObj, updatedObj)
+		require.NoError(t, err)
+
+		clientMock.AssertNumberOfCalls(t, "Patch", 1) // only a single PATCH request
+		if len(patches) == 1 {
+			patch, err := patches[0].Data(updatedObj)
+			require.NoError(t, err)
+
+			// ensure patch does NOT contain existing labels
+			assert.JSONEq(t,
+				`{"metadata":{"labels":{"my-cool-label":"hans"}}}`, string(patch))
+		}
+	})
+
+	t.Run("patchObject_update_no_metadata", func(t *testing.T) {
+		t.Parallel()
+
+		clientMock := testutil.NewClient()
+		r := &defaultPatcher{
+			writer: clientMock,
+		}
+		ctx := context.Background()
+
+		var patches []client.Patch
+		clientMock.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				patches = append(patches, args.Get(2).(client.Patch))
+			}).
+			Return(nil)
+
+		desiredObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"labels": map[string]any{
+						"my-cool-label": "hans",
+					},
+				},
+				"spec": map[string]any{
+					"key": "val",
+				},
+			},
+		}
+		currentObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"resourceVersion": "123",
+					"labels": map[string]any{
+						"banana":        "hans", // we don't care about extra labels
+						"my-cool-label": "hans",
+					},
+				},
+				"spec": map[string]any{
+					"key": "something else",
+				},
+			},
+		}
+		updatedObj := currentObj.DeepCopy()
+		err := controllerutil.SetControllerReference(&corev1.ConfigMap{}, updatedObj, testScheme)
+		require.NoError(t, err)
+
+		err = r.Patch(ctx, desiredObj, currentObj, updatedObj)
+		require.NoError(t, err)
+
+		clientMock.AssertNumberOfCalls(t, "Patch", 1) // only a single PATCH request
+		if len(patches) == 1 {
+			patch, err := patches[0].Data(updatedObj)
+			require.NoError(t, err)
+
+			assert.JSONEq(t, `{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch)) //nolint: lll
+		}
+	})
+
+	t.Run("fixFieldManagers", func(t *testing.T) {
+		t.Parallel()
+
+		clientMock := testutil.NewClient()
+		r := &defaultPatcher{
+			writer: clientMock,
+		}
+		ctx := context.Background()
+
+		clientMock.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		currentObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"name": "test",
+				},
+			},
+		}
+		currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
+			{
+				Manager:   "package-operator-manager",
+				Operation: metav1.ManagedFieldsOperationUpdate,
+				FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+			},
 		})
-	}
-}
 
-func Test_defaultPatcher_patchObject_update_metadata(t *testing.T) {
-	t.Parallel()
-
-	clientMock := testutil.NewClient()
-	r := &defaultPatcher{
-		writer: clientMock,
-	}
-	ctx := context.Background()
-
-	var patches []client.Patch
-	clientMock.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			patches = append(patches, args.Get(2).(client.Patch))
-		}).
-		Return(nil)
-
-	// no need to patch anything, all objects are the same
-	desiredObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"labels": map[string]any{
-					"my-cool-label": "hans",
-				},
-			},
-		},
-	}
-	currentObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"resourceVersion": "123",
-				"labels": map[string]any{
-					"banana": "hans",
-				},
-			},
-		},
-	}
-	updatedObj := currentObj.DeepCopy()
-
-	err := r.Patch(ctx, desiredObj, currentObj, updatedObj)
-	require.NoError(t, err)
-
-	clientMock.AssertNumberOfCalls(t, "Patch", 1) // only a single PATCH request
-	if len(patches) == 1 {
-		patch, err := patches[0].Data(updatedObj)
+		err := r.fixFieldManagers(ctx, currentObj)
 		require.NoError(t, err)
 
-		// ensure patch does NOT contain existing labels
-		assert.JSONEq(t,
-			`{"metadata":{"labels":{"my-cool-label":"hans"}}}`, string(patch))
-	}
-}
+		clientMock.AssertExpectations(t)
+	})
 
-func Test_defaultPatcher_patchObject_update_no_metadata(t *testing.T) {
-	t.Parallel()
+	t.Run("fixFieldManagers_error", func(t *testing.T) {
+		t.Parallel()
 
-	clientMock := testutil.NewClient()
-	r := &defaultPatcher{
-		writer: clientMock,
-	}
-	ctx := context.Background()
+		clientMock := testutil.NewClient()
+		r := &defaultPatcher{
+			writer: clientMock,
+		}
+		ctx := context.Background()
 
-	var patches []client.Patch
-	clientMock.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			patches = append(patches, args.Get(2).(client.Patch))
-		}).
-		Return(nil)
+		clientMock.
+			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(errTest)
 
-	desiredObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"labels": map[string]any{
-					"my-cool-label": "hans",
+		currentObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{
+					"name": "test",
 				},
 			},
-			"spec": map[string]any{
-				"key": "val",
+		}
+		currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
+			{
+				Manager:   "package-operator-manager",
+				Operation: metav1.ManagedFieldsOperationUpdate,
+				FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
 			},
-		},
-	}
-	currentObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"resourceVersion": "123",
-				"labels": map[string]any{
-					"banana":        "hans", // we don't care about extra labels
-					"my-cool-label": "hans",
-				},
-			},
-			"spec": map[string]any{
-				"key": "something else",
-			},
-		},
-	}
-	updatedObj := currentObj.DeepCopy()
-	err := controllerutil.SetControllerReference(&corev1.ConfigMap{}, updatedObj, testScheme)
-	require.NoError(t, err)
+		})
 
-	err = r.Patch(ctx, desiredObj, currentObj, updatedObj)
-	require.NoError(t, err)
+		err := r.fixFieldManagers(ctx, currentObj)
+		require.Error(t, err, errTest.Error())
 
-	clientMock.AssertNumberOfCalls(t, "Patch", 1) // only a single PATCH request
-	if len(patches) == 1 {
-		patch, err := patches[0].Data(updatedObj)
+		clientMock.AssertExpectations(t)
+	})
+
+	// fixFieldManagers_nowork ensures that fixFieldManagers
+	// does not call Patch when no changes are needed.
+	t.Run("fixFieldManagers_nowork", func(t *testing.T) {
+		t.Parallel()
+
+		clientMock := testutil.NewClient()
+		r := &defaultPatcher{writer: clientMock}
+		ctx := context.Background()
+
+		currentObj := &unstructured.Unstructured{
+			Object: map[string]any{
+				"metadata": map[string]any{"name": "test"},
+			},
+		}
+		currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{{
+			Manager:   "package-operator",
+			Operation: metav1.ManagedFieldsOperationApply,
+			FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
+		}})
+
+		err := r.fixFieldManagers(ctx, currentObj)
 		require.NoError(t, err)
 
-		assert.JSONEq(t, `{"metadata":{"labels":{"my-cool-label":"hans"},"ownerReferences":[{"apiVersion":"v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigMap","name":"","uid":""}]},"spec":{"key":"val"}}`, string(patch)) //nolint: lll
-	}
-}
-
-func Test_defaultPatcher_fixFieldManagers(t *testing.T) {
-	t.Parallel()
-
-	clientMock := testutil.NewClient()
-	r := &defaultPatcher{
-		writer: clientMock,
-	}
-	ctx := context.Background()
-
-	clientMock.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-
-	currentObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"name": "test",
-			},
-		},
-	}
-	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
-		{
-			Manager:   "package-operator-manager",
-			Operation: metav1.ManagedFieldsOperationUpdate,
-			FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-		},
+		clientMock.AssertExpectations(t)
 	})
-
-	err := r.fixFieldManagers(ctx, currentObj)
-	require.NoError(t, err)
-
-	clientMock.AssertExpectations(t)
-}
-
-func Test_defaultPatcher_fixFieldManagers_error(t *testing.T) {
-	t.Parallel()
-
-	clientMock := testutil.NewClient()
-	r := &defaultPatcher{
-		writer: clientMock,
-	}
-	ctx := context.Background()
-
-	clientMock.
-		On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(errTest)
-
-	currentObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{
-				"name": "test",
-			},
-		},
-	}
-	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{
-		{
-			Manager:   "package-operator-manager",
-			Operation: metav1.ManagedFieldsOperationUpdate,
-			FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-		},
-	})
-
-	err := r.fixFieldManagers(ctx, currentObj)
-	require.Error(t, err, errTest.Error())
-
-	clientMock.AssertExpectations(t)
-}
-
-// Test_defaultPatcher_fixFieldManagers_nowork ensures that fixFieldManagers
-// does not call Patch when no changes are needed.
-func Test_defaultPatcher_fixFieldManagers_nowork(t *testing.T) {
-	t.Parallel()
-
-	clientMock := testutil.NewClient()
-	r := &defaultPatcher{writer: clientMock}
-	ctx := context.Background()
-
-	currentObj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"metadata": map[string]any{"name": "test"},
-		},
-	}
-	currentObj.SetManagedFields([]metav1.ManagedFieldsEntry{{
-		Manager:   "package-operator",
-		Operation: metav1.ManagedFieldsOperationApply,
-		FieldsV1:  &metav1.FieldsV1{Raw: []byte(`{}`)},
-	}})
-
-	err := r.fixFieldManagers(ctx, currentObj)
-	require.NoError(t, err)
-
-	clientMock.AssertExpectations(t)
 }
 
 func Test_mergeKeysFrom(t *testing.T) {
@@ -1190,7 +1206,7 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 	t.Parallel()
 
 	pcm := &preflightCheckerMock{}
-	pr := &PhaseReconciler{
+	pr := &phaseReconciler{
 		scheme:           testScheme,
 		preflightChecker: pcm,
 	}
@@ -1218,19 +1234,6 @@ func TestPhaseReconciler_ReconcilePhase_preflightError(t *testing.T) {
 	var pErr *preflight.Error
 	require.ErrorAs(t, err, &pErr)
 }
-
-type preflightCheckerMock struct {
-	mock.Mock
-}
-
-func (m *preflightCheckerMock) Check(
-	ctx context.Context, owner, obj client.Object,
-) (violations []preflight.Violation, err error) {
-	args := m.Called(ctx, owner, obj)
-	return args.Get(0).([]preflight.Violation), args.Error(1)
-}
-
-var errTest = errors.New("xxx")
 
 func TestIsAdoptionRefusedError(t *testing.T) {
 	t.Parallel()
@@ -1270,28 +1273,6 @@ func TestIsAdoptionRefusedError(t *testing.T) {
 		})
 	}
 }
-
-type testUpdateMock struct {
-	mock.Mock
-}
-
-func (m *testUpdateMock) Update(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-type objectSetOrPhaseStub struct {
-	ObjectSet corev1alpha1.ObjectSet
-}
-
-func (s *objectSetOrPhaseStub) ClientObject() client.Object {
-	return &s.ObjectSet
-}
-
-func (s *objectSetOrPhaseStub) GetConditions() *[]metav1.Condition {
-	return &s.ObjectSet.Status.Conditions
-}
-func (s *objectSetOrPhaseStub) UpdateStatusPhase() {}
 
 func TestUpdateObjectSetOrPhaseStatusFromError(t *testing.T) {
 	t.Parallel()

@@ -44,6 +44,7 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	package-operator.run/apis v1.17.1
 	package-operator.run/pkg v1.17.1
+	pkg.package-operator.run/boxcutter v0.1.1
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.4
@@ -54,8 +55,6 @@ require (
 	sigs.k8s.io/kind v0.28.0
 	sigs.k8s.io/yaml v1.4.0
 )
-
-require go.uber.org/automaxprocs v1.6.0 // indirect
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
@@ -148,6 +147,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.6.0 // indirect
+	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
@@ -166,7 +166,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.32.4 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	pkg.package-operator.run/boxcutter v0.1.1
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.32.1 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
