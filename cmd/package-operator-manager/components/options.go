@@ -60,6 +60,7 @@ type Options struct {
 	PackageHashModifier         *int32
 	PackageOperatorPackageImage string
 	ImagePrefixOverrides        string
+	LogLevel                    int
 
 	// sub commands
 	SelfBootstrap       string
@@ -146,6 +147,14 @@ func ProvideOptions() (opts Options, err error) {
 		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
 		subCmpntAffinityFlagDescription,
 	)
+	defaultLogLevel := -1
+	if lvl, err := strconv.Atoi(os.Getenv("LOG_LEVEL")); err == nil {
+		defaultLogLevel = lvl
+	}
+	flag.IntVar(
+		&opts.LogLevel, "log-level", defaultLogLevel,
+		"Log level. Default is -1 (warn). Higher numbers increase verbosity (e.g., 0 = info, 1 = debug)")
+
 	if len(subComponentAffinityJSON) > 0 {
 		if err := json.Unmarshal([]byte(subComponentAffinityJSON), &opts.SubComponentAffinity); err != nil {
 			return Options{}, err

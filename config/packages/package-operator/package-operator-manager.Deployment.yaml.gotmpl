@@ -39,10 +39,17 @@ spec:
         {{- if hasKey .config "objectTemplateOptionalResourceRetryInterval" }}
         - --object-template-optional-resource-retry-interval={{ .config.objectTemplateOptionalResourceRetryInterval }}
         {{- end}}
+        {{- if hasKey .config "logLevel" }}
+        - --log-level={{ .config.logLevel }}
+        {{- end }}
         ports:
         - name: metrics
           containerPort: 8080
         env:
+{{- if hasKey .config "logLevel" }}
+        - name: LOG_LEVEL
+          value: "{{ .config.logLevel }}"
+{{- end}}
 {{- if hasKey .config "registryHostOverrides" }}
         - name: PKO_REGISTRY_HOST_OVERRIDES
           value: {{ .config.registryHostOverrides }}

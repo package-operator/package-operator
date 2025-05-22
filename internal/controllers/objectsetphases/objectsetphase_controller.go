@@ -318,7 +318,7 @@ func (c *GenericObjectSetPhaseController) SetupWithManager(
 			c.accessManager.Source(
 				c.ownerStrategy.EnqueueRequestForOwner(objectSetPhase, mgr.GetRESTMapper(), false),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.Info(
+					c.log.V(constants.LogLevelDebug).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),

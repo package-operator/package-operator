@@ -32,6 +32,7 @@ func TestProvideOptions(t *testing.T) {
 		EnableLeaderElection: true,
 		MetricsAddr:          ":8080",
 		ProbeAddr:            ":8081",
+		LogLevel:             -1,
 		SubComponentTolerations: []corev1.Toleration{
 			{
 				Key:    "node-role.kubernetes.io/infra",
