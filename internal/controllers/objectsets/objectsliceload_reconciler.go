@@ -38,7 +38,7 @@ func newObjectSliceLoadReconciler(
 func (r *objectSliceLoadReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	phases := objectSet.GetPhases()
+	phases := objectSet.GetSpecPhases()
 	for i := range phases {
 		phase := &phases[i]
 		for _, slice := range phase.Slices {
@@ -64,6 +64,6 @@ func (r *objectSliceLoadReconciler) Reconcile(
 			phase.Objects = append(phase.Objects, objSlice.GetObjects()...)
 		}
 	}
-	objectSet.SetPhases(phases)
+	objectSet.SetSpecPhases(phases)
 	return
 }

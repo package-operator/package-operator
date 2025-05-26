@@ -18,12 +18,12 @@ type ObjectSetMock struct {
 	mock.Mock
 }
 
-func (o *ObjectSetMock) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (o *ObjectSetMock) GetSpecPrevious() []corev1alpha1.PreviousRevisionReference {
 	args := o.Called()
 	return args.Get(0).([]corev1alpha1.PreviousRevisionReference)
 }
 
-func (o *ObjectSetMock) SetPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
+func (o *ObjectSetMock) SetSpecPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
 	o.Called(phases)
 }
 
@@ -32,21 +32,21 @@ func (o *ObjectSetMock) GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe {
 	return args.Get(0).([]corev1alpha1.ObjectSetProbe)
 }
 
-func (o *ObjectSetMock) GetSuccessDelaySeconds() int32 {
+func (o *ObjectSetMock) GetSpecSuccessDelaySeconds() int32 {
 	args := o.Called()
 	return args.Get(0).(int32)
 }
 
-func (o *ObjectSetMock) SetRevision(revision int64) {
+func (o *ObjectSetMock) SetStatusRevision(revision int64) {
 	o.Called(revision)
 }
 
-func (o *ObjectSetMock) GetRemotePhases() []corev1alpha1.RemotePhaseReference {
+func (o *ObjectSetMock) GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference {
 	args := o.Called()
 	return args.Get(0).([]corev1alpha1.RemotePhaseReference)
 }
 
-func (o *ObjectSetMock) SetRemotePhases(references []corev1alpha1.RemotePhaseReference) {
+func (o *ObjectSetMock) SetStatusRemotePhases(references []corev1alpha1.RemotePhaseReference) {
 	o.Called(references)
 }
 
@@ -64,7 +64,7 @@ func (o *ObjectSetMock) ClientObject() client.Object {
 	return args.Get(0).(client.Object)
 }
 
-func (o *ObjectSetMock) GetRevision() int64 {
+func (o *ObjectSetMock) GetStatusRevision() int64 {
 	args := o.Called()
 	return args.Get(0).(int64)
 }
@@ -84,56 +84,56 @@ func (o *ObjectSetMock) IsSpecPaused() bool {
 	return args.Bool(0)
 }
 
-func (o *ObjectSetMock) SetPaused() {
+func (o *ObjectSetMock) SetSpecPaused() {
 	o.Called()
 }
 
-func (o *ObjectSetMock) IsAvailable() bool {
+func (o *ObjectSetMock) IsSpecAvailable() bool {
 	args := o.Called()
 	return args.Bool(0)
 }
 
-func (o *ObjectSetMock) GetConditions() *[]metav1.Condition {
+func (o *ObjectSetMock) GetStatusConditions() *[]metav1.Condition {
 	args := o.Called()
 	return args.Get(0).(*[]metav1.Condition)
 }
 
-func (o *ObjectSetMock) IsArchived() bool {
+func (o *ObjectSetMock) IsSpecArchived() bool {
 	args := o.Called()
 	return args.Bool(0)
 }
 
-func (o *ObjectSetMock) SetArchived() {
+func (o *ObjectSetMock) SetSpecArchived() {
 	o.Called()
 }
 
-func (o *ObjectSetMock) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+func (o *ObjectSetMock) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	args := o.Called()
 	return args.Get(0).([]corev1alpha1.ObjectSetTemplatePhase)
 }
 
-func (o *ObjectSetMock) SetPreviousRevisions(prev []adapters.ObjectSetAccessor) {
+func (o *ObjectSetMock) SetSpecPreviousRevisions(prev []adapters.ObjectSetAccessor) {
 	o.Called(prev)
 }
 
-func (o *ObjectSetMock) SetTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
+func (o *ObjectSetMock) SetSpecTemplateSpec(templateSpec corev1alpha1.ObjectSetTemplateSpec) {
 	o.Called(templateSpec)
 }
 
-func (o *ObjectSetMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (o *ObjectSetMock) GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
 }
 
-func (o *ObjectSetMock) SetActiveByParent() {
+func (o *ObjectSetMock) SetSpecActiveByParent() {
 	o.Called()
 }
 
-func (o *ObjectSetMock) SetPausedByParent() {
+func (o *ObjectSetMock) SetSpecPausedByParent() {
 	o.Called()
 }
 
-func (o *ObjectSetMock) GetPausedByParent() bool {
+func (o *ObjectSetMock) GetSpecPausedByParent() bool {
 	args := o.Called()
 	return args.Get(0).(bool)
 }

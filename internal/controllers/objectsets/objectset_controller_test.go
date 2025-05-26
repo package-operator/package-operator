@@ -248,7 +248,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
 		{
-			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
+			name:                  "areRemotePhasesPaused true, ObjectSet IsSpecPaused true",
 			objectSetPaused:       true,
 			phase:                 pausedPhase,
 			pausedConditionStatus: metav1.ConditionTrue,
@@ -260,13 +260,13 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 			startingConditions: []metav1.Condition{pausedCond},
 		},
 		{
-			name:                  "areRemotePhasesPaused true, ObjectSet isPaused true",
+			name:                  "areRemotePhasesPaused true, ObjectSet IsSpecPaused true",
 			objectSetPaused:       true,
 			phase:                 unpausedPhase,
 			pausedConditionStatus: metav1.ConditionUnknown,
 		},
 		{
-			name:                  "areRemotePhasesPaused true, ObjectSet isPaused false",
+			name:                  "areRemotePhasesPaused true, ObjectSet IsSpecPaused false",
 			objectSetPaused:       false,
 			phase:                 pausedPhase,
 			pausedConditionStatus: metav1.ConditionUnknown,
@@ -294,7 +294,7 @@ func TestGenericObjectSetController_areRemotePhasesPaused_reportPausedCondition(
 			objectSet.Status.Conditions = test.startingConditions
 			err := controller.reportPausedCondition(context.Background(), objectSet)
 			require.NoError(t, err)
-			conds := *objectSet.GetConditions()
+			conds := *objectSet.GetStatusConditions()
 			if test.pausedConditionStatus != "" {
 				assert.Len(t, conds, 1)
 				assert.Equal(t, corev1alpha1.ObjectSetPaused, conds[0].Type)
@@ -368,7 +368,7 @@ func TestGenericObjectSetController_handleDeletionAndArchival(t *testing.T) {
 
 			err := controller.handleDeletionAndArchival(context.Background(), objectSet)
 			require.NoError(t, err)
-			conds := *objectSet.GetConditions()
+			conds := *objectSet.GetStatusConditions()
 
 			if test.teardownDone {
 				accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)

@@ -25,7 +25,7 @@ const loaderJobFinalizer = "package-operator.run/loader-job"
 var _ environment.Sinker = (*GenericPackageController)(nil)
 
 type reconciler interface {
-	Reconcile(ctx context.Context, pkg adapters.GenericPackageAccessor) (ctrl.Result, error)
+	Reconcile(ctx context.Context, pkg adapters.PackageAccessor) (ctrl.Result, error)
 }
 
 type metricsRecorder interface {
@@ -202,7 +202,7 @@ func (c *GenericPackageController) Reconcile(
 	return res, c.updateStatus(ctx, pkg)
 }
 
-func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapters.GenericPackageAccessor) error {
+func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapters.PackageAccessor) error {
 	if err := c.client.Status().Update(ctx, pkg.ClientObject()); err != nil {
 		return fmt.Errorf("updating Package status: %w", err)
 	}
@@ -210,7 +210,7 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapter
 }
 
 func (c *GenericPackageController) handleDeletion(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
+	ctx context.Context, pkg adapters.PackageAccessor,
 ) error {
 	// Remove finalizer from previous versions of PKO.
 	if err := controllers.RemoveFinalizer(

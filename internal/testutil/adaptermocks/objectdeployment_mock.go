@@ -72,7 +72,7 @@ func (o *ObjectDeploymentMock) GetObservedGeneration() int64 {
 	return args.Get(0).(int64)
 }
 
-func (o *ObjectDeploymentMock) GetRevisionHistoryLimit() *int32 {
+func (o *ObjectDeploymentMock) GetSpecRevisionHistoryLimit() *int32 {
 	args := o.Called()
 	return args.Get(0).(*int32)
 }
@@ -83,21 +83,21 @@ func (o *ObjectDeploymentMock) GetStatusCollisionCount() *int32 {
 	return res
 }
 
-func (o *ObjectDeploymentMock) GetSelector() metav1.LabelSelector {
+func (o *ObjectDeploymentMock) GetSpecSelector() metav1.LabelSelector {
 	args := o.Called()
 	return args.Get(0).(metav1.LabelSelector)
 }
 
-func (o *ObjectDeploymentMock) SetSelector(labels map[string]string) {
+func (o *ObjectDeploymentMock) SetSpecSelector(labels map[string]string) {
 	o.Called(labels)
 }
 
-func (o *ObjectDeploymentMock) GetConditions() *[]metav1.Condition {
+func (o *ObjectDeploymentMock) GetStatusConditions() *[]metav1.Condition {
 	args := o.Called()
 	return args.Get(0).(*[]metav1.Condition)
 }
 
-func (o *ObjectDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
+func (o *ObjectDeploymentMock) GetSpecObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
 }
@@ -115,12 +115,12 @@ func (o *ObjectDeploymentMock) RemoveStatusConditions(condTypes ...string) {
 	o.Called(condTypes)
 }
 
-func (o *ObjectDeploymentMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (o *ObjectDeploymentMock) GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
 }
 
-func (o *ObjectDeploymentMock) SetTemplateSpec(a corev1alpha1.ObjectSetTemplateSpec) {
+func (o *ObjectDeploymentMock) SetSpecTemplateSpec(a corev1alpha1.ObjectSetTemplateSpec) {
 	o.Called(a)
 }
 
@@ -186,7 +186,7 @@ func (o *ObjectSetDeploymentMock) GetObservedGeneration() int64 {
 	return args.Get(0).(int64)
 }
 
-func (o *ObjectSetDeploymentMock) GetRevisionHistoryLimit() *int32 {
+func (o *ObjectSetDeploymentMock) GetSpecRevisionHistoryLimit() *int32 {
 	args := o.Called()
 	return args.Get(0).(*int32)
 }
@@ -197,21 +197,21 @@ func (o *ObjectSetDeploymentMock) GetStatusCollisionCount() *int32 {
 	return res
 }
 
-func (o *ObjectSetDeploymentMock) GetSelector() metav1.LabelSelector {
+func (o *ObjectSetDeploymentMock) GetSpecSelector() metav1.LabelSelector {
 	args := o.Called()
 	return args.Get(0).(metav1.LabelSelector)
 }
 
-func (o *ObjectSetDeploymentMock) SetSelector(labels map[string]string) {
+func (o *ObjectSetDeploymentMock) SetSpecSelector(labels map[string]string) {
 	o.Called(labels)
 }
 
-func (o *ObjectSetDeploymentMock) GetConditions() *[]metav1.Condition {
+func (o *ObjectSetDeploymentMock) GetStatusConditions() *[]metav1.Condition {
 	args := o.Called()
 	return args.Get(0).(*[]metav1.Condition)
 }
 
-func (o *ObjectSetDeploymentMock) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
+func (o *ObjectSetDeploymentMock) GetSpecObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplate)
 }
@@ -225,11 +225,11 @@ func (o *ObjectSetDeploymentMock) GetStatusControllerOf() []corev1alpha1.Control
 	return args.Get(0).([]corev1alpha1.ControlledObjectReference)
 }
 
-func (o *ObjectSetDeploymentMock) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (o *ObjectSetDeploymentMock) GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	args := o.Called()
 	return args.Get(0).(corev1alpha1.ObjectSetTemplateSpec)
 }
 
-func (o *ObjectSetDeploymentMock) SetTemplateSpec(a corev1alpha1.ObjectSetTemplateSpec) {
+func (o *ObjectSetDeploymentMock) SetSpecTemplateSpec(a corev1alpha1.ObjectSetTemplateSpec) {
 	o.Called(a)
 }

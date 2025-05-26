@@ -146,11 +146,11 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		}
 	}
 
-	isAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
+	IsSpecAvailable, err := isPKOAvailable(ctx, init.client, init.packageOperatorNamespace)
 	if err != nil {
 		return false, err
 	}
-	if isAvailable {
+	if IsSpecAvailable {
 		// PKO is available. Skip bootstrap.
 		log.Info("PackageOperator is available")
 		return false, nil

@@ -92,7 +92,7 @@ type isControllerChecker interface {
 }
 
 // Returns a list of ControlledObjectReferences controlled by this instance.
-func GetControllerOf(
+func GetStatusControllerOf(
 	_ context.Context, scheme *runtime.Scheme, ownerStrategy isControllerChecker,
 	owner client.Object, actualObjects []client.Object,
 ) ([]corev1alpha1.ControlledObjectReference, error) {

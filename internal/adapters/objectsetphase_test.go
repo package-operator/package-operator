@@ -18,18 +18,18 @@ func TestObjectSetPhase(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ObjectSetPhase{}, co)
 
 	var revision int64 = 2
-	objectSetPhase.SetRevision(revision)
-	assert.Equal(t, revision, objectSetPhase.GetRevision())
+	objectSetPhase.SetStatusRevision(revision)
+	assert.Equal(t, revision, objectSetPhase.GetStatusRevision())
 
 	paused := true
-	objectSetPhase.SetPaused(paused)
+	objectSetPhase.SetSpecPaused(paused)
 	assert.Equal(t, paused, objectSetPhase.IsSpecPaused())
 
 	objectSetPhase.ObjectSetPhase.Status.Conditions = []metav1.Condition{}
 	assert.Equal(
 		t,
 		len(objectSetPhase.ObjectSetPhase.Status.Conditions),
-		len(*objectSetPhase.GetConditions()),
+		len(*objectSetPhase.GetStatusConditions()),
 	)
 
 	objectSetPhase.SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe{})
@@ -49,18 +49,18 @@ func TestClusterObjectSetPhase(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ClusterObjectSetPhase{}, co)
 
 	var revision int64 = 2
-	clusterObjectSetPhase.SetRevision(revision)
-	assert.Equal(t, revision, clusterObjectSetPhase.GetRevision())
+	clusterObjectSetPhase.SetStatusRevision(revision)
+	assert.Equal(t, revision, clusterObjectSetPhase.GetStatusRevision())
 
 	paused := true
-	clusterObjectSetPhase.SetPaused(paused)
+	clusterObjectSetPhase.SetSpecPaused(paused)
 	assert.Equal(t, paused, clusterObjectSetPhase.IsSpecPaused())
 
 	clusterObjectSetPhase.ClusterObjectSetPhase.Status.Conditions = []metav1.Condition{}
 	assert.Equal(
 		t,
 		len(clusterObjectSetPhase.ClusterObjectSetPhase.Status.Conditions),
-		len(*clusterObjectSetPhase.GetConditions()),
+		len(*clusterObjectSetPhase.GetStatusConditions()),
 	)
 
 	clusterObjectSetPhase.SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe{})

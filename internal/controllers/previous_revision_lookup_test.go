@@ -36,7 +36,7 @@ func TestPreviousRevisionLookup(t *testing.T) {
 
 	owner := &previousOwnerMock{}
 	owner.
-		On("GetPrevious").
+		On("GetSpecPrevious").
 		Return([]corev1alpha1.PreviousRevisionReference{
 			{
 				Name: "test1",

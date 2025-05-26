@@ -10,19 +10,19 @@ import (
 
 type ObjectSetPhaseAccessor interface {
 	ClientObject() client.Object
-	GetConditions() *[]metav1.Condition
+	GetStatusConditions() *[]metav1.Condition
 	GetClass() string
-	GetPrevious() []corev1alpha1.PreviousRevisionReference
+	GetSpecPrevious() []corev1alpha1.PreviousRevisionReference
 	SetPrevious([]corev1alpha1.PreviousRevisionReference)
 	GetPhase() corev1alpha1.ObjectSetTemplatePhase
 	SetPhase(corev1alpha1.ObjectSetTemplatePhase)
 	GetAvailabilityProbes() []corev1alpha1.ObjectSetProbe
 	SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe)
-	GetRevision() int64
-	SetRevision(int64)
+	GetStatusRevision() int64
+	SetStatusRevision(int64)
 	GetGeneration() int64
 	IsSpecPaused() bool
-	SetPaused(bool)
+	SetSpecPaused(bool)
 	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
 }
@@ -45,9 +45,7 @@ func NewObjectSetPhaseAccessor(scheme *runtime.Scheme) ObjectSetPhaseAccessor {
 		panic(err)
 	}
 
-	return &ObjectSetPhaseAdapter{
-		ObjectSetPhase: *obj.(*corev1alpha1.ObjectSetPhase),
-	}
+	return &ObjectSetPhaseAdapter{ObjectSetPhase: *obj.(*corev1alpha1.ObjectSetPhase)}
 }
 
 func NewClusterObjectSetPhaseAccessor(scheme *runtime.Scheme) ObjectSetPhaseAccessor {
@@ -56,9 +54,7 @@ func NewClusterObjectSetPhaseAccessor(scheme *runtime.Scheme) ObjectSetPhaseAcce
 		panic(err)
 	}
 
-	return &ClusterObjectSetPhaseAdapter{
-		ClusterObjectSetPhase: *obj.(*corev1alpha1.ClusterObjectSetPhase),
-	}
+	return &ClusterObjectSetPhaseAdapter{ClusterObjectSetPhase: *obj.(*corev1alpha1.ClusterObjectSetPhase)}
 }
 
 type ObjectSetPhaseAdapter struct {
@@ -69,7 +65,7 @@ func (a *ObjectSetPhaseAdapter) ClientObject() client.Object {
 	return &a.ObjectSetPhase
 }
 
-func (a *ObjectSetPhaseAdapter) GetConditions() *[]metav1.Condition {
+func (a *ObjectSetPhaseAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
@@ -77,7 +73,7 @@ func (a *ObjectSetPhaseAdapter) GetClass() string {
 	return a.Labels[corev1alpha1.ObjectSetPhaseClassLabel]
 }
 
-func (a *ObjectSetPhaseAdapter) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (a *ObjectSetPhaseAdapter) GetSpecPrevious() []corev1alpha1.PreviousRevisionReference {
 	return a.Spec.Previous
 }
 
@@ -108,11 +104,11 @@ func (a *ObjectSetPhaseAdapter) SetAvailabilityProbes(probes []corev1alpha1.Obje
 	a.Spec.AvailabilityProbes = probes
 }
 
-func (a *ObjectSetPhaseAdapter) GetRevision() int64 {
+func (a *ObjectSetPhaseAdapter) GetStatusRevision() int64 {
 	return a.Spec.Revision
 }
 
-func (a *ObjectSetPhaseAdapter) SetRevision(revision int64) {
+func (a *ObjectSetPhaseAdapter) SetStatusRevision(revision int64) {
 	a.Spec.Revision = revision
 }
 
@@ -120,7 +116,7 @@ func (a *ObjectSetPhaseAdapter) IsSpecPaused() bool {
 	return a.Spec.Paused
 }
 
-func (a *ObjectSetPhaseAdapter) SetPaused(paused bool) {
+func (a *ObjectSetPhaseAdapter) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
 }
 
@@ -144,7 +140,7 @@ func (a *ClusterObjectSetPhaseAdapter) ClientObject() client.Object {
 	return &a.ClusterObjectSetPhase
 }
 
-func (a *ClusterObjectSetPhaseAdapter) GetConditions() *[]metav1.Condition {
+func (a *ClusterObjectSetPhaseAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
@@ -152,7 +148,7 @@ func (a *ClusterObjectSetPhaseAdapter) GetClass() string {
 	return a.Labels[corev1alpha1.ObjectSetPhaseClassLabel]
 }
 
-func (a *ClusterObjectSetPhaseAdapter) GetPrevious() []corev1alpha1.PreviousRevisionReference {
+func (a *ClusterObjectSetPhaseAdapter) GetSpecPrevious() []corev1alpha1.PreviousRevisionReference {
 	return a.Spec.Previous
 }
 
@@ -183,11 +179,11 @@ func (a *ClusterObjectSetPhaseAdapter) SetAvailabilityProbes(probes []corev1alph
 	a.Spec.AvailabilityProbes = probes
 }
 
-func (a *ClusterObjectSetPhaseAdapter) GetRevision() int64 {
+func (a *ClusterObjectSetPhaseAdapter) GetStatusRevision() int64 {
 	return a.Spec.Revision
 }
 
-func (a *ClusterObjectSetPhaseAdapter) SetRevision(revision int64) {
+func (a *ClusterObjectSetPhaseAdapter) SetStatusRevision(revision int64) {
 	a.Spec.Revision = revision
 }
 
@@ -199,7 +195,7 @@ func (a *ClusterObjectSetPhaseAdapter) IsSpecPaused() bool {
 	return a.Spec.Paused
 }
 
-func (a *ClusterObjectSetPhaseAdapter) SetPaused(paused bool) {
+func (a *ClusterObjectSetPhaseAdapter) SetSpecPaused(paused bool) {
 	a.Spec.Paused = paused
 }
 
