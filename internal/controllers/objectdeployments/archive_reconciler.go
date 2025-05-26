@@ -55,8 +55,8 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	sort.Sort(objectSetsByRevisionAscending(objectsToArchive))
 
 	for _, objectSet := range objectsToArchive {
-		if !objectSet.IsArchived() && objectSet.IsStatusPaused() {
-			objectSet.SetArchived()
+		if !objectSet.IsSpecArchived() && objectSet.IsStatusPaused() {
+			objectSet.SetSpecArchived()
 			if err := a.client.Update(ctx, objectSet.ClientObject()); err != nil {
 				return fmt.Errorf("failed to archive objectset: %w", err)
 			}
@@ -82,7 +82,7 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 		// Case 1:
 		// currentRevision is "Available",
 		// so all previous revisions can be archived.
-		if currentLatestRevision.IsAvailable() {
+		if currentLatestRevision.IsSpecAvailable() {
 			prevRevisionsToArchive, err := a.archiveAllLaterRevisions(ctx, currentLatestRevision, allObjectSets[:j])
 			if err != nil {
 				return []adapters.ObjectSetAccessor{}, err
@@ -95,11 +95,11 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 			previousRevision := allObjectSets[j-1]
 
 			// Already archived dont do anything
-			if previousRevision.IsArchived() {
+			if previousRevision.IsSpecArchived() {
 				continue
 			}
 
-			if currentLatestRevision.GetRevision() <= previousRevision.GetRevision() {
+			if currentLatestRevision.GetStatusRevision() <= previousRevision.GetStatusRevision() {
 				// Sanity check
 				// We always expect the  currentLatestRevision objectset to have a revision greater
 				// than the previous revision
@@ -131,18 +131,18 @@ func (a *archiveReconciler) archiveAllLaterRevisions(
 	res := make([]adapters.ObjectSetAccessor, 0)
 	for _, currPrev := range laterRevisions {
 		// revision already archived, we just skip.
-		if currPrev.IsArchived() {
+		if currPrev.IsSpecArchived() {
 			continue
 		}
 		// Sanity check
 		// We always expect the  currentLatestRevision objectset to have a revision greater
 		// than the previous revision
-		if currPrev.GetRevision() < currentLatest.GetRevision() {
-			isPaused, err := a.ensurePaused(ctx, currPrev)
+		if currPrev.GetStatusRevision() < currentLatest.GetStatusRevision() {
+			IsSpecPaused, err := a.ensurePaused(ctx, currPrev)
 			if err != nil {
 				return []adapters.ObjectSetAccessor{}, err
 			}
-			if isPaused {
+			if IsSpecPaused {
 				res = append(res, currPrev)
 			}
 		}
@@ -177,14 +177,14 @@ func (a *archiveReconciler) intermediateRevisionCanBeArchived(
 	// then the current previous revision can be marked for archival. (IF the previous revision
 	// is not available).
 	commonObjects := intersection(latestRevisionObjects, previousRevisionActivelyReconciledObjects)
-	if len(commonObjects) == 0 && !previousRevision.IsAvailable() {
+	if len(commonObjects) == 0 && !previousRevision.IsSpecAvailable() {
 		// This previousRevision is a candidate for archival but we only
 		// proceed to archive it after its paused.
-		isPaused, err := a.ensurePaused(ctx, previousRevision)
+		IsSpecPaused, err := a.ensurePaused(ctx, previousRevision)
 		if err != nil {
 			return false, err
 		}
-		return isPaused, nil
+		return IsSpecPaused, nil
 	}
 	return false, nil
 }
@@ -201,7 +201,7 @@ func (a *archiveReconciler) ensurePaused(ctx context.Context, objectset adapters
 	}
 
 	// Pause the revision
-	objectset.SetPaused()
+	objectset.SetSpecPaused()
 	if err := a.client.Update(ctx, objectset.ClientObject()); err != nil {
 		return false, fmt.Errorf("failed to pause objectset for archival: %w", err)
 	}
@@ -228,7 +228,7 @@ func (a *archiveReconciler) garbageCollectRevisions(
 	objectDeployment adapters.ObjectDeploymentAccessor,
 ) error {
 	revisionLimit := defaultRevisionLimit
-	deploymentRevisionLimit := objectDeployment.GetRevisionHistoryLimit()
+	deploymentRevisionLimit := objectDeployment.GetSpecRevisionHistoryLimit()
 	if deploymentRevisionLimit != nil {
 		revisionLimit = *deploymentRevisionLimit
 	}

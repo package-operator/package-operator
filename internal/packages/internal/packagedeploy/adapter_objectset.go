@@ -13,7 +13,7 @@ type (
 
 type genericObjectSet interface {
 	ClientObject() client.Object
-	GetPhases() []corev1alpha1.ObjectSetTemplatePhase
+	GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase
 }
 
 var (
@@ -24,10 +24,10 @@ var (
 func (a *GenericObjectSet) ClientObject() client.Object        { return &a.ObjectSet }
 func (a *GenericClusterObjectSet) ClientObject() client.Object { return &a.ClusterObjectSet }
 
-func (a *GenericObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+func (a *GenericObjectSet) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.ObjectSetTemplateSpec.Phases
 }
 
-func (a *GenericClusterObjectSet) GetPhases() []corev1alpha1.ObjectSetTemplatePhase {
+func (a *GenericClusterObjectSet) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
 	return a.Spec.Phases
 }

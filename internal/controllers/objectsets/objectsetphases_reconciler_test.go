@@ -107,7 +107,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		p.remotePhaseReconciler.AssertCalled(t, "Reconcile", mock.Anything, os, phase2)
 		p.checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
-		conds := *os.GetConditions()
+		conds := *os.GetStatusConditions()
 		require.Len(t, conds, 2)
 		var succeededCond, availableCond metav1.Condition
 		for _, cond := range conds {
@@ -185,7 +185,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 					Return(test.firstTeardownFinish, nil).Once()
 				p.phaseReconciler.On("TeardownPhase", mock.Anything, os, mock.Anything).
 					Return(true, nil).Maybe()
-				p.accessManager.On("FreeWithUser", mock.Anything, mock.Anything, os).Return(nil)
+				p.accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 				done, err := p.objectSetPhasesReconciler.Teardown(context.Background(), os)
 				assert.Equal(t, test.firstTeardownFinish, done)
@@ -193,7 +193,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 				p.remotePhaseReconciler.AssertCalled(t, "Teardown", mock.Anything, os, phase2)
 				if test.firstTeardownFinish {
 					p.phaseReconciler.AssertCalled(t, "TeardownPhase", mock.Anything, os, phase1)
-					p.accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, os)
+					p.accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
 				} else {
 					p.accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything, os)
 				}
@@ -317,11 +317,15 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
 			require.NoError(t, err)
 
-			require.Equal(t, len(tc.ExpectedConditionStatuses), len(*tc.ObjectSet.GetConditions()), tc.ObjectSet.GetConditions())
+			require.Equal(t,
+				len(tc.ExpectedConditionStatuses),
+				len(*tc.ObjectSet.GetStatusConditions()),
+				tc.ObjectSet.GetStatusConditions(),
+			)
 			checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
 
 			for cond, stat := range tc.ExpectedConditionStatuses {
-				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetConditions(), cond, stat))
+				require.True(t, meta.IsStatusConditionPresentAndEqual(*tc.ObjectSet.GetStatusConditions(), cond, stat))
 			}
 		})
 	}
@@ -338,7 +342,7 @@ func Test_isObjectSetInTransition(t *testing.T) {
 
 	testObjectSet1 := adapters.NewObjectSet(testScheme)
 	testObjectSet1.ClientObject().SetNamespace("test-ns")
-	testObjectSet1.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{
+	testObjectSet1.SetSpecPhases([]corev1alpha1.ObjectSetTemplatePhase{
 		{
 			Name: "a",
 			Objects: []corev1alpha1.ObjectSetObject{

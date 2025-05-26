@@ -19,24 +19,24 @@ func TestObjectDeployment(t *testing.T) {
 
 	var revisionHistoryLimit int32 = 2
 	deploy.ObjectDeployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
-	assert.Equal(t, &revisionHistoryLimit, deploy.GetRevisionHistoryLimit())
+	assert.Equal(t, &revisionHistoryLimit, deploy.GetSpecRevisionHistoryLimit())
 
 	var collisionCount int32 = 4
 	deploy.SetStatusCollisionCount(&collisionCount)
 	assert.Equal(t, &collisionCount, deploy.GetStatusCollisionCount())
 
 	deploy.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, deploy.Status.Conditions, *deploy.GetConditions())
+	assert.Equal(t, deploy.Status.Conditions, *deploy.GetStatusConditions())
 
 	deploy.Spec.Selector = metav1.LabelSelector{
 		MatchLabels: map[string]string{"test": "test"},
 	}
-	assert.Equal(t, deploy.Spec.Selector, deploy.GetSelector())
+	assert.Equal(t, deploy.Spec.Selector, deploy.GetSpecSelector())
 
 	deploy.Spec.Template = corev1alpha1.ObjectSetTemplate{}
-	assert.Equal(t, deploy.Spec.Template, deploy.GetObjectSetTemplate())
-	deploy.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
-	assert.Equal(t, deploy.Spec.Template.Spec, deploy.GetTemplateSpec())
+	assert.Equal(t, deploy.Spec.Template, deploy.GetSpecObjectSetTemplate())
+	deploy.SetSpecTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
+	assert.Equal(t, deploy.Spec.Template.Spec, deploy.GetSpecTemplateSpec())
 
 	templateHash := "hash123"
 	deploy.SetStatusTemplateHash(templateHash)
@@ -45,7 +45,7 @@ func TestObjectDeployment(t *testing.T) {
 	selector := map[string]string{
 		"a": "b",
 	}
-	deploy.SetSelector(selector)
+	deploy.SetSpecSelector(selector)
 	assert.Equal(t, selector, deploy.Spec.Selector.MatchLabels)
 	assert.Equal(t, selector, deploy.Spec.Template.Metadata.Labels)
 
@@ -75,24 +75,24 @@ func TestClusterObjectDeployment(t *testing.T) {
 
 	var revisionHistoryLimit int32 = 2
 	deploy.ClusterObjectDeployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
-	assert.Equal(t, &revisionHistoryLimit, deploy.GetRevisionHistoryLimit())
+	assert.Equal(t, &revisionHistoryLimit, deploy.GetSpecRevisionHistoryLimit())
 
 	var collisionCount int32 = 4
 	deploy.SetStatusCollisionCount(&collisionCount)
 	assert.Equal(t, &collisionCount, deploy.GetStatusCollisionCount())
 
 	deploy.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, deploy.Status.Conditions, *deploy.GetConditions())
+	assert.Equal(t, deploy.Status.Conditions, *deploy.GetStatusConditions())
 
 	deploy.Spec.Selector = metav1.LabelSelector{
 		MatchLabels: map[string]string{"test": "test"},
 	}
-	assert.Equal(t, deploy.Spec.Selector, deploy.GetSelector())
+	assert.Equal(t, deploy.Spec.Selector, deploy.GetSpecSelector())
 
 	deploy.Spec.Template = corev1alpha1.ObjectSetTemplate{}
-	assert.Equal(t, deploy.Spec.Template, deploy.GetObjectSetTemplate())
-	deploy.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
-	assert.Equal(t, deploy.Spec.Template.Spec, deploy.GetTemplateSpec())
+	assert.Equal(t, deploy.Spec.Template, deploy.GetSpecObjectSetTemplate())
+	deploy.SetSpecTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
+	assert.Equal(t, deploy.Spec.Template.Spec, deploy.GetSpecTemplateSpec())
 
 	templateHash := "hash123"
 	deploy.SetStatusTemplateHash(templateHash)
@@ -101,7 +101,7 @@ func TestClusterObjectDeployment(t *testing.T) {
 	selector := map[string]string{
 		"a": "b",
 	}
-	deploy.SetSelector(selector)
+	deploy.SetSpecSelector(selector)
 	assert.Equal(t, selector, deploy.Spec.Selector.MatchLabels)
 	assert.Equal(t, selector, deploy.Spec.Template.Metadata.Labels)
 

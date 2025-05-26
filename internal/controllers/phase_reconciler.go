@@ -94,8 +94,8 @@ type preflightChecker interface {
 
 type PhaseObjectOwner interface {
 	ClientObject() client.Object
-	GetRevision() int64
-	GetConditions() *[]metav1.Condition
+	GetStatusRevision() int64
+	GetStatusConditions() *[]metav1.Condition
 	IsSpecPaused() bool
 }
 
@@ -385,7 +385,7 @@ func mapConditions(
 			continue
 		}
 
-		meta.SetStatusCondition(owner.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
 			Type:               destType,
 			Status:             condition.Status,
 			Reason:             condition.Reason,
@@ -428,7 +428,7 @@ func (r *phaseReconciler) desiredObject(
 
 	desiredObj.SetLabels(labels)
 
-	setObjectRevision(desiredObj, owner.GetRevision())
+	setObjectRevision(desiredObj, owner.GetStatusRevision())
 
 	return desiredObj
 }
@@ -439,7 +439,7 @@ func (r *phaseReconciler) desiredObject(
 
 type ObjectSetOrPhase interface {
 	ClientObject() client.Object
-	GetConditions() *[]metav1.Condition
+	GetStatusConditions() *[]metav1.Condition
 }
 
 func UpdateObjectSetOrPhaseStatusFromError(
@@ -448,7 +448,7 @@ func UpdateObjectSetOrPhaseStatusFromError(
 ) (res ctrl.Result, err error) {
 	var preflightError *preflight.Error
 	if errors.As(reconcileErr, &preflightError) {
-		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
@@ -461,7 +461,7 @@ func UpdateObjectSetOrPhaseStatusFromError(
 	}
 
 	if IsAdoptionRefusedError(reconcileErr) {
-		meta.SetStatusCondition(objectSetOrPhase.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
@@ -558,7 +558,7 @@ func (r *phaseReconciler) reconcileObject(
 			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
 			"ObjectKey", client.ObjectKeyFromObject(desiredObj),
 			"ObjectGVK", desiredObj.GetObjectKind().GroupVersionKind())
-		setObjectRevision(updatedObj, owner.GetRevision())
+		setObjectRevision(updatedObj, owner.GetStatusRevision())
 		r.ownerStrategy.ReleaseController(updatedObj)
 		if err := r.ownerStrategy.SetControllerReference(owner.ClientObject(), updatedObj); err != nil {
 			return nil, err
@@ -671,7 +671,7 @@ func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object
 		return false, fmt.Errorf("getting revision of object: %w", err)
 	}
 	// Never ever adopt objects of newer revisions.
-	if currentRevision > owner.GetRevision() {
+	if currentRevision > owner.GetStatusRevision() {
 		// owned by newer revision.
 		return false, nil
 	}
@@ -712,7 +712,7 @@ func (c *defaultAdoptionChecker) Check(owner PhaseObjectOwner, obj client.Object
 		}
 	}
 
-	if currentRevision == owner.GetRevision() {
+	if currentRevision == owner.GetStatusRevision() {
 		// This should not have happened.
 		// Revision is same as owner,
 		// but the object is not already owned by this object.
@@ -739,7 +739,7 @@ func (c *defaultAdoptionChecker) isControlledByPreviousRevision(
 			return true
 		}
 
-		remotePhases := prev.GetRemotePhases()
+		remotePhases := prev.GetStatusRemotePhases()
 		if len(remotePhases) == 0 {
 			continue
 		}

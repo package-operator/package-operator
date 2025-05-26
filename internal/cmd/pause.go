@@ -26,7 +26,7 @@ func (c *Client) PackageSetPaused(
 	ctx context.Context, waiter Waiter,
 	kind, name, namespace string, pause bool, message string,
 ) error {
-	var pkg adapters.GenericPackageAccessor
+	var pkg adapters.PackageAccessor
 	switch kind {
 	case "package":
 		pkg = adapters.NewGenericPackage(c.client.Scheme())

@@ -36,7 +36,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 		prevs := make([]adapters.ObjectSetAccessor, 2)
 		for i := range prevs {
 			obj := &adaptermocks.ObjectSetMock{}
-			obj.AssertNotCalled(t, "IsAvailable")
+			obj.AssertNotCalled(t, "IsSpecAvailable")
 			prevs[i] = obj
 		}
 
@@ -60,9 +60,9 @@ func Test_ArchivalReconciler(t *testing.T) {
 		latestAvailable := &adaptermocks.ObjectSetMock{}
 
 		// Return same revision number for all
-		arch1.On("GetRevision").Return(int64(1))
-		arch2.On("GetRevision").Return(int64(1))
-		latestAvailable.On("GetRevision").Return(int64(1))
+		arch1.On("GetStatusRevision").Return(int64(1))
+		arch2.On("GetStatusRevision").Return(int64(1))
+		latestAvailable.On("GetStatusRevision").Return(int64(1))
 
 		// Set empty client objects for all
 		// so that creation timestamp is also same
@@ -70,9 +70,9 @@ func Test_ArchivalReconciler(t *testing.T) {
 		arch2.On("ClientObject").Return(&unstructured.Unstructured{})
 		latestAvailable.On("ClientObject").Return(&unstructured.Unstructured{})
 
-		arch1.On("IsArchived").Return(false)
-		arch2.On("IsArchived").Return(false)
-		latestAvailable.On("IsAvailable").Return(true)
+		arch1.On("IsSpecArchived").Return(false)
+		arch2.On("IsSpecArchived").Return(false)
+		latestAvailable.On("IsSpecAvailable").Return(true)
 		prevs := []adapters.ObjectSetAccessor{
 			arch1,
 			arch2,
@@ -82,13 +82,13 @@ func Test_ArchivalReconciler(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res.IsZero(), "unexpected requeue")
 		testClient.AssertNotCalled(t, "Update")
-		latestAvailable.AssertCalled(t, "IsAvailable")
+		latestAvailable.AssertCalled(t, "IsSpecAvailable")
 		arch1.AssertNotCalled(t, "IsStatusPaused")
 		arch1.AssertNotCalled(t, "IsSpecPaused")
-		arch1.AssertNotCalled(t, "SetPaused")
+		arch1.AssertNotCalled(t, "SetSpecPaused")
 		arch2.AssertNotCalled(t, "IsStatusPaused")
 		arch2.AssertNotCalled(t, "IsSpecPaused")
-		arch2.AssertNotCalled(t, "SetPaused")
+		arch2.AssertNotCalled(t, "SetSpecPaused")
 	})
 
 	t.Run(
@@ -118,7 +118,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 			// setup Objectdeployment
 			objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 			revisionLimit := int32(10)
-			objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
+			objectDeployment.On("GetSpecRevisionHistoryLimit").Return(&revisionLimit)
 
 			// Setup revisions
 
@@ -233,24 +233,24 @@ func contains(source []int, obj int) bool {
 
 func assertShouldNotBeArchived(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
-	obj.AssertNotCalled(t, "SetArchived")
+	obj.AssertNotCalled(t, "SetSpecArchived")
 }
 
 func assertShouldBeArchived(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
-	obj.AssertNumberOfCalls(t, "SetArchived", 1)
-	obj.AssertCalled(t, "SetArchived")
+	obj.AssertNumberOfCalls(t, "SetSpecArchived", 1)
+	obj.AssertCalled(t, "SetSpecArchived")
 }
 
 func assertShouldBePaused(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
-	obj.AssertNumberOfCalls(t, "SetPaused", 1)
-	obj.AssertCalled(t, "SetPaused")
+	obj.AssertNumberOfCalls(t, "SetSpecPaused", 1)
+	obj.AssertCalled(t, "SetSpecPaused")
 }
 
 func assertShouldNotBePaused(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
-	obj.AssertNotCalled(t, "SetPaused")
+	obj.AssertNotCalled(t, "SetSpecPaused")
 }
 
 func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool) {
@@ -258,7 +258,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 	// setup Objectdeployment
 	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
-	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
+	objectDeployment.On("GetSpecRevisionHistoryLimit").Return(&revisionLimit)
 
 	// Setup client
 	client := testutil.NewClient()
@@ -376,7 +376,7 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	// setup Objectdeployment
 	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(10)
-	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
+	objectDeployment.On("GetSpecRevisionHistoryLimit").Return(&revisionLimit)
 
 	// Setup client
 	client := testutil.NewClient()
@@ -421,27 +421,27 @@ func testPauseAndArchivalWhenLatestIsAvailable(t *testing.T, alreadyPaused bool)
 	// Latest available is left alone
 	latestAvailableRevision.AssertNotCalled(t, "IsStatusPaused")
 	latestAvailableRevision.AssertNotCalled(t, "IsSpecPaused")
-	latestAvailableRevision.AssertNotCalled(t, "SetPaused")
-	latestAvailableRevision.AssertNotCalled(t, "SetArchived")
+	latestAvailableRevision.AssertNotCalled(t, "SetSpecPaused")
+	latestAvailableRevision.AssertNotCalled(t, "SetSpecArchived")
 
 	// prevs[0],prevs[2] is paused/archived
 	if alreadyPaused {
-		prevs[0].AssertCalled(t, "SetArchived")
-		prevs[0].AssertNumberOfCalls(t, "SetArchived", 1)
+		prevs[0].AssertCalled(t, "SetSpecArchived")
+		prevs[0].AssertNumberOfCalls(t, "SetSpecArchived", 1)
 
-		prevs[2].AssertCalled(t, "SetArchived")
-		prevs[2].AssertNumberOfCalls(t, "SetArchived", 1)
+		prevs[2].AssertCalled(t, "SetSpecArchived")
+		prevs[2].AssertNumberOfCalls(t, "SetSpecArchived", 1)
 	} else {
-		prevs[0].AssertCalled(t, "SetPaused")
-		prevs[0].AssertNumberOfCalls(t, "SetPaused", 1)
+		prevs[0].AssertCalled(t, "SetSpecPaused")
+		prevs[0].AssertNumberOfCalls(t, "SetSpecPaused", 1)
 
-		prevs[2].AssertCalled(t, "SetPaused")
-		prevs[2].AssertNumberOfCalls(t, "SetPaused", 1)
+		prevs[2].AssertCalled(t, "SetSpecPaused")
+		prevs[2].AssertNumberOfCalls(t, "SetSpecPaused", 1)
 	}
 
 	// Since prevs[1] is already archived, it is left alone
-	prevs[1].AssertNotCalled(t, "SetPaused")
-	prevs[1].AssertNotCalled(t, "SetArchived")
+	prevs[1].AssertNotCalled(t, "SetSpecPaused")
+	prevs[1].AssertNotCalled(t, "SetSpecArchived")
 }
 
 func testDeleteArchive(t *testing.T) {
@@ -449,7 +449,7 @@ func testDeleteArchive(t *testing.T) {
 	// setup Objectdeployment
 	objectDeployment := &adaptermocks.ObjectDeploymentMock{}
 	revisionLimit := int32(3)
-	objectDeployment.On("GetRevisionHistoryLimit").Return(&revisionLimit)
+	objectDeployment.On("GetSpecRevisionHistoryLimit").Return(&revisionLimit)
 
 	// Setup client
 	client := testutil.NewClient()
@@ -495,8 +495,8 @@ func testDeleteArchive(t *testing.T) {
 	client.AssertCalled(t, "Update", mock.Anything, mock.Anything, mock.Anything)
 	client.AssertNumberOfCalls(t, "Update", 1)
 
-	prevs[3].AssertCalled(t, "SetArchived")
-	prevs[3].AssertNumberOfCalls(t, "SetArchived", 1)
+	prevs[3].AssertCalled(t, "SetSpecArchived")
+	prevs[3].AssertNumberOfCalls(t, "SetSpecArchived", 1)
 
 	client.AssertCalled(t,
 		"Delete",
@@ -529,11 +529,11 @@ func newObjectSetMock(
 	activeReconciled []objectIdentifier,
 	objects []objectIdentifier,
 	isStatusPaused bool,
-	isArchived bool,
-	isAvailable bool,
+	isSpecArchived bool,
+	isSpecAvailable bool,
 ) *adaptermocks.ObjectSetMock {
 	mock := &adaptermocks.ObjectSetMock{}
-	mock.On("GetRevision").Return(int64(revision))
+	mock.On("GetStatusRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{
 		"important_for_mock_to_not_confuse_calls": strconv.Itoa(revision),
@@ -545,9 +545,9 @@ func newObjectSetMock(
 	mock.On("GetObjects").Return(objects, nil)
 	mock.On("IsStatusPaused").Return(isStatusPaused)
 	mock.On("IsSpecPaused").Return(false)
-	mock.On("IsAvailable").Return(isAvailable)
-	mock.On("IsArchived").Return(isArchived)
-	mock.On("SetPaused").Return()
-	mock.On("SetArchived").Return()
+	mock.On("IsSpecAvailable").Return(isSpecAvailable)
+	mock.On("IsSpecArchived").Return(isSpecArchived)
+	mock.On("SetSpecPaused").Return()
+	mock.On("SetSpecArchived").Return()
 	return mock
 }

@@ -142,8 +142,8 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		Name: currentObjectSetPhase.ClientObject().GetName(),
 		UID:  currentObjectSetPhase.ClientObject().GetUID(),
 	}
-	remotes := objectSet.GetRemotePhases()
-	objectSet.SetRemotePhases(addRemoteObjectSetPhase(remotes, ref))
+	remotes := objectSet.GetStatusRemotePhases()
+	objectSet.SetStatusRemotePhases(addRemoteObjectSetPhase(remotes, ref))
 
 	// Pause/Unpause
 	if currentObjectSetPhase.IsSpecPaused() != desiredObjectSetPhase.IsSpecPaused() {
@@ -170,13 +170,13 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	// -> copy mapped status conditions
 	controllers.MapConditions(
 		ctx,
-		currentObjectSetPhase.ClientObject().GetGeneration(), *currentObjectSetPhase.GetConditions(),
-		objectSet.ClientObject().GetGeneration(), objectSet.GetConditions(),
+		currentObjectSetPhase.ClientObject().GetGeneration(), *currentObjectSetPhase.GetStatusConditions(),
+		objectSet.ClientObject().GetGeneration(), objectSet.GetStatusConditions(),
 	)
 
 	// -> check status
 	availableCond := meta.FindStatusCondition(
-		*currentObjectSetPhase.GetConditions(),
+		*currentObjectSetPhase.GetStatusConditions(),
 		corev1alpha1.ObjectSetAvailable,
 	)
 	activeObjects := currentObjectSetPhase.GetStatusControllerOf()
@@ -221,11 +221,11 @@ func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
 
 	desiredObjectSetPhase.SetPhase(phase)
 	desiredObjectSetPhase.SetAvailabilityProbes(objectSet.GetAvailabilityProbes())
-	desiredObjectSetPhase.SetRevision(objectSet.GetRevision())
-	desiredObjectSetPhase.SetPrevious(objectSet.GetPrevious())
+	desiredObjectSetPhase.SetStatusRevision(objectSet.GetStatusRevision())
+	desiredObjectSetPhase.SetPrevious(objectSet.GetSpecPrevious())
 	if objectSet.IsSpecPaused() {
 		// ObjectSetPhases don't have to support archival.
-		desiredObjectSetPhase.SetPaused(true)
+		desiredObjectSetPhase.SetSpecPaused(true)
 	}
 
 	if err := controllerutil.SetControllerReference(

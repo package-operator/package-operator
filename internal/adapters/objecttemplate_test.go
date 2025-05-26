@@ -26,7 +26,7 @@ func TestGenericObjectTemplate(t *testing.T) {
 	assert.Equal(t, controlledObj, ot.GetStatusControllerOf())
 
 	ot.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, ot.Status.Conditions, *ot.GetConditions())
+	assert.Equal(t, ot.Status.Conditions, *ot.GetStatusConditions())
 
 	sources := []corev1alpha1.ObjectTemplateSource{}
 	ot.Spec.Sources = sources
@@ -53,7 +53,7 @@ func TestGenericClusterObjectTemplate(t *testing.T) {
 	assert.Equal(t, controlledObj, ot.GetStatusControllerOf())
 
 	ot.Status.Conditions = []metav1.Condition{}
-	assert.Equal(t, ot.Status.Conditions, *ot.GetConditions())
+	assert.Equal(t, ot.Status.Conditions, *ot.GetStatusConditions())
 
 	sources := []corev1alpha1.ObjectTemplateSource{}
 	ot.Spec.Sources = sources

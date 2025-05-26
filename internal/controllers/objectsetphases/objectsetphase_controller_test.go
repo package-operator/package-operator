@@ -245,7 +245,7 @@ func TestGenericObjectSetPhaseController_reportPausedCondition(t *testing.T) {
 			p.Status.Conditions = test.startingConditions
 
 			controller.reportPausedCondition(context.Background(), p)
-			conds := *p.GetConditions()
+			conds := *p.GetStatusConditions()
 			if test.phasePaused {
 				assert.Len(t, conds, 1)
 				assert.Equal(t, corev1alpha1.ObjectSetPhasePaused, conds[0].Type)

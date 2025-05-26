@@ -27,11 +27,11 @@ func TestHashReconciler(t *testing.T) {
 		ctx := context.Background()
 
 		objectSetDeployment := &adaptermocks.ObjectSetDeploymentMock{}
-		objectSetDeployment.On("GetObjectSetTemplate").Return(corev1alpha1.ObjectSetTemplate{})
+		objectSetDeployment.On("GetSpecObjectSetTemplate").Return(corev1alpha1.ObjectSetTemplate{})
 		objectSetDeployment.On("GetStatusCollisionCount").Return(1)
 
 		hash := utils.ComputeFNV32Hash(
-			objectSetDeployment.GetObjectSetTemplate(),
+			objectSetDeployment.GetSpecObjectSetTemplate(),
 			objectSetDeployment.GetStatusCollisionCount(),
 		)
 		objectSetDeployment.On("SetStatusTemplateHash", hash)

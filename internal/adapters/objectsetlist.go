@@ -7,17 +7,25 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+var (
+	objectSetListGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSetList")
+	clusterObjectSetListGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetList")
+)
+
+// ObjectSetListAccessor is an adapter interface to access an ObjectSetList.
+//
+// Reason for this interface is that it allows accessing an ObjectSetList in two scopes:
+// The regular ObjectSetList and the ClusterObjectSetList.
 type ObjectSetListAccessor interface {
 	ClientObjectList() client.ObjectList
 	GetItems() []ObjectSetAccessor
 }
 
-type ObjectSetListAccessorFactory func(
-	scheme *runtime.Scheme) ObjectSetListAccessor
+type ObjectSetListAccessorFactory func(scheme *runtime.Scheme) ObjectSetListAccessor
 
 var (
-	objectSetListGVK        = corev1alpha1.GroupVersion.WithKind("ObjectSetList")
-	clusterObjectSetListGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectSetList")
+	_ ObjectSetListAccessor = (*ObjectSetList)(nil)
+	_ ObjectSetListAccessor = (*ClusterObjectSetList)(nil)
 )
 
 func NewObjectSetList(scheme *runtime.Scheme) ObjectSetListAccessor {
@@ -41,11 +49,6 @@ func NewClusterObjectSetList(scheme *runtime.Scheme) ObjectSetListAccessor {
 		ClusterObjectSetList: *obj.(*corev1alpha1.ClusterObjectSetList),
 	}
 }
-
-var (
-	_ ObjectSetListAccessor = (*ObjectSetList)(nil)
-	_ ObjectSetListAccessor = (*ClusterObjectSetList)(nil)
-)
 
 type ObjectSetList struct {
 	corev1alpha1.ObjectSetList

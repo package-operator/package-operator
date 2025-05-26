@@ -396,7 +396,7 @@ func updateStatusConditionsFromOwnedObject(
 			Reason:             condMap["reason"].(string),
 			Message:            condMap["message"].(string),
 		}
-		meta.SetStatusCondition(objectTemplate.GetConditions(), newCond)
+		meta.SetStatusCondition(objectTemplate.GetStatusConditions(), newCond)
 	}
 	return nil
 }
@@ -404,7 +404,7 @@ func updateStatusConditionsFromOwnedObject(
 func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTemplateAccessor, err error) error {
 	var sourceError *SourceError
 	if errors.As(err, &sourceError) {
-		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectTemplate.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: objectTemplate.GetGeneration(),
@@ -415,7 +415,7 @@ func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTempla
 	}
 	var templateError *TemplateError
 	if errors.As(err, &templateError) {
-		meta.SetStatusCondition(objectTemplate.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectTemplate.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectTemplateInvalid,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: objectTemplate.GetGeneration(),
@@ -426,7 +426,7 @@ func setObjectTemplateConditionBasedOnError(objectTemplate adapters.ObjectTempla
 	}
 
 	if err == nil {
-		meta.RemoveStatusCondition(objectTemplate.GetConditions(), corev1alpha1.ObjectTemplateInvalid)
+		meta.RemoveStatusCondition(objectTemplate.GetStatusConditions(), corev1alpha1.ObjectTemplateInvalid)
 	}
 	return err
 }

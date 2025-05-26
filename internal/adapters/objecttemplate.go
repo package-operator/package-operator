@@ -8,23 +8,26 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+var (
+	objectTemplateGVK        = corev1alpha1.GroupVersion.WithKind("ObjectTemplate")
+	clusterObjectTemplateGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectTemplate")
+)
+
+// ObjectTemplateAccessor is an adapter interface to access an ObjectTemplate.
+//
+// Reason for this interface is that it allows accessing an ObjectTemplate in two scopes:
+// The regular ObjectTemplate and the ClusterObjectTemplate.
 type ObjectTemplateAccessor interface {
 	ClientObject() client.Object
 	GetTemplate() string
 	GetSources() []corev1alpha1.ObjectTemplateSource
-	GetConditions() *[]metav1.Condition
+	GetStatusConditions() *[]metav1.Condition
 	GetGeneration() int64
 	SetStatusControllerOf(corev1alpha1.ControlledObjectReference)
 	GetStatusControllerOf() corev1alpha1.ControlledObjectReference
 }
 
-type GenericObjectTemplateFactory func(
-	scheme *runtime.Scheme) ObjectTemplateAccessor
-
-var (
-	objectTemplateGVK        = corev1alpha1.GroupVersion.WithKind("ObjectTemplate")
-	clusterObjectTemplateGVK = corev1alpha1.GroupVersion.WithKind("ClusterObjectTemplate")
-)
+type GenericObjectTemplateFactory func(scheme *runtime.Scheme) ObjectTemplateAccessor
 
 func NewGenericObjectTemplate(scheme *runtime.Scheme) ObjectTemplateAccessor {
 	obj, err := scheme.New(objectTemplateGVK)
@@ -64,7 +67,7 @@ func (t *GenericObjectTemplate) GetSources() []corev1alpha1.ObjectTemplateSource
 	return t.Spec.Sources
 }
 
-func (t *GenericObjectTemplate) GetConditions() *[]metav1.Condition {
+func (t *GenericObjectTemplate) GetStatusConditions() *[]metav1.Condition {
 	return &t.Status.Conditions
 }
 
@@ -92,7 +95,7 @@ func (t *GenericClusterObjectTemplate) GetSources() []corev1alpha1.ObjectTemplat
 	return t.Spec.Sources
 }
 
-func (t *GenericClusterObjectTemplate) GetConditions() *[]metav1.Condition {
+func (t *GenericClusterObjectTemplate) GetStatusConditions() *[]metav1.Condition {
 	return &t.Status.Conditions
 }
 

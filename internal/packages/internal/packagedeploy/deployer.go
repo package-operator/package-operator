@@ -135,11 +135,11 @@ func ImageWithDigest(reference string, digest string) (string, error) {
 
 func (l *PackageDeployer) Deploy(
 	ctx context.Context,
-	apiPkg adapters.GenericPackageAccessor,
+	apiPkg adapters.PackageAccessor,
 	rawPkg *packagetypes.RawPackage,
 	env manifests.PackageEnvironment,
 ) error {
-	pkg, err := l.structuralLoader.LoadComponent(ctx, rawPkg, apiPkg.GetComponent())
+	pkg, err := l.structuralLoader.LoadComponent(ctx, rawPkg, apiPkg.GetSpecComponent())
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
 		// Explicitly do not return an error here to avoid re-pulling
@@ -154,7 +154,7 @@ func (l *PackageDeployer) Deploy(
 	}
 
 	// prepare package render/template context
-	tmplCtx := apiPkg.TemplateContext()
+	tmplCtx := apiPkg.GetSpecTemplateContext()
 	configuration := map[string]any{}
 	if tmplCtx.Config != nil {
 		if err := json.Unmarshal(tmplCtx.Config.Raw, &configuration); err != nil {
@@ -209,24 +209,24 @@ func (l *PackageDeployer) Deploy(
 	}
 
 	// Load success
-	meta.RemoveStatusCondition(apiPkg.GetConditions(), corev1alpha1.PackageInvalid)
+	meta.RemoveStatusCondition(apiPkg.GetSpecConditions(), corev1alpha1.PackageInvalid)
 	return nil
 }
 
 func (l *PackageDeployer) desiredObjectDeployment(
-	_ context.Context, pkg adapters.GenericPackageAccessor, pkgInstance *packagetypes.PackageInstance,
+	_ context.Context, pkg adapters.PackageAccessor, pkgInstance *packagetypes.PackageInstance,
 ) (deploy adapters.ObjectDeploymentAccessor, err error) {
 	labels := map[string]string{
 		manifestsv1alpha1.PackageLabel:         pkgInstance.Manifest.Name,
 		manifestsv1alpha1.PackageInstanceLabel: pkg.ClientObject().GetName(),
 	}
 
-	configJSON, err := json.Marshal(pkg.TemplateContext().Config)
+	configJSON, err := json.Marshal(pkg.GetSpecTemplateContext().Config)
 	if err != nil {
 		return nil, fmt.Errorf("marshalling config for package-config annotation: %w", err)
 	}
 	annotations := map[string]string{
-		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetImage(),
+		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetSpecImage(),
 		manifestsv1alpha1.PackageConfigAnnotation:      string(configJSON),
 		constants.ChangeCauseAnnotation: fmt.Sprintf(
 			"Installing %s package.", pkgInstance.Manifest.Name),
@@ -239,8 +239,8 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	deploy.ClientObject().SetName(pkg.ClientObject().GetName())
 	deploy.ClientObject().SetNamespace(pkg.ClientObject().GetNamespace())
 
-	deploy.SetTemplateSpec(packagerender.RenderObjectSetTemplateSpec(pkgInstance))
-	deploy.SetSelector(labels)
+	deploy.SetSpecTemplateSpec(packagerender.RenderObjectSetTemplateSpec(pkgInstance))
+	deploy.SetSpecSelector(labels)
 
 	if err := controllerutil.SetControllerReference(
 		pkg.ClientObject(), deploy.ClientObject(), l.scheme); err != nil {
@@ -250,11 +250,11 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	return deploy, nil
 }
 
-func setInvalidConditionBasedOnLoadError(pkg adapters.GenericPackageAccessor, err error) {
+func setInvalidConditionBasedOnLoadError(pkg adapters.PackageAccessor, err error) {
 	reason := "LoadError"
 
 	// Can not be determined more precisely
-	meta.SetStatusCondition(pkg.GetConditions(), metav1.Condition{
+	meta.SetStatusCondition(pkg.GetSpecConditions(), metav1.Condition{
 		Type:               corev1alpha1.PackageInvalid,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
@@ -267,7 +267,7 @@ var uniqueLock = sync.Mutex{}
 
 func validateUnique(
 	ctx context.Context, uncachedClient client.Client,
-	apiPkg adapters.GenericPackageAccessor, manifest *manifests.PackageManifest,
+	apiPkg adapters.PackageAccessor, manifest *manifests.PackageManifest,
 ) ([]string, error) {
 	hasUnique := false
 	for _, c := range manifest.Spec.Constraints {
@@ -325,7 +325,7 @@ func validateUnique(
 func validateConstraints(
 	ctx context.Context,
 	uncachedClient client.Client,
-	apiPkg adapters.GenericPackageAccessor, manifest *manifests.PackageManifest, env manifests.PackageEnvironment,
+	apiPkg adapters.PackageAccessor, manifest *manifests.PackageManifest, env manifests.PackageEnvironment,
 ) error {
 	var messages []string
 	for _, constraint := range manifest.Spec.Constraints {
@@ -373,7 +373,7 @@ func validateConstraints(
 	messages = append(messages, extra...)
 
 	if len(messages) > 0 {
-		meta.SetStatusCondition(apiPkg.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(apiPkg.GetSpecConditions(), metav1.Condition{
 			Type:               corev1alpha1.PackageInvalid,
 			Status:             metav1.ConditionTrue,
 			Reason:             "ConstraintsFailed",

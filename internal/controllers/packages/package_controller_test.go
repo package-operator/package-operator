@@ -114,7 +114,7 @@ func TestPackageController_Paused(t *testing.T) {
 	ipm := &imagePullerMock{}
 	clientMock := testutil.NewClient()
 	var hash int32
-	newPausedPackage := func(scheme *runtime.Scheme) adapters.GenericPackageAccessor {
+	newPausedPackage := func(scheme *runtime.Scheme) adapters.PackageAccessor {
 		obj := adapters.NewGenericPackage(scheme)
 		obj.SetSpecPaused(true)
 		return obj
@@ -294,7 +294,7 @@ func TestClusterPackageController_Paused(t *testing.T) {
 	ipm := &imagePullerMock{}
 	clientMock := testutil.NewClient()
 	var hash int32
-	newPausedClusterPackage := func(scheme *runtime.Scheme) adapters.GenericPackageAccessor {
+	newPausedClusterPackage := func(scheme *runtime.Scheme) adapters.PackageAccessor {
 		obj := adapters.NewGenericClusterPackage(scheme)
 		obj.SetSpecPaused(true)
 		return obj
