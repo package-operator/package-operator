@@ -24,6 +24,12 @@ spec:
       labels:
         app.kubernetes.io/name: package-operator-hosted-cluster-manager
     spec:
+{{- if and (hasKey . "environment") (hasKey .environment "hyperShift") (hasKey .environment.hyperShift "hostedCluster") (hasKey .environment.hyperShift.hostedCluster "nodeSelector") }}
+      nodeSelector:
+  {{- range $key, $value := .environment.hyperShift.hostedCluster.nodeSelector }}
+        {{ $key }}: {{ $value }}
+  {{- end }}
+{{- end }}
 {{- if hasKey .config "affinity" }}
       affinity: {{ toJson .config.affinity }}
 {{- end}}
