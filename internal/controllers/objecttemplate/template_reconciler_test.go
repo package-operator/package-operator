@@ -369,7 +369,7 @@ func Test_updateStatusConditionsFromOwnedObject(t *testing.T) {
 			err := updateStatusConditionsFromOwnedObject(
 				ctx, objectTemplate, test.obj)
 			require.NoError(t, err)
-			conds := *objectTemplate.GetConditions()
+			conds := *objectTemplate.GetStatusConditions()
 			if assert.Len(t, conds, len(test.expectedConditions)) {
 				for i, expectedCond := range test.expectedConditions {
 					cond := conds[i]
@@ -549,7 +549,7 @@ func Test_setObjectTemplateConditionBasedOnError(t *testing.T) {
 				require.ErrorIs(t, outErr, test.expectedErr)
 			}
 
-			conds := *test.objectTemplate.GetConditions()
+			conds := *test.objectTemplate.GetStatusConditions()
 			if assert.Len(t, conds, len(test.expectedConditions)) {
 				for i, expectedCond := range test.expectedConditions {
 					cond := conds[i]

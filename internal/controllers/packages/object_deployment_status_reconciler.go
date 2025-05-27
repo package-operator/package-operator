@@ -21,44 +21,47 @@ type objectDeploymentStatusReconciler struct {
 }
 
 func (r *objectDeploymentStatusReconciler) Reconcile(
-	ctx context.Context, packageObj adapters.GenericPackageAccessor,
+	ctx context.Context, packageObj adapters.PackageAccessor,
 ) (ctrl.Result, error) {
 	objDep := r.newObjectDeployment(r.scheme)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(packageObj.ClientObject()), objDep.ClientObject()); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	objDepAvailableCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentAvailable)
+	objDepAvailableCond := meta.FindStatusCondition(*objDep.GetStatusConditions(), corev1alpha1.ObjectDeploymentAvailable)
 	if objDepAvailableCond != nil && objDepAvailableCond.ObservedGeneration == objDep.ClientObject().GetGeneration() {
 		packageAvailableCond := objDepAvailableCond.DeepCopy()
 		packageAvailableCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetConditions(), *packageAvailableCond)
+		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packageAvailableCond)
 	}
 
-	objDepProgressingCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentProgressing)
+	objDepProgressingCond := meta.FindStatusCondition(
+		*objDep.GetStatusConditions(),
+		corev1alpha1.ObjectDeploymentProgressing,
+	)
 	if objDepProgressingCond != nil && objDepProgressingCond.ObservedGeneration == objDep.ClientObject().GetGeneration() {
 		packageProgressingCond := objDepProgressingCond.DeepCopy()
 		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetConditions(), *packageProgressingCond)
+		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packageProgressingCond)
 	}
 
-	objDepPausedCond := meta.FindStatusCondition(*objDep.GetConditions(), corev1alpha1.ObjectDeploymentPaused)
+	objDepPausedCond := meta.FindStatusCondition(*objDep.GetStatusConditions(), corev1alpha1.ObjectDeploymentPaused)
 	if objDepPausedCond != nil && objDepPausedCond.ObservedGeneration == objDep.ClientObject().GetGeneration() &&
 		objDepPausedCond.Status == metav1.ConditionTrue {
 		packagePausedCond := objDepPausedCond.DeepCopy()
 		packagePausedCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
-		meta.SetStatusCondition(packageObj.GetConditions(), *packagePausedCond)
+		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packagePausedCond)
 	} else {
-		meta.RemoveStatusCondition(packageObj.GetConditions(), corev1alpha1.PackagePaused)
+		meta.RemoveStatusCondition(packageObj.GetSpecConditions(), corev1alpha1.PackagePaused)
 	}
 
-	controllers.DeleteMappedConditions(ctx, packageObj.GetConditions())
+	controllers.DeleteMappedConditions(ctx, packageObj.GetSpecConditions())
 	controllers.MapConditions(
 		ctx,
-		objDep.ClientObject().GetGeneration(), *objDep.GetConditions(),
-		packageObj.ClientObject().GetGeneration(), packageObj.GetConditions(),
+		objDep.ClientObject().GetGeneration(), *objDep.GetStatusConditions(),
+		packageObj.ClientObject().GetGeneration(), packageObj.GetSpecConditions(),
 	)
 
 	packageObj.SetStatusRevision(objDep.GetStatusRevision())

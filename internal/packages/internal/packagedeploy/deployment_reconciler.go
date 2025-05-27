@@ -71,7 +71,7 @@ func newDeploymentReconciler(
 func (r *DeploymentReconciler) Reconcile(
 	ctx context.Context, desiredDeploy adapters.ObjectDeploymentAccessor, chunker objectChunker,
 ) error {
-	templateSpec := desiredDeploy.GetTemplateSpec()
+	templateSpec := desiredDeploy.GetSpecTemplateSpec()
 
 	// Get existing ObjectDeployment
 	actualDeploy := r.newObjectDeployment(r.scheme)
@@ -79,7 +79,7 @@ func (r *DeploymentReconciler) Reconcile(
 	if apimachineryerrors.IsNotFound(err) {
 		// Pre-Create the ObjectDeployment without phases,
 		// so we can create Slices with an OwnerRef to the Deployment.
-		desiredDeploy.SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
+		desiredDeploy.SetSpecTemplateSpec(corev1alpha1.ObjectSetTemplateSpec{})
 		if err := r.client.Create(ctx, desiredDeploy.ClientObject()); err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func (r *DeploymentReconciler) Reconcile(
 		)
 		actualDeploy.ClientObject().SetLabels(labels)
 
-		actualDeploy.SetTemplateSpec(templateSpec)
+		actualDeploy.SetSpecTemplateSpec(templateSpec)
 
 		err := r.client.Update(ctx, actualDeploy.ClientObject())
 		if err == nil {
@@ -151,13 +151,13 @@ func (r *DeploymentReconciler) sliceGarbageCollection(
 	}
 
 	referencedSlices := map[string]struct{}{}
-	for _, phase := range deploy.GetTemplateSpec().Phases {
+	for _, phase := range deploy.GetSpecTemplateSpec().Phases {
 		for _, slice := range phase.Slices {
 			referencedSlices[slice] = struct{}{}
 		}
 	}
 	for _, objectSet := range objectSets {
-		for _, phase := range objectSet.GetPhases() {
+		for _, phase := range objectSet.GetSpecPhases() {
 			for _, slice := range phase.Slices {
 				referencedSlices[slice] = struct{}{}
 			}
@@ -195,7 +195,7 @@ func (r *DeploymentReconciler) sliceGarbageCollection(
 func (r *DeploymentReconciler) listObjectSetsForDeployment(
 	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
 ) ([]genericObjectSet, error) {
-	labelSelector := deploy.GetSelector()
+	labelSelector := deploy.GetSpecSelector()
 	objectSetSelector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
 		return nil, fmt.Errorf("invalid selector: %w", err)

@@ -201,18 +201,18 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}()
 
-	if meta.IsStatusConditionTrue(*objectSet.GetConditions(), corev1alpha1.ObjectSetArchived) {
+	if meta.IsStatusConditionTrue(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetArchived) {
 		// We don't want to touch this object anymore.
 		return res, nil
 	}
 
 	if !objectSet.ClientObject().GetDeletionTimestamp().IsZero() ||
-		objectSet.IsArchived() {
+		objectSet.IsSpecArchived() {
 		if err := c.handleDeletionAndArchival(ctx, objectSet); err != nil {
 			return res, err
 		}
 
-		if !objectSet.IsArchived() {
+		if !objectSet.IsSpecArchived() {
 			// Object was deleted and not just archived.
 			// no way to update status now :)
 			return res, nil
@@ -256,7 +256,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) error {
 	var phasesArePaused, unknown bool
-	if len(objectSet.GetRemotePhases()) > 0 {
+	if len(objectSet.GetStatusRemotePhases()) > 0 {
 		var err error
 		phasesArePaused, unknown, err = c.areRemotePhasesPaused(ctx, objectSet)
 		if err != nil {
@@ -271,7 +271,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 		objectSet.IsSpecPaused() && !phasesArePaused ||
 		!objectSet.IsSpecPaused() && phasesArePaused:
 		// Could not get status of all remote ObjectSetPhases or they disagree with their parent.
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
 			Status:             metav1.ConditionUnknown,
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
@@ -281,7 +281,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 
 	case objectSet.IsSpecPaused() && phasesArePaused:
 		// Everything is paused!
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetPaused,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
@@ -291,7 +291,7 @@ func (c *GenericObjectSetController) reportPausedCondition(
 
 	case !objectSet.IsSpecPaused() && !phasesArePaused:
 		// Nothing is paused!
-		meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetPaused)
+		meta.RemoveStatusCondition(objectSet.GetStatusConditions(), corev1alpha1.ObjectSetPaused)
 	}
 	return nil
 }
@@ -300,7 +300,7 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (arePaused, unknown bool, err error) {
 	var pausedPhases int
-	for _, phaseRef := range objectSet.GetRemotePhases() {
+	for _, phaseRef := range objectSet.GetStatusRemotePhases() {
 		phase := c.newObjectSetPhase(c.scheme)
 		err := c.client.Get(ctx, client.ObjectKey{
 			Name:      phaseRef.Name,
@@ -315,11 +315,11 @@ func (c *GenericObjectSetController) areRemotePhasesPaused(
 			return false, false, fmt.Errorf("get ObjectSetPhase: %w", err)
 		}
 
-		if meta.IsStatusConditionTrue(*phase.GetConditions(), corev1alpha1.ObjectSetPhasePaused) {
+		if meta.IsStatusConditionTrue(*phase.GetStatusConditions(), corev1alpha1.ObjectSetPhasePaused) {
 			pausedPhases++
 		}
 	}
-	arePaused = pausedPhases == len(objectSet.GetRemotePhases())
+	arePaused = pausedPhases == len(objectSet.GetStatusRemotePhases())
 	return arePaused, false, nil
 }
 
@@ -327,7 +327,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) error {
 	// always make sure to remove Available condition
-	defer meta.RemoveStatusCondition(objectSet.GetConditions(), corev1alpha1.ObjectSetAvailable)
+	defer meta.RemoveStatusCondition(objectSet.GetStatusConditions(), corev1alpha1.ObjectSetAvailable)
 
 	done := true
 
@@ -342,8 +342,8 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 	}
 
 	if !done {
-		if objectSet.IsArchived() {
-			meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+		if objectSet.IsSpecArchived() {
+			meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 				Type:               corev1alpha1.ObjectSetArchived,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ArchivalInProgress",
@@ -355,7 +355,7 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 		return nil
 	}
 
-	if err := c.accessManager.FreeWithUser(ctx, constants.StaticCacheOwner(), objectSet); err != nil {
+	if err := c.accessManager.FreeWithUser(ctx, constants.StaticCacheOwner(), objectSet.ClientObject()); err != nil {
 		return fmt.Errorf("freeing cache: %w", err)
 	}
 
@@ -366,8 +366,8 @@ func (c *GenericObjectSetController) handleDeletionAndArchival(
 
 	// Needs to be called _after_ FreeCacheAndRemoveFinalizer,
 	// because .Update is loading new state into objectSet, overriding changes to conditions.
-	if objectSet.IsArchived() {
-		meta.SetStatusCondition(objectSet.GetConditions(), metav1.Condition{
+	if objectSet.IsSpecArchived() {
+		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetArchived,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Archived",

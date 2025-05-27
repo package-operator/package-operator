@@ -19,35 +19,35 @@ func TestObjectSet(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ObjectSet{}, co)
 
 	objectSet.Status.Conditions = []metav1.Condition{{}}
-	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
+	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetStatusConditions())
 
 	assert.False(t, objectSet.IsSpecPaused())
-	assert.False(t, objectSet.IsArchived())
-	objectSet.SetPaused()
+	assert.False(t, objectSet.IsSpecArchived())
+	objectSet.SetSpecPaused()
 	assert.True(t, objectSet.IsSpecPaused())
-	objectSet.SetArchived()
-	assert.True(t, objectSet.IsArchived())
+	objectSet.SetSpecArchived()
+	assert.True(t, objectSet.IsSpecArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
-	objectSet.SetPhases(phases)
-	assert.Equal(t, phases, objectSet.GetPhases())
+	objectSet.SetSpecPhases(phases)
+	assert.Equal(t, phases, objectSet.GetSpecPhases())
 
 	objectSet.Spec.AvailabilityProbes = []corev1alpha1.ObjectSetProbe{{}}
 	assert.Equal(t, objectSet.Spec.AvailabilityProbes,
 		objectSet.GetAvailabilityProbes())
 
 	var revision int64 = 34
-	objectSet.SetRevision(revision)
-	assert.Equal(t, revision, objectSet.GetRevision())
+	objectSet.SetStatusRevision(revision)
+	assert.Equal(t, revision, objectSet.GetStatusRevision())
 
 	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
 		{},
 	}
-	assert.Equal(t, objectSet.Spec.Previous, objectSet.GetPrevious())
+	assert.Equal(t, objectSet.Spec.Previous, objectSet.GetSpecPrevious())
 
 	remotes := []corev1alpha1.RemotePhaseReference{{}}
-	objectSet.SetRemotePhases(remotes)
-	assert.Equal(t, remotes, objectSet.GetRemotePhases())
+	objectSet.SetStatusRemotePhases(remotes)
+	assert.Equal(t, remotes, objectSet.GetStatusRemotePhases())
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
@@ -56,9 +56,9 @@ func TestObjectSet(t *testing.T) {
 	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
 		SuccessDelaySeconds: 42,
 	}
-	objectSet.SetTemplateSpec(templateSpec)
-	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
-	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+	objectSet.SetSpecTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetSpecTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSpecSuccessDelaySeconds())
 
 	objectSet.Status.Conditions = []metav1.Condition{{
 		Type:   corev1alpha1.ObjectSetPaused,
@@ -70,12 +70,12 @@ func TestObjectSet(t *testing.T) {
 		Type:   corev1alpha1.ObjectSetAvailable,
 		Status: metav1.ConditionTrue,
 	}}
-	assert.True(t, objectSet.IsAvailable())
+	assert.True(t, objectSet.IsSpecAvailable())
 
-	objectSet.SetPausedByParent()
-	assert.True(t, objectSet.GetPausedByParent())
-	objectSet.SetActiveByParent()
-	assert.False(t, objectSet.GetPausedByParent())
+	objectSet.SetSpecPausedByParent()
+	assert.True(t, objectSet.GetSpecPausedByParent())
+	objectSet.SetSpecActiveByParent()
+	assert.False(t, objectSet.GetSpecPausedByParent())
 }
 
 func TestClusterObjectSet(t *testing.T) {
@@ -87,35 +87,35 @@ func TestClusterObjectSet(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ClusterObjectSet{}, co)
 
 	objectSet.Status.Conditions = []metav1.Condition{{}}
-	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetConditions())
+	assert.Equal(t, objectSet.Status.Conditions, *objectSet.GetStatusConditions())
 
 	assert.False(t, objectSet.IsSpecPaused())
-	assert.False(t, objectSet.IsArchived())
-	objectSet.SetPaused()
+	assert.False(t, objectSet.IsSpecArchived())
+	objectSet.SetSpecPaused()
 	assert.True(t, objectSet.IsSpecPaused())
-	objectSet.SetArchived()
-	assert.True(t, objectSet.IsArchived())
+	objectSet.SetSpecArchived()
+	assert.True(t, objectSet.IsSpecArchived())
 
 	phases := []corev1alpha1.ObjectSetTemplatePhase{{}}
-	objectSet.SetPhases(phases)
-	assert.Equal(t, phases, objectSet.GetPhases())
+	objectSet.SetSpecPhases(phases)
+	assert.Equal(t, phases, objectSet.GetSpecPhases())
 
 	objectSet.Spec.AvailabilityProbes = []corev1alpha1.ObjectSetProbe{{}}
 	assert.Equal(t, objectSet.Spec.AvailabilityProbes,
 		objectSet.GetAvailabilityProbes())
 
 	var revision int64 = 34
-	objectSet.SetRevision(revision)
-	assert.Equal(t, revision, objectSet.GetRevision())
+	objectSet.SetStatusRevision(revision)
+	assert.Equal(t, revision, objectSet.GetStatusRevision())
 
 	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
 		{},
 	}
-	assert.Equal(t, objectSet.Spec.Previous, objectSet.GetPrevious())
+	assert.Equal(t, objectSet.Spec.Previous, objectSet.GetSpecPrevious())
 
 	remotes := []corev1alpha1.RemotePhaseReference{{}}
-	objectSet.SetRemotePhases(remotes)
-	assert.Equal(t, remotes, objectSet.GetRemotePhases())
+	objectSet.SetStatusRemotePhases(remotes)
+	assert.Equal(t, remotes, objectSet.GetStatusRemotePhases())
 
 	controllerOf := []corev1alpha1.ControlledObjectReference{{}}
 	objectSet.SetStatusControllerOf(controllerOf)
@@ -124,9 +124,9 @@ func TestClusterObjectSet(t *testing.T) {
 	templateSpec := corev1alpha1.ObjectSetTemplateSpec{
 		SuccessDelaySeconds: 42,
 	}
-	objectSet.SetTemplateSpec(templateSpec)
-	assert.Equal(t, templateSpec, objectSet.GetTemplateSpec())
-	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSuccessDelaySeconds())
+	objectSet.SetSpecTemplateSpec(templateSpec)
+	assert.Equal(t, templateSpec, objectSet.GetSpecTemplateSpec())
+	assert.Equal(t, templateSpec.SuccessDelaySeconds, objectSet.GetSpecSuccessDelaySeconds())
 
 	objectSet.Status.Conditions = []metav1.Condition{{
 		Type:   corev1alpha1.ObjectSetPaused,
@@ -138,10 +138,10 @@ func TestClusterObjectSet(t *testing.T) {
 		Type:   corev1alpha1.ObjectSetAvailable,
 		Status: metav1.ConditionTrue,
 	}}
-	assert.True(t, objectSet.IsAvailable())
+	assert.True(t, objectSet.IsSpecAvailable())
 
-	objectSet.SetPausedByParent()
-	assert.True(t, objectSet.GetPausedByParent())
-	objectSet.SetActiveByParent()
-	assert.False(t, objectSet.GetPausedByParent())
+	objectSet.SetSpecPausedByParent()
+	assert.True(t, objectSet.GetSpecPausedByParent())
+	objectSet.SetSpecActiveByParent()
+	assert.False(t, objectSet.GetSpecPausedByParent())
 }

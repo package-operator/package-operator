@@ -59,7 +59,7 @@ var (
 )
 
 // Returns the chunkingStrategy implementation for the given Package.
-func determineChunkingStrategyForPackage(pkg adapters.GenericPackageAccessor) objectChunker {
+func determineChunkingStrategyForPackage(pkg adapters.PackageAccessor) objectChunker {
 	strategy := pkg.ClientObject().GetAnnotations()[chunkingStrategyAnnotation]
 	switch chunkingStrategy(strategy) {
 	case chunkingStrategyEachObject:
