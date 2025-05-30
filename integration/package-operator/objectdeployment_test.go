@@ -46,7 +46,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}{
 		{
 			deploymentRevision: 1,
-			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
+			probe:              hashCollisionTestProbe(),
 			phases: []corev1alpha1.ObjectSetTemplatePhase{
 				{
 					Name: "phase-1",
@@ -74,7 +74,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		},
 		{
 			deploymentRevision: 2,
-			probe:              hashCollisionTestProbe(".metadata.name", ".data.name"),
+			probe:              hashCollisionTestProbe(),
 			phases: []corev1alpha1.ObjectSetTemplatePhase{
 				{
 					Name: "phase-1",
@@ -116,7 +116,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		Spec: corev1alpha1.ObjectSetSpec{
 			LifecycleState: corev1alpha1.ObjectSetLifecycleStatePaused,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-				AvailabilityProbes: hashCollisionTestProbe(".metadata.name", ".data.name"),
+				AvailabilityProbes: hashCollisionTestProbe(),
 				Phases:             testCases[1].phases,
 			},
 		},
@@ -126,7 +126,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Logf("Running revision: %d \n", testCase.deploymentRevision)
-		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probe, "test-objectdeployment")
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probe, "test-objectdeployment", 10)
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
@@ -183,6 +183,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 	}
 }
 
+//nolint:maintidx
 func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	testCases := []struct {
@@ -393,7 +394,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Logf("Running revision %s \n", testCase.revision)
-		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectdeployment-1")
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectdeployment-1", 10)
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {
@@ -470,7 +471,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 				},
 			},
 		},
-	}, nil, "test-od")
+	}, nil, "test-od", 10)
 
 	require.NoError(t, Client.Create(ctx, objectDeployment))
 	cleanupOnSuccess(ctx, t, objectDeployment)
@@ -546,50 +547,6 @@ func ExpectedObjectSetName(deployment *corev1alpha1.ObjectDeployment) string {
 	return fmt.Sprintf("%s-%s", deployment.GetName(), deployment.Status.TemplateHash)
 }
 
-func objectDeploymentTemplate(
-	objectSetPhases []corev1alpha1.ObjectSetTemplatePhase,
-	probes []corev1alpha1.ObjectSetProbe, name string,
-) *corev1alpha1.ObjectDeployment {
-	label := "test.package-operator.run/" + name
-	return &corev1alpha1.ObjectDeployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-		},
-		Spec: corev1alpha1.ObjectDeploymentSpec{
-			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{label: "True"},
-			},
-			Template: corev1alpha1.ObjectSetTemplate{
-				Metadata: metav1.ObjectMeta{
-					Labels: map[string]string{label: "True"},
-				},
-				Spec: corev1alpha1.ObjectSetTemplateSpec{
-					Phases:             objectSetPhases,
-					AvailabilityProbes: probes,
-				},
-			},
-		},
-	}
-}
-
-func cmTemplate(name string, data map[string]string, t require.TestingT) unstructured.Unstructured {
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
-		},
-		Data: data,
-	}
-	GVK, err := apiutil.GVKForObject(&cm, Scheme)
-	require.NoError(t, err)
-	cm.SetGroupVersionKind(GVK)
-
-	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cm)
-	require.NoError(t, err)
-	return unstructured.Unstructured{Object: resObj}
-}
-
 func secret(name string, t require.TestingT) unstructured.Unstructured {
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -605,41 +562,6 @@ func secret(name string, t require.TestingT) unstructured.Unstructured {
 	require.NoError(t, err)
 	secret.SetGroupVersionKind(GVK)
 	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&secret)
-	require.NoError(t, err)
-	return unstructured.Unstructured{Object: resObj}
-}
-
-func deploymentTemplate(deploymentName string, podImage string, t require.TestingT) unstructured.Unstructured {
-	obj := appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   deploymentName,
-			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"test.package-operator.run/test-1": "True"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "nginx",
-					Labels: map[string]string{"test.package-operator.run/test-1": "True"},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: podImage,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	GVK, err := apiutil.GVKForObject(&obj, Scheme)
-	require.NoError(t, err)
-	obj.SetGroupVersionKind(GVK)
-	resObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
 	require.NoError(t, err)
 	return unstructured.Unstructured{Object: resObj}
 }
@@ -679,26 +601,6 @@ func newArchivalTestProbes() []corev1alpha1.ObjectSetProbe {
 					Condition: &corev1alpha1.ProbeConditionSpec{
 						Type:   string(appsv1.DeploymentAvailable),
 						Status: string(metav1.ConditionTrue),
-					},
-				},
-			},
-		},
-	}
-}
-
-func hashCollisionTestProbe(configmapFieldA, configmapFieldB string) []corev1alpha1.ObjectSetProbe {
-	return []corev1alpha1.ObjectSetProbe{
-		{
-			Selector: corev1alpha1.ProbeSelector{
-				Kind: &corev1alpha1.PackageProbeKindSpec{
-					Kind: "ConfigMap",
-				},
-			},
-			Probes: []corev1alpha1.Probe{
-				{
-					FieldsEqual: &corev1alpha1.ProbeFieldsEqualSpec{
-						FieldA: configmapFieldA,
-						FieldB: configmapFieldB,
 					},
 				},
 			},

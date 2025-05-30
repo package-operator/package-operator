@@ -13,14 +13,13 @@ import (
 
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/imageprefix"
 	"package-operator.run/internal/metrics"
 	"package-operator.run/internal/packages"
 )
-
-const loaderJobFinalizer = "package-operator.run/loader-job"
 
 var _ environment.Sinker = (*GenericPackageController)(nil)
 
@@ -143,25 +142,33 @@ func (c *GenericPackageController) Reconcile(
 		ctx, req.NamespacedName, pkg.ClientObject()); err != nil {
 		return res, client.IgnoreNotFound(err)
 	}
+
 	defer func() {
 		if err != nil {
 			return
 		}
+		if pkg.ClientObject().GetDeletionTimestamp().IsZero() {
+			if err = controllers.EnsureFinalizer(ctx, c.client, pkg.ClientObject(), constants.MetricsFinalizer); err != nil {
+				return
+			}
+		}
 		if c.recorder != nil {
 			c.recorder.RecordPackageMetrics(pkg)
 		}
+		// If the package has a deletion timestamp, remove the metrics finalizer
+		if !pkg.ClientObject().GetDeletionTimestamp().IsZero() {
+			err = client.IgnoreNotFound(
+				controllers.RemoveFinalizer(ctx, c.client, pkg.ClientObject(), constants.MetricsFinalizer))
+		}
 	}()
 
-	pkgClientObject := pkg.ClientObject()
-	if !pkgClientObject.GetDeletionTimestamp().IsZero() {
-		if err := c.handleDeletion(ctx, pkg); err != nil {
-			return res, err
-		}
+	if !pkg.ClientObject().GetDeletionTimestamp().IsZero() {
+		// Package deleting... Do nothing
 		return res, nil
 	}
 
 	objDep := c.newObjectDeployment(c.scheme)
-	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkgClientObject), objDep.ClientObject())
+	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkg.ClientObject()), objDep.ClientObject())
 	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}
@@ -207,16 +214,4 @@ func (c *GenericPackageController) updateStatus(ctx context.Context, pkg adapter
 		return fmt.Errorf("updating Package status: %w", err)
 	}
 	return nil
-}
-
-func (c *GenericPackageController) handleDeletion(
-	ctx context.Context, pkg adapters.GenericPackageAccessor,
-) error {
-	// Remove finalizer from previous versions of PKO.
-	if err := controllers.RemoveFinalizer(
-		ctx, c.client, pkg.ClientObject(), loaderJobFinalizer); err != nil {
-		return err
-	}
-
-	return c.client.Update(ctx, pkg.ClientObject())
 }
