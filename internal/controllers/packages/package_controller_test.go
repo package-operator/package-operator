@@ -146,6 +146,9 @@ func TestPackageController_Paused(t *testing.T) {
 	clientMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
 		Return(nil)
+	clientMock.
+		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything, mock.Anything).
+		Return(nil)
 	clientMock.StatusMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
 		Return(nil)
@@ -187,6 +190,9 @@ func TestPackageController_Reconcile(t *testing.T) {
 		Return(nil)
 	clientMock.
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything, mock.Anything).
 		Return(nil)
 	clientMock.StatusMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.Package"), mock.Anything).
@@ -320,6 +326,9 @@ func TestClusterPackageController_Paused(t *testing.T) {
 	clientMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
 		Return(nil)
+	clientMock.
+		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything, mock.Anything).
+		Return(nil)
 	clientMock.StatusMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
 		Return(nil)
@@ -361,6 +370,9 @@ func TestClusterPackageController_Reconcile(t *testing.T) {
 		Return(nil)
 	clientMock.
 		On("Get", mock.Anything, objectKey, mock.AnythingOfType("*v1alpha1.ClusterObjectDeployment"), mock.Anything).
+		Return(nil)
+	clientMock.
+		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything, mock.Anything).
 		Return(nil)
 	clientMock.StatusMock.
 		On("Update", mock.Anything, mock.AnythingOfType("*v1alpha1.ClusterPackage"), mock.Anything).
