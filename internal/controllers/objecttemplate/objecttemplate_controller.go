@@ -17,6 +17,7 @@ import (
 
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/environment"
@@ -192,7 +193,7 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 			c.dynamicCache.Source(
 				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme()),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
-					c.log.Info(
+					c.log.V(constants.LogLevelDebug).Info(
 						"processing dynamic cache event",
 						"gvk", object.GetObjectKind().GroupVersionKind(),
 						"object", client.ObjectKeyFromObject(object),
