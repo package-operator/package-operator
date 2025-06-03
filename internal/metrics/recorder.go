@@ -78,7 +78,7 @@ func NewRecorder() *Recorder {
 		prometheus.GaugeOpts{
 			Name: "package_operator_object_set_succeeded_timestamp_seconds",
 			Help: "ObjectSet Unix success timestamp.",
-		}, []string{"pko_name", "pko_namespace", "pko_package_instance"},
+		}, []string{"pko_name", "pko_namespace", "pko_package_instance", "image"},
 	)
 
 	return &Recorder{
@@ -115,7 +115,10 @@ type GenericPackage interface {
 func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 	obj := pkg.ClientObject()
 	if !obj.GetDeletionTimestamp().IsZero() {
-		r.packageAvailability.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
+		r.packageAvailability.DeletePartialMatch(prometheus.Labels{
+			"pko_name":      obj.GetName(),
+			"pko_namespace": obj.GetNamespace(),
+		})
 		r.packageCreated.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
 		r.packageLoadDuration.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
 		r.packageRevision.DeleteLabelValues(obj.GetName(), obj.GetNamespace())
@@ -179,14 +182,21 @@ func (r *Recorder) RecordObjectSetMetrics(objectSet GenericObjectSet) {
 		instance = l[manifestsv1alpha1.PackageInstanceLabel]
 	}
 
+	// Package source image -> image of the Package Object.
+	var image string
+	annotations := obj.GetAnnotations()
+	if annotations != nil && annotations[manifestsv1alpha1.PackageSourceImageAnnotation] != "" {
+		image = annotations[manifestsv1alpha1.PackageSourceImageAnnotation]
+	}
+
 	if !obj.GetDeletionTimestamp().IsZero() ||
 		meta.IsStatusConditionTrue(*objectSet.GetConditions(), corev1alpha1.ObjectSetArchived) {
-		r.objectSetSucceeded.DeleteLabelValues(obj.GetName(), obj.GetNamespace(), instance)
+		r.objectSetSucceeded.DeleteLabelValues(obj.GetName(), obj.GetNamespace(), instance, image)
 	} else {
 		succeededCond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded)
 		if succeededCond != nil {
 			r.objectSetSucceeded.
-				WithLabelValues(obj.GetName(), obj.GetNamespace(), instance).
+				WithLabelValues(obj.GetName(), obj.GetNamespace(), instance, image).
 				Set(float64(succeededCond.LastTransitionTime.Unix()))
 		}
 	}

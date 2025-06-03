@@ -92,6 +92,10 @@ func deleteExistingPKO(ctx context.Context) error {
 			Name: PackageOperatorClusterPackageName,
 		},
 	}
+	// Get the package object so any finalizers can be removed.
+	if err := Client.Get(ctx, client.ObjectKeyFromObject(packageOperatorPackage), packageOperatorPackage); err != nil {
+		return fmt.Errorf("error getting PackageOperator ClusterPackage: %w", err)
+	}
 
 	if err := nukeObject(ctx, packageOperatorPackage); err != nil {
 		return fmt.Errorf("stuck PackageOperator ClusterPackage: %w", err)
