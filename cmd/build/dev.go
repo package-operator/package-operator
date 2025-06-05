@@ -103,6 +103,11 @@ func (dev *Dev) Create(ctx context.Context, _ []string) error {
 	return cluster.create(ctx)
 }
 
+// Bootstrap package-operator-manager in local development cluster.
+func (dev *Dev) Bootstrap(ctx context.Context, _ []string) error {
+	return bootstrap(ctx)
+}
+
 // Load CRDs into the local development cluster.
 func (dev *Dev) LoadCRDs(ctx context.Context, args []string) error {
 	return cluster.loadCRDs(ctx, args)

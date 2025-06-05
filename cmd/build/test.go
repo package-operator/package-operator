@@ -7,9 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"pkg.package-operator.run/cardboard/run"
@@ -24,8 +21,7 @@ type Test struct{}
 func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) error {
 	self := run.Meth2(t, t.Integration, jsonOutput, filter)
 	if err := mgr.ParallelDeps(ctx, self,
-		run.Meth(cluster, cluster.create),
-		run.Meth(generate, generate.All),
+		run.Fn1(bootstrap, ctx),
 	); err != nil {
 		return err
 	}
@@ -36,36 +32,6 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	cl, err := cluster.Clients()
-	if err != nil {
-		return err
-	}
-
-	err = cl.CreateAndWaitFromFiles(ctx, []string{filepath.Join("config", "self-bootstrap-job-local.yaml")})
-	if err != nil {
-		return err
-	}
-
-	// Bootstrap job is cleaning itself up after completion, so we can't wait for Condition Completed=True.
-	// See self-bootstrap-job .spec.ttlSecondsAfterFinished: 0
-	err = cl.Waiter.WaitToBeGone(ctx,
-		&batchv1.Job{
-			ObjectMeta: metav1.ObjectMeta{Name: "package-operator-bootstrap", Namespace: "package-operator-system"},
-		},
-		func(client.Object) (done bool, err error) { return },
-	)
-	if err != nil {
-		return err
-	}
-
-	err = cl.Waiter.WaitForCondition(ctx,
-		&corev1alpha1.ClusterPackage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "package-operator",
-			},
-		},
-		corev1alpha1.PackageAvailable,
-		metav1.ConditionTrue,
-	)
 	if err != nil {
 		return err
 	}
