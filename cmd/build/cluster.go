@@ -227,10 +227,33 @@ func (c *Cluster) createHostedCluster(ctx context.Context, mgmtCl *Cluster, args
 			Name:      c.Name(),
 			Namespace: "default",
 		},
+		Spec: hsv1beta1.HostedClusterSpec{
+			NodeSelector: map[string]string{
+				"hosted-cluster": "node-selector",
+			},
+		},
 	}
 
 	if err := mgmtClients.CreateAndWaitForReadiness(ctx, hstdClResource); err != nil {
 		return fmt.Errorf("can't create HostedCluster in mgmt cluster %s: %w", mgmtCl.Name(), err)
+	}
+
+	// list all nodes in the management cluster
+	nodeList := &corev1.NodeList{}
+	if err := mgmtClients.CtrlClient.List(ctx, nodeList); err != nil {
+		return fmt.Errorf("can't list nodes in management cluster %s: %w", c.Name(), err)
+	}
+
+	// label each node
+	for _, node := range nodeList.Items {
+		nodeCopy := node.DeepCopy()
+		if nodeCopy.Labels == nil {
+			nodeCopy.Labels = make(map[string]string)
+		}
+		nodeCopy.Labels["hosted-cluster"] = "node-selector"
+		if err := mgmtClients.CtrlClient.Update(ctx, nodeCopy); err != nil {
+			return fmt.Errorf("can't label node %s in hosted cluster %s: %w", node.Name, c.Name(), err)
+		}
 	}
 
 	hstdClResource.Status.Conditions = []metav1.Condition{
