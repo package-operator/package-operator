@@ -291,7 +291,7 @@ type PackageEnvironmentHyperShiftHostedCluster struct {
 	TemplateContextObjectMeta `json:"metadata"`
 
 	// The control-plane namespace of this hosted cluster.
-	// Note: This should actually be named HostedControlPlaneNamespace.
+	// Note: This should actually be named HostedControlPlaneNamespace, but renaming would change our template API.
 	HostedClusterNamespace string `json:"hostedClusterNamespace"`
 
 	// NodeSelector when specified in HostedCluster.spec.nodeSelector, is propagated to all control plane Deployments
@@ -299,8 +299,6 @@ type PackageEnvironmentHyperShiftHostedCluster struct {
 	//
 	// Note: Upstream docs of this field specify that changing it will re-deploy
 	// existing control-plane workloads. This is not something that PKO currently supports.
-	// Idea: Can we make the template engine track accesses to .environment and
-	// store hashes of the accessed fields in the Package resource?
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }

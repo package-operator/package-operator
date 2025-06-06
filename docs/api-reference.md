@@ -1468,8 +1468,8 @@ https://github.com/openshift/hypershift
 | Field | Description |
 | ----- | ----------- |
 | `metadata` <b>required</b><br><a href="#templatecontextobjectmeta">TemplateContextObjectMeta</a> | TemplateContextObjectMeta represents a simplified version of metav1.ObjectMeta for use in templates. |
-| `hostedClusterNamespace` <b>required</b><br>string | The control-plane namespace of this hosted cluster.<br>Note: This should actually be named HostedControlPlaneNamespace. |
-| `nodeSelector` <br><a href="#map[string]string">map[string]string</a> | NodeSelector when specified in HostedCluster.spec.nodeSelector, is propagated to all control plane Deployments<br>and Stateful sets running management side.<br><br>Note: Upstream docs of this field specify that changing it will re-deploy<br>existing control-plane workloads. This is not something that PKO currently supports.<br>Idea: Can we make the template engine track accesses to .environment and<br>store hashes of the accessed fields in the Package resource? |
+| `hostedClusterNamespace` <b>required</b><br>string | The control-plane namespace of this hosted cluster.<br>Note: This should actually be named HostedControlPlaneNamespace, but renaming would change our template API. |
+| `nodeSelector` <br><a href="#map[string]string">map[string]string</a> | NodeSelector when specified in HostedCluster.spec.nodeSelector, is propagated to all control plane Deployments<br>and Stateful sets running management side.<br><br>Note: Upstream docs of this field specify that changing it will re-deploy<br>existing control-plane workloads. This is not something that PKO currently supports. |
 
 
 Used in:
