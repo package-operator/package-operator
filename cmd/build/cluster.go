@@ -238,7 +238,7 @@ func (c *Cluster) createHostedCluster(ctx context.Context, mgmtCl *Cluster, args
 		return fmt.Errorf("can't create HostedCluster in mgmt cluster %s: %w", mgmtCl.Name(), err)
 	}
 
-	// list all nodes in the hosted cluster
+	// list all nodes in the management cluster
 	nodeList := &corev1.NodeList{}
 	if err := mgmtClients.CtrlClient.List(ctx, nodeList); err != nil {
 		return fmt.Errorf("can't list nodes in management cluster %s: %w", c.Name(), err)
