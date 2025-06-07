@@ -57,6 +57,7 @@ Package Operator uses [Cardboard](https://github.com/package-operator/cardboard)
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `./do Dev:Create`      | Sets up the local development cluster.                                                                                          |
 | `./do Dev:Destroy`     | Deletes the local development cluster.                                                                                          |
+| `./do Dev:Bootstrap`   | Deploys package-operator to local development cluster.                                                                          |
 | `./do Dev:Generate`    | Generate code, api docs, install files.                                                                                         |
 | `./do Dev:Integration` | Runs local integration tests in a KinD cluster. (Run `Dev:Destroy` before to ensure that you're testing a freshly compiled PKO) |
 | `./do Dev:Lint`        | Runs local linters to check the codebase.                                                                                       |
