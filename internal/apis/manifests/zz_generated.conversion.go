@@ -436,6 +436,7 @@ func autoConvert_manifests_PackageEnvironmentHyperShiftHostedCluster_To_v1alpha1
 		return err
 	}
 	out.HostedClusterNamespace = in.HostedClusterNamespace
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
 	return nil
 }
 
@@ -449,6 +450,7 @@ func autoConvert_v1alpha1_PackageEnvironmentHyperShiftHostedCluster_To_manifests
 		return err
 	}
 	out.HostedClusterNamespace = in.HostedClusterNamespace
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
 	return nil
 }
 

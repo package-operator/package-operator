@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 
@@ -106,18 +107,29 @@ func TestHyperShift(t *testing.T) {
 	})
 
 	t.Run("HostedClusterComponent", func(t *testing.T) {
-		hcPkg := &corev1alpha1.Package{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "hosted-cluster",
-				Namespace: namespace,
-			},
-			Spec: corev1alpha1.PackageSpec{
-				Image:     pkgImage,
-				Component: "hosted-cluster",
-			},
-		}
+		// Try to get existing hosted-cluster package
+		hcPkg := &corev1alpha1.Package{}
+		err := Client.Get(ctx, client.ObjectKey{
+			Name:      "hosted-cluster",
+			Namespace: namespace,
+		}, hcPkg)
 
-		require.NoError(t, Client.Create(ctx, hcPkg))
+		if apierrors.IsNotFound(err) {
+			// Package doesn't exist, create it
+			hcPkg = &corev1alpha1.Package{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "hosted-cluster",
+					Namespace: namespace,
+				},
+				Spec: corev1alpha1.PackageSpec{
+					Image:     pkgImage,
+					Component: "hosted-cluster",
+				},
+			}
+			require.NoError(t, Client.Create(ctx, hcPkg))
+		} else {
+			require.NoError(t, err)
+		}
 
 		// Wait for roll-out of hosted cluster package
 		err = Waiter.WaitForCondition(
@@ -125,6 +137,37 @@ func TestHyperShift(t *testing.T) {
 			metav1.ConditionTrue, wait.WithTimeout(100*time.Second),
 		)
 		require.NoError(t, err)
+	})
+
+	t.Run("NodeSelectorPropagation", func(t *testing.T) {
+		// Use the nodeSelector as defined in cmd/build/cluster.go
+		testNodeSelector := map[string]string{
+			"hosted-cluster": "node-selector",
+		}
+
+		// Verify remote-phase deployment has the nodeSelector
+		rpDeployment := &appsv1.Deployment{}
+		require.NoError(t, Client.Get(ctx,
+			client.ObjectKey{
+				Name:      "package-operator-remote-phase-manager",
+				Namespace: namespace,
+			},
+			rpDeployment,
+		))
+		assert.Equal(t, testNodeSelector, rpDeployment.Spec.Template.Spec.NodeSelector,
+			"remote-phase deployment should have the correct nodeSelector")
+
+		// Verify hosted-cluster deployment has the nodeSelector
+		hcDeployment := &appsv1.Deployment{}
+		require.NoError(t, Client.Get(ctx,
+			client.ObjectKey{
+				Name:      "package-operator-hosted-cluster-manager",
+				Namespace: namespace,
+			},
+			hcDeployment,
+		))
+		assert.Equal(t, testNodeSelector, hcDeployment.Spec.Template.Spec.NodeSelector,
+			"hosted-cluster deployment should have the correct nodeSelector")
 	})
 }
 
