@@ -316,6 +316,12 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		return err
 	}
 
+	// The test stub is reused for image prefix overrides test but needs to be named differently.
+	// So mirror it to another tag.
+	if err := mirrorImage("test-stub", "src/test-stub-mirror", registry); err != nil {
+		return err
+	}
+
 	if err := os.Setenv("PKO_REPOSITORY_HOST", hostPort); err != nil {
 		return err
 	}
@@ -326,6 +332,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		run.Fn2(pushPackage, "test-stub-cel", registry),
 		run.Fn2(pushPackage, "test-stub-pause", registry),
 		run.Fn2(pushPackage, "package-operator", registry),
+		run.Fn2(pushPackage, "test-stub-image-prefix-override", registry),
 	); err != nil {
 		return err
 	}

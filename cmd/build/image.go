@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"pkg.package-operator.run/cardboard/modules/oci"
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
@@ -114,4 +115,10 @@ func mustVersion() string {
 	v, err := version()
 	run.Must(err)
 	return v
+}
+
+func mirrorImage(src, mirror, registry string) error {
+	srcURL := imageURL(registry, src, appVersion)
+	mirrorURL := imageURL(registry, mirror, appVersion)
+	return crane.Copy(srcURL, mirrorURL)
 }
