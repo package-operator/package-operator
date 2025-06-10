@@ -77,7 +77,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 		return "", fmt.Errorf("parsing package contents: %w", err)
 	}
 
-	tmplCtx := t.getTemplateContext(pkg, cfg)
+	tmplCtx := t.GetSpecTemplateContext(pkg, cfg)
 	tmplCfg, err := t.getConfig(pkg, cfg)
 	if err != nil {
 		return "", fmt.Errorf("getting config: %w", err)
@@ -125,7 +125,7 @@ func (t *Tree) RenderPackage(ctx context.Context, srcPath string, opts ...Render
 	return pkgTree.Print(), nil
 }
 
-func (t *Tree) getTemplateContext(pkg *packages.Package, cfg RenderPackageConfig) packages.PackageRenderContext {
+func (t *Tree) GetSpecTemplateContext(pkg *packages.Package, cfg RenderPackageConfig) packages.PackageRenderContext {
 	templateContext := packages.PackageRenderContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: manifests.TemplateContextObjectMeta{

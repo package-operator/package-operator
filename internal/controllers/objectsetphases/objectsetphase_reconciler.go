@@ -62,7 +62,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 
-	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetConditions())
+	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetStatusConditions())
 
 	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	if !probingResult.IsZero() {
 		meta.SetStatusCondition(
-			objectSetPhase.GetConditions(), metav1.Condition{
+			objectSetPhase.GetStatusConditions(), metav1.Condition{
 				Type:               corev1alpha1.ObjectSetAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ProbeFailure",
@@ -121,7 +121,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, nil
 	}
 
-	meta.SetStatusCondition(objectSetPhase.GetConditions(), metav1.Condition{
+	meta.SetStatusCondition(objectSetPhase.GetStatusConditions(), metav1.Condition{
 		Type:               corev1alpha1.ObjectSetPhaseAvailable,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Available",
@@ -179,7 +179,7 @@ func (r *objectSetPhaseReconciler) Teardown(
 func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
 	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor, actualObjects []client.Object,
 ) error {
-	activeObjects, err := controllers.GetControllerOf(
+	activeObjects, err := controllers.GetStatusControllerOf(
 		ctx, r.scheme, r.ownerStrategy,
 		objectSetPhase.ClientObject(), actualObjects)
 	if err != nil {

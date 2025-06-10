@@ -97,7 +97,7 @@ func TestReportOwnActiveObjects(t *testing.T) {
 		On("IsController", mock.Anything, mock.Anything).
 		Return(false)
 
-	activeObjects, err := GetControllerOf(
+	activeObjects, err := GetStatusControllerOf(
 		ctx, testScheme, ownerStrategy,
 		&corev1.ConfigMap{},
 		[]client.Object{

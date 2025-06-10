@@ -55,7 +55,7 @@ func TestUnpackReconciler(t *testing.T) {
 	assert.True(t, res.IsZero())
 
 	assert.True(t,
-		meta.IsStatusConditionTrue(*pkg.GetConditions(),
+		meta.IsStatusConditionTrue(*pkg.GetSpecConditions(),
 			corev1alpha1.PackageUnpacked))
 	assert.NotEmpty(t, pkg.GetSpecHash(nil))
 }
@@ -116,7 +116,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	assert.Equal(t, controllers.DefaultInitialBackoff, res.RequeueAfter)
 
 	assert.True(t,
-		meta.IsStatusConditionFalse(*pkg.GetConditions(),
+		meta.IsStatusConditionFalse(*pkg.GetSpecConditions(),
 			corev1alpha1.PackageUnpacked))
 }
 
@@ -197,7 +197,7 @@ type packageDeployerMock struct {
 
 func (m *packageDeployerMock) Deploy(
 	ctx context.Context,
-	apiPkg adapters.GenericPackageAccessor,
+	apiPkg adapters.PackageAccessor,
 	rawPkg *packages.RawPackage,
 	env manifests.PackageEnvironment,
 ) error {

@@ -25,20 +25,20 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	if objectSet.GetRevision() != 0 {
+	if objectSet.GetStatusRevision() != 0 {
 		// .status.revision is already set.
 		return
 	}
 
-	if len(objectSet.GetPrevious()) == 0 {
+	if len(objectSet.GetSpecPrevious()) == 0 {
 		// no previous revision(s) specified, default to revision 1
-		objectSet.SetRevision(1)
+		objectSet.SetStatusRevision(1)
 		return
 	}
 
 	// Determine new revision number by inspecting previous revisions:
 	var latestPreviousRevision int64
-	for _, prev := range objectSet.GetPrevious() {
+	for _, prev := range objectSet.GetSpecPrevious() {
 		prevObjectSet := r.newObjectSet(r.scheme)
 		key := client.ObjectKey{
 			Name:      prev.Name,
@@ -48,7 +48,7 @@ func (r *revisionReconciler) Reconcile(
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
-		sr := prevObjectSet.GetRevision()
+		sr := prevObjectSet.GetStatusRevision()
 		if sr == 0 {
 			logr.FromContextOrDiscard(ctx).
 				Info("waiting for previous revision to report revision number", "object", key)
@@ -64,7 +64,7 @@ func (r *revisionReconciler) Reconcile(
 		}
 	}
 
-	objectSet.SetRevision(latestPreviousRevision + 1)
+	objectSet.SetStatusRevision(latestPreviousRevision + 1)
 	if err := r.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return res, fmt.Errorf("update revision in status: %w", err)
 	}

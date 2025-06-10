@@ -34,7 +34,7 @@ type defaultObjectSetGetter struct {
 
 func (os *defaultObjectSetGetter) getActivelyReconciledObjects() []objectIdentifier {
 	res := make([]objectIdentifier, 0)
-	if os.objectSet.IsArchived() {
+	if os.objectSet.IsSpecArchived() {
 		// If an objectset is archived, it doesn't actively
 		// reconcile anything, we just return an empty list
 		return []objectIdentifier{}
@@ -58,7 +58,7 @@ func (os *defaultObjectSetGetter) getActivelyReconciledObjects() []objectIdentif
 }
 
 func (os *defaultObjectSetGetter) getObjects() ([]objectIdentifier, error) {
-	objects := utils.GetObjectsFromPhases(os.objectSet.GetPhases())
+	objects := utils.GetObjectsFromPhases(os.objectSet.GetSpecPhases())
 	result := make([]objectIdentifier, len(objects))
 	for i := range objects {
 		unstructuredObj := objects[i].Object
@@ -116,5 +116,5 @@ func (a objectSetsByRevisionAscending) Less(i, j int) bool {
 	iObj := a[i]
 	jObj := a[j]
 
-	return iObj.GetRevision() < jObj.GetRevision()
+	return iObj.GetStatusRevision() < jObj.GetStatusRevision()
 }

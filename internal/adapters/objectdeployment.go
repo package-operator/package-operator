@@ -9,32 +9,42 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
+// ObjectDeploymentAccessor is an adapter interface to access an ObjectDeployment.
+//
+// Reason for this interface is that it allows accessing an ObjectDeployment in two scopes:
+// The regular ObjectDeployment and the ClusterObjectDeployment.
 type ObjectDeploymentAccessor interface {
 	ClientObject() client.Object
-	GetConditions() *[]metav1.Condition
-	GetSelector() metav1.LabelSelector
-	GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate
-	SetTemplateSpec(corev1alpha1.ObjectSetTemplateSpec)
-	GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
-	GetRevisionHistoryLimit() *int32
-	SetStatusConditions(...metav1.Condition)
-	RemoveStatusConditions(...string)
-	SetStatusCollisionCount(*int32)
-	GetStatusCollisionCount() *int32
 	GetGeneration() int64
-	GetStatusTemplateHash() string
-	SetStatusTemplateHash(templateHash string)
-	SetSelector(labels map[string]string)
-	SetStatusRevision(r int64)
-	GetStatusRevision() int64
-	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
-	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
+
+	GetSpecObjectSetTemplate() corev1alpha1.ObjectSetTemplate
 	GetSpecPaused() bool
 	SetSpecPaused(paused bool)
+	GetSpecRevisionHistoryLimit() *int32
+	GetSpecSelector() metav1.LabelSelector
+	SetSpecSelector(labels map[string]string)
+	SetSpecTemplateSpec(corev1alpha1.ObjectSetTemplateSpec)
+	GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec
+
+	GetStatusCollisionCount() *int32
+	SetStatusCollisionCount(*int32)
+	GetStatusConditions() *[]metav1.Condition
+	SetStatusConditions(...metav1.Condition)
+	RemoveStatusConditions(...string)
+	GetStatusControllerOf() []corev1alpha1.ControlledObjectReference
+	SetStatusControllerOf([]corev1alpha1.ControlledObjectReference)
+	GetStatusRevision() int64
+	SetStatusRevision(r int64)
+	GetStatusTemplateHash() string
+	SetStatusTemplateHash(templateHash string)
 }
 
-type ObjectDeploymentFactory func(
-	scheme *runtime.Scheme) ObjectDeploymentAccessor
+var (
+	_ ObjectDeploymentAccessor = (*ObjectDeployment)(nil)
+	_ ObjectDeploymentAccessor = (*ClusterObjectDeployment)(nil)
+)
+
+type ObjectDeploymentFactory func(scheme *runtime.Scheme) ObjectDeploymentAccessor
 
 var (
 	objectDeploymentGVK        = corev1alpha1.GroupVersion.WithKind("ObjectDeployment")
@@ -47,9 +57,7 @@ func NewObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
 		panic(err)
 	}
 
-	return &ObjectDeployment{
-		ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment),
-	}
+	return &ObjectDeployment{ObjectDeployment: *obj.(*corev1alpha1.ObjectDeployment)}
 }
 
 func NewClusterObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor {
@@ -58,9 +66,7 @@ func NewClusterObjectDeployment(scheme *runtime.Scheme) ObjectDeploymentAccessor
 		panic(err)
 	}
 
-	return &ClusterObjectDeployment{
-		ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment),
-	}
+	return &ClusterObjectDeployment{ClusterObjectDeployment: *obj.(*corev1alpha1.ClusterObjectDeployment)}
 }
 
 var (
@@ -72,7 +78,7 @@ type ObjectDeployment struct {
 	corev1alpha1.ObjectDeployment
 }
 
-func (a *ObjectDeployment) GetRevisionHistoryLimit() *int32 {
+func (a *ObjectDeployment) GetSpecRevisionHistoryLimit() *int32 {
 	return a.Spec.RevisionHistoryLimit
 }
 
@@ -88,15 +94,15 @@ func (a *ObjectDeployment) ClientObject() client.Object {
 	return &a.ObjectDeployment
 }
 
-func (a *ObjectDeployment) GetConditions() *[]metav1.Condition {
+func (a *ObjectDeployment) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *ObjectDeployment) GetSelector() metav1.LabelSelector {
+func (a *ObjectDeployment) GetSpecSelector() metav1.LabelSelector {
 	return a.Spec.Selector
 }
 
-func (a *ObjectDeployment) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
+func (a *ObjectDeployment) GetSpecObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	return a.Spec.Template
 }
 
@@ -122,15 +128,15 @@ func (a *ObjectDeployment) GetStatusTemplateHash() string {
 	return a.Status.TemplateHash
 }
 
-func (a *ObjectDeployment) SetTemplateSpec(spec corev1alpha1.ObjectSetTemplateSpec) {
+func (a *ObjectDeployment) SetSpecTemplateSpec(spec corev1alpha1.ObjectSetTemplateSpec) {
 	a.Spec.Template.Spec = spec
 }
 
-func (a *ObjectDeployment) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (a *ObjectDeployment) GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	return a.Spec.Template.Spec
 }
 
-func (a *ObjectDeployment) SetSelector(labels map[string]string) {
+func (a *ObjectDeployment) SetSpecSelector(labels map[string]string) {
 	a.Spec.Selector = metav1.LabelSelector{
 		MatchLabels: labels,
 	}
@@ -165,7 +171,7 @@ type ClusterObjectDeployment struct {
 	corev1alpha1.ClusterObjectDeployment
 }
 
-func (a *ClusterObjectDeployment) GetRevisionHistoryLimit() *int32 {
+func (a *ClusterObjectDeployment) GetSpecRevisionHistoryLimit() *int32 {
 	return a.Spec.RevisionHistoryLimit
 }
 
@@ -177,15 +183,15 @@ func (a *ClusterObjectDeployment) ClientObject() client.Object {
 	return &a.ClusterObjectDeployment
 }
 
-func (a *ClusterObjectDeployment) GetConditions() *[]metav1.Condition {
+func (a *ClusterObjectDeployment) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *ClusterObjectDeployment) GetSelector() metav1.LabelSelector {
+func (a *ClusterObjectDeployment) GetSpecSelector() metav1.LabelSelector {
 	return a.Spec.Selector
 }
 
-func (a *ClusterObjectDeployment) GetObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
+func (a *ClusterObjectDeployment) GetSpecObjectSetTemplate() corev1alpha1.ObjectSetTemplate {
 	return a.Spec.Template
 }
 
@@ -215,15 +221,15 @@ func (a *ClusterObjectDeployment) GetStatusTemplateHash() string {
 	return a.Status.TemplateHash
 }
 
-func (a *ClusterObjectDeployment) SetTemplateSpec(spec corev1alpha1.ObjectSetTemplateSpec) {
+func (a *ClusterObjectDeployment) SetSpecTemplateSpec(spec corev1alpha1.ObjectSetTemplateSpec) {
 	a.Spec.Template.Spec = spec
 }
 
-func (a *ClusterObjectDeployment) GetTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
+func (a *ClusterObjectDeployment) GetSpecTemplateSpec() corev1alpha1.ObjectSetTemplateSpec {
 	return a.Spec.Template.Spec
 }
 
-func (a *ClusterObjectDeployment) SetSelector(labels map[string]string) {
+func (a *ClusterObjectDeployment) SetSpecSelector(labels map[string]string) {
 	a.Spec.Selector = metav1.LabelSelector{
 		MatchLabels: labels,
 	}

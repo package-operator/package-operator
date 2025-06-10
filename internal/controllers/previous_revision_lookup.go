@@ -30,12 +30,12 @@ func NewPreviousRevisionLookup(
 
 type PreviousOwner interface {
 	ClientObject() client.Object
-	GetPrevious() []corev1alpha1.PreviousRevisionReference
+	GetSpecPrevious() []corev1alpha1.PreviousRevisionReference
 }
 
 type PreviousObjectSet interface {
 	ClientObject() client.Object
-	GetRemotePhases() []corev1alpha1.RemotePhaseReference
+	GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference
 }
 
 type PreviousObjectSetFactory func(*runtime.Scheme) PreviousObjectSet
@@ -43,7 +43,7 @@ type PreviousObjectSetFactory func(*runtime.Scheme) PreviousObjectSet
 func (l *PreviousRevisionLookup) Lookup(
 	ctx context.Context, owner PreviousOwner,
 ) ([]PreviousObjectSet, error) {
-	previous := owner.GetPrevious()
+	previous := owner.GetSpecPrevious()
 	previousSets := make([]PreviousObjectSet, len(previous))
 	for i, prev := range previous {
 		set := l.newPreviousObjectSet(l.scheme)

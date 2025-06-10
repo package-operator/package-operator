@@ -10,53 +10,55 @@ import (
 	"package-operator.run/internal/utils"
 )
 
-type GenericPackageAccessor interface {
-	ClientObject() client.Object
-	GetConditions() *[]metav1.Condition
-	GetImage() string
-	GetSpecHash(packageHashModifier *int32) string
-	GetUnpackedHash() string
-	SetUnpackedHash(hash string)
-	TemplateContext() manifests.TemplateContext
-	SetStatusRevision(rev int64)
-	GetStatusRevision() int64
-	GetComponent() string
-	GetSpecPaused() bool
-	SetSpecPaused(paused bool)
-}
-
-type GenericPackageFactory func(scheme *runtime.Scheme) GenericPackageAccessor
-
 var (
 	packageGVK        = corev1alpha1.GroupVersion.WithKind("Package")
 	clusterPackageGVK = corev1alpha1.GroupVersion.WithKind("ClusterPackage")
 )
 
-func NewGenericPackage(scheme *runtime.Scheme) GenericPackageAccessor {
+// PackageAccessor is an adapter interface to access a Package.
+//
+// Reason for this interface is that it allows accessing an Package in two scopes:
+// The regular Package and the ClusterPackage.
+type PackageAccessor interface {
+	ClientObject() client.Object
+
+	GetSpecComponent() string
+	GetSpecConditions() *[]metav1.Condition
+	GetSpecImage() string
+	GetSpecHash(packageHashModifier *int32) string
+	GetSpecPaused() bool
+	SetSpecPaused(paused bool)
+	GetSpecTemplateContext() manifests.TemplateContext
+
+	GetStatusRevision() int64
+	SetStatusRevision(rev int64)
+	GetStatusUnpackedHash() string
+	SetStatusUnpackedHash(hash string)
+}
+
+type GenericPackageFactory func(scheme *runtime.Scheme) PackageAccessor
+
+func NewGenericPackage(scheme *runtime.Scheme) PackageAccessor {
 	obj, err := scheme.New(packageGVK)
 	if err != nil {
 		panic(err)
 	}
 
-	return &GenericPackage{
-		Package: *obj.(*corev1alpha1.Package),
-	}
+	return &GenericPackage{Package: *obj.(*corev1alpha1.Package)}
 }
 
-func NewGenericClusterPackage(scheme *runtime.Scheme) GenericPackageAccessor {
+func NewGenericClusterPackage(scheme *runtime.Scheme) PackageAccessor {
 	obj, err := scheme.New(clusterPackageGVK)
 	if err != nil {
 		panic(err)
 	}
 
-	return &GenericClusterPackage{
-		ClusterPackage: *obj.(*corev1alpha1.ClusterPackage),
-	}
+	return &GenericClusterPackage{ClusterPackage: *obj.(*corev1alpha1.ClusterPackage)}
 }
 
 var (
-	_ GenericPackageAccessor = (*GenericPackage)(nil)
-	_ GenericPackageAccessor = (*GenericClusterPackage)(nil)
+	_ PackageAccessor = (*GenericPackage)(nil)
+	_ PackageAccessor = (*GenericClusterPackage)(nil)
 )
 
 type GenericPackage struct {
@@ -67,15 +69,15 @@ func (a *GenericPackage) ClientObject() client.Object {
 	return &a.Package
 }
 
-func (a *GenericPackage) GetComponent() string {
+func (a *GenericPackage) GetSpecComponent() string {
 	return a.Spec.Component
 }
 
-func (a *GenericPackage) GetConditions() *[]metav1.Condition {
+func (a *GenericPackage) GetSpecConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericPackage) GetImage() string {
+func (a *GenericPackage) GetSpecImage() string {
 	return a.Spec.Image
 }
 
@@ -83,11 +85,11 @@ func (a *GenericPackage) GetSpecHash(packageHashModifier *int32) string {
 	return utils.ComputeSHA256Hash(a.Spec, packageHashModifier)
 }
 
-func (a *GenericPackage) SetUnpackedHash(hash string) {
+func (a *GenericPackage) SetStatusUnpackedHash(hash string) {
 	a.Status.UnpackedHash = hash
 }
 
-func (a *GenericPackage) GetUnpackedHash() string {
+func (a *GenericPackage) GetStatusUnpackedHash() string {
 	return a.Status.UnpackedHash
 }
 
@@ -99,7 +101,7 @@ func (a *GenericPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
-func (a *GenericPackage) TemplateContext() manifests.TemplateContext {
+func (a *GenericPackage) GetSpecTemplateContext() manifests.TemplateContext {
 	return manifests.TemplateContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
@@ -125,15 +127,15 @@ func (a *GenericClusterPackage) ClientObject() client.Object {
 	return &a.ClusterPackage
 }
 
-func (a *GenericClusterPackage) GetComponent() string {
+func (a *GenericClusterPackage) GetSpecComponent() string {
 	return a.Spec.Component
 }
 
-func (a *GenericClusterPackage) GetConditions() *[]metav1.Condition {
+func (a *GenericClusterPackage) GetSpecConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
-func (a *GenericClusterPackage) GetImage() string {
+func (a *GenericClusterPackage) GetSpecImage() string {
 	return a.Spec.Image
 }
 
@@ -149,7 +151,7 @@ func (a *GenericClusterPackage) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
-func (a *GenericClusterPackage) TemplateContext() manifests.TemplateContext {
+func (a *GenericClusterPackage) GetSpecTemplateContext() manifests.TemplateContext {
 	return manifests.TemplateContext{
 		Package: manifests.TemplateContextPackage{
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
@@ -159,11 +161,11 @@ func (a *GenericClusterPackage) TemplateContext() manifests.TemplateContext {
 	}
 }
 
-func (a *GenericClusterPackage) SetUnpackedHash(hash string) {
+func (a *GenericClusterPackage) SetStatusUnpackedHash(hash string) {
 	a.Status.UnpackedHash = hash
 }
 
-func (a *GenericClusterPackage) GetUnpackedHash() string {
+func (a *GenericClusterPackage) GetStatusUnpackedHash() string {
 	return a.Status.UnpackedHash
 }
 

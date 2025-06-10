@@ -102,7 +102,7 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			assert.Empty(t, res)
 			require.NoError(t, err)
 
-			conds := *objectSetPhase.GetConditions()
+			conds := *objectSetPhase.GetStatusConditions()
 			assert.Len(t, conds, 1)
 			cond := conds[0]
 			assert.Equal(t, corev1alpha1.ObjectSetPhaseAvailable, cond.Type)

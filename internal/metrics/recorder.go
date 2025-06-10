@@ -107,8 +107,8 @@ func (r *Recorder) Register() {
 
 type GenericPackage interface {
 	ClientObject() client.Object
-	GetImage() string
-	GetConditions() *[]metav1.Condition
+	GetSpecImage() string
+	GetSpecConditions() *[]metav1.Condition
 	GetStatusRevision() int64
 }
 
@@ -129,7 +129,7 @@ func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 	healthStatus := 2
 
 	if availableCond := meta.FindStatusCondition(
-		*pkg.GetConditions(), corev1alpha1.PackageAvailable,
+		*pkg.GetSpecConditions(), corev1alpha1.PackageAvailable,
 	); availableCond != nil {
 		switch availableCond.Status {
 		case metav1.ConditionFalse:
@@ -150,7 +150,7 @@ func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 		"pko_namespace": obj.GetNamespace(),
 	})
 	r.packageAvailability.WithLabelValues(
-		obj.GetName(), obj.GetNamespace(), pkg.GetImage(),
+		obj.GetName(), obj.GetNamespace(), pkg.GetSpecImage(),
 	).Set(float64(healthStatus))
 
 	r.packageCreated.WithLabelValues(
@@ -170,7 +170,7 @@ func (r *Recorder) RecordPackageLoadMetric(pkg GenericPackage, d time.Duration) 
 
 type GenericObjectSet interface {
 	ClientObject() client.Object
-	GetConditions() *[]metav1.Condition
+	GetStatusConditions() *[]metav1.Condition
 }
 
 func (r *Recorder) RecordObjectSetMetrics(objectSet GenericObjectSet) {
@@ -190,10 +190,10 @@ func (r *Recorder) RecordObjectSetMetrics(objectSet GenericObjectSet) {
 	}
 
 	if !obj.GetDeletionTimestamp().IsZero() ||
-		meta.IsStatusConditionTrue(*objectSet.GetConditions(), corev1alpha1.ObjectSetArchived) {
+		meta.IsStatusConditionTrue(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetArchived) {
 		r.objectSetSucceeded.DeleteLabelValues(obj.GetName(), obj.GetNamespace(), instance, image)
 	} else {
-		succeededCond := meta.FindStatusCondition(*objectSet.GetConditions(), corev1alpha1.ObjectSetSucceeded)
+		succeededCond := meta.FindStatusCondition(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetSucceeded)
 		if succeededCond != nil {
 			r.objectSetSucceeded.
 				WithLabelValues(obj.GetName(), obj.GetNamespace(), instance, image).
