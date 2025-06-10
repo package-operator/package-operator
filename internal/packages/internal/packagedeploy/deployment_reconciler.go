@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -220,7 +221,7 @@ func (r *DeploymentReconciler) chunkPhase(
 	ctx context.Context, deploy adapters.ObjectDeploymentAccessor,
 	phase *corev1alpha1.ObjectSetTemplatePhase, chunker objectChunker,
 ) error {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	objectsForSlices, err := chunker.Chunk(ctx, phase)
 	if err != nil {
@@ -318,7 +319,7 @@ func (r *DeploymentReconciler) reconcileSliceWithCollisionCount(
 		return nil
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 	log.Info(
 		"ObjectSlice hash collision",
 		"ObjectSlice", sliceKey,

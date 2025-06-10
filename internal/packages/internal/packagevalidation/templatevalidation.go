@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packageimport"
@@ -45,8 +45,7 @@ func (v TemplateTestValidator) ValidatePackage(
 func (v TemplateTestValidator) doValidatePackage(
 	ctx context.Context, pkg *packagetypes.Package, isComponent bool,
 ) error {
-	log := logr.FromContextOrDiscard(ctx).V(1)
-
+	log := ctrl.LoggerFrom(ctx).V(1)
 	kcV, err := kubeconformValidatorFromManifest(pkg.Manifest)
 	if err != nil {
 		return err
@@ -79,7 +78,7 @@ func (v TemplateTestValidator) runTestCase(
 	kcV kubeconformValidator,
 	subDir string,
 ) (rErr error) {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 	pkg = pkg.DeepCopy()
 
 	configuration := map[string]any{}

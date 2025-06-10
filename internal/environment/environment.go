@@ -63,6 +63,7 @@ type Manager struct {
 	client          client.Client
 	discoveryClient serverVersionDiscoverer
 	restMapper      restMapper
+	log             logr.Logger
 
 	sinks []Sinker
 }
@@ -71,11 +72,13 @@ func NewManager(
 	client client.Client, // should be of the uncached variety
 	discoveryClient serverVersionDiscoverer,
 	restMapper restMapper,
+	log logr.Logger,
 ) *Manager {
 	return &Manager{
 		client:          client,
 		discoveryClient: discoveryClient,
 		restMapper:      restMapper,
+		log:             log,
 	}
 }
 
@@ -103,13 +106,11 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) do(ctx context.Context) error {
-	log := logr.FromContextOrDiscard(ctx)
-
 	env, err := m.probe(ctx)
 	if err != nil {
 		return err
 	}
-	log.Info("detected environment", "environment", env)
+	m.log.Info("detected environment", "environment", env)
 
 	for _, sink := range m.sinks {
 		sink.SetEnvironment(env)
