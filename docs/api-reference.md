@@ -30,11 +30,15 @@ kind: ClusterObjectDeployment
 metadata:
   name: example
 spec:
-  paused: "true"
+  paused: true
   revisionHistoryLimit: 10
-  selector: metav1.LabelSelector
+  selector:
+    matchLabels:
+      test: test
   template:
-    metadata: metav1.ObjectMeta
+    metadata:
+      labels:
+        test: test
     spec:
       availabilityProbes:
       - probes:
@@ -73,7 +77,10 @@ spec:
 status:
   collisionCount: 42
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
   - group: elitr
     kind: sadipscing
@@ -152,7 +159,10 @@ spec:
   successDelaySeconds: 42
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
   - group: amet
     kind: sit
@@ -160,7 +170,7 @@ status:
     namespace: sadipscing
   remotePhases:
   - name: dolor
-    uid: types.UID
+    uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
 ```
@@ -216,7 +226,7 @@ spec:
       kind: Deployment
       metadata:
         name: example-deployment
-  paused: "true"
+  paused: true
   previous:
   - name: previous-revision
   revision: 42
@@ -297,11 +307,14 @@ spec:
     kind: amet
     name: sadipscing
     namespace: consetetur
-    optional: "true"
+    optional: true
   template: dolor
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
     group: nonumy
     kind: diam
@@ -332,12 +345,15 @@ metadata:
   name: example
 spec:
   component: ipsum
-  config: runtime.RawExtension
+  config: {}
   image: lorem
-  paused: "true"
+  paused: true
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   revision: 42
   unpackedHash: dolor
 
@@ -365,11 +381,15 @@ metadata:
   name: example
   namespace: default
 spec:
-  paused: "true"
+  paused: true
   revisionHistoryLimit: 10
-  selector: metav1.LabelSelector
+  selector:
+    matchLabels:
+      test: test
   template:
-    metadata: metav1.ObjectMeta
+    metadata:
+      labels:
+        test: test
     spec:
       availabilityProbes:
       - probes:
@@ -408,7 +428,10 @@ spec:
 status:
   collisionCount: 42
   conditions:
-  - metav1.Condition
+  - message: ""
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
   - group: nonumy
     kind: diam
@@ -488,7 +511,10 @@ spec:
   successDelaySeconds: 42
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
   - group: elitr
     kind: sadipscing
@@ -496,7 +522,7 @@ status:
     namespace: diam
   remotePhases:
   - name: consetetur
-    uid: types.UID
+    uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
 ```
@@ -552,7 +578,7 @@ spec:
       kind: Deployment
       metadata:
         name: example-deployment
-  paused: "true"
+  paused: true
   previous:
   - name: previous-revision
   revision: 42
@@ -635,11 +661,14 @@ spec:
     kind: elitr
     name: diam
     namespace: sed
-    optional: "true"
+    optional: true
   template: consetetur
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   controllerOf:
     group: lorem
     kind: tempor
@@ -671,12 +700,15 @@ metadata:
   namespace: default
 spec:
   component: amet
-  config: runtime.RawExtension
+  config: {}
   image: sit
-  paused: "true"
+  paused: true
 status:
   conditions:
-  - metav1.Condition
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
   revision: 42
   unpackedHash: consetetur
 
@@ -700,10 +732,10 @@ ClusterObjectDeploymentSpec defines the desired state of a ClusterObjectDeployme
 
 | Field | Description |
 | ----- | ----------- |
-| `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `revisionHistoryLimit` <br>int32 | Number of old revisions in the form of archived ObjectSets to keep. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
-| `paused` <br><a href="#bool">bool</a> | If Paused is true, the object and its children will not be reconciled. |
+| `paused` <br>bool | If Paused is true, the object and its children will not be reconciled. |
 
 
 Used in:
@@ -717,7 +749,7 @@ ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeplo
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ClusterObjectDeployment. |
+| `collisionCount` <br>int32 | Count of hash collisions of the ClusterObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
 | `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | ControllerOf references the owned ClusterObjectSet revisions. |
@@ -733,7 +765,7 @@ ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `paused` <br><a href="#bool">bool</a> | Disables reconciliation of the ClusterObjectSet.<br>Only Status updates will still be propagated, but object changes will not be reconciled. |
+| `paused` <br>bool | Disables reconciliation of the ClusterObjectSet.<br>Only Status updates will still be propagated, but object changes will not be reconciled. |
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
@@ -768,7 +800,7 @@ ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
 | `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-| `successDelaySeconds` <br><a href="#int32">int32</a> | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
+| `successDelaySeconds` <br>int32 | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
 
 
 Used in:
@@ -833,10 +865,10 @@ ObjectDeploymentSpec defines the desired state of an ObjectDeployment.
 
 | Field | Description |
 | ----- | ----------- |
-| `revisionHistoryLimit` <br><a href="#int32">int32</a> | Number of old revisions in the form of archived ObjectSets to keep. |
+| `revisionHistoryLimit` <br>int32 | Number of old revisions in the form of archived ObjectSets to keep. |
 | `selector` <b>required</b><br>metav1.LabelSelector | Selector targets ObjectSets managed by this Deployment. |
 | `template` <b>required</b><br><a href="#objectsettemplate">ObjectSetTemplate</a> | Template to create new ObjectSets from. |
-| `paused` <br><a href="#bool">bool</a> | If Paused is true, the object and its children will not be reconciled. |
+| `paused` <br>bool | If Paused is true, the object and its children will not be reconciled. |
 
 
 Used in:
@@ -850,7 +882,7 @@ ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `collisionCount` <br><a href="#int32">int32</a> | Count of hash collisions of the ObjectDeployment. |
+| `collisionCount` <br>int32 | Count of hash collisions of the ObjectDeployment. |
 | `templateHash` <br>string | Computed TemplateHash. |
 | `revision` <br>int64 | Deployment revision. |
 | `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | ControllerOf references the owned ObjectSet revisions. |
@@ -885,7 +917,7 @@ ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.
 
 | Field | Description |
 | ----- | ----------- |
-| `paused` <br><a href="#bool">bool</a> | Disables reconciliation of the ObjectSet.<br>Only Status updates will still be propagated, but object changes will not be reconciled. |
+| `paused` <br>bool | Disables reconciliation of the ObjectSet.<br>Only Status updates will still be propagated, but object changes will not be reconciled. |
 | `revision` <b>required</b><br>int64 | Revision of the parent ObjectSet to use during object adoption. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
@@ -938,7 +970,7 @@ ObjectSetSpec defines the desired state of a ObjectSet.
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
 | `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-| `successDelaySeconds` <br><a href="#int32">int32</a> | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
+| `successDelaySeconds` <br>int32 | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
 
 
 Used in:
@@ -1004,7 +1036,7 @@ also update validation rules in (Cluster)ObjectSetSpec.
 | ----- | ----------- |
 | `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
-| `successDelaySeconds` <br><a href="#int32">int32</a> | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
+| `successDelaySeconds` <br>int32 | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
 
 
 Used in:
@@ -1022,7 +1054,7 @@ ObjectTemplateSource defines a source for a template.
 | `namespace` <br>string |  |
 | `name` <b>required</b><br>string |  |
 | `items` <b>required</b><br><a href="#objecttemplatesourceitem">[]ObjectTemplateSourceItem</a> |  |
-| `optional` <br><a href="#bool">bool</a> | Marks this source as optional.<br>The templated object will still be applied if optional sources are not found.<br>If the source object is created later on, it will be eventually picked up. |
+| `optional` <br>bool | Marks this source as optional.<br>The templated object will still be applied if optional sources are not found.<br>If the source object is created later on, it will be eventually picked up. |
 
 
 Used in:
@@ -1097,7 +1129,7 @@ PackageSpec specifies a package.
 | `image` <b>required</b><br>string | the image containing the contents of the package<br>this image will be unpacked by the package-loader to render<br>the ObjectDeployment for propagating the installation of the package. |
 | `config` <br>runtime.RawExtension | Package configuration parameters. |
 | `component` <br>string | Desired component to deploy from multi-component packages. |
-| `paused` <br><a href="#bool">bool</a> | If Paused is true, the package and its children will not be reconciled. |
+| `paused` <br>bool | If Paused is true, the package and its children will not be reconciled. |
 
 
 Used in:
@@ -1265,7 +1297,7 @@ spec:
     platformVersion:
       name: Kubernetes
       range: '>=1.20.x'
-    uniqueInScope: PackageManifestUniqueInScopeConstraint
+    uniqueInScope: {}
   dependencies:
   - image:
       name: my-pkg
@@ -1404,7 +1436,7 @@ data:
     platformVersion:
       name: Kubernetes
       range: '>=1.20.x'
-    uniqueInScope: PackageManifestUniqueInScopeConstraint
+    uniqueInScope: {}
   digest: dolor
   image: ipsum
   name: amet

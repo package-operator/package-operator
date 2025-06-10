@@ -59,6 +59,7 @@ type ClusterObjectSetSpec struct {
 // ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 type ClusterObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
+	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`
