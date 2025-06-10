@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -94,7 +96,11 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 	t.Parallel()
 
 	c := testutil.NewClient()
-	b := &Bootstrapper{client: c}
+	// Create a test logger
+	logger := testr.New(t)
+	b := &Bootstrapper{
+		client: c,
+	}
 
 	var (
 		runManagerCalled bool
@@ -124,8 +130,9 @@ func TestBootstrapper_bootstrap(t *testing.T) {
 		}).
 		Return(nil)
 
-	ctx, cancel := context.WithTimeout(
-		context.Background(), testBootstrapTimeout)
+	// Create a context with the logger
+	ctx := logr.NewContext(context.Background(), logger)
+	ctx, cancel := context.WithTimeout(ctx, testBootstrapTimeout)
 	defer cancel()
 	err := b.bootstrap(ctx, func(ctx context.Context) error {
 		runManagerCalled = true

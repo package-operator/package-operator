@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -81,7 +83,8 @@ func TestCache_Watch(t *testing.T) {
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		// Use context with logger instead of plain background context
+		ctx := testContextWithLogger(t)
 		owner := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test42",
@@ -117,7 +120,8 @@ func TestCache_Watch(t *testing.T) {
 			Return(nil, nil, nil)
 		cacheSource.On("handleNewInformer", mock.Anything).Return(nil)
 
-		ctx := context.Background()
+		// Use context with logger instead of plain background context
+		ctx := testContextWithLogger(t)
 		owner := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test42",
@@ -159,7 +163,8 @@ func TestCache_Free(t *testing.T) {
 		On("Delete", mock.Anything, mock.Anything).
 		Return(nil)
 
-	ctx := context.Background()
+	// Use context with logger instead of plain background context
+	ctx := testContextWithLogger(t)
 	err = c.Free(ctx, owner)
 	require.NoError(t, err)
 
@@ -270,7 +275,8 @@ func TestCache_sampleMetrics(t *testing.T) {
 		On("Get", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, reader, nil)
 
-	ctx := context.Background()
+	// Use context with logger instead of plain background context
+	ctx := testContextWithLogger(t)
 
 	c.sampleMetrics(ctx)
 	recorderMock.AssertCalled(t, "RecordDynamicCacheInformers", 2)
@@ -288,11 +294,16 @@ func setupTestCache(t *testing.T) (*Cache, *cacheSourceMock, *informerMapMock) {
 
 	c := &Cache{
 		scheme:             scheme,
-		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
 		cacheSource:        cacheSource,
 		informerMap:        informerMap,
+		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
 	}
 	return c, cacheSource, informerMap
+}
+
+func testContextWithLogger(t *testing.T) context.Context {
+	t.Helper()
+	return logr.NewContext(context.Background(), testr.New(t))
 }
 
 var (

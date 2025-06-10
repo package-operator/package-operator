@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,12 +18,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 
-	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/internal/testutil/restmappermock"
-
 	"package-operator.run/internal/apis/manifests"
+	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/testutil"
+	"package-operator.run/internal/testutil/restmappermock"
 )
+
+// Helper function to create a context with logger for tests.
+func testContextWithLogger(t *testing.T) context.Context {
+	t.Helper()
+	return logr.NewContext(context.Background(), testr.New(t))
+}
 
 var errExample = errors.New("boom")
 
@@ -69,7 +76,8 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 
 	mgr := NewManager(c, dc, rm)
 
-	ctx := context.Background()
+	// Use context with logger instead of plain background context
+	ctx := testContextWithLogger(t)
 	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 
@@ -150,7 +158,8 @@ func TestManager_Init_OpenShift(t *testing.T) {
 
 	mgr := NewManager(c, dc, rm)
 
-	ctx := context.Background()
+	// Use context with logger instead of plain background context
+	ctx := testContextWithLogger(t)
 	err := mgr.Init(ctx, []Sinker{sink})
 	require.NoError(t, err)
 

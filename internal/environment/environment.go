@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -103,12 +104,14 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) do(ctx context.Context) error {
-	log := logr.FromContextOrDiscard(ctx)
+	// Get logger using ctrl.LoggerFrom, which will provide a logger even if ctx doesn't have one
+	log := ctrl.LoggerFrom(ctx)
 
 	env, err := m.probe(ctx)
 	if err != nil {
 		return err
 	}
+
 	log.Info("detected environment", "environment", env)
 
 	for _, sink := range m.sinks {

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -146,7 +146,7 @@ func (c *Cache) Watch(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	gvk, err := apiutil.GVKForObject(obj, c.scheme)
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *Cache) Free(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	ownerRef, err := c.ownerRef(owner)
 	if err != nil {
@@ -338,7 +338,7 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 		return
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	informerCount := len(c.informerReferences)
 	c.recorder.RecordDynamicCacheInformers(informerCount)
