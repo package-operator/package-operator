@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/constants"
@@ -59,8 +60,12 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonNotFound:
 			return []Violation{{Error: err.Error()}}, nil
 		case "":
-			logr.FromContextOrDiscard(ctx).Info("API status error with empty reason string", "err", apiErr.Status())
-
+			log, lerr := logr.FromContext(ctx)
+			if lerr != nil {
+				// If no logger in context, use global logger
+				log = ctrl.Log
+			}
+			log.Info("API status error...", "err", apiErr.Status())
 			if strings.Contains(apiErr.Status().Message, "failed to create typed patch object") {
 				return []Violation{{Error: err.Error()}}, nil
 			}

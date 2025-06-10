@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/cmd/package-operator-manager/bootstrap/proxy"
@@ -112,8 +113,13 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 func (b *Bootstrapper) cancelWhenPackageAvailable(
 	ctx context.Context, cancel context.CancelFunc,
 ) {
-	log := logr.FromContextOrDiscard(ctx)
-	err := wait.PollUntilContextCancel(
+	// Get logger from context or use global logger if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+
+	err = wait.PollUntilContextCancel(
 		ctx, packageOperatorPackageCheckInterval, true,
 		func(ctx context.Context) (done bool, err error) {
 			available, err := isPKOAvailable(ctx, b.client, b.pkoNamespace)

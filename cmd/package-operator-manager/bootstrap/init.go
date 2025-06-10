@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -123,7 +124,12 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
+	// Get logger from context or use ctrl.Log if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+
 	if bootstrapClusterPackage.Spec.Image != existingClusterPackage.Spec.Image {
 		log.Info("image has been updated",
 			"from", existingClusterPackage.Spec.Image,
@@ -273,7 +279,12 @@ func (init *initializer) crdsFromPackage(ctx context.Context) (
 
 // ensure all CRDs are installed on the cluster.
 func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Unstructured) error {
-	log := logr.FromContextOrDiscard(ctx)
+	// Get logger from context or use ctrl.Log if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+
 	for _, crd := range crds {
 		// Set cache label.
 		labels := crd.GetLabels()

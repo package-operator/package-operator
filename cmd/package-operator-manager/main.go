@@ -49,14 +49,16 @@ func run(opts components.Options) error {
 		Development: false,
 		Level:       zapLevel,
 	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
+	logger := zap.New(zap.UseFlagOptions(&zapOpts))
+	ctrl.SetLogger(logger)
 	if opts.PrintVersion != nil {
 		_ = version.Get().Write(opts.PrintVersion)
 
 		return nil
 	}
 
-	ctx := logr.NewContext(ctrl.SetupSignalHandler(), ctrl.Log)
+	// Use the explicitly created logger instance to ensure we have a valid logger in context
+	ctx := logr.NewContext(ctrl.SetupSignalHandler(), logger)
 	if len(opts.SelfBootstrap) > 0 {
 		if err := di.Provide(bootstrap.NewBootstrapper); err != nil {
 			return err
@@ -77,7 +79,15 @@ func run(opts components.Options) error {
 			return err
 		}
 
-		if err := bs.Bootstrap(ctx, func(ctx context.Context) error {
+		if err := bs.Bootstrap(ctx, func(bootstrapCtx context.Context) error {
+			// Get the logger from the original context to ensure we have one
+			logger, err := logr.FromContext(ctx)
+			if err != nil {
+				logger = ctrl.Log.WithName("bootstrap")
+			}
+			// Create a new context with the logger from the original context
+			ctxWithLogger := logr.NewContext(bootstrapCtx, logger)
+
 			// Lazy create manager after boot strapper is finished or
 			// the RESTMapper will not pick up the new CRDs in the cluster.
 			return di.Invoke(func(
@@ -93,14 +103,14 @@ func run(opts components.Options) error {
 				if err := bootstrapControllers.SetupWithManager(mgr); err != nil {
 					return err
 				}
-				if err := envMgr.Init(ctx, environment.ImplementsSinker(bootstrapControllers.List())); err != nil {
+				if err := envMgr.Init(ctxWithLogger, environment.ImplementsSinker(bootstrapControllers.List())); err != nil {
 					return err
 				}
 				if err := mgr.Add(envMgr); err != nil {
 					return err
 				}
 
-				return mgr.Start(ctx)
+				return mgr.Start(ctxWithLogger)
 			})
 		}); err != nil {
 			return err
@@ -188,10 +198,14 @@ var hostedClusterGVK = hypershiftv1beta1.GroupVersion.
 func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 	ctx context.Context,
 ) error {
-	log := logr.FromContextOrDiscard(ctx)
+	// Get logger from context or use global logger if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = pkoMgr.log
+	}
 
 	// Probe for HyperShift API
-	_, err := pkoMgr.mgr.GetRESTMapper().
+	_, err = pkoMgr.mgr.GetRESTMapper().
 		RESTMapping(hostedClusterGVK.GroupKind(), hostedClusterGVK.Version)
 
 	switch {

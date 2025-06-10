@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +49,7 @@ func (r *revisionReconciler) Reconcile(
 
 		sr := prevObjectSet.GetStatusRevision()
 		if sr == 0 {
-			logr.FromContextOrDiscard(ctx).
+			ctrl.LoggerFrom(ctx).
 				Info("waiting for previous revision to report revision number", "object", key)
 			// retry later
 			// this delay is needed, because we are not watching previous revisions from this object

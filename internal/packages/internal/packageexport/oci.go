@@ -12,6 +12,7 @@ import (
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -85,7 +86,14 @@ func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.Raw
 	}
 
 	opts = append(opts, crane.WithContext(ctx))
-	verboseLogger := logr.FromContextOrDiscard(ctx).V(1)
+
+	// Get logger from context or use ctrl.Log if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+	verboseLogger := log.V(1)
+
 	for _, ref := range references {
 		verboseLogger.Info("pushing image", "reference", ref)
 		err := crane.Push(image, ref, opts...)
