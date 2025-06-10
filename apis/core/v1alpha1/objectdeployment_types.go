@@ -10,6 +10,7 @@ type ObjectDeploymentSpec struct {
 	// +kubebuilder:default=10
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 	// Selector targets ObjectSets managed by this Deployment.
+	// +example={"matchLabels": {"test": "test"}}
 	Selector metav1.LabelSelector `json:"selector"`
 	// Template to create new ObjectSets from.
 	Template ObjectSetTemplate `json:"template"`
@@ -20,6 +21,7 @@ type ObjectDeploymentSpec struct {
 // ObjectSetTemplate describes the template to create new ObjectSets from.
 type ObjectSetTemplate struct {
 	// Common Object Metadata.
+	// +example={"labels": {"test": "test"}}
 	Metadata metav1.ObjectMeta `json:"metadata"`
 	// ObjectSet specification.
 	Spec ObjectSetTemplateSpec `json:"spec"`
@@ -28,6 +30,7 @@ type ObjectSetTemplate struct {
 // ObjectDeploymentStatus defines the observed state of an ObjectDeployment.
 type ObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
+	// +example=[{"type": "Available", "status": "True", "reason": "Available",  "message": ""}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Count of hash collisions of the ObjectDeployment.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`

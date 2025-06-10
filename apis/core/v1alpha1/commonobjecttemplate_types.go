@@ -35,6 +35,7 @@ type ObjectTemplateSourceItem struct {
 // ObjectTemplateStatus defines the observed state of a ObjectTemplate ie the status of the templated object.
 type ObjectTemplateStatus struct {
 	// Conditions is a list of status conditions the templated object is in.
+	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ControllerOf references the templated object.
 	ControllerOf ControlledObjectReference `json:"controllerOf,omitempty"`

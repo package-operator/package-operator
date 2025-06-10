@@ -10,6 +10,7 @@ type ClusterObjectDeploymentSpec struct {
 	// +kubebuilder:default=10
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 	// Selector targets ObjectSets managed by this Deployment.
+	// +example={matchLabels: {test: test}}
 	Selector metav1.LabelSelector `json:"selector"`
 	// Template to create new ObjectSets from.
 	Template ObjectSetTemplate `json:"template"`
@@ -20,6 +21,7 @@ type ClusterObjectDeploymentSpec struct {
 // ClusterObjectDeploymentStatus defines the observed state of a ClusterObjectDeployment.
 type ClusterObjectDeploymentStatus struct {
 	// Conditions is a list of status conditions ths object is in.
+	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Count of hash collisions of the ClusterObjectDeployment.
 	CollisionCount *int32 `json:"collisionCount,omitempty"`

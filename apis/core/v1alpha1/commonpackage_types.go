@@ -8,6 +8,7 @@ import (
 // PackageStatus defines the observed state of a Package.
 type PackageStatus struct {
 	// Conditions is a list of status conditions ths object is in.
+	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Hash of image + config that was successfully unpacked.
 	UnpackedHash string `json:"unpackedHash,omitempty"`
