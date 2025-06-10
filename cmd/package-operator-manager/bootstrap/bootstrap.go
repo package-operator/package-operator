@@ -112,8 +112,12 @@ func (b *Bootstrapper) bootstrap(ctx context.Context, runManager func(ctx contex
 func (b *Bootstrapper) cancelWhenPackageAvailable(
 	ctx context.Context, cancel context.CancelFunc,
 ) {
-	log := logr.FromContextOrDiscard(ctx)
-	err := wait.PollUntilContextCancel(
+	// Get logger from context and properly handle error
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		panic(fmt.Errorf("getting logger from context in cancelWhenPackageAvailable: %w", err))
+	}
+	err = wait.PollUntilContextCancel(
 		ctx, packageOperatorPackageCheckInterval, true,
 		func(ctx context.Context) (done bool, err error) {
 			available, err := isPKOAvailable(ctx, b.client, b.pkoNamespace)
