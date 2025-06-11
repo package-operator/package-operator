@@ -6,7 +6,6 @@ import (
 
 	"package-operator.run/internal/adapters"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +30,7 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		// There is an objectset already for the current revision, we do nothing.
 		return ctrl.Result{}, nil
 	}
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	if len(objectDeployment.GetSpecObjectSetTemplate().Spec.Phases) == 0 {
 		// ObjectDeployment is empty. Don't create a ObjectSet, wait for spec.

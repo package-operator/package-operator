@@ -117,7 +117,7 @@ func newGenericObjectSetController(
 				preflight.List{
 					preflight.NewNoOwnerReferences(restMapper),
 					preflight.NewNamespaceEscalation(restMapper),
-					preflight.NewDryRun(client),
+					preflight.NewDryRun(client, log),
 				},
 			),
 		),

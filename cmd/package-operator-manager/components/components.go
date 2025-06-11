@@ -144,9 +144,10 @@ func ProvideMetricsRecorder() *metrics.Recorder {
 func ProvideDynamicCache(
 	mgr ctrl.Manager,
 	recorder *metrics.Recorder,
+	log logr.Logger,
 ) (*dynamiccache.Cache, error) {
 	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
+		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder, log,
 		dynamiccache.SelectorsByGVK{
 			// Only cache objects with our label selector,=
 			// so we prevent our caches from exploding!
@@ -186,7 +187,8 @@ func ProvideEnvironmentManager(
 	client UncachedClient,
 	discoveryClient discovery.DiscoveryInterface,
 	mgr ctrl.Manager,
+	log logr.Logger,
 ) *environment.Manager {
 	return environment.NewManager(
-		client, discoveryClient, mgr.GetRESTMapper())
+		client, discoveryClient, mgr.GetRESTMapper(), log)
 }

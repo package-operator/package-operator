@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr/testr"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -67,7 +68,7 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 		On("RESTMapping", mock.Anything, mock.Anything).
 		Return(&meta.RESTMapping{}, nil)
 
-	mgr := NewManager(c, dc, rm)
+	mgr := NewManager(c, dc, rm, testr.New(t))
 
 	ctx := context.Background()
 	err := mgr.Init(ctx, []Sinker{sink})
@@ -148,7 +149,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 		On("RESTMapping", mock.Anything, mock.Anything).
 		Return(&meta.RESTMapping{}, nil)
 
-	mgr := NewManager(c, dc, rm)
+	mgr := NewManager(c, dc, rm, testr.New(t))
 
 	ctx := context.Background()
 	err := mgr.Init(ctx, []Sinker{sink})
@@ -188,7 +189,7 @@ func TestManager_openShiftEnvironment_API_not_registered(t *testing.T) {
 		Return(&meta.NoKindMatchError{})
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil, nil, testr.New(t))
 	openShiftEnv, isOpenShift, err := mgr.openShiftEnvironment(ctx)
 	require.NoError(t, err)
 	assert.False(t, isOpenShift)
@@ -207,7 +208,7 @@ func TestManager_openShiftEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil, nil, testr.New(t))
 	_, _, err := mgr.openShiftEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
 }
@@ -243,7 +244,7 @@ func TestManager_openShiftProxyEnvironment_handeledErrors(t *testing.T) {
 				Return(test.err)
 
 			ctx := context.Background()
-			mgr := NewManager(c, nil, nil)
+			mgr := NewManager(c, nil, nil, testr.New(t))
 			proxyEnv, hasProxy, err := mgr.openShiftProxyEnvironment(ctx)
 			require.NoError(t, err)
 			assert.False(t, hasProxy)
@@ -264,7 +265,7 @@ func TestManager_openShiftProxyEnvironment_error(t *testing.T) {
 		Return(errExample)
 
 	ctx := context.Background()
-	mgr := NewManager(c, nil, nil)
+	mgr := NewManager(c, nil, nil, testr.New(t))
 	_, _, err := mgr.openShiftProxyEnvironment(ctx)
 	require.ErrorIs(t, err, errExample)
 }
@@ -279,7 +280,7 @@ func TestManager_hyperShiftEnvironment_handledErrors(t *testing.T) {
 		).
 		Return(&meta.RESTMapping{}, &meta.NoResourceMatchError{})
 
-	mgr := NewManager(nil, nil, rm)
+	mgr := NewManager(nil, nil, rm, testr.New(t))
 	_, ok, err := mgr.hyperShiftEnvironment()
 	require.NoError(t, err)
 	assert.False(t, ok)
@@ -295,7 +296,7 @@ func TestManager_hyperShiftEnvironment_error(t *testing.T) {
 		).
 		Return(&meta.RESTMapping{}, errExample)
 
-	mgr := NewManager(nil, nil, rm)
+	mgr := NewManager(nil, nil, rm, testr.New(t))
 	_, _, err := mgr.hyperShiftEnvironment()
 	require.ErrorIs(t, err, errExample)
 }
