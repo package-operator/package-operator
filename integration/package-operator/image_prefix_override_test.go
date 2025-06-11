@@ -58,8 +58,6 @@ func TestImagePrefixOverride(t *testing.T) {
 	mirroredPackageImage := strings.Replace(SuccessTestImagePrefixOverride, "src", "mirror", 1)
 	assert.Equal(t,
 		mirroredPackageImage, objectDeployment.GetAnnotations()[manifestsv1alpha1.PackageSourceImageAnnotation])
-	// This test fails highlighting that the mirrored image is not resolved in annotations on child objects
-	// TODO fix the above
 
 	// Check the deployment uses the mirror workload image.
 	deployList := &appsv1.DeploymentList{}
