@@ -15,10 +15,11 @@ import (
 func bootstrap(ctx context.Context) error {
 	self := run.Fn1(bootstrap, ctx)
 
-	if err := mgr.ParallelDeps(ctx, self,
+	err := mgr.ParallelDeps(ctx, self,
 		run.Meth(cluster, cluster.create),
 		run.Meth(generate, generate.All),
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
 
