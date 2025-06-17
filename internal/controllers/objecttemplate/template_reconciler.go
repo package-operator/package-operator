@@ -114,6 +114,7 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
+	obj.SetFinalizers(existingObj.GetFinalizers())
 	obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
 	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
 
