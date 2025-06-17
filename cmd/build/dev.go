@@ -184,6 +184,7 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		"-registry-host-overrides", imageRegistryHost() + "=localhost:5001",
 		"--package-operator-package-image", imageRegistry() + "/package-operator-package:" + appVersion,
 	}
+	goArgs = append(goArgs, args...)
 
 	return unix.Exec(absGoBinPath, goArgs, os.Environ())
 }
