@@ -54,6 +54,8 @@ func NewComponents() (*dig.Container, error) {
 		ProvidePackageController, ProvideClusterPackageController,
 		// ObjectTemplate
 		ProvideObjectTemplateController, ProvideClusterObjectTemplateController,
+		// Repository
+		ProvideRepositoryController, ProvideClusterRepositoryController,
 
 		// HostedCluster
 		ProvideHostedClusterController,
