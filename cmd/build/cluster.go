@@ -313,6 +313,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		run.Fn3(pushImage, "package-operator-webhook", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "remote-phase-manager", registry, runtime.GOARCH),
 		run.Fn3(pushImage, "test-stub", registry, runtime.GOARCH),
+		run.Fn3(pushImage, "test-stub-mirror", registry+"/src", runtime.GOARCH),
 	); err != nil {
 		return err
 	}
@@ -327,6 +328,7 @@ func (c *Cluster) loadImages(ctx context.Context, registryPort int32) error {
 		run.Fn2(pushPackage, "test-stub-cel", registry),
 		run.Fn2(pushPackage, "test-stub-pause", registry),
 		run.Fn2(pushPackage, "package-operator", registry),
+		run.Fn2(pushPackage, "test-stub-image-prefix-override", registry+"/mirror"),
 	); err != nil {
 		return err
 	}

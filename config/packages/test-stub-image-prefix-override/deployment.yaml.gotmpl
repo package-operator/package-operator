@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-stub-deployment
+{{- if eq .package.metadata.namespace ""}}
+  namespace: "{{.package.metadata.name}}"
+{{- end}}
+  labels:
+    app: test-stub
+    instance: "{{.package.metadata.name}}"
+  annotations:
+    test-environment: {{.environment | toJson | quote}}
+    package-operator.run/phase: deploy
+    package-operator.run/condition-map: |
+      Progressing => my-prefix/Progressing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: test-stub
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: test-stub
+    spec:
+      containers:
+        - name: test-stub
+          image: "{{.images.teststub}}"
+          ports:
+            - containerPort: 80

@@ -25,6 +25,8 @@ func buildPackage(ctx context.Context, name, registry string) error {
 			run.Meth(generate, generate.hostedClusterComponentFiles),
 			run.Meth(generate, generate.packageOperatorPackageFiles),
 		)
+	} else {
+		deps = append(deps, run.Meth1(generate, generate.templateManifestFiles, name))
 	}
 
 	self := run.Fn2(buildPackage, name, registry)
