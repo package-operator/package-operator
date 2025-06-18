@@ -19,9 +19,15 @@ import (
 
 type DryRun struct {
 	client client.Writer
+	log    logr.Logger
 }
 
-func NewDryRun(client client.Writer) *DryRun { return &DryRun{client: client} }
+func NewDryRun(client client.Writer, log logr.Logger) *DryRun {
+	return &DryRun{
+		client: client,
+		log:    log,
+	}
+}
 
 func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []Violation, err error) {
 	defer addPositionToViolations(ctx, obj, &violations)
@@ -59,7 +65,7 @@ func (p *DryRun) Check(ctx context.Context, _, obj client.Object) (violations []
 			metav1.StatusReasonNotFound:
 			return []Violation{{Error: err.Error()}}, nil
 		case "":
-			logr.FromContextOrDiscard(ctx).Info("API status error with empty reason string", "err", apiErr.Status())
+			p.log.Info("API status error with empty reason string", "err", apiErr.Status())
 
 			if strings.Contains(apiErr.Status().Message, "failed to create typed patch object") {
 				return []Violation{{Error: err.Error()}}, nil

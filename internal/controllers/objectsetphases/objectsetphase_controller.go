@@ -87,7 +87,7 @@ func NewMultiClusterObjectSetPhaseController(
 			targetRESTMapper,
 			preflight.List{
 				preflight.NewNoOwnerReferences(targetRESTMapper),
-				preflight.NewDryRun(targetWriter),
+				preflight.NewDryRun(targetWriter, log),
 			},
 		),
 	)
@@ -111,7 +111,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 		preflight.NewAPIExistence(
 			targetRESTMapper,
 			preflight.List{
-				preflight.NewDryRun(targetWriter),
+				preflight.NewDryRun(targetWriter, log),
 				preflight.NewNoOwnerReferences(targetRESTMapper),
 			},
 		),
@@ -136,7 +136,7 @@ func NewSameClusterObjectSetPhaseController(
 			restMapper,
 			preflight.List{
 				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewDryRun(client),
+				preflight.NewDryRun(client, log),
 				preflight.NewNoOwnerReferences(restMapper),
 			},
 		),
@@ -160,7 +160,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 		preflight.NewAPIExistence(
 			restMapper,
 			preflight.List{
-				preflight.NewDryRun(client),
+				preflight.NewDryRun(client, log),
 				preflight.NewNoOwnerReferences(restMapper),
 			},
 		),

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestDryRun(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := preflight.NewDryRun(c)
+	dr := preflight.NewDryRun(c, testr.New(t))
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.Error(t, err)
 	assert.Empty(t, v)
@@ -76,7 +77,7 @@ func TestDryRunViolations(t *testing.T) {
 			obj.SetNamespace("test-ns")
 			obj.SetKind("Hans")
 
-			dr := preflight.NewDryRun(c)
+			dr := preflight.NewDryRun(c, testr.New(t))
 			v, err := dr.Check(context.Background(), obj, obj)
 			require.NoError(t, err)
 			assert.Len(t, v, 1)
@@ -103,7 +104,7 @@ func TestDryRun_alreadyExists(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := preflight.NewDryRun(c)
+	dr := preflight.NewDryRun(c, testr.New(t))
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.NoError(t, err)
 	assert.Empty(t, v)
@@ -128,7 +129,7 @@ func TestDryRun_notFround(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := preflight.NewDryRun(c)
+	dr := preflight.NewDryRun(c, testr.New(t))
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.NoError(t, err)
 	assert.Len(t, v, 1)
@@ -149,7 +150,7 @@ func TestDryRun_emptyreason(t *testing.T) {
 	obj.SetNamespace("test-ns")
 	obj.SetKind("Hans")
 
-	dr := preflight.NewDryRun(c)
+	dr := preflight.NewDryRun(c, testr.New(t))
 	v, err := dr.Check(context.Background(), obj, obj)
 	require.NoError(t, err)
 	require.Len(t, v, 1)

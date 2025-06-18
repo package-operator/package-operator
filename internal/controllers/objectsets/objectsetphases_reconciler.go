@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,7 +95,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
-	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
+	log := ctrl.LoggerFrom(ctx).WithName("objectSetPhasesReconciler")
 	log.Info("reconcile")
 	defer log.Info("reconciled")
 
@@ -182,7 +181,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
+	log := ctrl.LoggerFrom(ctx).WithName("objectSetPhasesReconciler")
 
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
@@ -273,7 +272,7 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 func (r *objectSetPhasesReconciler) Teardown(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (cleanupDone bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	// objectSet is deleted with the `orphan` cascade option, so we don't delete the owned objects
 	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), "orphan") {

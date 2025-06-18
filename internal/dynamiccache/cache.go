@@ -57,6 +57,7 @@ type Cache struct {
 	scheme      *runtime.Scheme
 	opts        CacheOptions
 	informerMap informerMap
+	log         logr.Logger
 
 	informerReferencesMux sync.RWMutex
 	informerReferences    map[schema.GroupVersionKind]map[OwnerReference]struct{}
@@ -76,6 +77,7 @@ func NewCache(
 	scheme *runtime.Scheme,
 	mapper meta.RESTMapper,
 	recorder metricsRecorder,
+	log logr.Logger,
 	opts ...CacheOption,
 ) *Cache {
 	c := &Cache{
@@ -83,6 +85,7 @@ func NewCache(
 		informerReferences: map[schema.GroupVersionKind]map[OwnerReference]struct{}{},
 		cacheSource:        &cacheSource{},
 		recorder:           recorder,
+		log:                log,
 	}
 	for _, opt := range opts {
 		opt.ApplyToCacheOptions(&c.opts)
@@ -146,8 +149,6 @@ func (c *Cache) Watch(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
-
 	gvk, err := apiutil.GVKForObject(obj, c.scheme)
 	if err != nil {
 		return fmt.Errorf("get GVK for object: %w", err)
@@ -165,7 +166,7 @@ func (c *Cache) Watch(
 	c.informerReferences[gvk][ownerRef] = struct{}{}
 
 	if !informerExists {
-		log.Info("adding new watcher",
+		c.log.Info("adding new watcher",
 			"ownerGV", ownerRef.GroupKind,
 			"forGVK", gvk.String(),
 			"ownerNamespace", owner.GetNamespace())
@@ -193,8 +194,6 @@ func (c *Cache) Free(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
-
 	ownerRef, err := c.ownerRef(owner)
 	if err != nil {
 		return err
@@ -205,7 +204,7 @@ func (c *Cache) Free(
 			delete(refs, ownerRef)
 
 			if len(refs) == 0 {
-				log.Info("releasing watcher",
+				c.log.Info("releasing watcher",
 					"kind", gvk.Kind, "group", gvk.Group,
 					"ownerNamespace", owner.GetNamespace())
 
@@ -338,8 +337,6 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 		return
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
-
 	informerCount := len(c.informerReferences)
 	c.recorder.RecordDynamicCacheInformers(informerCount)
 
@@ -351,7 +348,7 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 			Kind:    gvk.Kind + "List",
 		})
 		if err := c.list(ctx, listObj); err != nil {
-			log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
+			c.log.Error(err, fmt.Sprintf("listing %v to record metrics", gvk))
 			continue
 		}
 		c.recorder.RecordDynamicCacheObjects(gvk, len(listObj.Items))

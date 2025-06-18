@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,7 +151,7 @@ func (r *templateReconciler) getValuesFromSources(
 	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 	sourcesConfig map[string]any,
 ) (retryLater bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 	for _, src := range objectTemplate.GetSources() {
 		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src)
 		if err != nil {
