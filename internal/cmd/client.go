@@ -43,7 +43,7 @@ func (c *Client) GetObjectset(
 			return &objectSet, nil
 		}
 	}
-	return nil, errors.New("ObjectSet could not be found") //nolint: err113
+	return nil, errors.New("ObjectSet could not be found")
 }
 
 func (c *Client) GetClusterObjectset(
@@ -60,7 +60,7 @@ func (c *Client) GetClusterObjectset(
 			return &clusterObjectSet, nil
 		}
 	}
-	return nil, errors.New("ClusterObjectSet could not be found") //nolint: err113
+	return nil, errors.New("ClusterObjectSet could not be found")
 }
 
 func (c *Client) GetPackage(ctx context.Context, name string, opts ...GetPackageOption) (*Package, error) {

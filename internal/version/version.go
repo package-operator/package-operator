@@ -37,7 +37,7 @@ func (i Info) Write(out io.Writer) error {
 		_, _ = fmt.Fprintf(buf, "pko\t%s\n", i.ApplicationVersion)
 	}
 
-	_, _ = fmt.Fprint(buf, i.BuildInfo.String())
+	_, _ = fmt.Fprint(buf, i.String())
 
 	if _, err := buf.WriteTo(out); err != nil {
 		return fmt.Errorf("write version info to output writer: %w", err)

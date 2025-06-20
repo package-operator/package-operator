@@ -15,7 +15,7 @@ type APIExistence struct {
 	sub        preflightChecker
 }
 
-type preflightChecker interface {
+type preflightChecker interface { //nolint: iface
 	Check(ctx context.Context, owner, obj client.Object) (violations []Violation, err error)
 }
 

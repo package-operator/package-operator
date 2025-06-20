@@ -25,18 +25,16 @@ func TestObjectSetPhase(t *testing.T) {
 	objectSetPhase.SetSpecPaused(paused)
 	assert.Equal(t, paused, objectSetPhase.IsSpecPaused())
 
-	objectSetPhase.ObjectSetPhase.Status.Conditions = []metav1.Condition{}
-	assert.Equal(
+	objectSetPhase.Status.Conditions = []metav1.Condition{}
+	assert.Len(
 		t,
-		len(objectSetPhase.ObjectSetPhase.Status.Conditions),
-		len(*objectSetPhase.GetStatusConditions()),
+		*objectSetPhase.GetStatusConditions(), len(objectSetPhase.Status.Conditions),
 	)
 
 	objectSetPhase.SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe{})
-	assert.Equal(
+	assert.Len(
 		t,
-		len(objectSetPhase.ObjectSetPhase.Spec.AvailabilityProbes),
-		len(objectSetPhase.GetAvailabilityProbes()),
+		objectSetPhase.GetAvailabilityProbes(), len(objectSetPhase.Spec.AvailabilityProbes),
 	)
 }
 
@@ -56,17 +54,16 @@ func TestClusterObjectSetPhase(t *testing.T) {
 	clusterObjectSetPhase.SetSpecPaused(paused)
 	assert.Equal(t, paused, clusterObjectSetPhase.IsSpecPaused())
 
-	clusterObjectSetPhase.ClusterObjectSetPhase.Status.Conditions = []metav1.Condition{}
-	assert.Equal(
+	clusterObjectSetPhase.Status.Conditions = []metav1.Condition{}
+	assert.Len(
 		t,
-		len(clusterObjectSetPhase.ClusterObjectSetPhase.Status.Conditions),
-		len(*clusterObjectSetPhase.GetStatusConditions()),
+		*clusterObjectSetPhase.GetStatusConditions(), len(clusterObjectSetPhase.Status.Conditions),
 	)
 
 	clusterObjectSetPhase.SetAvailabilityProbes([]corev1alpha1.ObjectSetProbe{})
-	assert.Equal(
+	assert.Len(
 		t,
-		len(clusterObjectSetPhase.ClusterObjectSetPhase.Spec.AvailabilityProbes),
-		len(clusterObjectSetPhase.GetAvailabilityProbes()),
+		clusterObjectSetPhase.GetAvailabilityProbes(),
+		len(clusterObjectSetPhase.Spec.AvailabilityProbes),
 	)
 }

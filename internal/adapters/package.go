@@ -107,7 +107,7 @@ func (a *GenericPackage) GetSpecTemplateContext() manifests.TemplateContext {
 			TemplateContextObjectMeta: templateContextObjectMetaFromObjectMeta(a.ObjectMeta),
 			Image:                     a.Spec.Image,
 		},
-		Config: a.Package.Spec.Config,
+		Config: a.Spec.Config,
 	}
 }
 

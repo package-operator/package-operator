@@ -23,7 +23,7 @@ func TestValidateFolder(t *testing.T) {
 	cmd.SetArgs([]string{"testdata"})
 
 	require.NoError(t, cmd.Execute())
-	require.EqualValues(t, "Package validated successfully!", stdout.String())
+	require.Equal(t, "Package validated successfully!", stdout.String())
 	require.Empty(t, stderr.String())
 }
 

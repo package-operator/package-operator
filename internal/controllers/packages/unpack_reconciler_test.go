@@ -78,7 +78,7 @@ func TestUnpackReconciler_noop(t *testing.T) {
 			},
 		},
 	}
-	pkg.Package.Status.UnpackedHash = pkg.GetSpecHash(nil)
+	pkg.Status.UnpackedHash = pkg.GetSpecHash(nil)
 	ctx := context.Background()
 	res, err := ur.Reconcile(ctx, pkg)
 	require.NoError(t, err)

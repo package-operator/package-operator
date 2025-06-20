@@ -175,7 +175,7 @@ func Test_ArchivalReconciler(t *testing.T) {
 				mock.Anything,
 				prevs[2].ClientObject(),
 				mock.Anything,
-			).Return(errors.New("Failed to update revision 5 for pausing")) //nolint:goerr113
+			).Return(errors.New("Failed to update revision 5 for pausing"))
 
 			// No errors on other updates
 			client.On("Update",
