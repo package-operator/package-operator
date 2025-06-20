@@ -89,7 +89,7 @@ func TestRestartPKOWithEnvvarsIfNeeded(t *testing.T) {
 		t.Run("env.ProxyDiffersOsEnvButResolvingExecutableErrs", func(t *testing.T) {
 			t.Parallel()
 
-			errTest := errors.New("resolving executable") //nolint:goerr113
+			errTest := errors.New("resolving executable")
 			mockedExecutable := mockExecutable("/irrelevant", errTest)
 
 			var err error

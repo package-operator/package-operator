@@ -154,7 +154,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 				log, err := logr.FromContext(ctx)
 				require.NoError(t, err)
 
-				testErr := errors.New("test") //nolint:goerr113
+				testErr := errors.New("test")
 
 				c.On("DeleteAllOf",
 					mock.Anything,
@@ -204,7 +204,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 				log, err := logr.FromContext(ctx)
 				require.NoError(t, err)
 
-				testErr := errors.New("test") //nolint:goerr113
+				testErr := errors.New("test")
 
 				c.On("DeleteAllOf",
 					mock.Anything,
@@ -250,7 +250,7 @@ func TestCRDPluralizationFix_ensureClusterObjectSetsGoneWithOrphansLeft(t *testi
 				log, err := logr.FromContext(ctx)
 				require.NoError(t, err)
 
-				testErr := errors.New("test") //nolint:goerr113
+				testErr := errors.New("test")
 
 				c.On("Scheme").Return(testScheme)
 

@@ -443,8 +443,6 @@ var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 // And transforms them all into a valid jsonpath expression:
 //
 //	{.metadata.name}
-//
-//nolint:goerr113
 func RelaxedJSONPathExpression(pathExpression string) (string, error) {
 	if len(pathExpression) == 0 {
 		return pathExpression, nil

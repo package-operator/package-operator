@@ -71,7 +71,7 @@ func addPositionToViolations(
 	}
 }
 
-type checker interface {
+type checker interface { //nolint: iface
 	Check(
 		ctx context.Context, owner, obj client.Object,
 	) (violations []Violation, err error)

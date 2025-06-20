@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -12,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

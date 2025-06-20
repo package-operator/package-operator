@@ -58,7 +58,7 @@ func genObjectSet(
 		}
 		phases = append(phases, currPhase)
 	}
-	objectSet.Spec.ObjectSetTemplateSpec.Phases = phases
+	objectSet.Spec.Phases = phases
 	return newObjectSetGetter(&adapters.ObjectSetAdapter{
 		ObjectSet: *objectSet,
 	})

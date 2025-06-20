@@ -36,7 +36,7 @@ func (c Compile) compile(ctx context.Context, cmd string, goos, goarch string) e
 		env["CGO_ENABLED"] = cgo
 	}
 	if goos == "" || goarch == "" {
-		return errors.New("invalid os or arch") //nolint:goerr113
+		return errors.New("invalid os or arch")
 	}
 
 	dst := filepath.Join("bin", fmt.Sprintf("%s_%s_%s", cmd, goos, goarch))

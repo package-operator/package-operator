@@ -1,166 +1,167 @@
+version: "2"
+run:
+  build-tags:
+    - integration
 linters:
-  disable-all: true
+  default: none
   # One can't use disable and disable-all. disable-all is preferred to avoid lint failing when golangci gets updated and linters are added.
   # at the same time but it is nice to explicitly state which linters we do not want.
   #disable:
-  #- containedctx     # Context.Context within a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
-  #- contextcheck     # Not that useful/false positives.
-  #- cyclop           # Cyclo complexity already calculated by other linters.
-  #- depguard         # We do not restrict imports.
-  #- dogsled          # Could be nice in the future.
-  #- dupl             # Could be nice in the future.
-  #- exhaustive       # Not that useful/false positives.
-  #- exhaustruct      # Not that useful/false positives.
-  #- exportloopref    # Deprecated.
-  #- forcetypeassert  # We want a panic in situations when a type is asserted.
-  #- funlen           # We really like long functions.
-  #- gci              # Conflicts with other linters.
-  #- gochecknoglobals # We need globals.
-  #- gochecknoinits   # We have a lot of those.
-  #- gocognit         # Not that useful/false positives.
-  #- godox            # Not that useful/false positives.
-  #- gomoddirectives  # Not that useful/false positives.
-  #- inamedparam      # Not that useful.
-  #- interfacebloat   # WE do bloaty interfaces.
-  #- ireturn          # Not that useful/false positives.
-  #- mnd              # The annoy is strong.
-  #- nakedret         # Naked return good return.
-  #- nlreturn         # Could be nice in the future.
-  #- nonamedreturns   # Named return good return.
-  #- tagliatelle      # Reports issues that are not right for us.
-  #- testpackage      # Whitebox testing is fine too.
-  #- varnamelen       # Not that useful/false positives.
-  #- wrapcheck        # Not that useful/false positives.
-  #- wsl              # Not that useful/false positives.
+  #  - containedctx     # Context.Context within a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
+  #  - contextcheck     # Not that useful/false positives.
+  #  - cyclop           # Cyclo complexity already calculated by other linters.
+  #  - depguard         # We do not restrict imports.
+  #  - dogsled          # Could be nice in the future.
+  #  - dupl             # Could be nice in the future.
+  #  - err113           # Could be nice in the future.
+  #  - exhaustive       # Not that useful/false positives.
+  #  - exhaustruct      # Not that useful/false positives.
+  #  - forcetypeassert  # We want a panic in situations when a type is asserted.
+  #  - funcorder        # Not that useful.
+  #  - funlen           # We really like long functions.
+  #  - gochecknoglobals # We need globals.
+  #  - gochecknoinits   # We have a lot of those.
+  #  - gocognit         # Not that useful/false positives.
+  #  - godox            # Not that useful/false positives.
+  #  - gomoddirectives  # Not that useful/false positives.
+  #  - inamedparam      # Not that useful.
+  #  - interfacebloat   # We do bloaty interfaces.
+  #  - ireturn          # Not that useful/false positives.
+  #  - mnd              # The annoy is strong.
+  #  - nakedret         # Naked return good return.
+  #  - nlreturn         # Could be nice in the future.
+  #  - nonamedreturns   # Named return good return.
+  #  - recvcheck        # Could be nice in the future.
+  #  - tagliatelle      # Reports issues that are not right for us.
+  #  - testpackage      # Whitebox testing is fine too.
+  #  - usetesting       # Would be nice to have.
+  #  - varnamelen       # Not that useful/false positives.
+  #  - wrapcheck        # Not that useful/false positives.
+  #  - wsl              # Not that useful/false positives.
   enable:
-  - asasalint
-  - asciicheck
-  - bidichk
-  - bodyclose
-  - canonicalheader
-  - copyloopvar
-  - decorder
-  - dupword
-  - durationcheck
-  - err113
-  - errcheck
-  - errchkjson
-  - errname
-  - errorlint
-  - fatcontext
-  - forbidigo
-  - ginkgolinter
-  - gocheckcompilerdirectives
-  - gochecksumtype
-  - goconst
-  - gocritic
-  - gocyclo
-  - godot
-  - gofmt
-  - gofumpt
-  - goheader
-  - goimports
-  - gomodguard
-  - goprintffuncname
-  - gosec
-  - gosimple
-  - gosmopolitan
-  - govet
-  - grouper
-  - importas
-  - ineffassign
-  - intrange
-  - lll
-  - loggercheck
-  - maintidx
-  - makezero
-  - mirror
-  - misspell
-  - musttag
-  - nestif
-  - nilerr
-  - nilnil
-  - noctx
-  - nolintlint
-  - nosprintfhostport
-  - paralleltest
-  - perfsprint
-  - prealloc
-  - predeclared
-  - promlinter
-  - protogetter
-  - reassign
-  - revive
-  - rowserrcheck
-  - sloglint
-  - spancheck
-  - sqlclosecheck
-  - staticcheck
-  - stylecheck
-  - tagalign
-  - tenv
-  - testableexamples
-  - testifylint
-  - thelper
-  - tparallel
-  - typecheck
-  - unconvert
-  - unparam
-  - unused
-  - usestdlibvars
-  - wastedassign
-  - whitespace
-  - zerologlint
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - copyloopvar
+    - decorder
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - ineffassign
+    - intrange
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagalign
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+    - zerologlint
+  settings:
+    gosec:
+      excludes:
+        - G115
+        - G204
+        - G301
+        - G302
+        - G304
+        - G306
+        - G601
+        - G602
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - lll
+        source: ^//( ?)[+]kubebuilder
+      - linters:
+          - lll
+        source: "^\t*//( ?)http(s?)://"
+      - linters:
+          - paralleltest
+        path: integration\/.+\.go
+      - path: internal/
+        text: ((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)
+      - path: cmd/
+        text: ((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)
+      - path: integration/
+        text: ((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)
+    paths:
+      - internal/packages/internal/packagekickstart/rukpak
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  max-same-issues: 0
   max-issues-per-linter: 0
-  exclude-dirs:
-  - internal/packages/internal/packagekickstart/rukpak
-  exclude-rules:
-  - linters:
-    - lll
-    source: "^//( ?)[+]kubebuilder"
-  - linters:
-    - lll
-    source: "^\t*//( ?)http(s?)://"
-  # Integration tests MUST NOT run in parallel.
-  - path: 'integration\/.+\.go'
-    linters: [paralleltest]
-  # Do not require comments on private packages and
-  # do not check their style.
-  - path: 'internal/'
-    text: '((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)'
-  - path: 'cmd/'
-    text: '((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)'
-  - path: 'integration/'
-    text: '((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)'
-  include:
-  - EXC0001 # Check errors returned by io.Closer.
-  - EXC0002 # Require docs on exported pkg.
-  - EXC0003 # Just don't name a test pkg `test`.
-  - EXC0004 # Unsafe pkg is scary.
-  - EXC0005 # No ineffectual breaks.
-  - EXC0006 # Unsafe pkg is scary.
-  #- EXC0007 # Launching a subprocess using variables is not that odd.
-  #- EXC0008 # Duplicated check.
-  #- EXC0009 # World readable files are actually not a CVE
-  #- EXC0010 # Reading a file with a non literal path is not a CVE either.
-  - EXC0011 # Docs.
-  - EXC0012 # Docs.
-  - EXC0013 # Docs.
-  - EXC0014 # Docs.
-  - EXC0015 # Docs.
-run:
-  build-tags:
-  - integration
-linters-settings:
-  goimports:
-    local-prefixes: package-operator.run
-  gosec:
-    excludes:
-    - G115 # TODO: Truncating integer conversions.
-    - G301 # Poor file permissions used when creating a directory.
-    - G302 # Poor file permissions used with chmod.
-    - G306 # Poor file permissions used when writing to a new file.
-    - G601 # Taking address of loop variable - not relevant anymore.
-    - G602 # Should reports out of bound access but is broken.
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - package-operator.run
+  exclusions:
+    generated: lax
+    paths:
+      - internal/packages/internal/packagekickstart/rukpak
+      - third_party$
+      - builtin$
+      - examples$

@@ -64,7 +64,7 @@ func (dev *Dev) Unit(ctx context.Context, args []string) error {
 	case 1:
 		filter = args[0]
 	default:
-		return errors.New("only supports a single argument") //nolint:goerr113
+		return errors.New("only supports a single argument")
 	}
 	return test.Unit(ctx, filter)
 }
@@ -78,7 +78,7 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 	case 1:
 		filter = args[0]
 	default:
-		return errors.New("only supports a single argument") //nolint:goerr113
+		return errors.New("only supports a single argument")
 	}
 	return test.Integration(ctx, false, filter)
 }

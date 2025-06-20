@@ -41,14 +41,18 @@ func main() {
 
 	err := errors.Join(
 		// Required by cardboard itself.
+		// TODO: unable to update, required go1.24
 		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.3"),
 		// Our deps
 		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
-		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.17.2"),
-		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.32.2"),
-		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/cmd/golangci-lint", "1.64.8"),
+		// TODO: unable to update, required go1.24
+		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.17.3"),
+		// TODO: unable to update, required go1.24
+		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.32.6"),
+		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "2.1.6"),
 		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.4"),
-		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.17.2"),
+		// TODO: unable to update, required go1.24
+		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.17.3"),
 		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.4"),
 		mgr.Register(&Dev{}, &CI{}),
 	)

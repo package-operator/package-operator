@@ -242,7 +242,7 @@ func Test_templateReconciler_templateObject(t *testing.T) {
 				Sink:             environment.NewSink(nil),
 				preflightChecker: preflight.List{},
 			}
-			r.Sink.SetEnvironment(&manifests.PackageEnvironment{})
+			r.SetEnvironment(&manifests.PackageEnvironment{})
 
 			template, err := os.ReadFile(filepath.Join("testdata", test.packageFile))
 			require.NoError(t, err)

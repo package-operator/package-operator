@@ -111,9 +111,10 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		require.Len(t, conds, 2)
 		var succeededCond, availableCond metav1.Condition
 		for _, cond := range conds {
-			if cond.Type == corev1alpha1.ObjectSetSucceeded {
+			switch cond.Type {
+			case corev1alpha1.ObjectSetSucceeded:
 				succeededCond = cond
-			} else if cond.Type == corev1alpha1.ObjectSetAvailable {
+			case corev1alpha1.ObjectSetAvailable:
 				availableCond = cond
 			}
 		}
@@ -317,9 +318,8 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
 			require.NoError(t, err)
 
-			require.Equal(t,
-				len(tc.ExpectedConditionStatuses),
-				len(*tc.ObjectSet.GetStatusConditions()),
+			require.Len(t,
+				*tc.ObjectSet.GetStatusConditions(), len(tc.ExpectedConditionStatuses),
 				tc.ObjectSet.GetStatusConditions(),
 			)
 			checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)

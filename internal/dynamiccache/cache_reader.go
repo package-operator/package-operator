@@ -16,7 +16,6 @@ limitations under the License.
 
 // taken without changes from sigs.k8s.io/controller-runtime@v0.12.3/pkg/cache/internal/cache_reader.go
 
-//nolint:goerr113
 package dynamiccache
 
 import (
