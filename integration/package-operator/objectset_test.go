@@ -623,13 +623,13 @@ func TestObjectSet_immutability(t *testing.T) {
 		{
 			field: "phases",
 			modify: func(os adapters.ObjectSetAccessor) {
-				os.SetPhases([]corev1alpha1.ObjectSetTemplatePhase{})
+				os.SetSpecPhases([]corev1alpha1.ObjectSetTemplatePhase{})
 			},
 		},
 		{
 			field: "availabilityProbes",
 			modify: func(os adapters.ObjectSetAccessor) {
-				ts := os.GetTemplateSpec()
+				ts := os.GetSpecTemplateSpec()
 				ts.AvailabilityProbes = append(
 					ts.AvailabilityProbes,
 					corev1alpha1.ObjectSetProbe{
@@ -647,21 +647,21 @@ func TestObjectSet_immutability(t *testing.T) {
 						},
 					},
 				)
-				os.SetTemplateSpec(ts)
+				os.SetSpecTemplateSpec(ts)
 			},
 		},
 		{
 			field: "successDelaySeconds",
 			modify: func(os adapters.ObjectSetAccessor) {
-				ts := os.GetTemplateSpec()
+				ts := os.GetSpecTemplateSpec()
 				ts.SuccessDelaySeconds += 42
-				os.SetTemplateSpec(ts)
+				os.SetSpecTemplateSpec(ts)
 			},
 		},
 		{
 			field: "previous",
 			modify: func(os adapters.ObjectSetAccessor) {
-				os.SetPreviousRevisions([]adapters.ObjectSetAccessor{os})
+				os.SetSpecPreviousRevisions([]adapters.ObjectSetAccessor{os})
 			},
 		},
 	} {
