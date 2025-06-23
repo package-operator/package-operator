@@ -584,8 +584,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 func TestObjectSet_immutability(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	configMap, err := createConfigMap(t, "test-immutability", "default", map[string]string{"banana": "bread"})
-	require.NoError(t, err)
+	configMap := cmTemplate("test-immutability", map[string]string{"banana": "bread"}, t)
 
 	objectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -593,15 +592,22 @@ func TestObjectSet_immutability(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
-			ObjectSetTemplateSpec: createTemplateSpec(t, *configMap),
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{{
+						CollisionProtection: "Prevent",
+						Object:              configMap,
+					}},
+				}},
+			},
 		},
 	}
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
-	clusterConfigMap, err := createConfigMap(t, "cl-test-immutability", "default", map[string]string{"banana": "bread"})
-	require.NoError(t, err)
+	clusterConfigMap := cmTemplate("cl-test-immutability", map[string]string{"banana": "bread"}, t)
 
 	clusterObjectSet := &corev1alpha1.ClusterObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -609,7 +615,15 @@ func TestObjectSet_immutability(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ClusterObjectSetSpec{
-			ObjectSetTemplateSpec: createTemplateSpec(t, *clusterConfigMap),
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{{
+						CollisionProtection: "Prevent",
+						Object:              clusterConfigMap,
+					}},
+				}},
+			},
 		},
 	}
 	require.NoError(t, Client.Create(ctx, clusterObjectSet))
@@ -681,37 +695,5 @@ func TestObjectSet_immutability(t *testing.T) {
 			tc.modify(newObjectSetAdapter)
 			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ClusterObjectSet), tc.field+" is immutable")
 		})
-	}
-}
-
-func createConfigMap(t *testing.T, name, namespace string, data map[string]string) (*corev1.ConfigMap, error) {
-	t.Helper()
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Data: data,
-	}
-	cmGVK, err := apiutil.GVKForObject(configMap, Scheme)
-	if err != nil {
-		return nil, err
-	}
-	configMap.SetGroupVersionKind(cmGVK)
-	return configMap, nil
-}
-
-func createTemplateSpec(t *testing.T, cm corev1.ConfigMap) corev1alpha1.ObjectSetTemplateSpec {
-	t.Helper()
-	cmObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&cm)
-	require.NoError(t, err)
-	return corev1alpha1.ObjectSetTemplateSpec{
-		Phases: []corev1alpha1.ObjectSetTemplatePhase{{
-			Name: "phase-1",
-			Objects: []corev1alpha1.ObjectSetObject{{
-				CollisionProtection: "Prevent",
-				Object:              unstructured.Unstructured{Object: cmObj},
-			}},
-		}},
 	}
 }
