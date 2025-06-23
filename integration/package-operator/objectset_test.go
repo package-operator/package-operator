@@ -584,7 +584,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 func TestObjectSet_immutability(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	configMap := cmTemplate("test-immutability", map[string]string{"banana": "bread"}, t)
+	configMap := cmTemplate("test-immutability", "", map[string]string{"banana": "bread"}, t)
 
 	objectSet := &corev1alpha1.ObjectSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -607,7 +607,7 @@ func TestObjectSet_immutability(t *testing.T) {
 	cleanupOnSuccess(ctx, t, objectSet)
 	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
-	clusterConfigMap := cmTemplate("cl-test-immutability", map[string]string{"banana": "bread"}, t)
+	clusterConfigMap := cmTemplate("cl-test-immutability", "default", map[string]string{"banana": "bread"}, t)
 
 	clusterObjectSet := &corev1alpha1.ClusterObjectSet{
 		ObjectMeta: metav1.ObjectMeta{

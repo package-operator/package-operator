@@ -941,11 +941,12 @@ func hashCollisionTestProbe() []corev1alpha1.ObjectSetProbe {
 	}
 }
 
-func cmTemplate(name string, data map[string]string, t require.TestingT) unstructured.Unstructured {
+func cmTemplate(name string, namespace string, data map[string]string, t require.TestingT) unstructured.Unstructured {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"test.package-operator.run/test-1": "True"},
+			Name:      name,
+			Namespace: namespace,
+			Labels:    map[string]string{"test.package-operator.run/test-1": "True"},
 		},
 		Data: data,
 	}

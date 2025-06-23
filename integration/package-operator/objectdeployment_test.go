@@ -50,7 +50,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -58,7 +58,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -78,7 +78,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -86,7 +86,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "fails"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "fails"}, t),
 						},
 					},
 				},
@@ -202,7 +202,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -230,7 +230,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -260,7 +260,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -304,7 +304,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm3", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -327,7 +327,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm4", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -361,7 +361,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm4", map[string]string{"name": "cm4"}, t),
+							Object: cmTemplate("cm4", "", map[string]string{"name": "cm4"}, t),
 						},
 					},
 				},
@@ -465,7 +465,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 			Name: "test-phase",
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: cmTemplate(testConfigMap.Name, testConfigMap.Data, t),
+					Object: cmTemplate(testConfigMap.Name, "", testConfigMap.Data, t),
 				},
 			},
 		},
@@ -504,7 +504,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 	newConfigMapName := "new-config-map"
 	objectDeployment.Spec.Template.Spec.Phases[0].Objects = append(objectDeployment.Spec.Template.Spec.Phases[0].Objects,
 		corev1alpha1.ObjectSetObject{
-			Object: cmTemplate(newConfigMapName, nil, t),
+			Object: cmTemplate(newConfigMapName, "", nil, t),
 		})
 	require.NoError(t, Client.Update(ctx, objectDeployment))
 
