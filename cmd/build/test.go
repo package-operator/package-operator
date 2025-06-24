@@ -12,8 +12,6 @@ import (
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // Test is a collection of test related functions.
