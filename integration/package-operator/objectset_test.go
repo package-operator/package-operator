@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 )
 
@@ -578,4 +579,121 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 				return !ownerRefFound && !labelFound, err
 			}, wait.WithTimeout(40*time.Second),
 		))
+}
+
+func TestObjectSet_immutability(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	configMap := cmTemplate("test-immutability", "", map[string]string{"banana": "bread"}, t)
+
+	objectSet := &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-immutability",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{{
+						CollisionProtection: "Prevent",
+						Object:              configMap,
+					}},
+				}},
+			},
+		},
+	}
+	require.NoError(t, Client.Create(ctx, objectSet))
+	cleanupOnSuccess(ctx, t, objectSet)
+	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+	clusterConfigMap := cmTemplate("cl-test-immutability", "default", map[string]string{"banana": "bread"}, t)
+
+	clusterObjectSet := &corev1alpha1.ClusterObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cl-test-immutability",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ClusterObjectSetSpec{
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{{
+						CollisionProtection: "Prevent",
+						Object:              clusterConfigMap,
+					}},
+				}},
+			},
+		},
+	}
+	require.NoError(t, Client.Create(ctx, clusterObjectSet))
+	cleanupOnSuccess(ctx, t, clusterObjectSet)
+	requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+	for _, tc := range []struct {
+		field  string
+		modify func(adapters.ObjectSetAccessor)
+	}{
+		{
+			field: "phases",
+			modify: func(os adapters.ObjectSetAccessor) {
+				os.SetSpecPhases([]corev1alpha1.ObjectSetTemplatePhase{})
+			},
+		},
+		{
+			field: "availabilityProbes",
+			modify: func(os adapters.ObjectSetAccessor) {
+				ts := os.GetSpecTemplateSpec()
+				ts.AvailabilityProbes = append(
+					ts.AvailabilityProbes,
+					corev1alpha1.ObjectSetProbe{
+						Probes: []corev1alpha1.Probe{{
+							Condition: &corev1alpha1.ProbeConditionSpec{
+								Type:   "Available",
+								Status: "True",
+							},
+						}},
+						Selector: corev1alpha1.ProbeSelector{
+							Kind: &corev1alpha1.PackageProbeKindSpec{
+								Group: "v1",
+								Kind:  "ConfigMap",
+							},
+						},
+					},
+				)
+				os.SetSpecTemplateSpec(ts)
+			},
+		},
+		{
+			field: "successDelaySeconds",
+			modify: func(os adapters.ObjectSetAccessor) {
+				ts := os.GetSpecTemplateSpec()
+				ts.SuccessDelaySeconds += 42
+				os.SetSpecTemplateSpec(ts)
+			},
+		},
+		{
+			field: "previous",
+			modify: func(os adapters.ObjectSetAccessor) {
+				os.SetSpecPreviousRevisions([]adapters.ObjectSetAccessor{os})
+			},
+		},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			newObjectSet := objectSet.DeepCopy()
+			newObjectSetAdapter := &adapters.ObjectSetAdapter{
+				ObjectSet: *newObjectSet,
+			}
+			tc.modify(newObjectSetAdapter)
+			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ObjectSet), tc.field+" is immutable")
+		})
+		t.Run(tc.field+"-cluster", func(t *testing.T) {
+			newObjectSet := clusterObjectSet.DeepCopy()
+			newObjectSetAdapter := &adapters.ClusterObjectSetAdapter{
+				ClusterObjectSet: *newObjectSet,
+			}
+			tc.modify(newObjectSetAdapter)
+			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ClusterObjectSet), tc.field+" is immutable")
+		})
+	}
 }

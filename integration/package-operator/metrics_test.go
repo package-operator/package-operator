@@ -50,7 +50,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -58,7 +58,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -86,7 +86,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -125,7 +125,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm3", map[string]string{"name": "cm3"}, t),
+							Object: cmTemplate("cm3", "", map[string]string{"name": "cm3"}, t),
 						},
 					},
 				},
@@ -164,7 +164,7 @@ func TestObjectSetMetrics_ObjectDeploymentDeleted(t *testing.T) {
 			Name: "phase-1",
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+					Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 				},
 			},
 		},
@@ -172,7 +172,7 @@ func TestObjectSetMetrics_ObjectDeploymentDeleted(t *testing.T) {
 			Name: "phase-2",
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+					Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 				},
 			},
 		},

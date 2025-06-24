@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -22,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/strings/slices"
-	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -52,7 +50,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -60,7 +58,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -80,7 +78,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -88,7 +86,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "fails"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "fails"}, t),
 						},
 					},
 				},
@@ -204,7 +202,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -232,7 +230,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -262,7 +260,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
@@ -306,7 +304,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm3", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm3", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -329,7 +327,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm4", map[string]string{"name": "probe-failure"}, t),
+							Object: cmTemplate("cm4", "", map[string]string{"name": "probe-failure"}, t),
 						},
 					},
 				},
@@ -363,7 +361,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm4", map[string]string{"name": "cm4"}, t),
+							Object: cmTemplate("cm4", "", map[string]string{"name": "cm4"}, t),
 						},
 					},
 				},
@@ -467,7 +465,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 			Name: "test-phase",
 			Objects: []corev1alpha1.ObjectSetObject{
 				{
-					Object: cmTemplate(testConfigMap.Name, testConfigMap.Data, t),
+					Object: cmTemplate(testConfigMap.Name, "", testConfigMap.Data, t),
 				},
 			},
 		},
@@ -506,7 +504,7 @@ func TestObjectDeployment_Pause(t *testing.T) {
 	newConfigMapName := "new-config-map"
 	objectDeployment.Spec.Template.Spec.Phases[0].Objects = append(objectDeployment.Spec.Template.Spec.Phases[0].Objects,
 		corev1alpha1.ObjectSetObject{
-			Object: cmTemplate(newConfigMapName, nil, t),
+			Object: cmTemplate(newConfigMapName, "", nil, t),
 		})
 	require.NoError(t, Client.Update(ctx, objectDeployment))
 
@@ -629,20 +627,6 @@ func listObjectSetRevisions(
 	require.NoError(t, err)
 
 	return objectSetList
-}
-
-func requireCondition(
-	ctx context.Context, t *testing.T, object client.Object,
-	conditionType string, conditionStatus metav1.ConditionStatus,
-) {
-	t.Helper()
-
-	require.NoError(t,
-		Waiter.WaitForCondition(ctx,
-			object, conditionType, conditionStatus,
-			wait.WithTimeout(60*time.Second),
-		),
-	)
 }
 
 func requireClientGet(ctx context.Context, t *testing.T, name, namespace string, object client.Object) {
