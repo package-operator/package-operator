@@ -51,7 +51,7 @@ func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
 }
 
 // Release builds binaries and helm chart (if not exluded with the 'images-only" arg) and releases the
-// CLI, PKO manager, RP manager, PKO webhooks and test-stub images to the given registry.
+// CLI, PKO manager, RP manager, and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	registry := imageRegistry()
 
@@ -78,7 +78,6 @@ func (ci *CI) Release(ctx context.Context, args []string) error {
 		// binary images
 		run.Fn3(pushImage, "cli", registry, "amd64"),
 		run.Fn3(pushImage, "package-operator-manager", registry, "amd64"),
-		run.Fn3(pushImage, "package-operator-webhook", registry, "amd64"),
 		run.Fn3(pushImage, "remote-phase-manager", registry, "amd64"),
 	)
 
