@@ -9,9 +9,7 @@ import (
 	"go.uber.org/dig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -23,9 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	apis "package-operator.run/apis"
-	"package-operator.run/internal/constants"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
-	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/metrics"
 )
@@ -35,7 +31,7 @@ func NewComponents() (*dig.Container, error) {
 	container := dig.New()
 	providers := []any{
 		ProvideScheme, ProvideRestConfig, ProvideManager,
-		ProvideMetricsRecorder, ProvideDynamicCache, ProvideAccessManager,
+		ProvideMetricsRecorder, ProvideAccessManager,
 		ProvideUncachedClient, ProvideOptions, ProvideLogger,
 		ProvideRequestManager, ProvideDiscoveryClient, ProvideEnvironmentManager,
 
@@ -137,24 +133,6 @@ func ProvideMetricsRecorder() *metrics.Recorder {
 	recorder := metrics.NewRecorder()
 	recorder.Register()
 	return recorder
-}
-
-func ProvideDynamicCache(
-	mgr ctrl.Manager,
-	recorder *metrics.Recorder,
-) (*dynamiccache.Cache, error) {
-	dc := dynamiccache.NewCache(
-		mgr.GetConfig(), mgr.GetScheme(), mgr.GetRESTMapper(), recorder,
-		dynamiccache.SelectorsByGVK{
-			// Only cache objects with our label selector,=
-			// so we prevent our caches from exploding!
-			schema.GroupVersionKind{}: dynamiccache.Selector{
-				Label: labels.SelectorFromSet(labels.Set{
-					constants.DynamicCacheLabel: "True",
-				}),
-			},
-		})
-	return dc, nil
 }
 
 type UncachedClient struct{ client.Client }

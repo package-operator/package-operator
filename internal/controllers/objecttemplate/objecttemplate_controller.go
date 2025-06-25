@@ -8,29 +8,26 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/dynamiccache"
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
 )
 
-type dynamicCache interface {
-	client.Reader
-	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
-	Free(ctx context.Context, obj client.Object) error
-	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
-	OwnersForGKV(gvk schema.GroupVersionKind) []dynamiccache.OwnerReference
-}
+// type dynamicCache interface {
+// 	client.Reader
+// 	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
+// 	Free(ctx context.Context, obj client.Object) error
+// 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
+// 	OwnersForGKV(gvk schema.GroupVersionKind) []dynamiccache.OwnerReference
+// }
 
 type reconciler interface {
 	Reconcile(ctx context.Context, pkg adapters.ObjectTemplateAccessor) (ctrl.Result, error)
@@ -50,7 +47,7 @@ type GenericObjectTemplateController struct {
 	scheme             *runtime.Scheme
 	client             client.Client
 	uncachedClient     client.Client
-	dynamicCache       dynamicCache
+	accessManager      managedcache.ObjectBoundAccessManager[client.Object]
 	templateReconciler *templateReconciler
 	reconciler         []reconciler
 }
@@ -68,33 +65,33 @@ type ControllerConfig struct {
 func NewObjectTemplateController(
 	client, uncachedClient client.Client,
 	log logr.Logger,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
-		client, uncachedClient, log, dynamicCache, scheme,
+		client, uncachedClient, log, accessManager, scheme,
 		restMapper, adapters.NewGenericObjectTemplate, cfg)
 }
 
 func NewClusterObjectTemplateController(
 	client, uncachedClient client.Client,
 	log logr.Logger,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
-		client, uncachedClient, log, dynamicCache, scheme,
+		client, uncachedClient, log, accessManager, scheme,
 		restMapper, adapters.NewGenericClusterObjectTemplate, cfg)
 }
 
 func newGenericObjectTemplateController(
 	client, uncachedClient client.Client,
 	log logr.Logger,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
 	newObjectTemplate adapters.GenericObjectTemplateFactory,
@@ -106,8 +103,8 @@ func newGenericObjectTemplateController(
 		scheme:            scheme,
 		client:            client,
 		uncachedClient:    uncachedClient,
-		dynamicCache:      dynamicCache,
-		templateReconciler: newTemplateReconciler(scheme, client, uncachedClient, dynamicCache,
+		accessManager:     accessManager,
+		templateReconciler: newTemplateReconciler(scheme, client, uncachedClient, accessManager,
 			preflight.NewAPIExistence(
 				restMapper,
 				preflight.List{
@@ -138,7 +135,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	}
 
 	if !objectTemplate.ClientObject().GetDeletionTimestamp().IsZero() {
-		if err := c.dynamicCache.Free(ctx, objectTemplate.ClientObject()); err != nil {
+		if err := c.accessManager.Free(ctx, objectTemplate.ClientObject()); err != nil {
 			return ctrl.Result{}, fmt.Errorf("free cache: %w", err)
 		}
 
@@ -190,8 +187,8 @@ func (c *GenericObjectTemplateController) SetupWithManager(
 	return ctrl.NewControllerManagedBy(mgr).
 		For(objectTemplate).
 		WatchesRawSource(
-			c.dynamicCache.Source(
-				dynamiccache.NewEnqueueWatchingObjects(c.dynamicCache, objectTemplate, mgr.GetScheme()),
+			c.accessManager.Source(
+				managedcache.NewEnqueueWatchingObjects(c.accessManager, objectTemplate, mgr.GetScheme()),
 				predicate.NewPredicateFuncs(func(object client.Object) bool {
 					c.log.V(constants.LogLevelDebug).Info(
 						"processing dynamic cache event",
