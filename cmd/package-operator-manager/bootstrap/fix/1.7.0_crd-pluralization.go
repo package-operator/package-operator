@@ -139,7 +139,7 @@ func (f CRDPluralizationFix) ensureClusterObjectSetsGoneWithOrphansLeft(
 	// for each listed ClusterObjectSet: remove all finalizers and wait for them to be gone.
 	for _, cos := range list.Items {
 		patch := client.MergeFrom(cos.DeepCopy())
-		cos.ObjectMeta.Finalizers = []string{}
+		cos.Finalizers = []string{}
 		if err := fc.Client.Patch(ctx, &cos, patch); err != nil {
 			return err
 		}

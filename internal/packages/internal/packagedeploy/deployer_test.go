@@ -81,7 +81,7 @@ func TestUniqueConstraint(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, msgs)
 
-	pAPIPkg.Package.ObjectMeta.Namespace = ""
+	pAPIPkg.Namespace = ""
 
 	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		dst := args.Get(1).(*corev1alpha1.ClusterPackageList)
@@ -99,7 +99,6 @@ func TestUniqueConstraint(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, msgs)
 
-	//nolint:err113
 	testErr := errors.New("testerr")
 	uc.On("List", mock.Anything, mock.Anything, mock.Anything).Return(testErr).Once()
 	_, err = validateUnique(ctx, uc, pAPIPkg, manifest)

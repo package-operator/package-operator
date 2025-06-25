@@ -251,7 +251,6 @@ func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
 		return nil, &fileNotFoundInFixturesFolderError{file: fileA}
 	}
 
-	//nolint:gosec
 	data, err := exec.
 		Command("diff", "-u", "--label="+labelA, "--label="+labelB, fileA, fileB).
 		CombinedOutput()

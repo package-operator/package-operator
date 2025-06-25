@@ -25,7 +25,7 @@ func (a *GenericObjectSet) ClientObject() client.Object        { return &a.Objec
 func (a *GenericClusterObjectSet) ClientObject() client.Object { return &a.ClusterObjectSet }
 
 func (a *GenericObjectSet) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
-	return a.Spec.ObjectSetTemplateSpec.Phases
+	return a.Spec.Phases
 }
 
 func (a *GenericClusterObjectSet) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {

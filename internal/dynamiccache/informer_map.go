@@ -228,7 +228,6 @@ func indexFuncForExtractor(extractor client.IndexerFunc) func(objRaw any) ([]str
 		// TODO(directxman12): check if this is the correct type?
 		obj, isObj := objRaw.(client.Object)
 		if !isObj {
-			//nolint:goerr113
 			return nil, fmt.Errorf("object of type %T is not an Object", objRaw)
 		}
 		meta, err := apimachinerymeta.Accessor(obj)

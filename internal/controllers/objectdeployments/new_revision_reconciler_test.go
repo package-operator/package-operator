@@ -49,7 +49,7 @@ func Test_newRevisionReconciler_createsObjectSet(t *testing.T) {
 	t.Parallel()
 
 	hashCollisionOS := newObjectSet("test-xyz", 1, "xyz", true, true, false)
-	hashCollisionOS.Spec.ObjectSetTemplateSpec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
+	hashCollisionOS.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 		{}, {},
 	}
 
@@ -239,7 +239,7 @@ func requireObject(t *testing.T,
 	hash, ok1 := obj.Annotations[ObjectSetHashAnnotation]
 	require.True(t, ok1)
 	require.Equal(t, expectedHash, hash)
-	require.Equal(t, len(prevs), len(obj.Spec.Previous))
+	require.Len(t, obj.Spec.Previous, len(prevs))
 
 	objprevs := make([]string, len(obj.Spec.Previous))
 	for i, prev := range obj.Spec.Previous {

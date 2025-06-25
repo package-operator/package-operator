@@ -40,7 +40,7 @@ var _ Prober = (*LabelSelector)(nil)
 
 // Probe executes the probe.
 func (ss *LabelSelector) Probe(obj client.Object) (success bool, messages []string) {
-	if !ss.Selector.Matches(labels.Set(obj.GetLabels())) {
+	if !ss.Matches(labels.Set(obj.GetLabels())) {
 		// We want to _skip_ objects, that don't match.
 		// So this probe succeeds by default.
 		return true, nil

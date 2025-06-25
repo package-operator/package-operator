@@ -24,7 +24,9 @@ func ComputeFNV32Hash(obj any, collisionCount *int32) string {
 		collisionCountBytes := make([]byte, 8)
 		binary.LittleEndian.PutUint32(
 			collisionCountBytes, uint32(*collisionCount))
-		hasher.Write(collisionCountBytes)
+		if _, err := hasher.Write(collisionCountBytes); err != nil {
+			panic(err)
+		}
 	}
 
 	return rand.SafeEncodeString(strconv.FormatUint(uint64(hasher.Sum32()), 10))

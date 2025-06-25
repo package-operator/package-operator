@@ -18,7 +18,7 @@ func TestObjectDeployment(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ObjectDeployment{}, co)
 
 	var revisionHistoryLimit int32 = 2
-	deploy.ObjectDeployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
+	deploy.Spec.RevisionHistoryLimit = &revisionHistoryLimit
 	assert.Equal(t, &revisionHistoryLimit, deploy.GetSpecRevisionHistoryLimit())
 
 	var collisionCount int32 = 4
@@ -74,7 +74,7 @@ func TestClusterObjectDeployment(t *testing.T) {
 	assert.IsType(t, &corev1alpha1.ClusterObjectDeployment{}, co)
 
 	var revisionHistoryLimit int32 = 2
-	deploy.ClusterObjectDeployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
+	deploy.Spec.RevisionHistoryLimit = &revisionHistoryLimit
 	assert.Equal(t, &revisionHistoryLimit, deploy.GetSpecRevisionHistoryLimit())
 
 	var collisionCount int32 = 4

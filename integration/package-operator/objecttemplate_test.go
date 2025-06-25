@@ -434,7 +434,7 @@ data:
 	)
 
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(cm), cm))
-	assert.Equal(t, "", cm.Data["test"])
+	assert.Empty(t, cm.Data["test"])
 
 	require.NoError(t, Client.Create(ctx, &secret))
 	defer cleanupOnSuccess(ctx, t, &secret)

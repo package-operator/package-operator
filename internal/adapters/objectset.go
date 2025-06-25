@@ -112,7 +112,7 @@ func (a *ObjectSetAdapter) SetSpecPreviousRevisions(prevObjectSets []ObjectSetAc
 }
 
 func (a *ObjectSetAdapter) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
-	return a.Spec.ObjectSetTemplateSpec.Phases
+	return a.Spec.Phases
 }
 
 func (a *ObjectSetAdapter) SetSpecPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
@@ -235,7 +235,7 @@ func (a *ClusterObjectSetAdapter) SetSpecPreviousRevisions(prevObjectSets []Obje
 }
 
 func (a *ClusterObjectSetAdapter) GetSpecPhases() []corev1alpha1.ObjectSetTemplatePhase {
-	return a.Spec.ObjectSetTemplateSpec.Phases
+	return a.Spec.Phases
 }
 
 func (a *ClusterObjectSetAdapter) SetSpecPhases(phases []corev1alpha1.ObjectSetTemplatePhase) {
