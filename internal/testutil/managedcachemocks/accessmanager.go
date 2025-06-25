@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -52,4 +53,9 @@ func (m *ObjectBoundAccessManagerMock[T]) Source(
 ) source.Source {
 	args := m.Called(handler, predicates)
 	return args.Get(0).(source.Source)
+}
+
+func (m *ObjectBoundAccessManagerMock[T]) GetWatchersForGVK(gvk schema.GroupVersionKind) []managedcache.AccessManagerKey {
+	args := m.Called(gvk)
+	return args.Get(0).([]managedcache.AccessManagerKey)
 }

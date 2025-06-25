@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/jsonpath"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,7 +40,7 @@ type templateReconciler struct {
 	scheme                        *runtime.Scheme
 	client                        client.Writer
 	uncachedClient                client.Reader
-	dynamicCache                  dynamicCache
+	accessManager                 managedcache.ObjectBoundAccessManager[client.Object]
 	preflightChecker              preflightChecker
 	optionalResourceRetryInterval time.Duration
 	resourceRetryInterval         time.Duration
@@ -49,7 +50,7 @@ func newTemplateReconciler(
 	scheme *runtime.Scheme,
 	client client.Client,
 	uncachedClient client.Reader,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	preflightChecker preflightChecker,
 	optionalResourceRetryInterval time.Duration,
 	resourceRetryInterval time.Duration,
@@ -60,7 +61,7 @@ func newTemplateReconciler(
 		scheme:                        scheme,
 		client:                        client,
 		uncachedClient:                uncachedClient,
-		dynamicCache:                  dynamicCache,
+		accessManager:                 accessManager,
 		preflightChecker:              preflightChecker,
 		optionalResourceRetryInterval: optionalResourceRetryInterval,
 		resourceRetryInterval:         resourceRetryInterval,
@@ -94,14 +95,23 @@ func (r *templateReconciler) Reconcile(
 		return res, err
 	}
 
-	if err := r.dynamicCache.Watch(
-		ctx, objectTemplate.ClientObject(), obj); err != nil {
-		return res, fmt.Errorf("watching new child: %w", err)
+	objects := []client.Object{
+		objectTemplate.ClientObject(),
+		obj,
+	}
+	cache, err := r.accessManager.GetWithUser(
+		context.Background(),
+		constants.StaticCacheOwner(),
+		objectTemplate.ClientObject(),
+		objects,
+	)
+	if err != nil {
+		return res, err
 	}
 
 	existingObj := &unstructured.Unstructured{}
 	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
-	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
+	if err := cache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
 		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 			return res, fmt.Errorf("handling creation: %w", err)
 		}
@@ -132,6 +142,14 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
+
+	if err := r.accessManager.FreeWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectTemplate.ClientObject(),
+	); err != nil {
+		return res, fmt.Errorf("freewithuser: %w", err)
+	}
 
 	return res, nil
 }
@@ -194,14 +212,23 @@ func (r *templateReconciler) getSourceObject(
 		sourceObj.SetNamespace(objectTemplate.GetNamespace())
 	}
 
-	if err := r.dynamicCache.Watch(
-		ctx, objectTemplate, sourceObj); err != nil {
-		return nil, false, fmt.Errorf("watching new source: %w", err)
+	objects := []client.Object{
+		objectTemplate,
+		sourceObj,
+	}
+	cache, err := r.accessManager.GetWithUser(
+		context.Background(),
+		constants.StaticCacheOwner(),
+		objectTemplate,
+		objects,
+	)
+	if err != nil {
+		return nil, false, err
 	}
 
 	objectKey := client.ObjectKeyFromObject(sourceObj)
 
-	if err := r.dynamicCache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
+	if err := cache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
 		// the referenced object might not be labeled correctly for the cache to pick up,
 		// fallback to an uncached read to discover.
 		found, err := r.lookupUncached(ctx, src, objectKey, sourceObj)
