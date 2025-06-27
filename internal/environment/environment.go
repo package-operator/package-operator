@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -86,6 +88,13 @@ func (m *Manager) Init(ctx context.Context, sinks []Sinker) error {
 
 // Continuously updates the environment information.
 func (m *Manager) Start(ctx context.Context) error {
+	// Get the global logger if context doesn't have one
+	_, err := logr.FromContext(ctx)
+	if err != nil {
+		// If context is missing logger, use global logger directly
+		ctx = logr.NewContext(ctx, ctrl.Log)
+	}
+
 	t := time.NewTicker(environmentProbeInterval)
 	defer t.Stop()
 
@@ -103,12 +112,17 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) do(ctx context.Context) error {
-	log := logr.FromContextOrDiscard(ctx)
+	log, lerr := logr.FromContext(ctx)
+	if lerr != nil {
+		// If no logger in context, use global logger directly
+		log = ctrl.Log
+	}
 
 	env, err := m.probe(ctx)
 	if err != nil {
 		return err
 	}
+
 	log.Info("detected environment", "environment", env)
 
 	for _, sink := range m.sinks {

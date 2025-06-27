@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	containerregistrypkgv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -22,7 +23,13 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 ) {
 	files := packagetypes.Files{}
 	reader := mutate.Extract(image)
-	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
+
+	// Get logger from context or use ctrl.Log if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+	verboseLog := log.V(1)
 
 	defer func() {
 		if cErr := reader.Close(); err == nil && cErr != nil {

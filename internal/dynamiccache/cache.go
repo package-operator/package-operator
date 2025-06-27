@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -146,7 +147,11 @@ func (c *Cache) Watch(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
+	log, lerr := logr.FromContext(ctx)
+	if lerr != nil {
+		// If no logger in context, use global logger
+		log = ctrl.Log
+	}
 
 	gvk, err := apiutil.GVKForObject(obj, c.scheme)
 	if err != nil {
@@ -193,7 +198,11 @@ func (c *Cache) Free(
 	defer c.informerReferencesMux.Unlock()
 	defer c.sampleMetrics(ctx)
 
-	log := logr.FromContextOrDiscard(ctx)
+	log, lerr := logr.FromContext(ctx)
+	if lerr != nil {
+		// If no logger in context, use global logger
+		log = ctrl.Log
+	}
 
 	ownerRef, err := c.ownerRef(owner)
 	if err != nil {
@@ -338,7 +347,12 @@ func (c *Cache) sampleMetrics(ctx context.Context) {
 		return
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
+	log, lerr := logr.FromContext(ctx)
+	if lerr != nil {
+		// Just return without logging - sampleMetrics is called as deferred function
+		// so we don't want to return an error here
+		return
+	}
 
 	informerCount := len(c.informerReferences)
 	c.recorder.RecordDynamicCacheInformers(informerCount)

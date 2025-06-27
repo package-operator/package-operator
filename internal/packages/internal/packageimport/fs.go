@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/internal/packages/internal/packagetypes"
 )
@@ -30,7 +31,13 @@ func FromFS(ctx context.Context, src fs.FS) (*packagetypes.RawPackage, error) {
 }
 
 func walker(ctx context.Context, src fs.FS, files packagetypes.Files) fs.WalkDirFunc {
-	verboseLog := logr.FromContextOrDiscard(ctx).V(1)
+	// Get logger from context or use ctrl.Log if not found
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		log = ctrl.Log
+	}
+	verboseLog := log.V(1)
+
 	return func(path string, entry fs.DirEntry, ioErr error) error {
 		switch {
 		case ioErr != nil:
