@@ -55,7 +55,9 @@ func (m *ObjectBoundAccessManagerMock[T]) Source(
 	return args.Get(0).(source.Source)
 }
 
-func (m *ObjectBoundAccessManagerMock[T]) GetWatchersForGVK(gvk schema.GroupVersionKind) []managedcache.AccessManagerKey {
+func (m *ObjectBoundAccessManagerMock[T]) GetWatchersForGVK(
+	gvk schema.GroupVersionKind,
+) []managedcache.AccessManagerKey {
 	args := m.Called(gvk)
 	return args.Get(0).([]managedcache.AccessManagerKey)
 }
