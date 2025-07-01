@@ -44,7 +44,7 @@ func (r *revisionReconciler) Reconcile(
 			Name:      prev.Name,
 			Namespace: objectSet.ClientObject().GetNamespace(),
 		}
-		if err := r.client.Get(ctx, key, prevObjectSet.ClientObject()); err != nil {
+		if err := client.IgnoreNotFound(r.client.Get(ctx, key, prevObjectSet.ClientObject())); err != nil {
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
