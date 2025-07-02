@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -696,4 +697,46 @@ func TestObjectSet_immutability(t *testing.T) {
 			require.ErrorContains(t, Client.Update(ctx, &newObjectSetAdapter.ClusterObjectSet), tc.field+" is immutable")
 		})
 	}
+}
+
+func TestObjectSet_invalidPreviousReference(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	configMap := cmTemplate("test-invalid-previous-reference", "", map[string]string{"banana": "bread"}, t)
+
+	prev := &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "previous-revision",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+					Name: "phase-1",
+					Objects: []corev1alpha1.ObjectSetObject{{
+						CollisionProtection: "Prevent",
+						Object:              configMap,
+					}},
+				}},
+			},
+		},
+	}
+
+	objectSet := prev.DeepCopy()
+	objectSet.Name = "test-invalid-previous-reference"
+	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
+		{Name: prev.Name},
+		{Name: "non-existent-revision"},
+	}
+
+	// Create previous ObjectSet
+	require.NoError(t, Client.Create(ctx, prev))
+	cleanupOnSuccess(ctx, t, prev)
+	requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+	// Create new ObjectSet with reference to previous and non-existent
+	require.NoError(t, Client.Create(ctx, objectSet))
+	cleanupOnSuccess(ctx, t, objectSet)
+	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+	assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
 }
