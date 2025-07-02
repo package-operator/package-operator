@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,7 +46,12 @@ func (r *revisionReconciler) Reconcile(
 			Name:      prev.Name,
 			Namespace: objectSet.ClientObject().GetNamespace(),
 		}
-		if err := client.IgnoreNotFound(r.client.Get(ctx, key, prevObjectSet.ClientObject())); err != nil {
+		err := r.client.Get(ctx, key, prevObjectSet.ClientObject())
+		if errors.IsNotFound(err) {
+			// Skip deleted revisions in the revision counter
+			continue
+		}
+		if err != nil {
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
