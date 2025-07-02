@@ -7,8 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -169,5 +171,73 @@ func Test_revisionReconciler(t *testing.T) {
 		assert.Equal(t, revisionReconcilerRequeueDelay, res.RequeueAfter)
 		assert.False(t, res.IsZero())
 		assert.Equal(t, int64(0), objectSet.Status.Revision)
+	})
+
+	t.Run("invalid previous reference", func(t *testing.T) {
+		t.Parallel()
+
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
+
+		prev := &corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prev",
+				Namespace: "xxx",
+			},
+			Status: corev1alpha1.ObjectSetStatus{
+				Revision: 42,
+			},
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKeyFromObject(prev), mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*corev1alpha1.ObjectSet)
+				*out = *prev
+			}).
+			Return(nil)
+
+		prevNotFound := &corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prev-not-found",
+				Namespace: "xxx",
+			},
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKeyFromObject(prevNotFound), mock.Anything, mock.Anything).
+			Return(errors.NewNotFound(schema.GroupResource{}, prevNotFound.Name))
+
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{
+							Name: prev.Name,
+						},
+						{
+							Name: prevNotFound.Name,
+						},
+					},
+				},
+			},
+		}
+
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
+
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
+
+		testClient.AssertExpectations(t)
+		testClient.StatusMock.AssertExpectations(t)
 	})
 }
