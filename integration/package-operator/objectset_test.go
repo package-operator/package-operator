@@ -702,41 +702,74 @@ func TestObjectSet_immutability(t *testing.T) {
 func TestObjectSet_invalidPreviousReference(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	configMap := cmTemplate("test-invalid-previous-reference", "", map[string]string{"banana": "bread"}, t)
+	configMap := cmTemplate("test-invalid-previous-reference", "default", map[string]string{"banana": "bread"}, t)
+	objectSetTemplateSpec := corev1alpha1.ObjectSetTemplateSpec{
+		Phases: []corev1alpha1.ObjectSetTemplatePhase{{
+			Name: "phase-1",
+			Objects: []corev1alpha1.ObjectSetObject{{
+				CollisionProtection: "Prevent",
+				Object:              configMap,
+			}},
+		}},
+	}
 
-	prev := &corev1alpha1.ObjectSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "previous-revision",
-			Namespace: "default",
-		},
-		Spec: corev1alpha1.ObjectSetSpec{
-			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
-					Name: "phase-1",
-					Objects: []corev1alpha1.ObjectSetObject{{
-						CollisionProtection: "Prevent",
-						Object:              configMap,
-					}},
-				}},
+	t.Run("namespaced", func(t *testing.T) {
+		prev := &corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "previous-revision",
+				Namespace: "default",
 			},
-		},
-	}
+			Spec: corev1alpha1.ObjectSetSpec{
+				ObjectSetTemplateSpec: objectSetTemplateSpec,
+			},
+		}
 
-	objectSet := prev.DeepCopy()
-	objectSet.Name = "test-invalid-previous-reference"
-	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
-		{Name: prev.Name},
-		{Name: "non-existent-revision"},
-	}
+		objectSet := prev.DeepCopy()
+		objectSet.Name = "test-invalid-previous-reference"
+		objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
+			{Name: prev.Name},
+			{Name: "non-existent-revision"},
+		}
 
-	// Create previous ObjectSet
-	require.NoError(t, Client.Create(ctx, prev))
-	cleanupOnSuccess(ctx, t, prev)
-	requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+		// Create previous ObjectSet
+		require.NoError(t, Client.Create(ctx, prev))
+		cleanupOnSuccess(ctx, t, prev)
+		requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
-	// Create new ObjectSet with reference to previous and non-existent
-	require.NoError(t, Client.Create(ctx, objectSet))
-	cleanupOnSuccess(ctx, t, objectSet)
-	requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-	assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
+		// Create new ObjectSet with reference to previous and non-existent
+		require.NoError(t, Client.Create(ctx, objectSet))
+		cleanupOnSuccess(ctx, t, objectSet)
+		requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+		assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
+	})
+
+	t.Run("cluster", func(t *testing.T) {
+		prev := &corev1alpha1.ClusterObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "previous-revision",
+				Namespace: "default",
+			},
+			Spec: corev1alpha1.ClusterObjectSetSpec{
+				ObjectSetTemplateSpec: objectSetTemplateSpec,
+			},
+		}
+
+		clusterObjectSet := prev.DeepCopy()
+		clusterObjectSet.Name = "test-invalid-previous-reference"
+		clusterObjectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
+			{Name: prev.Name},
+			{Name: "non-existent-revision"},
+		}
+
+		// Create previous ClusterObjectSet
+		require.NoError(t, Client.Create(ctx, prev))
+		cleanupOnSuccess(ctx, t, prev)
+		requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+
+		// Create new ClusterObjectSet with reference to previous and non-existent
+		require.NoError(t, Client.Create(ctx, clusterObjectSet))
+		cleanupOnSuccess(ctx, t, clusterObjectSet)
+		requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
+		assert.Equal(t, prev.Status.Revision+1, clusterObjectSet.Status.Revision)
+	})
 }
