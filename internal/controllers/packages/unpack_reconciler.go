@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/flowcontrol"
@@ -104,7 +103,7 @@ func (r *unpackReconciler) Reconcile(
 	}
 
 	pullStart := time.Now()
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 	rawPkg, err := r.imagePuller.Pull(ctx, pkg.GetSpecImage())
 	if err != nil {
 		meta.SetStatusCondition(
