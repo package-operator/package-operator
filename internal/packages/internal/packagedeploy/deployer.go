@@ -225,8 +225,9 @@ func (l *PackageDeployer) desiredObjectDeployment(
 	if err != nil {
 		return nil, fmt.Errorf("marshalling config for package-config annotation: %w", err)
 	}
+
 	annotations := map[string]string{
-		manifestsv1alpha1.PackageSourceImageAnnotation: pkg.GetSpecImage(),
+		manifestsv1alpha1.PackageSourceImageAnnotation: imageprefix.Replace(pkg.GetSpecImage(), l.imagePrefixOverrides),
 		manifestsv1alpha1.PackageConfigAnnotation:      string(configJSON),
 		constants.ChangeCauseAnnotation: fmt.Sprintf(
 			"Installing %s package.", pkgInstance.Manifest.Name),

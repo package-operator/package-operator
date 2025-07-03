@@ -64,16 +64,21 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	env := sh.WithEnvironment{
-		"CGO_ENABLED":                          "1",
-		"PKO_TEST_VERSION":                     appVersion,
-		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":       imageURL(imageRegistry(), "test-stub-package", appVersion),
-		"PKO_TEST_SUCCESS_PACKAGE_IMAGE_AUTH":  imageURL("dev-registry.dev-registry.svc.cluster.local:5002/package-operator", "test-stub-package", appVersion), //nolint:lll
-		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE": imageURL(imageRegistry(), "test-stub-multi-package", appVersion),
-		"PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE":   imageURL(imageRegistry(), "test-stub-cel-package", appVersion),
-		"PKO_TEST_SUCCESS_PAUSE_PACKAGE_IMAGE": imageURL(imageRegistry(), "test-stub-pause-package", appVersion),
-		"PKO_TEST_STUB_IMAGE":                  imageURL(imageRegistry(), "test-stub", appVersion),
-		"PKO_TEST_LATEST_BOOTSTRAP_JOB":        os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB"),
-		"KUBECONFIG":                           kubeconfigPath,
+		"CGO_ENABLED":                                   "1",
+		"PKO_TEST_VERSION":                              appVersion,
+		"PKO_TEST_SUCCESS_PACKAGE_IMAGE":                imageURL(imageRegistry(), "test-stub-package", appVersion),
+		"PKO_TEST_SUCCESS_PACKAGE_IMAGE_AUTH":           imageURL("dev-registry.dev-registry.svc.cluster.local:5002/package-operator", "test-stub-package", appVersion), //nolint:lll
+		"PKO_TEST_SUCCESS_MULTI_PACKAGE_IMAGE":          imageURL(imageRegistry(), "test-stub-multi-package", appVersion),
+		"PKO_TEST_SUCCESS_CEL_PACKAGE_IMAGE":            imageURL(imageRegistry(), "test-stub-cel-package", appVersion),
+		"PKO_TEST_SUCCESS_PAUSE_PACKAGE_IMAGE":          imageURL(imageRegistry(), "test-stub-pause-package", appVersion),
+		"PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE":        imageURL(imageRegistry(), "test-stub-image-prefix-override-package", appVersion),           //nolint:lll
+		"PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE_MIRROR": imageURL(imageRegistry()+"/mirror", "test-stub-image-prefix-override-package", appVersion), //nolint:lll
+		"PKO_TEST_STUB_IMAGE":                           imageURL(imageRegistry(), "test-stub", appVersion),
+		"PKO_TEST_STUB_IMAGE_SRC":                       imageURL(imageRegistry()+"/src", "test-stub-mirror", appVersion),
+		"PKO_TEST_STUB_IMAGE_MIRROR":                    imageURL(imageRegistry()+"/mirror", "test-stub-mirror", appVersion),
+		"PKO_TEST_LATEST_BOOTSTRAP_JOB":                 os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB"),
+		"PKO_IMAGE_REGISTRY":                            imageRegistry(),
+		"KUBECONFIG":                                    kubeconfigPath,
 	}
 
 	if env["PKO_TEST_LATEST_BOOTSTRAP_JOB"] == "" {

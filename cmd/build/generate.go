@@ -130,6 +130,7 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 	}
 
 	registyOverrides := imageRegistryHost() + "=dev-registry.dev-registry.svc.cluster.local:5001"
+	imagePrefixOverrides := imageRegistry() + "/src/=" + imageRegistry() + "/mirror/"
 	cfgBytes, err := json.Marshal(cfg{
 		ObjectTemplateResourceRetryInterval:         "2s",
 		ObjectTemplateOptionalResourceRetryInterval: "4s",
@@ -151,17 +152,18 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		SubcomponentTolerations: []corev1.Toleration{
 			{Effect: "NoSchedule", Key: "node-role.kubernetes.io/infra"},
 		},
-		ImagePrefixOverrides: "",
+		ImagePrefixOverrides: imagePrefixOverrides,
 	})
 	if err != nil {
 		return err
 	}
 
 	replacements := map[string]string{
-		`##registry-overrides##`: registyOverrides,
-		`##pko-config##`:         string(cfgBytes),
-		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
-		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
+		`##image-prefix-overrides##`: imagePrefixOverrides,
+		`##registry-overrides##`:     registyOverrides,
+		`##pko-config##`:             string(cfgBytes),
+		`##pko-manager-image##`:      imageURL(imageRegistry(), "package-operator-manager", appVersion),
+		`##pko-package-image##`:      imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}
 
 	latestJob := string(latestJobBytes)
@@ -179,10 +181,11 @@ func (g Generate) selfBootstrapJob(context.Context) error {
 	}
 
 	replacements := map[string]string{
-		`##registry-overrides##`: "",
-		`##pko-config##`:         "",
-		`##pko-manager-image##`:  imageURL(imageRegistry(), "package-operator-manager", appVersion),
-		`##pko-package-image##`:  imageURL(imageRegistry(), "package-operator-package", appVersion),
+		`##image-prefix-overrides##`: "",
+		`##registry-overrides##`:     "",
+		`##pko-config##`:             "",
+		`##pko-manager-image##`:      imageURL(imageRegistry(), "package-operator-manager", appVersion),
+		`##pko-package-image##`:      imageURL(imageRegistry(), "package-operator-package", appVersion),
 	}
 
 	latestJob := string(latestJobBytes)
@@ -200,10 +203,11 @@ func (g Generate) selfBootstrapJobHelm(context.Context) error {
 	}
 
 	replacements := map[string]string{
-		`##registry-overrides##`: "",
-		`##pko-config##`:         "{{ .Values.Config | mustToJson }}",
-		`##pko-manager-image##`:  `{{ get .Values.Images "package-operator-manager" }}`,
-		`##pko-package-image##`:  `{{ get .Values.Images "package-operator-package" }}`,
+		`##image-prefix-overrides##`: "",
+		`##registry-overrides##`:     "",
+		`##pko-config##`:             "{{ .Values.Config | mustToJson }}",
+		`##pko-manager-image##`:      `{{ get .Values.Images "package-operator-manager" }}`,
+		`##pko-package-image##`:      `{{ get .Values.Images "package-operator-package" }}`,
 	}
 
 	latestJob := string(latestJobBytes)
@@ -445,4 +449,38 @@ func (g Generate) generateChartYaml(outFilePath, chartVersion, appVersion string
 	}
 
 	return os.WriteFile(outFilePath, []byte(chart), os.ModePerm)
+}
+
+func (g Generate) templateManifestFiles(ctx context.Context, templatedPackage string) error {
+	templateBytes, err := os.ReadFile(filepath.Join("config", "packages", templatedPackage, "manifest.yaml.tpl"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Not a templated package so no need to template
+			return nil
+		}
+		return err
+	}
+
+	replacements := map[string]string{
+		`##image-registry##`: imageRegistry(),
+		`##tag##`:            appVersion,
+	}
+
+	template := string(templateBytes)
+	for replace, with := range replacements {
+		template = strings.ReplaceAll(template, replace, with)
+	}
+
+	err = os.WriteFile(filepath.Join("config", "packages", templatedPackage, "manifest.yaml"),
+		[]byte(template), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = cmd.Update{}.UpdateLockData(ctx, filepath.Join("config", "packages", templatedPackage))
+	if err == nil || errors.Is(err, cmd.ErrLockDataUnchanged) {
+		return nil
+	}
+
+	return err
 }

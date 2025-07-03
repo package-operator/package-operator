@@ -55,6 +55,18 @@ var (
 	// SuccessTestPausePackageImage points to an image to use to test Package reconciliation pause.
 	SuccessTestPausePackageImage string
 
+	// SuccessTestImagePrefixOverride points to a package image used to test image prefix overrides.
+	SuccessTestImagePrefixOverride string
+	// SuccessTestImagePrefixOverride points to a mirrored package image used to test image prefix overrides.
+	SuccessTestImagePrefixOverrideMirror string
+	// TestStubImageSrc points to an image used to test image prefix overrides.
+	TestStubImageSrc string
+	// TestStubImageMirror points to a mirrored image used to image prefix overrides.
+	TestStubImageMirror string
+
+	// ImageRegistry Points to the image registry in use.
+	ImageRegistry string
+
 	FailureTestPackageImage = "localhost/does-not-exist"
 
 	LatestSelfBootstrapJobURL string
@@ -81,13 +93,35 @@ func init() {
 	if len(SuccessTestPausePackageImage) == 0 {
 		panic("PKO_TEST_SUCCESS_PAUSE_PACKAGE_IMAGE not set!")
 	}
+	SuccessTestImagePrefixOverride = os.Getenv("PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE")
+	if len(SuccessTestImagePrefixOverride) == 0 {
+		panic("PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE not set!")
+	}
+	SuccessTestImagePrefixOverrideMirror = os.Getenv("PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE_MIRROR")
+	if len(SuccessTestImagePrefixOverride) == 0 {
+		panic("PKO_TEST_SUCCESS_IMAGE_PREFIX_OVERRIDE_MIRROR not set!")
+	}
+
 	TestStubImage = os.Getenv("PKO_TEST_STUB_IMAGE")
 	if len(TestStubImage) == 0 {
 		panic("PKO_TEST_STUB_IMAGE not set!")
 	}
+	TestStubImageSrc = os.Getenv("PKO_TEST_STUB_IMAGE_SRC")
+	if len(TestStubImageSrc) == 0 {
+		panic("PKO_TEST_STUB_IMAGE_SRC not set!")
+	}
+	TestStubImageMirror = os.Getenv("PKO_TEST_STUB_IMAGE_MIRROR")
+	if len(TestStubImageMirror) == 0 {
+		panic("PKO_TEST_STUB_IMAGE_MIRROR not set!")
+	}
 	LatestSelfBootstrapJobURL = os.Getenv("PKO_TEST_LATEST_BOOTSTRAP_JOB")
 	if len(LatestSelfBootstrapJobURL) == 0 {
 		panic("PKO_TEST_LATEST_BOOTSTRAP_JOB not set!")
+	}
+
+	ImageRegistry = os.Getenv("PKO_IMAGE_REGISTRY")
+	if len(ImageRegistry) == 0 {
+		panic("PKO_IMAGE_REGISTRY no set")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
