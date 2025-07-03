@@ -6,3 +6,4 @@ ignore:
   - "cmd/build"
   - "cmd/test-stub"
   - internal/packages/internal/packagekickstart/rukpak
+  - "integration"
