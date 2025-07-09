@@ -170,7 +170,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSet adapters.ObjectSetAccessorFactory,
-	ownerStrategy ownerStrategy,
+	ownerStrategy ownerhandling.OwnerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,

@@ -19,6 +19,8 @@ const (
 	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
 	// FieldOwner name of the PKO field manager for server-side apply.
 	FieldOwner = "package-operator"
+	// TODO
+	SystemPrefix = "package-operator.run"
 	// OwnerStrategyAnnotationKey is the k8s annotation key that denotes the owner of a resource.
 	OwnerStrategyAnnotationKey = "package-operator.run/owners"
 )

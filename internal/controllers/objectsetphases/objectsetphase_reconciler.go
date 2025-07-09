@@ -4,31 +4,44 @@ import (
 	"context"
 	"fmt"
 
-	"pkg.package-operator.run/boxcutter/managedcache"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/flowcontrol"
+	"pkg.package-operator.run/boxcutter"
+	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/machinery/types"
+	"pkg.package-operator.run/boxcutter/managedcache"
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	internalprobing "package-operator.run/internal/probing"
+
+	// TODO why does goimport INSIST on having an alias for this import?
+	// if i remove this then it is aliased as boxcutter
+	boxcutterutil "package-operator.run/internal/controllers/boxcutterutil"
 )
 
 // objectSetPhaseReconciler reconciles objects within a phase.
 type objectSetPhaseReconciler struct {
-	scheme                  *runtime.Scheme
+	scheme          *runtime.Scheme
+	discoveryClient discovery.DiscoveryInterface
+	restMapper      meta.RESTMapper
+	phaseValidator  machinery.PhaseValidator
+
 	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
 	phaseReconcilerFactory  controllers.PhaseReconcilerFactory
 	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           ownerStrategy
+	ownerStrategy           ownerhandling.OwnerStrategy
 	backoff                 *flowcontrol.Backoff
 }
 
@@ -37,7 +50,7 @@ func newObjectSetPhaseReconciler(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	phaseReconcilerFactory controllers.PhaseReconcilerFactory,
 	lookupPreviousRevisions lookupPreviousRevisions,
-	ownerStrategy ownerStrategy,
+	ownerStrategy ownerhandling.OwnerStrategy,
 ) *objectSetPhaseReconciler {
 	var cfg objectSetPhaseReconcilerConfig
 
@@ -88,10 +101,45 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("preparing cache: %w", err)
 	}
-	phaseReconciler := r.phaseReconcilerFactory.New(cache)
 
-	actualObjects, probingResult, err := phaseReconciler.ReconcilePhase(
-		ctx, objectSetPhase, objectSetPhase.GetPhase(), probe, previous)
+	phaseEngine, err := boxcutter.NewPhaseEngine(boxcutter.RevisionEngineOptions{
+		Scheme:          r.scheme,
+		FieldOwner:      constants.FieldOwner,
+		SystemPrefix:    constants.SystemPrefix,
+		DiscoveryClient: r.discoveryClient,
+		RestMapper:      r.restMapper,
+		Writer:          cache,
+		Reader:          cache,
+		OwnerStrategy:   r.ownerStrategy,
+		PhaseValidator:  r.phaseValidator,
+	})
+	if err != nil {
+		return res, fmt.Errorf("preparing PhaseEngine: %w", err)
+	}
+
+	apiPhase := objectSetPhase.GetPhase()
+	phaseObjects := make([]unstructured.Unstructured, len(apiPhase.Objects))
+	phaseReconcileOptions := make([]types.PhaseReconcileOption, len(apiPhase.Objects))
+	for i := range apiPhase.Objects {
+		phaseObjects[i] = apiPhase.Objects[i].Object
+		phaseReconcileOptions[i] = types.WithObjectReconcileOptions(
+			&apiPhase.Objects[i].Object,
+			boxcutterutil.TranslateCollisionProtection(apiPhase.Objects[i].CollisionProtection),
+			// howto probing?
+			// howto conditionmapping?
+			// apiPhase.Objects[i].ConditionMappings
+			// howto pausing?
+		)
+	}
+
+	result, err := phaseEngine.Reconcile(ctx,
+		objectSetPhase.ClientObject(),
+		objectSetPhase.GetRevision(),
+		types.Phase{
+			Name:    apiPhase.Name,
+			Objects: phaseObjects,
+		},
+	)
 	if controllers.IsExternalResourceNotFound(err) {
 		id := string(objectSetPhase.ClientObject().GetUID())
 
@@ -101,11 +149,29 @@ func (r *objectSetPhaseReconciler) Reconcile(
 			RequeueAfter: r.backoff.Get(id),
 		}, nil
 	} else if err != nil {
-		return res, err
+		return res, fmt.Errorf("PhaseEngine reconcile error: %w", err)
 	}
 
-	if err := r.reportOwnActiveObjects(ctx, objectSetPhase, actualObjects); err != nil {
+	// actualObjects, probingResult, err := phaseReconciler.ReconcilePhase(
+	// 	ctx, objectSetPhase, objectSetPhase.GetPhase(), probe, previous)
+	// if controllers.IsExternalResourceNotFound(err) {
+	// 	id := string(objectSetPhase.ClientObject().GetUID())
+
+	// 	r.backoff.Next(id, r.backoff.Clock.Now())
+
+	// 	return ctrl.Result{
+	// 		RequeueAfter: r.backoff.Get(id),
+	// 	}, nil
+	// } else if err != nil {
+	// 	return res, err
+	// }
+
+	if err := r.reportOwnActiveObjects(ctx, objectSetPhase, result.GetObjects()); err != nil {
 		return res, fmt.Errorf("reporting active objects: %w", err)
+	}
+	for _, objr := range result.GetObjects() {
+		// objr.Success()
+		// -> need a method that just exposes if we control the object.
 	}
 
 	if !probingResult.IsZero() {
@@ -177,8 +243,9 @@ func (r *objectSetPhaseReconciler) Teardown(
 
 // Sets .status.activeObjects to all objects actively reconciled and controlled by this Phase.
 func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
-	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor, actualObjects []client.Object,
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor, actualObjects []machinery.ObjectResult,
 ) error {
+
 	activeObjects, err := controllers.GetControllerOf(
 		ctx, r.scheme, r.ownerStrategy,
 		objectSetPhase.ClientObject(), actualObjects)
