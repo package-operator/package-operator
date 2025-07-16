@@ -75,6 +75,10 @@ func (m *AccessorMock) RemoveOtherInformers(ctx context.Context, gvks ...schema.
 	return args.Error(0)
 }
 
+func (m *AccessorMock) GetGVKs() []schema.GroupVersionKind {
+	return m.Called().Get(0).([]schema.GroupVersionKind)
+}
+
 func (m *AccessorMock) GetInformer(
 	ctx context.Context,
 	obj client.Object,
