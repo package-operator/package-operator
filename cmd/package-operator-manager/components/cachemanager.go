@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"package-operator.run/internal/constants"
 
@@ -29,7 +30,7 @@ func ProvideAccessManager(
 		return c, o, nil
 	}
 
-	return managedcache.NewObjectBoundAccessManager(
+	accessManager := managedcache.NewObjectBoundAccessManager(
 		log,
 		mapper,
 		restConfig,
@@ -41,4 +42,10 @@ func ProvideAccessManager(
 			}),
 		},
 	)
+
+	metrics.Registry.MustRegister(
+		managedcache.NewCollector(accessManager, "package_operator"),
+	)
+
+	return accessManager
 }
