@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
@@ -223,6 +224,9 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	if err := mgr.Add(accessManager); err != nil {
 		return fmt.Errorf("unable to start cache manager: %w", err)
 	}
+
+	metricsCollector := managedcache.NewCollector(accessManager, "remote_phase_manager")
+	ctrlmetrics.Registry.MustRegister(metricsCollector)
 
 	// Create a remote client that does not cache resources cluster-wide.
 	uncachedTargetClient, err := client.New(
