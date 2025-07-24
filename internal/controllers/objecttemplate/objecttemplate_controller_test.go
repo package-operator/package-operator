@@ -47,8 +47,6 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
 	ownerRefGetter := &ownerRefGetterMock{}
-	// scheme := runtime.NewScheme()
-	// h := managedcache.NewEnqueueWatchingObjects(ownerRefGetter, &corev1.ConfigMap{}, scheme)
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	rm := &restmappermock.RestMapperMock{}
 	cfg := ControllerConfig{
@@ -86,7 +84,6 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
-	// dc := &dynmiccachemocks.DynamicCacheMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	rm := &restmappermock.RestMapperMock{}
 	cfg := ControllerConfig{

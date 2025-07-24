@@ -21,14 +21,6 @@ import (
 	"package-operator.run/internal/preflight"
 )
 
-// type dynamicCache interface {
-// 	client.Reader
-// 	Source(handler handler.EventHandler, predicates ...predicate.Predicate) source.Source
-// 	Free(ctx context.Context, obj client.Object) error
-// 	Watch(ctx context.Context, owner client.Object, obj runtime.Object) error
-// 	OwnersForGKV(gvk schema.GroupVersionKind) []dynamiccache.OwnerReference
-// }
-
 type reconciler interface {
 	Reconcile(ctx context.Context, pkg adapters.ObjectTemplateAccessor) (ctrl.Result, error)
 }
