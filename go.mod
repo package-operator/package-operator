@@ -7,7 +7,7 @@ toolchain go1.23.8
 replace (
 	package-operator.run/apis => ./apis
 	package-operator.run/pkg => ./pkg
-	pkg.package-operator.run/boxcutter => ../boxcutter
+	pkg.package-operator.run/boxcutter => github.com/radimous/boxcutter v0.0.0-20250722085524-31b6023f3511
 )
 
 require (
