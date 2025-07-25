@@ -54,7 +54,7 @@ require (
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/kind v0.29.0
-	sigs.k8s.io/yaml v1.5.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
