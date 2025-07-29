@@ -80,8 +80,8 @@ github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHk
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
-github.com/fxamacker/cbor/v2 v2.8.0 h1:fFtUGXUzXPHTIUdne5+zzMPTfffl3RD5qYnkY40vtxU=
-github.com/fxamacker/cbor/v2 v2.8.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
+github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/go-air/gini v1.0.4 h1:lteMAxHKNOAjIqazL/klOJJmxq6YxxSuJ17MnMXny+s=
 github.com/go-air/gini v1.0.4/go.mod h1:dd8RvT1xcv6N1da33okvBd8DhMh1/A4siGy6ErjTljs=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -449,8 +449,8 @@ k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUy
 k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
 k8s.io/utils v0.0.0-20241210054802-24370beab758 h1:sdbE21q2nlQtFh65saZY+rRM6x6aJJI8IUa1AmH/qa0=
 k8s.io/utils v0.0.0-20241210054802-24370beab758/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-pkg.package-operator.run/boxcutter v0.1.3 h1:D3QenUDoUjLhzQlbJVTV8txyfKsNl/cJw2gaQcxPQR0=
-pkg.package-operator.run/boxcutter v0.1.3/go.mod h1:VlO8M2Xmwhxa/P12tFKaTA47SQFvLPDetY3ZLDx/41Y=
+pkg.package-operator.run/boxcutter v0.2.0 h1:BvSAkLT2lt5TO+PdiKKXAg0oyMcNP7D7hBUnZaiRUrs=
+pkg.package-operator.run/boxcutter v0.2.0/go.mod h1:Zhiq6OgWKnbBYy/87C/8+n7h7s2cTsA9QsIiXVZA4fk=
 pkg.package-operator.run/cardboard v0.0.4 h1:a5wus35NCnpVkJmqzq1WZukLM3SOPiRoYD30k33E5nY=
 pkg.package-operator.run/cardboard v0.0.4/go.mod h1:txTwfizKr008RFlNrfa2USO5oQnPOSnkEdRJ4bb4nvQ=
 pkg.package-operator.run/cardboard/kubeutils v0.0.4 h1:rsDqBsnnqN3NaCI3yUdoePqVzJQUVxjLBY3s0wRSoW4=

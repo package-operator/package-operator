@@ -45,7 +45,7 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	package-operator.run/apis v1.17.1
 	package-operator.run/pkg v1.17.1
-	pkg.package-operator.run/boxcutter v0.1.3
+	pkg.package-operator.run/boxcutter v0.2.0
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.4
@@ -83,7 +83,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-air/gini v1.0.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
