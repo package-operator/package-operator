@@ -202,3 +202,33 @@ func TestObjectSetMetrics_ObjectDeploymentDeleted(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, found)
 }
+
+func TestManagedCacheMetrics(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	found, err := testutil.MetricsVectorExists(ctx, Config, "managed_cache_informers", "owner", "123-456")
+	require.NoError(t, err)
+	assert.True(t, found)
+
+	deployments := deploymentsInCache(ctx, t)
+
+	pkg := clusterPackageTemplate("test-package")
+	requireDeployPackage(ctx, t, pkg, &corev1alpha1.ClusterObjectDeployment{})
+
+	// Expect one more deployment after the test-stub package is available
+	assert.Equal(t, deployments+1, deploymentsInCache(ctx, t))
+
+	require.NoError(t, Client.Delete(ctx, pkg))
+	require.NoError(t, Waiter.WaitToBeGone(ctx, pkg, func(client.Object) (bool, error) { return false, nil }))
+
+	// After deleting the package, the number of deployments should be back to the original value
+	assert.Equal(t, deployments, deploymentsInCache(ctx, t))
+}
+
+func deploymentsInCache(ctx context.Context, t *testing.T) int {
+	t.Helper()
+
+	metric, err := testutil.GetMetric(ctx, Config, "managed_cache_objects", "gvk", "apps/v1, Kind=Deployment")
+	require.NoError(t, err)
+	return int(metric.GetGauge().GetValue())
+}
