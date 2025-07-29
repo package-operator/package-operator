@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -70,7 +71,7 @@ func (m *AccessorMock) Source(handler handler.EventHandler, predicates ...predic
 	return args.Get(0).(source.Source)
 }
 
-func (m *AccessorMock) RemoveOtherInformers(ctx context.Context, gvks ...schema.GroupVersionKind) error {
+func (m *AccessorMock) RemoveOtherInformers(ctx context.Context, gvks sets.Set[schema.GroupVersionKind]) error {
 	args := m.Called(ctx, gvks)
 	return args.Error(0)
 }
