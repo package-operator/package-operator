@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-logr/logr"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -229,7 +228,7 @@ func (r *phaseReconciler) teardownPhaseObject(
 	ctx context.Context, owner PhaseObjectOwner,
 	phaseObject corev1alpha1.ObjectSetObject,
 ) (cleanupDone bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	desiredObj := r.desiredObject(ctx, owner, phaseObject)
 
@@ -552,7 +551,7 @@ func (r *phaseReconciler) reconcileObject(
 
 	// Take over object ownership by patching metadata.
 	if needsAdoption {
-		log := logr.FromContextOrDiscard(ctx)
+		log := ctrl.LoggerFrom(ctx)
 		log.Info("adopting object",
 			"OwnerKey", client.ObjectKeyFromObject(owner.ClientObject()),
 			"OwnerGVK", owner.ClientObject().GetObjectKind().GroupVersionKind(),
