@@ -3,6 +3,7 @@ package testutil
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strings"
 
 	io_prometheus_client "github.com/prometheus/client_model/go"
@@ -32,23 +33,27 @@ func parseMetrics(metricBytes []byte) (map[string][]*io_prometheus_client.Metric
 
 // This function fetches metrics from pko manager and checks if a given vector exists.
 func MetricsVectorExists(ctx context.Context, restConfig *rest.Config, metric, label, value string) (bool, error) {
+	vector, err := GetMetric(ctx, restConfig, metric, label, value)
+	return vector != nil, err
+}
+
+func GetMetric(ctx context.Context, restConfig *rest.Config, metric, label, value string) (*io_prometheus_client.Metric, error) {
 	respBytes, err := GetEndpointOnCluster(ctx, restConfig,
 		"package-operator-system", "package-operator-metrics", "/metrics", 8080)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	metrics, err := parseMetrics(respBytes)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	// Verify there's a vector with the provided label,value pair
-	vectors := metrics[metric]
-	vector := searchableMetrics(vectors).findMetric(label, value)
-	if vector != nil {
-		return true, nil
+	vectors, ok := metrics[metric]
+	if !ok {
+		return nil, fmt.Errorf("metric '%s' not found", metric)
 	}
-	return false, nil
+
+	return searchableMetrics(vectors).findMetric(label, value), nil
 }
 
 type searchableMetrics []*io_prometheus_client.Metric
