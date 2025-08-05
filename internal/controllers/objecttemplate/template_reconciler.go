@@ -100,7 +100,7 @@ func (r *templateReconciler) Reconcile(
 		obj,
 	}
 	cache, err := r.accessManager.GetWithUser(
-		context.Background(),
+		ctx,
 		constants.StaticCacheOwner(),
 		objectTemplate.ClientObject(),
 		objects,
@@ -217,7 +217,7 @@ func (r *templateReconciler) getSourceObject(
 		sourceObj,
 	}
 	cache, err := r.accessManager.GetWithUser(
-		context.Background(),
+		ctx,
 		constants.StaticCacheOwner(),
 		objectTemplate,
 		objects,
