@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"pkg.package-operator.run/boxcutter/managedcache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -30,23 +28,12 @@ func init() {
 	}
 }
 
-type ownerRefGetterMock struct {
-	mock.Mock
-}
-
-func (m *ownerRefGetterMock) GetWatchersForGVK(gvk schema.GroupVersionKind) []managedcache.AccessManagerKey {
-	args := m.Called(gvk)
-
-	return args.Get(0).([]managedcache.AccessManagerKey)
-}
-
 func TestObjectTemplateController_Reconcile(t *testing.T) {
 	t.Parallel()
 
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
-	ownerRefGetter := &ownerRefGetterMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	rm := &restmappermock.RestMapperMock{}
 	cfg := ControllerConfig{
@@ -75,7 +62,10 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
 
-	ownerRefGetter.AssertExpectations(t)
+	c.AssertExpectations(t)
+	uncachedClient.AssertExpectations(t)
+	c.StatusMock.AssertExpectations(t)
+	accessManager.AssertExpectations(t)
 }
 
 func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
@@ -118,5 +108,8 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
 
+	c.AssertExpectations(t)
+	uncachedClient.AssertExpectations(t)
+	c.StatusMock.AssertExpectations(t)
 	accessManager.AssertExpectations(t)
 }
