@@ -143,14 +143,6 @@ func (r *templateReconciler) Reconcile(
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
 
-	if err := r.accessManager.FreeWithUser(
-		ctx,
-		constants.StaticCacheOwner(),
-		objectTemplate.ClientObject(),
-	); err != nil {
-		return res, fmt.Errorf("freewithuser: %w", err)
-	}
-
 	return res, nil
 }
 

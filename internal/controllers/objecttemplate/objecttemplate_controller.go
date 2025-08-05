@@ -127,7 +127,7 @@ func (c *GenericObjectTemplateController) Reconcile(
 	}
 
 	if !objectTemplate.ClientObject().GetDeletionTimestamp().IsZero() {
-		if err := c.accessManager.Free(ctx, objectTemplate.ClientObject()); err != nil {
+		if err := c.accessManager.FreeWithUser(ctx, constants.StaticCacheOwner(), objectTemplate.ClientObject()); err != nil {
 			return ctrl.Result{}, fmt.Errorf("free cache: %w", err)
 		}
 

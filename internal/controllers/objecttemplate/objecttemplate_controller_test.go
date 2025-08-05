@@ -94,11 +94,8 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 			}}
 		}).
 		Return(nil)
-	c.
-		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything, mock.Anything).
-		Return(nil)
 	accessManager.
-		On("Free", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
+		On("FreeWithUser", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
 		Return(nil)
 
 	ctx := context.Background()
