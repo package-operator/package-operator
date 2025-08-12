@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
+	"package-operator.run/internal/testutil/discoveryclientmock"
 	"package-operator.run/internal/testutil/restmappermock"
 
 	"package-operator.run/internal/apis/manifests"
@@ -48,7 +49,7 @@ func TestManager_Init_Kubernetes(t *testing.T) {
 	t.Parallel()
 	rm := &restmappermock.RestMapperMock{}
 	c := testutil.NewClient()
-	dc := &discoveryClientMock{}
+	dc := &discoveryclientmock.DiscoveryClientMock{}
 	sink := &testSink{}
 
 	// Mocks
@@ -86,7 +87,7 @@ func TestManager_Init_OpenShift(t *testing.T) {
 	t.Parallel()
 	rm := &restmappermock.RestMapperMock{}
 	c := testutil.NewClient()
-	dc := &discoveryClientMock{}
+	dc := &discoveryclientmock.DiscoveryClientMock{}
 	sink := &testSink{}
 
 	// Mocks
@@ -298,15 +299,6 @@ func TestManager_hyperShiftEnvironment_error(t *testing.T) {
 	mgr := NewManager(nil, nil, rm)
 	_, _, err := mgr.hyperShiftEnvironment()
 	require.ErrorIs(t, err, errExample)
-}
-
-type discoveryClientMock struct {
-	mock.Mock
-}
-
-func (c *discoveryClientMock) ServerVersion() (*version.Info, error) {
-	args := c.Called()
-	return args.Get(0).(*version.Info), args.Error(1)
 }
 
 func TestSink(t *testing.T) {

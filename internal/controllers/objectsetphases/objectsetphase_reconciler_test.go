@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"pkg.package-operator.run/boxcutter/machinery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -17,7 +18,7 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/testutil"
-	"package-operator.run/internal/testutil/controllersmocks"
+	"package-operator.run/internal/testutil/boxcuttermocks"
 	"package-operator.run/internal/testutil/managedcachemocks"
 	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
@@ -32,8 +33,6 @@ func init() {
 		panic(err)
 	}
 }
-
-type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 
 func TestPhaseReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
@@ -77,25 +76,28 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
-			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
-			phaseReconciler := &phaseReconcilerMock{}
+			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
+			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
+			phaseResult := &boxcuttermocks.PhaseResultMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
-
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, phaseEngineFactory, lookup, ownerStrategy)
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
-			factory.On("New", accessor).Return(phaseReconciler)
+
+			phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
+			phaseEngine.
+				On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
+					objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+				Return(phaseResult, nil).
+				Once()
+			phaseResult.On("GetObjects").Return([]machinery.ObjectResult{})
 
 			if test.condition.Reason == "ProbeFailure" {
-				phaseReconciler.
-					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
-					Return([]client.Object{}, controllers.ProbingResult{PhaseName: "this"}, nil).
-					Once()
+				phaseResult.On("IsComplete").Return(false)
+				phaseResult.On("GetProbesStatus").Return("object not ready")
 			} else {
-				phaseReconciler.
-					On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
-					Return([]client.Object{}, controllers.ProbingResult{}, nil).
-					Once()
+				phaseResult.On("IsComplete").Return(true)
+				phaseResult.On("GetProbesStatus").Return("")
 			}
 
 			res, err := r.Reconcile(context.Background(), objectSetPhase)
@@ -127,20 +129,22 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	factory := &controllersmocks.PhaseReconcilerFactoryMock{}
-	phaseReconciler := &phaseReconcilerMock{}
-
+	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
+	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
+	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
+	r := newObjectSetPhaseReconciler(testScheme, accessManager, phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(accessor, nil)
-	factory.On("New", accessor).Return(phaseReconciler)
-
-	phaseReconciler.
-		On("ReconcilePhase", mock.Anything, objectSetPhase, objectSetPhase.GetPhase(), mock.Anything, previousList).
-		Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil)).
+	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
+	phaseEngine.
+		On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
+			objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+		Return(phaseResult, controllers.NewExternalResourceNotFoundError(nil)).
 		Once()
+	phaseResult.On("IsComplete").Return(false)
+	phaseResult.On("GetProbesStatus").Return("")
 
 	res, err := r.Reconcile(context.Background(), objectSetPhase)
 	require.NoError(t, err)
@@ -169,23 +173,33 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
-			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
-			phaseReconciler := &phaseReconcilerMock{}
-
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, factory, lookup, ownerStrategy)
+			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
+			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
+			phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, phaseEngineFactory, lookup, ownerStrategy)
 
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
 			accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-			factory.On("New", accessor).Return(phaseReconciler)
+			phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 
-			phaseReconciler.On("TeardownPhase", mock.Anything, mock.Anything, mock.Anything).Return(teardownDone, nil)
+			phaseEngine.
+				On("Teardown", mock.Anything, objectSetPhase.ClientObject(),
+					objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+				Return(phaseTeardownResult, nil)
+
+			if teardownDone {
+				phaseTeardownResult.On("IsComplete").Return(true)
+			} else {
+				phaseTeardownResult.On("IsComplete").Return(false)
+			}
 
 			_, err := r.Teardown(context.Background(), objectSetPhase)
 			require.NoError(t, err)
 
-			phaseReconciler.AssertCalled(t, "TeardownPhase", mock.Anything, mock.Anything, mock.Anything)
+			phaseEngine.AssertCalled(t, "Teardown", mock.Anything, objectSetPhase.ClientObject(),
+				objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything)
 
 			if teardownDone {
 				accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)

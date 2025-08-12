@@ -81,6 +81,16 @@ func (m *AccessorMock) GetGVKs() []schema.GroupVersionKind {
 	return m.Called().Get(0).([]schema.GroupVersionKind)
 }
 
+func (m *AccessorMock) Free(ctx context.Context, user client.Object) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *AccessorMock) Watch(ctx context.Context, user client.Object, gvks sets.Set[schema.GroupVersionKind]) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *AccessorMock) GetInformer(
 	ctx context.Context,
 	obj client.Object,

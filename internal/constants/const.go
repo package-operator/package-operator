@@ -25,6 +25,8 @@ const (
 	LogLevelDebug = 1
 	// // Metrics finalizer ensures metrics have been updated before resources are deleted.
 	MetricsFinalizer = "package-operator.run/metrics"
+	// System prefix is used by boxcutter to label and annotate objects it creates.
+	SystemPrefix = "package-operator.run"
 )
 
 func StaticCacheOwner() *corev1alpha1.ObjectDeployment {
