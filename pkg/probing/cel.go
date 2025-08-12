@@ -8,6 +8,7 @@ import (
 	"github.com/google/cel-go/ext"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apiserver/pkg/cel/library"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -62,7 +63,7 @@ func NewCELProbe(rule, message string) (
 }
 
 // Probe executes the probe.
-func (p *CELProbe) Probe(obj client.Object) (success bool, messages []string) {
+func (p *CELProbe) Probe(obj client.Object) types.ProbeResult {
 	return probeUnstructuredSingleMsg(obj, p.probe)
 }
 

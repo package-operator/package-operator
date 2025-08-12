@@ -15,6 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -228,20 +229,17 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 	metricsCollector := metrics.NewManagedCacheCollector(accessManager, log)
 	ctrlmetrics.Registry.MustRegister(metricsCollector)
 
-	// Create a remote client that does not cache resources cluster-wide.
-	uncachedTargetClient, err := client.New(
-		targetCfg, client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
-	if err != nil {
-		return fmt.Errorf("unable to set up uncached client: %w", err)
-	}
-
 	managementClusterClient := mgr.GetClient()
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(targetCfg)
+	if err != nil {
+		return fmt.Errorf("unable to create discovery client: %w", err)
+	}
 
 	if err = objectsetphases.NewMultiClusterObjectSetPhaseController(
 		ctrl.Log.WithName("controllers").WithName("ObjectSetPhase"),
-		mgr.GetScheme(), accessManager, uncachedTargetClient,
+		mgr.GetScheme(), accessManager,
 		opts.class, managementClusterClient,
-		targetClient, targetMapper,
+		targetClient, targetMapper, discoveryClient,
 	).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller for ObjectSetPhase: %w", err)
 	}
@@ -250,9 +248,9 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		// Only start the Cluster-Scoped controller, when we are running cluster scoped.
 		if err = objectsetphases.NewMultiClusterClusterObjectSetPhaseController(
 			ctrl.Log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-			mgr.GetScheme(), accessManager, uncachedTargetClient,
+			mgr.GetScheme(), accessManager,
 			opts.class, managementClusterClient,
-			targetClient, targetMapper,
+			targetClient, targetMapper, discoveryClient,
 		).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller for ClusterObjectSetPhase: %w", err)
 		}

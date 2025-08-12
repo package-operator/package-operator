@@ -18,10 +18,11 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/internal/preflight"
+	"package-operator.run/internal/controllers/boxcutterutil"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
+	"pkg.package-operator.run/boxcutter/validation"
 )
 
 type reconciler interface {
@@ -47,12 +48,6 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
-type preflightChecker interface {
-	Check(
-		ctx context.Context, owner, obj client.Object,
-	) (violations []preflight.Violation, err error)
-}
-
 // Generic reconciler for both ObjectSetPhase and ClusterObjectSetPhase objects.
 type GenericObjectSetPhaseController struct {
 	newObjectSetPhase adapters.ObjectSetPhaseFactory
@@ -71,112 +66,96 @@ type GenericObjectSetPhaseController struct {
 func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			targetRESTMapper,
-			preflight.List{
-				preflight.NewNoOwnerReferences(targetRESTMapper),
-				preflight.NewDryRun(targetWriter),
-			},
-		),
+		discoveryClient,
+		targetRESTMapper,
+		validation.NewClusterPhaseValidator(targetRESTMapper, targetWriter),
 	)
 }
 
 func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			targetRESTMapper,
-			preflight.List{
-				preflight.NewDryRun(targetWriter),
-				preflight.NewNoOwnerReferences(targetRESTMapper),
-			},
-		),
+		discoveryClient,
+		targetRESTMapper,
+		validation.NewClusterPhaseValidator(targetRESTMapper, targetWriter),
 	)
 }
 
 func NewSameClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			restMapper,
-			preflight.List{
-				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
-			},
-		),
+		discoveryClient,
+		restMapper,
+		validation.NewNamespacedPhaseValidator(restMapper, client),
 	)
 }
 
 func NewSameClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			restMapper,
-			preflight.List{
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
-			},
-		),
+		discoveryClient,
+		restMapper,
+		validation.NewNamespacedPhaseValidator(restMapper, client),
 	)
 }
 
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSet adapters.ObjectSetAccessorFactory,
-	ownerStrategy ownerStrategy,
+	ownerStrategy boxcutterutil.OwnerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
-	preflightChecker preflightChecker,
+	discoveryClient boxcutterutil.DiscoveryClient,
+	targetRESTMapper meta.RESTMapper,
+	phaseValidator *validation.PhaseValidator,
 ) *GenericObjectSetPhaseController {
 	controller := &GenericObjectSetPhaseController{
 		newObjectSetPhase: newObjectSetPhase,
@@ -189,16 +168,16 @@ func NewGenericObjectSetPhaseController(
 		ownerStrategy: ownerStrategy,
 		accessManager: accessManager,
 	}
-
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		accessManager,
-		controllers.NewPhaseReconcilerFactory(
-			scheme, uncachedClient, ownerStrategy, preflightChecker),
+		client,
+		boxcutterutil.NewPhaseEngineFactory(
+			scheme, discoveryClient, targetRESTMapper, ownerStrategy, phaseValidator),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
-			}, client).Lookup,
+			}, client).LookupPreviousRemotePhases,
 		ownerStrategy,
 	)
 	controller.teardownHandler = phaseReconciler

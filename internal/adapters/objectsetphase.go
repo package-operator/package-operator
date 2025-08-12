@@ -83,6 +83,7 @@ func (a *ObjectSetPhaseAdapter) SetPrevious(previous []corev1alpha1.PreviousRevi
 
 func (a *ObjectSetPhaseAdapter) GetPhase() corev1alpha1.ObjectSetTemplatePhase {
 	return corev1alpha1.ObjectSetTemplatePhase{
+		Name:    a.Name,
 		Objects: a.Spec.Objects,
 	}
 }
