@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,7 +18,7 @@ type FieldsEqualProbe struct {
 var _ Prober = (*FieldsEqualProbe)(nil)
 
 // Probe executes the probe.
-func (fe *FieldsEqualProbe) Probe(obj client.Object) (success bool, messages []string) {
+func (fe *FieldsEqualProbe) Probe(obj client.Object) types.ProbeResult {
 	return probeUnstructuredSingleMsg(obj, fe.probe)
 }
 

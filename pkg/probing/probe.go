@@ -5,12 +5,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Prober check Kubernetes objects for certain conditions and report success or failure with failure messages.
 type Prober interface {
-	Probe(obj client.Object) (success bool, messages []string)
+	Probe(obj client.Object) types.ProbeResult
 }
 
 // And combines multiple Prober, only passing if all given Probers succeed.
@@ -20,17 +21,45 @@ type And []Prober
 var _ Prober = (And)(nil)
 
 // Probe executes the probe.
-func (p And) Probe(obj client.Object) (success bool, messages []string) {
+func (p And) Probe(obj client.Object) types.ProbeResult {
 	var allMsgs []string
+	hasUnknown := false
+
 	for _, probe := range p {
-		if success, msgs := probe.Probe(obj); !success {
-			allMsgs = append(allMsgs, msgs...)
+		result := probe.Probe(obj)
+		switch result.Status {
+		case types.ProbeStatusFalse:
+			// If any probe fails, the And fails
+			allMsgs = append(allMsgs, result.Messages...)
+		case types.ProbeStatusUnknown:
+			// Track that we have an unknown state
+			hasUnknown = true
+			allMsgs = append(allMsgs, result.Messages...)
+		case types.ProbeStatusTrue:
+			// Continue checking other probes
 		}
 	}
+
+	// Determine final status:
+	// - If we have any messages (from False or Unknown)
 	if len(allMsgs) > 0 {
-		return false, allMsgs
+		if hasUnknown {
+			return types.ProbeResult{
+				Status:   types.ProbeStatusUnknown,
+				Messages: allMsgs,
+			}
+		}
+		return types.ProbeResult{
+			Status:   types.ProbeStatusFalse,
+			Messages: allMsgs,
+		}
 	}
-	return true, nil
+
+	// All probes were True
+	return types.ProbeResult{
+		Status:   types.ProbeStatusTrue,
+		Messages: nil,
+	}
 }
 
 func toUnstructured(obj client.Object) *unstructured.Unstructured {
@@ -44,11 +73,17 @@ func toUnstructured(obj client.Object) *unstructured.Unstructured {
 func probeUnstructuredSingleMsg(
 	obj client.Object,
 	probe func(obj *unstructured.Unstructured) (success bool, message string),
-) (success bool, messages []string) {
+) types.ProbeResult {
 	unst := toUnstructured(obj)
 	success, msg := probe(unst)
 	if success {
-		return success, nil
+		return types.ProbeResult{
+			Status:   types.ProbeStatusTrue,
+			Messages: nil,
+		}
 	}
-	return success, []string{msg}
+	return types.ProbeResult{
+		Status:   types.ProbeStatusFalse,
+		Messages: []string{msg},
+	}
 }

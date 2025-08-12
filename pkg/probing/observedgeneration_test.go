@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 )
 
 func TestStatusObservedGeneration(t *testing.T) {
@@ -15,7 +16,12 @@ func TestStatusObservedGeneration(t *testing.T) {
 		Prober: properMock,
 	}
 
-	properMock.On("Probe", mock.Anything).Return(true, []string{"banana"})
+	properMock.On("Probe", mock.Anything).Return(
+		types.ProbeResult{
+			Status:   types.ProbeStatusTrue,
+			Messages: nil,
+		},
+	)
 
 	tests := []struct {
 		name     string
@@ -73,9 +79,9 @@ func TestStatusObservedGeneration(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			s, m := og.Probe(test.obj)
-			assert.Equal(t, test.succeeds, s)
-			assert.Equal(t, test.messages, m)
+			result := og.Probe(test.obj)
+			assert.Equal(t, test.succeeds, result.Status)
+			assert.Equal(t, test.messages, result.Messages)
 		})
 	}
 }
