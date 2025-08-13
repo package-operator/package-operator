@@ -13,6 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
+
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
 )
@@ -150,7 +153,10 @@ func TestDryRun_emptyreason(t *testing.T) {
 	obj.SetKind("Hans")
 
 	dr := preflight.NewDryRun(c)
-	v, err := dr.Check(context.Background(), obj, obj)
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	_, err := logr.FromContext(ctx)
+	require.NoError(t, err, "logger not injected into context")
+	v, err := dr.Check(ctx, obj, obj)
 	require.NoError(t, err)
 	require.Len(t, v, 1)
 	require.Contains(t, v[0].Error, e.ErrStatus.Message)
