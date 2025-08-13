@@ -1,6 +1,8 @@
 package packages
 
-import "package-operator.run/internal/packages/internal/packagerepository"
+import (
+	"package-operator.run/internal/packages/internal/packagerepository"
+)
 
 type (
 	RepositoryIndex      = packagerepository.RepositoryIndex
