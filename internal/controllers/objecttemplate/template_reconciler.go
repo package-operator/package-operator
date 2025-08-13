@@ -75,8 +75,17 @@ func (r *templateReconciler) Reconcile(
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
 	}()
 
+	cache, err := r.accessManager.GetWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectTemplate.ClientObject(),
+		r.aggregateLocalObjects(ctx, objectTemplate),
+	)
+	if err != nil {
+		return res, err
+	}
 	sourcesConfig := map[string]any{}
-	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig)
+	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig, cache)
 	if err != nil {
 		if isMissingResourceError(err) {
 			res.RequeueAfter = r.resourceRetryInterval
@@ -92,20 +101,6 @@ func (r *templateReconciler) Reconcile(
 		Object: map[string]any{},
 	}
 	if err := r.templateObject(ctx, sourcesConfig, objectTemplate, obj); err != nil {
-		return res, err
-	}
-
-	objects := []client.Object{
-		objectTemplate.ClientObject(),
-		obj,
-	}
-	cache, err := r.accessManager.GetWithUser(
-		ctx,
-		constants.StaticCacheOwner(),
-		objectTemplate.ClientObject(),
-		objects,
-	)
-	if err != nil {
 		return res, err
 	}
 
@@ -161,10 +156,11 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 func (r *templateReconciler) getValuesFromSources(
 	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 	sourcesConfig map[string]any,
+	cache managedcache.Accessor,
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 	for _, src := range objectTemplate.GetSources() {
-		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src)
+		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src, cache)
 		if err != nil {
 			return false, err
 		}
@@ -184,6 +180,7 @@ func (r *templateReconciler) getValuesFromSources(
 func (r *templateReconciler) getSourceObject(
 	ctx context.Context, objectTemplate client.Object,
 	src corev1alpha1.ObjectTemplateSource,
+	cache managedcache.Accessor,
 ) (sourceObj *unstructured.Unstructured, found bool, err error) {
 	sourceObj = &unstructured.Unstructured{}
 	sourceObj.SetName(src.Name)
@@ -202,20 +199,6 @@ func (r *templateReconciler) getSourceObject(
 
 	if len(sourceObj.GetNamespace()) == 0 {
 		sourceObj.SetNamespace(objectTemplate.GetNamespace())
-	}
-
-	objects := []client.Object{
-		objectTemplate,
-		sourceObj,
-	}
-	cache, err := r.accessManager.GetWithUser(
-		ctx,
-		constants.StaticCacheOwner(),
-		objectTemplate,
-		objects,
-	)
-	if err != nil {
-		return nil, false, err
 	}
 
 	objectKey := client.ObjectKeyFromObject(sourceObj)
@@ -489,4 +472,34 @@ func isMissingResourceError(err error) bool {
 		return apimachineryerrors.IsNotFound(sourceError.Err)
 	}
 	return false
+}
+
+func (r *templateReconciler) aggregateLocalObjects(
+	ctx context.Context,
+	objectTemplate adapters.ObjectTemplateAccessor,
+) []client.Object {
+	objects := []client.Object{}
+	for _, src := range objectTemplate.GetSources() {
+		sourceObj := &unstructured.Unstructured{}
+		sourceObj.SetName(src.Name)
+		sourceObj.SetKind(src.Kind)
+		sourceObj.SetAPIVersion(src.APIVersion)
+		sourceObj.SetNamespace(src.Namespace)
+
+		// Ensure we are staying within the same namespace.
+		violations, err := r.preflightChecker.Check(ctx, objectTemplate.ClientObject(), sourceObj)
+		if err != nil {
+			return nil
+		}
+		if len(violations) > 0 {
+			return nil
+		}
+
+		if len(sourceObj.GetNamespace()) == 0 {
+			sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
+		}
+		objects = append(objects, sourceObj)
+	}
+	// TODO: templated object??
+	return objects
 }
