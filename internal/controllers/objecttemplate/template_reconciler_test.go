@@ -67,7 +67,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 
 	ctx := context.Background()
 	srcObj, _, err := r.getSourceObject(
-		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{})
+		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{}, accessor)
 	require.NoError(t, err)
 
 	if assert.NotNil(t, srcObj) {
@@ -96,7 +96,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 			Kind:      "ConfigMap",
 			Name:      "test",
 			Namespace: "default",
-		})
+		}, &managedcachemocks.AccessorMock{})
 	require.EqualError(t, err, "for source ConfigMap default/test: here: aaaaaaah!")
 }
 
