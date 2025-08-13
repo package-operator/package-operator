@@ -7,10 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/testutil/dynamiccachemocks"
 )
-
-type DynamicCacheMock = dynamiccachemocks.DynamicCacheMock
 
 type ObjectSetPhasesReconcilerMock struct {
 	mock.Mock
