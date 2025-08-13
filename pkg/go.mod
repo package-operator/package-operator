@@ -1,6 +1,6 @@
 module package-operator.run/pkg
 
-go 1.23.0
+go 1.24.4
 
 require (
 	github.com/google/cel-go v0.22.1

@@ -1,8 +1,6 @@
 module package-operator.run
 
-go 1.23.0
-
-toolchain go1.23.8
+go 1.24.4
 
 replace (
 	package-operator.run/apis => ./apis
