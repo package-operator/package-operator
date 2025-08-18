@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -18,10 +18,10 @@ jobs:
         python-version: '3.x'
 
     - name: Install dependencies
-      run: pip install requests
+      run: pip install -r misc/requirements.txt
 
     - name: Run rotation script
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         RELEASE_ROTATION: ${{ secrets.RELEASE_ROTATION }}
-      run: python release_rotation.py
+      run: python misc/release_rotation.py
