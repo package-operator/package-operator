@@ -1,0 +1,27 @@
+name: Weekly Release Rotation
+
+on:
+  schedule:
+  - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  post-rotation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: pip install -r misc/requirements.txt
+
+    - name: Run rotation script
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        RELEASE_ROTATION: ${{ secrets.RELEASE_ROTATION }}
+      run: python misc/release_rotation.py
