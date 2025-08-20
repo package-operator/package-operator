@@ -449,8 +449,8 @@ k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUy
 k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
 k8s.io/utils v0.0.0-20241210054802-24370beab758 h1:sdbE21q2nlQtFh65saZY+rRM6x6aJJI8IUa1AmH/qa0=
 k8s.io/utils v0.0.0-20241210054802-24370beab758/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-pkg.package-operator.run/boxcutter v0.2.0 h1:BvSAkLT2lt5TO+PdiKKXAg0oyMcNP7D7hBUnZaiRUrs=
-pkg.package-operator.run/boxcutter v0.2.0/go.mod h1:Zhiq6OgWKnbBYy/87C/8+n7h7s2cTsA9QsIiXVZA4fk=
+pkg.package-operator.run/boxcutter v0.5.1 h1:oZ68bI8wQ5nUsn6VqFFYNKJpnHLrys9Uc36yeNgedKE=
+pkg.package-operator.run/boxcutter v0.5.1/go.mod h1:yJu14WhAywcr2rvt/MEfDCT14t8cTFdYGZWxdSMA5QY=
 pkg.package-operator.run/cardboard v0.0.4 h1:a5wus35NCnpVkJmqzq1WZukLM3SOPiRoYD30k33E5nY=
 pkg.package-operator.run/cardboard v0.0.4/go.mod h1:txTwfizKr008RFlNrfa2USO5oQnPOSnkEdRJ4bb4nvQ=
 pkg.package-operator.run/cardboard/kubeutils v0.0.4 h1:rsDqBsnnqN3NaCI3yUdoePqVzJQUVxjLBY3s0wRSoW4=
@@ -465,8 +465,8 @@ pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339 h1:FUmtfBZwLM
 pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339/go.mod h1:Bt5XABGYPxvkX0zK0OKOvGqBRbJ+aumZJS3OjXjBtOc=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0 h1:qPrZsv1cwQiFeieFlRqT627fVZ+tyfou/+S5S0H5ua0=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
-sigs.k8s.io/controller-runtime v0.20.4 h1:X3c+Odnxz+iPTRobG4tp092+CvBU9UK0t/bRf+n0DGU=
-sigs.k8s.io/controller-runtime v0.20.4/go.mod h1:xg2XB0K5ShQzAgsoujxuKN4LNXR2LfwwHsPj7Iaw+XY=
+sigs.k8s.io/controller-runtime v0.21.0 h1:CYfjpEuicjUecRk+KAeyYh+ouUBn4llGyDYytIGcJS8=
+sigs.k8s.io/controller-runtime v0.21.0/go.mod h1:OSg14+F65eWqIu4DceX7k/+QRAbTTvxeQSNSOQpukWM=
 sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 h1:gBQPwqORJ8d8/YNZWEjoZs7npUVDpVXUUOFfW6CgAqE=
 sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8/go.mod h1:mdzfpAEoE6DHQEN0uh9ZbOCuHbLK5wOm7dK4ctXE9Tg=
 sigs.k8s.io/kind v0.29.0 h1:3TpCsyh908IkXXpcSnsMjWdwdWjIl7o9IMZImZCWFnI=
