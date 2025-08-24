@@ -410,6 +410,9 @@ spec:
                     namespace:
                       description: Object Namespace.
                       type: string
+                    version:
+                      description: Object Version.
+                      type: string
                   required:
                   - group
                   - kind

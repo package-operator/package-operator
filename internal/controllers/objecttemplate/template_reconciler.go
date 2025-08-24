@@ -79,7 +79,7 @@ func (r *templateReconciler) Reconcile(
 		ctx,
 		constants.StaticCacheOwner(),
 		objectTemplate.ClientObject(),
-		r.aggregateLocalObjects(ctx, objectTemplate),
+		r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf()),
 	)
 	if err != nil {
 		return res, err
@@ -134,6 +134,7 @@ func (r *templateReconciler) Reconcile(
 		Group:     gvk.Group,
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
+		Version:   gvk.Version,
 	}
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
@@ -477,6 +478,7 @@ func isMissingResourceError(err error) bool {
 func (r *templateReconciler) aggregateLocalObjects(
 	ctx context.Context,
 	objectTemplate adapters.ObjectTemplateAccessor,
+	outputObjectRef corev1alpha1.ControlledObjectReference,
 ) []client.Object {
 	objects := []client.Object{}
 	for _, src := range objectTemplate.GetSources() {
@@ -500,6 +502,18 @@ func (r *templateReconciler) aggregateLocalObjects(
 		}
 		objects = append(objects, sourceObj)
 	}
-	// TODO: templated object??
+
+	// first reconcile, unknown output gvk
+	if outputObjectRef.Group == "" && outputObjectRef.Kind == "" && outputObjectRef.Name == "" {
+		return objects
+	}
+
+	outputObject := &unstructured.Unstructured{}
+	outputObject.SetName(outputObjectRef.Name)
+	outputObject.SetKind(outputObjectRef.Kind)
+	outputObject.SetNamespace(outputObjectRef.Namespace)
+	outputObject.SetAPIVersion(outputObjectRef.Version)
+
+	objects = append(objects, outputObject)
 	return objects
 }
