@@ -123,7 +123,11 @@ func (init *initializer) ensureUpdatedPKO(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	log := logr.FromContextOrDiscard(ctx)
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		panic(fmt.Errorf("getting logger from context in ensureUpdatedPKO: %w", err))
+	}
+
 	if bootstrapClusterPackage.Spec.Image != existingClusterPackage.Spec.Image {
 		log.Info("image has been updated",
 			"from", existingClusterPackage.Spec.Image,
@@ -273,7 +277,12 @@ func (init *initializer) crdsFromPackage(ctx context.Context) (
 
 // ensure all CRDs are installed on the cluster.
 func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Unstructured) error {
-	log := logr.FromContextOrDiscard(ctx)
+	// Get logger from context and properly handle error
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("getting logger from context in ensureCRDs: %w", err)
+	}
+
 	for _, crd := range crds {
 		// Set cache label.
 		labels := crd.GetLabels()
