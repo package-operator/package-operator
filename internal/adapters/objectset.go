@@ -43,6 +43,8 @@ type ObjectSetAccessor interface {
 	GetSpecPrevious() []corev1alpha1.PreviousRevisionReference
 	SetSpecPreviousRevisions(prev []ObjectSetAccessor)
 	GetSpecSuccessDelaySeconds() int32
+	SetSpecRevision(int64)
+	GetSpecRevision() int64
 
 	IsStatusPaused() bool
 	GetStatusRevision() int64
@@ -191,6 +193,14 @@ func (a *ObjectSetAdapter) GetSpecSuccessDelaySeconds() int32 {
 	return a.Spec.SuccessDelaySeconds
 }
 
+func (a *ObjectSetAdapter) SetSpecRevision(revision int64) {
+	a.Spec.Revision = revision
+}
+
+func (a *ObjectSetAdapter) GetSpecRevision() int64 {
+	return a.Spec.Revision
+}
+
 func (a *ObjectSetAdapter) GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference {
 	return a.Status.RemotePhases
 }
@@ -312,6 +322,14 @@ func (a *ClusterObjectSetAdapter) GetAvailabilityProbes() []corev1alpha1.ObjectS
 
 func (a *ClusterObjectSetAdapter) GetSpecSuccessDelaySeconds() int32 {
 	return a.Spec.SuccessDelaySeconds
+}
+
+func (a *ClusterObjectSetAdapter) SetSpecRevision(revision int64) {
+	a.Spec.Revision = revision
+}
+
+func (a *ClusterObjectSetAdapter) GetSpecRevision() int64 {
+	return a.Spec.Revision
 }
 
 func (a *ClusterObjectSetAdapter) GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference {
