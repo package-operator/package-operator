@@ -43,14 +43,14 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	package-operator.run/apis v1.17.1
 	package-operator.run/pkg v1.17.1
-	pkg.package-operator.run/boxcutter v0.2.0
+	pkg.package-operator.run/boxcutter v0.5.2
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.4
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4
 	pkg.package-operator.run/cardboard/modules/oci v0.0.4
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
-	sigs.k8s.io/controller-runtime v0.20.4
+	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/kind v0.29.0
 	sigs.k8s.io/yaml v1.6.0
 )
