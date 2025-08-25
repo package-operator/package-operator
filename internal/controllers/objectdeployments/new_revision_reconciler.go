@@ -107,6 +107,7 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 		objectDeployment.GetSpecObjectSetTemplate().Spec,
 	)
 	newObjectSet.SetSpecPreviousRevisions(prevObjectSets)
+	newObjectSet.SetSpecRevision(latestRevisionNumber(prevObjectSets) + 1)
 
 	if newObjectSetClientObj.GetLabels() == nil {
 		newObjectSetClientObj.SetLabels(map[string]string{})
