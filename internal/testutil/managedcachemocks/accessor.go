@@ -122,3 +122,13 @@ func (m *AccessorMock) IndexField(
 	args := m.Called(ctx, obj, field, extractValue)
 	return args.Error(0)
 }
+
+func (m *AccessorMock) Watch(ctx context.Context, user client.Object, gvks sets.Set[schema.GroupVersionKind]) error {
+	args := m.Called(ctx, user, gvks)
+	return args.Error(0)
+}
+
+func (m *AccessorMock) Free(ctx context.Context, user client.Object) error {
+	args := m.Called(ctx, user)
+	return args.Error(0)
+}
