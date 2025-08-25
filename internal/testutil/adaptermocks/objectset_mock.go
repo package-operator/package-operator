@@ -138,6 +138,15 @@ func (o *ObjectSetMock) GetSpecPausedByParent() bool {
 	return args.Get(0).(bool)
 }
 
+func (o *ObjectSetMock) GetSpecRevision() int64 {
+	args := o.Called()
+	return args.Get(0).(int64)
+}
+
+func (o *ObjectSetMock) SetSpecRevision(revision int64) {
+	o.Called(revision)
+}
+
 func (o *ObjectSetMock) DeepCopyObject() runtime.Object {
 	args := o.Called()
 	return args.Get(0).(runtime.Object)

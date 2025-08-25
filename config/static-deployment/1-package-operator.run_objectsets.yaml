@@ -307,6 +307,10 @@ spec:
                   - name
                   type: object
                 type: array
+              revision:
+                description: Computed revision number, monotonically increasing.
+                format: int64
+                type: integer
               successDelaySeconds:
                 description: |-
                   Success Delay Seconds applies a wait period from the time an
@@ -316,6 +320,8 @@ spec:
                   probes, but are ultimately unstable.
                 format: int32
                 type: integer
+            required:
+            - revision
             type: object
             x-kubernetes-validations:
             - message: previous is immutable
