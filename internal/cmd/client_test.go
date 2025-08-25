@@ -876,7 +876,8 @@ func TestObjectSetList_RenderYAML(t *testing.T) {
 	expected := strings.Join([]string{
 		"- metadata:",
 		"    creationTimestamp: null",
-		"  spec: {}",
+		"  spec:",
+		"    revision: 1",
 		"  status:",
 		"    revision: 1",
 		"",
@@ -884,6 +885,9 @@ func TestObjectSetList_RenderYAML(t *testing.T) {
 
 	list := ObjectSetList{
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
+				Revision: 1,
+			},
 			Status: corev1alpha1.ClusterObjectSetStatus{
 				Revision: 1,
 			},
@@ -905,7 +909,9 @@ func TestObjectSetList_RenderJSON(t *testing.T) {
 		`        "metadata": {`,
 		`            "creationTimestamp": null`,
 		"        },",
-		`        "spec": {},`,
+		`        "spec": {`,
+		`            "revision": 1`,
+		"        },",
 		`        "status": {`,
 		`            "revision": 1`,
 		"        }",
@@ -915,6 +921,9 @@ func TestObjectSetList_RenderJSON(t *testing.T) {
 
 	list := ObjectSetList{
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
+				Revision: 1,
+			},
 			Status: corev1alpha1.ClusterObjectSetStatus{
 				Revision: 1,
 			},
