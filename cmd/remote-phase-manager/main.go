@@ -225,7 +225,7 @@ func run(log logr.Logger, scheme *runtime.Scheme, opts opts) error {
 		return fmt.Errorf("unable to start cache manager: %w", err)
 	}
 
-	metricsCollector := managedcache.NewCollector(accessManager, "remote_phase_manager")
+	metricsCollector := metrics.NewManagedCacheCollector(accessManager)
 	ctrlmetrics.Registry.MustRegister(metricsCollector)
 
 	// Create a remote client that does not cache resources cluster-wide.

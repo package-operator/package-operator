@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"package-operator.run/internal/constants"
+	pkometrics "package-operator.run/internal/metrics"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 )
@@ -44,7 +45,7 @@ func ProvideAccessManager(
 	)
 
 	metrics.Registry.MustRegister(
-		managedcache.NewCollector(accessManager, "package_operator"),
+		pkometrics.NewManagedCacheCollector(accessManager),
 	)
 
 	return accessManager

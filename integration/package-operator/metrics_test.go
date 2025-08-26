@@ -206,7 +206,7 @@ func TestObjectSetMetrics_ObjectDeploymentDeleted(t *testing.T) {
 func TestManagedCacheMetrics(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
-	found, err := testutil.MetricsVectorExists(ctx, Config, "managed_cache_informers", "owner", "123-456")
+	found, err := testutil.MetricsVectorExists(ctx, Config, "managed_cache_informers_total", "owner", "123-456")
 	require.NoError(t, err)
 	assert.True(t, found)
 
@@ -228,7 +228,7 @@ func TestManagedCacheMetrics(t *testing.T) {
 func deploymentsInCache(ctx context.Context, t *testing.T) int {
 	t.Helper()
 
-	metric, err := testutil.GetMetric(ctx, Config, "managed_cache_objects", "gvk", "apps/v1, Kind=Deployment")
+	metric, err := testutil.GetMetric(ctx, Config, "managed_cache_objects_total", "gvk", "apps/v1, Kind=Deployment")
 	require.NoError(t, err)
 	return int(metric.GetGauge().GetValue())
 }
