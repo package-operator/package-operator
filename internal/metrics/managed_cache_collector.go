@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,7 +15,7 @@ var _ ManagedCacheCollector = (*collector)(nil)
 type ManagedCacheCollector prometheus.Collector
 
 // NewManagedCacheCollector constructs a managed cache metrics collector that collects metrics from the provided ObjectBoundAccessManager.
-func NewManagedCacheCollector(manager managedcache.ObjectBoundAccessManager[client.Object]) ManagedCacheCollector {
+func NewManagedCacheCollector(manager managedcache.ObjectBoundAccessManager[client.Object], log logr.Logger) ManagedCacheCollector {
 	informersDesc := prometheus.NewDesc(
 		"package_operator_managed_cache_informers_total",
 		"Number of active informers per owner running for the managed cache.",
@@ -28,6 +29,7 @@ func NewManagedCacheCollector(manager managedcache.ObjectBoundAccessManager[clie
 		manager,
 		informersDesc,
 		objectsDesc,
+		log,
 	}
 }
 
@@ -35,6 +37,7 @@ type collector struct {
 	manager       managedcache.ObjectBoundAccessManager[client.Object]
 	informersDesc *prometheus.Desc
 	objectsDesc   *prometheus.Desc
+	log           logr.Logger
 }
 
 func (c collector) Describe(ch chan<- *prometheus.Desc) {
@@ -42,7 +45,11 @@ func (c collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c collector) Collect(ch chan<- prometheus.Metric) {
-	objectsPerOwnerPerGVK := c.manager.CollectMetrics(context.Background())
+	objectsPerOwnerPerGVK, err := c.manager.CollectMetrics(context.Background())
+
+	if err != nil {
+		c.log.Error(err, "collecting managed cache metrics")
+	}
 
 	for owner, objectsPerGVK := range objectsPerOwnerPerGVK {
 		// Number of GVKs per owner

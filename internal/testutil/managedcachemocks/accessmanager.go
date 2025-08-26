@@ -61,3 +61,8 @@ func (m *ObjectBoundAccessManagerMock[T]) GetWatchersForGVK(
 	args := m.Called(gvk)
 	return args.Get(0).([]managedcache.AccessManagerKey)
 }
+
+func (m *ObjectBoundAccessManagerMock[T]) CollectMetrics(ctx context.Context) (managedcache.ObjectsPerOwnerPerGVK, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(managedcache.ObjectsPerOwnerPerGVK), args.Error(1)
+}

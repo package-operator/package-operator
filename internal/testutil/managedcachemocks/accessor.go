@@ -122,3 +122,8 @@ func (m *AccessorMock) IndexField(
 	args := m.Called(ctx, obj, field, extractValue)
 	return args.Error(0)
 }
+
+func (m *AccessorMock) GetObjectsPerInformer(ctx context.Context) (map[schema.GroupVersionKind]int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(map[schema.GroupVersionKind]int), args.Error(1)
+}

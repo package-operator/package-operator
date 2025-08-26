@@ -45,7 +45,7 @@ func ProvideAccessManager(
 	)
 
 	metrics.Registry.MustRegister(
-		pkometrics.NewManagedCacheCollector(accessManager),
+		pkometrics.NewManagedCacheCollector(accessManager, log),
 	)
 
 	return accessManager
