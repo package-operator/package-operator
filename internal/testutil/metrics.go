@@ -37,7 +37,9 @@ func MetricsVectorExists(ctx context.Context, restConfig *rest.Config, metric, l
 	return vector != nil, err
 }
 
-func GetMetric(ctx context.Context, restConfig *rest.Config, metric, label, value string) (*io_prometheus_client.Metric, error) {
+func GetMetric(
+	ctx context.Context, restConfig *rest.Config, metric, label, value string,
+) (*io_prometheus_client.Metric, error) {
 	respBytes, err := GetEndpointOnCluster(ctx, restConfig,
 		"package-operator-system", "package-operator-metrics", "/metrics", 8080)
 	if err != nil {

@@ -14,8 +14,12 @@ var _ ManagedCacheCollector = (*collector)(nil)
 // ManagedCacheCollector is an alias for prometheus.Collector.
 type ManagedCacheCollector prometheus.Collector
 
-// NewManagedCacheCollector constructs a managed cache metrics collector that collects metrics from the provided ObjectBoundAccessManager.
-func NewManagedCacheCollector(manager managedcache.ObjectBoundAccessManager[client.Object], log logr.Logger) ManagedCacheCollector {
+// NewManagedCacheCollector constructs a managed cache metrics collector
+// that collects metrics from the provided ObjectBoundAccessManager.
+func NewManagedCacheCollector(
+	manager managedcache.ObjectBoundAccessManager[client.Object],
+	log logr.Logger,
+) ManagedCacheCollector {
 	informersDesc := prometheus.NewDesc(
 		"package_operator_managed_cache_informers_total",
 		"Number of active informers per owner running for the managed cache.",
@@ -46,7 +50,6 @@ func (c collector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c collector) Collect(ch chan<- prometheus.Metric) {
 	objectsPerOwnerPerGVK, err := c.manager.CollectMetrics(context.Background())
-
 	if err != nil {
 		c.log.Error(err, "collecting managed cache metrics")
 	}
