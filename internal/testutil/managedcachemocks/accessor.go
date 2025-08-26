@@ -123,6 +123,16 @@ func (m *AccessorMock) IndexField(
 	return args.Error(0)
 }
 
+func (m *AccessorMock) Watch(ctx context.Context, user client.Object, gvks sets.Set[schema.GroupVersionKind]) error {
+	args := m.Called(ctx, user, gvks)
+	return args.Error(0)
+}
+
+func (m *AccessorMock) Free(ctx context.Context, user client.Object) error {
+	args := m.Called(ctx, user)
+	return args.Error(0)
+}
+
 func (m *AccessorMock) GetObjectsPerInformer(ctx context.Context) (map[schema.GroupVersionKind]int, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(map[schema.GroupVersionKind]int), args.Error(1)
