@@ -10,7 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"package-operator.run/internal/constants"
 	pkometrics "package-operator.run/internal/metrics"
@@ -44,7 +44,7 @@ func ProvideAccessManager(
 		},
 	)
 
-	metrics.Registry.MustRegister(
+	ctrlmetrics.Registry.MustRegister(
 		pkometrics.NewManagedCacheCollector(accessManager, log),
 	)
 
