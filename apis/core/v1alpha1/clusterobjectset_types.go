@@ -54,6 +54,9 @@ type ClusterObjectSetSpec struct {
 	Previous []PreviousRevisionReference `json:"previous,omitempty"`
 
 	ObjectSetTemplateSpec `json:",inline"`
+
+	// Computed revision number, monotonically increasing.
+	Revision int64 `json:"revision"`
 }
 
 // ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
