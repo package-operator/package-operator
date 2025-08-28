@@ -6,7 +6,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
@@ -16,9 +15,6 @@ import (
 
 // Recorder stores all the metrics related to Addons.
 type Recorder struct {
-	dynamicCacheInformers prometheus.Gauge
-	dynamicCacheObjects   *prometheus.GaugeVec
-
 	packageAvailability *prometheus.GaugeVec
 	packageCreated      *prometheus.GaugeVec
 	packageLoadDuration *prometheus.GaugeVec
@@ -29,18 +25,6 @@ type Recorder struct {
 }
 
 func NewRecorder() *Recorder {
-	// DynamicCache
-	dynamicCacheInformers := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "package_operator_dynamic_cache_informers",
-			Help: "Tracks the number of active Informers running for the dynamic cache.",
-		})
-	dynamicCacheObjects := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "package_operator_dynamic_cache_objects",
-			Help: "Number of objects for each GVK in the dynamic cache.",
-		}, []string{"pko_gvk"})
-
 	// Package
 	packageAvailability := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -82,9 +66,6 @@ func NewRecorder() *Recorder {
 	)
 
 	return &Recorder{
-		dynamicCacheInformers: dynamicCacheInformers,
-		dynamicCacheObjects:   dynamicCacheObjects,
-
 		packageAvailability: packageAvailability,
 		packageCreated:      packageCreated,
 		packageLoadDuration: packageLoadDuration,
@@ -98,7 +79,6 @@ func NewRecorder() *Recorder {
 // Register metrics into ctrl registry.
 func (r *Recorder) Register() {
 	metrics.Registry.MustRegister(
-		r.dynamicCacheInformers, r.dynamicCacheObjects,
 		r.packageAvailability, r.packageCreated, r.packageLoadDuration, r.packageRevision,
 
 		r.objectSetCreated, r.objectSetSucceeded,
@@ -208,14 +188,4 @@ func (r *Recorder) RecordObjectSetMetrics(objectSet GenericObjectSet) {
 			WithLabelValues(obj.GetName(), obj.GetNamespace(), instance).
 			Set(float64(obj.GetCreationTimestamp().Unix()))
 	}
-}
-
-// Records the number of active Informers for the cache.
-func (r *Recorder) RecordDynamicCacheInformers(total int) {
-	r.dynamicCacheInformers.Set(float64(total))
-}
-
-// Records the number of objects in the cache identified by GVK.
-func (r *Recorder) RecordDynamicCacheObjects(gvk schema.GroupVersionKind, count int) {
-	r.dynamicCacheObjects.WithLabelValues(gvk.String()).Set(float64(count))
 }
