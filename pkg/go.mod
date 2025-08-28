@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/google/cel-go v0.23.2
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	k8s.io/apimachinery v0.33.4
 	k8s.io/apiserver v0.33.4
 	sigs.k8s.io/controller-runtime v0.21.0
