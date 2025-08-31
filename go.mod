@@ -14,7 +14,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cel-go v0.23.2
+	github.com/google/cel-go v0.26.0
 	github.com/google/go-containerregistry v0.20.6
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
 	github.com/onsi/ginkgo/v2 v2.25.2
@@ -34,13 +34,13 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.43.0
 	golang.org/x/sys v0.35.0
-	k8s.io/api v0.33.4
-	k8s.io/apiextensions-apiserver v0.33.4
-	k8s.io/apimachinery v0.33.4
-	k8s.io/apiserver v0.33.4
-	k8s.io/client-go v0.33.4
-	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-	k8s.io/utils v0.0.0-20241210054802-24370beab758
+	k8s.io/api v0.34.0
+	k8s.io/apiextensions-apiserver v0.34.0
+	k8s.io/apimachinery v0.34.0
+	k8s.io/apiserver v0.34.0
+	k8s.io/client-go v0.34.0
+	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
+	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	package-operator.run/apis v1.17.1
 	package-operator.run/pkg v1.17.1
 	pkg.package-operator.run/boxcutter v0.6.0
@@ -91,7 +91,7 @@ require (
 	github.com/go-test/deep v1.1.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/gnostic-models v0.6.9 // indirect
+	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
@@ -161,10 +161,10 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.33.4 // indirect
+	k8s.io/component-base v0.34.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
