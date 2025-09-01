@@ -320,8 +320,6 @@ spec:
                   probes, but are ultimately unstable.
                 format: int32
                 type: integer
-            required:
-            - revision
             type: object
             x-kubernetes-validations:
             - message: previous is immutable
@@ -338,7 +336,8 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
             - message: revision is immutable
-              rule: self.revision == oldSelf.revision
+              rule: (has(self.revision) == has(oldSelf.revision)) && (!has(self.revision)
+                || (self.revision == oldSelf.revision))
           status:
             description: ObjectSetStatus defines the observed state of a ObjectSet.
             properties:
