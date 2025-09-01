@@ -3,7 +3,7 @@ module package-operator.run/pkg
 go 1.24.4
 
 require (
-	github.com/google/cel-go v0.26.0
+	github.com/google/cel-go v0.26.1
 	github.com/stretchr/testify v1.11.1
 	k8s.io/apimachinery v0.33.4
 	k8s.io/apiserver v0.33.4
