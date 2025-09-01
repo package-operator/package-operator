@@ -337,6 +337,8 @@ spec:
               rule: (has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds))
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
+            - message: revision is immutable
+              rule: self.revision == oldSelf.revision
           status:
             description: ObjectSetStatus defines the observed state of a ObjectSet.
             properties:
