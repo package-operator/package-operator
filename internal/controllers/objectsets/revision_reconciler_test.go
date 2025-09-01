@@ -240,4 +240,37 @@ func Test_revisionReconciler(t *testing.T) {
 		testClient.AssertExpectations(t)
 		testClient.StatusMock.AssertExpectations(t)
 	})
+
+	t.Run("sets revision based on .spec.revision", func(t *testing.T) {
+		t.Parallel()
+
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
+
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Revision: 42,
+				},
+			},
+		}
+
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
+
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
+
+		testClient.AssertExpectations(t)
+	})
 }

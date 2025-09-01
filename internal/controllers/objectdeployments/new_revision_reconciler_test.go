@@ -245,7 +245,11 @@ func requireObject(t *testing.T,
 	for i, prev := range obj.Spec.Previous {
 		objprevs[i] = prev.Name
 	}
+
+	latestRevision := int64(0)
 	for _, prev := range prevs {
+		latestRevision = max(latestRevision, prev.Spec.Revision)
 		require.Contains(t, objprevs, prev.Name)
 	}
+	require.Equal(t, latestRevision+1, obj.Spec.Revision)
 }
