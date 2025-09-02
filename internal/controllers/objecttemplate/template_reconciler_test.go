@@ -40,10 +40,6 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 	uncachedClient := testutil.NewClient()
 	accessor := &managedcachemocks.AccessorMock{}
 
-	accessManager.
-		On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(accessor, nil)
-
 	accessor.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
@@ -63,7 +59,7 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 		preflightChecker: preflight.List{},
 	}
 
-	objectTemplate := &corev1alpha1.ObjectTemplate{}
+	objectTemplate := &adapters.GenericObjectTemplate{}
 
 	ctx := context.Background()
 	srcObj, _, err := r.getSourceObject(
@@ -77,6 +73,10 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 	}
 	client.AssertCalled(
 		t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	uncachedClient.AssertExpectations(t)
+	client.AssertExpectations(t)
+	accessManager.AssertExpectations(t)
+	accessor.AssertExpectations(t)
 }
 
 func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
@@ -88,7 +88,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 			}),
 	}
 
-	objectTemplate := &corev1alpha1.ObjectTemplate{}
+	objectTemplate := &adapters.GenericObjectTemplate{}
 
 	ctx := context.Background()
 	_, _, err := r.getSourceObject(
@@ -413,9 +413,6 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 				On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
 
-			accessManager.
-				On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).
-				Return(nil)
 			template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 			require.NoError(t, err)
 			objectTemplate := &adapters.GenericObjectTemplate{
@@ -440,6 +437,9 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 			res, err := r.Reconcile(context.Background(), objectTemplate)
 			assert.Empty(t, res)
 			require.NoError(t, err)
+			client.AssertExpectations(t)
+			accessManager.AssertExpectations(t)
+			accessor.AssertExpectations(t)
 		})
 	}
 }
@@ -622,6 +622,10 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		require.False(t, res.IsZero())
 		assert.Equal(t, optionalResourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
+		uncachedClient.AssertExpectations(t)
+		client.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 
 	t.Run("missing source returns configured resourceRetryInterval", func(t *testing.T) {
