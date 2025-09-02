@@ -75,11 +75,12 @@ func (r *templateReconciler) Reconcile(
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
 	}()
 
+	originalControllerOf := objectTemplate.GetStatusControllerOf()
 	cache, err := r.accessManager.GetWithUser(
 		ctx,
 		constants.StaticCacheOwner(),
 		objectTemplate.ClientObject(),
-		r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf()),
+		r.aggregateLocalObjects(ctx, objectTemplate, originalControllerOf),
 	)
 	if err != nil {
 		return res, err
@@ -138,6 +139,16 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
+
+	if controllerOf != originalControllerOf {
+		// start watches for output gvk if controllerof wasn't set before
+		r.accessManager.GetWithUser(
+			ctx,
+			constants.StaticCacheOwner(),
+			objectTemplate.ClientObject(),
+			r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf()),
+		)
+	}
 
 	return res, nil
 }
