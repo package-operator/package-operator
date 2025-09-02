@@ -142,12 +142,14 @@ func (r *templateReconciler) Reconcile(
 
 	if controllerOf != originalControllerOf {
 		// start watches for output gvk if controllerof wasn't set before
-		r.accessManager.GetWithUser(
+		if _, err := r.accessManager.GetWithUser(
 			ctx,
 			constants.StaticCacheOwner(),
 			objectTemplate.ClientObject(),
 			r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf()),
-		)
+		); err != nil {
+			return res, err
+		}
 	}
 
 	return res, nil
