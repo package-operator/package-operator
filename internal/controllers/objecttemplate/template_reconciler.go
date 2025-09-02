@@ -76,11 +76,15 @@ func (r *templateReconciler) Reconcile(
 	}()
 
 	originalControllerOf := objectTemplate.GetStatusControllerOf()
+	localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
+	if err != nil {
+		return res, err
+	}
 	cache, err := r.accessManager.GetWithUser(
 		ctx,
 		constants.StaticCacheOwner(),
 		objectTemplate.ClientObject(),
-		r.aggregateLocalObjects(ctx, objectTemplate, originalControllerOf),
+		localObjects,
 	)
 	if err != nil {
 		return res, err
@@ -142,11 +146,17 @@ func (r *templateReconciler) Reconcile(
 
 	if controllerOf != originalControllerOf {
 		// start watches for output gvk if controllerof wasn't set before
+
+		localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
+		if err != nil {
+			return res, err
+		}
+
 		if _, err := r.accessManager.GetWithUser(
 			ctx,
 			constants.StaticCacheOwner(),
 			objectTemplate.ClientObject(),
-			r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf()),
+			localObjects,
 		); err != nil {
 			return res, err
 		}
@@ -174,7 +184,7 @@ func (r *templateReconciler) getValuesFromSources(
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 	for _, src := range objectTemplate.GetSources() {
-		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src, cache)
+		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate, src, cache)
 		if err != nil {
 			return false, err
 		}
@@ -192,29 +202,14 @@ func (r *templateReconciler) getValuesFromSources(
 }
 
 func (r *templateReconciler) getSourceObject(
-	ctx context.Context, objectTemplate client.Object,
+	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 	src corev1alpha1.ObjectTemplateSource,
 	cache managedcache.Accessor,
 ) (sourceObj *unstructured.Unstructured, found bool, err error) {
-	sourceObj = &unstructured.Unstructured{}
-	sourceObj.SetName(src.Name)
-	sourceObj.SetKind(src.Kind)
-	sourceObj.SetAPIVersion(src.APIVersion)
-	sourceObj.SetNamespace(src.Namespace)
-
-	// Ensure we are staying within the same namespace.
-	violations, err := r.preflightChecker.Check(ctx, objectTemplate, sourceObj)
+	sourceObj, err = r.constructSourceObject(ctx, objectTemplate, src)
 	if err != nil {
 		return nil, false, err
 	}
-	if len(violations) > 0 {
-		return nil, false, &SourceError{Source: sourceObj, Err: &preflight.Error{Violations: violations}}
-	}
-
-	if len(sourceObj.GetNamespace()) == 0 {
-		sourceObj.SetNamespace(objectTemplate.GetNamespace())
-	}
-
 	objectKey := client.ObjectKeyFromObject(sourceObj)
 
 	if err := cache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
@@ -492,33 +487,19 @@ func (r *templateReconciler) aggregateLocalObjects(
 	ctx context.Context,
 	objectTemplate adapters.ObjectTemplateAccessor,
 	outputObjectRef corev1alpha1.ControlledObjectReference,
-) []client.Object {
+) ([]client.Object, error) {
 	objects := []client.Object{}
 	for _, src := range objectTemplate.GetSources() {
-		sourceObj := &unstructured.Unstructured{}
-		sourceObj.SetName(src.Name)
-		sourceObj.SetKind(src.Kind)
-		sourceObj.SetAPIVersion(src.APIVersion)
-		sourceObj.SetNamespace(src.Namespace)
-
-		// Ensure we are staying within the same namespace.
-		violations, err := r.preflightChecker.Check(ctx, objectTemplate.ClientObject(), sourceObj)
+		srcObject, err := r.constructSourceObject(ctx, objectTemplate, src)
 		if err != nil {
-			return nil
+			return objects, err
 		}
-		if len(violations) > 0 {
-			return nil
-		}
-
-		if len(sourceObj.GetNamespace()) == 0 {
-			sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
-		}
-		objects = append(objects, sourceObj)
+		objects = append(objects, srcObject)
 	}
 
 	// first reconcile, unknown output gvk
 	if outputObjectRef.Group == "" && outputObjectRef.Kind == "" && outputObjectRef.Name == "" {
-		return objects
+		return objects, nil
 	}
 
 	outputObject := &unstructured.Unstructured{}
@@ -528,5 +509,31 @@ func (r *templateReconciler) aggregateLocalObjects(
 	outputObject.SetAPIVersion(outputObjectRef.Version)
 
 	objects = append(objects, outputObject)
-	return objects
+	return objects, nil
+}
+
+func (r *templateReconciler) constructSourceObject(
+	ctx context.Context,
+	objectTemplate adapters.ObjectTemplateAccessor,
+	src corev1alpha1.ObjectTemplateSource,
+) (*unstructured.Unstructured, error) {
+	sourceObj := &unstructured.Unstructured{}
+	sourceObj.SetName(src.Name)
+	sourceObj.SetKind(src.Kind)
+	sourceObj.SetAPIVersion(src.APIVersion)
+	sourceObj.SetNamespace(src.Namespace)
+
+	// Ensure we are staying within the same namespace.
+	violations, err := r.preflightChecker.Check(ctx, objectTemplate.ClientObject(), sourceObj)
+	if err != nil {
+		return nil, err
+	}
+	if len(violations) > 0 {
+		return nil, &SourceError{Source: sourceObj, Err: &preflight.Error{Violations: violations}}
+	}
+
+	if len(sourceObj.GetNamespace()) == 0 {
+		sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
+	}
+	return sourceObj, nil
 }
