@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -51,7 +52,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
+	log := ctrl.LoggerFrom(ctx)
 
 	defer log.Info("teardown of remote phase", "phase", phase.Name, "cleanupDone", cleanupDone)
 	objectSetPhase := r.newObjectSetPhase(r.scheme)
