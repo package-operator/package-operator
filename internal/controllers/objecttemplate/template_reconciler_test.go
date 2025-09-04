@@ -674,6 +674,9 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		require.False(t, res.IsZero())
 		assert.Equal(t, resourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
+		uncachedClient.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 
 	t.Run("reconciler returns error on non missing source errors", func(t *testing.T) {
@@ -725,5 +728,8 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		res, err := r.Reconcile(context.Background(), objectTemplate)
 		require.True(t, res.IsZero())
 		require.Error(t, err)
+		uncachedClient.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 }
