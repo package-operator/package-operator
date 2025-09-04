@@ -28,7 +28,7 @@ jobs:
           token: ${{ secrets.UPDATE_GO_MODULES_PAT }}
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.4'
           cache-dependency-path: "**/*.sum"
@@ -73,7 +73,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.24.4'
         cache-dependency-path: "**/*.sum"
