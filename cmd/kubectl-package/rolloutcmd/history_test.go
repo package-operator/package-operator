@@ -201,6 +201,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 1,
+					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 1,
 					},
@@ -218,7 +221,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`                "package-operator.run/instance": "test"`,
 				"            }",
 				"        },",
-				`        "spec": {},`,
+				`        "spec": {`,
+				`            "revision": 1`,
+				"        },",
 				`        "status": {`,
 				`            "revision": 1`,
 				"        }",
@@ -242,6 +247,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 1,
+					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 1,
 					},
@@ -255,7 +263,8 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				"      package-operator.run/instance: test",
 				"    name: test",
 				`    resourceVersion: "999"`,
-				"  spec: {}",
+				"  spec:",
+				"    revision: 1",
 				"  status:",
 				"    revision: 1",
 				"",
@@ -276,6 +285,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 1,
+					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 1,
 					},
@@ -286,6 +298,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 						Labels: map[string]string{
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
+					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 2,
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 2,
@@ -300,7 +315,8 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				"    package-operator.run/instance: test",
 				"  name: test-2",
 				`  resourceVersion: "999"`,
-				"spec: {}",
+				"spec:",
+				"  revision: 2",
 				"status:",
 				"  revision: 2",
 				"",
@@ -321,6 +337,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 1,
+					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 1,
 					},
@@ -331,6 +350,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 						Labels: map[string]string{
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
+					},
+					Spec: corev1alpha1.ClusterObjectSetSpec{
+						Revision: 2,
 					},
 					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 2,
@@ -348,7 +370,9 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`            "package-operator.run/instance": "test"`,
 				"        }",
 				"    },",
-				`    "spec": {},`,
+				`    "spec": {`,
+				`        "revision": 2`,
+				"    },",
 				`    "status": {`,
 				`        "revision": 2`,
 				"    }",

@@ -158,6 +158,9 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		require.Equal(t,
 			concernedDeployment.Generation,
 			currentObjectSet.Status.Revision)
+		require.Equal(t,
+			concernedDeployment.Generation,
+			currentObjectSet.Spec.Revision)
 
 		// Expect ObjectSet to be created
 		// Expect concerned ObjectSet to be created
@@ -426,6 +429,9 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		require.Equal(t,
 			concernedDeployment.Generation,
 			currentObjectSet.Status.Revision)
+		require.Equal(t,
+			concernedDeployment.Generation,
+			currentObjectSet.Spec.Revision)
 
 		// Expect concerned ObjectSet to be created
 		currObjectSetList := listObjectSetRevisions(ctx, t, concernedDeployment)

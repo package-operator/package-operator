@@ -371,6 +371,7 @@ func newObjectSet(
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{{}},
 			},
+			Revision: deploymentRevision,
 		},
 		Status: corev1alpha1.ObjectSetStatus{
 			Revision: deploymentRevision,

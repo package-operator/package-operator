@@ -307,6 +307,10 @@ spec:
                   - name
                   type: object
                 type: array
+              revision:
+                description: Computed revision number, monotonically increasing.
+                format: int64
+                type: integer
               successDelaySeconds:
                 description: |-
                   Success Delay Seconds applies a wait period from the time an
@@ -331,6 +335,9 @@ spec:
               rule: (has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds))
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
+            - message: revision is immutable
+              rule: (has(self.revision) == has(oldSelf.revision)) && (!has(self.revision)
+                || (self.revision == oldSelf.revision))
           status:
             description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:

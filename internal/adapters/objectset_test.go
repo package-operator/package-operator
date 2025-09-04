@@ -39,6 +39,8 @@ func TestObjectSet(t *testing.T) {
 	var revision int64 = 34
 	objectSet.SetStatusRevision(revision)
 	assert.Equal(t, revision, objectSet.GetStatusRevision())
+	objectSet.SetSpecRevision(revision)
+	assert.Equal(t, revision, objectSet.GetSpecRevision())
 
 	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
 		{},
@@ -107,6 +109,8 @@ func TestClusterObjectSet(t *testing.T) {
 	var revision int64 = 34
 	objectSet.SetStatusRevision(revision)
 	assert.Equal(t, revision, objectSet.GetStatusRevision())
+	objectSet.SetSpecRevision(revision)
+	assert.Equal(t, revision, objectSet.GetSpecRevision())
 
 	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
 		{},

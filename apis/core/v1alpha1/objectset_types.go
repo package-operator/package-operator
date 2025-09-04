@@ -44,6 +44,7 @@ type ObjectSetList struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.phases) == has(oldSelf.phases)) && (!has(self.phases) || (self.phases == oldSelf.phases))", message="phases is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.availabilityProbes) == has(oldSelf.availabilityProbes)) && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))", message="availabilityProbes is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds)) && (!has(self.successDelaySeconds) || (self.successDelaySeconds == oldSelf.successDelaySeconds))", message="successDelaySeconds is immutable"
+// +kubebuilder:validation:XValidation:rule="(has(self.revision) == has(oldSelf.revision)) && (!has(self.revision) || (self.revision == oldSelf.revision))", message="revision is immutable"
 type ObjectSetSpec struct {
 	// Specifies the lifecycle state of the ObjectSet.
 	// +kubebuilder:default="Active"
@@ -56,6 +57,9 @@ type ObjectSetSpec struct {
 	Previous []PreviousRevisionReference `json:"previous,omitempty"`
 
 	ObjectSetTemplateSpec `json:",inline"`
+
+	// Computed revision number, monotonically increasing.
+	Revision int64 `json:"revision,omitempty"`
 }
 
 // ObjectSetStatus defines the observed state of a ObjectSet.

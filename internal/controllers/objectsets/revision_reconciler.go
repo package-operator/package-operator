@@ -32,6 +32,12 @@ func (r *revisionReconciler) Reconcile(
 		return
 	}
 
+	if objectSet.GetSpecRevision() != 0 {
+		// Prioritize .spec.revision set by ObjectDeploymentController's newRevisionReconciler
+		objectSet.SetStatusRevision(objectSet.GetSpecRevision())
+		return
+	}
+
 	if len(objectSet.GetSpecPrevious()) == 0 {
 		// no previous revision(s) specified, default to revision 1
 		objectSet.SetStatusRevision(1)

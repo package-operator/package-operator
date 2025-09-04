@@ -156,6 +156,7 @@ spec:
     - ipsum
   previous:
   - name: previous-revision
+  revision: 42
   successDelaySeconds: 42
 status:
   conditions:
@@ -508,6 +509,7 @@ spec:
     - amet
   previous:
   - name: previous-revision
+  revision: 42
   successDelaySeconds: 42
 status:
   conditions:
@@ -798,6 +800,7 @@ ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ClusterObjectSet. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ClusterObjectSet to adopt objects from. |
+| `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `successDelaySeconds` <br>int32 | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
@@ -968,6 +971,7 @@ ObjectSetSpec defines the desired state of a ObjectSet.
 | ----- | ----------- |
 | `lifecycleState` <br><a href="#objectsetlifecyclestate">ObjectSetLifecycleState</a> | Specifies the lifecycle state of the ObjectSet. |
 | `previous` <br><a href="#previousrevisionreference">[]PreviousRevisionReference</a> | Previous revisions of the ObjectSet to adopt objects from. |
+| `revision` <br>int64 | Computed revision number, monotonically increasing. |
 | `phases` <br><a href="#objectsettemplatephase">[]ObjectSetTemplatePhase</a> | Reconcile phase configuration for a ObjectSet.<br>Phases will be reconciled in order and the contained objects checked<br>against given probes before continuing with the next phase. |
 | `availabilityProbes` <br><a href="#objectsetprobe">[]ObjectSetProbe</a> | Availability Probes check objects that are part of the package.<br>All probes need to succeed for a package to be considered Available.<br>Failing probes will prevent the reconciliation of objects in later phases. |
 | `successDelaySeconds` <br>int32 | Success Delay Seconds applies a wait period from the time an<br>Object Set is available to the time it is marked as successful.<br>This can be used to prevent false reporting of success when<br>the underlying objects may initially satisfy the availability<br>probes, but are ultimately unstable. |
