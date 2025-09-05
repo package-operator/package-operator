@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/jsonpath"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,7 +40,7 @@ type templateReconciler struct {
 	scheme                        *runtime.Scheme
 	client                        client.Writer
 	uncachedClient                client.Reader
-	dynamicCache                  dynamicCache
+	accessManager                 managedcache.ObjectBoundAccessManager[client.Object]
 	preflightChecker              preflightChecker
 	optionalResourceRetryInterval time.Duration
 	resourceRetryInterval         time.Duration
@@ -49,7 +50,7 @@ func newTemplateReconciler(
 	scheme *runtime.Scheme,
 	client client.Client,
 	uncachedClient client.Reader,
-	dynamicCache dynamicCache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	preflightChecker preflightChecker,
 	optionalResourceRetryInterval time.Duration,
 	resourceRetryInterval time.Duration,
@@ -60,7 +61,7 @@ func newTemplateReconciler(
 		scheme:                        scheme,
 		client:                        client,
 		uncachedClient:                uncachedClient,
-		dynamicCache:                  dynamicCache,
+		accessManager:                 accessManager,
 		preflightChecker:              preflightChecker,
 		optionalResourceRetryInterval: optionalResourceRetryInterval,
 		resourceRetryInterval:         resourceRetryInterval,
@@ -74,8 +75,22 @@ func (r *templateReconciler) Reconcile(
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
 	}()
 
+	originalControllerOf := objectTemplate.GetStatusControllerOf()
+	localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
+	if err != nil {
+		return res, err
+	}
+	cache, err := r.accessManager.GetWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectTemplate.ClientObject(),
+		localObjects,
+	)
+	if err != nil {
+		return res, err
+	}
 	sourcesConfig := map[string]any{}
-	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig)
+	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig, cache)
 	if err != nil {
 		if isMissingResourceError(err) {
 			res.RequeueAfter = r.resourceRetryInterval
@@ -94,14 +109,9 @@ func (r *templateReconciler) Reconcile(
 		return res, err
 	}
 
-	if err := r.dynamicCache.Watch(
-		ctx, objectTemplate.ClientObject(), obj); err != nil {
-		return res, fmt.Errorf("watching new child: %w", err)
-	}
-
 	existingObj := &unstructured.Unstructured{}
 	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
-	if err := r.dynamicCache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
+	if err := cache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
 		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
 			return res, fmt.Errorf("handling creation: %w", err)
 		}
@@ -129,9 +139,28 @@ func (r *templateReconciler) Reconcile(
 		Group:     gvk.Group,
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
+		Version:   gvk.Version,
 	}
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
+
+	if controllerOf != originalControllerOf {
+		// start watches for output gvk if controllerof wasn't set before
+
+		localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
+		if err != nil {
+			return res, err
+		}
+
+		if _, err := r.accessManager.GetWithUser(
+			ctx,
+			constants.StaticCacheOwner(),
+			objectTemplate.ClientObject(),
+			localObjects,
+		); err != nil {
+			return res, err
+		}
+	}
 
 	return res, nil
 }
@@ -151,10 +180,11 @@ func (r *templateReconciler) handleCreation(ctx context.Context, owner, object c
 func (r *templateReconciler) getValuesFromSources(
 	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 	sourcesConfig map[string]any,
+	cache managedcache.Accessor,
 ) (retryLater bool, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 	for _, src := range objectTemplate.GetSources() {
-		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate.ClientObject(), src)
+		sourceObj, found, err := r.getSourceObject(ctx, objectTemplate, src, cache)
 		if err != nil {
 			return false, err
 		}
@@ -172,36 +202,17 @@ func (r *templateReconciler) getValuesFromSources(
 }
 
 func (r *templateReconciler) getSourceObject(
-	ctx context.Context, objectTemplate client.Object,
+	ctx context.Context, objectTemplate adapters.ObjectTemplateAccessor,
 	src corev1alpha1.ObjectTemplateSource,
+	cache managedcache.Accessor,
 ) (sourceObj *unstructured.Unstructured, found bool, err error) {
-	sourceObj = &unstructured.Unstructured{}
-	sourceObj.SetName(src.Name)
-	sourceObj.SetKind(src.Kind)
-	sourceObj.SetAPIVersion(src.APIVersion)
-	sourceObj.SetNamespace(src.Namespace)
-
-	// Ensure we are staying within the same namespace.
-	violations, err := r.preflightChecker.Check(ctx, objectTemplate, sourceObj)
+	sourceObj, err = r.constructSourceObject(ctx, objectTemplate, src)
 	if err != nil {
 		return nil, false, err
 	}
-	if len(violations) > 0 {
-		return nil, false, &SourceError{Source: sourceObj, Err: &preflight.Error{Violations: violations}}
-	}
-
-	if len(sourceObj.GetNamespace()) == 0 {
-		sourceObj.SetNamespace(objectTemplate.GetNamespace())
-	}
-
-	if err := r.dynamicCache.Watch(
-		ctx, objectTemplate, sourceObj); err != nil {
-		return nil, false, fmt.Errorf("watching new source: %w", err)
-	}
-
 	objectKey := client.ObjectKeyFromObject(sourceObj)
 
-	if err := r.dynamicCache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
+	if err := cache.Get(ctx, objectKey, sourceObj); apimachineryerrors.IsNotFound(err) {
 		// the referenced object might not be labeled correctly for the cache to pick up,
 		// fallback to an uncached read to discover.
 		found, err := r.lookupUncached(ctx, src, objectKey, sourceObj)
@@ -470,4 +481,59 @@ func isMissingResourceError(err error) bool {
 		return apimachineryerrors.IsNotFound(sourceError.Err)
 	}
 	return false
+}
+
+func (r *templateReconciler) aggregateLocalObjects(
+	ctx context.Context,
+	objectTemplate adapters.ObjectTemplateAccessor,
+	outputObjectRef corev1alpha1.ControlledObjectReference,
+) ([]client.Object, error) {
+	objects := []client.Object{}
+	for _, src := range objectTemplate.GetSources() {
+		srcObject, err := r.constructSourceObject(ctx, objectTemplate, src)
+		if err != nil {
+			return objects, err
+		}
+		objects = append(objects, srcObject)
+	}
+
+	// first reconcile, unknown output gvk
+	if outputObjectRef.Group == "" && outputObjectRef.Kind == "" && outputObjectRef.Name == "" {
+		return objects, nil
+	}
+
+	outputObject := &unstructured.Unstructured{}
+	outputObject.SetName(outputObjectRef.Name)
+	outputObject.SetKind(outputObjectRef.Kind)
+	outputObject.SetNamespace(outputObjectRef.Namespace)
+	outputObject.SetAPIVersion(outputObjectRef.Version)
+
+	objects = append(objects, outputObject)
+	return objects, nil
+}
+
+func (r *templateReconciler) constructSourceObject(
+	ctx context.Context,
+	objectTemplate adapters.ObjectTemplateAccessor,
+	src corev1alpha1.ObjectTemplateSource,
+) (*unstructured.Unstructured, error) {
+	sourceObj := &unstructured.Unstructured{}
+	sourceObj.SetName(src.Name)
+	sourceObj.SetKind(src.Kind)
+	sourceObj.SetAPIVersion(src.APIVersion)
+	sourceObj.SetNamespace(src.Namespace)
+
+	// Ensure we are staying within the same namespace.
+	violations, err := r.preflightChecker.Check(ctx, objectTemplate.ClientObject(), sourceObj)
+	if err != nil {
+		return nil, err
+	}
+	if len(violations) > 0 {
+		return nil, &SourceError{Source: sourceObj, Err: &preflight.Error{Violations: violations}}
+	}
+
+	if len(sourceObj.GetNamespace()) == 0 {
+		sourceObj.SetNamespace(objectTemplate.ClientObject().GetNamespace())
+	}
+	return sourceObj, nil
 }

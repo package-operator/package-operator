@@ -25,7 +25,7 @@ import (
 	"package-operator.run/internal/environment"
 	"package-operator.run/internal/preflight"
 	"package-operator.run/internal/testutil"
-	"package-operator.run/internal/testutil/dynamiccachemocks"
+	"package-operator.run/internal/testutil/managedcachemocks"
 )
 
 const (
@@ -35,15 +35,12 @@ const (
 
 func Test_templateReconciler_getSourceObject(t *testing.T) {
 	t.Parallel()
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	client := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
-	dynamicCache := &dynamiccachemocks.DynamicCacheMock{}
+	accessor := &managedcachemocks.AccessorMock{}
 
-	dynamicCache.
-		On("Watch", mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-
-	dynamicCache.
+	accessor.
 		On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
@@ -58,15 +55,15 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 	r := &templateReconciler{
 		client:           client,
 		uncachedClient:   uncachedClient,
-		dynamicCache:     dynamicCache,
+		accessManager:    accessManager,
 		preflightChecker: preflight.List{},
 	}
 
-	objectTemplate := &corev1alpha1.ObjectTemplate{}
+	objectTemplate := &adapters.GenericObjectTemplate{}
 
 	ctx := context.Background()
 	srcObj, _, err := r.getSourceObject(
-		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{})
+		ctx, objectTemplate, corev1alpha1.ObjectTemplateSource{}, accessor)
 	require.NoError(t, err)
 
 	if assert.NotNil(t, srcObj) {
@@ -76,6 +73,10 @@ func Test_templateReconciler_getSourceObject(t *testing.T) {
 	}
 	client.AssertCalled(
 		t, "Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	uncachedClient.AssertExpectations(t)
+	client.AssertExpectations(t)
+	accessManager.AssertExpectations(t)
+	accessor.AssertExpectations(t)
 }
 
 func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
@@ -87,7 +88,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 			}),
 	}
 
-	objectTemplate := &corev1alpha1.ObjectTemplate{}
+	objectTemplate := &adapters.GenericObjectTemplate{}
 
 	ctx := context.Background()
 	_, _, err := r.getSourceObject(
@@ -95,7 +96,7 @@ func Test_templateReconciler_getSourceObject_stopAtViolation(t *testing.T) {
 			Kind:      "ConfigMap",
 			Name:      "test",
 			Namespace: "default",
-		})
+		}, &managedcachemocks.AccessorMock{})
 	require.EqualError(t, err, "for source ConfigMap default/test: here: aaaaaaah!")
 }
 
@@ -401,15 +402,16 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			r, client, _, dc := newControllerAndMocks(t)
+			r, client, _, accessManager := newControllerAndMocks(t)
 
+			accessor := &managedcachemocks.AccessorMock{}
 			client.On("Update", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			client.On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Maybe()
-			dc.
-				On("Watch", mock.Anything, mock.Anything, mock.Anything).
-				Return(nil)
+			accessManager.
+				On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(accessor, nil)
 
 			template, err := os.ReadFile("testdata/package_template_to_json.yaml")
 			require.NoError(t, err)
@@ -428,26 +430,29 @@ func Test_templateReconcilerReconcile(t *testing.T) {
 			objectTemplate.ClientObject().SetDeletionTimestamp(test.deletionTimestamp)
 
 			// getting package
-			dc.
+			accessor.
 				On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once().Maybe()
 
 			res, err := r.Reconcile(context.Background(), objectTemplate)
 			assert.Empty(t, res)
 			require.NoError(t, err)
+			client.AssertExpectations(t)
+			accessManager.AssertExpectations(t)
+			accessor.AssertExpectations(t)
 		})
 	}
 }
 
 func newControllerAndMocks(t *testing.T) (
 	*templateReconciler, *testutil.CtrlClient, *testutil.CtrlClient,
-	*dynamiccachemocks.DynamicCacheMock,
+	*managedcachemocks.ObjectBoundAccessManagerMock[client.Object],
 ) {
 	t.Helper()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	c := testutil.NewClient()
 	uncachedC := testutil.NewClient()
-	dc := &dynamiccachemocks.DynamicCacheMock{}
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 
 	r := &templateReconciler{
 		Sink: environment.NewSink(c),
@@ -455,10 +460,10 @@ func newControllerAndMocks(t *testing.T) (
 		client:           c,
 		uncachedClient:   uncachedC,
 		scheme:           scheme,
-		dynamicCache:     dc,
+		accessManager:    accessManager,
 		preflightChecker: preflight.List{},
 	}
-	return r, c, uncachedC, dc
+	return r, c, uncachedC, accessManager
 }
 
 var errTest = errors.New("something")
@@ -569,7 +574,7 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 	t.Parallel()
 	t.Run("missing optional source returns configured optionalResourceRetryInterval", func(t *testing.T) {
 		t.Parallel()
-		r, client, uncachedClient, dc := newControllerAndMocks(t)
+		r, client, uncachedClient, accessManager := newControllerAndMocks(t)
 		r.optionalResourceRetryInterval = optionalResourceRetryInterval
 		r.resourceRetryInterval = resourceRetryInterval
 
@@ -581,15 +586,17 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 				Optional:  true,
 			},
 		}
+		accessor := &managedcachemocks.AccessorMock{}
+
+		accessManager.
+			On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(accessor, nil)
 
 		client.On("Create", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Maybe()
-		dc.
-			On("Watch", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
 
 		// Make both dynamic cache and uncached client return not found error.
-		dc.
+		accessor.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 		uncachedClient.
@@ -615,11 +622,15 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		require.False(t, res.IsZero())
 		assert.Equal(t, optionalResourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
+		uncachedClient.AssertExpectations(t)
+		client.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 
 	t.Run("missing source returns configured resourceRetryInterval", func(t *testing.T) {
 		t.Parallel()
-		r, _, uncachedClient, dc := newControllerAndMocks(t)
+		r, _, uncachedClient, accessManager := newControllerAndMocks(t)
 		r.optionalResourceRetryInterval = optionalResourceRetryInterval
 		r.resourceRetryInterval = resourceRetryInterval
 
@@ -632,12 +643,12 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			},
 		}
 
-		dc.
-			On("Watch", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-
 		// Make both dynamic cache and uncached client return not found error.
-		dc.
+		accessor := &managedcachemocks.AccessorMock{}
+		accessManager.
+			On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(accessor, nil)
+		accessor.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 		uncachedClient.
@@ -663,11 +674,14 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		require.False(t, res.IsZero())
 		assert.Equal(t, resourceRetryInterval, res.RequeueAfter)
 		require.NoError(t, err)
+		uncachedClient.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 
 	t.Run("reconciler returns error on non missing source errors", func(t *testing.T) {
 		t.Parallel()
-		r, _, uncachedClient, dc := newControllerAndMocks(t)
+		r, _, uncachedClient, accessManager := newControllerAndMocks(t)
 		r.optionalResourceRetryInterval = optionalResourceRetryInterval
 		r.resourceRetryInterval = resourceRetryInterval
 
@@ -680,12 +694,14 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 			},
 		}
 
-		dc.
-			On("Watch", mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
+		accessor := &managedcachemocks.AccessorMock{}
+
+		accessManager.
+			On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(accessor, nil)
 
 		// Make dynamic cache client return not found error.
-		dc.
+		accessor.
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 
@@ -712,5 +728,8 @@ func TestRequeueDurationOnMissingSource(t *testing.T) {
 		res, err := r.Reconcile(context.Background(), objectTemplate)
 		require.True(t, res.IsZero())
 		require.Error(t, err)
+		uncachedClient.AssertExpectations(t)
+		accessManager.AssertExpectations(t)
+		accessor.AssertExpectations(t)
 	})
 }
