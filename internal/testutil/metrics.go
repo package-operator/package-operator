@@ -8,12 +8,13 @@ import (
 
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"k8s.io/client-go/rest"
 )
 
 func parseMetrics(metricBytes []byte) (map[string][]*io_prometheus_client.Metric, error) {
 	reader := bytes.NewReader(metricBytes)
-	parser := &expfmt.TextParser{}
+	parser := expfmt.NewTextParser(model.UTF8Validation)
 
 	mfs, err := parser.TextToMetricFamilies(reader)
 	if err != nil {
