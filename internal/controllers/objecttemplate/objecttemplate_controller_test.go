@@ -16,7 +16,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/testutil"
-	"package-operator.run/internal/testutil/dynamiccachemocks"
+	"package-operator.run/internal/testutil/managedcachemocks"
 	"package-operator.run/internal/testutil/restmappermock"
 )
 
@@ -34,13 +34,14 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
-	dc := &dynamiccachemocks.DynamicCacheMock{}
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	rm := &restmappermock.RestMapperMock{}
 	cfg := ControllerConfig{
 		OptionalResourceRetryInterval: time.Second * 30,
 		ResourceRetryInterval:         time.Second * 30,
 	}
-	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm, cfg)
+
+	controller := NewObjectTemplateController(c, uncachedClient, log, accessManager, testScheme, rm, cfg)
 	controller.reconciler = nil // we are testing reconcilers on their own
 
 	objectKey := client.ObjectKey{Name: "test", Namespace: "testns"}
@@ -61,7 +62,10 @@ func TestObjectTemplateController_Reconcile(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
 
-	dc.AssertExpectations(t)
+	c.AssertExpectations(t)
+	uncachedClient.AssertExpectations(t)
+	c.StatusMock.AssertExpectations(t)
+	accessManager.AssertExpectations(t)
 }
 
 func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
@@ -70,13 +74,13 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 	c := testutil.NewClient()
 	uncachedClient := testutil.NewClient()
 	log := testr.New(t)
-	dc := &dynamiccachemocks.DynamicCacheMock{}
+	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	rm := &restmappermock.RestMapperMock{}
 	cfg := ControllerConfig{
 		OptionalResourceRetryInterval: time.Second * 30,
 		ResourceRetryInterval:         time.Second * 30,
 	}
-	controller := NewObjectTemplateController(c, uncachedClient, log, dc, testScheme, rm, cfg)
+	controller := NewObjectTemplateController(c, uncachedClient, log, accessManager, testScheme, rm, cfg)
 	controller.reconciler = nil // we are testing reconcilers on their own
 
 	objectKey := client.ObjectKey{Name: "test", Namespace: "testns"}
@@ -90,11 +94,8 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 			}}
 		}).
 		Return(nil)
-	c.
-		On("Patch", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything, mock.Anything).
-		Return(nil)
-	dc.
-		On("Free", mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
+	accessManager.
+		On("FreeWithUser", mock.Anything, mock.Anything, mock.AnythingOfType("*v1alpha1.ObjectTemplate"), mock.Anything).
 		Return(nil)
 
 	ctx := context.Background()
@@ -104,5 +105,8 @@ func TestObjectTemplateController_Reconcile_deletion(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.IsZero())
 
-	dc.AssertExpectations(t)
+	c.AssertExpectations(t)
+	uncachedClient.AssertExpectations(t)
+	c.StatusMock.AssertExpectations(t)
+	accessManager.AssertExpectations(t)
 }

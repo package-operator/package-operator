@@ -86,6 +86,7 @@ status:
     kind: sadipscing
     name: sed
     namespace: diam
+    version: nonumy
   revision: 42
   templateHash: consetetur
 
@@ -140,20 +141,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: eirmod
-    name: nonumy
+  - class: tempor
+    name: eirmod
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: lorem
-        sourceType: tempor
+      - destinationType: ipsum
+        sourceType: lorem
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - ipsum
+    - dolor
   previous:
   - name: previous-revision
   revision: 42
@@ -165,12 +166,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: amet
-    kind: sit
-    name: consetetur
-    namespace: sadipscing
+  - group: consetetur
+    kind: amet
+    name: sadipscing
+    namespace: elitr
+    version: sed
   remotePhases:
-  - name: dolor
+  - name: sit
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
@@ -220,8 +222,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: sed
-      sourceType: elitr
+    - destinationType: nonumy
+      sourceType: diam
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -236,10 +238,11 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: nonumy
-    kind: diam
-    name: eirmod
-    namespace: tempor
+  - group: tempor
+    kind: eirmod
+    name: lorem
+    namespace: ipsum
+    version: dolor
 
 ```
 
@@ -268,8 +271,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: ipsum
-    sourceType: lorem
+  - destinationType: amet
+    sourceType: sit
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -301,15 +304,15 @@ metadata:
   name: example
 spec:
   sources:
-  - apiVersion: sit
+  - apiVersion: sadipscing
     items:
-    - destination: sed
-      key: elitr
-    kind: amet
-    name: sadipscing
-    namespace: consetetur
+    - destination: eirmod
+      key: nonumy
+    kind: elitr
+    name: diam
+    namespace: sed
     optional: true
-  template: dolor
+  template: consetetur
 status:
   conditions:
   - message: Latest Revision is Available.
@@ -317,10 +320,11 @@ status:
     status: "True"
     type: Available
   controllerOf:
-    group: nonumy
-    kind: diam
-    name: eirmod
-    namespace: tempor
+    group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
+    version: sit
 
 ```
 
@@ -345,9 +349,9 @@ kind: ClusterPackage
 metadata:
   name: example
 spec:
-  component: ipsum
+  component: consetetur
   config: {}
-  image: lorem
+  image: amet
   paused: true
 status:
   conditions:
@@ -356,7 +360,7 @@ status:
     status: "True"
     type: Available
   revision: 42
-  unpackedHash: dolor
+  unpackedHash: sadipscing
 
 ```
 
@@ -411,20 +415,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: amet
-        name: sit
+      - class: sed
+        name: elitr
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: sadipscing
-            sourceType: consetetur
+          - destinationType: nonumy
+            sourceType: diam
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - elitr
+        - eirmod
       successDelaySeconds: 42
 status:
   collisionCount: 42
@@ -434,12 +438,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: nonumy
-    kind: diam
-    name: eirmod
-    namespace: tempor
+  - group: ipsum
+    kind: lorem
+    name: dolor
+    namespace: sit
+    version: amet
   revision: 42
-  templateHash: sed
+  templateHash: tempor
 
 ```
 
@@ -493,20 +498,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: ipsum
-    name: lorem
+  - class: sadipscing
+    name: consetetur
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: sit
-        sourceType: dolor
+      - destinationType: sed
+        sourceType: elitr
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - amet
+    - diam
   previous:
   - name: previous-revision
   revision: 42
@@ -518,12 +523,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: elitr
-    kind: sadipscing
-    name: sed
-    namespace: diam
+  - group: tempor
+    kind: eirmod
+    name: lorem
+    namespace: ipsum
+    version: dolor
   remotePhases:
-  - name: consetetur
+  - name: nonumy
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
@@ -573,8 +579,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: amet
+      sourceType: sit
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -589,10 +595,11 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+  - group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
+    version: diam
 
 ```
 
@@ -622,8 +629,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: amet
-    sourceType: sit
+  - destinationType: eirmod
+    sourceType: nonumy
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -656,15 +663,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sadipscing
+  - apiVersion: lorem
     items:
-    - destination: eirmod
-      key: nonumy
-    kind: elitr
-    name: diam
-    namespace: sed
+    - destination: consetetur
+      key: amet
+    kind: ipsum
+    name: sit
+    namespace: dolor
     optional: true
-  template: consetetur
+  template: tempor
 status:
   conditions:
   - message: Latest Revision is Available.
@@ -672,10 +679,11 @@ status:
     status: "True"
     type: Available
   controllerOf:
-    group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
+    group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
+    version: nonumy
 
 ```
 
@@ -701,9 +709,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: amet
+  component: tempor
   config: {}
-  image: sit
+  image: eirmod
   paused: true
 status:
   conditions:
@@ -712,7 +720,7 @@ status:
     status: "True"
     type: Available
   revision: 42
-  unpackedHash: consetetur
+  unpackedHash: lorem
 
 ```
 
@@ -850,6 +858,7 @@ ControlledObjectReference an object controlled by this object.
 | `group` <b>required</b><br>string | Object Group. |
 | `name` <b>required</b><br>string | Object Name. |
 | `namespace` <br>string | Object Namespace. |
+| `version` <br>string | Object Version. |
 
 
 Used in:

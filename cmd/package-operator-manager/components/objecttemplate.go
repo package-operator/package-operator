@@ -2,10 +2,11 @@ package components
 
 import (
 	"github.com/go-logr/logr"
+	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/controllers/objecttemplate"
-	"package-operator.run/internal/dynamiccache"
 )
 
 // Type alias for dependency injector to differentiate
@@ -22,13 +23,13 @@ type (
 func ProvideObjectTemplateController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
-	dc *dynamiccache.Cache, options Options,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object], options Options,
 ) ObjectTemplateController {
 	return ObjectTemplateController{
 		objecttemplate.NewObjectTemplateController(
 			mgr.GetClient(), uncachedClient,
 			log.WithName("controllers").WithName("ObjectTemplate"),
-			dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+			accessManager, mgr.GetScheme(), mgr.GetRESTMapper(),
 			objecttemplate.ControllerConfig{
 				OptionalResourceRetryInterval: options.ObjectTemplateOptionalResourceRetryInterval,
 				ResourceRetryInterval:         options.ObjectTemplateResourceRetryInterval,
@@ -40,14 +41,14 @@ func ProvideObjectTemplateController(
 func ProvideClusterObjectTemplateController(
 	mgr ctrl.Manager, log logr.Logger,
 	uncachedClient UncachedClient,
-	dc *dynamiccache.Cache,
+	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	options Options,
 ) ClusterObjectTemplateController {
 	return ClusterObjectTemplateController{
 		objecttemplate.NewClusterObjectTemplateController(
 			mgr.GetClient(), uncachedClient,
 			log.WithName("controllers").WithName("ClusterObjectTemplate"),
-			dc, mgr.GetScheme(), mgr.GetRESTMapper(),
+			accessManager, mgr.GetScheme(), mgr.GetRESTMapper(),
 			objecttemplate.ControllerConfig{
 				OptionalResourceRetryInterval: options.ObjectTemplateOptionalResourceRetryInterval,
 				ResourceRetryInterval:         options.ObjectTemplateResourceRetryInterval,
