@@ -60,9 +60,9 @@ func Test_ArchivalReconciler(t *testing.T) {
 		latestAvailable := &adaptermocks.ObjectSetMock{}
 
 		// Return same revision number for all
-		arch1.On("GetStatusRevision").Return(int64(1))
-		arch2.On("GetStatusRevision").Return(int64(1))
-		latestAvailable.On("GetStatusRevision").Return(int64(1))
+		arch1.On("GetSpecRevision").Return(int64(1))
+		arch2.On("GetSpecRevision").Return(int64(1))
+		latestAvailable.On("GetSpecRevision").Return(int64(1))
 
 		// Set empty client objects for all
 		// so that creation timestamp is also same

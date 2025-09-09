@@ -239,7 +239,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
 			},
 		},
 	}
-	objectSet.Status.Revision = 15
+	objectSet.Spec.Revision = 15
 	objectSet.Spec.Previous = []corev1alpha1.PreviousRevisionReference{
 		{
 			Name: "test-1",
@@ -259,7 +259,7 @@ func TestObjectSetRemotePhaseReconciler_desiredObjectSetPhase(t *testing.T) {
 
 	assert.Equal(t, phase.Objects, objectSetPhase.Spec.Objects)
 	assert.Equal(t, objectSet.Spec.AvailabilityProbes, objectSetPhase.Spec.AvailabilityProbes)
-	assert.Equal(t, objectSet.Status.Revision, objectSetPhase.Spec.Revision)
+	assert.Equal(t, objectSet.Spec.Revision, objectSetPhase.Spec.Revision)
 	assert.Equal(t, objectSet.Spec.Previous, objectSetPhase.Spec.Previous)
 	assert.True(t, objectSetPhase.Spec.Paused)
 	assert.NotEmpty(t, objectSetPhase.GetOwnerReferences())

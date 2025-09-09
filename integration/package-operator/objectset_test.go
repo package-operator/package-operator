@@ -746,7 +746,7 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 		require.NoError(t, Client.Create(ctx, objectSet))
 		cleanupOnSuccess(ctx, t, objectSet)
 		requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-		assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
+		assert.Equal(t, prev.Spec.Revision+1, objectSet.Spec.Revision)
 	})
 
 	t.Run("cluster", func(t *testing.T) {
@@ -776,6 +776,6 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 		require.NoError(t, Client.Create(ctx, clusterObjectSet))
 		cleanupOnSuccess(ctx, t, clusterObjectSet)
 		requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-		assert.Equal(t, prev.Status.Revision+1, clusterObjectSet.Status.Revision)
+		assert.Equal(t, prev.Spec.Revision+1, clusterObjectSet.Spec.Revision)
 	})
 }

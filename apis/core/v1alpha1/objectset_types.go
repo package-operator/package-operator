@@ -70,7 +70,7 @@ type ObjectSetStatus struct {
 	// Conditions is a list of status conditions ths object is in.
 	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Computed revision number, monotonically increasing.
+	// Deprecated: use .spec.revision instead
 	Revision int64 `json:"revision,omitempty"`
 	// Remote phases aka ObjectSetPhase objects.
 	RemotePhases []RemotePhaseReference `json:"remotePhases,omitempty"`

@@ -116,5 +116,5 @@ func (a objectSetsByRevisionAscending) Less(i, j int) bool {
 	iObj := a[i]
 	jObj := a[j]
 
-	return iObj.GetStatusRevision() < jObj.GetStatusRevision()
+	return iObj.GetSpecRevision() < jObj.GetSpecRevision()
 }
