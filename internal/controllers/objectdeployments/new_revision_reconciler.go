@@ -61,11 +61,11 @@ func (r *newRevisionReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("getting conflicting ObjectSet: %w", err)
 	}
 	log.Info("collision revision",
-		"collisionRev", conflictingObjectSet.GetStatusRevision(),
+		"collisionRev", conflictingObjectSet.GetSpecRevision(),
 		"latestRev", latestRevisionNumber)
 	controllerRef := metav1.GetControllerOf(conflictingObjectSet.ClientObject())
 	if !conflictingObjectSet.IsSpecArchived() &&
-		conflictingObjectSet.GetStatusRevision() >= latestRevisionNumber &&
+		conflictingObjectSet.GetSpecRevision() >= latestRevisionNumber &&
 		controllerRef != nil &&
 		controllerRef.UID == objectDeployment.ClientObject().GetUID() &&
 		equality.Semantic.DeepEqual(newObjectSet.GetSpecTemplateSpec(), conflictingObjectSet.GetSpecTemplateSpec()) {
@@ -130,5 +130,5 @@ func latestRevisionNumber(prevObjectSets []adapters.ObjectSetAccessor) int64 {
 	if len(prevObjectSets) == 0 {
 		return 0
 	}
-	return prevObjectSets[len(prevObjectSets)-1].GetStatusRevision()
+	return prevObjectSets[len(prevObjectSets)-1].GetSpecRevision()
 }

@@ -328,10 +328,10 @@ func (s *ObjectSet) GetSpecConditions() []metav1.Condition {
 
 func (s *ObjectSet) Revision() int64 {
 	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
-		return cos.Status.Revision
+		return cos.Spec.Revision
 	}
 
-	return s.obj.(*corev1alpha1.ObjectSet).Status.Revision
+	return s.obj.(*corev1alpha1.ObjectSet).Spec.Revision
 }
 
 func (s *ObjectSet) ChangeCause() string {

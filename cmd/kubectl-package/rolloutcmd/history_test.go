@@ -51,7 +51,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -81,7 +81,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -112,7 +112,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -145,7 +145,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -173,7 +173,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -204,9 +204,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Revision: 1,
-					},
 				},
 			},
 			ShouldFail: false,
@@ -223,9 +220,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`        "spec": {`,
 				`            "revision": 1`,
 				"        },",
-				`        "status": {`,
-				`            "revision": 1`,
-				"        }",
+				`        "status": {}`,
 				"    }",
 				"]",
 				"",
@@ -249,9 +244,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Revision: 1,
-					},
 				},
 			},
 			ShouldFail: false,
@@ -263,8 +255,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`    resourceVersion: "999"`,
 				"  spec:",
 				"    revision: 1",
-				"  status:",
-				"    revision: 1",
+				"  status: {}",
 				"",
 			}, "\n"),
 		},
@@ -286,9 +277,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Revision: 1,
-					},
 				},
 				&corev1alpha1.ClusterObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
@@ -298,9 +286,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 						},
 					},
 					Spec: corev1alpha1.ClusterObjectSetSpec{
-						Revision: 2,
-					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 2,
 					},
 				},
@@ -314,8 +299,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`  resourceVersion: "999"`,
 				"spec:",
 				"  revision: 2",
-				"status:",
-				"  revision: 2",
+				"status: {}",
 				"",
 			}, "\n"),
 		},
@@ -337,9 +321,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
-						Revision: 1,
-					},
 				},
 				&corev1alpha1.ClusterObjectSet{
 					ObjectMeta: metav1.ObjectMeta{
@@ -349,9 +330,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 						},
 					},
 					Spec: corev1alpha1.ClusterObjectSetSpec{
-						Revision: 2,
-					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
 						Revision: 2,
 					},
 				},
@@ -369,9 +347,7 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`    "spec": {`,
 				`        "revision": 2`,
 				"    },",
-				`    "status": {`,
-				`        "revision": 2`,
-				"    }",
+				`    "status": {}`,
 				"}",
 				"",
 			}, "\n"),

@@ -40,14 +40,14 @@ func (o *objectSetReconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("listing objectsets under deployment errored: %w", err)
 	}
 
-	// Delay any action until all ObjectSets under management report .status.revision
+	// Delay any action until all ObjectSets under management report .spec.revision
 	for _, objectSet := range objectSets {
-		if objectSet.GetStatusRevision() == 0 || objectSet.GetSpecRevision() == 0 {
+		if objectSet.GetSpecRevision() == 0 {
 			return ctrl.Result{}, nil
 		}
 	}
 
-	// objectSets is already sorted ascending by .status.revision
+	// objectSets is already sorted ascending by .spec.revision
 	// check if the latest revision is up-to-date, by comparing their hash.
 	var (
 		currentObjectSet adapters.ObjectSetAccessor
@@ -146,12 +146,12 @@ func (o *objectSetReconciler) setObjectDeploymentStatus(ctx context.Context,
 			conditionFromPreviousObjectSets(objectDeployment.GetGeneration(), prevObjectSets...),
 		)
 		if len(prevObjectSets) > 0 {
-			objectDeployment.SetStatusRevision(prevObjectSets[0].GetStatusRevision())
+			objectDeployment.SetStatusRevision(prevObjectSets[0].GetSpecRevision())
 		}
 		return
 	}
 
-	objectDeployment.SetStatusRevision(currentObjectSet.GetStatusRevision())
+	objectDeployment.SetStatusRevision(currentObjectSet.GetSpecRevision())
 
 	// map conditions
 	// -> copy mapped status conditions

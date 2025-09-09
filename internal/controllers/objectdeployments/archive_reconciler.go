@@ -99,7 +99,7 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 				continue
 			}
 
-			if currentLatestRevision.GetStatusRevision() <= previousRevision.GetStatusRevision() {
+			if currentLatestRevision.GetSpecRevision() <= previousRevision.GetSpecRevision() {
 				// Sanity check
 				// We always expect the  currentLatestRevision objectset to have a revision greater
 				// than the previous revision
@@ -137,7 +137,7 @@ func (a *archiveReconciler) archiveAllLaterRevisions(
 		// Sanity check
 		// We always expect the  currentLatestRevision objectset to have a revision greater
 		// than the previous revision
-		if currPrev.GetStatusRevision() < currentLatest.GetStatusRevision() {
+		if currPrev.GetSpecRevision() < currentLatest.GetSpecRevision() {
 			IsSpecPaused, err := a.ensurePaused(ctx, currPrev)
 			if err != nil {
 				return []adapters.ObjectSetAccessor{}, err

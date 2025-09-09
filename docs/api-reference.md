@@ -825,7 +825,7 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `revision` <br>int64 | Computed revision number, monotonically increasing. |
+| `revision` <br>int64 | Deprecated: use .spec.revision instead |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ClusterObjectSetPhase objects. |
 | `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
@@ -997,7 +997,7 @@ ObjectSetStatus defines the observed state of a ObjectSet.
 | Field | Description |
 | ----- | ----------- |
 | `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
-| `revision` <br>int64 | Computed revision number, monotonically increasing. |
+| `revision` <br>int64 | Deprecated: use .spec.revision instead |
 | `remotePhases` <br><a href="#remotephasereference">[]RemotePhaseReference</a> | Remote phases aka ObjectSetPhase objects. |
 | `controllerOf` <br><a href="#controlledobjectreference">[]ControlledObjectReference</a> | References all objects controlled by this instance. |
 
