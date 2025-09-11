@@ -42,7 +42,7 @@ type ClusterObjectSetList struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.phases) == has(oldSelf.phases)) && (!has(self.phases) || (self.phases == oldSelf.phases))", message="phases is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.availabilityProbes) == has(oldSelf.availabilityProbes)) && (!has(self.availabilityProbes) || (self.availabilityProbes == oldSelf.availabilityProbes))", message="availabilityProbes is immutable"
 // +kubebuilder:validation:XValidation:rule="(has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds)) && (!has(self.successDelaySeconds) || (self.successDelaySeconds == oldSelf.successDelaySeconds))", message="successDelaySeconds is immutable"
-// +kubebuilder:validation:XValidation:rule="(has(self.revision) == has(oldSelf.revision)) && (!has(self.revision) || (self.revision == oldSelf.revision))", message="revision is immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.revision) || (self.revision == oldSelf.revision)", message="revision is immutable"
 type ClusterObjectSetSpec struct {
 	// Specifies the lifecycle state of the ClusterObjectSet.
 	// +kubebuilder:default="Active"

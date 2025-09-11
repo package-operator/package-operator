@@ -27,14 +27,20 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	if objectSet.GetStatusRevision() != 0 {
-		// .status.revision is already set.
-		return
-	}
-
 	if objectSet.GetSpecRevision() != 0 {
 		// Prioritize .spec.revision set by ObjectDeploymentController's newRevisionReconciler
 		objectSet.SetStatusRevision(objectSet.GetSpecRevision())
+		return
+	}
+
+	if objectSet.GetStatusRevision() != 0 {
+		// Update existing ObjectSets to include .spec.revision
+		// to phase in new revision numbering approach.
+		objectSet.SetSpecRevision(objectSet.GetStatusRevision())
+		if err = r.client.Update(ctx, objectSet.ClientObject()); err != nil {
+			return res, fmt.Errorf("update revision in spec: %w", err)
+		}
+
 		return
 	}
 
