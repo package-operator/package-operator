@@ -2,6 +2,7 @@ package components
 
 import (
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/discovery"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,7 @@ func ProvideObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
+	discoveryClient discovery.DiscoveryInterface,
 ) ObjectSetPhaseController {
 	return ObjectSetPhaseController{
 		objectsetphases.NewSameClusterObjectSetPhaseController(
@@ -29,6 +31,7 @@ func ProvideObjectSetPhaseController(
 			mgr.GetScheme(), accessManager, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
+			discoveryClient,
 		),
 	}
 }
@@ -37,6 +40,7 @@ func ProvideClusterObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
+	discoveryClient discovery.DiscoveryInterface,
 ) ClusterObjectSetPhaseController {
 	return ClusterObjectSetPhaseController{
 		objectsetphases.NewSameClusterClusterObjectSetPhaseController(
@@ -44,6 +48,7 @@ func ProvideClusterObjectSetPhaseController(
 			mgr.GetScheme(), accessManager, uncachedClient,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
+			discoveryClient,
 		),
 	}
 }
