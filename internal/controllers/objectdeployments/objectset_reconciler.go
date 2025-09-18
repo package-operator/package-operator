@@ -42,7 +42,7 @@ func (o *objectSetReconciler) Reconcile(
 
 	// Delay any action until all ObjectSets under management report .status.revision
 	for _, objectSet := range objectSets {
-		if objectSet.GetStatusRevision() == 0 {
+		if objectSet.GetStatusRevision() == 0 || objectSet.GetSpecRevision() == 0 {
 			return ctrl.Result{}, nil
 		}
 	}
