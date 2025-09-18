@@ -55,15 +55,7 @@ func (a *archiveReconciler) markObjectSetsForArchival(ctx context.Context,
 	sort.Sort(objectSetsByRevisionAscending(objectsToArchive))
 
 	for _, objectSet := range objectsToArchive {
-		if !objectSet.IsSpecArchived() && objectSet.IsStatusPaused() &&
-			objectSet.GetSpecRevision() != 0 {
-			// TODO: remove `objectSet.GetSpecRevision() != 0`.
-			// This condition was added to phase in the new revision numbering approach.
-			// This reconciler can run before the existing ObjectSet is assigned
-			// a `.spec.revision` number by the ObjectSet revision reconciler.
-			// The `client.Update` would then break the validation rules
-			// if the two reconcilers fight over the field.
-
+		if !objectSet.IsSpecArchived() && objectSet.IsStatusPaused() {
 			objectSet.SetSpecArchived()
 			if err := a.client.Update(ctx, objectSet.ClientObject()); err != nil {
 				return fmt.Errorf("failed to archive objectset: %w", err)
