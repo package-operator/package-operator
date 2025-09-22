@@ -534,6 +534,7 @@ func newObjectSetMock(
 ) *adaptermocks.ObjectSetMock {
 	mock := &adaptermocks.ObjectSetMock{}
 	mock.On("GetStatusRevision").Return(int64(revision))
+	mock.On("GetSpecRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{
 		"important_for_mock_to_not_confuse_calls": strconv.Itoa(revision),

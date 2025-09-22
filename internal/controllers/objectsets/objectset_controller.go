@@ -214,6 +214,15 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}()
 
+	if objectSet.GetStatusRevision() != 0 && objectSet.GetSpecRevision() == 0 {
+		// Update existing ObjectSets to include .spec.revision
+		// to phase in new revision numbering approach.
+		objectSet.SetSpecRevision(objectSet.GetStatusRevision())
+		if err = c.client.Update(ctx, objectSet.ClientObject()); err != nil {
+			return res, fmt.Errorf("update revision in spec: %w", err)
+		}
+	}
+
 	if meta.IsStatusConditionTrue(*objectSet.GetStatusConditions(), corev1alpha1.ObjectSetArchived) {
 		// We don't want to touch this object anymore.
 		return res, nil
