@@ -243,6 +243,7 @@ func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
 	t.Parallel()
 
 	testClient := testutil.NewClient()
+	testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	r := &revisionReconciler{
 		scheme:       testScheme,
@@ -267,4 +268,6 @@ func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
 
 	assert.True(t, res.IsZero(), "unexpected requeue")
 	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
+	testClient.AssertExpectations(t)
+
 }
