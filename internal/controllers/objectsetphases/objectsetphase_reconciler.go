@@ -3,8 +3,10 @@ package objectsetphases
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"pkg.package-operator.run/boxcutter"
 	"pkg.package-operator.run/boxcutter/machinery"
 	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
@@ -19,8 +21,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"pkg.package-operator.run/boxcutter/ownerhandling"
-
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
@@ -33,18 +33,20 @@ import (
 type objectSetPhaseReconciler struct {
 	scheme                  *runtime.Scheme
 	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
+	uncachedclient          client.Client
 	phaseEngineFactory      boxcutterutil.PhaseEngineFactory
 	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           ownerhandling.OwnerStrategy
+	ownerStrategy           boxcutterutil.OwnerStrategy
 	backoff                 *flowcontrol.Backoff
 }
 
 func newObjectSetPhaseReconciler(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
+	uncachedClient client.Client,
 	phaseEngineFactory boxcutterutil.PhaseEngineFactory,
 	lookupPreviousRevisions lookupPreviousRevisions,
-	ownerStrategy ownerhandling.OwnerStrategy,
+	ownerStrategy boxcutterutil.OwnerStrategy,
 ) *objectSetPhaseReconciler {
 	var cfg objectSetPhaseReconcilerConfig
 
@@ -53,6 +55,7 @@ func newObjectSetPhaseReconciler(
 	return &objectSetPhaseReconciler{
 		scheme:                  scheme,
 		accessManager:           accessManager,
+		uncachedclient:          uncachedClient,
 		phaseEngineFactory:      phaseEngineFactory,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerStrategy,
@@ -62,14 +65,17 @@ func newObjectSetPhaseReconciler(
 
 type lookupPreviousRevisions func(
 	ctx context.Context, owner controllers.PreviousOwner,
-) ([]controllers.PreviousObjectSet, error)
+) ([]client.Object, error)
 
 func (r *objectSetPhaseReconciler) Reconcile(
 	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
-
 	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetStatusConditions())
+	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
+	if err != nil {
+		return res, fmt.Errorf("lookup previous revisions: %w", err)
+	}
 
 	probe, err := internalprobing.Parse(
 		ctx, objectSetPhase.GetAvailabilityProbes())
@@ -111,6 +117,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 			&apiPhase.Objects[i].Object,
 			boxcutterutil.TranslateCollisionProtection(apiPhase.Objects[i].CollisionProtection),
 			types.WithProbe(types.ProgressProbeType, probe),
+			boxcutter.WithPreviousOwners(previous),
 		)
 		if objectSetPhase.IsSpecPaused() {
 			phaseReconcileOptions = append(phaseReconcileOptions, types.WithPaused{})
@@ -127,6 +134,22 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		phaseReconcileOptions...,
 	)
 
+	target := &machinery.CreateCollisionError{}
+	if errors.As(err, &target) {
+		_, err := controllers.AddDynamicCacheLabel(ctx, r.uncachedclient, convertToUnstructured(target.Object))
+		if err != nil {
+			return res, err
+		}
+		id := string(objectSetPhase.ClientObject().GetUID())
+
+		r.backoff.Next(id, r.backoff.Clock.Now())
+
+		fmt.Printf(("Backing off\n"))
+		return ctrl.Result{
+			RequeueAfter: r.backoff.Get(id),
+		}, nil
+	}
+
 	if controllers.IsExternalResourceNotFound(err) {
 		id := string(objectSetPhase.ClientObject().GetUID())
 
@@ -139,9 +162,9 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, err
 	}
 
-	actualObjects := make([]machinery.Object, len(result.GetObjects()))
-	for i := range result.GetObjects() {
-		actualObjects = append(actualObjects, result.GetObjects()[i].Object())
+	actualObjects := make([]machinery.Object, 0, len(result.GetObjects()))
+	for _, obj := range result.GetObjects() {
+		actualObjects = append(actualObjects, obj.Object())
 	}
 
 	if err = mapConditions(actualObjects, objectSetPhase); err != nil {

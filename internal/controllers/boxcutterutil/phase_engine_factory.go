@@ -10,10 +10,11 @@ import (
 	"pkg.package-operator.run/boxcutter/machinery"
 	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
-	"pkg.package-operator.run/boxcutter/ownerhandling"
 	"pkg.package-operator.run/boxcutter/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"package-operator.run/internal/constants"
 )
 
@@ -46,11 +47,23 @@ type phaseEngineFactory struct {
 	phaseValidator  *validation.PhaseValidator
 }
 
+type OwnerStrategy interface {
+	SetOwnerReference(owner, obj metav1.Object) error
+	SetControllerReference(owner, obj metav1.Object) error
+	GetController(obj metav1.Object) (metav1.OwnerReference, bool)
+	IsController(owner, obj metav1.Object) bool
+	CopyOwnerReferences(objA, objB metav1.Object)
+	EnqueueRequestForOwner(ownerType client.Object, mapper meta.RESTMapper, isController bool) handler.EventHandler
+	ReleaseController(obj metav1.Object)
+	RemoveOwner(owner, obj metav1.Object)
+	IsOwner(owner, obj metav1.Object) bool
+}
+
 func NewPhaseEngineFactory(
 	scheme *runtime.Scheme,
 	discoveryClient discovery.DiscoveryInterface,
 	restMapper meta.RESTMapper,
-	ownerStrategy ownerhandling.OwnerStrategy,
+	ownerStrategy OwnerStrategy,
 	phaseValidator *validation.PhaseValidator,
 ) PhaseEngineFactory {
 	return phaseEngineFactory{
