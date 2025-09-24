@@ -47,7 +47,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	_tempDir = ginkgo.GinkgoT().TempDir()
 
-	_root, err = projectRoot()
+	_root, err = projectRoot(context.Background())
 	gomega.Expect(err).ToNot(
 		gomega.HaveOccurred(),
 		"Looking up project root.",
@@ -107,10 +107,10 @@ const (
 	version = "v0.0.0"
 )
 
-func projectRoot() (string, error) {
+func projectRoot(ctx context.Context) (string, error) {
 	var buf bytes.Buffer
 
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel")
 	cmd.Stdout = &buf
 	cmd.Stderr = io.Discard
 
