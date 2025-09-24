@@ -3,7 +3,6 @@ package objectsets
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -11,8 +10,6 @@ import (
 
 	"package-operator.run/internal/adapters"
 )
-
-const revisionReconcilerRequeueDelay = 10 * time.Second
 
 // revisionReconciler determines the .status.revision number by checking previous revisions.
 type revisionReconciler struct {
