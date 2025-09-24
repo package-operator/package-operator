@@ -189,7 +189,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSet adapters.ObjectSetAccessorFactory,
-	ownerStrategy ownerhandling.OwnerStrategy,
+	ownerStrategy boxcutterutil.OwnerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Reader,
@@ -214,12 +214,13 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		accessManager,
+		client,
 		boxcutterutil.NewPhaseEngineFactory(
 			scheme, discoveryClient, targetRESTMapper, ownerStrategy, phaseValidator),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
-			}, client).Lookup,
+			}, client).LookupPreviousRemotePhases,
 		ownerStrategy,
 	)
 	controller.teardownHandler = phaseReconciler

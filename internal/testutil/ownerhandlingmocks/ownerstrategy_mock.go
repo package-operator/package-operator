@@ -4,12 +4,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"pkg.package-operator.run/boxcutter/ownerhandling"
+	"package-operator.run/internal/controllers/boxcutterutil"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
-var _ ownerhandling.OwnerStrategy = (*OwnerStrategyMock)(nil)
+var _ boxcutterutil.OwnerStrategy = (*OwnerStrategyMock)(nil)
 
 type OwnerStrategyMock struct {
 	mock.Mock
