@@ -216,7 +216,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`        "metadata": {`,
 				`            "name": "test",`,
 				`            "resourceVersion": "999",`,
-				`            "creationTimestamp": null,`,
 				`            "labels": {`,
 				`                "package-operator.run/instance": "test"`,
 				"            }",
@@ -258,7 +257,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"- metadata:",
-				"    creationTimestamp: null",
 				"    labels:",
 				"      package-operator.run/instance: test",
 				"    name: test",
@@ -310,7 +308,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 			ShouldFail: false,
 			Output: strings.Join([]string{
 				"metadata:",
-				"  creationTimestamp: null",
 				"  labels:",
 				"    package-operator.run/instance: test",
 				"  name: test-2",
@@ -365,7 +362,6 @@ func TestHistoryCmd(t *testing.T) { //nolint:maintidx
 				`    "metadata": {`,
 				`        "name": "test-2",`,
 				`        "resourceVersion": "999",`,
-				`        "creationTimestamp": null,`,
 				`        "labels": {`,
 				`            "package-operator.run/instance": "test"`,
 				"        }",

@@ -100,6 +100,12 @@ func (c *CtrlClient) RESTMapper() meta.RESTMapper {
 	return args.Get(0).(meta.RESTMapper)
 }
 
+func (c *CtrlClient) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+	args := c.Called(ctx, obj, opts)
+
+	return args.Error(0)
+}
+
 type CtrlStatusClient struct {
 	mock.Mock
 }

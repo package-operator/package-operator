@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -136,4 +137,9 @@ func (m *AccessorMock) Free(ctx context.Context, user client.Object) error {
 func (m *AccessorMock) GetObjectsPerInformer(ctx context.Context) (map[schema.GroupVersionKind]int, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(map[schema.GroupVersionKind]int), args.Error(1)
+}
+
+func (m *AccessorMock) Apply(context.Context, runtime.ApplyConfiguration, ...client.ApplyOption) error {
+	args := m.Called()
+	return args.Error(0)
 }

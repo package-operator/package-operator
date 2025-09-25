@@ -78,18 +78,15 @@ func TestImportOLMBundleImage(t *testing.T) {
 					"annotations": map[string]interface{}{
 						"olm.targetNamespaces": "",
 					},
-					"creationTimestamp": nil,
-					"name":              "example-operator-controller-manager",
-					"namespace":         "example-operator-system",
+					"name":      "example-operator-controller-manager",
+					"namespace": "example-operator-system",
 				},
 				"spec": map[string]interface{}{
 					"replicas": int64(1),
 					"selector": nil,
 					"strategy": map[string]interface{}{},
 					"template": map[string]interface{}{
-						"metadata": map[string]interface{}{
-							"creationTimestamp": nil,
-						},
+						"metadata": map[string]interface{}{},
 						"spec": map[string]interface{}{
 							"containers": []interface{}{
 								map[string]interface{}{

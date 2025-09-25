@@ -53,7 +53,6 @@ data:
   - v1.3.5
 kind: RepositoryEntry
 metadata:
-  creationTimestamp: null
   name: pkg.67890
 `
 
@@ -151,7 +150,7 @@ func TestSaveAndLoadRepositoryToOCI(t *testing.T) {
 
 	hash, err := image.Digest()
 	require.NoError(t, err)
-	assert.Equal(t, "853c85d3e2126cb5ce5016b2fae33283a1ce573961d4090029bc0e058ea45396", hash.Hex)
+	assert.Equal(t, "7a12dda67da105a2bed2792d62a6122b43ec4caf74db30440958218093efe802", hash.Hex)
 
 	ri, err := LoadRepositoryFromOCI(ctx, image)
 	require.NoError(t, err)
