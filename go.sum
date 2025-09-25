@@ -115,8 +115,8 @@ github.com/go-openapi/swag/netutils v0.25.0 h1:/e1LPmXfF9fcOYbbaP3+SQgon1fRwe5EZ
 github.com/go-openapi/swag/netutils v0.25.0/go.mod h1:CAkkvqnUJX8NV96tNhEQvKz8SQo2KF0f7LleiJwIeRE=
 github.com/go-openapi/swag/stringutils v0.25.0 h1:iYfCF45GUeI/1Yrh8rQtTFCp5K1ToqWhUdzJZwvXvv8=
 github.com/go-openapi/swag/stringutils v0.25.0/go.mod h1:JLdSAq5169HaiDUbTvArA2yQxmgn4D6h4A+4HqVvAYg=
-github.com/go-openapi/swag/typeutils v0.24.0 h1:d3szEGzGDf4L2y1gYOSSLeK6h46F+zibnEas2Jm/wIw=
-github.com/go-openapi/swag/typeutils v0.24.0/go.mod h1:q8C3Kmk/vh2VhpCLaoR2MVWOGP8y7Jc8l82qCTd1DYI=
+github.com/go-openapi/swag/typeutils v0.25.0 h1:iUTsxu3F3h9v6CBzVFGXKPSBQt6d8XXgYy1YAlu+HJ8=
+github.com/go-openapi/swag/typeutils v0.25.0/go.mod h1:9McMC/oCdS4BKwk2shEB7x17P6HmMmA6dQRtAkSnNb8=
 github.com/go-openapi/swag/yamlutils v0.24.0 h1:bhw4894A7Iw6ne+639hsBNRHg9iZg/ISrOVr+sJGp4c=
 github.com/go-openapi/swag/yamlutils v0.24.0/go.mod h1:DpKv5aYuaGm/sULePoeiG8uwMpZSfReo1HR3Ik0yaG8=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
