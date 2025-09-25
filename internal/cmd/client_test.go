@@ -874,8 +874,7 @@ func TestObjectSetList_RenderYAML(t *testing.T) {
 	t.Parallel()
 
 	expected := strings.Join([]string{
-		"- metadata:",
-		"    creationTimestamp: null",
+		"- metadata: {}",
 		"  spec:",
 		"    revision: 1",
 		"  status:",
@@ -906,9 +905,7 @@ func TestObjectSetList_RenderJSON(t *testing.T) {
 	expected := strings.Join([]string{
 		"[",
 		"    {",
-		`        "metadata": {`,
-		`            "creationTimestamp": null`,
-		"        },",
+		`        "metadata": {},`,
 		`        "spec": {`,
 		`            "revision": 1`,
 		"        },",
