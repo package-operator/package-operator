@@ -308,10 +308,7 @@ spec:
                   type: object
                 type: array
               revision:
-                description: |-
-                  Computed revision number, monotonically increasing.
-                  Currently, the rule allows adding the revision field to existing ClusterObjectSets
-                  to phase in the new revision numbering approach.
+                description: Computed revision number, monotonically increasing.
                 format: int64
                 type: integer
               successDelaySeconds:
@@ -339,7 +336,8 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
             - message: revision is immutable
-              rule: '!has(oldSelf.revision) || (self.revision == oldSelf.revision)'
+              rule: (has(self.revision) == has(oldSelf.revision)) && (!has(self.revision)
+                || (self.revision == oldSelf.revision))
           status:
             description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:
