@@ -4,9 +4,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"package-operator.run/internal/controllers/boxcutterutil"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
+
+var _ boxcutterutil.OwnerStrategy = (*OwnerStrategyMock)(nil)
 
 type OwnerStrategyMock struct {
 	mock.Mock
@@ -50,4 +53,8 @@ func (m *OwnerStrategyMock) EnqueueRequestForOwner(
 ) handler.EventHandler {
 	args := m.Called(ownerType, mapper, isController)
 	return args.Get(0).(handler.EventHandler)
+}
+
+func (m *OwnerStrategyMock) CopyOwnerReferences(objA, objB metav1.Object) {
+	_ = m.Called(objA, objB)
 }
