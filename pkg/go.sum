@@ -28,8 +28,8 @@ github.com/go-openapi/jsonpointer v0.22.0 h1:TmMhghgNef9YXxTu1tOopo+0BGEytxA+okb
 github.com/go-openapi/jsonpointer v0.22.0/go.mod h1:xt3jV88UtExdIkkL7NloURjRQjbeUgcxFblMjq2iaiU=
 github.com/go-openapi/jsonreference v0.21.1 h1:bSKrcl8819zKiOgxkbVNRUBIr6Wwj9KYrDbMjRs0cDA=
 github.com/go-openapi/jsonreference v0.21.1/go.mod h1:PWs8rO4xxTUqKGu+lEvvCxD5k2X7QYkKAepJyCmSTT8=
-github.com/go-openapi/swag v0.24.1 h1:DPdYTZKo6AQCRqzwr/kGkxJzHhpKxZ9i/oX0zag+MF8=
-github.com/go-openapi/swag v0.24.1/go.mod h1:sm8I3lCPlspsBBwUm1t5oZeWZS0s7m/A+Psg0ooRU0A=
+github.com/go-openapi/swag v0.25.0 h1:xyZhlgInBg6wOtyTD5b+pzwVqHSOliAvgvKW+POFUts=
+github.com/go-openapi/swag v0.25.0/go.mod h1:yhsa7GJvO1JBFZccLq9uh/MawsC0PQd8sNz88VBXQlU=
 github.com/go-openapi/swag/cmdutils v0.25.0 h1:iYZ24DEGPEk6L1jO09vw39KfpxbG7KhS+WeQexS8U5A=
 github.com/go-openapi/swag/cmdutils v0.25.0/go.mod h1:pdae/AFo6WxLl5L0rq87eRzVPm/XRHM3MoYgRMvG4A0=
 github.com/go-openapi/swag/conv v0.25.0 h1:5K+e44HkOgCVE0IJTbivurzHahT62DPr2DEJqR/+4pA=
@@ -42,8 +42,8 @@ github.com/go-openapi/swag/jsonutils v0.25.0 h1:ELKpJT29T4N/AvmDqMeDFLx2QRZQOYFt
 github.com/go-openapi/swag/jsonutils v0.25.0/go.mod h1:KYL8GyGoi6tek9ajpvn0le4BWmKoUVVv8yPxklViIMo=
 github.com/go-openapi/swag/jsonutils/fixtures_test v0.25.0 h1:ca9vKxLnJegL2bzqXRWNabKdqVGxBzrnO8/UZnr5W0Y=
 github.com/go-openapi/swag/jsonutils/fixtures_test v0.25.0/go.mod h1:kjmweouyPwRUEYMSrbAidoLMGeJ5p6zdHi9BgZiqmsg=
-github.com/go-openapi/swag/loading v0.24.0 h1:ln/fWTwJp2Zkj5DdaX4JPiddFC5CHQpvaBKycOlceYc=
-github.com/go-openapi/swag/loading v0.24.0/go.mod h1:gShCN4woKZYIxPxbfbyHgjXAhO61m88tmjy0lp/LkJk=
+github.com/go-openapi/swag/loading v0.25.0 h1:e9mjE5fJeaK0LTepHMtG0Ief+9ETXLFhWCx7ZfiI6LI=
+github.com/go-openapi/swag/loading v0.25.0/go.mod h1:2ZCWXwVY1XYuoue8Bdjbn5GJK4/ufXbCfcvoSPFQJqM=
 github.com/go-openapi/swag/mangling v0.25.0 h1:VdTfDWX5lS3yURxYHF5SK7kYelSK69Lv2xEAeudTzM8=
 github.com/go-openapi/swag/mangling v0.25.0/go.mod h1:CdiMQ6pnfAgyQGSOIYnZkXvqhnnwOn997uXZMAd/7mQ=
 github.com/go-openapi/swag/netutils v0.25.0 h1:/e1LPmXfF9fcOYbbaP3+SQgon1fRwe5EZ0FjpR4vAjs=
