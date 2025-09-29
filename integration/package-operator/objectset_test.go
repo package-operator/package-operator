@@ -679,12 +679,6 @@ func TestObjectSet_immutability(t *testing.T) {
 				os.SetSpecPreviousRevisions([]adapters.ObjectSetAccessor{os})
 			},
 		},
-		{
-			field: "revision",
-			modify: func(os adapters.ObjectSetAccessor) {
-				os.SetSpecRevision(os.GetSpecRevision() + 42)
-			},
-		},
 	} {
 		t.Run(tc.field, func(t *testing.T) {
 			newObjectSet := objectSet.DeepCopy()

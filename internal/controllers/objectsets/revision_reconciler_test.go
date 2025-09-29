@@ -26,245 +26,251 @@ func init() {
 	}
 }
 
-func TestRevisionReconciler_DefaultRevision(t *testing.T) {
+func Test_revisionReconciler(t *testing.T) {
 	t.Parallel()
-	testClient := testutil.NewClient()
-	testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	t.Run("defaults to revision 1", func(t *testing.T) {
+		t.Parallel()
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	r := &revisionReconciler{
-		scheme:       testScheme,
-		newObjectSet: adapters.NewObjectSet,
-		client:       testClient,
-	}
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
 
-	objectSet := &adapters.ObjectSetAdapter{
-		ObjectSet: corev1alpha1.ObjectSet{},
-	}
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{},
+		}
 
-	ctx := context.Background()
-	res, err := r.Reconcile(ctx, objectSet)
-	require.NoError(t, err)
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
 
-	assert.True(t, res.IsZero(), "unexpected requeue")
-	assert.Equal(t, int64(1), objectSet.Status.Revision)
-}
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, int64(1), objectSet.Status.Revision)
+	})
 
-func TestRevisionReconciler_FromPrevious(t *testing.T) {
-	t.Parallel()
+	t.Run("sets revision based on previous", func(t *testing.T) {
+		t.Parallel()
 
-	testClient := testutil.NewClient()
-	testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	r := &revisionReconciler{
-		scheme:       testScheme,
-		newObjectSet: adapters.NewObjectSet,
-		client:       testClient,
-	}
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
 
-	prev1 := &corev1alpha1.ObjectSet{
-		Status: corev1alpha1.ObjectSetStatus{
-			Revision: 14,
-		},
-	}
-	testClient.
-		On("Get", mock.Anything, client.ObjectKey{
-			Name:      "prev1",
-			Namespace: "xxx",
-		}, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			out := args.Get(2).(*corev1alpha1.ObjectSet)
-			*out = *prev1
-		}).
-		Return(nil)
-
-	prev2 := &corev1alpha1.ObjectSet{
-		Status: corev1alpha1.ObjectSetStatus{
-			Revision: 4,
-		},
-	}
-	testClient.
-		On("Get", mock.Anything, client.ObjectKey{
-			Name:      "prev2",
-			Namespace: "xxx",
-		}, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			out := args.Get(2).(*corev1alpha1.ObjectSet)
-			*out = *prev2
-		}).
-		Return(nil)
-
-	objectSet := &adapters.ObjectSetAdapter{
-		ObjectSet: corev1alpha1.ObjectSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "xxx",
+		prev1 := &corev1alpha1.ObjectSet{
+			Status: corev1alpha1.ObjectSetStatus{
+				Revision: 14,
 			},
-			Spec: corev1alpha1.ObjectSetSpec{
-				Previous: []corev1alpha1.PreviousRevisionReference{
-					{
-						Name: "prev1",
-					},
-					{
-						Name: "prev2",
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKey{
+				Name:      "prev1",
+				Namespace: "xxx",
+			}, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*corev1alpha1.ObjectSet)
+				*out = *prev1
+			}).
+			Return(nil)
+
+		prev2 := &corev1alpha1.ObjectSet{
+			Status: corev1alpha1.ObjectSetStatus{
+				Revision: 4,
+			},
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKey{
+				Name:      "prev2",
+				Namespace: "xxx",
+			}, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*corev1alpha1.ObjectSet)
+				*out = *prev2
+			}).
+			Return(nil)
+
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{
+							Name: "prev1",
+						},
+						{
+							Name: "prev2",
+						},
 					},
 				},
 			},
-		},
-	}
+		}
 
-	ctx := context.Background()
-	res, err := r.Reconcile(ctx, objectSet)
-	require.NoError(t, err)
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
 
-	assert.True(t, res.IsZero(), "unexpected requeue")
-	assert.Equal(t, int64(15), objectSet.Status.Revision)
-}
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, int64(15), objectSet.Status.Revision)
+	})
 
-func TestRevisionReconciler_WaitForPrevious(t *testing.T) {
-	t.Parallel()
+	t.Run("waits on previous", func(t *testing.T) {
+		t.Parallel()
 
-	testClient := testutil.NewClient()
-	testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	r := &revisionReconciler{
-		scheme:       testScheme,
-		newObjectSet: adapters.NewObjectSet,
-		client:       testClient,
-	}
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
 
-	prev1 := &corev1alpha1.ObjectSet{
-		Status: corev1alpha1.ObjectSetStatus{
-			// does not report Revision
-		},
-	}
-	testClient.
-		On("Get", mock.Anything, client.ObjectKey{
-			Name:      "prev1",
-			Namespace: "xxx",
-		}, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			out := args.Get(2).(*corev1alpha1.ObjectSet)
-			*out = *prev1
-		}).
-		Return(nil)
-
-	objectSet := &adapters.ObjectSetAdapter{
-		ObjectSet: corev1alpha1.ObjectSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "xxx",
+		prev1 := &corev1alpha1.ObjectSet{
+			Status: corev1alpha1.ObjectSetStatus{
+				// does not report Revision
 			},
-			Spec: corev1alpha1.ObjectSetSpec{
-				Previous: []corev1alpha1.PreviousRevisionReference{
-					{
-						Name: "prev1",
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKey{
+				Name:      "prev1",
+				Namespace: "xxx",
+			}, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*corev1alpha1.ObjectSet)
+				*out = *prev1
+			}).
+			Return(nil)
+
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{
+							Name: "prev1",
+						},
 					},
 				},
 			},
-		},
-	}
+		}
 
-	ctx := context.Background()
-	res, err := r.Reconcile(ctx, objectSet)
-	require.NoError(t, err)
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
 
-	assert.Equal(t, revisionReconcilerRequeueDelay, res.RequeueAfter)
-	assert.False(t, res.IsZero())
-	assert.Equal(t, int64(0), objectSet.Status.Revision)
-}
+		assert.Equal(t, revisionReconcilerRequeueDelay, res.RequeueAfter)
+		assert.False(t, res.IsZero())
+		assert.Equal(t, int64(0), objectSet.Status.Revision)
+	})
 
-func TestRevisionReconciler_InvalidPreviousReference(t *testing.T) {
-	t.Parallel()
+	t.Run("invalid previous reference", func(t *testing.T) {
+		t.Parallel()
 
-	testClient := testutil.NewClient()
-	testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	r := &revisionReconciler{
-		scheme:       testScheme,
-		newObjectSet: adapters.NewObjectSet,
-		client:       testClient,
-	}
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
 
-	prev := &corev1alpha1.ObjectSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prev",
-			Namespace: "xxx",
-		},
-		Status: corev1alpha1.ObjectSetStatus{
-			Revision: 42,
-		},
-	}
-	testClient.
-		On("Get", mock.Anything, client.ObjectKeyFromObject(prev), mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			out := args.Get(2).(*corev1alpha1.ObjectSet)
-			*out = *prev
-		}).
-		Return(nil)
-
-	prevNotFound := &corev1alpha1.ObjectSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prev-not-found",
-			Namespace: "xxx",
-		},
-	}
-	testClient.
-		On("Get", mock.Anything, client.ObjectKeyFromObject(prevNotFound), mock.Anything, mock.Anything).
-		Return(errors.NewNotFound(schema.GroupResource{}, prevNotFound.Name))
-
-	objectSet := &adapters.ObjectSetAdapter{
-		ObjectSet: corev1alpha1.ObjectSet{
+		prev := &corev1alpha1.ObjectSet{
 			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prev",
 				Namespace: "xxx",
 			},
-			Spec: corev1alpha1.ObjectSetSpec{
-				Previous: []corev1alpha1.PreviousRevisionReference{
-					{
-						Name: prev.Name,
-					},
-					{
-						Name: prevNotFound.Name,
-					},
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-	res, err := r.Reconcile(ctx, objectSet)
-	require.NoError(t, err)
-
-	assert.True(t, res.IsZero(), "unexpected requeue")
-	assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
-
-	testClient.AssertExpectations(t)
-	testClient.StatusMock.AssertExpectations(t)
-}
-
-func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
-	t.Parallel()
-
-	testClient := testutil.NewClient()
-
-	r := &revisionReconciler{
-		scheme:       testScheme,
-		newObjectSet: adapters.NewObjectSet,
-		client:       testClient,
-	}
-
-	objectSet := &adapters.ObjectSetAdapter{
-		ObjectSet: corev1alpha1.ObjectSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "xxx",
-			},
-			Spec: corev1alpha1.ObjectSetSpec{
+			Status: corev1alpha1.ObjectSetStatus{
 				Revision: 42,
 			},
-		},
-	}
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKeyFromObject(prev), mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				out := args.Get(2).(*corev1alpha1.ObjectSet)
+				*out = *prev
+			}).
+			Return(nil)
 
-	ctx := context.Background()
-	res, err := r.Reconcile(ctx, objectSet)
-	require.NoError(t, err)
+		prevNotFound := &corev1alpha1.ObjectSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prev-not-found",
+				Namespace: "xxx",
+			},
+		}
+		testClient.
+			On("Get", mock.Anything, client.ObjectKeyFromObject(prevNotFound), mock.Anything, mock.Anything).
+			Return(errors.NewNotFound(schema.GroupResource{}, prevNotFound.Name))
 
-	assert.True(t, res.IsZero(), "unexpected requeue")
-	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{
+							Name: prev.Name,
+						},
+						{
+							Name: prevNotFound.Name,
+						},
+					},
+				},
+			},
+		}
+
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
+
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, prev.Status.Revision+1, objectSet.Status.Revision)
+
+		testClient.AssertExpectations(t)
+		testClient.StatusMock.AssertExpectations(t)
+	})
+
+	t.Run("sets revision based on .spec.revision", func(t *testing.T) {
+		t.Parallel()
+
+		testClient := testutil.NewClient()
+		testClient.StatusMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		r := &revisionReconciler{
+			scheme:       testScheme,
+			newObjectSet: adapters.NewObjectSet,
+			client:       testClient,
+		}
+
+		objectSet := &adapters.ObjectSetAdapter{
+			ObjectSet: corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "xxx",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Revision: 42,
+				},
+			},
+		}
+
+		ctx := context.Background()
+		res, err := r.Reconcile(ctx, objectSet)
+		require.NoError(t, err)
+
+		assert.True(t, res.IsZero(), "unexpected requeue")
+		assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
+
+		testClient.AssertExpectations(t)
+	})
 }
