@@ -448,7 +448,7 @@ spec:
                   type: object
                 type: array
               revision:
-                description: Computed revision number, monotonically increasing.
+                description: 'Deprecated: use .spec.revision instead'
                 format: int64
                 type: integer
             type: object

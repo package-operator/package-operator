@@ -27,20 +27,23 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	if objectSet.GetStatusRevision() != 0 {
+	if objectSet.GetStatusRevision() != 0 { //nolint:staticcheck
 		// .status.revision is already set.
 		return
 	}
 
 	if objectSet.GetSpecRevision() != 0 {
 		// Prioritize .spec.revision set by ObjectDeploymentController's newRevisionReconciler
-		objectSet.SetStatusRevision(objectSet.GetSpecRevision())
+		objectSet.SetStatusRevision(objectSet.GetSpecRevision()) //nolint:staticcheck
 		return
 	}
 
+	// theoretically GetSpecRevision shouldn't return 0 and it should never get here
+	log := logr.FromContextOrDiscard(ctx).WithName("revisionReconciler")
 	if len(objectSet.GetSpecPrevious()) == 0 {
 		// no previous revision(s) specified, default to revision 1
-		objectSet.SetStatusRevision(1)
+		objectSet.SetStatusRevision(1) //nolint:staticcheck
+		log.Error(nil, "no previous revision(s), setting to 1")
 		return
 	}
 
@@ -61,7 +64,7 @@ func (r *revisionReconciler) Reconcile(
 			return res, fmt.Errorf("getting previous revision: %w", err)
 		}
 
-		sr := prevObjectSet.GetStatusRevision()
+		sr := prevObjectSet.GetStatusRevision() //nolint:staticcheck
 		if sr == 0 {
 			logr.FromContextOrDiscard(ctx).
 				Info("waiting for previous revision to report revision number", "object", key)
@@ -77,7 +80,9 @@ func (r *revisionReconciler) Reconcile(
 		}
 	}
 
-	objectSet.SetStatusRevision(latestPreviousRevision + 1)
+	log.Error(nil, ".spec.revision was 0, determined revision from previous revisions",
+		"new revision", latestPreviousRevision+1)
+	objectSet.SetStatusRevision(latestPreviousRevision + 1) //nolint:staticcheck
 	if err := r.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return res, fmt.Errorf("update revision in status: %w", err)
 	}

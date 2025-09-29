@@ -214,10 +214,10 @@ func (c *GenericObjectSetController) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}()
 
-	if objectSet.GetStatusRevision() != 0 && objectSet.GetSpecRevision() == 0 {
+	if objectSet.GetStatusRevision() != 0 && objectSet.GetSpecRevision() == 0 { //nolint:staticcheck
 		// Update existing ObjectSets to include .spec.revision
 		// to phase in new revision numbering approach.
-		objectSet.SetSpecRevision(objectSet.GetStatusRevision())
+		objectSet.SetSpecRevision(objectSet.GetStatusRevision()) //nolint:staticcheck
 		if err = c.client.Update(ctx, objectSet.ClientObject()); err != nil {
 			return res, fmt.Errorf("update revision in spec: %w", err)
 		}
