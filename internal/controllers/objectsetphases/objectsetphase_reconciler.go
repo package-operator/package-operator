@@ -103,22 +103,23 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	}
 
 	apiPhase := objectSetPhase.GetPhase()
-	phaseObjects := make([]unstructured.Unstructured, len(apiPhase.Objects))
-	phaseReconcileOptions := make([]types.PhaseReconcileOption, len(apiPhase.Objects))
+	// TODO Fix this!!!
+	phaseObjects := make([]unstructured.Unstructured, 0)
+	phaseReconcileOptions := make([]types.PhaseReconcileOption, 0)
 	for i := range apiPhase.Objects {
-		phaseObjects[i] = apiPhase.Objects[i].Object
+		phaseObjects = append(phaseObjects, apiPhase.Objects[i].Object)
 		labels := phaseObjects[i].GetLabels()
 		if labels == nil {
 			labels = map[string]string{}
 		}
 		labels[constants.DynamicCacheLabel] = "True"
 		phaseObjects[i].SetLabels(labels)
-		phaseReconcileOptions[i] = types.WithObjectReconcileOptions(
+		phaseReconcileOptions = append(phaseReconcileOptions, types.WithObjectReconcileOptions(
 			&apiPhase.Objects[i].Object,
 			boxcutterutil.TranslateCollisionProtection(apiPhase.Objects[i].CollisionProtection),
 			types.WithProbe(types.ProgressProbeType, probe),
 			boxcutter.WithPreviousOwners(previous),
-		)
+		))
 		if objectSetPhase.IsSpecPaused() {
 			phaseReconcileOptions = append(phaseReconcileOptions, types.WithPaused{})
 		}
@@ -144,7 +145,6 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 		r.backoff.Next(id, r.backoff.Clock.Now())
 
-		fmt.Printf(("Backing off\n"))
 		return ctrl.Result{
 			RequeueAfter: r.backoff.Get(id),
 		}, nil

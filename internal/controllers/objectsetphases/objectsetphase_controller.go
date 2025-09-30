@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -20,7 +19,6 @@ import (
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/controllers/boxcutterutil"
-	"package-operator.run/internal/preflight"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
@@ -50,12 +48,6 @@ type teardownHandler interface {
 	) (cleanupDone bool, err error)
 }
 
-type preflightChecker interface {
-	Check(
-		ctx context.Context, owner, obj client.Object,
-	) (violations []preflight.Violation, err error)
-}
-
 // Generic reconciler for both ObjectSetPhase and ClusterObjectSetPhase objects.
 type GenericObjectSetPhaseController struct {
 	newObjectSetPhase adapters.ObjectSetPhaseFactory
@@ -74,26 +66,18 @@ type GenericObjectSetPhaseController struct {
 func NewMultiClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			targetRESTMapper,
-			preflight.List{
-				preflight.NewNoOwnerReferences(targetRESTMapper),
-				preflight.NewDryRun(targetWriter),
-			},
-		),
 		discoveryClient,
 		targetRESTMapper,
 		validation.NewClusterPhaseValidator(targetRESTMapper, targetWriter),
@@ -103,26 +87,18 @@ func NewMultiClusterObjectSetPhaseController(
 func NewMultiClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases (management cluster).
 	targetWriter client.Writer, // client to patch objects with (hosted cluster).
 	targetRESTMapper meta.RESTMapper,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			targetRESTMapper,
-			preflight.List{
-				preflight.NewDryRun(targetWriter),
-				preflight.NewNoOwnerReferences(targetRESTMapper),
-			},
-		),
 		discoveryClient,
 		targetRESTMapper,
 		validation.NewClusterPhaseValidator(targetRESTMapper, targetWriter),
@@ -132,26 +108,17 @@ func NewMultiClusterClusterObjectSetPhaseController(
 func NewSameClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			restMapper,
-			preflight.List{
-				preflight.NewNamespaceEscalation(restMapper),
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
-			},
-		),
 		discoveryClient,
 		restMapper,
 		validation.NewNamespacedPhaseValidator(restMapper, client),
@@ -161,25 +128,17 @@ func NewSameClusterObjectSetPhaseController(
 func NewSameClusterClusterObjectSetPhaseController(
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
 	restMapper meta.RESTMapper,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetPhaseController {
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
 		ownerhandling.NewNative(scheme),
-		log, scheme, accessManager, uncachedClient,
+		log, scheme, accessManager,
 		class, client,
-		preflight.NewAPIExistence(
-			restMapper,
-			preflight.List{
-				preflight.NewDryRun(client),
-				preflight.NewNoOwnerReferences(restMapper),
-			},
-		),
 		discoveryClient,
 		restMapper,
 		validation.NewNamespacedPhaseValidator(restMapper, client),
@@ -192,11 +151,9 @@ func NewGenericObjectSetPhaseController(
 	ownerStrategy boxcutterutil.OwnerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Reader,
 	class string,
 	client client.Client, // client to get and update ObjectSetPhases.
-	preflightChecker preflightChecker,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient boxcutterutil.DiscoveryClient,
 	targetRESTMapper meta.RESTMapper,
 	phaseValidator *validation.PhaseValidator,
 ) *GenericObjectSetPhaseController {

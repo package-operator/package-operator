@@ -86,18 +86,16 @@ func (l *PreviousRevisionLookup) LookupPreviousRemotePhases(
 			panic(err)
 		}
 
-		phases, err := l.lookupRemotePhases(remotePhaseReferences, prevGVK, prev.ClientObject().GetNamespace())
-		if err != nil {
-			return nil, fmt.Errorf("looking up remote phases: %w", err)
-		}
+		phases := l.lookupRemotePhases(remotePhaseReferences, prevGVK, prev.ClientObject().GetNamespace())
 		remotePhases = append(remotePhases, phases...)
 	}
 
 	return remotePhases, nil
 }
 
-func (l *PreviousRevisionLookup) lookupRemotePhases(ref []corev1alpha1.RemotePhaseReference, gvk schema.GroupVersionKind, namespace string) ([]client.Object, error) {
-
+func (l *PreviousRevisionLookup) lookupRemotePhases(
+	ref []corev1alpha1.RemotePhaseReference, gvk schema.GroupVersionKind, namespace string,
+) []client.Object {
 	remotePhases := make([]client.Object, 0)
 
 	var remoteGVK schema.GroupVersionKind
@@ -117,5 +115,5 @@ func (l *PreviousRevisionLookup) lookupRemotePhases(ref []corev1alpha1.RemotePha
 
 		remotePhases = append(remotePhases, phase)
 	}
-	return remotePhases, nil
+	return remotePhases
 }

@@ -94,7 +94,6 @@ func (a *ObjectSetPhaseAdapter) SetPhase(phase corev1alpha1.ObjectSetTemplatePha
 	}
 
 	a.Labels[corev1alpha1.ObjectSetPhaseClassLabel] = phase.Class
-	a.Name = a.ObjectMeta.Name
 	a.Spec.Objects = phase.Objects
 }
 

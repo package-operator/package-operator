@@ -27,7 +27,8 @@ type isControllerChecker interface {
 }
 
 func GetControllerOf(ownerStrategy isControllerChecker, owner client.Object,
-	result machinery.PhaseResult) []corev1alpha1.ControlledObjectReference {
+	result machinery.PhaseResult,
+) []corev1alpha1.ControlledObjectReference {
 	objects := result.GetObjects()
 	controllerOf := make([]corev1alpha1.ControlledObjectReference, 0, len(objects))
 	for _, object := range objects {

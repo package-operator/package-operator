@@ -22,13 +22,12 @@ const defaultObjectSetPhaseClass = "default"
 func ProvideObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient UncachedClient,
 	discoveryClient discovery.DiscoveryInterface,
 ) ObjectSetPhaseController {
 	return ObjectSetPhaseController{
 		objectsetphases.NewSameClusterObjectSetPhaseController(
 			log.WithName("controllers").WithName("ObjectSetPhase"),
-			mgr.GetScheme(), accessManager, uncachedClient,
+			mgr.GetScheme(), accessManager,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
 			discoveryClient,
@@ -39,13 +38,12 @@ func ProvideObjectSetPhaseController(
 func ProvideClusterObjectSetPhaseController(
 	mgr ctrl.Manager, log logr.Logger,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient UncachedClient,
 	discoveryClient discovery.DiscoveryInterface,
 ) ClusterObjectSetPhaseController {
 	return ClusterObjectSetPhaseController{
 		objectsetphases.NewSameClusterClusterObjectSetPhaseController(
 			log.WithName("controllers").WithName("ClusterObjectSetPhase"),
-			mgr.GetScheme(), accessManager, uncachedClient,
+			mgr.GetScheme(), accessManager,
 			defaultObjectSetPhaseClass, mgr.GetClient(),
 			mgr.GetRESTMapper(),
 			discoveryClient,

@@ -82,7 +82,8 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			phaseResult := &boxcuttermocks.PhaseResultMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			// TODO mock client
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient, phaseEngineFactory, lookup, ownerStrategy)
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+				phaseEngineFactory, lookup, ownerStrategy)
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
 
@@ -126,7 +127,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	lookup := func(
 		_ context.Context, _ controllers.PreviousOwner,
 	) (
-		[]client.Object, error, //nolint: unparam
+		[]client.Object, error,
 	) {
 		return previousList, nil
 	}
@@ -140,7 +141,8 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient, phaseEngineFactory, lookup, ownerStrategy)
+	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(accessor, nil)
@@ -184,7 +186,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 			phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient, phaseEngineFactory, lookup, ownerStrategy)
+			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+				phaseEngineFactory, lookup, ownerStrategy)
 
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)

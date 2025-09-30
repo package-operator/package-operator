@@ -2,7 +2,6 @@ package objectsetphases
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -270,15 +269,14 @@ func TestInitializers(t *testing.T) {
 	class := "default"
 	mapper := meta.NewDefaultRESTMapper(scheme.PreferredVersionAllGroups())
 	discoveryClient := &discoveryclientmock.DiscoveryClientMock{}
-	fmt.Printf("TODO fix, print discovery client for now to avoid unused error %v\n", discoveryClient)
 
 	t.Run("NewMultiClusterObjectSetPhaseController", func(t *testing.T) {
 		t.Parallel()
 
 		ctrl := NewMultiClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client, client,
-			mapper, nil, // TODO fix discovery
+			accessManager, class, client, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -289,8 +287,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client, client,
-			mapper, nil, // TODO fix discovery
+			accessManager, class, client, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -301,8 +299,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client,
-			mapper, nil, // TODO fix discovery
+			accessManager, class, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -313,8 +311,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client,
-			mapper, nil, // TODO fix discovery
+			accessManager, class, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)

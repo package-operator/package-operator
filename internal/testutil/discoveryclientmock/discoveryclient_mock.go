@@ -1,9 +1,9 @@
 package discoveryclientmock
 
 import (
-	openapi_v2 "github.com/google/gnostic-models/openapiv2"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/openapi"
 )
 
 type DiscoveryClientMock struct {
@@ -15,7 +15,7 @@ func (c *DiscoveryClientMock) ServerVersion() (*version.Info, error) {
 	return args.Get(0).(*version.Info), args.Error(1)
 }
 
-func (c *DiscoveryClientMock) OpenAPISchema() (*openapi_v2.Document, error) {
-	// TODO
-	return nil, nil
+func (c *DiscoveryClientMock) OpenAPIV3() openapi.Client {
+	args := c.Called(0)
+	return args.Get(0).(openapi.Client)
 }

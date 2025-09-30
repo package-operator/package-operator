@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/openapi"
 	"pkg.package-operator.run/boxcutter"
 	"pkg.package-operator.run/boxcutter/machinery"
 	"pkg.package-operator.run/boxcutter/machinery/types"
@@ -15,6 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/version"
+
 	"package-operator.run/internal/constants"
 )
 
@@ -41,7 +44,7 @@ type PhaseEngineFactory interface {
 
 type phaseEngineFactory struct {
 	scheme          *runtime.Scheme
-	discoveryClient discovery.DiscoveryInterface
+	discoveryClient DiscoveryClient
 	restMapper      meta.RESTMapper
 	ownerStrategy   boxcutter.OwnerStrategy
 	phaseValidator  *validation.PhaseValidator
@@ -59,9 +62,14 @@ type OwnerStrategy interface {
 	IsOwner(owner, obj metav1.Object) bool
 }
 
+type DiscoveryClient interface {
+	OpenAPIV3() openapi.Client
+	ServerVersion() (*version.Info, error)
+}
+
 func NewPhaseEngineFactory(
 	scheme *runtime.Scheme,
-	discoveryClient discovery.DiscoveryInterface,
+	discoveryClient DiscoveryClient,
 	restMapper meta.RESTMapper,
 	ownerStrategy OwnerStrategy,
 	phaseValidator *validation.PhaseValidator,
