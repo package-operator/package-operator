@@ -52,6 +52,9 @@ type AllControllers struct {
 
 	ObjectTemplate        ObjectTemplateController
 	ClusterObjectTemplate ClusterObjectTemplateController
+
+	Repository        RepositoryController
+	ClusterRepository ClusterRepositoryController
 }
 
 func (ac AllControllers) List() []any {
@@ -61,6 +64,7 @@ func (ac AllControllers) List() []any {
 		ac.ObjectDeployment, ac.ClusterObjectDeployment,
 		ac.Package, ac.ClusterPackage,
 		ac.ObjectTemplate, ac.ClusterObjectTemplate,
+		ac.Repository, ac.ClusterRepository,
 	}
 }
 
@@ -105,6 +109,14 @@ func (ac AllControllers) SetupWithManager(mgr ctrl.Manager) error {
 		{
 			name:       "ClusterObjectTemplate",
 			controller: ac.ClusterObjectTemplate,
+		},
+		{
+			name:       "Repository",
+			controller: ac.Repository,
+		},
+		{
+			name:       "ClusterRepository",
+			controller: ac.ClusterRepository,
 		},
 	})
 }
