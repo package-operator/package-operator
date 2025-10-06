@@ -533,7 +533,6 @@ func newObjectSetMock(
 	isSpecAvailable bool,
 ) *adaptermocks.ObjectSetMock {
 	mock := &adaptermocks.ObjectSetMock{}
-	mock.On("GetStatusRevision").Return(int64(revision))
 	mock.On("GetSpecRevision").Return(int64(revision))
 	clientObj := &unstructured.Unstructured{}
 	clientObj.SetAnnotations(map[string]string{
