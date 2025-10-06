@@ -727,6 +727,7 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 			},
 			Spec: corev1alpha1.ObjectSetSpec{
 				ObjectSetTemplateSpec: objectSetTemplateSpec,
+				Revision:              1,
 			},
 		}
 
@@ -743,10 +744,11 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 		requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
 		// Create new ObjectSet with reference to previous and non-existent
+		objectSet.Spec.Revision = prev.Spec.Revision + 1
 		require.NoError(t, Client.Create(ctx, objectSet))
 		cleanupOnSuccess(ctx, t, objectSet)
 		requireCondition(ctx, t, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-		assert.Equal(t, prev.Spec.Revision, objectSet.Spec.Revision)
+		assert.Equal(t, prev.Spec.Revision+1, objectSet.Spec.Revision)
 	})
 
 	t.Run("cluster", func(t *testing.T) {
@@ -757,6 +759,7 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 			},
 			Spec: corev1alpha1.ClusterObjectSetSpec{
 				ObjectSetTemplateSpec: objectSetTemplateSpec,
+				Revision:              1,
 			},
 		}
 
@@ -773,9 +776,10 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 		requireCondition(ctx, t, prev, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 
 		// Create new ClusterObjectSet with reference to previous and non-existent
+		clusterObjectSet.Spec.Revision = prev.Spec.Revision + 1
 		require.NoError(t, Client.Create(ctx, clusterObjectSet))
 		cleanupOnSuccess(ctx, t, clusterObjectSet)
 		requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
-		assert.Equal(t, prev.Spec.Revision, clusterObjectSet.Spec.Revision)
+		assert.Equal(t, prev.Spec.Revision+1, clusterObjectSet.Spec.Revision)
 	})
 }
