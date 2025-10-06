@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/jsonpath"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -504,9 +505,13 @@ func (r *templateReconciler) aggregateLocalObjects(
 
 	outputObject := &unstructured.Unstructured{}
 	outputObject.SetName(outputObjectRef.Name)
-	outputObject.SetKind(outputObjectRef.Kind)
 	outputObject.SetNamespace(outputObjectRef.Namespace)
-	outputObject.SetAPIVersion(outputObjectRef.Version)
+	gvk := schema.GroupVersionKind{
+		Group:   outputObjectRef.Group,
+		Version: outputObjectRef.Version,
+		Kind:    outputObjectRef.Kind,
+	}
+	outputObject.SetGroupVersionKind(gvk)
 
 	objects = append(objects, outputObject)
 	return objects, nil
@@ -519,9 +524,12 @@ func (r *templateReconciler) constructSourceObject(
 ) (*unstructured.Unstructured, error) {
 	sourceObj := &unstructured.Unstructured{}
 	sourceObj.SetName(src.Name)
-	sourceObj.SetKind(src.Kind)
-	sourceObj.SetAPIVersion(src.APIVersion)
 	sourceObj.SetNamespace(src.Namespace)
+	gv, err := schema.ParseGroupVersion(src.APIVersion)
+	if err != nil {
+		return nil, err
+	}
+	sourceObj.SetGroupVersionKind(gv.WithKind(src.Kind))
 
 	// Ensure we are staying within the same namespace.
 	violations, err := r.preflightChecker.Check(ctx, objectTemplate.ClientObject(), sourceObj)
