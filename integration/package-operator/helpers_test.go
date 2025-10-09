@@ -395,8 +395,9 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	cm1 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "cm-1",
-			Labels: map[string]string{"test.package-operator.run/test": "True"},
+			Name:      "cm-1",
+			Namespace: "default",
+			Labels:    map[string]string{"test.package-operator.run/test": "True"},
 		},
 	}
 	cmGVK, err := apiutil.GVKForObject(cm1, Scheme)
@@ -405,7 +406,8 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	cm2 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cm-2",
+			Name:      "cm-2",
+			Namespace: "default",
 		},
 	}
 	cm2.SetGroupVersionKind(cmGVK)
@@ -415,7 +417,8 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	cm3 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cm-3",
+			Name:      "cm-3",
+			Namespace: "default",
 		},
 	}
 	cm3.SetGroupVersionKind(cmGVK)
@@ -563,8 +566,9 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 ) {
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "cm-4",
-			Labels: map[string]string{"test.package-operator.run/test": "True"},
+			Name:      "cm-4",
+			Namespace: "default",
+			Labels:    map[string]string{"test.package-operator.run/test": "True"},
 		},
 		Data: map[string]string{
 			"banana": "bread",
@@ -576,11 +580,11 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 
 	cm5 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cm-5",
+			Name:      "cm-5",
+			Namespace: "default",
 		},
 	}
 	cm5.SetGroupVersionKind(cmGVK)
-
 	objectSet, err := defaultObjectSet(cm4, cm5, namespace, class)
 	require.NoError(t, err)
 
