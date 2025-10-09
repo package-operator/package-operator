@@ -79,7 +79,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -92,7 +92,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test",
 							},
-							Status: corev1alpha1.ClusterObjectSetStatus{
+							Spec: corev1alpha1.ClusterObjectSetSpec{
 								Revision: 1,
 							},
 						},
@@ -119,7 +119,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -133,7 +133,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 								Name:      "test",
 								Namespace: "test",
 							},
-							Status: corev1alpha1.ObjectSetStatus{
+							Spec: corev1alpha1.ObjectSetSpec{
 								Revision: 1,
 							},
 						},
@@ -160,7 +160,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -173,7 +173,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test",
 							},
-							Status: corev1alpha1.ClusterObjectSetStatus{
+							Spec: corev1alpha1.ClusterObjectSetSpec{
 								Revision: 1,
 							},
 						},
@@ -203,7 +203,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "test",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -217,7 +217,7 @@ func TestObjectSetGetter_GetObjectSets(t *testing.T) {
 								Name:      "test",
 								Namespace: "test",
 							},
-							Status: corev1alpha1.ObjectSetStatus{
+							Spec: corev1alpha1.ObjectSetSpec{
 								Revision: 1,
 							},
 						},
