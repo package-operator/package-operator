@@ -64,8 +64,9 @@ func TestToPushedOCI(t *testing.T) { //nolint:paralleltest
 		Files: seedingFileMap,
 	}
 
-	err := ToPushedOCI(ctx, []string{ref}, rawPkg, reg.CraneOpt)
+	digest, err := ToPushedOCI(ctx, []string{ref}, rawPkg, reg.CraneOpt)
 	require.NoError(t, err)
+	require.Equal(t, "sha256:8012c104de49c1b7d05db3ed1033f41a9cff0d0f52f74dbcf9622ecf20a44c61", digest)
 
 	_, err = crane.Pull(ref, reg.CraneOpt)
 	require.NoError(t, err)

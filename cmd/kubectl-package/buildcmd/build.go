@@ -53,14 +53,22 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 				return fmt.Errorf("invalid tag specified as parameter %s: %w", ref, err)
 			}
 		}
-
-		if err := builderFactory.Builder().BuildFromSource(
-			cmd.Context(), src,
+		factoryOpts := []internalcmd.BuildFromSourceOption{
 			internalcmd.WithInsecure(opts.Insecure),
 			internalcmd.WithOutputPath(opts.OutputPath),
 			internalcmd.WithPush(opts.Push),
 			internalcmd.WithTags(opts.Tags),
-		); err != nil {
+		}
+
+		switch opts.OutputFormat {
+		case "":
+		case internalcmd.OutputFormatHuman, internalcmd.OutputFormatDigest:
+			factoryOpts = append(factoryOpts, internalcmd.WithOutputFormat(opts.OutputFormat))
+		default:
+			return fmt.Errorf("unknown output format: %s", opts.OutputFormat)
+		}
+
+		if err := builderFactory.Builder().BuildFromSource(cmd.Context(), src, factoryOpts...); err != nil {
 			return fmt.Errorf("building from source: %w", err)
 		}
 
@@ -74,10 +82,11 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 }
 
 type options struct {
-	Insecure   bool
-	OutputPath string
-	Push       bool
-	Tags       []string
+	Insecure     bool
+	OutputPath   string
+	OutputFormat string
+	Push         bool
+	Tags         []string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
@@ -110,6 +119,12 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 			"Will be packed as a tar.",
 			"Containing directories must exist.",
 			"Defaults to none.",
+		}, " "),
+	)
+	flags.StringVar(&o.OutputFormat, "output-format", internalcmd.OutputFormatHuman,
+		strings.Join([]string{
+			"Either `human` for regular stdout output or `digest` for only printing ",
+			"the image digest of the pushed package image",
 		}, " "),
 	)
 }

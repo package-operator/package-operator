@@ -78,10 +78,14 @@ func ToOCIFile(dst string, tags []string, pkg *packagetypes.RawPackage) error {
 }
 
 // Exports the given package by pushing it to an OCI registry.
-func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.RawPackage, opts ...crane.Option) error {
+//
+// Returns the digest of the pushed package image.
+func ToPushedOCI(
+	ctx context.Context, references []string, pkg *packagetypes.RawPackage, opts ...crane.Option,
+) (string, error) {
 	image, err := ToOCI(pkg)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	opts = append(opts, crane.WithContext(ctx))
@@ -90,11 +94,16 @@ func ToPushedOCI(ctx context.Context, references []string, pkg *packagetypes.Raw
 		verboseLogger.Info("pushing image", "reference", ref)
 		err := crane.Push(image, ref, opts...)
 		if err != nil {
-			return fmt.Errorf("push: %w", err)
+			return "", fmt.Errorf("push: %w", err)
 		}
 	}
 
-	return nil
+	digest, err := image.Digest()
+	if err != nil {
+		return "", err
+	}
+
+	return digest.String(), nil
 }
 
 func addOCIPathPrefix(path string) string {

@@ -59,18 +59,29 @@ type BuildOption interface {
 }
 
 func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...BuildFromSourceOption) error {
-	b.cfg.Log.Info("loading source from disk", "path", srcPath)
-
 	var cfg BuildFromSourceConfig
 
+	cfg.Default()
 	cfg.Option(opts...)
+
+	var log logr.Logger
+	switch cfg.OutputFormat {
+	case OutputFormatHuman:
+		log = b.cfg.Log
+	case OutputFormatDigest:
+		log = logr.Discard()
+	default:
+		panic("unknown output format: " + cfg.OutputFormat)
+	}
+
+	log.Info("loading source from disk", "path", srcPath)
 
 	rawPkg, err := getPackageFromPath(ctx, srcPath)
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", srcPath, err)
 	}
 
-	b.cfg.Log.Info("creating image")
+	log.Info("creating image")
 
 	pkg, err := packages.DefaultStructuralLoader.Load(ctx, rawPkg)
 	if err != nil {
@@ -96,7 +107,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	}
 
 	if cfg.OutputPath != "" {
-		b.cfg.Log.Info("writing tagged image to disk", "path", cfg.OutputPath)
+		log.Info("writing tagged image to disk", "path", cfg.OutputPath)
 
 		if err := packages.ToOCIFile(cfg.OutputPath, cfg.Tags, rawPkg); err != nil {
 			return fmt.Errorf("exporting package to file: %w", err)
@@ -104,8 +115,13 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	}
 
 	if cfg.Push {
-		if err := packages.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...); err != nil {
+		digest, err := packages.ToPushedOCI(ctx, cfg.Tags, rawPkg, craneOpts...)
+		if err != nil {
 			return fmt.Errorf("exporting package to image: %w", err)
+		}
+
+		if cfg.OutputFormat == OutputFormatDigest {
+			fmt.Println(digest) //nolint:forbidigo
 		}
 	}
 
@@ -113,15 +129,22 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 }
 
 type BuildFromSourceConfig struct {
-	Insecure   bool
-	OutputPath string
-	Tags       []string
-	Push       bool
+	Insecure     bool
+	OutputPath   string
+	OutputFormat string
+	Tags         []string
+	Push         bool
 }
 
 func (c *BuildFromSourceConfig) Option(opts ...BuildFromSourceOption) {
 	for _, opt := range opts {
 		opt.ConfigureBuildFromSource(c)
+	}
+}
+
+func (c *BuildFromSourceConfig) Default() {
+	if c.OutputFormat == "" {
+		c.OutputFormat = OutputFormatHuman
 	}
 }
 
