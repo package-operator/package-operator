@@ -223,5 +223,5 @@ type ControlledObjectReference struct {
 	// Object Namespace.
 	Namespace string `json:"namespace,omitempty"`
 	// Object Version.
-	Version string `json:"version,omitempty"`
+	Version string `json:"version"`
 }

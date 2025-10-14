@@ -499,7 +499,8 @@ func (r *templateReconciler) aggregateLocalObjects(
 	}
 
 	// first reconcile, unknown output gvk
-	if outputObjectRef.Group == "" && outputObjectRef.Kind == "" && outputObjectRef.Name == "" {
+	if outputObjectRef.Group == "" || outputObjectRef.Kind == "" ||
+		outputObjectRef.Name == "" || outputObjectRef.Version == "" {
 		return objects, nil
 	}
 
