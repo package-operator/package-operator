@@ -858,7 +858,7 @@ ControlledObjectReference an object controlled by this object.
 | `group` <b>required</b><br>string | Object Group. |
 | `name` <b>required</b><br>string | Object Name. |
 | `namespace` <br>string | Object Namespace. |
-| `version` <br>string | Object Version. |
+| `version` <b>required</b><br>string | Object Version. |
 
 
 Used in:

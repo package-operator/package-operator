@@ -460,6 +460,7 @@ spec:
                   - group
                   - kind
                   - name
+                  - version
                   type: object
                 type: array
               revision:

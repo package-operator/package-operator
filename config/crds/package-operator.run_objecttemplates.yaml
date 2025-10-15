@@ -183,6 +183,7 @@ spec:
                 - group
                 - kind
                 - name
+                - version
                 type: object
             type: object
         type: object

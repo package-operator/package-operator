@@ -423,6 +423,7 @@ spec:
                   - group
                   - kind
                   - name
+                  - version
                   type: object
                 type: array
               remotePhases:
