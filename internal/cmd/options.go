@@ -1,7 +1,14 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/go-logr/logr"
+)
+
+const (
+	OutputFormatHuman  = "human"
+	OutputFormatDigest = "digest"
 )
 
 type WithClock struct{ Clock Clock }
@@ -100,6 +107,17 @@ type WithOutputPath string
 
 func (w WithOutputPath) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
 	c.OutputPath = string(w)
+}
+
+type WithOutputFormat string
+
+func (w WithOutputFormat) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
+	switch string(w) {
+	case OutputFormatDigest, OutputFormatHuman:
+		c.OutputFormat = string(w)
+	default:
+		panic(fmt.Sprintf("invalid output format: %s", w))
+	}
 }
 
 type WithPackageLoader struct{ Loader PackageLoader }

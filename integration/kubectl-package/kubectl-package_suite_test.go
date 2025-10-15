@@ -130,8 +130,12 @@ func loadPackageImages(ctx context.Context, infos ...packageImageBuildInfo) erro
 
 		tags := []string{info.Ref}
 
-		if err := packages.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure); err != nil {
+		digest, err := packages.ToPushedOCI(ctx, tags, rawPkg, crane.Insecure)
+		if err != nil {
 			return fmt.Errorf("pushing package image: %w", err)
+		}
+		if !strings.HasPrefix(digest, "sha256:") {
+			return fmt.Errorf("invalid digest: %s", digest)
 		}
 	}
 
