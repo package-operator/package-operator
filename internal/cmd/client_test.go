@@ -480,7 +480,7 @@ func TestPackage(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -526,7 +526,7 @@ func TestPackage(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "package",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -617,7 +617,7 @@ func TestObjectDeployment(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "cluster-package",
 						},
 					},
-					Status: corev1alpha1.ClusterObjectSetStatus{
+					Spec: corev1alpha1.ClusterObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -666,7 +666,7 @@ func TestObjectDeployment(t *testing.T) {
 							manifestsv1alpha1.PackageInstanceLabel: "package",
 						},
 					},
-					Status: corev1alpha1.ObjectSetStatus{
+					Spec: corev1alpha1.ObjectSetSpec{
 						Revision: 1,
 					},
 				},
@@ -817,17 +817,17 @@ func TestObjectSetList_Sort(t *testing.T) {
 
 	list := ObjectSetList{
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 2,
 			},
 		}),
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 3,
 			},
 		}),
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 1,
 			},
 		}),
@@ -848,17 +848,17 @@ func TestObjectSetList_FindRevision(t *testing.T) {
 
 	list := ObjectSetList{
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 2,
 			},
 		}),
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 3,
 			},
 		}),
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 1,
 			},
 		}),
@@ -957,7 +957,7 @@ func TestObjectSetList_RenderTable(t *testing.T) {
 
 	list := ObjectSetList{
 		NewObjectSet(&corev1alpha1.ClusterObjectSet{
-			Status: corev1alpha1.ClusterObjectSetStatus{
+			Spec: corev1alpha1.ClusterObjectSetSpec{
 				Revision: 1,
 			},
 		}),
