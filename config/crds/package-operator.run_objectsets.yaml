@@ -308,10 +308,7 @@ spec:
                   type: object
                 type: array
               revision:
-                description: |-
-                  Computed revision number, monotonically increasing.
-                  Currently, the rule allows adding the revision field to existing ObjectSets
-                  to phase in the new revision numbering approach.
+                description: Computed revision number, monotonically increasing.
                 format: int64
                 type: integer
               successDelaySeconds:
