@@ -1,0 +1,281 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: hostedclusterpackages.package-operator.run
+spec:
+  group: package-operator.run
+  names:
+    kind: HostedClusterPackage
+    listKind: HostedClusterPackageList
+    plural: hostedclusterpackages
+    shortNames:
+    - hcpkg
+    singular: hostedclusterpackage
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: HostedClusterPackage defines package to be rolled out on every
+          HyperShift HostedCluster.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostedClusterPackageSpec is the description of a HostedClusterPackage.
+            properties:
+              hostedClusterSelector:
+                description: |-
+                  A label selector is a label query over a set of resources. The result of matchLabels and
+                  matchExpressions are ANDed. An empty label selector matches all objects. A null
+                  label selector matches no objects.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              strategy:
+                description: HostedClusterPackageStrategy describes the rollout strategy
+                  for a HostedClusterPackage.
+                properties:
+                  instant:
+                    description: Updates all matching Packages instantly and all at
+                      the same time.
+                    type: object
+                  rollingUpgrade:
+                    description: Performs a rolling upgrade according to maxUnavailable
+                      and partition settings.
+                    properties:
+                      maxUnavailable:
+                        default: 1
+                        description: |-
+                          MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
+                          Cannot be below 1, because we cannot surge to create more instances.
+                        minimum: 1
+                        type: integer
+                      partition:
+                        description: |-
+                          Partition HostedClusters by label value.
+                          All packages in the same partition will have to be upgraded
+                          before progressing to the next partition.
+                        properties:
+                          labelKey:
+                            description: LabelKey defines a labelKey to group objects
+                              on.
+                            minLength: 1
+                            type: string
+                          order:
+                            description: |-
+                              Controls how partitions are ordered.
+                              By default items will be sorted AlphaNumeric ascending.
+                            properties:
+                              static:
+                                description: |-
+                                  Allows to define a static partition order.
+                                  The special * key matches anything not explicitly part of the list.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        required:
+                        - labelKey
+                        type: object
+                    required:
+                    - maxUnavailable
+                    type: object
+                type: object
+              template:
+                description: PackageTemplateSpec describes the data a package should
+                  have when created from a template.
+                properties:
+                  metadata:
+                    description: |-
+                      Standard object's metadata.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      finalizers:
+                        items:
+                          type: string
+                        type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  spec:
+                    description: Specification of the desired behavior of the package.
+                    properties:
+                      component:
+                        description: Desired component to deploy from multi-component
+                          packages.
+                        type: string
+                      config:
+                        description: Package configuration parameters.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      image:
+                        description: |-
+                          the image containing the contents of the package
+                          this image will be unpacked by the package-loader to render
+                          the ObjectDeployment for propagating the installation of the package.
+                        type: string
+                      paused:
+                        description: If Paused is true, the package and its children
+                          will not be reconciled.
+                        type: boolean
+                    required:
+                    - image
+                    type: object
+                type: object
+            required:
+            - hostedClusterSelector
+            - strategy
+            - template
+            type: object
+          status:
+            default:
+              phase: Pending
+            description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
+            properties:
+              available:
+                format: int32
+                type: integer
+              found:
+                format: int32
+                type: integer
+              partitions:
+                description: Count of packages found by partition.
+                items:
+                  description: HostedClusterPackagePartitionStatus describes the status
+                    of a partition.
+                  properties:
+                    available:
+                      format: int32
+                      type: integer
+                    found:
+                      format: int32
+                      type: integer
+                    name:
+                      description: Name of the partition.
+                      type: string
+                    total:
+                      format: int32
+                      type: integer
+                    updated:
+                      format: int32
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+              phase:
+                description: |-
+                  This field is not part of any API contract
+                  it will go away as soon as kubectl can print conditions!
+                  When evaluating object state in code, use .Conditions instead.
+                type: string
+              processing:
+                description: Processing set of packages during upgrade.
+                items:
+                  description: HostedClusterPackageRefStatus holds a reference to
+                    upgrades in-flight.
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    uid:
+                      description: |-
+                        UID is a type that holds unique ID values, including UUIDs.  Because we
+                        don't ONLY use UUIDs, this is an alias to string.  Being a type captures
+                        intent and helps make sure that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - name
+                  - uid
+                  type: object
+                type: array
+              total:
+                format: int32
+                type: integer
+              updated:
+                format: int32
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
