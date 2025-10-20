@@ -9,14 +9,17 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=hcpkg
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
+// +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="Unpacked",type=string,JSONPath=`.status.conditions[?(@.type=="Unpacked")].status`
+// +kubebuilder:printcolumn:name="Invalid",type=string,JSONPath=`.status.conditions[?(@.type=="Invalid")].status`
+// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type HostedClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec HostedClusterPackageSpec `json:"spec,omitempty"`
-	// +kubebuilder:default={phase: Pending}
+	Spec   HostedClusterPackageSpec   `json:"spec,omitempty"`
 	Status HostedClusterPackageStatus `json:"status,omitempty"`
 }
 
@@ -79,27 +82,12 @@ type HostedClusterPackagePartitionOrderSpec struct {
 
 // HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 type HostedClusterPackageStatus struct {
-	// This field is not part of any API contract
-	// it will go away as soon as kubectl can print conditions!
-	// When evaluating object state in code, use .Conditions instead.
-	Phase                            HostedClusterPackageStatusPhase `json:"phase,omitempty"`
 	HostedClusterPackageCountsStatus `json:",inline"`
 	// Count of packages found by partition.
 	Partitions []HostedClusterPackagePartitionStatus `json:"partitions,omitempty"`
 	// Processing set of packages during upgrade.
 	Processing []HostedClusterPackageRefStatus `json:"processing,omitempty"`
 }
-
-// HostedClusterPackageStatusPhase is a human-readable status of the HostedClusterPackage.
-type HostedClusterPackageStatusPhase string
-
-// Well-known HostedClusterPackage Phases for printing a Status in kubectl,
-// see deprecation notice in HostedClusterPackageStatus for details.
-const (
-	HostedClusterPackagePhasePending     HostedClusterPackageStatusPhase = "Pending"
-	HostedClusterPackagePhaseProgressing HostedClusterPackageStatusPhase = "Progressing"
-	HostedClusterPackagePhaseCompleted   HostedClusterPackageStatusPhase = "Completed"
-)
 
 // HostedClusterPackagePartitionStatus describes the status of a partition.
 type HostedClusterPackagePartitionStatus struct {

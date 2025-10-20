@@ -405,7 +405,20 @@ spec:
       image: diam
       paused: true
 status:
-  phase: Pending
+  available: 42
+  found: 42
+  partitions:
+  - available: 42
+    found: 42
+    name: eirmod
+    total: 42
+    updated: 42
+  processing:
+  - name: tempor
+    namespace: lorem
+    uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
+  total: 42
+  updated: 42
 
 ```
 
@@ -460,20 +473,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: tempor
-        name: eirmod
+      - class: dolor
+        name: ipsum
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: ipsum
-            sourceType: lorem
+          - destinationType: amet
+            sourceType: sit
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - dolor
+        - consetetur
       successDelaySeconds: 42
 status:
   collisionCount: 42
@@ -483,13 +496,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: consetetur
-    kind: amet
-    name: sadipscing
-    namespace: elitr
-    version: sed
+  - group: sed
+    kind: elitr
+    name: diam
+    namespace: nonumy
+    version: eirmod
   revision: 42
-  templateHash: sit
+  templateHash: sadipscing
 
 ```
 
@@ -543,20 +556,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: nonumy
-    name: diam
+  - class: lorem
+    name: tempor
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: tempor
-        sourceType: eirmod
+      - destinationType: dolor
+        sourceType: ipsum
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - lorem
+    - sit
   previous:
   - name: previous-revision
   revision: 42
@@ -568,13 +581,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: sit
-    kind: dolor
-    name: amet
-    namespace: consetetur
-    version: sadipscing
+  - group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
+    version: diam
   remotePhases:
-  - name: ipsum
+  - name: amet
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
@@ -624,8 +637,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: sed
-      sourceType: elitr
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -640,11 +653,11 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: nonumy
-    kind: diam
-    name: eirmod
-    namespace: tempor
-    version: lorem
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
+    version: sit
 
 ```
 
@@ -674,8 +687,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: dolor
-    sourceType: ipsum
+  - destinationType: consetetur
+    sourceType: amet
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -708,15 +721,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: amet
+  - apiVersion: elitr
     items:
-    - destination: diam
-      key: sed
-    kind: consetetur
-    name: elitr
-    namespace: sadipscing
+    - destination: tempor
+      key: eirmod
+    kind: sed
+    name: nonumy
+    namespace: diam
     optional: true
-  template: sit
+  template: sadipscing
 status:
   conditions:
   - message: Latest Revision is Available.
@@ -724,11 +737,11 @@ status:
     status: "True"
     type: Available
   controllerOf:
-    group: eirmod
-    kind: nonumy
-    name: tempor
-    namespace: lorem
-    version: ipsum
+    group: ipsum
+    kind: lorem
+    name: dolor
+    namespace: sit
+    version: amet
 
 ```
 
@@ -754,9 +767,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: sit
+  component: sadipscing
   config: {}
-  image: dolor
+  image: consetetur
   paused: true
 status:
   conditions:
@@ -765,7 +778,7 @@ status:
     status: "True"
     type: Available
   revision: 42
-  unpackedHash: amet
+  unpackedHash: elitr
 
 ```
 
@@ -999,7 +1012,6 @@ HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 
 | Field | Description |
 | ----- | ----------- |
-| `phase` <br><a href="#hostedclusterpackagestatusphase">HostedClusterPackageStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
 | `partitions` <br><a href="#hostedclusterpackagepartitionstatus">[]HostedClusterPackagePartitionStatus</a> | Count of packages found by partition. |
 | `processing` <br><a href="#hostedclusterpackagerefstatus">[]HostedClusterPackageRefStatus</a> | Processing set of packages during upgrade. |
 | `total` <br>int32 |  |
