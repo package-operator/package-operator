@@ -17,8 +17,20 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Status
+    - jsonPath: .status.conditions[?(@.type=="Available")].status
+      name: Available
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Progressing")].status
+      name: Progressing
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Unpacked")].status
+      name: Unpacked
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Invalid")].status
+      name: Invalid
+      type: string
+    - jsonPath: .status.revision
+      name: Revision
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -251,8 +263,6 @@ spec:
             - template
             type: object
           status:
-            default:
-              phase: Pending
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
             properties:
               available:
@@ -286,12 +296,6 @@ spec:
                   - name
                   type: object
                 type: array
-              phase:
-                description: |-
-                  This field is not part of any API contract
-                  it will go away as soon as kubectl can print conditions!
-                  When evaluating object state in code, use .Conditions instead.
-                type: string
               processing:
                 description: Processing set of packages during upgrade.
                 items:
