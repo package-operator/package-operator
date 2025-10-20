@@ -22,9 +22,14 @@ type HostedClusterPackage struct {
 
 // HostedClusterPackageSpec is the description of a HostedClusterPackage.
 type HostedClusterPackageSpec struct {
-	Strategy              HostedClusterPackageStrategy `json:"strategy"`
-	HostedClusterSelector metav1.LabelSelector         `json:"hostedClusterSelector"`
-	Template              PackageTemplateSpec          `json:"template"`
+	Strategy HostedClusterPackageStrategy `json:"strategy"`
+	// HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to.
+	HostedClusterSelector metav1.LabelSelector `json:"hostedClusterSelector,omitempty"`
+	// Selector is a label query over Packages managed by this HostedClusterPackage.
+	Selector metav1.LabelSelector `json:"selector"`
+	// Template describes the Package that should be created when new
+	// HostedClusters matching the hostedClusterSelector are detected.
+	Template PackageTemplateSpec `json:"template"`
 }
 
 // HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage.

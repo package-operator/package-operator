@@ -387,6 +387,7 @@ metadata:
   name: example
 spec:
   hostedClusterSelector: {}
+  selector: {}
   strategy:
     instant: {}
     rollingUpgrade:
@@ -983,8 +984,9 @@ HostedClusterPackageSpec is the description of a HostedClusterPackage.
 | Field | Description |
 | ----- | ----------- |
 | `strategy` <b>required</b><br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
-| `hostedClusterSelector` <b>required</b><br>metav1.LabelSelector |  |
-| `template` <b>required</b><br><a href="#packagetemplatespec">PackageTemplateSpec</a> | PackageTemplateSpec describes the data a package should have when created from a template. |
+| `hostedClusterSelector` <br>metav1.LabelSelector | HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to. |
+| `selector` <b>required</b><br>metav1.LabelSelector | Selector is a label query over Packages managed by this HostedClusterPackage. |
+| `template` <b>required</b><br><a href="#packagetemplatespec">PackageTemplateSpec</a> | Template describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
 
 
 Used in:
