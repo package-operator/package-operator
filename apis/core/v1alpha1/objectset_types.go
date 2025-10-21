@@ -59,6 +59,9 @@ type ObjectSetSpec struct {
 	ObjectSetTemplateSpec `json:",inline"`
 
 	// Computed revision number, monotonically increasing.
+	// TODO: After soaking, update the validation rule to match the other ones.
+	// TODO: Currently, the rule allows adding the revision field to existing ObjectSets
+	// TODO: to phase in the new revision numbering approach.
 	Revision int64 `json:"revision,omitempty"`
 }
 
