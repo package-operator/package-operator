@@ -72,9 +72,16 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 			return fmt.Errorf("building from source: %w", err)
 		}
 
-		if _, err := fmt.Fprint(cmd.OutOrStdout(), buildSuccessMessage); err != nil {
-			panic(err)
+		switch opts.OutputFormat {
+		case "", internalcmd.OutputFormatHuman:
+			if _, err := fmt.Fprint(cmd.OutOrStdout(), buildSuccessMessage); err != nil {
+				panic(err)
+			}
+		case internalcmd.OutputFormatDigest:
+		default:
+			panic(opts.OutputFormat)
 		}
+
 		return nil
 	}
 
