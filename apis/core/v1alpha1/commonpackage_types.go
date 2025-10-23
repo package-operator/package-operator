@@ -70,11 +70,7 @@ type PackageSpec struct {
 
 // PackageTemplateSpec describes the data a package should have when created from a template.
 type PackageTemplateSpec struct {
-	// Standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Name string `json:"name"`
 	// Specification of the desired behavior of the package.
-	// +optional
-	Spec PackageSpec `json:"spec,omitempty"`
+	Spec PackageSpec `json:"spec"`
 }

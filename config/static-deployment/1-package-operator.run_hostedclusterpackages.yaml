@@ -23,14 +23,8 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Progressing")].status
       name: Progressing
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Unpacked")].status
-      name: Unpacked
-      type: string
-    - jsonPath: .status.conditions[?(@.type=="Invalid")].status
-      name: Invalid
-      type: string
-    - jsonPath: .status.revision
-      name: Revision
+    - jsonPath: .status.observedGeneration
+      name: Generation
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -210,28 +204,8 @@ spec:
                   Template describes the Package that should be created when new
                   HostedClusters matching the hostedClusterSelector are detected.
                 properties:
-                  metadata:
-                    description: |-
-                      Standard object's metadata.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      finalizers:
-                        items:
-                          type: string
-                        type: array
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                    type: object
+                  name:
+                    type: string
                   spec:
                     description: Specification of the desired behavior of the package.
                     properties:
@@ -256,6 +230,9 @@ spec:
                     required:
                     - image
                     type: object
+                required:
+                - name
+                - spec
                 type: object
             required:
             - selector
@@ -265,10 +242,71 @@ spec:
           status:
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
             properties:
-              available:
+              availablePackages:
                 format: int32
                 type: integer
-              found:
+              conditions:
+                description: Conditions is a list of status conditions ths object
+                  is in.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              observedGeneration:
+                format: int32
+                type: integer
+              packages:
                 format: int32
                 type: integer
               partitions:
@@ -277,19 +315,25 @@ spec:
                   description: HostedClusterPackagePartitionStatus describes the status
                     of a partition.
                   properties:
-                    available:
-                      format: int32
-                      type: integer
-                    found:
+                    availablePackages:
                       format: int32
                       type: integer
                     name:
                       description: Name of the partition.
                       type: string
-                    total:
+                    observedGeneration:
                       format: int32
                       type: integer
-                    updated:
+                    packages:
+                      format: int32
+                      type: integer
+                    readyPackages:
+                      format: int32
+                      type: integer
+                    unavailablePackages:
+                      format: int32
+                      type: integer
+                    updatedPackages:
                       format: int32
                       type: integer
                   required:
@@ -317,10 +361,13 @@ spec:
                   - uid
                   type: object
                 type: array
-              total:
+              readyPackages:
                 format: int32
                 type: integer
-              updated:
+              unavailablePackages:
+                format: int32
+                type: integer
+              updatedPackages:
                 format: int32
                 type: integer
             type: object

@@ -52,6 +52,9 @@ func NewComponents() (*dig.Container, error) {
 
 		// HostedCluster
 		ProvideHostedClusterController,
+
+		// HostedClusterPackage
+		ProvideHostedClusterPackageController,
 	}
 	for _, p := range providers {
 		if err := container.Provide(p); err != nil {
