@@ -128,14 +128,16 @@ type packageOperatorManager struct {
 	log logr.Logger
 	mgr ctrl.Manager
 
-	hostedClusterController components.HostedClusterController
-	environmentManager      *environment.Manager
-	allControllers          components.AllControllers
+	hostedClusterController        components.HostedClusterController
+	hostedClusterPackageController components.HostedClusterPackageController
+	environmentManager             *environment.Manager
+	allControllers                 components.AllControllers
 }
 
 func newPackageOperatorManager(
 	mgr ctrl.Manager, log logr.Logger,
 	hostedClusterController components.HostedClusterController,
+	hostedClusterPackageController components.HostedClusterPackageController,
 	envMgr *environment.Manager,
 	allControllers components.AllControllers,
 ) (*packageOperatorManager, error) {
@@ -150,9 +152,10 @@ func newPackageOperatorManager(
 		log: log.WithName("package-operator-manager"),
 		mgr: mgr,
 
-		hostedClusterController: hostedClusterController,
-		environmentManager:      envMgr,
-		allControllers:          allControllers,
+		hostedClusterController:        hostedClusterController,
+		hostedClusterPackageController: hostedClusterPackageController,
+		environmentManager:             envMgr,
+		allControllers:                 allControllers,
 	}
 
 	return pkoMgr, nil
@@ -203,6 +206,11 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 			SetupWithManager(pkoMgr.mgr); err != nil {
 			return fmt.Errorf(
 				"unable to create controller for HostedCluster: %w", err)
+		}
+		if err = pkoMgr.hostedClusterPackageController.
+			SetupWithManager(pkoMgr.mgr); err != nil {
+			return fmt.Errorf(
+				"unable to create controller for HostedClusterPackage: %w", err)
 		}
 
 	case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||

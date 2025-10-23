@@ -11,9 +11,7 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=hcpkg
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
-// +kubebuilder:printcolumn:name="Unpacked",type=string,JSONPath=`.status.conditions[?(@.type=="Unpacked")].status`
-// +kubebuilder:printcolumn:name="Invalid",type=string,JSONPath=`.status.conditions[?(@.type=="Invalid")].status`
-// +kubebuilder:printcolumn:name="Revision",type=string,JSONPath=`.status.revision`
+// +kubebuilder:printcolumn:name="Generation",type=string,JSONPath=`.status.observedGeneration`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type HostedClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -82,6 +80,9 @@ type HostedClusterPackagePartitionOrderSpec struct {
 
 // HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 type HostedClusterPackageStatus struct {
+	// Conditions is a list of status conditions ths object is in.
+	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
+	Conditions                       []metav1.Condition `json:"conditions,omitempty"`
 	HostedClusterPackageCountsStatus `json:",inline"`
 	// Count of packages found by partition.
 	Partitions []HostedClusterPackagePartitionStatus `json:"partitions,omitempty"`
@@ -99,13 +100,17 @@ type HostedClusterPackagePartitionStatus struct {
 // HostedClusterPackageCountsStatus counts the status of Packages.
 type HostedClusterPackageCountsStatus struct {
 	// +optional
-	Total int32 `json:"total,omitempty"`
+	ObservedGeneration int32 `json:"observedGeneration,omitempty"`
 	// +optional
-	Found int32 `json:"found,omitempty"`
+	AvailablePackages int32 `json:"availablePackages,omitempty"`
 	// +optional
-	Available int32 `json:"available,omitempty"`
+	ReadyPackages int32 `json:"readyPackages,omitempty"`
 	// +optional
-	Updated int32 `json:"updated,omitempty"`
+	UnavailablePackages int32 `json:"unavailablePackages,omitempty"`
+	// +optional
+	UpdatedPackages int32 `json:"updatedPackages,omitempty"`
+	// +optional
+	Packages int32 `json:"packages,omitempty"`
 }
 
 // HostedClusterPackageRefStatus holds a reference to upgrades in-flight.

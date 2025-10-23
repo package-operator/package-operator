@@ -398,27 +398,36 @@ spec:
           static:
           - sed
   template:
-    metadata: {}
+    name: diam
     spec:
-      component: nonumy
+      component: eirmod
       config: {}
-      image: diam
+      image: nonumy
       paused: true
 status:
-  available: 42
-  found: 42
+  availablePackages: 42
+  conditions:
+  - message: Latest Revision is Available.
+    reason: Available
+    status: "True"
+    type: Available
+  observedGeneration: 42
+  packages: 42
   partitions:
-  - available: 42
-    found: 42
-    name: eirmod
-    total: 42
-    updated: 42
+  - availablePackages: 42
+    name: tempor
+    observedGeneration: 42
+    packages: 42
+    readyPackages: 42
+    unavailablePackages: 42
+    updatedPackages: 42
   processing:
-  - name: tempor
-    namespace: lorem
+  - name: lorem
+    namespace: ipsum
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
-  total: 42
-  updated: 42
+  readyPackages: 42
+  unavailablePackages: 42
+  updatedPackages: 42
 
 ```
 
@@ -473,20 +482,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: dolor
-        name: ipsum
+      - class: sit
+        name: dolor
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: amet
-            sourceType: sit
+          - destinationType: consetetur
+            sourceType: amet
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - consetetur
+        - sadipscing
       successDelaySeconds: 42
 status:
   collisionCount: 42
@@ -496,13 +505,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: sed
-    kind: elitr
-    name: diam
-    namespace: nonumy
-    version: eirmod
+  - group: diam
+    kind: sed
+    name: nonumy
+    namespace: eirmod
+    version: tempor
   revision: 42
-  templateHash: sadipscing
+  templateHash: elitr
 
 ```
 
@@ -556,20 +565,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: lorem
-    name: tempor
+  - class: ipsum
+    name: lorem
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: dolor
-        sourceType: ipsum
+      - destinationType: sit
+        sourceType: dolor
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - sit
+    - amet
   previous:
   - name: previous-revision
   revision: 42
@@ -581,13 +590,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: sadipscing
-    kind: consetetur
-    name: elitr
-    namespace: sed
-    version: diam
+  - group: elitr
+    kind: sadipscing
+    name: sed
+    namespace: diam
+    version: nonumy
   remotePhases:
-  - name: amet
+  - name: consetetur
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
@@ -637,8 +646,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: eirmod
-      sourceType: nonumy
+    - destinationType: tempor
+      sourceType: eirmod
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -653,11 +662,11 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: lorem
-    kind: tempor
-    name: ipsum
-    namespace: dolor
-    version: sit
+  - group: ipsum
+    kind: lorem
+    name: dolor
+    namespace: sit
+    version: amet
 
 ```
 
@@ -687,8 +696,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: consetetur
-    sourceType: amet
+  - destinationType: sadipscing
+    sourceType: consetetur
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -721,15 +730,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: elitr
+  - apiVersion: sed
     items:
-    - destination: tempor
-      key: eirmod
-    kind: sed
-    name: nonumy
-    namespace: diam
+    - destination: lorem
+      key: tempor
+    kind: diam
+    name: eirmod
+    namespace: nonumy
     optional: true
-  template: sadipscing
+  template: elitr
 status:
   conditions:
   - message: Latest Revision is Available.
@@ -737,11 +746,11 @@ status:
     status: "True"
     type: Available
   controllerOf:
-    group: ipsum
-    kind: lorem
-    name: dolor
-    namespace: sit
-    version: amet
+    group: dolor
+    kind: ipsum
+    name: sit
+    namespace: amet
+    version: consetetur
 
 ```
 
@@ -767,9 +776,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: sadipscing
+  component: elitr
   config: {}
-  image: consetetur
+  image: sadipscing
   paused: true
 status:
   conditions:
@@ -778,7 +787,7 @@ status:
     status: "True"
     type: Available
   revision: 42
-  unpackedHash: elitr
+  unpackedHash: sed
 
 ```
 
@@ -965,10 +974,12 @@ HostedClusterPackagePartitionStatus describes the status of a partition.
 | Field | Description |
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of the partition. |
-| `total` <br>int32 |  |
-| `found` <br>int32 |  |
-| `available` <br>int32 |  |
-| `updated` <br>int32 |  |
+| `observedGeneration` <br>int32 |  |
+| `availablePackages` <br>int32 |  |
+| `readyPackages` <br>int32 |  |
+| `unavailablePackages` <br>int32 |  |
+| `updatedPackages` <br>int32 |  |
+| `packages` <br>int32 |  |
 
 
 Used in:
@@ -1012,12 +1023,15 @@ HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 
 | Field | Description |
 | ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
 | `partitions` <br><a href="#hostedclusterpackagepartitionstatus">[]HostedClusterPackagePartitionStatus</a> | Count of packages found by partition. |
 | `processing` <br><a href="#hostedclusterpackagerefstatus">[]HostedClusterPackageRefStatus</a> | Processing set of packages during upgrade. |
-| `total` <br>int32 |  |
-| `found` <br>int32 |  |
-| `available` <br>int32 |  |
-| `updated` <br>int32 |  |
+| `observedGeneration` <br>int32 |  |
+| `availablePackages` <br>int32 |  |
+| `readyPackages` <br>int32 |  |
+| `unavailablePackages` <br>int32 |  |
+| `updatedPackages` <br>int32 |  |
+| `packages` <br>int32 |  |
 
 
 Used in:
@@ -1355,8 +1369,8 @@ PackageTemplateSpec describes the data a package should have when created from a
 
 | Field | Description |
 | ----- | ----------- |
-| `metadata` <br>metav1.ObjectMeta | Standard object's metadata.<br>More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata |
-| `spec` <br><a href="#packagespec">PackageSpec</a> | Specification of the desired behavior of the package. |
+| `name` <b>required</b><br>string |  |
+| `spec` <b>required</b><br><a href="#packagespec">PackageSpec</a> | Specification of the desired behavior of the package. |
 
 
 Used in:
