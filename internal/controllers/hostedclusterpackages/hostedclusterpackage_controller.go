@@ -2,8 +2,11 @@ package hostedclusterpackages
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
@@ -66,7 +71,76 @@ func (c *HostedClusterPackageController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	hostedClusters := &v1beta1.HostedClusterList{}
+	if err := c.client.List(ctx, hostedClusters, client.InNamespace("default")); err != nil {
+		return ctrl.Result{}, fmt.Errorf("listing clusters: %w", err)
+	}
+
+	for _, hc := range hostedClusters.Items {
+		if err := c.reconcileHostedCluster(ctx, hostedClusterPackage, hc); err != nil {
+			return ctrl.Result{}, fmt.Errorf("reconciling hosted cluster '%s': %w", hc.Name, err)
+		}
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (c *HostedClusterPackageController) reconcileHostedCluster(
+	ctx context.Context,
+	clusterPackage *corev1alpha1.HostedClusterPackage,
+	hc v1beta1.HostedCluster,
+) error {
+	log := logr.FromContextOrDiscard(ctx)
+
+	if !meta.IsStatusConditionTrue(hc.Status.Conditions, v1beta1.HostedClusterAvailable) {
+		log.Info(fmt.Sprintf("waiting for HostedCluster '%s' to become ready", hc.Name))
+		return nil
+	}
+
+	pkg, err := c.constructClusterPackage(clusterPackage, hc)
+	if err != nil {
+		return fmt.Errorf("constructing Package: %w", err)
+	}
+
+	existingPkg := &corev1alpha1.Package{}
+	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg)
+	if err != nil && errors.IsNotFound(err) {
+		if err := c.client.Create(ctx, pkg); err != nil {
+			return fmt.Errorf("creating Package: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("getting Package: %w", err)
+	}
+
+	// Update package if spec is different.
+	if !reflect.DeepEqual(existingPkg.Spec, pkg.Spec) {
+		existingPkg.Spec = pkg.Spec
+		if err := c.client.Update(ctx, existingPkg); err != nil {
+			return fmt.Errorf("updating outdated Package: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *HostedClusterPackageController) constructClusterPackage(
+	clusterPackage *corev1alpha1.HostedClusterPackage,
+	hc v1beta1.HostedCluster,
+) (*corev1alpha1.Package, error) {
+	pkg := &corev1alpha1.Package{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterPackage.Name,
+			Namespace: v1beta1.HostedClusterNamespace(hc),
+		},
+		Spec: clusterPackage.Spec.PackageSpec,
+	}
+
+	if err := c.ownerStrategy.SetControllerReference(clusterPackage, pkg); err != nil {
+		return nil, fmt.Errorf("setting controller reference: %w", err)
+	}
+	return pkg, nil
 }
 
 func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) error {
@@ -83,6 +157,10 @@ func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) erro
 					),
 				),
 			),
+		).
+		Watches(
+			&v1beta1.HostedCluster{},
+			&handler.EnqueueRequestForObject{},
 		).
 		Complete(c)
 }

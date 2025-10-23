@@ -102,53 +102,32 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
-              selector:
-                description: Selector is a label query over Packages managed by this
-                  HostedClusterPackage.
+              spec:
+                description: |-
+                  PackageSpec describes the Package that should be created when new
+                  HostedClusters matching the hostedClusterSelector are detected.
                 properties:
-                  matchExpressions:
-                    description: matchExpressions is a list of label selector requirements.
-                      The requirements are ANDed.
-                    items:
-                      description: |-
-                        A label selector requirement is a selector that contains values, a key, and an operator that
-                        relates the key and values.
-                      properties:
-                        key:
-                          description: key is the label key that the selector applies
-                            to.
-                          type: string
-                        operator:
-                          description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
-                          type: string
-                        values:
-                          description: |-
-                            values is an array of string values. If the operator is In or NotIn,
-                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                            the values array must be empty. This array is replaced during a strategic
-                            merge patch.
-                          items:
-                            type: string
-                          type: array
-                          x-kubernetes-list-type: atomic
-                      required:
-                      - key
-                      - operator
-                      type: object
-                    type: array
-                    x-kubernetes-list-type: atomic
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                      map is equivalent to an element of matchExpressions, whose key field is "key", the
-                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                  component:
+                    description: Desired component to deploy from multi-component
+                      packages.
+                    type: string
+                  config:
+                    description: Package configuration parameters.
                     type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  image:
+                    description: |-
+                      the image containing the contents of the package
+                      this image will be unpacked by the package-loader to render
+                      the ObjectDeployment for propagating the installation of the package.
+                    type: string
+                  paused:
+                    description: If Paused is true, the package and its children will
+                      not be reconciled.
+                    type: boolean
+                required:
+                - image
                 type: object
-                x-kubernetes-map-type: atomic
               strategy:
                 description: HostedClusterPackageStrategy describes the rollout strategy
                   for a HostedClusterPackage.
@@ -199,45 +178,9 @@ spec:
                     - maxUnavailable
                     type: object
                 type: object
-              template:
-                description: |-
-                  Template describes the Package that should be created when new
-                  HostedClusters matching the hostedClusterSelector are detected.
-                properties:
-                  name:
-                    type: string
-                  spec:
-                    description: Specification of the desired behavior of the package.
-                    properties:
-                      component:
-                        description: Desired component to deploy from multi-component
-                          packages.
-                        type: string
-                      config:
-                        description: Package configuration parameters.
-                        type: object
-                        x-kubernetes-preserve-unknown-fields: true
-                      image:
-                        description: |-
-                          the image containing the contents of the package
-                          this image will be unpacked by the package-loader to render
-                          the ObjectDeployment for propagating the installation of the package.
-                        type: string
-                      paused:
-                        description: If Paused is true, the package and its children
-                          will not be reconciled.
-                        type: boolean
-                    required:
-                    - image
-                    type: object
-                required:
-                - name
-                - spec
-                type: object
             required:
-            - selector
+            - spec
             - strategy
-            - template
             type: object
           status:
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
