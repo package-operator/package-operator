@@ -157,6 +157,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		// Assert that the ObjectSet reports the right revision number
 		require.Equal(t,
 			concernedDeployment.Generation,
+			// disabled staticcheck, because .status.revision is deprecated, but still tested
 			currentObjectSet.Status.Revision) //nolint:staticcheck
 		require.Equal(t,
 			concernedDeployment.Generation,
@@ -428,6 +429,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		// Assert that the ObjectSet reports the right revision number
 		require.Equal(t,
 			concernedDeployment.Generation,
+			// disabled staticcheck, because .status.revision is deprecated, but still tested
 			currentObjectSet.Status.Revision) //nolint:staticcheck
 		require.Equal(t,
 			concernedDeployment.Generation,
