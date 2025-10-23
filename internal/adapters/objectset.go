@@ -128,10 +128,12 @@ func (a *ObjectSetAdapter) GetStatusConditions() *[]metav1.Condition {
 }
 
 func (a *ObjectSetAdapter) GetStatusRevision() int64 {
+	// disabled staticcheck, because .status.revision is deprecated, but still tested
 	return a.Status.Revision //nolint:staticcheck
 }
 
 func (a *ObjectSetAdapter) SetStatusRevision(revision int64) {
+	// disabled staticcheck, because .status.revision is deprecated, but still tested
 	a.Status.Revision = revision //nolint:staticcheck
 }
 

@@ -50,6 +50,7 @@ func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, res.IsZero(), "unexpected requeue")
-	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
+	// disabled staticcheck, because .status.revision is deprecated, but still tested
+	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision) //nolint:staticcheck
 	testClient.AssertExpectations(t)
 }
