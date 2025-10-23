@@ -67,10 +67,3 @@ type PackageSpec struct {
 	// If Paused is true, the package and its children will not be reconciled.
 	Paused bool `json:"paused,omitempty"`
 }
-
-// PackageTemplateSpec describes the data a package should have when created from a template.
-type PackageTemplateSpec struct {
-	Name string `json:"name"`
-	// Specification of the desired behavior of the package.
-	Spec PackageSpec `json:"spec"`
-}

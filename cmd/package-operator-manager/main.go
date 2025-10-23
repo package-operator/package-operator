@@ -18,6 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"package-operator.run/internal/controllers/hostedclusterpackages"
+
 	"package-operator.run/cmd/package-operator-manager/bootstrap"
 	"package-operator.run/cmd/package-operator-manager/components"
 	hypershiftv1beta1 "package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
@@ -129,7 +131,7 @@ type packageOperatorManager struct {
 	mgr ctrl.Manager
 
 	hostedClusterController        components.HostedClusterController
-	hostedClusterPackageController components.HostedClusterPackageController
+	hostedClusterPackageController hostedclusterpackages.HostedClusterPackageController
 	environmentManager             *environment.Manager
 	allControllers                 components.AllControllers
 }
@@ -137,7 +139,7 @@ type packageOperatorManager struct {
 func newPackageOperatorManager(
 	mgr ctrl.Manager, log logr.Logger,
 	hostedClusterController components.HostedClusterController,
-	hostedClusterPackageController components.HostedClusterPackageController,
+	hostedClusterPackageController hostedclusterpackages.HostedClusterPackageController,
 	envMgr *environment.Manager,
 	allControllers components.AllControllers,
 ) (*packageOperatorManager, error) {
