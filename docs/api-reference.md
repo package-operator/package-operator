@@ -387,7 +387,11 @@ metadata:
   name: example
 spec:
   hostedClusterSelector: {}
-  selector: {}
+  spec:
+    component: nonumy
+    config: {}
+    image: diam
+    paused: true
   strategy:
     instant: {}
     rollingUpgrade:
@@ -397,13 +401,6 @@ spec:
         order:
           static:
           - sed
-  template:
-    name: diam
-    spec:
-      component: eirmod
-      config: {}
-      image: nonumy
-      paused: true
 status:
   availablePackages: 42
   conditions:
@@ -415,15 +412,15 @@ status:
   packages: 42
   partitions:
   - availablePackages: 42
-    name: tempor
+    name: eirmod
     observedGeneration: 42
     packages: 42
     readyPackages: 42
     unavailablePackages: 42
     updatedPackages: 42
   processing:
-  - name: lorem
-    namespace: ipsum
+  - name: tempor
+    namespace: lorem
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   readyPackages: 42
   unavailablePackages: 42
@@ -482,20 +479,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: example-operator
       phases:
-      - class: sit
-        name: dolor
+      - class: dolor
+        name: ipsum
         objects:
         - collisionProtection: Prevent
           conditionMappings:
-          - destinationType: consetetur
-            sourceType: amet
+          - destinationType: amet
+            sourceType: sit
           object:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
               name: example-deployment
         slices:
-        - sadipscing
+        - consetetur
       successDelaySeconds: 42
 status:
   collisionCount: 42
@@ -505,13 +502,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: diam
-    kind: sed
-    name: nonumy
-    namespace: eirmod
-    version: tempor
+  - group: sed
+    kind: elitr
+    name: diam
+    namespace: nonumy
+    version: eirmod
   revision: 42
-  templateHash: elitr
+  templateHash: sadipscing
 
 ```
 
@@ -565,20 +562,20 @@ spec:
           app.kubernetes.io/name: example-operator
   lifecycleState: Active
   phases:
-  - class: ipsum
-    name: lorem
+  - class: lorem
+    name: tempor
     objects:
     - collisionProtection: Prevent
       conditionMappings:
-      - destinationType: sit
-        sourceType: dolor
+      - destinationType: dolor
+        sourceType: ipsum
       object:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: example-deployment
     slices:
-    - amet
+    - sit
   previous:
   - name: previous-revision
   revision: 42
@@ -590,13 +587,13 @@ status:
     status: "True"
     type: Available
   controllerOf:
-  - group: elitr
-    kind: sadipscing
-    name: sed
-    namespace: diam
-    version: nonumy
+  - group: sadipscing
+    kind: consetetur
+    name: elitr
+    namespace: sed
+    version: diam
   remotePhases:
-  - name: consetetur
+  - name: amet
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
   revision: 42
 
@@ -646,8 +643,8 @@ spec:
   objects:
   - collisionProtection: Prevent
     conditionMappings:
-    - destinationType: tempor
-      sourceType: eirmod
+    - destinationType: eirmod
+      sourceType: nonumy
     object:
       apiVersion: apps/v1
       kind: Deployment
@@ -662,11 +659,11 @@ status:
   - status: "True"
     type: Available
   controllerOf:
-  - group: ipsum
-    kind: lorem
-    name: dolor
-    namespace: sit
-    version: amet
+  - group: lorem
+    kind: tempor
+    name: ipsum
+    namespace: dolor
+    version: sit
 
 ```
 
@@ -696,8 +693,8 @@ metadata:
 objects:
 - collisionProtection: Prevent
   conditionMappings:
-  - destinationType: sadipscing
-    sourceType: consetetur
+  - destinationType: consetetur
+    sourceType: amet
   object:
     apiVersion: apps/v1
     kind: Deployment
@@ -730,15 +727,15 @@ metadata:
   namespace: default
 spec:
   sources:
-  - apiVersion: sed
+  - apiVersion: elitr
     items:
-    - destination: lorem
-      key: tempor
-    kind: diam
-    name: eirmod
-    namespace: nonumy
+    - destination: tempor
+      key: eirmod
+    kind: sed
+    name: nonumy
+    namespace: diam
     optional: true
-  template: elitr
+  template: sadipscing
 status:
   conditions:
   - message: Latest Revision is Available.
@@ -746,11 +743,11 @@ status:
     status: "True"
     type: Available
   controllerOf:
-    group: dolor
-    kind: ipsum
-    name: sit
-    namespace: amet
-    version: consetetur
+    group: ipsum
+    kind: lorem
+    name: dolor
+    namespace: sit
+    version: amet
 
 ```
 
@@ -776,9 +773,9 @@ metadata:
   name: example
   namespace: default
 spec:
-  component: elitr
+  component: sadipscing
   config: {}
-  image: sadipscing
+  image: consetetur
   paused: true
 status:
   conditions:
@@ -787,7 +784,7 @@ status:
     status: "True"
     type: Available
   revision: 42
-  unpackedHash: sed
+  unpackedHash: elitr
 
 ```
 
@@ -1009,8 +1006,7 @@ HostedClusterPackageSpec is the description of a HostedClusterPackage.
 | ----- | ----------- |
 | `strategy` <b>required</b><br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
 | `hostedClusterSelector` <br>metav1.LabelSelector | HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to. |
-| `selector` <b>required</b><br>metav1.LabelSelector | Selector is a label query over Packages managed by this HostedClusterPackage. |
-| `template` <b>required</b><br><a href="#packagetemplatespec">PackageTemplateSpec</a> | Template describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
+| `spec` <b>required</b><br><a href="#packagespec">PackageSpec</a> | PackageSpec describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
 
 
 Used in:
@@ -1342,7 +1338,7 @@ PackageSpec specifies a package.
 
 
 Used in:
-* [PackageTemplateSpec](#packagetemplatespec)
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
 
@@ -1361,20 +1357,6 @@ PackageStatus defines the observed state of a Package.
 Used in:
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
-
-
-### PackageTemplateSpec
-
-PackageTemplateSpec describes the data a package should have when created from a template.
-
-| Field | Description |
-| ----- | ----------- |
-| `name` <b>required</b><br>string |  |
-| `spec` <b>required</b><br><a href="#packagespec">PackageSpec</a> | Specification of the desired behavior of the package. |
-
-
-Used in:
-* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 
 
 ### PreviousRevisionReference
