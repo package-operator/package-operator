@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,6 +15,7 @@ import (
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -23,6 +25,12 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
+)
+
+const (
+	packageNameIndexKey      = "metadata.name"
+	minReadyDuration         = 10 * time.Second
+	cleanupPackagesFinalizer = "package-operator.run/cleanup-packages"
 )
 
 type HostedClusterPackageController struct {
@@ -62,13 +70,21 @@ func (c *HostedClusterPackageController) Reconcile(
 	ctx = logr.NewContext(ctx, log)
 	hostedClusterPackage := &corev1alpha1.HostedClusterPackage{}
 	if err := c.client.Get(ctx, req.NamespacedName, hostedClusterPackage); err != nil {
+		// TODO: detect type of object causing reconcile?
+
 		// Ignore not found errors on delete
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !hostedClusterPackage.DeletionTimestamp.IsZero() {
-		log.Info("HostedClusterPackage is deleting")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, c.handleDeletion(ctx, hostedClusterPackage)
+	}
+
+	if !controllerutil.ContainsFinalizer(hostedClusterPackage, cleanupPackagesFinalizer) {
+		controllerutil.AddFinalizer(hostedClusterPackage, cleanupPackagesFinalizer)
+		if err := c.client.Update(ctx, hostedClusterPackage); err != nil {
+			return ctrl.Result{}, fmt.Errorf("adding cleanup-packages finalizer: %w", err)
+		}
 	}
 
 	hostedClusters := &v1beta1.HostedClusterList{}
@@ -82,7 +98,116 @@ func (c *HostedClusterPackageController) Reconcile(
 		}
 	}
 
+	return c.updateStatus(ctx, hostedClusterPackage, hostedClusters)
+}
+
+func (c *HostedClusterPackageController) handleDeletion(
+	ctx context.Context,
+	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
+) error {
+	if !controllerutil.ContainsFinalizer(hostedClusterPackage, cleanupPackagesFinalizer) {
+		return nil
+	}
+
+	log := logr.FromContextOrDiscard(ctx)
+	log.Info("HostedClusterPackage is deleting")
+
+	packages := &corev1alpha1.PackageList{}
+	if err := c.client.List(ctx, packages, client.MatchingFields{
+		packageNameIndexKey: hostedClusterPackage.Name,
+	}); err != nil {
+		return fmt.Errorf("listing packages: %w", err)
+	}
+	for _, pkg := range packages.Items {
+		if err := c.client.Delete(ctx, &pkg); err != nil {
+			return fmt.Errorf("deleting package in '%s': %w", pkg.Namespace, err)
+		}
+	}
+
+	controllerutil.RemoveFinalizer(hostedClusterPackage, cleanupPackagesFinalizer)
+	if err := c.client.Update(ctx, hostedClusterPackage); err != nil {
+		return fmt.Errorf("removing cleanup-packages finalizer: %w", err)
+	}
+	return nil
+}
+
+func (c *HostedClusterPackageController) updateStatus(
+	ctx context.Context,
+	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
+	hostedClusters *v1beta1.HostedClusterList,
+) (ctrl.Result, error) {
+	packages := &corev1alpha1.PackageList{}
+	if err := c.client.List(ctx, packages, client.MatchingFields{
+		packageNameIndexKey: hostedClusterPackage.Name,
+	}); err != nil {
+		return ctrl.Result{}, fmt.Errorf("listing packages: %w", err)
+	}
+
+	hostedClusterPackage.Status.Packages = int32(len(packages.Items))
+	hostedClusterPackage.Status.AvailablePackages = 0
+	hostedClusterPackage.Status.ReadyPackages = 0
+	hostedClusterPackage.Status.UpdatedPackages = 0
+
+	requeueAfter := 2 * minReadyDuration
+	for _, pkg := range packages.Items {
+		// TODO: invalid package image ref -> package is "Available" && !"Unpacked"?
+
+		availableCond := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageAvailable)
+		if availableCond != nil && availableCond.Status == metav1.ConditionTrue {
+			readyFor := time.Now().UTC().Sub(availableCond.LastTransitionTime.Time)
+			if readyFor >= minReadyDuration {
+				hostedClusterPackage.Status.AvailablePackages++
+			} else {
+				requeueAfter = min(requeueAfter, minReadyDuration-readyFor+time.Second)
+			}
+		}
+
+		if meta.IsStatusConditionFalse(pkg.Status.Conditions, corev1alpha1.PackageProgressing) {
+			hostedClusterPackage.Status.ReadyPackages++
+		}
+
+		if reflect.DeepEqual(pkg.Spec, hostedClusterPackage.Spec.PackageSpec) {
+			hostedClusterPackage.Status.UpdatedPackages++
+		}
+	}
+
+	hostedClusterPackage.Status.UnavailablePackages = int32(len(hostedClusters.Items)) -
+		hostedClusterPackage.Status.AvailablePackages
+
+	c.updateConditions(hostedClusterPackage)
+
+	if err := c.client.Status().Update(ctx, hostedClusterPackage); err != nil {
+		return ctrl.Result{}, fmt.Errorf("updating status: %w", err)
+	}
+
+	if requeueAfter < 2*minReadyDuration {
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (c *HostedClusterPackageController) updateConditions(hostedClusterPackage *corev1alpha1.HostedClusterPackage) {
+	available := metav1.ConditionTrue
+	progressing := metav1.ConditionTrue
+	if hostedClusterPackage.Status.UnavailablePackages == 0 {
+		progressing = metav1.ConditionFalse
+	} else {
+		available = metav1.ConditionFalse
+	}
+
+	meta.SetStatusCondition(&hostedClusterPackage.Status.Conditions, metav1.Condition{
+		Type:               corev1alpha1.HostedClusterPackageAvailable,
+		Status:             available,
+		ObservedGeneration: hostedClusterPackage.Generation,
+		Reason:             "TODO:Reason",
+	})
+	meta.SetStatusCondition(&hostedClusterPackage.Status.Conditions, metav1.Condition{
+		Type:               corev1alpha1.HostedClusterPackageProgressing,
+		Status:             progressing,
+		ObservedGeneration: hostedClusterPackage.Generation,
+		Reason:             "TODO:Reason",
+	})
 }
 
 func (c *HostedClusterPackageController) reconcileHostedCluster(
@@ -104,7 +229,7 @@ func (c *HostedClusterPackageController) reconcileHostedCluster(
 
 	existingPkg := &corev1alpha1.Package{}
 	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg)
-	if err != nil && errors.IsNotFound(err) {
+	if errors.IsNotFound(err) {
 		if err := c.client.Create(ctx, pkg); err != nil {
 			return fmt.Errorf("creating Package: %w", err)
 		}
@@ -144,6 +269,14 @@ func (c *HostedClusterPackageController) constructClusterPackage(
 }
 
 func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) error {
+	// Index Packages by name
+	if err := mgr.GetCache().IndexField(context.Background(), &corev1alpha1.Package{}, packageNameIndexKey,
+		func(obj client.Object) []string {
+			return []string{obj.GetName()}
+		}); err != nil {
+		return fmt.Errorf("creating name index for Packages: %w", err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha1.HostedClusterPackage{}).
 		WatchesRawSource(
