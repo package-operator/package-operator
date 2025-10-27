@@ -88,6 +88,11 @@ type HostedClusterPackageStatus struct {
 	Processing []HostedClusterPackageRefStatus `json:"processing,omitempty"`
 }
 
+const (
+	HostedClusterPackageAvailable   = "Available"
+	HostedClusterPackageProgressing = "Progressing"
+)
+
 // HostedClusterPackagePartitionStatus describes the status of a partition.
 type HostedClusterPackagePartitionStatus struct {
 	// Name of the partition.
