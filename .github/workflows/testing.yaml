@@ -99,14 +99,14 @@ jobs:
         verbose: true
 
     - name: Archive unit test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: success() || failure()
       with:
         name: unit-test-results
         path: .cache/unit
 
     - name: Archive integration test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: success() || failure()
       with:
         name: integration-test-results
