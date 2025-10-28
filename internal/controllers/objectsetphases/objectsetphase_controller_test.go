@@ -23,6 +23,8 @@ import (
 	"package-operator.run/internal/testutil/managedcachemocks"
 
 	"pkg.package-operator.run/boxcutter/ownerhandling"
+
+	"package-operator.run/internal/testutil/discoveryclientmock"
 )
 
 type objectSetPhaseReconcilerMock struct {
@@ -266,14 +268,15 @@ func TestInitializers(t *testing.T) {
 	client := testutil.NewClient()
 	class := "default"
 	mapper := meta.NewDefaultRESTMapper(scheme.PreferredVersionAllGroups())
+	discoveryClient := &discoveryclientmock.DiscoveryClientMock{}
 
 	t.Run("NewMultiClusterObjectSetPhaseController", func(t *testing.T) {
 		t.Parallel()
 
 		ctrl := NewMultiClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client, client,
-			mapper,
+			accessManager, class, client, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -284,8 +287,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewMultiClusterClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client, client,
-			mapper,
+			accessManager, class, client, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -296,8 +299,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client,
-			mapper,
+			accessManager, class, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
@@ -308,8 +311,8 @@ func TestInitializers(t *testing.T) {
 
 		ctrl := NewSameClusterClusterObjectSetPhaseController(
 			log, scheme,
-			accessManager, client, class, client,
-			mapper,
+			accessManager, class, client,
+			mapper, discoveryClient,
 		)
 
 		require.NotNil(t, ctrl)
