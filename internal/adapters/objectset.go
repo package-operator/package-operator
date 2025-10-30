@@ -127,14 +127,14 @@ func (a *ObjectSetAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
+// Deprecated: use GetSpecRevision instead.
 func (a *ObjectSetAdapter) GetStatusRevision() int64 {
-	// disabled staticcheck, because .status.revision is deprecated, but still tested
-	return a.Status.Revision //nolint:staticcheck
+	return a.Status.Revision
 }
 
+// Deprecated: use SetSpecRevision instead.
 func (a *ObjectSetAdapter) SetStatusRevision(revision int64) {
-	// disabled staticcheck, because .status.revision is deprecated, but still tested
-	a.Status.Revision = revision //nolint:staticcheck
+	a.Status.Revision = revision
 }
 
 func (a *ObjectSetAdapter) GetGeneration() int64 {
@@ -260,12 +260,14 @@ func (a *ClusterObjectSetAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
+// Deprecated: use GetSpecRevision instead.
 func (a *ClusterObjectSetAdapter) GetStatusRevision() int64 {
-	return a.Status.Revision //nolint:staticcheck
+	return a.Status.Revision
 }
 
+// Deprecated: use SetSpecRevision instead.
 func (a *ClusterObjectSetAdapter) SetStatusRevision(revision int64) {
-	a.Status.Revision = revision //nolint:staticcheck
+	a.Status.Revision = revision
 }
 
 func (a *ClusterObjectSetAdapter) GetGeneration() int64 {
