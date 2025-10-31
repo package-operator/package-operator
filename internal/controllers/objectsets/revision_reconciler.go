@@ -21,13 +21,13 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	// disabled staticcheck, because .status.revision is deprecated
-	if objectSet.GetStatusRevision() == objectSet.GetSpecRevision() { //nolint:staticcheck
+	//nolint:staticcheck // .status.revision is deprecated, but still tested
+	if objectSet.GetStatusRevision() == objectSet.GetSpecRevision() {
 		// .status.revision is already set.
 		return
 	}
-	// disabled staticcheck, because .status.revision is deprecated
-	objectSet.SetStatusRevision(objectSet.GetSpecRevision()) //nolint:staticcheck
+	//nolint:staticcheck // .status.revision is deprecated, but still tested
+	objectSet.SetStatusRevision(objectSet.GetSpecRevision())
 	if err := r.client.Status().Update(ctx, objectSet.ClientObject()); err != nil {
 		return res, fmt.Errorf("update revision in status: %w", err)
 	}

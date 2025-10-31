@@ -22,6 +22,7 @@ func init() {
 		panic(err)
 	}
 }
+
 func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
 	t.Parallel()
 
@@ -50,7 +51,7 @@ func TestRevisionReconciler_SetStatusFromSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, res.IsZero(), "unexpected requeue")
-	// disabled staticcheck, because .status.revision is deprecated, but still tested
-	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision) //nolint:staticcheck
+	//nolint:staticcheck // .status.revision is deprecated, but still tested
+	assert.Equal(t, objectSet.Spec.Revision, objectSet.Status.Revision)
 	testClient.AssertExpectations(t)
 }
