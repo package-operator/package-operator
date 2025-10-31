@@ -208,6 +208,7 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (
 				},
 				AvailabilityProbes: []corev1alpha1.ObjectSetProbe{},
 			},
+			Revision: 1,
 		},
 	}, nil
 }
@@ -276,6 +277,7 @@ func defaultObjectSetRev2(
 					},
 				},
 			},
+			Revision: 2,
 		},
 	}, nil
 }

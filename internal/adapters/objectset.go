@@ -47,7 +47,9 @@ type ObjectSetAccessor interface {
 	GetSpecRevision() int64
 
 	IsStatusPaused() bool
+	// Deprecated: use GetSpecRevision instead
 	GetStatusRevision() int64
+	// Deprecated: use SetSpecRevision instead
 	SetStatusRevision(revision int64)
 	GetStatusConditions() *[]metav1.Condition
 	GetStatusRemotePhases() []corev1alpha1.RemotePhaseReference
@@ -125,10 +127,12 @@ func (a *ObjectSetAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
+// Deprecated: use GetSpecRevision instead.
 func (a *ObjectSetAdapter) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
+// Deprecated: use SetSpecRevision instead.
 func (a *ObjectSetAdapter) SetStatusRevision(revision int64) {
 	a.Status.Revision = revision
 }
@@ -256,10 +260,12 @@ func (a *ClusterObjectSetAdapter) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
+// Deprecated: use GetSpecRevision instead.
 func (a *ClusterObjectSetAdapter) GetStatusRevision() int64 {
 	return a.Status.Revision
 }
 
+// Deprecated: use SetSpecRevision instead.
 func (a *ClusterObjectSetAdapter) SetStatusRevision(revision int64) {
 	a.Status.Revision = revision
 }
