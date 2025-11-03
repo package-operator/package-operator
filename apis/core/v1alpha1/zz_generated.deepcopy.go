@@ -615,7 +615,7 @@ func (in *HostedClusterPackageList) DeepCopyInto(out *HostedClusterPackageList) 
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]Package, len(*in))
+		*out = make([]HostedClusterPackage, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

@@ -128,7 +128,7 @@ type HostedClusterPackageRefStatus struct {
 type HostedClusterPackageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Package `json:"items"`
+	Items           []HostedClusterPackage `json:"items"`
 }
 
 func init() { register(&HostedClusterPackage{}, &HostedClusterPackageList{}) }
