@@ -36,11 +36,6 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	); err != nil {
 		return err
 	}
-	if err := mgr.ParallelDeps(ctx, self,
-		run.Meth(lint, lint.govulnCheck),
-	); err != nil {
-		return err
-	}
 
 	return lint.validateGitClean()
 }
@@ -53,9 +48,15 @@ func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
 // Release builds binaries and helm chart (if not exluded with the 'images-only" arg) and releases the
 // CLI, PKO manager, RP manager, and test-stub images to the given registry.
 func (ci *CI) Release(ctx context.Context, args []string) error {
-	registry := imageRegistry()
-
 	self := run.Meth1(ci, ci.Release, args)
+
+	if err := mgr.ParallelDeps(ctx, self,
+		run.Meth(lint, lint.govulnCheck),
+	); err != nil {
+		return err
+	}
+
+	registry := imageRegistry()
 
 	deps := []run.Dependency{}
 
