@@ -11,40 +11,26 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/workqueue"
-	"pkg.package-operator.run/boxcutter/ownerhandling"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/internal/constants"
+	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 )
 
 const (
-	packageNameIndexKey      = "metadata.name"
-	minReadyDuration         = 10 * time.Second
-	cleanupPackagesFinalizer = "package-operator.run/cleanup-packages"
+	packageNameIndexKey = "metadata.name"
+	minReadyDuration    = 30 * time.Second
 )
 
 type HostedClusterPackageController struct {
-	client        client.Client
-	log           logr.Logger
-	scheme        *runtime.Scheme
-	ownerStrategy ownerStrategy
-}
-
-type ownerStrategy interface {
-	SetControllerReference(owner, obj metav1.Object) error
-	EnqueueRequestForOwner(
-		ownerType client.Object, mapper meta.RESTMapper, isController bool,
-	) handler.EventHandler
+	client client.Client
+	log    logr.Logger
+	scheme *runtime.Scheme
 }
 
 func NewHostedClusterPackageController(
@@ -54,10 +40,6 @@ func NewHostedClusterPackageController(
 		client: c,
 		log:    log,
 		scheme: scheme,
-		// Using Annotation Owner-Handling,
-		// because Package objects will live in the hosted-clusters "execution" namespace.
-		// e.g. clusters-my-cluster and not in the same Namespace as the HostedCluster object
-		ownerStrategy: ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 	}
 }
 
@@ -70,21 +52,13 @@ func (c *HostedClusterPackageController) Reconcile(
 	ctx = logr.NewContext(ctx, log)
 	hostedClusterPackage := &corev1alpha1.HostedClusterPackage{}
 	if err := c.client.Get(ctx, req.NamespacedName, hostedClusterPackage); err != nil {
-		// TODO: detect type of object causing reconcile?
-
 		// Ignore not found errors on delete
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !hostedClusterPackage.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, c.handleDeletion(ctx, hostedClusterPackage)
-	}
-
-	if !controllerutil.ContainsFinalizer(hostedClusterPackage, cleanupPackagesFinalizer) {
-		controllerutil.AddFinalizer(hostedClusterPackage, cleanupPackagesFinalizer)
-		if err := c.client.Update(ctx, hostedClusterPackage); err != nil {
-			return ctrl.Result{}, fmt.Errorf("adding cleanup-packages finalizer: %w", err)
-		}
+		log.Info("HostedClusterPackage is deleting")
+		return ctrl.Result{}, nil
 	}
 
 	hostedClusters := &v1beta1.HostedClusterList{}
@@ -101,36 +75,6 @@ func (c *HostedClusterPackageController) Reconcile(
 	return c.updateStatus(ctx, hostedClusterPackage, hostedClusters)
 }
 
-func (c *HostedClusterPackageController) handleDeletion(
-	ctx context.Context,
-	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
-) error {
-	if !controllerutil.ContainsFinalizer(hostedClusterPackage, cleanupPackagesFinalizer) {
-		return nil
-	}
-
-	log := logr.FromContextOrDiscard(ctx)
-	log.Info("HostedClusterPackage is deleting")
-
-	packages := &corev1alpha1.PackageList{}
-	if err := c.client.List(ctx, packages, client.MatchingFields{
-		packageNameIndexKey: hostedClusterPackage.Name,
-	}); err != nil {
-		return fmt.Errorf("listing packages: %w", err)
-	}
-	for _, pkg := range packages.Items {
-		if err := c.client.Delete(ctx, &pkg); err != nil {
-			return fmt.Errorf("deleting package in '%s': %w", pkg.Namespace, err)
-		}
-	}
-
-	controllerutil.RemoveFinalizer(hostedClusterPackage, cleanupPackagesFinalizer)
-	if err := c.client.Update(ctx, hostedClusterPackage); err != nil {
-		return fmt.Errorf("removing cleanup-packages finalizer: %w", err)
-	}
-	return nil
-}
-
 func (c *HostedClusterPackageController) updateStatus(
 	ctx context.Context,
 	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
@@ -143,6 +87,7 @@ func (c *HostedClusterPackageController) updateStatus(
 		return ctrl.Result{}, fmt.Errorf("listing packages: %w", err)
 	}
 
+	hostedClusterPackage.Status.ObservedGeneration = int32(hostedClusterPackage.GetGeneration())
 	hostedClusterPackage.Status.Packages = int32(len(packages.Items))
 	hostedClusterPackage.Status.AvailablePackages = 0
 	hostedClusterPackage.Status.ReadyPackages = 0
@@ -150,8 +95,6 @@ func (c *HostedClusterPackageController) updateStatus(
 
 	requeueAfter := 2 * minReadyDuration
 	for _, pkg := range packages.Items {
-		// TODO: invalid package image ref -> package is "Available" && !"Unpacked"?
-
 		availableCond := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageAvailable)
 		if availableCond != nil && availableCond.Status == metav1.ConditionTrue {
 			readyFor := time.Now().UTC().Sub(availableCond.LastTransitionTime.Time)
@@ -162,7 +105,8 @@ func (c *HostedClusterPackageController) updateStatus(
 			}
 		}
 
-		if meta.IsStatusConditionFalse(pkg.Status.Conditions, corev1alpha1.PackageProgressing) {
+		if meta.IsStatusConditionFalse(pkg.Status.Conditions, corev1alpha1.PackageProgressing) &&
+			meta.IsStatusConditionTrue(pkg.Status.Conditions, corev1alpha1.PackageUnpacked) {
 			hostedClusterPackage.Status.ReadyPackages++
 		}
 
@@ -262,7 +206,8 @@ func (c *HostedClusterPackageController) constructClusterPackage(
 		Spec: clusterPackage.Spec.PackageSpec,
 	}
 
-	if err := c.ownerStrategy.SetControllerReference(clusterPackage, pkg); err != nil {
+	if err := controllerutil.SetControllerReference(
+		clusterPackage, pkg, c.scheme); err != nil {
 		return nil, fmt.Errorf("setting controller reference: %w", err)
 	}
 	return pkg, nil
@@ -279,63 +224,27 @@ func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) erro
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha1.HostedClusterPackage{}).
-		WatchesRawSource(
-			source.Kind(
-				mgr.GetCache(),
-				&corev1alpha1.Package{},
-				wrapEventHandlerwithTypedEventHandler[*corev1alpha1.Package](
-					c.ownerStrategy.EnqueueRequestForOwner(&corev1alpha1.HostedClusterPackage{},
-						mgr.GetRESTMapper(),
-						true,
-					),
-				),
-			),
-		).
+		Owns(&corev1alpha1.Package{}).
 		Watches(
 			&v1beta1.HostedCluster{},
-			&handler.EnqueueRequestForObject{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+				hcpkgList := &corev1alpha1.HostedClusterPackageList{}
+				if err := c.client.List(ctx, hcpkgList); err != nil {
+					return nil
+				}
+
+				// Enqueue all HostedClusterPackages on HostedCluster change
+				requests := make([]reconcile.Request, len(hcpkgList.Items))
+				for i, hcpkg := range hcpkgList.Items {
+					requests[i] = reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name: hcpkg.Name,
+						},
+					}
+				}
+
+				return requests
+			}),
 		).
 		Complete(c)
-}
-
-type outer[T client.Object] struct {
-	inner handler.TypedEventHandler[client.Object, reconcile.Request]
-}
-
-// Create implements handler.TypedEventHandler.
-func (o outer[T]) Create(ctx context.Context, evt event.TypedCreateEvent[T],
-	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	o.inner.Create(ctx, event.TypedCreateEvent[client.Object]{Object: evt.Object}, rl)
-}
-
-// Delete implements handler.TypedEventHandler.
-func (o outer[T]) Delete(ctx context.Context, evt event.TypedDeleteEvent[T],
-	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	o.inner.Delete(
-		ctx,
-		event.TypedDeleteEvent[client.Object]{Object: evt.Object, DeleteStateUnknown: evt.DeleteStateUnknown},
-		rl,
-	)
-}
-
-// Generic implements handler.TypedEventHandler.
-func (o outer[T]) Generic(ctx context.Context, evt event.TypedGenericEvent[T],
-	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	o.inner.Generic(ctx, event.TypedGenericEvent[client.Object]{Object: evt.Object}, rl)
-}
-
-// Update implements handler.TypedEventHandler.
-func (o outer[T]) Update(ctx context.Context, evt event.TypedUpdateEvent[T],
-	rl workqueue.TypedRateLimitingInterface[reconcile.Request],
-) {
-	o.inner.Update(ctx, event.TypedUpdateEvent[client.Object]{ObjectOld: evt.ObjectOld, ObjectNew: evt.ObjectNew}, rl)
-}
-
-func wrapEventHandlerwithTypedEventHandler[T client.Object](
-	inner handler.TypedEventHandler[client.Object, reconcile.Request],
-) handler.TypedEventHandler[T, reconcile.Request] {
-	return outer[T]{inner}
 }
