@@ -17,7 +17,7 @@ require (
 	github.com/google/cel-go v0.26.1
 	github.com/google/go-containerregistry v0.20.6
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
-	github.com/onsi/ginkgo/v2 v2.27.1
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/openshift/api v0.0.0-20250320170726-75d64d71980b
 	github.com/operator-framework/api v0.35.0
@@ -151,7 +151,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.8.0 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
