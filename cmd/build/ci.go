@@ -107,7 +107,7 @@ func (ci *CI) Compile(ctx context.Context, args []string) error {
 	return compile.compile(ctx, args[0], args[1], args[2])
 }
 
-// Runs govulncheck
+// Runs govulncheck.
 func (ci *CI) GovulnCheck(_ context.Context, _ []string) error {
 	return lint.govulnCheck()
 }
