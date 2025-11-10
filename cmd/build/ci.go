@@ -50,12 +50,6 @@ func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
 func (ci *CI) Release(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.Release, args)
 
-	if err := mgr.ParallelDeps(ctx, self,
-		run.Meth(lint, lint.govulnCheck),
-	); err != nil {
-		return err
-	}
-
 	registry := imageRegistry()
 
 	deps := []run.Dependency{}
@@ -111,4 +105,9 @@ func (ci *CI) Compile(ctx context.Context, args []string) error {
 		return errInvalidArguments
 	}
 	return compile.compile(ctx, args[0], args[1], args[2])
+}
+
+// Runs govulncheck.
+func (ci *CI) GovulnCheck(_ context.Context, _ []string) error {
+	return lint.govulnCheck()
 }
