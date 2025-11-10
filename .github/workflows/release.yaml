@@ -46,6 +46,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
+    - name: Vulnerability check
+      run: ./do CI:GovulnCheck
+
     - name: Log in to quay.io
       run: ./do CI:RegistryLogin "${{ vars.REGISTRY }}" -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_TOKEN }}"
 
