@@ -132,55 +132,43 @@ spec:
                 description: HostedClusterPackageStrategy describes the rollout strategy
                   for a HostedClusterPackage.
                 properties:
-                  instant:
-                    description: Updates all matching Packages instantly and all at
-                      the same time.
-                    type: object
-                  rollingUpgrade:
-                    description: Performs a rolling upgrade according to maxUnavailable
-                      and partition settings.
+                  maxUnavailable:
+                    default: 1
+                    description: |-
+                      MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
+                      Cannot be below 1, because we cannot surge to create more instances.
+                    minimum: 1
+                    type: integer
+                  partition:
+                    description: |-
+                      Partition HostedClusters by label value.
+                      All packages in the same partition will have to be upgraded
+                      before progressing to the next partition.
                     properties:
-                      maxUnavailable:
-                        default: 1
+                      labelKey:
+                        description: LabelKey defines a labelKey to group objects
+                          on.
+                        minLength: 1
+                        type: string
+                      order:
                         description: |-
-                          MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
-                          Cannot be below 1, because we cannot surge to create more instances.
-                        minimum: 1
-                        type: integer
-                      partition:
-                        description: |-
-                          Partition HostedClusters by label value.
-                          All packages in the same partition will have to be upgraded
-                          before progressing to the next partition.
+                          Controls how partitions are ordered.
+                          By default items will be sorted AlphaNumeric ascending.
                         properties:
-                          labelKey:
-                            description: LabelKey defines a labelKey to group objects
-                              on.
-                            minLength: 1
-                            type: string
-                          order:
+                          static:
                             description: |-
-                              Controls how partitions are ordered.
-                              By default items will be sorted AlphaNumeric ascending.
-                            properties:
-                              static:
-                                description: |-
-                                  Allows to define a static partition order.
-                                  The special * key matches anything not explicitly part of the list.
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                        required:
-                        - labelKey
+                              Allows to define a static partition order.
+                              The special * key matches anything not explicitly part of the list.
+                            items:
+                              type: string
+                            type: array
                         type: object
                     required:
-                    - maxUnavailable
+                    - labelKey
                     type: object
                 type: object
             required:
             - spec
-            - strategy
             type: object
           status:
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.

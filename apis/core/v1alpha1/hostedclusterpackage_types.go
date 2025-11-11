@@ -23,7 +23,7 @@ type HostedClusterPackage struct {
 
 // HostedClusterPackageSpec is the description of a HostedClusterPackage.
 type HostedClusterPackageSpec struct {
-	Strategy HostedClusterPackageStrategy `json:"strategy"`
+	Strategy HostedClusterPackageStrategy `json:"strategy,omitempty"`
 	// HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to.
 	HostedClusterSelector metav1.LabelSelector `json:"hostedClusterSelector,omitempty"`
 	// PackageSpec describes the Package that should be created when new
@@ -33,24 +33,11 @@ type HostedClusterPackageSpec struct {
 
 // HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage.
 type HostedClusterPackageStrategy struct {
-	// Updates all matching Packages instantly and all at the same time.
-	Instant *HostedClusterPackageStrategyInstant `json:"instant,omitempty"`
-	// Performs a rolling upgrade according to maxUnavailable and partition settings.
-	RollingUpgrade *HostedClusterPackageStrategyRollingUpgrade `json:"rollingUpgrade,omitempty"`
-}
-
-// HostedClusterPackageStrategyInstant describes the instant
-// rollout strategy for a HostedClusterPackages.
-type HostedClusterPackageStrategyInstant struct{}
-
-// HostedClusterPackageStrategyRollingUpgrade describes the
-// rolling upgrade strategy for HostedClusterPackages.
-type HostedClusterPackageStrategyRollingUpgrade struct {
 	// MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
 	// Cannot be below 1, because we cannot surge to create more instances.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Minimum=1
-	MaxUnavailable int `json:"maxUnavailable"`
+	MaxUnavailable int `json:"maxUnavailable,omitempty"`
 	// Partition HostedClusters by label value.
 	// All packages in the same partition will have to be upgraded
 	// before progressing to the next partition.
