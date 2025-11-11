@@ -393,14 +393,12 @@ spec:
     image: diam
     paused: true
   strategy:
-    instant: {}
-    rollingUpgrade:
-      maxUnavailable: 1
-      partition:
-        labelKey: elitr
-        order:
-          static:
-          - sed
+    maxUnavailable: 1
+    partition:
+      labelKey: elitr
+      order:
+        static:
+        - sed
 status:
   availablePackages: 42
   conditions:
@@ -961,7 +959,7 @@ Upgrades in the next partition will only start after the previous has finished.
 
 
 Used in:
-* [HostedClusterPackageStrategyRollingUpgrade](#hostedclusterpackagestrategyrollingupgrade)
+* [HostedClusterPackageStrategy](#hostedclusterpackagestrategy)
 
 
 ### HostedClusterPackagePartitionStatus
@@ -1004,7 +1002,7 @@ HostedClusterPackageSpec is the description of a HostedClusterPackage.
 
 | Field | Description |
 | ----- | ----------- |
-| `strategy` <b>required</b><br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
+| `strategy` <br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
 | `hostedClusterSelector` <br>metav1.LabelSelector | HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to. |
 | `spec` <b>required</b><br><a href="#packagespec">PackageSpec</a> | PackageSpec describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
 
@@ -1040,27 +1038,12 @@ HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterP
 
 | Field | Description |
 | ----- | ----------- |
-| `instant` <br><a href="#hostedclusterpackagestrategyinstant">HostedClusterPackageStrategyInstant</a> | Updates all matching Packages instantly and all at the same time. |
-| `rollingUpgrade` <br><a href="#hostedclusterpackagestrategyrollingupgrade">HostedClusterPackageStrategyRollingUpgrade</a> | Performs a rolling upgrade according to maxUnavailable and partition settings. |
-
-
-Used in:
-* [HostedClusterPackageSpec](#hostedclusterpackagespec)
-
-
-### HostedClusterPackageStrategyRollingUpgrade
-
-HostedClusterPackageStrategyRollingUpgrade describes the
-rolling upgrade strategy for HostedClusterPackages.
-
-| Field | Description |
-| ----- | ----------- |
-| `maxUnavailable` <b>required</b><br>int | MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.<br>Cannot be below 1, because we cannot surge to create more instances. |
+| `maxUnavailable` <br>int | MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.<br>Cannot be below 1, because we cannot surge to create more instances. |
 | `partition` <br><a href="#hostedclusterpackagepartitionspec">HostedClusterPackagePartitionSpec</a> | Partition HostedClusters by label value.<br>All packages in the same partition will have to be upgraded<br>before progressing to the next partition. |
 
 
 Used in:
-* [HostedClusterPackageStrategy](#hostedclusterpackagestrategy)
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 
 
 ### ObjectDeploymentSpec
