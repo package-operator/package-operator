@@ -336,7 +336,8 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
             - message: revision is immutable
-              rule: '!has(oldSelf.revision) || (self.revision == oldSelf.revision)'
+              rule: (has(self.revision) == has(oldSelf.revision)) && (!has(self.revision)
+                || (self.revision == oldSelf.revision))
           status:
             description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:
@@ -446,7 +447,7 @@ spec:
                   type: object
                 type: array
               revision:
-                description: Computed revision number, monotonically increasing.
+                description: 'Deprecated: use .spec.revision instead'
                 format: int64
                 type: integer
             type: object

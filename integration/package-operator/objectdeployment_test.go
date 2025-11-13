@@ -157,6 +157,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 		// Assert that the ObjectSet reports the right revision number
 		require.Equal(t,
 			concernedDeployment.Generation,
+			//nolint:staticcheck // .status.revision is deprecated, but still tested
 			currentObjectSet.Status.Revision)
 		require.Equal(t,
 			concernedDeployment.Generation,
@@ -169,7 +170,7 @@ func TestObjectDeployment_availability_and_hash_collision(t *testing.T) {
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
-			currObjectSetRevision := currObjectSet.Status.Revision
+			currObjectSetRevision := currObjectSet.Spec.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				requireCondition(ctx, t, currentObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
@@ -428,7 +429,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 		// Assert that the ObjectSet reports the right revision number
 		require.Equal(t,
 			concernedDeployment.Generation,
-			currentObjectSet.Status.Revision)
+			currentObjectSet.Status.Revision) //nolint:staticcheck // .status.revision is deprecated, but still tested
 		require.Equal(t,
 			concernedDeployment.Generation,
 			currentObjectSet.Spec.Revision)
@@ -439,7 +440,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 
 		// Assert that the expected revisions are archived (and others active)
 		for _, currObjectSet := range currObjectSetList.Items {
-			currObjectSetRevision := currObjectSet.Status.Revision
+			currObjectSetRevision := currObjectSet.Spec.Revision
 			if slices.Contains(testCase.expectedArchivedRevisions, strconv.FormatInt(currObjectSetRevision, 10)) {
 				requireCondition(ctx, t, &currObjectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue)
 			} else {
