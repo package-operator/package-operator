@@ -3,6 +3,7 @@
 package kubectlpackage
 
 import (
+	"context"
 	"path"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 )
 
 var _ = ginkgo.DescribeTable("build subcommand",
-	testSubCommand("build"),
+	testSubCommand(context.Background(), "build"),
 	ginkgo.Entry("given no path",
 		subCommandTestCase{
 			ExpectedExitCode: 1,
