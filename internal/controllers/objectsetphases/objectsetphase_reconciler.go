@@ -180,7 +180,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 				Type:               corev1alpha1.ObjectSetAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ProbeFailure",
-				Message:            result.GetProbesStatus(),
+				Message:            result.String(),
 				ObservedGeneration: objectSetPhase.ClientObject().GetGeneration(),
 			})
 		return res, nil

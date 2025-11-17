@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -15,7 +16,7 @@ type ConditionProbe struct {
 var _ Prober = (*ConditionProbe)(nil)
 
 // Probe executes the probe.
-func (cp *ConditionProbe) Probe(obj client.Object) (success bool, messages []string) {
+func (cp *ConditionProbe) Probe(obj client.Object) types.ProbeResult {
 	return probeUnstructuredSingleMsg(obj, cp.probe)
 }
 

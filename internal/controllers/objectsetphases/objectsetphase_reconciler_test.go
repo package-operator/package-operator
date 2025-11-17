@@ -97,10 +97,10 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 
 			if test.condition.Reason == "ProbeFailure" {
 				phaseResult.On("IsComplete").Return(false)
-				phaseResult.On("GetProbesStatus").Return("object not ready")
+				phaseResult.On("String").Return("object not ready")
 			} else {
 				phaseResult.On("IsComplete").Return(true)
-				phaseResult.On("GetProbesStatus").Return("")
+				phaseResult.On("String").Return("")
 			}
 
 			res, err := r.Reconcile(context.Background(), objectSetPhase)
