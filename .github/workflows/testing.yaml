@@ -22,7 +22,7 @@ jobs:
       UPDATE: ${{ steps.detect_changes.outputs.UPDATE }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.UPDATE_GO_MODULES_PAT }}
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
