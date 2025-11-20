@@ -2,6 +2,7 @@ package probing
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -15,12 +16,15 @@ type ObservedGenerationProbe struct {
 var _ Prober = (*ObservedGenerationProbe)(nil)
 
 // Probe executes the probe.
-func (cg *ObservedGenerationProbe) Probe(obj client.Object) (success bool, messages []string) {
+func (cg *ObservedGenerationProbe) Probe(obj client.Object) types.ProbeResult {
 	unstr := toUnstructured(obj)
 	if observedGeneration, ok, err := unstructured.NestedInt64(
 		unstr.Object, "status", "observedGeneration",
 	); err == nil && ok && observedGeneration != obj.GetGeneration() {
-		return false, []string{".status outdated"}
+		return types.ProbeResult{
+			Status:   types.ProbeStatusFalse,
+			Messages: []string{".status outdated"},
+		}
 	}
 	return cg.Prober.Probe(obj)
 }
