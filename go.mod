@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/yannh/kubeconform v0.7.0
 	go.uber.org/dig v1.19.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/sys v0.38.0
 	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.2
