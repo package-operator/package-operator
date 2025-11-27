@@ -2,14 +2,20 @@ package objectsetphases
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 
+	"pkg.package-operator.run/boxcutter"
+	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,6 +25,7 @@ import (
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
+	"package-operator.run/internal/controllers/boxcutterutil"
 	internalprobing "package-operator.run/internal/probing"
 )
 
@@ -26,18 +33,20 @@ import (
 type objectSetPhaseReconciler struct {
 	scheme                  *runtime.Scheme
 	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
-	phaseReconcilerFactory  controllers.PhaseReconcilerFactory
+	uncachedclient          client.Client
+	phaseEngineFactory      boxcutterutil.PhaseEngineFactory
 	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           ownerStrategy
+	ownerStrategy           boxcutterutil.OwnerStrategy
 	backoff                 *flowcontrol.Backoff
 }
 
 func newObjectSetPhaseReconciler(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	phaseReconcilerFactory controllers.PhaseReconcilerFactory,
+	uncachedClient client.Client,
+	phaseEngineFactory boxcutterutil.PhaseEngineFactory,
 	lookupPreviousRevisions lookupPreviousRevisions,
-	ownerStrategy ownerStrategy,
+	ownerStrategy boxcutterutil.OwnerStrategy,
 ) *objectSetPhaseReconciler {
 	var cfg objectSetPhaseReconcilerConfig
 
@@ -46,7 +55,8 @@ func newObjectSetPhaseReconciler(
 	return &objectSetPhaseReconciler{
 		scheme:                  scheme,
 		accessManager:           accessManager,
-		phaseReconcilerFactory:  phaseReconcilerFactory,
+		uncachedclient:          uncachedClient,
+		phaseEngineFactory:      phaseEngineFactory,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerStrategy,
 		backoff:                 cfg.GetBackoff(),
@@ -55,15 +65,13 @@ func newObjectSetPhaseReconciler(
 
 type lookupPreviousRevisions func(
 	ctx context.Context, owner controllers.PreviousOwner,
-) ([]controllers.PreviousObjectSet, error)
+) ([]client.Object, error)
 
 func (r *objectSetPhaseReconciler) Reconcile(
 	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
-
 	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetStatusConditions())
-
 	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
 	if err != nil {
 		return res, fmt.Errorf("lookup previous revisions: %w", err)
@@ -88,10 +96,60 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("preparing cache: %w", err)
 	}
-	phaseReconciler := r.phaseReconcilerFactory.New(cache)
 
-	actualObjects, probingResult, err := phaseReconciler.ReconcilePhase(
-		ctx, objectSetPhase, objectSetPhase.GetPhase(), probe, previous)
+	phaseEngine, err := r.phaseEngineFactory.New(cache)
+	if err != nil {
+		return res, err
+	}
+
+	apiPhase := objectSetPhase.GetPhase()
+	// TODO Fix this!!!
+	phaseObjects := make([]unstructured.Unstructured, 0)
+	phaseReconcileOptions := make([]types.PhaseReconcileOption, 0)
+	for i := range apiPhase.Objects {
+		phaseObjects = append(phaseObjects, apiPhase.Objects[i].Object)
+		labels := phaseObjects[i].GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[constants.DynamicCacheLabel] = "True"
+		phaseObjects[i].SetLabels(labels)
+		phaseReconcileOptions = append(phaseReconcileOptions, types.WithObjectReconcileOptions(
+			&apiPhase.Objects[i].Object,
+			boxcutterutil.TranslateCollisionProtection(apiPhase.Objects[i].CollisionProtection),
+			types.WithProbe(types.ProgressProbeType, probe),
+			boxcutter.WithPreviousOwners(previous),
+		))
+		if objectSetPhase.IsSpecPaused() {
+			phaseReconcileOptions = append(phaseReconcileOptions, types.WithPaused{})
+		}
+	}
+
+	result, err := phaseEngine.Reconcile(ctx,
+		objectSetPhase.ClientObject(),
+		objectSetPhase.GetStatusRevision(),
+		types.Phase{
+			Name:    apiPhase.Name,
+			Objects: phaseObjects,
+		},
+		phaseReconcileOptions...,
+	)
+
+	target := &machinery.CreateCollisionError{}
+	if errors.As(err, &target) {
+		_, err := controllers.AddDynamicCacheLabel(ctx, r.uncachedclient, convertToUnstructured(target.Object))
+		if err != nil {
+			return res, err
+		}
+		id := string(objectSetPhase.ClientObject().GetUID())
+
+		r.backoff.Next(id, r.backoff.Clock.Now())
+
+		return ctrl.Result{
+			RequeueAfter: r.backoff.Get(id),
+		}, nil
+	}
+
 	if controllers.IsExternalResourceNotFound(err) {
 		id := string(objectSetPhase.ClientObject().GetUID())
 
@@ -104,20 +162,27 @@ func (r *objectSetPhaseReconciler) Reconcile(
 		return res, err
 	}
 
-	if err := r.reportOwnActiveObjects(ctx, objectSetPhase, actualObjects); err != nil {
-		return res, fmt.Errorf("reporting active objects: %w", err)
+	actualObjects := make([]machinery.Object, 0, len(result.GetObjects()))
+	for _, obj := range result.GetObjects() {
+		actualObjects = append(actualObjects, obj.Object())
 	}
 
-	if !probingResult.IsZero() {
+	if err = mapConditions(actualObjects, objectSetPhase); err != nil {
+		return res, err
+	}
+
+	objectSetPhase.SetStatusControllerOf(
+		boxcutterutil.GetControllerOf(r.ownerStrategy, objectSetPhase.ClientObject(), result))
+
+	if !result.IsComplete() {
 		meta.SetStatusCondition(
 			objectSetPhase.GetStatusConditions(), metav1.Condition{
 				Type:               corev1alpha1.ObjectSetAvailable,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ProbeFailure",
-				Message:            probingResult.StringWithoutPhase(),
+				Message:            result.String(),
 				ObservedGeneration: objectSetPhase.ClientObject().GetGeneration(),
 			})
-
 		return res, nil
 	}
 
@@ -153,14 +218,35 @@ func (r *objectSetPhaseReconciler) Teardown(
 	if err != nil {
 		return false, fmt.Errorf("preparing cache: %w", err)
 	}
-	phaseReconciler := r.phaseReconcilerFactory.New(cache)
 
-	cleanupDone, err = phaseReconciler.TeardownPhase(
-		ctx, objectSetPhase, objectSetPhase.GetPhase())
+	phaseEngine, err := r.phaseEngineFactory.New(cache)
 	if err != nil {
 		return false, err
 	}
-	if !cleanupDone {
+	apiPhase := objectSetPhase.GetPhase()
+	phaseObjects := make([]unstructured.Unstructured, len(apiPhase.Objects))
+	objectTearDownOptions := make([]types.PhaseTeardownOption, len(apiPhase.Objects))
+
+	for i := range apiPhase.Objects {
+		phaseObjects[i] = apiPhase.Objects[i].Object
+		objectTearDownOptions[i] = types.WithObjectTeardownOptions(
+			&apiPhase.Objects[i].Object,
+		)
+	}
+
+	result, err := phaseEngine.Teardown(ctx,
+		objectSetPhase.ClientObject(),
+		objectSetPhase.GetStatusRevision(),
+		types.Phase{
+			Name:    apiPhase.Name,
+			Objects: phaseObjects,
+		},
+		objectTearDownOptions...,
+	)
+	if err != nil {
+		return false, err
+	}
+	if !result.IsComplete() {
 		return false, nil
 	}
 
@@ -173,20 +259,6 @@ func (r *objectSetPhaseReconciler) Teardown(
 	}
 
 	return true, nil
-}
-
-// Sets .status.activeObjects to all objects actively reconciled and controlled by this Phase.
-func (r *objectSetPhaseReconciler) reportOwnActiveObjects(
-	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor, actualObjects []client.Object,
-) error {
-	activeObjects, err := controllers.GetStatusControllerOf(
-		ctx, r.scheme, r.ownerStrategy,
-		objectSetPhase.ClientObject(), actualObjects)
-	if err != nil {
-		return err
-	}
-	objectSetPhase.SetStatusControllerOf(activeObjects)
-	return nil
 }
 
 type objectSetPhaseReconcilerConfig struct {
@@ -205,4 +277,70 @@ func (c *objectSetPhaseReconcilerConfig) Default() {
 
 type objectSetPhaseReconcilerOption interface {
 	ConfigureObjectSetPhaseReconciler(*objectSetPhaseReconcilerConfig)
+}
+
+// Convert a  kubernetes object to an unstructured object.
+func convertToUnstructured(obj machinery.Object) *unstructured.Unstructured {
+	return obj.(*unstructured.Unstructured)
+}
+
+func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetPhaseAccessor) error {
+	for _, obj := range actualObjects {
+		unstructuredObj := convertToUnstructured(obj)
+
+		rawConditions, exist, err := unstructured.NestedFieldNoCopy(
+			unstructuredObj.Object, "status", "conditions")
+		if err != nil {
+			return err
+		}
+		if !exist {
+			return nil
+		}
+
+		j, err := json.Marshal(rawConditions)
+		if err != nil {
+			return err
+		}
+		var objectConditions []metav1.Condition
+		if err := json.Unmarshal(j, &objectConditions); err != nil {
+			return err
+		}
+
+		var conditionMappings []corev1alpha1.ConditionMapping
+		objectsettemplatephase := owner.GetPhase()
+		for _, objectsetobject := range objectsettemplatephase.Objects {
+			if objectsetobject.Object.GetName() == obj.GetName() {
+				conditionMappings = objectsetobject.ConditionMappings
+			}
+		}
+
+		// Maps from object condition type to PKO condition type.
+		conditionTypeMap := map[string]string{}
+		for _, m := range conditionMappings {
+			conditionTypeMap[m.SourceType] = m.DestinationType
+		}
+		for _, condition := range objectConditions {
+			if condition.ObservedGeneration != 0 &&
+				condition.ObservedGeneration != obj.GetGeneration() {
+				// condition outdated
+				continue
+			}
+
+			destType, ok := conditionTypeMap[condition.Type]
+			if !ok {
+				// condition not mapped
+				continue
+			}
+
+			meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
+				Type:               destType,
+				Status:             condition.Status,
+				Reason:             condition.Reason,
+				Message:            condition.Message,
+				ObservedGeneration: owner.ClientObject().GetGeneration(),
+			})
+		}
+	}
+
+	return nil
 }

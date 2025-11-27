@@ -126,9 +126,9 @@ func TestFieldsEqual(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			s, m := fe.Probe(test.obj)
-			assert.Equal(t, test.succeeds, s)
-			assert.Equal(t, test.messages, m)
+			result := fe.Probe(test.obj)
+			assert.Equal(t, test.succeeds, result.Status)
+			assert.Equal(t, test.messages, result.Messages)
 		})
 	}
 }
