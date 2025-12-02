@@ -147,7 +147,7 @@ func updateStatusCounts(
 			counts.ReadyPackages++
 		}
 
-		if reflect.DeepEqual(pkg.Spec, hostedClusterPackage.Spec.PackageSpec) {
+		if reflect.DeepEqual(pkg.Spec, hostedClusterPackage.Spec.Template.Spec) {
 			counts.UpdatedPackages++
 		}
 	}

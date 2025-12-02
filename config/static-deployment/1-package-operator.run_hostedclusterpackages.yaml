@@ -24,7 +24,7 @@ spec:
       name: Progressing
       type: string
     - jsonPath: .status.observedGeneration
-      name: Generation
+      name: ObservedGeneration
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -102,73 +102,118 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
-              spec:
+              partition:
                 description: |-
-                  PackageSpec describes the Package that should be created when new
-                  HostedClusters matching the hostedClusterSelector are detected.
+                  Partition HostedClusters by label value.
+                  All packages in the same partition will have to be upgraded
+                  before progressing to the next partition.
                 properties:
-                  component:
-                    description: Desired component to deploy from multi-component
-                      packages.
+                  labelKey:
+                    description: LabelKey defines a labelKey to group objects on.
+                    minLength: 1
                     type: string
-                  config:
-                    description: Package configuration parameters.
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
-                  image:
+                  order:
                     description: |-
-                      the image containing the contents of the package
-                      this image will be unpacked by the package-loader to render
-                      the ObjectDeployment for propagating the installation of the package.
-                    type: string
-                  paused:
-                    description: If Paused is true, the package and its children will
-                      not be reconciled.
-                    type: boolean
+                      Controls how partitions are ordered.
+                      By default items will be sorted AlphaNumeric ascending.
+                    properties:
+                      alphanumericAsc:
+                        description: |-
+                          HostedClusterPackageStrategyInstant describes the instant
+                          rollout strategy for a HostedClusterPackages.
+                        type: object
+                      static:
+                        description: |-
+                          Allows to define a static partition order.
+                          The special * key matches anything not explicitly part of the list.
+                          Unknown risk-groups or HostedClusters without label
+                          will be put into an implicit "unknown" group and
+                          will get upgraded LAST.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 required:
-                - image
+                - labelKey
                 type: object
               strategy:
+                default:
+                  instant: {}
                 description: HostedClusterPackageStrategy describes the rollout strategy
                   for a HostedClusterPackage.
                 properties:
-                  maxUnavailable:
-                    default: 1
-                    description: |-
-                      MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
-                      Cannot be below 1, because we cannot surge to create more instances.
-                    minimum: 1
-                    type: integer
-                  partition:
-                    description: |-
-                      Partition HostedClusters by label value.
-                      All packages in the same partition will have to be upgraded
-                      before progressing to the next partition.
+                  instant:
+                    description: Updates all matching Packages instantly.
+                    type: object
+                  rollingUpgrade:
+                    description: Performs a rolling upgrade according to maxUnavailable.
                     properties:
-                      labelKey:
-                        description: LabelKey defines a labelKey to group objects
-                          on.
-                        minLength: 1
-                        type: string
-                      order:
+                      maxUnavailable:
+                        default: 1
                         description: |-
-                          Controls how partitions are ordered.
-                          By default items will be sorted AlphaNumeric ascending.
-                        properties:
-                          static:
-                            description: |-
-                              Allows to define a static partition order.
-                              The special * key matches anything not explicitly part of the list.
-                            items:
-                              type: string
-                            type: array
-                        type: object
+                          MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.
+                          Cannot be below 1, because we cannot surge to create more instances.
+                        minimum: 1
+                        type: integer
                     required:
-                    - labelKey
+                    - maxUnavailable
+                    type: object
+                type: object
+              template:
+                description: |-
+                  Template describes the Package that should be created when new
+                  HostedClusters matching the hostedClusterSelector are detected.
+                properties:
+                  metadata:
+                    description: |-
+                      Standard object's metadata.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      finalizers:
+                        items:
+                          type: string
+                        type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  spec:
+                    description: Specification of the desired behavior of the package.
+                    properties:
+                      component:
+                        description: Desired component to deploy from multi-component
+                          packages.
+                        type: string
+                      config:
+                        description: Package configuration parameters.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      image:
+                        description: |-
+                          the image containing the contents of the package
+                          this image will be unpacked by the package-loader to render
+                          the ObjectDeployment for propagating the installation of the package.
+                        type: string
+                      paused:
+                        description: If Paused is true, the package and its children
+                          will not be reconciled.
+                        type: boolean
+                    required:
+                    - image
                     type: object
                 type: object
             required:
-            - spec
+            - strategy
+            - template
             type: object
           status:
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
@@ -177,7 +222,7 @@ spec:
                 format: int32
                 type: integer
               conditions:
-                description: Conditions is a list of status conditions ths object
+                description: Conditions is a list of status conditions this object
                   is in.
                 items:
                   description: Condition contains details for one aspect of the current

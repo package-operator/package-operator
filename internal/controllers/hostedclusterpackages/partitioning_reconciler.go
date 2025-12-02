@@ -54,13 +54,13 @@ func (r *partitioningReconciler) listPartitions(
 		return nil, fmt.Errorf("listing clusters: %w", err)
 	}
 
-	if hostedClusterPackage.Spec.Strategy.Partition == nil {
+	if hostedClusterPackage.Spec.Partition == nil {
 		return []partition{{labelValue: "*", hostedClusters: hostedClusters.Items}}, nil
 	}
 
 	partitionsMap := make(map[string][]v1beta1.HostedCluster)
 	for _, hc := range hostedClusters.Items {
-		label := hc.GetLabels()[hostedClusterPackage.Spec.Strategy.Partition.LabelKey]
+		label := hc.GetLabels()[hostedClusterPackage.Spec.Partition.LabelKey]
 		if len(label) == 0 {
 			label = "*"
 		}
@@ -82,14 +82,15 @@ func (r *partitioningReconciler) sortedPartitions(
 	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
 	partitions []partition,
 ) []partition {
-	if hostedClusterPackage.Spec.Strategy.Partition.Order == nil ||
-		len(hostedClusterPackage.Spec.Strategy.Partition.Order.Static) == 0 {
+	if hostedClusterPackage.Spec.Partition.Order == nil ||
+		hostedClusterPackage.Spec.Partition.Order.AlphanumericAsc != nil {
 		slices.SortFunc(partitions, func(a partition, b partition) int {
 			return strings.Compare(strings.ToLower(a.labelValue), strings.ToLower(b.labelValue))
 		})
 		return partitions
-	} else {
+	} else if len(hostedClusterPackage.Spec.Partition.Order.Static) > 0 {
 		// TODO: static ordering
+		panic("Static ordering not implemented yet")
 	}
 
 	return partitions

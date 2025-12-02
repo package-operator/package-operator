@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,12 +118,11 @@ func (r *partitionReconciler) constructClusterPackage(
 	hc v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
 	pkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterPackage.Name,
-			Namespace: v1beta1.HostedClusterNamespace(hc),
-		},
-		Spec: clusterPackage.Spec.PackageSpec,
+		ObjectMeta: clusterPackage.Spec.Template.ObjectMeta,
+		Spec:       clusterPackage.Spec.Template.Spec,
 	}
+	pkg.Name = clusterPackage.Name
+	pkg.Namespace = v1beta1.HostedClusterNamespace(hc)
 
 	if err := controllerutil.SetControllerReference(
 		clusterPackage, pkg, r.scheme); err != nil {

@@ -387,18 +387,20 @@ metadata:
   name: example
 spec:
   hostedClusterSelector: {}
-  spec:
-    component: nonumy
-    config: {}
-    image: diam
-    paused: true
-  strategy:
-    maxUnavailable: 1
-    partition:
-      labelKey: elitr
-      order:
-        static:
-        - sed
+  partition:
+    labelKey: diam
+    order:
+      alphanumericAsc: {}
+      static:
+      - nonumy
+  strategy: '{instant:{}}'
+  template:
+    metadata: {}
+    spec:
+      component: sed
+      config: {}
+      image: elitr
+      paused: true
 status:
   availablePackages: 42
   conditions:
@@ -939,7 +941,8 @@ HostedClusterPackagePartitionOrderSpec describes ordering for a partition.
 
 | Field | Description |
 | ----- | ----------- |
-| `static` <br>[]string | Allows to define a static partition order.<br>The special * key matches anything not explicitly part of the list. |
+| `static` <br>[]string | Allows to define a static partition order.<br>The special * key matches anything not explicitly part of the list.<br>Unknown risk-groups or HostedClusters without label<br>will be put into an implicit "unknown" group and<br>will get upgraded LAST. |
+| `alphanumericAsc` <br><a href="#hostedclusterpackagepartitionorderalphanumericasc">HostedClusterPackagePartitionOrderAlphanumericAsc</a> |  |
 
 
 Used in:
@@ -951,6 +954,8 @@ Used in:
 HostedClusterPackagePartitionSpec describes settings to partition HostedClusters into groups for upgrades.
 Partitions will be upgraded after each other:
 Upgrades in the next partition will only start after the previous has finished.
+HostedClusters without the label will be put into an implicit "unknown" group
+and will get upgraded LAST.
 
 | Field | Description |
 | ----- | ----------- |
@@ -959,7 +964,7 @@ Upgrades in the next partition will only start after the previous has finished.
 
 
 Used in:
-* [HostedClusterPackageStrategy](#hostedclusterpackagestrategy)
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 
 
 ### HostedClusterPackagePartitionStatus
@@ -1002,9 +1007,10 @@ HostedClusterPackageSpec is the description of a HostedClusterPackage.
 
 | Field | Description |
 | ----- | ----------- |
-| `strategy` <br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
+| `strategy` <b>required</b><br><a href="#hostedclusterpackagestrategy">HostedClusterPackageStrategy</a> | HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterPackage. |
 | `hostedClusterSelector` <br>metav1.LabelSelector | HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to. |
-| `spec` <b>required</b><br><a href="#packagespec">PackageSpec</a> | PackageSpec describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
+| `template` <b>required</b><br><a href="#packagetemplatespec">PackageTemplateSpec</a> | Template describes the Package that should be created when new<br>HostedClusters matching the hostedClusterSelector are detected. |
+| `partition` <br><a href="#hostedclusterpackagepartitionspec">HostedClusterPackagePartitionSpec</a> | Partition HostedClusters by label value.<br>All packages in the same partition will have to be upgraded<br>before progressing to the next partition. |
 
 
 Used in:
@@ -1017,7 +1023,7 @@ HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 
 | Field | Description |
 | ----- | ----------- |
-| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions this object is in. |
 | `partitions` <br><a href="#hostedclusterpackagepartitionstatus">[]HostedClusterPackagePartitionStatus</a> | Count of packages found by partition. |
 | `processing` <br><a href="#hostedclusterpackagerefstatus">[]HostedClusterPackageRefStatus</a> | Processing set of packages during upgrade. |
 | `observedGeneration` <br>int32 |  |
@@ -1038,12 +1044,26 @@ HostedClusterPackageStrategy describes the rollout strategy for a HostedClusterP
 
 | Field | Description |
 | ----- | ----------- |
-| `maxUnavailable` <br>int | MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.<br>Cannot be below 1, because we cannot surge to create more instances. |
-| `partition` <br><a href="#hostedclusterpackagepartitionspec">HostedClusterPackagePartitionSpec</a> | Partition HostedClusters by label value.<br>All packages in the same partition will have to be upgraded<br>before progressing to the next partition. |
+| `instant` <br><a href="#hostedclusterpackagestrategyinstant">HostedClusterPackageStrategyInstant</a> | Updates all matching Packages instantly. |
+| `rollingUpgrade` <br><a href="#hostedclusterpackagestrategyrollingupgrade">HostedClusterPackageStrategyRollingUpgrade</a> | Performs a rolling upgrade according to maxUnavailable. |
 
 
 Used in:
 * [HostedClusterPackageSpec](#hostedclusterpackagespec)
+
+
+### HostedClusterPackageStrategyRollingUpgrade
+
+HostedClusterPackageStrategyRollingUpgrade describes the
+rolling upgrade strategy for HostedClusterPackages.
+
+| Field | Description |
+| ----- | ----------- |
+| `maxUnavailable` <b>required</b><br>int | MaxUnavailable defines how many Packages may become unavailable during upgrade at the same time.<br>Cannot be below 1, because we cannot surge to create more instances. |
+
+
+Used in:
+* [HostedClusterPackageStrategy](#hostedclusterpackagestrategy)
 
 
 ### ObjectDeploymentSpec
@@ -1321,7 +1341,7 @@ PackageSpec specifies a package.
 
 
 Used in:
-* [HostedClusterPackageSpec](#hostedclusterpackagespec)
+* [PackageTemplateSpec](#packagetemplatespec)
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
 
@@ -1340,6 +1360,20 @@ PackageStatus defines the observed state of a Package.
 Used in:
 * [ClusterPackage](#clusterpackage)
 * [Package](#package)
+
+
+### PackageTemplateSpec
+
+PackageTemplateSpec describes the data a package should have when created from a template.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta | Standard object's metadata.<br>More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata |
+| `spec` <br><a href="#packagespec">PackageSpec</a> | Specification of the desired behavior of the package. |
+
+
+Used in:
+* [HostedClusterPackageSpec](#hostedclusterpackagespec)
 
 
 ### PreviousRevisionReference
