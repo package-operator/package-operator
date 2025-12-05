@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -15,11 +16,9 @@ type proberMock struct {
 	mock.Mock
 }
 
-func (m *proberMock) Probe(obj client.Object) (
-	success bool, messages []string,
-) {
+func (m *proberMock) Probe(obj client.Object) types.ProbeResult {
 	args := m.Called(obj)
-	return args.Bool(0), args.Get(1).([]string)
+	return args.Get(0).(types.ProbeResult)
 }
 
 func TestAnd(t *testing.T) {
@@ -38,9 +37,9 @@ func TestAnd(t *testing.T) {
 
 		l := And{prober1, prober2}
 
-		s, m := l.Probe(&unstructured.Unstructured{})
-		assert.False(t, s)
-		assert.Equal(t, []string{"error from prober1", "error from prober2"}, m)
+		result := l.Probe(&unstructured.Unstructured{})
+		assert.Equal(t, false, result.Status) //nolint: testifylint
+		assert.Equal(t, []string{"error from prober1", "error from prober2"}, result.Messages)
 	})
 	t.Run("succeeds when all subprobes succeed", func(t *testing.T) {
 		t.Parallel()
@@ -56,8 +55,8 @@ func TestAnd(t *testing.T) {
 
 		l := And{prober1, prober2}
 
-		s, m := l.Probe(&unstructured.Unstructured{})
-		assert.True(t, s)
-		assert.Nil(t, m)
+		result := l.Probe(&unstructured.Unstructured{})
+		assert.Equal(t, true, result.Status) //nolint: testifylint
+		assert.Nil(t, result.Messages)
 	})
 }

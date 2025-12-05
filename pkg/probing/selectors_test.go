@@ -29,9 +29,9 @@ func TestKindSelector(t *testing.T) {
 			Prober:    prober,
 			GroupKind: gk,
 		}
-		success, message := s.Probe(obj)
-		assert.True(t, success)
-		assert.Empty(t, message)
+		result := s.Probe(obj)
+		assert.Equal(t, true, result.Status) //nolint: testifylint
+		assert.Empty(t, result.Messages)
 		prober.AssertCalled(t, "Probe", mock.Anything)
 	})
 
@@ -51,9 +51,9 @@ func TestKindSelector(t *testing.T) {
 			Prober:    prober,
 			GroupKind: gk,
 		}
-		success, message := s.Probe(obj)
-		assert.True(t, success)
-		assert.Nil(t, message)
+		result := s.Probe(obj)
+		assert.Equal(t, true, result.Status) //nolint: testifylint
+		assert.Nil(t, result.Messages)
 		prober.AssertNotCalled(t, "Probe", mock.Anything)
 	})
 }
@@ -73,9 +73,9 @@ func TestLabelSelector(t *testing.T) {
 			Prober:   prober,
 			Selector: labels.Everything(),
 		}
-		success, message := s.Probe(obj)
-		assert.True(t, success)
-		assert.Empty(t, message)
+		result := s.Probe(obj)
+		assert.Equal(t, true, result.Status) //nolint: testifylint
+		assert.Empty(t, result.Messages)
 		prober.AssertCalled(t, "Probe", mock.Anything)
 	})
 
@@ -92,9 +92,9 @@ func TestLabelSelector(t *testing.T) {
 			Prober:   prober,
 			Selector: labels.Nothing(),
 		}
-		success, message := s.Probe(obj)
-		assert.True(t, success)
-		assert.Nil(t, message)
+		result := s.Probe(obj)
+		assert.Equal(t, true, result.Status) //nolint: testifylint
+		assert.Nil(t, result.Messages)
 		prober.AssertNotCalled(t, "Probe", mock.Anything)
 	})
 }
