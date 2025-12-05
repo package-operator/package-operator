@@ -3,13 +3,14 @@
 package kubectlpackage
 
 import (
+	"context"
 	"path"
 
 	"github.com/onsi/ginkgo/v2"
 )
 
 var _ = ginkgo.DescribeTable("validate subcommand",
-	testSubCommand("validate"),
+	testSubCommand(context.Background(), "validate"),
 	ginkgo.Entry("given no path",
 		subCommandTestCase{
 			ExpectedExitCode: 1,
