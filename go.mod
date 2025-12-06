@@ -42,7 +42,7 @@ require (
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	package-operator.run/apis v1.17.1
 	package-operator.run/pkg v1.17.1
-	pkg.package-operator.run/boxcutter v0.7.1
+	pkg.package-operator.run/boxcutter v0.8.0
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
 	pkg.package-operator.run/cardboard/modules/kind v0.0.4
