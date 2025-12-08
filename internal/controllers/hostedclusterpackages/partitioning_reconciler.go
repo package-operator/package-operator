@@ -37,7 +37,7 @@ func (r *partitioningReconciler) Reconcile(
 
 	for _, part := range partitions {
 		res, err := r.partReconciler.Reconcile(ctx, hostedClusterPackage, part)
-		if err != nil || !res.IsZero() || !isUpdatedAndAvailable(hostedClusterPackage, part.labelValue) {
+		if err != nil || !res.IsZero() || !partitionDone(hostedClusterPackage, part.labelValue) {
 			// Don't reconcile next partition if current one hasn't successfully updated.
 			return res, err
 		}
@@ -96,10 +96,12 @@ func (r *partitioningReconciler) sortedPartitions(
 	return partitions
 }
 
-func isUpdatedAndAvailable(hostedClusterPackage *corev1alpha1.HostedClusterPackage, partitionName string) bool {
+func partitionDone(hostedClusterPackage *corev1alpha1.HostedClusterPackage, partitionName string) bool {
 	for _, partStatus := range hostedClusterPackage.Status.Partitions {
 		if partStatus.Name == partitionName {
-			return partStatus.UpdatedPackages == partStatus.Packages && partStatus.AvailablePackages == partStatus.Packages
+			return partStatus.UpdatedPackages == partStatus.Packages &&
+				partStatus.AvailablePackages == partStatus.Packages &&
+				partStatus.ReadyPackages == partStatus.Packages
 		}
 	}
 	panic("Developer error: partition not found")

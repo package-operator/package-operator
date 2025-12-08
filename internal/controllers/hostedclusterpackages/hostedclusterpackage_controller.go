@@ -133,7 +133,7 @@ func updateStatusCounts(
 	requeueAfter := 2 * minReadyDuration
 	for _, pkg := range packages {
 		availableCond := meta.FindStatusCondition(pkg.Status.Conditions, corev1alpha1.PackageAvailable)
-		if availableCond != nil && availableCond.Status == metav1.ConditionTrue {
+		if availableCond != nil && validateCondition(&pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue) {
 			readyFor := time.Now().UTC().Sub(availableCond.LastTransitionTime.Time)
 			if readyFor >= minReadyDuration {
 				counts.AvailablePackages++
@@ -142,8 +142,8 @@ func updateStatusCounts(
 			}
 		}
 
-		if meta.IsStatusConditionFalse(pkg.Status.Conditions, corev1alpha1.PackageProgressing) &&
-			meta.IsStatusConditionTrue(pkg.Status.Conditions, corev1alpha1.PackageUnpacked) {
+		if validateCondition(&pkg, corev1alpha1.PackageProgressing, metav1.ConditionFalse) &&
+			validateCondition(&pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue) {
 			counts.ReadyPackages++
 		}
 
@@ -158,6 +158,11 @@ func updateStatusCounts(
 		return ctrl.Result{RequeueAfter: requeueAfter}
 	}
 	return ctrl.Result{}
+}
+
+func validateCondition(pkg *corev1alpha1.Package, conditionType string, status metav1.ConditionStatus) bool {
+	cond := meta.FindStatusCondition(pkg.Status.Conditions, conditionType)
+	return cond != nil && cond.Status == status && pkg.GetGeneration() == cond.ObservedGeneration
 }
 
 func (c *HostedClusterPackageController) updateConditions(hostedClusterPackage *corev1alpha1.HostedClusterPackage) {

@@ -119,8 +119,8 @@ spec:
                     properties:
                       alphanumericAsc:
                         description: |-
-                          HostedClusterPackageStrategyInstant describes the instant
-                          rollout strategy for a HostedClusterPackages.
+                          HostedClusterPackagePartitionOrderAlphanumericAsc describes the alphanumeric
+                          ascending partition ordering for HostedClusterPackages.
                         type: object
                       static:
                         description: |-
