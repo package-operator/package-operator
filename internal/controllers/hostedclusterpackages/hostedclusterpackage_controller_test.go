@@ -123,6 +123,19 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
 					*arg = hypershiftv1beta1.HostedClusterList{Items: []hypershiftv1beta1.HostedCluster{}}
 				}).Return(nil)
+
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1alpha1.PackageList"),
+					mock.Anything).
+					Return(nil)
+
+				c.StatusMock.
+					On("Update",
+						mock.Anything,
+						mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+						mock.Anything).
+					Return(nil)
 			},
 			expectedResult: ctrl.Result{},
 		},
@@ -132,7 +145,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			clientMock := &testutil.CtrlClient{}
+			clientMock := testutil.NewClient()
 			tt.setupClient(clientMock)
 
 			controller := NewHostedClusterPackageController(clientMock, logr.Discard(), testScheme)
@@ -337,4 +350,150 @@ func TestHostedClusterPackageController_constructClusterPackage(t *testing.T) {
 	assert.Len(t, pkg.OwnerReferences, 1)
 	assert.Equal(t, hostedClusterPackage.Name, pkg.OwnerReferences[0].Name)
 	assert.Equal(t, hostedClusterPackage.UID, pkg.OwnerReferences[0].UID)
+}
+
+func TestHostedClusterPackageController_statusCounts(t *testing.T) {
+	t.Parallel()
+
+	type want struct {
+		available   int32
+		ready       int32
+		packages    int32
+		unavailable int32
+		updated     int32
+	}
+
+	tests := []struct {
+		name           string
+		pkgs           []corev1alpha1.Package
+		hostedClusters int
+		want           want
+	}{
+		{
+			name:           "zero packages zero clusters",
+			pkgs:           nil,
+			hostedClusters: 0,
+			want: want{
+				available:   0,
+				ready:       0,
+				packages:    0,
+				unavailable: 0,
+				updated:     0,
+			},
+		},
+		{
+			name:           "zero packages five clusters",
+			pkgs:           nil,
+			hostedClusters: 5,
+			want: want{
+				available:   0,
+				ready:       0,
+				packages:    0,
+				unavailable: 5,
+				updated:     0,
+			},
+		},
+		{
+			name: "one package no conditions, five clusters",
+			pkgs: []corev1alpha1.Package{
+				{Spec: corev1alpha1.PackageSpec{Image: "test-image"}},
+			},
+			hostedClusters: 5,
+			want: want{
+				available:   0,
+				ready:       0,
+				packages:    1,
+				unavailable: 5,
+				updated:     0,
+			},
+		},
+		{
+			name: "one available package, five clusters",
+			pkgs: []corev1alpha1.Package{
+				{
+					Spec: corev1alpha1.PackageSpec{Image: "test-image"},
+					Status: corev1alpha1.PackageStatus{
+						Conditions: []metav1.Condition{
+							{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
+						},
+					},
+				},
+			},
+			hostedClusters: 5,
+			want: want{
+				available:   1,
+				ready:       0,
+				packages:    1,
+				unavailable: 4,
+				updated:     0,
+			},
+		},
+		{
+			name: "one ready package, five clusters",
+			pkgs: []corev1alpha1.Package{
+				{
+					Spec: corev1alpha1.PackageSpec{Image: "test-image"},
+					Status: corev1alpha1.PackageStatus{
+						Conditions: []metav1.Condition{
+							{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
+							{Type: corev1alpha1.PackageUnpacked, Status: metav1.ConditionTrue},
+							{Type: corev1alpha1.PackageProgressing, Status: metav1.ConditionFalse},
+						},
+					},
+				},
+			},
+			hostedClusters: 5,
+			want: want{
+				available:   1,
+				ready:       1,
+				packages:    1,
+				unavailable: 4,
+				updated:     0,
+			},
+		},
+		{
+			name: "ne upgraded package, five clusters",
+			pkgs: []corev1alpha1.Package{
+				{
+					Spec: corev1alpha1.PackageSpec{Image: "hostedclusterpackage-image"},
+					Status: corev1alpha1.PackageStatus{
+						Conditions: []metav1.Condition{
+							{Type: corev1alpha1.PackageAvailable, Status: metav1.ConditionTrue},
+						},
+					},
+				},
+			},
+			hostedClusters: 5,
+			want: want{
+				available:   1,
+				ready:       0,
+				packages:    1,
+				unavailable: 4,
+				updated:     1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			counts := &corev1alpha1.HostedClusterPackageCountsStatus{}
+			hostedPackage := &corev1alpha1.HostedClusterPackage{
+				Spec: corev1alpha1.HostedClusterPackageSpec{
+					Template: corev1alpha1.PackageTemplateSpec{
+						Spec: corev1alpha1.PackageSpec{
+							Image: "hostedclusterpackage-image",
+						},
+					},
+				},
+			}
+			updateStatusCounts(counts, hostedPackage, tt.pkgs, tt.hostedClusters)
+
+			assert.Equal(t, tt.want.available, counts.AvailablePackages)
+			assert.Equal(t, tt.want.ready, counts.ReadyPackages)
+			assert.Equal(t, tt.want.packages, counts.Packages)
+			assert.Equal(t, tt.want.unavailable, counts.UnavailablePackages)
+			assert.Equal(t, tt.want.updated, counts.UpdatedPackages)
+		})
+	}
 }
