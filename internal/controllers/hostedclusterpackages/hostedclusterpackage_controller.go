@@ -55,7 +55,7 @@ func (c *HostedClusterPackageController) Reconcile(
 	}
 
 	hostedClusters := &v1beta1.HostedClusterList{}
-	if err := c.client.List(ctx, hostedClusters, client.InNamespace("default")); err != nil {
+	if err := c.client.List(ctx, hostedClusters); err != nil {
 		return ctrl.Result{}, fmt.Errorf("listing clusters: %w", err)
 	}
 
