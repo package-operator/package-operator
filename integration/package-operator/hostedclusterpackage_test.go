@@ -25,6 +25,11 @@ func TestHostedClusterPackage_InstantRollout(t *testing.T) {
 			Name: "test-hostedcluster-package",
 		},
 		Spec: corev1alpha1.HostedClusterPackageSpec{
+			HostedClusterSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"hcpkg-enable": "True",
+				},
+			},
 			Template: corev1alpha1.PackageTemplateSpec{
 				Spec: corev1alpha1.PackageSpec{
 					Image: SuccessTestPackageImage,
