@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,8 +55,13 @@ func (c *HostedClusterPackageController) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	s, err := metav1.LabelSelectorAsSelector(&hostedClusterPackage.Spec.HostedClusterSelector)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("parsing label selector: %w", err)
+	}
+
 	hostedClusters := &v1beta1.HostedClusterList{}
-	if err := c.client.List(ctx, hostedClusters); err != nil {
+	if err := c.client.List(ctx, hostedClusters, client.MatchingLabelsSelector{Selector: s}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("listing clusters: %w", err)
 	}
 

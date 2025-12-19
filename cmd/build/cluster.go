@@ -226,6 +226,9 @@ func (c *Cluster) createHostedCluster(ctx context.Context, mgmtCl *Cluster, args
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.Name(),
 			Namespace: "default",
+			Labels: map[string]string{
+				"hcpkg-enable": "True",
+			},
 		},
 		Spec: hsv1beta1.HostedClusterSpec{
 			NodeSelector: map[string]string{
