@@ -635,17 +635,3 @@ func listObjectSetRevisions(
 
 	return objectSetList
 }
-
-func requireClientGet(ctx context.Context, t *testing.T, name, namespace string, object client.Object) {
-	t.Helper()
-
-	require.NoError(t,
-		Client.Get(ctx,
-			client.ObjectKey{
-				Name:      name,
-				Namespace: namespace,
-			},
-			object,
-		),
-	)
-}
