@@ -452,7 +452,7 @@ func TestHostedClusterPackageController_statusCounts(t *testing.T) {
 			},
 		},
 		{
-			name: "ne upgraded package, five clusters",
+			name: "one upgraded package, five clusters",
 			pkgs: []corev1alpha1.Package{
 				{
 					Spec: corev1alpha1.PackageSpec{Image: "hostedclusterpackage-image"},

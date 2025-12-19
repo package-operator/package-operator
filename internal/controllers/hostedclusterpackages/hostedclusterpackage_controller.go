@@ -72,7 +72,7 @@ func (c *HostedClusterPackageController) Reconcile(
 		}
 	}
 
-	return c.updateStatus(ctx, hostedClusterPackage)
+	return c.updateStatus(ctx, hostedClusterPackage, len(hostedClusters.Items))
 }
 
 func (c *HostedClusterPackageController) reconcileHostedCluster(
@@ -136,12 +136,8 @@ func (c *HostedClusterPackageController) constructClusterPackage(
 func (c *HostedClusterPackageController) updateStatus(
 	ctx context.Context,
 	hostedClusterPackage *corev1alpha1.HostedClusterPackage,
+	hostedClusterCount int,
 ) (ctrl.Result, error) {
-	hostedClusters := &v1beta1.HostedClusterList{}
-	if err := c.client.List(ctx, hostedClusters, client.InNamespace("default")); err != nil {
-		return ctrl.Result{}, fmt.Errorf("listing clusters: %w", err)
-	}
-
 	packages := &corev1alpha1.PackageList{}
 	if err := c.client.List(ctx, packages, client.MatchingFields{
 		packageNameIndexKey: hostedClusterPackage.Name,
@@ -153,7 +149,7 @@ func (c *HostedClusterPackageController) updateStatus(
 		&hostedClusterPackage.Status.HostedClusterPackageCountsStatus,
 		hostedClusterPackage,
 		packages.Items,
-		len(hostedClusters.Items),
+		hostedClusterCount,
 	)
 
 	c.updateConditions(hostedClusterPackage)
@@ -235,6 +231,17 @@ func (c *HostedClusterPackageController) updateConditions(hostedClusterPackage *
 }
 
 func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&corev1alpha1.Package{},
+		packageNameIndexKey,
+		func(obj client.Object) []string {
+			return []string{obj.GetName()}
+		},
+	); err != nil {
+		return fmt.Errorf("failed to setup field indexer: %w", err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha1.HostedClusterPackage{}).
 		Owns(&corev1alpha1.Package{}).
