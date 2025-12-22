@@ -116,12 +116,12 @@ func Test_celProbe(t *testing.T) {
 			p, err := NewCELProbe(test.rule, test.messages[0])
 			require.NoError(t, err)
 
-			success, outMsg := p.Probe(test.obj)
-			assert.Equal(t, test.success, success)
+			result := p.Probe(test.obj)
+			assert.Equal(t, test.success, result.Status)
 			if test.success {
-				assert.Empty(t, outMsg)
+				assert.Empty(t, result.Messages)
 			} else {
-				assert.Equal(t, test.messages, outMsg)
+				assert.Equal(t, test.messages, result.Messages)
 			}
 		})
 	}
