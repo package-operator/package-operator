@@ -67,3 +67,12 @@ type PackageSpec struct {
 	// If Paused is true, the package and its children will not be reconciled.
 	Paused bool `json:"paused,omitempty"`
 }
+
+// PackageTemplateSpec describes the data a package should have when created from a template.
+type PackageTemplateSpec struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Specification of the desired behavior of the package.
+	Spec PackageSpec `json:"spec,omitempty"`
+}
