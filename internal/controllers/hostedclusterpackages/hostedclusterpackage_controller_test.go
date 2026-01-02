@@ -324,7 +324,7 @@ func TestHostedClusterPackageController_constructClusterPackage(t *testing.T) {
 
 	controller := NewHostedClusterPackageController(nil, logr.Discard(), testScheme)
 
-	pkg, err := controller.constructClusterPackage(hostedClusterPackage, hostedCluster)
+	pkg, err := controller.constructPackage(hostedClusterPackage, hostedCluster)
 
 	require.NoError(t, err)
 	require.NotNil(t, pkg)

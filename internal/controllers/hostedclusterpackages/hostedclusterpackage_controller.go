@@ -91,7 +91,7 @@ func (c *HostedClusterPackageController) createMissingPackages(
 	state *packageStates,
 ) error {
 	for _, hcMissingPackage := range state.ListHostedClustersMissingPackage() {
-		pkg, err := c.constructClusterPackage(hcpkg, hcMissingPackage)
+		pkg, err := c.constructPackage(hcpkg, hcMissingPackage)
 		if err != nil {
 			return fmt.Errorf("constructing Package: %w", err)
 		}
@@ -115,10 +115,11 @@ func (c *HostedClusterPackageController) updatePackages(
 		return nil
 	}
 
-	if disruptionBudget < 0 {
-		// First make sure we have our updated processing queue persisted.
+	hcpkg.Status.Processing = nil
+
+	if disruptionBudget > 0 {
+		// Make sure we have our updated processing queue persisted.
 		// But don't use the processing queue at all, if we have the disruption budget disabled.
-		hcpkg.Status.Processing = nil
 		for _, pkg := range packagesToUpdate {
 			hcpkg.Status.Processing = append(hcpkg.Status.Processing, corev1alpha1.HostedClusterPackageRefStatus{
 				UID:       pkg.UID,
@@ -126,9 +127,10 @@ func (c *HostedClusterPackageController) updatePackages(
 				Namespace: pkg.Namespace,
 			})
 		}
-		if err := c.client.Status().Update(ctx, hcpkg, client.FieldOwner(constants.FieldOwner)); err != nil {
-			return fmt.Errorf("updating HostedClusterPackage status: %w", err)
-		}
+	}
+
+	if err := c.client.Status().Update(ctx, hcpkg, client.FieldOwner(constants.FieldOwner)); err != nil {
+		return fmt.Errorf("updating HostedClusterPackage status: %w", err)
 	}
 
 	for _, pkg := range packagesToUpdate {
@@ -181,10 +183,16 @@ func (c *HostedClusterPackageController) indexPackageState(
 }
 
 type packageStates struct {
-	hcpkg           *corev1alpha1.HostedClusterPackage
-	hcToPackage     map[types.UID]*corev1alpha1.Package
-	hostedClusters  map[types.UID]*v1beta1.HostedCluster
-	needsUpdate     map[string][]*corev1alpha1.Package
+	// HostedClusterPackage object controlling this state.
+	hcpkg *corev1alpha1.HostedClusterPackage
+	// UID of HostedCluster objects mapped to Package objects in their namespace.
+	hcToPackage map[types.UID]*corev1alpha1.Package
+	// HostedCluster objects selected by the HostedClusterPackage
+	// indexed by their own UID.
+	hostedClusters map[types.UID]*v1beta1.HostedCluster
+	// needsUpdate maps partitions to lists of Packages belonging to that partition.
+	needsUpdate map[string][]*corev1alpha1.Package
+	// unavailablePkgs tracks total number of Packages not reporting Available == True.
 	unavailablePkgs int
 }
 
@@ -256,6 +264,9 @@ func (ps *packageStates) ListPackagesToUpdate() []corev1alpha1.Package {
 			if len(packages) >= limit {
 				return packages
 			}
+			if _, ok := processingUIDs[pkg.UID]; ok {
+				continue
+			}
 			packages = append(packages, *pkg)
 		}
 	}
@@ -323,8 +334,7 @@ func (ps *packageStates) partitionKey(hc *v1beta1.HostedCluster) string {
 func (c *HostedClusterPackageController) updateProcessingQueue(
 	ctx context.Context, hcpkg *corev1alpha1.HostedClusterPackage,
 ) error {
-	//nolint:prealloc
-	var updatedQueue []corev1alpha1.HostedClusterPackageRefStatus
+	updatedQueue := make([]corev1alpha1.HostedClusterPackageRefStatus, 0, len(hcpkg.Status.Processing))
 	for _, processingPkg := range hcpkg.Status.Processing {
 		pkg := &corev1alpha1.Package{}
 		if err := c.client.Get(ctx, client.ObjectKey{
@@ -336,8 +346,9 @@ func (c *HostedClusterPackageController) updateProcessingQueue(
 
 		if pkg.UID != processingPkg.UID {
 			// strange...
-			// Package must have been deleted.
-			// Don't put this Package back into the queue.
+			// Package must have been deleted and recreated.
+			// Don't put this Package back into the queue because
+			// it is a completely new and different object.
 			continue
 		}
 
@@ -372,7 +383,7 @@ func (c *HostedClusterPackageController) reconcileHostedCluster(
 		return nil
 	}
 
-	pkg, err := c.constructClusterPackage(clusterPackage, hc)
+	pkg, err := c.constructPackage(clusterPackage, hc)
 	if err != nil {
 		return fmt.Errorf("constructing Package: %w", err)
 	}
@@ -400,7 +411,7 @@ func (c *HostedClusterPackageController) reconcileHostedCluster(
 	return nil
 }
 
-func (c *HostedClusterPackageController) constructClusterPackage(
+func (c *HostedClusterPackageController) constructPackage(
 	hcpkg *corev1alpha1.HostedClusterPackage,
 	hc v1beta1.HostedCluster,
 ) (*corev1alpha1.Package, error) {
