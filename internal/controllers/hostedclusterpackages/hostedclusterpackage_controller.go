@@ -115,10 +115,11 @@ func (c *HostedClusterPackageController) updatePackages(
 		return nil
 	}
 
-	if disruptionBudget < 0 {
-		// First make sure we have our updated processing queue persisted.
+	hcpkg.Status.Processing = nil
+
+	if disruptionBudget > 0 {
+		// Make sure we have our updated processing queue persisted.
 		// But don't use the processing queue at all, if we have the disruption budget disabled.
-		hcpkg.Status.Processing = nil
 		for _, pkg := range packagesToUpdate {
 			hcpkg.Status.Processing = append(hcpkg.Status.Processing, corev1alpha1.HostedClusterPackageRefStatus{
 				UID:       pkg.UID,
@@ -126,9 +127,10 @@ func (c *HostedClusterPackageController) updatePackages(
 				Namespace: pkg.Namespace,
 			})
 		}
-		if err := c.client.Status().Update(ctx, hcpkg, client.FieldOwner(constants.FieldOwner)); err != nil {
-			return fmt.Errorf("updating HostedClusterPackage status: %w", err)
-		}
+	}
+
+	if err := c.client.Status().Update(ctx, hcpkg, client.FieldOwner(constants.FieldOwner)); err != nil {
+		return fmt.Errorf("updating HostedClusterPackage status: %w", err)
 	}
 
 	for _, pkg := range packagesToUpdate {
@@ -255,6 +257,9 @@ func (ps *packageStates) ListPackagesToUpdate() []corev1alpha1.Package {
 		for _, pkg := range ps.needsUpdate[partition] {
 			if len(packages) >= limit {
 				return packages
+			}
+			if _, ok := processingUIDs[pkg.UID]; ok {
+				continue
 			}
 			packages = append(packages, *pkg)
 		}
