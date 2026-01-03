@@ -147,7 +147,7 @@ func ProvideOptions() (opts Options, err error) {
 		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
 		subCmpntAffinityFlagDescription,
 	)
-	defaultLogLevel := 1
+	defaultLogLevel := -1
 	if lvl, err := strconv.Atoi(os.Getenv("LOG_LEVEL")); err == nil {
 		defaultLogLevel = lvl
 	}
