@@ -286,7 +286,7 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		log.Info("ensuring CRD", "name", crd.GetName())
 		err := init.client.Create(ctx, &crd)
 		if errors.IsAlreadyExists(err) {
-			err = init.client.Update(ctx, &crd)
+			err = init.client.Patch(ctx, &crd, client.Apply, client.FieldOwner(constants.FieldOwner))
 		}
 		if err != nil {
 			return err
