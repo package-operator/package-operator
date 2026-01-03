@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/constants"
 )
 
 // revisionReconciler determines the .status.revision number by checking previous revisions.
@@ -24,19 +23,6 @@ type revisionReconciler struct {
 func (r *revisionReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (res ctrl.Result, err error) {
-	if objectSet.GetSpecRevision() == 0 {
-		res, err = r.recoverRevision(ctx, objectSet)
-		if !res.IsZero() {
-			return res, err
-		}
-		if err := r.client.Update(
-			ctx, objectSet.ClientObject(),
-			client.FieldOwner(constants.FieldOwner),
-		); err != nil {
-			return res, fmt.Errorf("update revision in spec to recover: %w", err)
-		}
-	}
-
 	//nolint:staticcheck // .status.revision is deprecated, but still tested
 	if objectSet.GetStatusRevision() == objectSet.GetSpecRevision() {
 		// .status.revision is already set.
