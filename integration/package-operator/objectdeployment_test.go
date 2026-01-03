@@ -396,7 +396,7 @@ func TestObjectDeployment_ObjectSetArchival(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Logf("Running revision %s \n", testCase.revision)
-		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "test-objectdeployment-1", 10)
+		concernedDeployment := objectDeploymentTemplate(testCase.phases, testCase.probes, "objectdeployment-archival-1", 10)
 		currentInClusterDeployment := &corev1alpha1.ObjectDeployment{}
 		err := Client.Get(ctx, client.ObjectKeyFromObject(concernedDeployment), currentInClusterDeployment)
 		if errors.IsNotFound(err) {

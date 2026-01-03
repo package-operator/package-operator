@@ -44,7 +44,6 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 	for revisionHistoryLimit := range 2 {
 		t.Run(fmt.Sprintf("RevisionHistoryLimit%d", revisionHistoryLimit), func(t *testing.T) {
 			ctx := logr.NewContext(context.Background(), testr.New(t))
-			probe := hashCollisionTestProbe()
 			phases := []corev1alpha1.ObjectSetTemplatePhase{
 				{
 					Name: "phase-1",
@@ -66,7 +65,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 
 			// Create object deployment
 			objectDeployment := objectDeploymentTemplate(
-				phases, probe, fmt.Sprintf("test-objectdeployment-%d", revisionHistoryLimit), int32(revisionHistoryLimit))
+				phases, nil, fmt.Sprintf("test-objectdeployment-%d", revisionHistoryLimit), int32(revisionHistoryLimit))
 			require.NoError(t, Client.Create(ctx, objectDeployment), "error creating object deployment")
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, objectDeployment, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue))
