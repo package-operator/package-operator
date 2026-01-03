@@ -271,7 +271,7 @@ func (init *initializer) crdsFromPackage(ctx context.Context) (
 	return crdsFromObjects(objs), nil
 }
 
-// ensure all CRDs are installed on the cluster.
+// ensure all CRDs are installed and updated on the cluster.
 func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Unstructured) error {
 	log := logr.FromContextOrDiscard(ctx)
 	for _, crd := range crds {
@@ -284,8 +284,11 @@ func (init *initializer) ensureCRDs(ctx context.Context, crds []unstructured.Uns
 		crd.SetLabels(labels)
 
 		log.Info("ensuring CRD", "name", crd.GetName())
-		if err := init.client.Create(ctx, &crd); err != nil &&
-			!errors.IsAlreadyExists(err) {
+		err := init.client.Create(ctx, &crd)
+		if errors.IsAlreadyExists(err) {
+			err = init.client.Update(ctx, &crd)
+		}
+		if err != nil {
 			return err
 		}
 	}

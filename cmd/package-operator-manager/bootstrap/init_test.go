@@ -416,6 +416,7 @@ func Test_initializer_ensureCRDs(t *testing.T) {
 		Return(apimachineryerrors.NewAlreadyExists(schema.GroupResource{}, ""))
 	c.On("Create", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
+	c.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	crds := []unstructured.Unstructured{crd, crd}
 	err := b.ensureCRDs(ctx, crds)
