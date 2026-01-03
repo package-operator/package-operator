@@ -44,13 +44,12 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 	for revisionHistoryLimit := range 2 {
 		t.Run(fmt.Sprintf("RevisionHistoryLimit%d", revisionHistoryLimit), func(t *testing.T) {
 			ctx := logr.NewContext(context.Background(), testr.New(t))
-			probe := hashCollisionTestProbe()
 			phases := []corev1alpha1.ObjectSetTemplatePhase{
 				{
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate(fmt.Sprintf("cm1-%d", revisionHistoryLimit), "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -58,15 +57,16 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm2", "", map[string]string{"name": "cm2"}, t),
+							Object: cmTemplate(fmt.Sprintf("cm2-%d", revisionHistoryLimit), "", map[string]string{"name": "cm2"}, t),
 						},
 					},
 				},
 			}
 
 			// Create object deployment
-			objectDeployment := objectDeploymentTemplate(phases, probe, "test-objectdeployment", int32(revisionHistoryLimit))
-			require.NoError(t, Client.Create(ctx, objectDeployment), "error creating object set")
+			objectDeployment := objectDeploymentTemplate(
+				phases, nil, fmt.Sprintf("test-objectdeployment-%d", revisionHistoryLimit), int32(revisionHistoryLimit))
+			require.NoError(t, Client.Create(ctx, objectDeployment), "error creating object deployment")
 			require.NoError(t,
 				Waiter.WaitForCondition(ctx, objectDeployment, corev1alpha1.ObjectDeploymentAvailable, metav1.ConditionTrue))
 			cleanupOnSuccess(ctx, t, objectDeployment)
@@ -86,7 +86,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm1", "", map[string]string{"name": "cm1"}, t),
+							Object: cmTemplate(fmt.Sprintf("cm1-%d", revisionHistoryLimit), "", map[string]string{"name": "cm1"}, t),
 						},
 					},
 				},
@@ -94,7 +94,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: deploymentTemplate("nginx-1", "nginx:1.14.2", t),
+							Object: deploymentTemplate(fmt.Sprintf("nginx1-%d", revisionHistoryLimit), "nginx:1.14.2", t),
 						},
 					},
 				},
@@ -125,7 +125,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-1",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: cmTemplate("cm3", "", map[string]string{"name": "cm3"}, t),
+							Object: cmTemplate(fmt.Sprintf("cm3-%d", revisionHistoryLimit), "", map[string]string{"name": "cm3"}, t),
 						},
 					},
 				},
@@ -133,7 +133,7 @@ func TestObjectSetMetrics_ObjectSetsGarbageCollected(t *testing.T) {
 					Name: "phase-2",
 					Objects: []corev1alpha1.ObjectSetObject{
 						{
-							Object: deploymentTemplate("nginx-1", "nginx:1.14.2", t),
+							Object: deploymentTemplate(fmt.Sprintf("nginx1-%d", revisionHistoryLimit), "nginx:1.14.2", t),
 						},
 					},
 				},
