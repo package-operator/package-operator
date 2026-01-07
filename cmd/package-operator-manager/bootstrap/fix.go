@@ -33,6 +33,7 @@ func newFixer(c client.Client, log logr.Logger, pkoNamespace string) *fixer {
 		// Order matters here, the fixes are checked against and applied sequentially one-by-one.
 		fixes: []runChecker{
 			&fix.CRDPluralizationFix{},
+			&fix.RevisionDroppedFix{},
 		},
 	}
 }
