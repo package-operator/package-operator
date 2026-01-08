@@ -297,7 +297,7 @@ func TestRevisionDroppedFix_reconcile(t *testing.T) {
 				Spec: corev1alpha1.ObjectSetSpec{Revision: 5},
 			},
 			setupMock:       func(_ *testutil.CtrlClient, _ *corev1alpha1.ObjectSet) {},
-			expectedSuccess: false,
+			expectedSuccess: true,
 			expectedError:   false,
 			validateResult: func(t *testing.T, os *corev1alpha1.ObjectSet) {
 				t.Helper()
@@ -316,8 +316,14 @@ func TestRevisionDroppedFix_reconcile(t *testing.T) {
 					Previous: []corev1alpha1.PreviousRevisionReference{},
 				},
 			},
-			setupMock:       func(_ *testutil.CtrlClient, _ *corev1alpha1.ObjectSet) {},
-			expectedSuccess: false,
+			setupMock: func(c *testutil.CtrlClient, _ *corev1alpha1.ObjectSet) {
+				c.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(nil)
+			},
+			expectedSuccess: true,
 			expectedError:   false,
 			validateResult: func(t *testing.T, os *corev1alpha1.ObjectSet) {
 				t.Helper()
@@ -571,9 +577,10 @@ func TestRevisionDroppedFix_run(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		setupMock     func(*testutil.CtrlClient)
-		expectedError bool
+		name             string
+		setupMock        func(*testutil.CtrlClient)
+		expectedFinished bool
+		expectedError    bool
 	}{
 		{
 			name: "successfully processes when no ObjectSets need fixing",
@@ -592,7 +599,72 @@ func TestRevisionDroppedFix_run(t *testing.T) {
 					Return(nil).
 					Once()
 			},
-			expectedError: false,
+			expectedFinished: true,
+			expectedError:    false,
+		},
+		{
+			name: "successfully processes ObjectSets with all revisions set",
+			setupMock: func(c *testutil.CtrlClient) {
+				c.On("Scheme").Return(testScheme)
+
+				c.On("List",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ObjectSetList{}),
+					mock.Anything).
+					Run(func(args mock.Arguments) {
+						list := args.Get(1).(*corev1alpha1.ObjectSetList)
+						list.Items = []corev1alpha1.ObjectSet{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: "test-os"},
+								Spec:       corev1alpha1.ObjectSetSpec{Revision: 5},
+							},
+						}
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedFinished: true,
+			expectedError:    false,
+		},
+		{
+			name: "returns not finished when ObjectSet needs fixing",
+			setupMock: func(c *testutil.CtrlClient) {
+				c.On("Scheme").Return(testScheme)
+
+				c.On("List",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ObjectSetList{}),
+					mock.Anything).
+					Run(func(args mock.Arguments) {
+						list := args.Get(1).(*corev1alpha1.ObjectSetList)
+						list.Items = []corev1alpha1.ObjectSet{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: "test-os", Namespace: "default"},
+								Spec: corev1alpha1.ObjectSetSpec{
+									Revision: 0,
+									Previous: []corev1alpha1.PreviousRevisionReference{
+										{Name: "test-os-prev"},
+									},
+								},
+							},
+						}
+					}).
+					Return(nil).
+					Once()
+
+				c.On("Get",
+					mock.Anything,
+					client.ObjectKey{Name: "test-os-prev", Namespace: "default"},
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Run(func(args mock.Arguments) {
+						prevOS := args.Get(2).(*corev1alpha1.ObjectSet)
+						prevOS.Spec.Revision = 0 // Still needs fixing, so we can't proceed
+					}).
+					Return(nil)
+			},
+			expectedFinished: false,
+			expectedError:    false,
 		},
 		{
 			name: "returns error when list fails",
@@ -605,7 +677,8 @@ func TestRevisionDroppedFix_run(t *testing.T) {
 					mock.Anything).
 					Return(errTest)
 			},
-			expectedError: true,
+			expectedFinished: false,
+			expectedError:    true,
 		},
 	}
 
@@ -618,13 +691,14 @@ func TestRevisionDroppedFix_run(t *testing.T) {
 			tt.setupMock(c)
 
 			fix := &RevisionDroppedFix{}
-			err := fix.run(ctx, Context{Client: c}, adapters.NewObjectSetList)
+			finished, err := fix.run(ctx, Context{Client: c}, adapters.NewObjectSetList, adapters.NewObjectSet)
 
 			if tt.expectedError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
+			assert.Equal(t, tt.expectedFinished, finished)
 			c.AssertExpectations(t)
 		})
 	}
