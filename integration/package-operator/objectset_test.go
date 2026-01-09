@@ -593,6 +593,7 @@ func TestObjectSet_immutability(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
 					Name: "phase-1",
@@ -616,6 +617,7 @@ func TestObjectSet_immutability(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ClusterObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{{
 					Name: "phase-1",

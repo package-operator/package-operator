@@ -36,7 +36,7 @@ spec:
       name: InTransition
       priority: 1
       type: string
-    - jsonPath: .status.revision
+    - jsonPath: .spec.revision
       name: Revision
       type: string
     - jsonPath: .metadata.creationTimestamp
@@ -336,8 +336,7 @@ spec:
                 && (!has(self.successDelaySeconds) || (self.successDelaySeconds ==
                 oldSelf.successDelaySeconds))
             - message: revision is immutable
-              rule: (has(self.revision) == has(oldSelf.revision)) && (!has(self.revision)
-                || (self.revision == oldSelf.revision))
+              rule: '!has(oldSelf.revision) || (self.revision == oldSelf.revision)'
           status:
             description: ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
             properties:
