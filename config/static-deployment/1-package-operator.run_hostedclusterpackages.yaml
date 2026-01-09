@@ -130,9 +130,23 @@ spec:
                           will be put into an implicit "unknown" group and
                           will get upgraded LAST.
                         items:
+                          maxLength: 63
                           type: string
+                        maxItems: 20
                         type: array
+                        x-kubernetes-list-type: set
+                        x-kubernetes-validations:
+                        - message: must consist of alphanumeric characters, '-', '_'
+                            or '.', and must start and end with an alphanumeric character
+                            or '*'
+                          rule: self.filter(i, i != '*' && !i.matches('^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$')).size()
+                            == 0
+                        - message: catch all '*' group may only be used once
+                          rule: self.filter(i, i == '*').size() <= 1
                     type: object
+                    x-kubernetes-validations:
+                    - message: either .static or .alphanumericAsc must be specified
+                      rule: self.static.size() > 0 || has(self.alphanumericAsc)
                 required:
                 - labelKey
                 type: object

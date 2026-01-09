@@ -77,12 +77,20 @@ type HostedClusterPackagePartitionSpec struct {
 type HostedClusterPackagePartitionOrderAlphanumericAsc struct{}
 
 // HostedClusterPackagePartitionOrderSpec describes ordering for a partition.
+// +kubebuilder:validation:XValidation:rule="self.static.size() > 0 || has(self.alphanumericAsc)", message="either .static or .alphanumericAsc must be specified"
+//
+//nolint:lll
 type HostedClusterPackagePartitionOrderSpec struct {
 	// Allows to define a static partition order.
 	// The special * key matches anything not explicitly part of the list.
 	// Unknown risk-groups or HostedClusters without label
 	// will be put into an implicit "unknown" group and
 	// will get upgraded LAST.
+	// +listType=set
+	// +kubebuilder:validation:MaxItems=20
+	// +kubebuilder:validation:items:MaxLength=63
+	// +kubebuilder:validation:XValidation:rule="self.filter(i, i != '*' && !i.matches('^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$')).size() == 0", message="must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character or '*'"
+	// +kubebuilder:validation:XValidation:rule="self.filter(i, i == '*').size() <= 1", message="catch all '*' group may only be used once"
 	Static          []string                                           `json:"static,omitempty"`
 	AlphanumericAsc *HostedClusterPackagePartitionOrderAlphanumericAsc `json:"alphanumericAsc,omitempty"`
 }
