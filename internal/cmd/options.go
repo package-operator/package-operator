@@ -155,3 +155,14 @@ type WithTags []string
 func (w WithTags) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
 	c.Tags = append(c.Tags, w...)
 }
+
+type WithLabels map[string]string
+
+func (w WithLabels) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
+	if c.Labels == nil {
+		c.Labels = map[string]string{}
+	}
+	for k, v := range w {
+		c.Labels[k] = v
+	}
+}

@@ -53,11 +53,17 @@ func NewCmd(builderFactory BuilderFactory) *cobra.Command {
 				return fmt.Errorf("invalid tag specified as parameter %s: %w", ref, err)
 			}
 		}
+		for label, value := range opts.Labels {
+			if value == "" {
+				return fmt.Errorf("parsing label %q, value is empty", label)
+			}
+		}
 		factoryOpts := []internalcmd.BuildFromSourceOption{
 			internalcmd.WithInsecure(opts.Insecure),
 			internalcmd.WithOutputPath(opts.OutputPath),
 			internalcmd.WithPush(opts.Push),
 			internalcmd.WithTags(opts.Tags),
+			internalcmd.WithLabels(opts.Labels),
 		}
 
 		switch opts.OutputFormat {
@@ -94,6 +100,7 @@ type options struct {
 	OutputFormat string
 	Push         bool
 	Tags         []string
+	Labels       map[string]string
 }
 
 func (o *options) AddFlags(flags *pflag.FlagSet) {
@@ -133,5 +140,11 @@ func (o *options) AddFlags(flags *pflag.FlagSet) {
 			"Either `human` for regular stdout output or `digest` for only printing ",
 			"the image digest of the pushed package image",
 		}, " "),
+	)
+	flags.StringToStringVarP(
+		&o.Labels,
+		"label",
+		"l", o.Labels,
+		"Labels to add the OCI. May be specified multiple times. Defaults to none.",
 	)
 }

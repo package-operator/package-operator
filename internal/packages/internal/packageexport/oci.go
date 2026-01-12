@@ -24,8 +24,10 @@ func ToOCI(pkg *packagetypes.RawPackage) (containerregistrypkgv1.Image, error) {
 	configFile := &containerregistrypkgv1.ConfigFile{
 		Architecture: "amd64",
 		OS:           "linux",
-		Config:       containerregistrypkgv1.Config{},
-		RootFS:       containerregistrypkgv1.RootFS{Type: "layers"},
+		Config: containerregistrypkgv1.Config{
+			Labels: pkg.Labels,
+		},
+		RootFS: containerregistrypkgv1.RootFS{Type: "layers"},
 	}
 	image, err := mutate.ConfigFile(empty.Image, configFile)
 	if err != nil {

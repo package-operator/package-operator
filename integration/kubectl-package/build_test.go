@@ -127,11 +127,12 @@ var _ = ginkgo.DescribeTable("build subcommand",
 			ExpectedOutput: []string{"Package built successfully!"},
 		},
 	),
-	ginkgo.Entry("given '--push' with valid tag",
+	ginkgo.Entry("given '--push' with valid tag and label",
 		subCommandTestCase{
 			Args: []string{
 				"--push",
 				"--insecure",
+				"--label", "test=test",
 				"--tag", path.Join(registryPlaceholder, "valid-package"),
 				sourcePathFixture("valid_without_config"),
 			},
