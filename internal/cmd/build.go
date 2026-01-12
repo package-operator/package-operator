@@ -80,6 +80,7 @@ func (b *Build) BuildFromSource(ctx context.Context, srcPath string, opts ...Bui
 	if err != nil {
 		return fmt.Errorf("load source from disk path %s: %w", srcPath, err)
 	}
+	rawPkg.Labels = cfg.Labels
 
 	log.Info("creating image")
 
@@ -133,6 +134,7 @@ type BuildFromSourceConfig struct {
 	OutputPath   string
 	OutputFormat string
 	Tags         []string
+	Labels       map[string]string
 	Push         bool
 }
 

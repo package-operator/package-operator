@@ -1,6 +1,8 @@
 package packagetypes
 
 import (
+	"maps"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -52,13 +54,17 @@ type PackageRenderContext struct {
 // RawPackage right after import.
 // No validation has been performed yet.
 type RawPackage struct {
-	Files Files
+	// Labels added by the transport format.
+	// In most cases these will be OCI labels.
+	Labels map[string]string
+	Files  Files
 }
 
 // Returns a deep copy of the RawPackage map.
 func (rp *RawPackage) DeepCopy() *RawPackage {
 	return &RawPackage{
-		Files: rp.Files.DeepCopy(),
+		Labels: maps.Clone(rp.Labels),
+		Files:  rp.Files.DeepCopy(),
 	}
 }
 

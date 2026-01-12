@@ -124,6 +124,22 @@ func TestBuildInvalidTag(t *testing.T) {
 	require.Error(t, cmd.Execute())
 }
 
+func TestBuildInvalidLabel(t *testing.T) {
+	t.Parallel()
+
+	factory := &builderFactoryMock{}
+	factory.On("Builder").Return(internalcmd.NewBuild())
+
+	cmd := NewCmd(factory)
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
+	cmd.SetArgs([]string{".", "--label", "test="})
+
+	require.Error(t, cmd.Execute())
+}
+
 func TestBuildWithPath(t *testing.T) {
 	t.Parallel()
 

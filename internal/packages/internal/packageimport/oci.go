@@ -62,8 +62,14 @@ func FromOCI(ctx context.Context, image containerregistrypkgv1.Image) (
 		return nil, packagetypes.ErrEmptyPackage
 	}
 
+	cf, err := image.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("get configFile for Image: %w", err)
+	}
+
 	return &packagetypes.RawPackage{
-		Files: files,
+		Files:  files,
+		Labels: cf.Config.Labels,
 	}, nil
 }
 

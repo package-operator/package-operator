@@ -60,11 +60,13 @@ func (t inMemoryRegistryRoundTripper) RoundTrip(req *http.Request) (*http.Respon
 	return resp, nil
 }
 
-func BuildImage(t *testing.T, layerData map[string][]byte) containerregistrypkgv1.Image {
+func BuildImage(t *testing.T, layerData map[string][]byte, labels map[string]string) containerregistrypkgv1.Image {
 	t.Helper()
 
 	configFile := &containerregistrypkgv1.ConfigFile{
-		Config: containerregistrypkgv1.Config{},
+		Config: containerregistrypkgv1.Config{
+			Labels: labels,
+		},
 		RootFS: containerregistrypkgv1.RootFS{Type: "layers"},
 	}
 	image, err := mutate.ConfigFile(empty.Image, configFile)
