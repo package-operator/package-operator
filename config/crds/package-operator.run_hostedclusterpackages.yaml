@@ -32,8 +32,9 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HostedClusterPackage defines package to be rolled out on every
-          HyperShift HostedCluster.
+        description: |-
+          HostedClusterPackage defines package to be rolled out on every HyperShift HostedCluster.
+          Experimental: Subject to change.
         properties:
           apiVersion:
             description: |-
@@ -235,9 +236,7 @@ spec:
             description: HostedClusterPackageStatus describes the status of a HostedClusterPackage.
             properties:
               availablePackages:
-                description: |-
-                  Total number of available Packages ready for at least minReadySeconds
-                  targeted by this HostedClusterPackage.
+                description: Total number of available Packages targeted by this HostedClusterPackage.
                 format: int32
                 type: integer
               conditions:
@@ -302,11 +301,6 @@ spec:
                 description: The generation observed by the HostedClusterPackage controller.
                 format: int32
                 type: integer
-              packages:
-                description: Total number of non-terminated Packages targeted by this
-                  HostedClusterPackage.
-                format: int32
-                type: integer
               partitions:
                 description: Count of packages found by partition.
                 items:
@@ -314,9 +308,8 @@ spec:
                     of a partition.
                   properties:
                     availablePackages:
-                      description: |-
-                        Total number of available Packages ready for at least minReadySeconds
-                        targeted by this HostedClusterPackage.
+                      description: Total number of available Packages targeted by
+                        this HostedClusterPackage.
                       format: int32
                       type: integer
                     name:
@@ -327,20 +320,14 @@ spec:
                         controller.
                       format: int32
                       type: integer
-                    packages:
+                    progressedPackages:
+                      description: Total number of Packages with Progressing=False
+                        and Unpacked=True conditions.
+                      format: int32
+                      type: integer
+                    totalPackages:
                       description: Total number of non-terminated Packages targeted
                         by this HostedClusterPackage.
-                      format: int32
-                      type: integer
-                    readyPackages:
-                      description: Managed Packages with a Progressing=False Condition.
-                      format: int32
-                      type: integer
-                    unavailablePackages:
-                      description: |-
-                        Total number of unavailable packages targeted by this HostedClusterPackage. This is the total number of
-                        Packages that are still required for the HostedClusterPackage to have 100% available capacity.
-                        They may be packages that exist but aren’t available yet, or packages that haven’t been created.
                       format: int32
                       type: integer
                     updatedPackages:
@@ -374,15 +361,14 @@ spec:
                   - uid
                   type: object
                 type: array
-              readyPackages:
-                description: Managed Packages with a Progressing=False Condition.
+              progressedPackages:
+                description: Total number of Packages with Progressing=False and Unpacked=True
+                  conditions.
                 format: int32
                 type: integer
-              unavailablePackages:
-                description: |-
-                  Total number of unavailable packages targeted by this HostedClusterPackage. This is the total number of
-                  Packages that are still required for the HostedClusterPackage to have 100% available capacity.
-                  They may be packages that exist but aren’t available yet, or packages that haven’t been created.
+              totalPackages:
+                description: Total number of non-terminated Packages targeted by this
+                  HostedClusterPackage.
                 format: int32
                 type: integer
               updatedPackages:

@@ -376,6 +376,7 @@ status:
 ### HostedClusterPackage
 
 HostedClusterPackage defines package to be rolled out on every HyperShift HostedCluster.
+Experimental: Subject to change.
 
 
 **Example**
@@ -409,21 +410,19 @@ status:
     status: "True"
     type: Available
   observedGeneration: 42
-  packages: 42
   partitions:
   - availablePackages: 42
     name: eirmod
     observedGeneration: 42
-    packages: 42
-    readyPackages: 42
-    unavailablePackages: 42
+    progressedPackages: 42
+    totalPackages: 42
     updatedPackages: 42
   processing:
   - name: tempor
     namespace: lorem
     uid: 3490a790-05f8-4bd7-8333-1001c49fccd2
-  readyPackages: 42
-  unavailablePackages: 42
+  progressedPackages: 42
+  totalPackages: 42
   updatedPackages: 42
 
 ```
@@ -975,11 +974,10 @@ HostedClusterPackagePartitionStatus describes the status of a partition.
 | ----- | ----------- |
 | `name` <b>required</b><br>string | Name of the partition. |
 | `observedGeneration` <br>int32 | The generation observed by the HostedClusterPackage controller. |
-| `availablePackages` <br>int32 | Total number of available Packages ready for at least minReadySeconds<br>targeted by this HostedClusterPackage. |
-| `readyPackages` <br>int32 | Managed Packages with a Progressing=False Condition. |
-| `unavailablePackages` <br>int32 | Total number of unavailable packages targeted by this HostedClusterPackage. This is the total number of<br>Packages that are still required for the HostedClusterPackage to have 100% available capacity.<br>They may be packages that exist but aren’t available yet, or packages that haven’t been created. |
+| `availablePackages` <br>int32 | Total number of available Packages targeted by this HostedClusterPackage. |
+| `progressedPackages` <br>int32 | Total number of Packages with Progressing=False and Unpacked=True conditions. |
 | `updatedPackages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage that have the desired template spec. |
-| `packages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage. |
+| `totalPackages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage. |
 
 
 Used in:
@@ -1027,11 +1025,10 @@ HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 | `partitions` <br><a href="#hostedclusterpackagepartitionstatus">[]HostedClusterPackagePartitionStatus</a> | Count of packages found by partition. |
 | `processing` <br><a href="#hostedclusterpackagerefstatus">[]HostedClusterPackageRefStatus</a> | Processing set of packages during upgrade. |
 | `observedGeneration` <br>int32 | The generation observed by the HostedClusterPackage controller. |
-| `availablePackages` <br>int32 | Total number of available Packages ready for at least minReadySeconds<br>targeted by this HostedClusterPackage. |
-| `readyPackages` <br>int32 | Managed Packages with a Progressing=False Condition. |
-| `unavailablePackages` <br>int32 | Total number of unavailable packages targeted by this HostedClusterPackage. This is the total number of<br>Packages that are still required for the HostedClusterPackage to have 100% available capacity.<br>They may be packages that exist but aren’t available yet, or packages that haven’t been created. |
+| `availablePackages` <br>int32 | Total number of available Packages targeted by this HostedClusterPackage. |
+| `progressedPackages` <br>int32 | Total number of Packages with Progressing=False and Unpacked=True conditions. |
 | `updatedPackages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage that have the desired template spec. |
-| `packages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage. |
+| `totalPackages` <br>int32 | Total number of non-terminated Packages targeted by this HostedClusterPackage. |
 
 
 Used in:
