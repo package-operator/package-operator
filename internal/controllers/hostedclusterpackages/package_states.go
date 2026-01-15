@@ -25,6 +25,8 @@ type packageStates struct {
 	hostedClusters map[types.UID]*v1beta1.HostedCluster
 	// needsUpdate maps partitions to lists of Packages belonging to that partition.
 	needsUpdate map[string][]*corev1alpha1.Package
+	// needsUpdateAndFailing maps partitions to lists of Packages belonging to that partition.
+	needsUpdateAndFailing map[string][]*corev1alpha1.Package
 	// availablePkgs tracks total number of Packages reporting Available == True.
 	availablePkgs int
 	// unavailablePkgs tracks total number of Packages not reporting Available == True.
@@ -37,10 +39,11 @@ type packageStates struct {
 
 func newPackageStates(hcpkg *corev1alpha1.HostedClusterPackage) *packageStates {
 	return &packageStates{
-		hcToPackage:    map[types.UID]*corev1alpha1.Package{},
-		hostedClusters: map[types.UID]*v1beta1.HostedCluster{},
-		needsUpdate:    map[string][]*corev1alpha1.Package{},
-		hcpkg:          hcpkg,
+		hcToPackage:           map[types.UID]*corev1alpha1.Package{},
+		hostedClusters:        map[types.UID]*v1beta1.HostedCluster{},
+		needsUpdate:           map[string][]*corev1alpha1.Package{},
+		needsUpdateAndFailing: map[string][]*corev1alpha1.Package{},
+		hcpkg:                 hcpkg,
 	}
 }
 
@@ -65,6 +68,11 @@ func (ps *packageStates) Add(hc *v1beta1.HostedCluster, pkg *corev1alpha1.Packag
 	}
 
 	ps.needsUpdate[ps.partitionKey(hc)] = append(ps.needsUpdate[ps.partitionKey(hc)], pkg)
+
+	if !isPackageAvailable(pkg) || !isPackageProgressed(pkg) {
+		ps.needsUpdateAndFailing[ps.partitionKey(hc)] = append(
+			ps.needsUpdateAndFailing[ps.partitionKey(hc)], pkg)
+	}
 }
 
 func (ps *packageStates) Missing(hc *v1beta1.HostedCluster) {
@@ -103,7 +111,19 @@ func (ps *packageStates) ListPackagesToUpdate() []corev1alpha1.Package {
 	}
 
 	// Add additional packages.
-	for _, partition := range ps.partitionList() {
+	for partitionIdx, partition := range ps.partitionList() {
+		for _, pkg := range ps.needsUpdateAndFailing[partition] {
+			if len(packages) >= limit && partitionIdx > 0 {
+				// Only the first partition should update failing packages
+				// beyond the disruption budget to enable progression.
+				return packages
+			}
+			if _, ok := processingUIDs[pkg.UID]; ok {
+				continue
+			}
+			packages = append(packages, *pkg)
+		}
+
 		for _, pkg := range ps.needsUpdate[partition] {
 			if len(packages) >= limit {
 				return packages
