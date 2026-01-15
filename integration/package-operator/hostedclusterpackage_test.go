@@ -50,4 +50,7 @@ func TestHostedClusterPackage_InstantRollout(t *testing.T) {
 	pkg := &corev1alpha1.Package{}
 	requireClientGet(ctx, t, hcpkg.Name, v1beta1.HostedClusterNamespace(*hc), pkg)
 	requireCondition(ctx, t, pkg, corev1alpha1.PackageAvailable, metav1.ConditionTrue)
+
+	requireCondition(ctx, t, hcpkg, corev1alpha1.HostedClusterPackageAvailable, metav1.ConditionTrue)
+	requireCondition(ctx, t, hcpkg, corev1alpha1.HostedClusterPackageProgressing, metav1.ConditionFalse)
 }

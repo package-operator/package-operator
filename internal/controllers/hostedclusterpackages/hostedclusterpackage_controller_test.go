@@ -2,6 +2,7 @@ package hostedclusterpackages
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,12 +34,13 @@ func init() {
 	}
 }
 
+//nolint:maintidx
 func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name           string
-		setupClient    func(*testutil.CtrlClient)
+		setupClient    func(client *testutil.CtrlClient)
 		expectedResult ctrl.Result
 		expectedError  string
 	}{
@@ -123,6 +126,882 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
 					*arg = hypershiftv1beta1.HostedClusterList{Items: []hypershiftv1beta1.HostedCluster{}}
 				}).Return(nil)
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(0), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(0), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(0), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(0), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(0), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(0), availableCond.ObservedGeneration)
+					assert.Equal(t, "0/0 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, int64(0), progressingCond.ObservedGeneration)
+					assert.Equal(t, "0/0 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "All 5 packages available and progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 1,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					pkg := makePackage(i, true, true)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(5), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "5/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "All 5 packages available, none progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 1,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					pkg := makePackage(i, true, false)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(0), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "5/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "All 5 packages unavailable and not progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 1,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					pkg := makePackage(i, false, false)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(0), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(0), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "3 available/progressed, 2 unavailable/not progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 2,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					available := i < 3
+					progressed := i < 3
+					pkg := makePackage(i, available, progressed)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(3), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(3), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "All available, mixed progression (3 progressed, 2 not)",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 1,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					progressed := i < 3
+					pkg := makePackage(i, true, progressed)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(3), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "5/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "Mixed availability (2 available, 3 unavailable), all progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 3,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					available := i < 2
+					pkg := makePackage(i, available, true)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(2), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(5), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "2/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "Complex mix: 2 available+progressed, 1 available+not progressed, 2 unavailable+not progressed",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 2,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				packageStates := []struct{ available, progressed bool }{
+					{true, true},   // pkg 0
+					{true, true},   // pkg 1
+					{true, false},  // pkg 2
+					{false, false}, // pkg 3
+					{false, false}, // pkg 4
+				}
+
+				for i := range 5 {
+					pkg := makePackage(i, packageStates[i].available, packageStates[i].progressed)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(3), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(2), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionTrue, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "2/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "Boundary: 1 available+progressed, 4 unavailable+not progressed (exceeds maxUnavailable)",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 2,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				for i := range 5 {
+					available := i == 0
+					progressed := i == 0
+					pkg := makePackage(i, available, progressed)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(1), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(1), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "1/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "1/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "Instant strategy with mixed states",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							Instant: &corev1alpha1.HostedClusterPackageStrategyInstant{},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := makeHostedClusters()
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				packageStates := []struct{ available, progressed bool }{
+					{true, true},
+					{true, false},
+					{false, true},
+					{false, false},
+					{true, true},
+				}
+
+				for i := range 5 {
+					pkg := makePackage(i, packageStates[i].available, packageStates[i].progressed)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					hcpkg := args.Get(1).(*corev1alpha1.HostedClusterPackage)
+
+					// Validate counts
+					assert.Equal(t, int32(1), hcpkg.Status.ObservedGeneration)
+					assert.Equal(t, int32(5), hcpkg.Status.TotalPackages)
+					assert.Equal(t, int32(3), hcpkg.Status.AvailablePackages)
+					assert.Equal(t, int32(3), hcpkg.Status.ProgressedPackages)
+					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
+
+					// Validate conditions
+					require.Len(t, hcpkg.Status.Conditions, 2)
+
+					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
+					require.NotNil(t, availableCond)
+					assert.Equal(t, metav1.ConditionFalse, availableCond.Status)
+					assert.Equal(t, int64(1), availableCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages available.", availableCond.Message)
+
+					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
+					require.NotNil(t, progressingCond)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
+					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+				}).Return(nil)
+			},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name: "Some HostedClusters not available yet",
+			setupClient: func(c *testutil.CtrlClient) {
+				hcpkg := &corev1alpha1.HostedClusterPackage{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg", Generation: 1},
+					Spec: corev1alpha1.HostedClusterPackageSpec{
+						Strategy: corev1alpha1.HostedClusterPackageStrategy{
+							RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
+								MaxUnavailable: 2,
+							},
+						},
+						Template: corev1alpha1.PackageTemplateSpec{
+							Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+						},
+					},
+				}
+				c.On("Get",
+					mock.Anything,
+					types.NamespacedName{Name: "test-hcpkg"},
+					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+					*arg = *hcpkg
+				}).Return(nil)
+
+				hostedClusters := make([]hypershiftv1beta1.HostedCluster, 5)
+				for i := range 5 {
+					hostedClusters[i] = hypershiftv1beta1.HostedCluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("hc-%d", i),
+							Namespace: "default",
+							UID:       types.UID(fmt.Sprintf("hc-uid-%d", i)),
+						},
+						Status: hypershiftv1beta1.HostedClusterStatus{
+							Conditions: []metav1.Condition{},
+						},
+					}
+					// Only first 3 HostedClusters are available
+					if i < 3 {
+						hostedClusters[i].Status.Conditions = []metav1.Condition{
+							{
+								Type:   hypershiftv1beta1.HostedClusterAvailable,
+								Status: metav1.ConditionTrue,
+							},
+						}
+					}
+				}
+
+				c.On("List",
+					mock.Anything,
+					mock.AnythingOfType("*v1beta1.HostedClusterList"),
+					mock.Anything,
+				).Run(func(args mock.Arguments) {
+					arg := args.Get(1).(*hypershiftv1beta1.HostedClusterList)
+					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
+				}).Return(nil)
+
+				// Only the available HostedClusters have packages
+				for i := range 3 {
+					pkg := makePackage(i, true, true)
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Run(func(args mock.Arguments) {
+						arg := args.Get(2).(*corev1alpha1.Package)
+						*arg = pkg
+					}).Return(nil)
+				}
+
+				// Last 2 HostedClusters don't have packages yet
+				for i := 3; i < 5; i++ {
+					c.On("Get",
+						mock.Anything,
+						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
+						mock.AnythingOfType("*v1alpha1.Package"),
+						mock.Anything,
+					).Return(errors.NewNotFound(schema.GroupResource{}, "test-package"))
+				}
+
+				// Mock creating packages for the missing HostedClusters
+				c.On("Create",
+					mock.Anything,
+					mock.AnythingOfType("*v1alpha1.Package"),
+					mock.Anything,
+				).Return(nil)
+
+				c.StatusMock.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.HostedClusterPackage{}),
+					mock.Anything,
+				).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
 		},
@@ -132,7 +1011,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			clientMock := &testutil.CtrlClient{}
+			clientMock := testutil.NewClient()
 			tt.setupClient(clientMock)
 
 			controller := NewHostedClusterPackageController(clientMock, logr.Discard(), testScheme)
@@ -141,149 +1020,6 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 			result, err := controller.Reconcile(context.Background(), req)
 
 			assert.Equal(t, tt.expectedResult, result)
-			if tt.expectedError != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			} else {
-				require.NoError(t, err)
-			}
-
-			clientMock.AssertExpectations(t)
-		})
-	}
-}
-
-func TestHostedClusterPackageController_reconcileHostedCluster(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		hostedCluster hypershiftv1beta1.HostedCluster
-		setupClient   func(*testutil.CtrlClient)
-		expectedError string
-	}{
-		{
-			name: "HostedCluster not available",
-			hostedCluster: hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"},
-				Status: hypershiftv1beta1.HostedClusterStatus{
-					Conditions: []metav1.Condition{},
-				},
-			},
-			setupClient: func(_ *testutil.CtrlClient) {},
-		},
-		{
-			name: "Error creating Package",
-			hostedCluster: hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"},
-				Status: hypershiftv1beta1.HostedClusterStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   hypershiftv1beta1.HostedClusterAvailable,
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
-			},
-			setupClient: func(c *testutil.CtrlClient) {
-				c.On("Get",
-					mock.Anything,
-					mock.AnythingOfType("types.NamespacedName"),
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Return(errors.NewNotFound(schema.GroupResource{}, "test-package"))
-
-				c.On("Create",
-					mock.Anything,
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Return(assert.AnError)
-			},
-			expectedError: "creating Package: assert.AnError general error for testing",
-		},
-		{
-			name: "Successfully create Package",
-			hostedCluster: hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"},
-				Status: hypershiftv1beta1.HostedClusterStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   hypershiftv1beta1.HostedClusterAvailable,
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
-			},
-			setupClient: func(c *testutil.CtrlClient) {
-				c.On("Get",
-					mock.Anything,
-					mock.AnythingOfType("types.NamespacedName"),
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Return(errors.NewNotFound(schema.GroupResource{}, "test-package"))
-
-				c.On("Create",
-					mock.Anything,
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Return(nil)
-			},
-		},
-		{
-			name: "Successfully update existing Package",
-			hostedCluster: hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"},
-				Status: hypershiftv1beta1.HostedClusterStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   hypershiftv1beta1.HostedClusterAvailable,
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
-			},
-			setupClient: func(c *testutil.CtrlClient) {
-				existingPkg := &corev1alpha1.Package{
-					Spec: corev1alpha1.PackageSpec{Image: "old-image"},
-				}
-				c.On("Get",
-					mock.Anything,
-					mock.AnythingOfType("types.NamespacedName"),
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.Package)
-					*arg = *existingPkg
-				}).Return(nil)
-
-				c.On("Update",
-					mock.Anything,
-					mock.AnythingOfType("*v1alpha1.Package"),
-					mock.Anything,
-				).Return(nil)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			clientMock := &testutil.CtrlClient{}
-			tt.setupClient(clientMock)
-
-			controller := NewHostedClusterPackageController(clientMock, logr.Discard(), testScheme)
-			hcpkg := &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Template: corev1alpha1.PackageTemplateSpec{
-						Spec: corev1alpha1.PackageSpec{Image: "test-image"},
-					},
-				},
-			}
-
-			err := controller.reconcileHostedCluster(context.Background(), hcpkg, tt.hostedCluster)
-
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -339,800 +1075,88 @@ func TestHostedClusterPackageController_constructClusterPackage(t *testing.T) {
 	assert.Equal(t, hostedClusterPackage.UID, pkg.OwnerReferences[0].UID)
 }
 
-func TestNewPackageStates(t *testing.T) {
-	t.Parallel()
-
-	hcpkg := &corev1alpha1.HostedClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-	}
-
-	ps := newPackageStates(hcpkg)
-
-	require.NotNil(t, ps)
-	assert.Equal(t, hcpkg, ps.hcpkg)
-	assert.NotNil(t, ps.hcToPackage)
-	assert.NotNil(t, ps.hostedClusters)
-	assert.NotNil(t, ps.needsUpdate)
-	assert.Equal(t, 0, ps.unavailablePkgs)
-}
-
-func TestPackageStates_Add(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name                 string
-		hcpkg                *corev1alpha1.HostedClusterPackage
-		hc                   *hypershiftv1beta1.HostedCluster
-		pkg                  *corev1alpha1.Package
-		expectedUnavailable  int
-		expectedNeedsUpdate  bool
-		expectedPartitionKey string
-	}{
-		{
-			name: "add available package with matching spec",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Template: corev1alpha1.PackageTemplateSpec{
-						Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
+// makeHostedClusters creates 5 HostedCluster test objects.
+func makeHostedClusters() []hypershiftv1beta1.HostedCluster {
+	n := 5
+	clusters := make([]hypershiftv1beta1.HostedCluster, 0, n)
+	for i := range n {
+		clusters = append(clusters, hypershiftv1beta1.HostedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("hc-%d", i),
+				Namespace: "default",
+				UID:       types.UID(fmt.Sprintf("hc-uid-%d", i)),
+			},
+			Status: hypershiftv1beta1.HostedClusterStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:   hypershiftv1beta1.HostedClusterAvailable,
+						Status: metav1.ConditionTrue,
 					},
 				},
 			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-hc",
-					Namespace: "default",
-					UID:       "hc-uid-1",
-				},
-			},
-			pkg: &corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-pkg",
-					Namespace:  "default",
-					UID:        "pkg-uid-1",
-					Generation: 1,
-				},
-				Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-				Status: corev1alpha1.PackageStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               corev1alpha1.PackageAvailable,
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 1,
-						},
-					},
-				},
-			},
-			expectedUnavailable:  0,
-			expectedNeedsUpdate:  false,
-			expectedPartitionKey: defaultPartitionGroup,
-		},
-		{
-			name: "add unavailable package",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Template: corev1alpha1.PackageTemplateSpec{
-						Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-hc",
-					Namespace: "default",
-					UID:       "hc-uid-1",
-				},
-			},
-			pkg: &corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-pkg",
-					Namespace:  "default",
-					UID:        "pkg-uid-1",
-					Generation: 1,
-				},
-				Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-				Status: corev1alpha1.PackageStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               corev1alpha1.PackageAvailable,
-							Status:             metav1.ConditionFalse,
-							ObservedGeneration: 1,
-						},
-					},
-				},
-			},
-			expectedUnavailable:  1,
-			expectedNeedsUpdate:  false,
-			expectedPartitionKey: defaultPartitionGroup,
-		},
-		{
-			name: "add package needing update",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Template: corev1alpha1.PackageTemplateSpec{
-						Spec: corev1alpha1.PackageSpec{Image: "test-image:v2"},
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-hc",
-					Namespace: "default",
-					UID:       "hc-uid-1",
-				},
-			},
-			pkg: &corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-pkg",
-					Namespace:  "default",
-					UID:        "pkg-uid-1",
-					Generation: 1,
-				},
-				Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-				Status: corev1alpha1.PackageStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               corev1alpha1.PackageAvailable,
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 1,
-						},
-					},
-				},
-			},
-			expectedUnavailable:  0,
-			expectedNeedsUpdate:  true,
-			expectedPartitionKey: defaultPartitionGroup,
-		},
-		{
-			name: "add package with partition label",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Template: corev1alpha1.PackageTemplateSpec{
-						Spec: corev1alpha1.PackageSpec{Image: "test-image:v2"},
-					},
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-hc",
-					Namespace: "default",
-					UID:       "hc-uid-1",
-					Labels: map[string]string{
-						"risk-group": "low-risk",
-					},
-				},
-			},
-			pkg: &corev1alpha1.Package{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-pkg",
-					Namespace:  "default",
-					UID:        "pkg-uid-1",
-					Generation: 1,
-				},
-				Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-				Status: corev1alpha1.PackageStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:               corev1alpha1.PackageAvailable,
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 1,
-						},
-					},
-				},
-			},
-			expectedUnavailable:  0,
-			expectedNeedsUpdate:  true,
-			expectedPartitionKey: "low-risk",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := newPackageStates(tt.hcpkg)
-			ps.Add(tt.hc, tt.pkg)
-
-			assert.Equal(t, tt.expectedUnavailable, ps.unavailablePkgs)
-			assert.Equal(t, tt.pkg, ps.hcToPackage[tt.hc.UID])
-			assert.Equal(t, tt.hc, ps.hostedClusters[tt.hc.UID])
-
-			partitionKey := ps.partitionKey(tt.hc)
-			assert.Equal(t, tt.expectedPartitionKey, partitionKey)
-
-			if tt.expectedNeedsUpdate {
-				assert.Contains(t, ps.needsUpdate[partitionKey], tt.pkg)
-			} else {
-				assert.NotContains(t, ps.needsUpdate[partitionKey], tt.pkg)
-			}
 		})
 	}
+	return clusters
 }
 
-func TestPackageStates_Missing(t *testing.T) {
-	t.Parallel()
-
-	hcpkg := &corev1alpha1.HostedClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-	}
-	hc := &hypershiftv1beta1.HostedCluster{
+// makePackage creates a Package test object with specified availability and progression states.
+func makePackage(id int, available, progressed bool) corev1alpha1.Package {
+	pkg := corev1alpha1.Package{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-hc",
-			Namespace: "default",
-			UID:       "hc-uid-1",
+			Name:       "test-hcpkg",
+			Namespace:  fmt.Sprintf("default-hc-%d", id),
+			UID:        types.UID(fmt.Sprintf("pkg-uid-%d", id)),
+			Generation: 1,
+		},
+		Spec: corev1alpha1.PackageSpec{
+			Image: "test-image:v1",
+		},
+		Status: corev1alpha1.PackageStatus{
+			Conditions: []metav1.Condition{},
 		},
 	}
 
-	ps := newPackageStates(hcpkg)
-	ps.Missing(hc)
-
-	assert.Equal(t, 1, ps.unavailablePkgs)
-	assert.Equal(t, hc, ps.hostedClusters[hc.UID])
-	assert.Nil(t, ps.hcToPackage[hc.UID])
-}
-
-func TestPackageStates_ListHostedClustersMissingPackage(t *testing.T) {
-	t.Parallel()
-
-	hcpkg := &corev1alpha1.HostedClusterPackage{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-		Spec: corev1alpha1.HostedClusterPackageSpec{
-			Template: corev1alpha1.PackageTemplateSpec{
-				Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-			},
-		},
-	}
-
-	hcMissing := &hypershiftv1beta1.HostedCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hc-missing",
-			Namespace: "default",
-			UID:       "hc-uid-missing",
-		},
-	}
-
-	hcWithPackage := &hypershiftv1beta1.HostedCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "hc-with-package",
-			Namespace: "default",
-			UID:       "hc-uid-with-package",
-		},
-	}
-
-	pkg := &corev1alpha1.Package{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-pkg",
-			Namespace: "default",
-			UID:       "pkg-uid-1",
-		},
-		Spec: corev1alpha1.PackageSpec{Image: "test-image:v1"},
-	}
-
-	ps := newPackageStates(hcpkg)
-	ps.Missing(hcMissing)
-	ps.Add(hcWithPackage, pkg)
-
-	missing := ps.ListHostedClustersMissingPackage()
-
-	assert.Len(t, missing, 1)
-	assert.Equal(t, "hc-missing", missing[0].Name)
-}
-
-func TestPackageStates_DisruptionBudget(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name            string
-		hcpkg           *corev1alpha1.HostedClusterPackage
-		unavailablePkgs int
-		expectedBudget  int
-	}{
-		{
-			name: "instant strategy - budget disabled",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						Instant: &corev1alpha1.HostedClusterPackageStrategyInstant{},
-					},
-				},
-			},
-			unavailablePkgs: 0,
-			expectedBudget:  -1,
-		},
-		{
-			name: "no strategy - budget disabled",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-			},
-			unavailablePkgs: 0,
-			expectedBudget:  -1,
-		},
-		{
-			name: "rolling upgrade - no unavailable packages",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 3,
-						},
-					},
-				},
-			},
-			unavailablePkgs: 0,
-			expectedBudget:  3,
-		},
-		{
-			name: "rolling upgrade - some unavailable packages",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 5,
-						},
-					},
-				},
-			},
-			unavailablePkgs: 2,
-			expectedBudget:  3,
-		},
-		{
-			name: "rolling upgrade - at max unavailable",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 3,
-						},
-					},
-				},
-			},
-			unavailablePkgs: 3,
-			expectedBudget:  0,
-		},
-		{
-			name: "rolling upgrade - over max unavailable",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 2,
-						},
-					},
-				},
-			},
-			unavailablePkgs: 5,
-			expectedBudget:  0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := newPackageStates(tt.hcpkg)
-			ps.unavailablePkgs = tt.unavailablePkgs
-
-			budget := ps.DisruptionBudget()
-
-			assert.Equal(t, tt.expectedBudget, budget)
+	if available {
+		pkg.Status.Conditions = append(pkg.Status.Conditions, metav1.Condition{
+			Type:               corev1alpha1.PackageAvailable,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: 1,
+		})
+	} else {
+		pkg.Status.Conditions = append(pkg.Status.Conditions, metav1.Condition{
+			Type:               corev1alpha1.PackageAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: 1,
 		})
 	}
-}
 
-func TestPackageStates_PartitionKey(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name        string
-		hcpkg       *corev1alpha1.HostedClusterPackage
-		hc          *hypershiftv1beta1.HostedCluster
-		expectedKey string
-	}{
-		{
-			name: "no partition spec",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
+	if progressed {
+		pkg.Status.Conditions = append(pkg.Status.Conditions,
+			metav1.Condition{
+				Type:               corev1alpha1.PackageUnpacked,
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: 1,
 			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hc"},
+			metav1.Condition{
+				Type:               corev1alpha1.PackageProgressing,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: 1,
 			},
-			expectedKey: defaultPartitionGroup,
-		},
-		{
-			name: "partition spec but no labels on HC",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
+		)
+	} else {
+		pkg.Status.Conditions = append(pkg.Status.Conditions,
+			metav1.Condition{
+				Type:               corev1alpha1.PackageUnpacked,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: 1,
 			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hc"},
+			metav1.Condition{
+				Type:               corev1alpha1.PackageProgressing,
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: 1,
 			},
-			expectedKey: defaultPartitionGroup,
-		},
-		{
-			name: "partition spec but missing label",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "test-hc",
-					Labels: map[string]string{"other": "value"},
-				},
-			},
-			expectedKey: defaultPartitionGroup,
-		},
-		{
-			name: "partition spec with matching label",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "test-hc",
-					Labels: map[string]string{"risk-group": "high-risk"},
-				},
-			},
-			expectedKey: "high-risk",
-		},
-		{
-			name: "partition spec with empty label value",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
-			},
-			hc: &hypershiftv1beta1.HostedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "test-hc",
-					Labels: map[string]string{"risk-group": ""},
-				},
-			},
-			expectedKey: defaultPartitionGroup,
-		},
+		)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := newPackageStates(tt.hcpkg)
-			key := ps.partitionKey(tt.hc)
-
-			assert.Equal(t, tt.expectedKey, key)
-		})
-	}
-}
-
-func TestPackageStates_PartitionList(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		hcpkg         *corev1alpha1.HostedClusterPackage
-		needsUpdate   map[string][]*corev1alpha1.Package
-		expectedOrder []string
-	}{
-		{
-			name: "no partition spec",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				defaultPartitionGroup: {{}},
-			},
-			expectedOrder: []string{defaultPartitionGroup},
-		},
-		{
-			name: "alphanumeric ascending (default)",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-					},
-				},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				"low-risk":            {{}},
-				"high-risk":           {{}},
-				"medium-risk":         {{}},
-				defaultPartitionGroup: {{}},
-			},
-			expectedOrder: []string{"high-risk", "low-risk", "medium-risk", defaultPartitionGroup},
-		},
-		{
-			name: "alphanumeric ascending (explicit)",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-						Order: &corev1alpha1.HostedClusterPackagePartitionOrderSpec{
-							AlphanumericAsc: &corev1alpha1.HostedClusterPackagePartitionOrderAlphanumericAsc{},
-						},
-					},
-				},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				"zone-c":              {{}},
-				"zone-a":              {{}},
-				"zone-b":              {{}},
-				defaultPartitionGroup: {{}},
-			},
-			expectedOrder: []string{"zone-a", "zone-b", "zone-c", defaultPartitionGroup},
-		},
-		{
-			name: "static ordering without wildcard",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-						Order: &corev1alpha1.HostedClusterPackagePartitionOrderSpec{
-							Static: []string{"low-risk", "medium-risk", "high-risk"},
-						},
-					},
-				},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				"low-risk":    {{}},
-				"high-risk":   {{}},
-				"medium-risk": {{}},
-			},
-			expectedOrder: []string{"low-risk", "medium-risk", "high-risk"},
-		},
-		{
-			name: "static ordering with wildcard at beginning",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-						Order: &corev1alpha1.HostedClusterPackagePartitionOrderSpec{
-							Static: []string{"*", "low-risk", "medium-risk", "high-risk"},
-						},
-					},
-				},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				"low-risk":            {{}},
-				"high-risk":           {{}},
-				defaultPartitionGroup: {{}},
-			},
-			expectedOrder: []string{defaultPartitionGroup, "low-risk", "medium-risk", "high-risk"},
-		},
-		{
-			name: "static ordering with wildcard in middle",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-						Order: &corev1alpha1.HostedClusterPackagePartitionOrderSpec{
-							Static: []string{"low-risk", "*", "high-risk"},
-						},
-					},
-				},
-			},
-			needsUpdate: map[string][]*corev1alpha1.Package{
-				"low-risk":            {{}},
-				"high-risk":           {{}},
-				defaultPartitionGroup: {{}},
-			},
-			expectedOrder: []string{"low-risk", defaultPartitionGroup, "high-risk"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := newPackageStates(tt.hcpkg)
-			ps.needsUpdate = tt.needsUpdate
-
-			order := ps.partitionList()
-
-			assert.Equal(t, tt.expectedOrder, order)
-		})
-	}
-}
-
-func TestPackageStates_ListPackagesToUpdate(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name             string
-		hcpkg            *corev1alpha1.HostedClusterPackage
-		setupState       func(*packageStates)
-		expectedPkgCount int
-		expectedPkgUIDs  []types.UID
-	}{
-		{
-			name: "no packages need update",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-			},
-			setupState: func(_ *packageStates) {
-				// Empty state
-			},
-			expectedPkgCount: 0,
-		},
-		{
-			name: "instant strategy - return all packages",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						Instant: &corev1alpha1.HostedClusterPackageStrategyInstant{},
-					},
-				},
-			},
-			setupState: func(ps *packageStates) {
-				ps.needsUpdate[defaultPartitionGroup] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-1"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-2"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-3"}},
-				}
-			},
-			expectedPkgCount: 3,
-		},
-		{
-			name: "rolling upgrade - respect disruption budget",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 2,
-						},
-					},
-				},
-			},
-			setupState: func(ps *packageStates) {
-				ps.needsUpdate[defaultPartitionGroup] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-1"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-2"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-3"}},
-				}
-			},
-			expectedPkgCount: 2,
-		},
-		{
-			name: "rolling upgrade - no budget available",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 2,
-						},
-					},
-				},
-			},
-			setupState: func(ps *packageStates) {
-				ps.unavailablePkgs = 2
-				ps.needsUpdate[defaultPartitionGroup] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-1"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-2"}},
-				}
-			},
-			expectedPkgCount: 0,
-		},
-		{
-			name: "packages in processing queue are prioritized",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 2,
-						},
-					},
-				},
-				Status: corev1alpha1.HostedClusterPackageStatus{
-					Processing: []corev1alpha1.HostedClusterPackageRefStatus{
-						{UID: "pkg-2"},
-					},
-				},
-			},
-			setupState: func(ps *packageStates) {
-				ps.hcToPackage["hc-1"] = &corev1alpha1.Package{
-					ObjectMeta: metav1.ObjectMeta{UID: "pkg-1"},
-				}
-				ps.hcToPackage["hc-2"] = &corev1alpha1.Package{
-					ObjectMeta: metav1.ObjectMeta{UID: "pkg-2"},
-				}
-				ps.hcToPackage["hc-3"] = &corev1alpha1.Package{
-					ObjectMeta: metav1.ObjectMeta{UID: "pkg-3"},
-				}
-				ps.needsUpdate[defaultPartitionGroup] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-1"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-2"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-3"}},
-				}
-			},
-			expectedPkgCount: 2,
-			expectedPkgUIDs:  []types.UID{"pkg-2", "pkg-1"}, // pkg-2 should be first (from processing queue)
-		},
-		{
-			name: "partitions processed in order",
-			hcpkg: &corev1alpha1.HostedClusterPackage{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
-				Spec: corev1alpha1.HostedClusterPackageSpec{
-					Strategy: corev1alpha1.HostedClusterPackageStrategy{
-						RollingUpgrade: &corev1alpha1.HostedClusterPackageStrategyRollingUpgrade{
-							MaxUnavailable: 2,
-						},
-					},
-					Partition: &corev1alpha1.HostedClusterPackagePartitionSpec{
-						LabelKey: "risk-group",
-						Order: &corev1alpha1.HostedClusterPackagePartitionOrderSpec{
-							Static: []string{"low-risk", "high-risk"},
-						},
-					},
-				},
-			},
-			setupState: func(ps *packageStates) {
-				ps.needsUpdate["low-risk"] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-low-1"}},
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-low-2"}},
-				}
-				ps.needsUpdate["high-risk"] = []*corev1alpha1.Package{
-					{ObjectMeta: metav1.ObjectMeta{UID: "pkg-high-1"}},
-				}
-			},
-			expectedPkgCount: 2,
-			expectedPkgUIDs:  []types.UID{"pkg-low-1", "pkg-low-2"}, // Only low-risk packages
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := newPackageStates(tt.hcpkg)
-			tt.setupState(ps)
-
-			packages := ps.ListPackagesToUpdate()
-
-			assert.Len(t, packages, tt.expectedPkgCount)
-
-			if len(tt.expectedPkgUIDs) > 0 {
-				actualUIDs := make([]types.UID, len(packages))
-				for i, pkg := range packages {
-					actualUIDs[i] = pkg.UID
-				}
-				assert.Equal(t, tt.expectedPkgUIDs, actualUIDs)
-			}
-		})
-	}
+	return pkg
 }

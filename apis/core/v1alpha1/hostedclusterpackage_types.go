@@ -6,6 +6,7 @@ import (
 )
 
 // HostedClusterPackage defines package to be rolled out on every HyperShift HostedCluster.
+// Experimental: Subject to change.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=hcpkg
@@ -111,7 +112,7 @@ const (
 	// HostedClusterPackageAvailable indicates that all or a given percentage of managed Packages
 	// are reporting a positive Available status condition.
 	HostedClusterPackageAvailable = "Available"
-	// HostedClusterPackageProgressing indicates that A rollout is currently ongoing.
+	// HostedClusterPackageProgressing indicates that a rollout is currently ongoing.
 	// This means that not all managed Packages have been upgraded to the latest specified version and configuration.
 	HostedClusterPackageProgressing = "Progressing"
 )
@@ -128,24 +129,18 @@ type HostedClusterPackageCountsStatus struct {
 	// The generation observed by the HostedClusterPackage controller.
 	// +optional
 	ObservedGeneration int32 `json:"observedGeneration,omitempty"`
-	// Total number of available Packages ready for at least minReadySeconds
-	// targeted by this HostedClusterPackage.
+	// Total number of available Packages targeted by this HostedClusterPackage.
 	// +optional
 	AvailablePackages int32 `json:"availablePackages,omitempty"`
-	// Managed Packages with a Progressing=False Condition.
+	// Total number of Packages with Progressing=False and Unpacked=True conditions.
 	// +optional
-	ReadyPackages int32 `json:"readyPackages,omitempty"`
-	// Total number of unavailable packages targeted by this HostedClusterPackage. This is the total number of
-	// Packages that are still required for the HostedClusterPackage to have 100% available capacity.
-	// They may be packages that exist but aren’t available yet, or packages that haven’t been created.
-	// +optional
-	UnavailablePackages int32 `json:"unavailablePackages,omitempty"`
+	ProgressedPackages int32 `json:"progressedPackages,omitempty"`
 	// Total number of non-terminated Packages targeted by this HostedClusterPackage that have the desired template spec.
 	// +optional
 	UpdatedPackages int32 `json:"updatedPackages,omitempty"`
 	// Total number of non-terminated Packages targeted by this HostedClusterPackage.
 	// +optional
-	Packages int32 `json:"packages,omitempty"`
+	TotalPackages int32 `json:"totalPackages,omitempty"`
 }
 
 // HostedClusterPackageRefStatus holds a reference to upgrades in-flight.
