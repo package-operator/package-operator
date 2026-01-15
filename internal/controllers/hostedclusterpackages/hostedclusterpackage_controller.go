@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -275,13 +276,16 @@ func (c *HostedClusterPackageController) updateStatus(
 ) error {
 	totalPackages := int32(len(state.hcToPackage))
 
-	conditions := make([]metav1.Condition, 0, 2)
+	if hcpkg.Status.Conditions == nil {
+		hcpkg.Status.Conditions = make([]metav1.Condition, 0, 2)
+	}
+
 	maxUnavailable := 0
 	if hcpkg.Spec.Strategy.RollingUpgrade != nil {
 		maxUnavailable = hcpkg.Spec.Strategy.RollingUpgrade.MaxUnavailable
 	}
 	if state.unavailablePkgs <= maxUnavailable {
-		conditions = append(conditions, metav1.Condition{
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageAvailable,
 			Status:             metav1.ConditionTrue,
@@ -289,7 +293,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			Message:            fmt.Sprintf("%d/%d packages available.", state.availablePkgs, totalPackages),
 		})
 	} else {
-		conditions = append(conditions, metav1.Condition{
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageAvailable,
 			Status:             metav1.ConditionFalse,
@@ -299,24 +303,22 @@ func (c *HostedClusterPackageController) updateStatus(
 	}
 
 	if state.progressedPkgs == int(totalPackages) {
-		conditions = append(conditions, metav1.Condition{
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageProgressing,
-			Status:             metav1.ConditionTrue,
+			Status:             metav1.ConditionFalse,
 			Reason:             "AllPackagesProgressed",
 			Message:            fmt.Sprintf("%d/%d packages progressed.", state.progressedPkgs, totalPackages),
 		})
 	} else {
-		conditions = append(conditions, metav1.Condition{
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageProgressing,
-			Status:             metav1.ConditionFalse,
+			Status:             metav1.ConditionTrue,
 			Reason:             "NotAllPackagesProgressed",
 			Message:            fmt.Sprintf("%d/%d packages progressed.", state.progressedPkgs, totalPackages),
 		})
 	}
-
-	hcpkg.Status.Conditions = conditions
 
 	hcpkg.Status.HostedClusterPackageCountsStatus = corev1alpha1.HostedClusterPackageCountsStatus{
 		ObservedGeneration: int32(hcpkg.Generation),

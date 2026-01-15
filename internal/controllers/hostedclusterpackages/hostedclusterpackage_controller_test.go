@@ -152,7 +152,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(0), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/0 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -233,7 +233,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -314,7 +314,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -395,7 +395,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -478,7 +478,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -560,7 +560,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -642,7 +642,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -731,7 +731,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "2/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -814,7 +814,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "1/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
@@ -901,7 +901,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 
 					progressingCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageProgressing)
 					require.NotNil(t, progressingCond)
-					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
+					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
 				}).Return(nil)
