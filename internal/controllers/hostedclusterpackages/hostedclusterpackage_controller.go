@@ -3,12 +3,10 @@ package hostedclusterpackages
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -224,46 +222,6 @@ func (c *HostedClusterPackageController) rebuildProcessingQueue(
 	return nil
 }
 
-func (c *HostedClusterPackageController) reconcileHostedCluster(
-	ctx context.Context,
-	clusterPackage *corev1alpha1.HostedClusterPackage,
-	hc v1beta1.HostedCluster,
-) error {
-	log := logr.FromContextOrDiscard(ctx)
-
-	if !meta.IsStatusConditionTrue(hc.Status.Conditions, v1beta1.HostedClusterAvailable) {
-		log.Info(fmt.Sprintf("waiting for HostedCluster '%s' to become ready", hc.Name))
-		return nil
-	}
-
-	pkg, err := c.constructPackage(clusterPackage, hc)
-	if err != nil {
-		return fmt.Errorf("constructing Package: %w", err)
-	}
-
-	existingPkg := &corev1alpha1.Package{}
-	err = c.client.Get(ctx, client.ObjectKeyFromObject(pkg), existingPkg)
-	if errors.IsNotFound(err) {
-		if err := c.client.Create(ctx, pkg); err != nil {
-			return fmt.Errorf("creating Package: %w", err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("getting Package: %w", err)
-	}
-
-	// Update package if spec is different.
-	if !reflect.DeepEqual(existingPkg.Spec, pkg.Spec) {
-		existingPkg.Spec = pkg.Spec
-		if err := c.client.Update(ctx, existingPkg); err != nil {
-			return fmt.Errorf("updating outdated Package: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func (c *HostedClusterPackageController) constructPackage(
 	hcpkg *corev1alpha1.HostedClusterPackage,
 	hc v1beta1.HostedCluster,
@@ -327,6 +285,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageAvailable,
 			Status:             metav1.ConditionTrue,
+			Reason:             "EnoughPackagesAvailable",
 			Message:            fmt.Sprintf("%d/%d packages available.", state.availablePkgs, totalPackages),
 		})
 	} else {
@@ -334,6 +293,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageAvailable,
 			Status:             metav1.ConditionFalse,
+			Reason:             "NotEnoughPackagesAvailable",
 			Message:            fmt.Sprintf("%d/%d packages available.", state.availablePkgs, totalPackages),
 		})
 	}
@@ -343,6 +303,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageProgressing,
 			Status:             metav1.ConditionTrue,
+			Reason:             "AllPackagesProgressed",
 			Message:            fmt.Sprintf("%d/%d packages progressed.", state.progressedPkgs, totalPackages),
 		})
 	} else {
@@ -350,6 +311,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageProgressing,
 			Status:             metav1.ConditionFalse,
+			Reason:             "NotAllPackagesProgressed",
 			Message:            fmt.Sprintf("%d/%d packages progressed.", state.progressedPkgs, totalPackages),
 		})
 	}
@@ -359,7 +321,7 @@ func (c *HostedClusterPackageController) updateStatus(
 	hcpkg.Status.HostedClusterPackageCountsStatus = corev1alpha1.HostedClusterPackageCountsStatus{
 		ObservedGeneration: int32(hcpkg.Generation),
 		TotalPackages:      totalPackages,
-		AvailablePackages:  int32(len(state.hcToPackage) - state.unavailablePkgs),
+		AvailablePackages:  int32(state.availablePkgs),
 		ProgressedPackages: int32(state.progressedPkgs),
 		UpdatedPackages:    int32(state.updatedPkgs),
 	}
