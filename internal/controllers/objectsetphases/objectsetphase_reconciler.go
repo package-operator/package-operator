@@ -137,7 +137,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	target := &machinery.CreateCollisionError{}
 	if errors.As(err, &target) {
-		_, err := controllers.AddDynamicCacheLabel(ctx, r.uncachedclient, convertToUnstructured(target.Object))
+		_, err := controllers.AddDynamicCacheLabel(ctx, r.uncachedclient, convertToUnstructured(target.Object()))
 		if err != nil {
 			return res, err
 		}
