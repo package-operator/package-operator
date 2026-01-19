@@ -124,6 +124,7 @@ func defaultObjectSet(cm4, cm5 *corev1.ConfigMap, namespace, class string) (*cor
 			Namespace: namespace,
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -440,26 +441,26 @@ func runObjectSetHandoverTestWithCustomHandlers(
 	// expect cm-1 to be present.
 	currentCM1 := &corev1.ConfigMap{}
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+		Name: cm1.Name, Namespace: cm1.Namespace,
 	}, currentCM1))
 
 	// expect cm-2 to be present.
 	currentCM2 := &corev1.ConfigMap{}
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
+		Name: cm2.Name, Namespace: cm2.Namespace,
 	}, currentCM2))
 
 	// expect cm-1 and cm-2 to be reported under "ControllerOf" in revision 1
 	require.Equal(t, []corev1alpha1.ControlledObjectReference{
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM1.Name,
-			Namespace: currentCM1.Namespace,
+			Name:      cm1.Name,
+			Namespace: cm1.Namespace,
 		},
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM2.Name,
-			Namespace: currentCM2.Namespace,
+			Name:      cm2.Name,
+			Namespace: cm2.Namespace,
 		},
 	}, objectSetRev1.Status.ControllerOf)
 
@@ -476,13 +477,13 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	// expect cm-2 to still be present.
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev2.Namespace,
+		Name: cm2.Name, Namespace: cm2.Namespace,
 	}, currentCM2))
 
 	// expect cm-3 to also be present now.
 	currentCM3 := &corev1.ConfigMap{}
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
+		Name: cm3.Name, Namespace: cm3.Namespace,
 	}, currentCM3))
 
 	// wait for Revision 1 to report "InTransition" (needed to ensure that the next assertions are not racy)
@@ -491,7 +492,7 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	// expect cm-1 to still be present and now controlled by Rev2.
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev1.Namespace,
+		Name: cm1.Name, Namespace: cm1.Namespace,
 	}, currentCM1))
 
 	assertControllerNameHasPrefix(t, objectSetRev2.Name, currentCM1)
@@ -501,8 +502,8 @@ func runObjectSetHandoverTestWithCustomHandlers(
 	require.Equal(t, []corev1alpha1.ControlledObjectReference{
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM2.Name,
-			Namespace: currentCM2.Namespace,
+			Name:      cm2.Name,
+			Namespace: cm2.Namespace,
 		},
 	}, objectSetRev1.Status.ControllerOf)
 
@@ -510,13 +511,13 @@ func runObjectSetHandoverTestWithCustomHandlers(
 	expectedControllerOf := []corev1alpha1.ControlledObjectReference{
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM3.Name,
-			Namespace: currentCM3.Namespace,
+			Name:      cm3.Name,
+			Namespace: cm3.Namespace,
 		},
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM1.Name,
-			Namespace: currentCM1.Namespace,
+			Name:      cm1.Name,
+			Namespace: cm1.Namespace,
 		},
 	}
 	require.NoError(t, Waiter.WaitForObject(ctx, objectSetRev2,
@@ -543,15 +544,15 @@ func runObjectSetHandoverTestWithCustomHandlers(
 
 	// expect cm-2 to be gone.
 	require.EqualError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm2.Name, Namespace: objectSetRev1.Namespace,
+		Name: cm2.Name, Namespace: cm2.Namespace,
 	}, currentCM2), `configmaps "cm-2" not found`)
 
 	// expect cm-3 and cm-1 to be still present
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm1.Name, Namespace: objectSetRev2.Namespace,
+		Name: cm1.Name, Namespace: cm1.Namespace,
 	}, currentCM1))
 	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm3.Name, Namespace: objectSetRev2.Namespace,
+		Name: cm3.Name, Namespace: cm3.Namespace,
 	}, currentCM3))
 }
 
@@ -590,12 +591,8 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 	objectSet, err := defaultObjectSet(cm4, cm5, namespace, class)
 	require.NoError(t, err)
 
-	cm4Key := client.ObjectKey{
-		Name: cm4.Name, Namespace: objectSet.Namespace,
-	}
-	cm5Key := client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace,
-	}
+	cm4Key := client.ObjectKeyFromObject(cm4)
+	cm5Key := client.ObjectKeyFromObject(cm5)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -619,7 +616,7 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 		{
 			Kind:      "ConfigMap",
 			Name:      cm4.Name,
-			Namespace: namespace,
+			Namespace: "default",
 		},
 	}
 	require.NoError(t, Waiter.WaitForObject(ctx, objectSet,
@@ -666,20 +663,18 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 	require.Equal(t, []corev1alpha1.ControlledObjectReference{
 		{
 			Kind:      "ConfigMap",
-			Name:      currentCM4.Name,
-			Namespace: currentCM4.Namespace,
+			Name:      cm4.Name,
+			Namespace: cm4.Namespace,
 		},
 		{
 			Kind:      "ConfigMap",
 			Name:      cm5.Name,
-			Namespace: namespace,
+			Namespace: cm5.Namespace,
 		},
 	}, objectSet.Status.ControllerOf)
 
 	// Expect cm-5 to be present now.
-	require.NoError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm5.Name, Namespace: objectSet.Namespace,
-	}, currentCM5))
+	require.NoError(t, destClient.Get(ctx, cm5Key, currentCM5))
 
 	// -----------
 	// Test pause.
@@ -760,9 +755,7 @@ func runObjectSetSetupPauseTeardownTestWithCustomHandlers(
 		Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetArchived, metav1.ConditionTrue))
 
 	// expect cm-4 to be also gone.
-	require.EqualError(t, destClient.Get(ctx, client.ObjectKey{
-		Name: cm4.Name, Namespace: objectSet.Namespace,
-	}, currentCM4), `configmaps "cm-4" not found`)
+	require.EqualError(t, destClient.Get(ctx, cm4Key, currentCM4), `configmaps "cm-4" not found`)
 
 	// expect no "ControllerOf" left
 	require.Empty(t, objectSet.Status.ControllerOf)
@@ -779,6 +772,7 @@ func simpleObjectSet(cm *corev1.ConfigMap, namespace, class string) (*corev1alph
 			Namespace: namespace,
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{

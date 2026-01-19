@@ -51,6 +51,7 @@ func TestCollisionPreventionPreventUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -110,6 +111,7 @@ func TestCollisionPreventionPreventOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -161,6 +163,7 @@ func TestCollisionPreventionInvalidSet(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -222,6 +225,7 @@ func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -268,6 +272,7 @@ func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -337,6 +342,7 @@ func TestCollisionPreventionNoneUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -395,6 +401,7 @@ func TestCollisionPreventionNoneOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
