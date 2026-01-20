@@ -160,7 +160,15 @@ func (ps *packageStates) partitionList() []string {
 	if ps.hcpkg.Spec.Partition.Order == nil ||
 		ps.hcpkg.Spec.Partition.Order.AlphanumericAsc != nil {
 		var partitions []string
+		partitionKeys := map[string]struct{}{}
 		for partitionGroupKey := range ps.needsUpdate {
+			partitionKeys[partitionGroupKey] = struct{}{}
+		}
+		for partitionGroupKey := range ps.needsUpdateAndUnavailable {
+			partitionKeys[partitionGroupKey] = struct{}{}
+		}
+
+		for partitionGroupKey := range partitionKeys {
 			if partitionGroupKey == defaultPartitionGroup {
 				continue // will be added back at the end
 			}
