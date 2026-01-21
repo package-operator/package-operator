@@ -496,8 +496,8 @@ k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b h1:MloQ9/bdJyIu9lb1PzujOP
 k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b/go.mod h1:UZ2yyWbFTpuhSbFhv24aGNOdoRdJZgsIObGBUaYVsts=
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 h1:hwvWFiBzdWw1FhfY1FooPn3kzWuJ8tmbZBHi4zVsl1Y=
 k8s.io/utils v0.0.0-20250604170112-4c0f3b243397/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-pkg.package-operator.run/boxcutter v0.8.1 h1:GoSXwI20s4WvFkOXq7xNlINzWmODBlA+2VMY7UflPFA=
-pkg.package-operator.run/boxcutter v0.8.1/go.mod h1:nk6XIcTS3i8WV1+GpaFwjPcNM+tK0jHczoa0qGnbUbk=
+pkg.package-operator.run/boxcutter v0.9.0 h1:uBypecAVb178RG5dL3Z3T85Ou/KSL0/4BiQTcHRTnqY=
+pkg.package-operator.run/boxcutter v0.9.0/go.mod h1:nk6XIcTS3i8WV1+GpaFwjPcNM+tK0jHczoa0qGnbUbk=
 pkg.package-operator.run/cardboard v0.0.4 h1:a5wus35NCnpVkJmqzq1WZukLM3SOPiRoYD30k33E5nY=
 pkg.package-operator.run/cardboard v0.0.4/go.mod h1:txTwfizKr008RFlNrfa2USO5oQnPOSnkEdRJ4bb4nvQ=
 pkg.package-operator.run/cardboard/kubeutils v0.0.4 h1:rsDqBsnnqN3NaCI3yUdoePqVzJQUVxjLBY3s0wRSoW4=
