@@ -159,6 +159,7 @@ func (a *ClusterObjectSetPhaseAdapter) SetPrevious(previous []corev1alpha1.Previ
 
 func (a *ClusterObjectSetPhaseAdapter) GetPhase() corev1alpha1.ObjectSetTemplatePhase {
 	return corev1alpha1.ObjectSetTemplatePhase{
+		Name:    a.Name,
 		Objects: a.Spec.Objects,
 	}
 }

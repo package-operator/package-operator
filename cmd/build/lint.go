@@ -18,20 +18,19 @@ func (l Lint) goModTidyAll(ctx context.Context) error {
 	return mgr.ParallelDeps(ctx, run.Meth(l, l.goModTidyAll),
 		run.Meth1(l, l.goModTidy, "."),
 		run.Meth1(l, l.goModTidy, "./apis/"),
-		run.Meth1(l, l.goModTidy, "./pkg/"),
 	)
 }
 
 func (Lint) glciFix() error {
 	return shr.Run("golangci-lint", "run", "--timeout=3m",
 		"--build-tags=integration,integration_hypershift", "--fix",
-		"./...", "./apis/...", "./pkg/...")
+		"./...", "./apis/...")
 }
 
 func (Lint) glciCheck() error {
 	return shr.Run("golangci-lint", "run", "--timeout=3m",
 		"--build-tags=integration,integration_hypershift",
-		"./...", "./apis/...", "./pkg/...")
+		"./...", "./apis/...")
 }
 
 func (Lint) govulnCheck() error {
