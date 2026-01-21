@@ -103,9 +103,8 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	}
 
 	apiPhase := objectSetPhase.GetPhase()
-	// TODO Fix this!!!
-	phaseObjects := make([]unstructured.Unstructured, 0)
-	phaseReconcileOptions := make([]types.PhaseReconcileOption, 0)
+	phaseObjects := make([]unstructured.Unstructured, 0, len(apiPhase.Objects))
+	phaseReconcileOptions := make([]types.PhaseReconcileOption, 0, len(apiPhase.Objects))
 	for i := range apiPhase.Objects {
 		phaseObjects = append(phaseObjects, apiPhase.Objects[i].Object)
 		labels := phaseObjects[i].GetLabels()
@@ -120,9 +119,9 @@ func (r *objectSetPhaseReconciler) Reconcile(
 			types.WithProbe(types.ProgressProbeType, probe),
 			boxcutter.WithPreviousOwners(previous),
 		))
-		if objectSetPhase.IsSpecPaused() {
-			phaseReconcileOptions = append(phaseReconcileOptions, types.WithPaused{})
-		}
+	}
+	if objectSetPhase.IsSpecPaused() {
+		phaseReconcileOptions = append(phaseReconcileOptions, types.WithPaused{})
 	}
 
 	result, err := phaseEngine.Reconcile(ctx,
@@ -294,7 +293,7 @@ func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetPha
 			return err
 		}
 		if !exist {
-			return nil
+			continue
 		}
 
 		j, err := json.Marshal(rawConditions)

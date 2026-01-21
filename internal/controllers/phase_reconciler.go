@@ -28,11 +28,12 @@ import (
 
 	boxcutter "pkg.package-operator.run/boxcutter/machinery/types"
 
+	"pkg.package-operator.run/boxcutter/probing"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/pkg/probing"
 )
 
 // PhaseReconciler reconciles objects within a ObjectSet phase.

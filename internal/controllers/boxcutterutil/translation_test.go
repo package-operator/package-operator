@@ -1,6 +1,7 @@
 package boxcutterutil
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -235,7 +236,7 @@ func TestGetControllerOf(t *testing.T) {
 		objects := make([]machinery.ObjectResult, 0, 10)
 		for i := range 10 {
 			obj := &objectMock{
-				name:      "obj-" + string(rune('0'+i)),
+				name:      fmt.Sprintf("obj-%d", i),
 				namespace: "ns-1",
 				gvk: schema.GroupVersionKind{
 					Group:   "",

@@ -16,6 +16,6 @@ func (c *DiscoveryClientMock) ServerVersion() (*version.Info, error) {
 }
 
 func (c *DiscoveryClientMock) OpenAPIV3() openapi.Client {
-	args := c.Called(0)
+	args := c.Called()
 	return args.Get(0).(openapi.Client)
 }
