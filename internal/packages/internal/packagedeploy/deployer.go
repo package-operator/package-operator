@@ -209,7 +209,7 @@ func (l *PackageDeployer) Deploy(
 	}
 
 	// Load success
-	meta.RemoveStatusCondition(apiPkg.GetSpecConditions(), corev1alpha1.PackageInvalid)
+	meta.RemoveStatusCondition(apiPkg.GetStatusConditions(), corev1alpha1.PackageInvalid)
 	return nil
 }
 
@@ -255,7 +255,7 @@ func setInvalidConditionBasedOnLoadError(pkg adapters.PackageAccessor, err error
 	reason := "LoadError"
 
 	// Can not be determined more precisely
-	meta.SetStatusCondition(pkg.GetSpecConditions(), metav1.Condition{
+	meta.SetStatusCondition(pkg.GetStatusConditions(), metav1.Condition{
 		Type:               corev1alpha1.PackageInvalid,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
@@ -374,7 +374,7 @@ func validateConstraints(
 	messages = append(messages, extra...)
 
 	if len(messages) > 0 {
-		meta.SetStatusCondition(apiPkg.GetSpecConditions(), metav1.Condition{
+		meta.SetStatusCondition(apiPkg.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.PackageInvalid,
 			Status:             metav1.ConditionTrue,
 			Reason:             "ConstraintsFailed",
