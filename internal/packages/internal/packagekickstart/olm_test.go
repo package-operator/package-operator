@@ -62,7 +62,7 @@ func TestImportOLMBundleImage(t *testing.T) {
 	image := testutil.BuildImage(t, map[string][]byte{
 		olmMetadataFolder + "/annotations.yaml":                []byte(olmBundleAnnotations),
 		olmManifestFolder + "/test.clusterserviceversion.yaml": []byte(olmBundleCSV),
-	})
+	}, nil)
 
 	ctx := context.Background()
 	objects, reg, err := ImportOLMBundleImage(ctx, image)
@@ -108,7 +108,7 @@ func TestIsOLMBundleImage(t *testing.T) {
 	t.Parallel()
 	t.Run("empty image", func(t *testing.T) {
 		t.Parallel()
-		image := testutil.BuildImage(t, map[string][]byte{})
+		image := testutil.BuildImage(t, map[string][]byte{}, nil)
 
 		isOLM, err := IsOLMBundleImage(image)
 		require.NoError(t, err)
@@ -120,7 +120,7 @@ func TestIsOLMBundleImage(t *testing.T) {
 		t.Parallel()
 		image := testutil.BuildImage(t, map[string][]byte{
 			"package/manifest.yaml": {11, 12},
-		})
+		}, nil)
 
 		isOLM, err := IsOLMBundleImage(image)
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestIsOLMBundleImage(t *testing.T) {
 		image := testutil.BuildImage(t, map[string][]byte{
 			olmMetadataFolder + "/annotations.yaml":                {11, 12},
 			olmManifestFolder + "/test.clusterserviceversion.yaml": {11, 12},
-		})
+		}, nil)
 
 		isOLM, err := IsOLMBundleImage(image)
 		require.NoError(t, err)
