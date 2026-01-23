@@ -17,6 +17,7 @@ require (
 	github.com/google/cel-go v0.26.1
 	github.com/google/go-containerregistry v0.20.7
 	github.com/joeycumines/go-dotnotation v0.0.0-20180131115956-2d3612e36c5d
+	github.com/json-iterator/go v1.1.12
 	github.com/onsi/ginkgo/v2 v2.27.5
 	github.com/onsi/gomega v1.39.0
 	github.com/openshift/api v0.0.0-20250320170726-75d64d71980b
@@ -113,7 +114,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
