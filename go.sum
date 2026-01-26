@@ -249,8 +249,8 @@ github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJw
 github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
 github.com/openshift/api v0.0.0-20250320170726-75d64d71980b h1:GGuFSHESP0BSOu70AqV4u9IVrjYdaeu4Id+HXRIOvkw=
 github.com/openshift/api v0.0.0-20250320170726-75d64d71980b/go.mod h1:yk60tHAmHhtVpJQo3TwVYq2zpuP70iJIFDCmeKMIzPw=
-github.com/operator-framework/api v0.37.0 h1:2XCMWitBnumtJTqzip6LQKUwpM2pXVlt3gkpdlkbaCE=
-github.com/operator-framework/api v0.37.0/go.mod h1:NZs4vB+Jiamyv3pdPDjZtuC4U7KX0eq4z2r5hKY5fUA=
+github.com/operator-framework/api v0.38.0 h1:RbIhBH7pot/tlVPkEppXOh2zT7GpSUjPJoC8pRnNnBo=
+github.com/operator-framework/api v0.38.0/go.mod h1:6UCZhZPh9zAZZq1D9B2+IO0ibVwHdTiNYLYRr8ZT8Mk=
 github.com/operator-framework/deppy v0.3.0 h1:W8wpF0ehcTAdH2WfMyqMPI5Ja0Qv8M5FMO5cXgJvEQ8=
 github.com/operator-framework/deppy v0.3.0/go.mod h1:EHDxZz8fKGvuymCng3G/Ou7wuX14GaLr0cmf2u29Oog=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
