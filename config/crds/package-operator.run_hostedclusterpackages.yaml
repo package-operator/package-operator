@@ -23,8 +23,15 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Progressing")].status
       name: Progressing
       type: string
+    - jsonPath: .status.conditions[?(@.type=="HasPausedPackage")].status
+      name: HasPausedPackage
+      type: string
     - jsonPath: .status.observedGeneration
       name: ObservedGeneration
+      type: string
+    - jsonPath: .spec.template.spec.image
+      name: Image
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

@@ -12,7 +12,9 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=hcpkg
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="HasPausedPackage",type=string,JSONPath=`.status.conditions[?(@.type=="HasPausedPackage")].status`
 // +kubebuilder:printcolumn:name="ObservedGeneration",type=string,JSONPath=`.status.observedGeneration`
+// +kubebuilder:printcolumn:name="Image",type=string,priority=1,JSONPath=`.spec.template.spec.image`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type HostedClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
