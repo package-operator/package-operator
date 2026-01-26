@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +33,19 @@ func init() {
 	if err := hypershiftv1beta1.AddToScheme(testScheme); err != nil {
 		panic(err)
 	}
+}
+
+// mockHostedClusterPackageGet sets up mock expectations for both Gets of a HostedClusterPackage.
+func mockHostedClusterPackageGet(c *testutil.CtrlClient, hcpkg *corev1alpha1.HostedClusterPackage) {
+	c.On("Get",
+		mock.Anything,
+		types.NamespacedName{Name: hcpkg.Name},
+		mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
+		*arg = *hcpkg
+	}).Return(nil).Once()
 }
 
 //nolint:maintidx
@@ -73,7 +87,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 				).Run(func(args mock.Arguments) {
 					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
 					*arg = *hcpkg
-				}).Return(nil)
+				}).Return(nil).Once()
 			},
 			expectedResult: ctrl.Result{},
 		},
@@ -83,15 +97,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 				hcpkg := &corev1alpha1.HostedClusterPackage{
 					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				c.On("List",
 					mock.Anything,
@@ -108,15 +114,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 				hcpkg := &corev1alpha1.HostedClusterPackage{
 					ObjectMeta: metav1.ObjectMeta{Name: "test-hcpkg"},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				c.On("List",
 					mock.Anything,
@@ -142,7 +140,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(0), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -155,6 +153,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(0), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/0 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(0), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/0 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -175,15 +179,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -223,7 +219,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -236,6 +232,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -256,15 +258,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -304,7 +298,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -317,6 +311,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -337,15 +337,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -385,7 +377,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -398,6 +390,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "0/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -418,15 +416,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -468,7 +458,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -481,6 +471,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -501,15 +497,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -550,7 +538,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -563,6 +551,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -583,15 +577,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -632,7 +618,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -645,6 +631,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionFalse, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "5/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -665,15 +657,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -721,7 +705,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -734,6 +718,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "2/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -754,15 +744,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -804,7 +786,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -817,6 +799,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "1/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -835,15 +823,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := makeHostedClusters()
 				c.On("List",
@@ -891,7 +871,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, int32(5), hcpkg.Status.UpdatedPackages)
 
 					// Validate conditions
-					require.Len(t, hcpkg.Status.Conditions, 2)
+					require.Len(t, hcpkg.Status.Conditions, 3)
 
 					availableCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageAvailable)
 					require.NotNil(t, availableCond)
@@ -904,6 +884,12 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					assert.Equal(t, metav1.ConditionTrue, progressingCond.Status)
 					assert.Equal(t, int64(1), progressingCond.ObservedGeneration)
 					assert.Equal(t, "3/5 packages progressed.", progressingCond.Message)
+
+					pausedCond := meta.FindStatusCondition(hcpkg.Status.Conditions, corev1alpha1.HostedClusterPackageHasPausedPackage)
+					require.NotNil(t, pausedCond)
+					assert.Equal(t, metav1.ConditionFalse, pausedCond.Status)
+					assert.Equal(t, int64(1), pausedCond.ObservedGeneration)
+					assert.Equal(t, "0/5 packages paused.", pausedCond.Message)
 				}).Return(nil)
 			},
 			expectedResult: ctrl.Result{},
@@ -924,15 +910,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						},
 					},
 				}
-				c.On("Get",
-					mock.Anything,
-					types.NamespacedName{Name: "test-hcpkg"},
-					mock.AnythingOfType("*v1alpha1.HostedClusterPackage"),
-					mock.Anything,
-				).Run(func(args mock.Arguments) {
-					arg := args.Get(2).(*corev1alpha1.HostedClusterPackage)
-					*arg = *hcpkg
-				}).Return(nil)
+				mockHostedClusterPackageGet(c, hcpkg)
 
 				hostedClusters := make([]hypershiftv1beta1.HostedCluster, 5)
 				for i := range 5 {
@@ -990,10 +968,10 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					).Return(errors.NewNotFound(schema.GroupResource{}, "test-package"))
 				}
 
-				// Mock creating packages for the missing HostedClusters
-				c.On("Create",
+				// Mock applying packages for the missing HostedClusters
+				c.On("Apply",
 					mock.Anything,
-					mock.AnythingOfType("*v1alpha1.Package"),
+					mock.Anything,
 					mock.Anything,
 				).Return(nil)
 
@@ -1032,7 +1010,7 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 	}
 }
 
-func TestHostedClusterPackageController_constructClusterPackage(t *testing.T) {
+func TestHostedClusterPackageController_constructPackage(t *testing.T) {
 	t.Parallel()
 
 	hostedClusterPackage := &corev1alpha1.HostedClusterPackage{
@@ -1051,28 +1029,37 @@ func TestHostedClusterPackageController_constructClusterPackage(t *testing.T) {
 			},
 		},
 	}
-	hostedCluster := hypershiftv1beta1.HostedCluster{
+	hostedCluster := &hypershiftv1beta1.HostedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-hc",
 			Namespace: "default",
 		},
 	}
 
+	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(hostedClusterPackage)
+	require.NoError(t, err)
+
+	pkgTplAC, err := ExtractPackageTemplateFields(&unstructured.Unstructured{Object: uns})
+	require.NoError(t, err)
+
 	controller := NewHostedClusterPackageController(nil, logr.Discard(), testScheme)
 
-	pkg, err := controller.constructPackage(hostedClusterPackage, hostedCluster)
+	ac := controller.constructPackage(
+		hostedClusterPackage,
+		pkgTplAC,
+		hostedCluster,
+	)
 
-	require.NoError(t, err)
-	require.NotNil(t, pkg)
+	require.NotNil(t, ac)
 
-	assert.Equal(t, hostedClusterPackage.Name, pkg.Name)
-	assert.Equal(t, hypershiftv1beta1.HostedClusterNamespace(hostedCluster), pkg.Namespace)
-	assert.Equal(t, hostedClusterPackage.Spec.Template.Spec, pkg.Spec)
-	assert.Equal(t, hostedClusterPackage.Spec.Template.Labels, pkg.Labels)
+	assert.Equal(t, hostedClusterPackage.Name, *ac.Name)
+	assert.Equal(t, hypershiftv1beta1.HostedClusterNamespace(*hostedCluster), *ac.Namespace)
+	assert.Equal(t, hostedClusterPackage.Spec.Template.Spec.Image, *ac.Spec.Image)
+	assert.Equal(t, hostedClusterPackage.Spec.Template.Labels, ac.Labels)
 
-	assert.Len(t, pkg.OwnerReferences, 1)
-	assert.Equal(t, hostedClusterPackage.Name, pkg.OwnerReferences[0].Name)
-	assert.Equal(t, hostedClusterPackage.UID, pkg.OwnerReferences[0].UID)
+	assert.Len(t, ac.OwnerReferences, 1)
+	assert.Equal(t, hostedClusterPackage.Name, *ac.OwnerReferences[0].Name)
+	assert.Equal(t, hostedClusterPackage.UID, *ac.OwnerReferences[0].UID)
 }
 
 // makeHostedClusters creates 5 HostedCluster test objects.

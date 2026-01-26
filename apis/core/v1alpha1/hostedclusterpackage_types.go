@@ -115,6 +115,11 @@ const (
 	// HostedClusterPackageProgressing indicates that a rollout is currently ongoing.
 	// This means that not all managed Packages have been upgraded to the latest specified version and configuration.
 	HostedClusterPackageProgressing = "Progressing"
+	// HostedClusterPackageHasPausedPackage indicates that a Package resource
+	// under control is currently paused by an outside actor.
+	// This means that a rollout can get suck because this Package will not successfully progress
+	// until it has been unpaused again.
+	HostedClusterPackageHasPausedPackage = "HasPausedPackage"
 )
 
 // HostedClusterPackagePartitionStatus describes the status of a partition.

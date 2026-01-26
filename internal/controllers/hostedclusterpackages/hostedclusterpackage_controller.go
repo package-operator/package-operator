@@ -11,12 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corev1alpha1acs "package-operator.run/apis/applyconfigurations/core/v1alpha1"
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
@@ -47,13 +48,23 @@ func (c *HostedClusterPackageController) Reconcile(
 	ctx = logr.NewContext(ctx, log)
 	hostedClusterPackage := &corev1alpha1.HostedClusterPackage{}
 	if err := c.client.Get(ctx, req.NamespacedName, hostedClusterPackage); err != nil {
-		// Ignore not found errors on delete
+		// Ignore not found errors on delete.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !hostedClusterPackage.DeletionTimestamp.IsZero() {
 		log.Info("HostedClusterPackage is deleting")
 		return ctrl.Result{}, nil
+	}
+
+	unstructuredHostedClusterPackage, err := toUnstructured(hostedClusterPackage)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	packageTemplateApplyConfiguration, err := ExtractPackageTemplateFields(unstructuredHostedClusterPackage)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("extracting package template: %w", err)
 	}
 
 	// Plan:
@@ -72,11 +83,21 @@ func (c *HostedClusterPackageController) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("indexing package state: %w", err)
 	}
 
-	if err := c.createMissingPackages(ctx, hostedClusterPackage, state); err != nil {
+	if err := c.createMissingPackages(
+		ctx,
+		hostedClusterPackage,
+		packageTemplateApplyConfiguration,
+		state,
+	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("creating missing Packages: %w", err)
 	}
 
-	if err := c.updatePackages(ctx, hostedClusterPackage, state); err != nil {
+	if err := c.updatePackages(
+		ctx,
+		hostedClusterPackage,
+		packageTemplateApplyConfiguration,
+		state,
+	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("updating Packages: %w", err)
 	}
 
@@ -93,17 +114,16 @@ func (c *HostedClusterPackageController) Reconcile(
 }
 
 func (c *HostedClusterPackageController) createMissingPackages(
-	ctx context.Context, hcpkg *corev1alpha1.HostedClusterPackage,
+	ctx context.Context,
+	hcpkg *corev1alpha1.HostedClusterPackage,
+	packageTemplateApplyConfiguration *corev1alpha1acs.PackageTemplateSpecApplyConfiguration,
 	state *packageStates,
 ) error {
 	for _, hcMissingPackage := range state.ListHostedClustersMissingPackage() {
-		pkg, err := c.constructPackage(hcpkg, hcMissingPackage)
-		if err != nil {
-			return fmt.Errorf("constructing Package: %w", err)
-		}
-		if err := c.client.Create(
-			ctx, pkg, client.FieldOwner(constants.FieldOwner),
-		); err != nil && !errors.IsAlreadyExists(err) {
+		ac := c.constructPackage(hcpkg, packageTemplateApplyConfiguration, &hcMissingPackage)
+		if err := c.client.Apply(
+			ctx, ac, client.FieldOwner(constants.FieldOwner),
+		); err != nil {
 			return fmt.Errorf("creating Package: %w", err)
 		}
 	}
@@ -111,7 +131,9 @@ func (c *HostedClusterPackageController) createMissingPackages(
 }
 
 func (c *HostedClusterPackageController) updatePackages(
-	ctx context.Context, hcpkg *corev1alpha1.HostedClusterPackage,
+	ctx context.Context,
+	hcpkg *corev1alpha1.HostedClusterPackage,
+	packageTemplateApplyConfiguration *corev1alpha1acs.PackageTemplateSpecApplyConfiguration,
 	state *packageStates,
 ) error {
 	disruptionBudget := state.DisruptionBudget()
@@ -141,7 +163,12 @@ func (c *HostedClusterPackageController) updatePackages(
 
 	for _, pkg := range packagesToUpdate {
 		pkg.Spec = hcpkg.Spec.Template.Spec
-		if err := c.client.Update(ctx, &pkg, client.FieldOwner(constants.FieldOwner)); err != nil {
+		ac := c.constructPackage(
+			hcpkg,
+			packageTemplateApplyConfiguration,
+			state.PackageToHostedCluster(&pkg),
+		)
+		if err := c.client.Apply(ctx, ac, client.FieldOwner(constants.FieldOwner)); err != nil {
 			return fmt.Errorf("updating package: %w", err)
 		}
 	}
@@ -225,20 +252,24 @@ func (c *HostedClusterPackageController) rebuildProcessingQueue(
 
 func (c *HostedClusterPackageController) constructPackage(
 	hcpkg *corev1alpha1.HostedClusterPackage,
-	hc v1beta1.HostedCluster,
-) (*corev1alpha1.Package, error) {
-	pkg := &corev1alpha1.Package{
-		ObjectMeta: *hcpkg.Spec.Template.ObjectMeta.DeepCopy(),
-		Spec:       *hcpkg.Spec.Template.Spec.DeepCopy(),
-	}
-	pkg.Name = hcpkg.Name
-	pkg.Namespace = v1beta1.HostedClusterNamespace(hc)
+	packageTemplateApplyConfiguration *corev1alpha1acs.PackageTemplateSpecApplyConfiguration,
+	hc *v1beta1.HostedCluster,
+) *corev1alpha1acs.PackageApplyConfiguration {
+	ownerGVK := hcpkg.GroupVersionKind()
 
-	if err := controllerutil.SetControllerReference(
-		hcpkg, pkg, c.scheme); err != nil {
-		return nil, fmt.Errorf("setting controller reference: %w", err)
-	}
-	return pkg, nil
+	ac := corev1alpha1acs.Package(hcpkg.Name, v1beta1.HostedClusterNamespace(*hc)).
+		WithOwnerReferences(v1.OwnerReference().
+			WithAPIVersion(ownerGVK.GroupVersion().String()).
+			WithKind(ownerGVK.Kind).
+			WithName(hcpkg.Name).
+			WithUID(hcpkg.UID).
+			WithBlockOwnerDeletion(true).
+			WithController(true)).
+		WithLabels(packageTemplateApplyConfiguration.Labels).
+		WithAnnotations(packageTemplateApplyConfiguration.Annotations).
+		WithSpec(packageTemplateApplyConfiguration.Spec)
+
+	return ac
 }
 
 func (c *HostedClusterPackageController) SetupWithManager(mgr ctrl.Manager) error {
@@ -317,6 +348,24 @@ func (c *HostedClusterPackageController) updateStatus(
 			Status:             metav1.ConditionTrue,
 			Reason:             "NotAllPackagesProgressed",
 			Message:            fmt.Sprintf("%d/%d packages progressed.", state.progressedPkgs, totalPackages),
+		})
+	}
+
+	if state.pausedPkgs > 0 {
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
+			ObservedGeneration: hcpkg.Generation,
+			Type:               corev1alpha1.HostedClusterPackageHasPausedPackage,
+			Status:             metav1.ConditionTrue,
+			Reason:             "NoPackagePaused",
+			Message:            fmt.Sprintf("0/%d packages paused.", totalPackages),
+		})
+	} else {
+		meta.SetStatusCondition(&hcpkg.Status.Conditions, metav1.Condition{
+			ObservedGeneration: hcpkg.Generation,
+			Type:               corev1alpha1.HostedClusterPackageHasPausedPackage,
+			Status:             metav1.ConditionFalse,
+			Reason:             "AtleastOnePackagePaused",
+			Message:            fmt.Sprintf("%d/%d packages paused.", state.pausedPkgs, totalPackages),
 		})
 	}
 
