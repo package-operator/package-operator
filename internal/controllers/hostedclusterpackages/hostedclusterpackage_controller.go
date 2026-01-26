@@ -195,6 +195,11 @@ func (c *HostedClusterPackageController) indexPackageState(
 	}
 
 	for _, hc := range hostedClusters.Items {
+		// Completely skip unavailable clusters.
+		if !meta.IsStatusConditionTrue(hc.Status.Conditions, v1beta1.HostedClusterAvailable) {
+			continue
+		}
+
 		pkg := &corev1alpha1.Package{}
 		err := c.client.Get(ctx, client.ObjectKey{
 			Name:      hcpkg.Name,
