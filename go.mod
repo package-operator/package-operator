@@ -12,6 +12,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.4
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/disiqueira/gotree v1.0.0
+	github.com/erdii/matrix v0.0.2
 	github.com/go-logr/logr v1.4.3
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.26.1
