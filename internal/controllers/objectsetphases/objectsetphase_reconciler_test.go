@@ -503,10 +503,10 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -574,10 +574,10 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -631,10 +631,10 @@ func TestMapConditions_Success(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -652,17 +652,17 @@ func TestMapConditions_Success(t *testing.T) {
 
 	// Create an actual object with conditions
 	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":       "test-cm",
 				"namespace":  "default",
 				"generation": int64(1),
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":               "Ready",
 						"status":             "True",
 						"reason":             "AllGood",
@@ -698,10 +698,10 @@ func TestMapConditions_OutdatedCondition(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -719,17 +719,17 @@ func TestMapConditions_OutdatedCondition(t *testing.T) {
 
 	// Create an object with outdated condition (observedGeneration doesn't match)
 	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":       "test-cm",
 				"namespace":  "default",
 				"generation": int64(5),
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":               "Ready",
 						"status":             "True",
 						"reason":             "AllGood",
@@ -762,10 +762,10 @@ func TestMapConditions_UnmappedCondition(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -777,17 +777,17 @@ func TestMapConditions_UnmappedCondition(t *testing.T) {
 
 	// Create an object with conditions but no mappings
 	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":       "test-cm",
 				"namespace":  "default",
 				"generation": int64(1),
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":               "Ready",
 						"status":             "True",
 						"reason":             "AllGood",
@@ -820,10 +820,10 @@ func TestMapConditions_NoConditions(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm",
 							"namespace": "default",
 						},
@@ -835,10 +835,10 @@ func TestMapConditions_NoConditions(t *testing.T) {
 
 	// Create an object without conditions
 	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "test-cm",
 				"namespace": "default",
 			},
@@ -865,10 +865,10 @@ func TestMapConditions_MultipleObjects(t *testing.T) {
 		Objects: []corev1alpha1.ObjectSetObject{
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm-1",
 							"namespace": "default",
 						},
@@ -883,10 +883,10 @@ func TestMapConditions_MultipleObjects(t *testing.T) {
 			},
 			{
 				Object: unstructured.Unstructured{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "v1",
 						"kind":       "ConfigMap",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test-cm-2",
 							"namespace": "default",
 						},
@@ -904,17 +904,17 @@ func TestMapConditions_MultipleObjects(t *testing.T) {
 
 	// Create multiple objects with conditions
 	obj1 := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":       "test-cm-1",
 				"namespace":  "default",
 				"generation": int64(1),
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":               "Ready",
 						"status":             "True",
 						"reason":             "AllGood",
@@ -927,17 +927,17 @@ func TestMapConditions_MultipleObjects(t *testing.T) {
 	}
 
 	obj2 := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":       "test-cm-2",
 				"namespace":  "default",
 				"generation": int64(1),
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":               "Available",
 						"status":             "False",
 						"reason":             "NotReady",

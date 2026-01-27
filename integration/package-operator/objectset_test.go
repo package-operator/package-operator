@@ -6,6 +6,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -506,6 +508,83 @@ func TestObjectSet_orphanCascadeDeletion(t *testing.T) {
 			runObjectSetOrphanCascadeDeletionTest(t, "default", test.class)
 		})
 	}
+}
+
+func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-teardown-uncontrolled",
+			Namespace: "default",
+		},
+		Data: map[string]string{
+			"banana":       "bread",
+			"uncontrolled": "emotions",
+		},
+	}
+
+	cmGVK, err := apiutil.GVKForObject(configMap, Scheme)
+	require.NoError(t, err)
+	configMap.SetGroupVersionKind(cmGVK)
+
+	unstructuredCM, err := runtime.DefaultUnstructuredConverter.ToUnstructured(configMap)
+	require.NoError(t, err)
+
+	objectSet := &corev1alpha1.ObjectSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-teardown-uncontrolled",
+			Namespace: "default",
+		},
+		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
+			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+				Phases: []corev1alpha1.ObjectSetTemplatePhase{
+					{
+						Name:  "phase-1",
+						Class: "default",
+						Objects: []corev1alpha1.ObjectSetObject{
+							{
+								CollisionProtection: "Prevent",
+								Object:              unstructured.Unstructured{Object: unstructuredCM},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Apply ObjectSet and wait for it to become available.
+	require.NoError(t, Client.Create(ctx, objectSet))
+	cleanupOnSuccess(ctx, t, objectSet)
+	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue))
+
+	// Fetch ConfigMap from API and disable the controller flag on its owner reference.
+	actualConfigMap := &corev1.ConfigMap{}
+	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(configMap), actualConfigMap))
+	actualConfigMap.OwnerReferences[0].Controller = ptr.To(false)
+	require.NoError(t, Client.Update(ctx, actualConfigMap))
+
+	// Delete ObjectSet.
+	require.NoError(t, Client.Delete(ctx, objectSet))
+
+	// Wait for owner reference on ConfigMap to be removed.
+	require.NoError(t,
+		Waiter.WaitForObject(
+			ctx, actualConfigMap, "internal ownerReference to be removed",
+			func(client.Object) (bool, error) {
+				configMap := &corev1.ConfigMap{}
+				err := Client.Get(ctx, client.ObjectKeyFromObject(actualConfigMap), configMap)
+				ownerRefFound := false
+				for _, owner := range configMap.GetOwnerReferences() {
+					if owner.Name == objectSet.Name {
+						ownerRefFound = true
+					}
+				}
+				return !ownerRefFound, err
+			}, wait.WithTimeout(40*time.Second),
+		))
 }
 
 func TestObjectSet_immutability(t *testing.T) {
