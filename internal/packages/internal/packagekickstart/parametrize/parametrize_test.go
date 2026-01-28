@@ -9,23 +9,23 @@ import (
 )
 
 var deploy = unstructured.Unstructured{
-	Object: map[string]interface{}{
+	Object: map[string]any{
 		"apiVersion": "apps/v1",
 		"kind":       "Deployment",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "banana",
 			"namespace": "fruits",
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"replicas": int64(1),
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
+			"template": map[string]any{
+				"spec": map[string]any{
 					"affinity": nil,
-					"containers": []interface{}{
-						map[string]interface{}{
+					"containers": []any{
+						map[string]any{
 							"image": "quay.io/package-operator/banana:latest",
-							"env": []interface{}{
-								map[string]interface{}{
+							"env": []any{
+								map[string]any{
 									"name":  "HTTP_PROXY",
 									"value": "xxx",
 								},
@@ -39,14 +39,14 @@ var deploy = unstructured.Unstructured{
 }
 
 var configMap = unstructured.Unstructured{
-	Object: map[string]interface{}{
+	Object: map[string]any{
 		"apiVersion": "v1",
 		"kind":       "ConfigMap",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "banana",
 			"namespace": "fruits",
 		},
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"field1": "val1",
 			"field2": "val2",
 		},
@@ -54,18 +54,18 @@ var configMap = unstructured.Unstructured{
 }
 
 var configMapDataSlice = unstructured.Unstructured{
-	Object: map[string]interface{}{
+	Object: map[string]any{
 		"apiVersion": "v1",
 		"kind":       "ConfigMap",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "banana",
 			"namespace": "fruits",
 		},
-		"data": []interface{}{
-			map[string]interface{}{
+		"data": []any{
+			map[string]any{
 				"field1": "val1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"field2": "val2",
 			},
 		},

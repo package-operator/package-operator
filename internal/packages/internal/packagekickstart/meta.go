@@ -23,7 +23,7 @@ func parseObjectMeta(obj unstructured.Unstructured) (client.ObjectKey, error) {
 		return client.ObjectKey{}, &ObjectIsMissingMetadataError{obj}
 	}
 	// Validate that .metadata is a map.
-	metamap, ok := metadata.(map[string]interface{})
+	metamap, ok := metadata.(map[string]any)
 	if !ok {
 		return client.ObjectKey{}, &ObjectIsMissingMetadataError{obj}
 	}

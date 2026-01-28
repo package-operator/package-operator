@@ -71,34 +71,34 @@ func TestImportOLMBundleImage(t *testing.T) {
 	assert.Equal(t, "example-operator", reg.PackageName)
 	assert.Equal(t, []unstructured.Unstructured{
 		{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "apps/v1",
 				"kind":       "Deployment",
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
+				"metadata": map[string]any{
+					"annotations": map[string]any{
 						"olm.targetNamespaces": "",
 					},
 					"name":      "example-operator-controller-manager",
 					"namespace": "example-operator-system",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"replicas": int64(1),
 					"selector": nil,
-					"strategy": map[string]interface{}{},
-					"template": map[string]interface{}{
-						"metadata": map[string]interface{}{},
-						"spec": map[string]interface{}{
-							"containers": []interface{}{
-								map[string]interface{}{
+					"strategy": map[string]any{},
+					"template": map[string]any{
+						"metadata": map[string]any{},
+						"spec": map[string]any{
+							"containers": []any{
+								map[string]any{
 									"name":      "kube-rbac-proxy",
 									"image":     "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0",
-									"resources": map[string]interface{}{},
+									"resources": map[string]any{},
 								},
 							},
 						},
 					},
 				},
-				"status": map[string]interface{}{},
+				"status": map[string]any{},
 			},
 		},
 	}, objects)

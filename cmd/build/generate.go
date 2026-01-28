@@ -308,7 +308,7 @@ func (g Generate) manifestFileFromTemplate(ctx context.Context, pkgFolder string
 }
 
 type includeTransform func(obj *unstructured.Unstructured) (
-	skip bool, annotations map[string]string, subfolder string, objToMarshal interface{})
+	skip bool, annotations map[string]string, subfolder string, objToMarshal any)
 
 func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, err error) error {
 	if err != nil {
@@ -319,7 +319,7 @@ func (g Generate) includeInPackageOperatorPackage(path string, d fs.DirEntry, er
 	}
 	return g.includeInPackage(path, filepath.Join("config", "packages", "package-operator"),
 		func(obj *unstructured.Unstructured) (
-			skip bool, annotations map[string]string, subfolder string, objToMarshal interface{},
+			skip bool, annotations map[string]string, subfolder string, objToMarshal any,
 		) {
 			switch obj.GroupVersionKind().GroupKind() {
 			case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:
@@ -351,7 +351,7 @@ func (g Generate) includeInHostedClusterComponent(path string, d fs.DirEntry, er
 		path,
 		filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster"),
 		func(obj *unstructured.Unstructured) (
-			skip bool, annotations map[string]string, subfolder string, objToMarshal interface{},
+			skip bool, annotations map[string]string, subfolder string, objToMarshal any,
 		) {
 			switch obj.GroupVersionKind().GroupKind() {
 			case schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}:

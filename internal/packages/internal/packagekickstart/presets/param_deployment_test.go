@@ -12,24 +12,24 @@ import (
 )
 
 var deploy = unstructured.Unstructured{
-	Object: map[string]interface{}{
+	Object: map[string]any{
 		"apiVersion": "apps/v1",
 		"kind":       "Deployment",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "banana",
 			"namespace": "fruits",
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"replicas": int64(1),
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
+			"template": map[string]any{
+				"spec": map[string]any{
 					"affinity": nil,
-					"containers": []interface{}{
-						map[string]interface{}{
+					"containers": []any{
+						map[string]any{
 							"name":  "banana",
 							"image": "quay.io/package-operator/banana:latest",
-							"env": []interface{}{
-								map[string]interface{}{
+							"env": []any{
+								map[string]any{
 									"name":  "HTTP_PROXY",
 									"value": "xxx",
 								},

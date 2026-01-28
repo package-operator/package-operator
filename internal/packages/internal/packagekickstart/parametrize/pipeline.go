@@ -27,7 +27,7 @@ type pipeline struct {
 	fieldPath string
 }
 
-func (e *pipeline) Mark(obj map[string]interface{}) error {
+func (e *pipeline) Mark(obj map[string]any) error {
 	return dotnotation.Set(obj, e.fieldPath, e.marker)
 }
 

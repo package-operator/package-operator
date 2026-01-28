@@ -729,7 +729,7 @@ func Test_defaultAdoptionChecker(t *testing.T) {
 				},
 				collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
 				object: &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				},
 				needsAdoption: true,
 			},
@@ -744,7 +744,7 @@ func Test_defaultAdoptionChecker(t *testing.T) {
 						On("IsController", mock.Anything, mock.Anything).
 						Return(false)
 					ownerObj := &unstructured.Unstructured{
-						Object: map[string]interface{}{},
+						Object: map[string]any{},
 					}
 					osm.
 						On("GetController", mock.Anything).
@@ -758,7 +758,7 @@ func Test_defaultAdoptionChecker(t *testing.T) {
 				},
 				collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
 				object: &unstructured.Unstructured{
-					Object: map[string]interface{}{},
+					Object: map[string]any{},
 				},
 				errorAs:       &ObjectNotOwnedByPreviousRevisionError{},
 				needsAdoption: false,

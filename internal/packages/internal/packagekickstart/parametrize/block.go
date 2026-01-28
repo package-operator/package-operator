@@ -29,13 +29,13 @@ type block struct {
 	pipeline  string
 	fieldPath string
 
-	mapKey        string      // map key to merge structures on.
-	originalValue interface{} // YAML object found at position.
-	writeValue    interface{} // YAML object to write out.
+	mapKey        string // map key to merge structures on.
+	originalValue any    // YAML object found at position.
+	writeValue    any    // YAML object to write out.
 }
 
-func (b *block) Mark(obj map[string]interface{}) error {
-	var parentValue interface{}
+func (b *block) Mark(obj map[string]any) error {
+	var parentValue any
 	lastDotIdx := strings.LastIndex(b.fieldPath, ".")
 	if lastDotIdx != -1 {
 		var err error
@@ -53,11 +53,11 @@ func (b *block) Mark(obj map[string]interface{}) error {
 		return err
 	}
 	b.originalValue = origValue
-	if _, ok := parentValue.([]interface{}); ok {
+	if _, ok := parentValue.([]any); ok {
 		// wrap array items in an array again.
 		b.mapKey = b.fieldPath
-		if _, ok := origValue.([]interface{}); !ok {
-			origValue = []interface{}{origValue}
+		if _, ok := origValue.([]any); !ok {
+			origValue = []any{origValue}
 		}
 	} else {
 		b.mapKey = b.fieldPath
@@ -65,7 +65,7 @@ func (b *block) Mark(obj map[string]interface{}) error {
 			b.mapKey = b.fieldPath[lastDotIdx+1:]
 		}
 		// wrap field values in map key.
-		origValue = map[string]interface{}{
+		origValue = map[string]any{
 			b.mapKey: origValue,
 		}
 	}

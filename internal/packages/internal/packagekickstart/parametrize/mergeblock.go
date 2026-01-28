@@ -56,7 +56,7 @@ func (b *mergeBlock) Replace(in []byte) ([]byte, error) {
 	if _, err = fmt.Fprintf(&replacement, `%s{{- end }}{{"\n"}}`+"\n", i); err != nil {
 		return nil, err
 	}
-	if _, isSlice := b.originalValue.([]interface{}); isSlice {
+	if _, isSlice := b.originalValue.([]any); isSlice {
 		// assume data is a slice.
 		if _, err = fmt.Fprintf(&replacement,
 			`%s{{- dict %q (concat (fromYAML (include %q .)).%s (%s)) | toYAML | indent %d }}`+"\n",
