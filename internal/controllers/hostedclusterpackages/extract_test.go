@@ -19,13 +19,13 @@ func TestExtractPackageTemplateFields_EnsuresNoDefaulting(t *testing.T) {
 	t.Parallel()
 
 	hcpkg := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"metadata": map[string]interface{}{
+		Object: map[string]any{
+			"spec": map[string]any{
+				"template": map[string]any{
+					"metadata": map[string]any{
 						"name": "test-package",
 					},
-					"spec": map[string]interface{}{
+					"spec": map[string]any{
 						"image": "test-image:v1",
 						// Intentionally omitting: component, paused, config
 					},
