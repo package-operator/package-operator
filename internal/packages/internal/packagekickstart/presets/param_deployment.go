@@ -149,7 +149,7 @@ func parametrizeDeploymentTolerations(
 
 	_, err := dotnotation.Get(obj.Object, "spec.template.spec.tolerations")
 	if err != nil {
-		if err := dotnotation.Set(obj.Object, "spec.template.spec.tolerations", []interface{}{}); err != nil {
+		if err := dotnotation.Set(obj.Object, "spec.template.spec.tolerations", []any{}); err != nil {
 			return nil, err
 		}
 	}
@@ -181,8 +181,8 @@ func parametrizeDeploymentImages(
 	if err != nil {
 		return nil, err
 	}
-	for i, container := range containers.([]interface{}) {
-		c := container.(map[string]interface{})
+	for i, container := range containers.([]any) {
+		c := container.(map[string]any)
 		name, _, err := unstructured.NestedString(c, "name")
 		if err != nil {
 			return nil, err
@@ -269,8 +269,8 @@ func parametrizeDeploymentContainers(
 	if err != nil {
 		return nil, err
 	}
-	for i, container := range containers.([]interface{}) {
-		c := container.(map[string]interface{})
+	for i, container := range containers.([]any) {
+		c := container.(map[string]any)
 		name, _, err := unstructured.NestedString(c, "name")
 		if err != nil {
 			return nil, err
@@ -369,7 +369,7 @@ func parametrizeDeploymentContainers(
 			envDotNotation := fmt.Sprintf("spec.template.spec.containers.%d.env", i)
 			_, err := dotnotation.Get(obj.Object, envDotNotation)
 			if err != nil {
-				if err := dotnotation.Set(obj.Object, envDotNotation, []interface{}{}); err != nil {
+				if err := dotnotation.Set(obj.Object, envDotNotation, []any{}); err != nil {
 					return nil, err
 				}
 			}
@@ -386,7 +386,7 @@ func parametrizeDeploymentContainers(
 				return nil, err
 			}
 			if originalResources == nil {
-				originalResources = map[string]interface{}{}
+				originalResources = map[string]any{}
 			}
 			defaultRaw, err := json.Marshal(originalResources)
 			if err != nil {

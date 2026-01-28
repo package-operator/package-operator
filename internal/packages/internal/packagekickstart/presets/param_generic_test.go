@@ -11,10 +11,10 @@ import (
 
 var (
 	configMap = unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "banana",
 				"namespace": "fruits",
 			},
@@ -22,10 +22,10 @@ var (
 	}
 
 	secret = unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "v1",
 			"kind":       "Secret",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "banana",
 				"namespace": "fruits",
 			},
@@ -33,22 +33,22 @@ var (
 	}
 
 	clusterRoleBinding = unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "rbac.authorization.k8s.io/v1",
 			"kind":       "ClusterRoleBinding",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name": "banana",
 			},
-			"roleRef": map[string]interface{}{
+			"roleRef": map[string]any{
 				"kind": "ClusterRole",
 				"name": "bananas",
 			},
-			"subjects": []interface{}{
-				map[string]interface{}{
+			"subjects": []any{
+				map[string]any{
 					"kind": "User",
 					"name": "hans",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"kind":      "ServiceAccount",
 					"name":      "banana",
 					"namespace": "fruits",

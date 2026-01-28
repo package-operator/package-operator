@@ -50,7 +50,7 @@ func parametrizeNamespace(obj unstructured.Unstructured) (
 	if obj.GroupVersionKind().GroupKind() == clusterRoleBindingGK {
 		subjects, _, _ := unstructured.NestedSlice(obj.Object, "subjects")
 		for i, subjectI := range subjects {
-			subject := subjectI.(map[string]interface{})
+			subject := subjectI.(map[string]any)
 			ns, ok := subject["namespace"].(string)
 			if !ok {
 				continue

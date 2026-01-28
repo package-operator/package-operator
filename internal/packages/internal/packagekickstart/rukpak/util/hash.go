@@ -10,7 +10,7 @@ import (
 // DeepHashObject writes specified object to hash using the spew library
 // which follows pointers and prints actual values of the nested objects
 // ensuring the hash does not change when a pointer changes.
-func DeepHashObject(obj interface{}) (string, error) {
+func DeepHashObject(obj any) (string, error) {
 	// While the most accurate encoding we could do for Kubernetes objects (runtime.Object)
 	// would use the API machinery serializers, those operate over entire objects - and
 	// we often need to operate on snippets. Checking with the experts and the implementation,

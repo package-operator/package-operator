@@ -10,7 +10,7 @@ import (
 
 // Instructions get executed to convert an object into a YAML template.
 type Instruction interface {
-	Mark(obj map[string]interface{}) error
+	Mark(obj map[string]any) error
 	Replace(in []byte) ([]byte, error)
 	Priority() int // instructions with lower priority get executed first.
 }

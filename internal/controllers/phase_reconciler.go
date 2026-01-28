@@ -264,9 +264,9 @@ func (r *phaseReconciler) teardownPhaseObject(
 		object := &unstructured.Unstructured{}
 		object.SetOwnerReferences(currentObj.GetOwnerReferences())
 		r.ownerStrategy.RemoveOwner(owner.ClientObject(), object)
-		objectPatch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		objectPatch := map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					constants.DynamicCacheLabel: nil,
 				},
 				"ownerReferences": object.GetOwnerReferences(),

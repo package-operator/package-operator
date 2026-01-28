@@ -261,12 +261,12 @@ func addMissingNamespaces(
 		phase := string(presets.PhaseNamespaces)
 		usedPhases[phase] = struct{}{}
 		ns := unstructured.Unstructured{
-			Object: map[string]interface{}{
+			Object: map[string]any{
 				"apiVersion": "v1",
 				"kind":       "Namespace",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": nsName,
-					"annotations": map[string]interface{}{
+					"annotations": map[string]any{
 						manifestsv1alpha1.PackagePhaseAnnotation: phase,
 					},
 				},

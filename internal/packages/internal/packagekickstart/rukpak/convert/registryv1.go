@@ -328,7 +328,7 @@ func Convert(in RegistryV1, installNamespace string, targetNamespaces []string) 
 
 const maxNameLength = 63
 
-func generateName(base string, o interface{}) (string, error) {
+func generateName(base string, o any) (string, error) {
 	hashStr, err := util.DeepHashObject(o)
 	if err != nil {
 		return "", err
