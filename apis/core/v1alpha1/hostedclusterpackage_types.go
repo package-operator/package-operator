@@ -119,7 +119,7 @@ const (
 	HostedClusterPackageProgressing = "Progressing"
 	// HostedClusterPackageHasPausedPackage indicates that a Package resource
 	// under control is currently paused by an outside actor.
-	// This means that a rollout can get suck because this Package will not successfully progress
+	// This means that a rollout can get stuck because this Package will not successfully progress
 	// until it has been unpaused again.
 	HostedClusterPackageHasPausedPackage = "HasPausedPackage"
 )
