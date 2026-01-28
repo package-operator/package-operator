@@ -11,7 +11,7 @@ import (
 // PackageApplyConfiguration represents a declarative configuration of the Package type for use
 // with apply.
 //
-// Package defines a namespaced package installationn.
+// Package defines a namespaced package installation.
 type PackageApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`

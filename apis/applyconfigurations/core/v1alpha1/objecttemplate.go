@@ -12,7 +12,7 @@ import (
 // with apply.
 //
 // ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
-// sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
+// sources provided in the .Spec.Sources. The sources can only come from objects within the same namespace
 // as the ObjectTemplate.
 type ObjectTemplateApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`

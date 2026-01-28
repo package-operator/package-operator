@@ -38,7 +38,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Package defines a namespaced package installationn.
+        description: Package defines a namespaced package installation.
         properties:
           apiVersion:
             description: |-
