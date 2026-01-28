@@ -32,7 +32,7 @@ func TestGenericPackage(t *testing.T) {
 	p.Spec.Component = "test_component"
 	assert.Equal(t, p.Spec.Component, pkg.GetSpecComponent())
 
-	assert.Empty(t, pkg.GetSpecConditions())
+	assert.Empty(t, pkg.GetStatusConditions())
 	p.Status.Conditions = []metav1.Condition{
 		{
 			ObservedGeneration: 1,
@@ -41,7 +41,7 @@ func TestGenericPackage(t *testing.T) {
 			Message:            "test-message",
 		},
 	}
-	assert.Equal(t, p.Status.Conditions, *pkg.GetSpecConditions())
+	assert.Equal(t, p.Status.Conditions, *pkg.GetStatusConditions())
 
 	p.Status.Revision = int64(2)
 	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())
@@ -74,7 +74,7 @@ func TestGenericClusterPackage(t *testing.T) {
 	p.Spec.Component = "test_component"
 	assert.Equal(t, p.Spec.Component, pkg.GetSpecComponent())
 
-	assert.Empty(t, pkg.GetSpecConditions())
+	assert.Empty(t, pkg.GetStatusConditions())
 	p.Status.Conditions = []metav1.Condition{
 		{
 			ObservedGeneration: 1,
@@ -83,7 +83,7 @@ func TestGenericClusterPackage(t *testing.T) {
 			Message:            "test-message",
 		},
 	}
-	assert.Equal(t, p.Status.Conditions, *pkg.GetSpecConditions())
+	assert.Equal(t, p.Status.Conditions, *pkg.GetStatusConditions())
 
 	p.Status.Revision = int64(2)
 	assert.Equal(t, p.Status.Revision, pkg.GetStatusRevision())

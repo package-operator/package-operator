@@ -88,7 +88,7 @@ func (r *Recorder) Register() {
 type GenericPackage interface {
 	ClientObject() client.Object
 	GetSpecImage() string
-	GetSpecConditions() *[]metav1.Condition
+	GetStatusConditions() *[]metav1.Condition
 	GetStatusRevision() int64
 }
 
@@ -109,7 +109,7 @@ func (r *Recorder) RecordPackageMetrics(pkg GenericPackage) {
 	healthStatus := 2
 
 	if availableCond := meta.FindStatusCondition(
-		*pkg.GetSpecConditions(), corev1alpha1.PackageAvailable,
+		*pkg.GetStatusConditions(), corev1alpha1.PackageAvailable,
 	); availableCond != nil {
 		switch availableCond.Status {
 		case metav1.ConditionFalse:

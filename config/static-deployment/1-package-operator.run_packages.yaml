@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.20.0
   name: packages.package-operator.run
 spec:
   group: package-operator.run
@@ -38,7 +38,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Package defines a namespaced package installationn.
+        description: Package defines a namespaced package installation.
         properties:
           apiVersion:
             description: |-

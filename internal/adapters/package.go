@@ -23,13 +23,13 @@ type PackageAccessor interface {
 	ClientObject() client.Object
 
 	GetSpecComponent() string
-	GetSpecConditions() *[]metav1.Condition
 	GetSpecImage() string
 	GetSpecHash(packageHashModifier *int32) string
 	GetSpecPaused() bool
 	SetSpecPaused(paused bool)
 	GetSpecTemplateContext() manifests.TemplateContext
 
+	GetStatusConditions() *[]metav1.Condition
 	GetStatusRevision() int64
 	SetStatusRevision(rev int64)
 	GetStatusUnpackedHash() string
@@ -73,7 +73,7 @@ func (a *GenericPackage) GetSpecComponent() string {
 	return a.Spec.Component
 }
 
-func (a *GenericPackage) GetSpecConditions() *[]metav1.Condition {
+func (a *GenericPackage) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 
@@ -131,7 +131,7 @@ func (a *GenericClusterPackage) GetSpecComponent() string {
 	return a.Spec.Component
 }
 
-func (a *GenericClusterPackage) GetSpecConditions() *[]metav1.Condition {
+func (a *GenericClusterPackage) GetStatusConditions() *[]metav1.Condition {
 	return &a.Status.Conditions
 }
 

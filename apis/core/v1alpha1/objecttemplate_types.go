@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
-// sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
+// sources provided in the .Spec.Sources. The sources can only come from objects within the same namespace
 // as the ObjectTemplate.
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

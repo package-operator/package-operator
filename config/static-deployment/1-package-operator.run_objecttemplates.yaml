@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.20.0
   name: objecttemplates.package-operator.run
 spec:
   group: package-operator.run
@@ -26,7 +26,7 @@ spec:
       openAPIV3Schema:
         description: |-
           ObjectTemplate contain a go template of a Kubernetes manifest. This manifest is then templated with the
-          sources provided in the .Spec.Sources. The sources can only come from objects within the same nampespace
+          sources provided in the .Spec.Sources. The sources can only come from objects within the same namespace
           as the ObjectTemplate.
         properties:
           apiVersion:

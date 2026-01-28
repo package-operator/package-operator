@@ -55,7 +55,7 @@ func TestUnpackReconciler(t *testing.T) {
 	assert.True(t, res.IsZero())
 
 	assert.True(t,
-		meta.IsStatusConditionTrue(*pkg.GetSpecConditions(),
+		meta.IsStatusConditionTrue(*pkg.GetStatusConditions(),
 			corev1alpha1.PackageUnpacked))
 	assert.NotEmpty(t, pkg.GetSpecHash(nil))
 }
@@ -116,7 +116,7 @@ func TestUnpackReconciler_pullBackoff(t *testing.T) {
 	assert.Equal(t, controllers.DefaultInitialBackoff, res.RequeueAfter)
 
 	assert.True(t,
-		meta.IsStatusConditionFalse(*pkg.GetSpecConditions(),
+		meta.IsStatusConditionFalse(*pkg.GetStatusConditions(),
 			corev1alpha1.PackageUnpacked))
 }
 

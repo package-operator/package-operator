@@ -47,6 +47,7 @@ func (g Generate) All(ctx context.Context) error {
 }
 
 func (Generate) code() error {
+	// Generate CRD manifests.
 	err := shr.New(sh.WithWorkDir("apis")).Run("controller-gen",
 		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true",
 		"paths=./core/...",
@@ -56,7 +57,16 @@ func (Generate) code() error {
 		return fmt.Errorf("generating kubernetes manifests: %w", err)
 	}
 
-	// deepcopy generator
+	// Generate applyconfigurations.
+	err = shr.New().Run("controller-gen",
+		"applyconfiguration",
+		"paths=./apis/core/...",
+	)
+	if err != nil {
+		return fmt.Errorf("generating applyconfiguration code: %w", err)
+	}
+
+	// Generate DeepCopy code.
 	err = sh.New(sh.WithWorkDir("apis")).Run("controller-gen", "object", "paths=./...")
 	if err != nil {
 		return fmt.Errorf("generating deep copy methods: %w", err)
@@ -67,7 +77,7 @@ func (Generate) code() error {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
-	// conversion generator
+	// Generate conversion methods.
 	if err := shr.Run(
 		"conversion-gen",
 		"--extra-peer-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
@@ -86,7 +96,7 @@ func (Generate) code() error {
 		return (fmt.Errorf("writing zz_generated.conversion.go file: %w", err))
 	}
 
-	// copy CRDs over to config/statis-deployment
+	// Copy CRDs over to config/static-deployment.
 	crds, err := filepath.Glob(filepath.Join("config", "crds", "*.yaml"))
 	if err != nil {
 		return fmt.Errorf("finding CRDs: %w", err)
@@ -112,8 +122,8 @@ func (Generate) docs() error {
 	)
 }
 
-// generates a self-bootstrap-job.yaml based on the current VERSION.
-// requires the images to have been build beforehand.
+// Generates a self-bootstrap-job.yaml based on the current VERSION.
+// Requires the images to have been build beforehand.
 func (g Generate) selfBootstrapJobLocal(context.Context) error {
 	latestJobBytes, err := os.ReadFile(filepath.Join("config", "self-bootstrap-job.yaml.tpl"))
 	if err != nil {

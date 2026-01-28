@@ -315,10 +315,10 @@ func (s *ObjectSet) Namespace() string {
 }
 
 func (s *ObjectSet) HasSucceeded() bool {
-	return meta.IsStatusConditionTrue(s.GetSpecConditions(), corev1alpha1.ObjectSetSucceeded)
+	return meta.IsStatusConditionTrue(s.GetStatusConditions(), corev1alpha1.ObjectSetSucceeded)
 }
 
-func (s *ObjectSet) GetSpecConditions() []metav1.Condition {
+func (s *ObjectSet) GetStatusConditions() []metav1.Condition {
 	if cos, ok := s.obj.(*corev1alpha1.ClusterObjectSet); ok {
 		return cos.Status.Conditions
 	}

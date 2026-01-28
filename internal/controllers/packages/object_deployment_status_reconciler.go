@@ -33,7 +33,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(
 		packageAvailableCond := objDepAvailableCond.DeepCopy()
 		packageAvailableCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packageAvailableCond)
+		meta.SetStatusCondition(packageObj.GetStatusConditions(), *packageAvailableCond)
 	}
 
 	objDepProgressingCond := meta.FindStatusCondition(
@@ -44,7 +44,7 @@ func (r *objectDeploymentStatusReconciler) Reconcile(
 		packageProgressingCond := objDepProgressingCond.DeepCopy()
 		packageProgressingCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
 
-		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packageProgressingCond)
+		meta.SetStatusCondition(packageObj.GetStatusConditions(), *packageProgressingCond)
 	}
 
 	objDepPausedCond := meta.FindStatusCondition(*objDep.GetStatusConditions(), corev1alpha1.ObjectDeploymentPaused)
@@ -52,16 +52,16 @@ func (r *objectDeploymentStatusReconciler) Reconcile(
 		objDepPausedCond.Status == metav1.ConditionTrue {
 		packagePausedCond := objDepPausedCond.DeepCopy()
 		packagePausedCond.ObservedGeneration = packageObj.ClientObject().GetGeneration()
-		meta.SetStatusCondition(packageObj.GetSpecConditions(), *packagePausedCond)
+		meta.SetStatusCondition(packageObj.GetStatusConditions(), *packagePausedCond)
 	} else {
-		meta.RemoveStatusCondition(packageObj.GetSpecConditions(), corev1alpha1.PackagePaused)
+		meta.RemoveStatusCondition(packageObj.GetStatusConditions(), corev1alpha1.PackagePaused)
 	}
 
-	controllers.DeleteMappedConditions(ctx, packageObj.GetSpecConditions())
+	controllers.DeleteMappedConditions(ctx, packageObj.GetStatusConditions())
 	controllers.MapConditions(
 		ctx,
 		objDep.ClientObject().GetGeneration(), *objDep.GetStatusConditions(),
-		packageObj.ClientObject().GetGeneration(), packageObj.GetSpecConditions(),
+		packageObj.ClientObject().GetGeneration(), packageObj.GetStatusConditions(),
 	)
 
 	packageObj.SetStatusRevision(objDep.GetStatusRevision())

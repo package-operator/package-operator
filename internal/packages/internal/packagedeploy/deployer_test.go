@@ -397,7 +397,7 @@ func Test_validateConstraints(t *testing.T) {
 			err := validateConstraints(ctx, cli, test.apiPkg, test.manifest, test.env)
 			require.NoError(t, err)
 
-			invalidCond := meta.FindStatusCondition(*test.apiPkg.GetSpecConditions(), corev1alpha1.PackageInvalid)
+			invalidCond := meta.FindStatusCondition(*test.apiPkg.GetStatusConditions(), corev1alpha1.PackageInvalid)
 			assert.Equal(t, "ConstraintsFailed", invalidCond.Reason)
 			assert.Equal(t, test.condMessage, invalidCond.Message)
 		})
