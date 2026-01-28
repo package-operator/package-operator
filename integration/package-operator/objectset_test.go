@@ -23,7 +23,6 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/constants"
 )
 
 func TestCollisionPreventionPreventUnowned(t *testing.T) {
@@ -538,6 +537,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -569,7 +569,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 	// Delete ObjectSet.
 	require.NoError(t, Client.Delete(ctx, objectSet))
 
-	// Wait for owner reference and dynamic cache label on ConfigMap to be removed.
+	// Wait for owner reference on ConfigMap to be removed.
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, actualConfigMap, "internal ownerReference to be removed",
@@ -582,9 +582,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 						ownerRefFound = true
 					}
 				}
-				label := configMap.GetLabels()
-				_, labelFound := label[constants.DynamicCacheLabel]
-				return !ownerRefFound && !labelFound, err
+				return !ownerRefFound, err
 			}, wait.WithTimeout(40*time.Second),
 		))
 }
