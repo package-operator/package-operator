@@ -944,7 +944,8 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 					*arg = hypershiftv1beta1.HostedClusterList{Items: hostedClusters}
 				}).Return(nil)
 
-				// Only the available HostedClusters have packages
+				// Only the first 3 HostedClusters are available, so only they will have packages
+				// The last 2 are unavailable and will be skipped entirely by the controller
 				for i := range 3 {
 					pkg := makePackage(i, true, true)
 					c.On("Get",
@@ -957,23 +958,6 @@ func TestHostedClusterPackageController_Reconcile(t *testing.T) {
 						*arg = pkg
 					}).Return(nil)
 				}
-
-				// Last 2 HostedClusters don't have packages yet
-				for i := 3; i < 5; i++ {
-					c.On("Get",
-						mock.Anything,
-						types.NamespacedName{Name: "test-hcpkg", Namespace: fmt.Sprintf("default-hc-%d", i)},
-						mock.AnythingOfType("*v1alpha1.Package"),
-						mock.Anything,
-					).Return(errors.NewNotFound(schema.GroupResource{}, "test-package"))
-				}
-
-				// Mock applying packages for the missing HostedClusters
-				c.On("Apply",
-					mock.Anything,
-					mock.Anything,
-					mock.Anything,
-				).Return(nil)
 
 				c.StatusMock.On("Update",
 					mock.Anything,
