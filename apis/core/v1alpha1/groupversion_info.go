@@ -2,6 +2,8 @@
 // containing basic building blocks that other auxiliary APIs can build on top of.
 // +kubebuilder:object:generate=true
 // +groupName=package-operator.run
+// +kubebuilder:ac:generate=true
+// +kubebuilder:ac:output:package="../../applyconfigurations"
 package v1alpha1
 
 import (
@@ -19,6 +21,11 @@ var (
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
+
+	// SchemeGroupVersion is group version used to register these objects
+	//
+	// Deprecated: use GroupVersion instead.
+	SchemeGroupVersion = GroupVersion
 )
 
 func register(objs ...runtime.Object) {

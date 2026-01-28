@@ -12,7 +12,9 @@ import (
 // +kubebuilder:resource:scope=Cluster,shortName=hcpkg
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`
 // +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="Progressing")].status`
+// +kubebuilder:printcolumn:name="HasPausedPackage",type=string,JSONPath=`.status.conditions[?(@.type=="HasPausedPackage")].status`
 // +kubebuilder:printcolumn:name="ObservedGeneration",type=string,JSONPath=`.status.observedGeneration`
+// +kubebuilder:printcolumn:name="Image",type=string,priority=1,JSONPath=`.spec.template.spec.image`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type HostedClusterPackage struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -115,6 +117,11 @@ const (
 	// HostedClusterPackageProgressing indicates that a rollout is currently ongoing.
 	// This means that not all managed Packages have been upgraded to the latest specified version and configuration.
 	HostedClusterPackageProgressing = "Progressing"
+	// HostedClusterPackageHasPausedPackage indicates that a Package resource
+	// under control is currently paused by an outside actor.
+	// This means that a rollout can get stuck because this Package will not successfully progress
+	// until it has been unpaused again.
+	HostedClusterPackageHasPausedPackage = "HasPausedPackage"
 )
 
 // HostedClusterPackagePartitionStatus describes the status of a partition.

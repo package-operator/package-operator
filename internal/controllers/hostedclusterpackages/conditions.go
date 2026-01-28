@@ -20,3 +20,7 @@ func isPackageProgressed(pkg *corev1alpha1.Package) bool {
 	return packageConditionIs(pkg, corev1alpha1.PackageProgressing, metav1.ConditionFalse) &&
 		packageConditionIs(pkg, corev1alpha1.PackageUnpacked, metav1.ConditionTrue)
 }
+
+func isPackagePaused(pkg *corev1alpha1.Package) bool {
+	return packageConditionIs(pkg, corev1alpha1.PackagePaused, metav1.ConditionTrue)
+}
