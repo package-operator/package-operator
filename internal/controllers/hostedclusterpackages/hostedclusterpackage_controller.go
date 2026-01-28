@@ -361,7 +361,7 @@ func (c *HostedClusterPackageController) updateStatus(
 			ObservedGeneration: hcpkg.Generation,
 			Type:               corev1alpha1.HostedClusterPackageHasPausedPackage,
 			Status:             metav1.ConditionTrue,
-			Reason:             "AtleastOnePackagePaused",
+			Reason:             "AtLeastOnePackagePaused",
 			Message:            fmt.Sprintf("%d/%d packages paused.", state.pausedPkgs, totalPackages),
 		})
 	} else {
