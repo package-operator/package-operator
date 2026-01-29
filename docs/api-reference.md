@@ -394,7 +394,8 @@ spec:
       alphanumericAsc: {}
       static:
       - nonumy
-  strategy: '{instant:{}}'
+  strategy:
+    instant: {}
   template:
     metadata: {}
     spec:
