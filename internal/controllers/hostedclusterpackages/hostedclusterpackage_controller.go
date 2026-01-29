@@ -231,7 +231,11 @@ func (c *HostedClusterPackageController) rebuildProcessingQueue(
 		if err := c.client.Get(ctx, client.ObjectKey{
 			Name:      processingPkg.Name,
 			Namespace: processingPkg.Namespace,
-		}, pkg); err != nil {
+		}, pkg); errors.IsNotFound(err) {
+			// Package was deleted.
+			// Drop from the queue so it can be recreated later.
+			continue
+		} else if err != nil {
 			return fmt.Errorf("getting Package in processing: %w", err)
 		}
 
