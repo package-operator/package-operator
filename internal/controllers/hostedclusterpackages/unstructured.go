@@ -9,7 +9,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
-// toUnstructured converts a typed HostedClustedPackage object to an unstructured.Unstructured.
+// toUnstructured converts a typed HostedClusterPackage object to an unstructured.Unstructured.
 // Unspecified/defaulted fields will be dropped during the conversion and are not present in the returned data.
 func toUnstructured(hostedClusterPackage *corev1alpha1.HostedClusterPackage) (*unstructured.Unstructured, error) {
 	m, err := runtime.DefaultUnstructuredConverter.ToUnstructured(hostedClusterPackage)
