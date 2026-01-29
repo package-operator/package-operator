@@ -99,6 +99,18 @@ func (r *unpackReconciler) Reconcile(
 	}
 
 	if pkg.GetStatusUnpackedHash() == specHash {
+		if meta.IsStatusConditionFalse(*pkg.GetStatusConditions(), corev1alpha1.PackageUnpacked) {
+			// Covers this case: unpack success -> unpack of new image failed -> rollback.
+			meta.SetStatusCondition(
+				pkg.GetStatusConditions(), metav1.Condition{
+					Type:               corev1alpha1.PackageUnpacked,
+					Status:             metav1.ConditionTrue,
+					Reason:             "AlreadyUnpacked",
+					Message:            "Package already unpacked",
+					ObservedGeneration: pkg.ClientObject().GetGeneration(),
+				})
+		}
+
 		// We have already unpacked this package \o/
 		return res, nil
 	}
@@ -108,7 +120,7 @@ func (r *unpackReconciler) Reconcile(
 	rawPkg, err := r.imagePuller.Pull(ctx, pkg.GetSpecImage())
 	if err != nil {
 		meta.SetStatusCondition(
-			pkg.GetSpecConditions(), metav1.Condition{
+			pkg.GetStatusConditions(), metav1.Condition{
 				Type:               corev1alpha1.PackageUnpacked,
 				Status:             metav1.ConditionFalse,
 				Reason:             "ImagePullBackOff",
@@ -140,7 +152,7 @@ func (r *unpackReconciler) Reconcile(
 	}
 	pkg.SetStatusUnpackedHash(specHash)
 	meta.SetStatusCondition(
-		pkg.GetSpecConditions(), metav1.Condition{
+		pkg.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.PackageUnpacked,
 			Status:             metav1.ConditionTrue,
 			Reason:             "UnpackSuccess",
