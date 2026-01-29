@@ -26,7 +26,7 @@ type HostedClusterPackage struct {
 
 // HostedClusterPackageSpec is the description of a HostedClusterPackage.
 type HostedClusterPackageSpec struct {
-	// +kubebuilder:default={instant:{}}
+	// +kubebuilder:default={instant: {}}
 	Strategy HostedClusterPackageStrategy `json:"strategy"`
 	// HostedClusterSelector is a label query matching HostedClusters that the Package should be rolled out to.
 	HostedClusterSelector metav1.LabelSelector `json:"hostedClusterSelector,omitempty"`
