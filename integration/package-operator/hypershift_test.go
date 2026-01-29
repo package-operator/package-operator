@@ -172,7 +172,7 @@ func TestHyperShift(t *testing.T) {
 	})
 }
 
-func TestObjectSetPhaseImmutability(t *testing.T) {
+func TestHyperShiftObjectSetPhaseImmutability(t *testing.T) {
 	namespace := "default-pko-hs-hc"
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
@@ -192,6 +192,7 @@ func TestObjectSetPhaseImmutability(t *testing.T) {
 	cm4 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "cm-4",
+			Namespace:   "default",
 			Labels:      map[string]string{"test.package-operator.run/test": "True"},
 			Annotations: map[string]string{"name": "cm-4"},
 		},
@@ -205,7 +206,8 @@ func TestObjectSetPhaseImmutability(t *testing.T) {
 
 	cm5 := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cm-5",
+			Name:      "cm-5",
+			Namespace: "default",
 		},
 	}
 	cm5.SetGroupVersionKind(cmGVK)

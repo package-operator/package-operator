@@ -26,11 +26,14 @@ import (
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 
+	boxcutter "pkg.package-operator.run/boxcutter/machinery/types"
+
+	"pkg.package-operator.run/boxcutter/probing"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/pkg/probing"
 )
 
 // PhaseReconciler reconciles objects within a ObjectSet phase.
@@ -113,11 +116,11 @@ type recordingProbe struct {
 }
 
 func (p *recordingProbe) Probe(obj *unstructured.Unstructured) {
-	ok, msg := p.probe.Probe(obj)
-	if ok {
+	result := p.probe.Probe(obj)
+	if result.Status == boxcutter.ProbeStatusTrue {
 		return
 	}
-	p.recordForObj(obj, msg)
+	p.recordForObj(obj, result.Messages)
 }
 
 func (p *recordingProbe) RecordMissingObject(obj *unstructured.Unstructured) {

@@ -2,10 +2,7 @@ module package-operator.run
 
 go 1.25.3
 
-replace (
-	package-operator.run/apis => ./apis
-	package-operator.run/pkg => ./pkg
-)
+replace package-operator.run/apis => ./apis
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -41,7 +38,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	package-operator.run/apis v1.17.1
-	package-operator.run/pkg v1.17.1
 	pkg.package-operator.run/boxcutter v0.9.0
 	pkg.package-operator.run/cardboard v0.0.4
 	pkg.package-operator.run/cardboard/kubeutils v0.0.4
