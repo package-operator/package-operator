@@ -7,8 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"pkg.package-operator.run/boxcutter/probing"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
-	"package-operator.run/pkg/probing"
 )
 
 // Parse takes a list of ObjectSetProbes (commonly defined within a ObjectSetPhaseSpec)

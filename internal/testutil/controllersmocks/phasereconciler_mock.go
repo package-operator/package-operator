@@ -6,9 +6,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"pkg.package-operator.run/boxcutter/probing"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/controllers"
-	"package-operator.run/pkg/probing"
 )
 
 type PhaseReconcilerMock struct {

@@ -3,6 +3,7 @@
 # curl -X POST --data-binary @.codecov.yaml https://codecov.io/validate
 ignore:
   - "**/zz_generated*.go"
+  - "**/*_mock.go"
   - "cmd/build"
   - "cmd/test-stub"
   - internal/packages/internal/packagekickstart/rukpak

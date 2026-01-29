@@ -23,7 +23,6 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/constants"
 )
 
 func TestCollisionPreventionPreventUnowned(t *testing.T) {
@@ -54,6 +53,7 @@ func TestCollisionPreventionPreventUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -113,6 +113,7 @@ func TestCollisionPreventionPreventOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -164,6 +165,7 @@ func TestCollisionPreventionInvalidSet(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -225,6 +227,7 @@ func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -257,7 +260,7 @@ func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
 	}))
 
 	objectSetCM := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-if-no-controller-unowned-cm"},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-if-no-controller-unowned-cm", Namespace: "default"},
 		Data:       map[string]string{"banana": "bread"},
 	}
 	cmGVK, err := apiutil.GVKForObject(objectSetCM, Scheme)
@@ -271,6 +274,7 @@ func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -326,7 +330,7 @@ func TestCollisionPreventionNoneUnowned(t *testing.T) {
 	}))
 
 	objectSetCM := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-none-unowned-cm"},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-none-unowned-cm", Namespace: "default"},
 		Data:       map[string]string{"banana": "bread"},
 	}
 	cmGVK, err := apiutil.GVKForObject(objectSetCM, Scheme)
@@ -340,6 +344,7 @@ func TestCollisionPreventionNoneUnowned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -384,7 +389,7 @@ func TestCollisionPreventionNoneOwned(t *testing.T) {
 	}))
 
 	objectSetCM := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-none-owned-cm"},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-collision-prevention-none-owned-cm", Namespace: "default"},
 		Data:       map[string]string{"banana": "bread"},
 	}
 	cmGVK, err := apiutil.GVKForObject(objectSetCM, Scheme)
@@ -398,6 +403,7 @@ func TestCollisionPreventionNoneOwned(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -531,6 +537,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
+			Revision: 1,
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
 				Phases: []corev1alpha1.ObjectSetTemplatePhase{
 					{
@@ -562,7 +569,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 	// Delete ObjectSet.
 	require.NoError(t, Client.Delete(ctx, objectSet))
 
-	// Wait for owner reference and dynamic cache label on ConfigMap to be removed.
+	// Wait for owner reference on ConfigMap to be removed.
 	require.NoError(t,
 		Waiter.WaitForObject(
 			ctx, actualConfigMap, "internal ownerReference to be removed",
@@ -575,9 +582,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 						ownerRefFound = true
 					}
 				}
-				label := configMap.GetLabels()
-				_, labelFound := label[constants.DynamicCacheLabel]
-				return !ownerRefFound && !labelFound, err
+				return !ownerRefFound, err
 			}, wait.WithTimeout(40*time.Second),
 		))
 }
