@@ -103,7 +103,9 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 
 	containerdConfigPatches := []string{}
 	for _, registryHostOverride := range cfg.registryHostOverrides {
-		containerdConfigPatches = append(containerdConfigPatches, registryOverrideToml(registryHostOverride))
+		containerdConfigPatches = append(containerdConfigPatches,
+
+			registryOverrideToml(registryHostOverride))
 	}
 
 	var extraPortMappings []kindv1alpha4.PortMapping
@@ -138,6 +140,7 @@ func NewCluster(name string, opts ...clusterOption) Cluster {
 					Labels:            cfg.nodeLabels,
 					Role:              kindv1alpha4.ControlPlaneRole,
 					ExtraPortMappings: extraPortMappings,
+					Image:             "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a",
 				},
 			},
 		},

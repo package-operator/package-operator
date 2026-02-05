@@ -119,6 +119,14 @@ func (c *CtrlStatusClient) Update(
 	return args.Error(0)
 }
 
+func (c *CtrlStatusClient) Apply(
+	ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption,
+) error {
+	args := c.Called(ctx, obj, opts)
+
+	return args.Error(0)
+}
+
 func (c *CtrlStatusClient) Patch(
 	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption,
 ) error {

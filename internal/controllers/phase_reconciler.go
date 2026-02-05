@@ -26,11 +26,14 @@ import (
 
 	"pkg.package-operator.run/boxcutter/managedcache"
 
+	boxcutter "pkg.package-operator.run/boxcutter/machinery/types"
+	"pkg.package-operator.run/boxcutter/probing"
+	"pkg.package-operator.run/boxcutter/validation"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/pkg/probing"
 )
 
 // PhaseReconciler reconciles objects within a ObjectSet phase.
@@ -113,11 +116,11 @@ type recordingProbe struct {
 }
 
 func (p *recordingProbe) Probe(obj *unstructured.Unstructured) {
-	ok, msg := p.probe.Probe(obj)
-	if ok {
+	result := p.probe.Probe(obj)
+	if result.Status == boxcutter.ProbeStatusTrue {
 		return
 	}
-	p.recordForObj(obj, msg)
+	p.recordForObj(obj, result.Messages)
 }
 
 func (p *recordingProbe) RecordMissingObject(obj *unstructured.Unstructured) {
@@ -460,6 +463,20 @@ func UpdateObjectSetOrPhaseStatusFromError(
 		return res, updateStatus(ctx)
 	}
 
+	var phaseValidationError *validation.PhaseValidationError
+	if errors.As(reconcileErr, &phaseValidationError) {
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            phaseValidationError.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
 	if IsAdoptionRefusedError(reconcileErr) {
 		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
@@ -524,7 +541,8 @@ func (r *phaseReconciler) reconcileObject(
 	if apimachineryerrors.IsNotFound(err) {
 		// The object is not yet present on the cluster,
 		// just create it using desired state!
-		err := r.accessor.Patch(ctx, desiredObj, client.Apply, client.FieldOwner(constants.FieldOwner))
+		ac := client.ApplyConfigurationFromUnstructured(desiredObj)
+		err := r.accessor.Apply(ctx, ac, client.FieldOwner(constants.FieldOwner))
 		if apimachineryerrors.IsAlreadyExists(err) {
 			// object already exists, but was not in our cache.
 			// get object via uncached client directly from the API server.

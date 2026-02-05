@@ -55,7 +55,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 		return err
 	}
 
-	return oci.NewOCI("", "").Load(path)
+	return oci.NewOCI("", "").Load(ctx, path)
 }
 
 func pushPackage(ctx context.Context, name, registry string) error {
@@ -74,7 +74,7 @@ func pushPackage(ctx context.Context, name, registry string) error {
 
 	url := imageURL(registry, name+"-package", appVersion)
 
-	if err := oci.NewOCI(url, imgPath, oci.WithCranePush{}).Push(); err != nil {
+	if err := oci.NewOCI(url, imgPath, oci.WithCranePush{}).Push(ctx); err != nil {
 		return err
 	}
 

@@ -5,5 +5,4 @@ toolchain go1.25.3
 use (
 	.
 	./apis
-	./pkg
 )

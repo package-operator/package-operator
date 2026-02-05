@@ -47,7 +47,7 @@ func (c Compile) compile(ctx context.Context, cmd string, goos, goarch string) e
 		"-X", fmt.Sprintf("'package-operator.run/internal/version.version=%s'", appVersion),
 	}
 
-	err = shr.New(env).Run(
+	err = shr.New(env).Run(ctx,
 		"go", "build", "--ldflags", strings.Join(ldflags, " "), "--trimpath", "--mod=readonly", "-o", dst, "./cmd/"+cmd,
 	)
 	if err != nil {

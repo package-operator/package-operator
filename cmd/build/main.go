@@ -15,7 +15,7 @@ var (
 	shr = sh.New()
 	mgr = run.New(run.WithSources(source))
 
-	appVersion = mustVersion()
+	appVersion = mustVersion(context.Background())
 
 	// internal modules.
 	generate Generate
@@ -41,15 +41,15 @@ func main() {
 
 	err := errors.Join(
 		// Required by cardboard itself.
-		mgr.RegisterGoTool("crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.7"),
+		mgr.RegisterGoTool(ctx, "crane", "github.com/google/go-containerregistry/cmd/crane", "0.20.7"),
 		// Our deps
-		mgr.RegisterGoTool("gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
-		mgr.RegisterGoTool("controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.20.0"),
-		mgr.RegisterGoTool("conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.35.0"),
-		mgr.RegisterGoTool("golangci-lint", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "2.1.6"),
-		mgr.RegisterGoTool("k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.4"),
-		mgr.RegisterGoTool("helm", "helm.sh/helm/v3/cmd/helm", "3.19.5"),
-		mgr.RegisterGoTool("govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.4"),
+		mgr.RegisterGoTool(ctx, "gotestfmt", "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt", "2.5.0"),
+		mgr.RegisterGoTool(ctx, "controller-gen", "sigs.k8s.io/controller-tools/cmd/controller-gen", "0.20.0"),
+		mgr.RegisterGoTool(ctx, "conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.35.0"),
+		mgr.RegisterGoTool(ctx, "golangci-lint", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "2.1.6"),
+		mgr.RegisterGoTool(ctx, "k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.4"),
+		mgr.RegisterGoTool(ctx, "helm", "helm.sh/helm/v3/cmd/helm", "3.19.5"),
+		mgr.RegisterGoTool(ctx, "govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.1.4"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
 	if err != nil {

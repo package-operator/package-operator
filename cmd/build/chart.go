@@ -37,7 +37,7 @@ func (ch *Chart) prepare(ctx context.Context, _ []string) error {
 	}
 
 	if err := mgr.SerialDeps(ctx, self,
-		run.Fn(func() error { return shr.Run("cp", "-r", inDir, chartDir) }),
+		run.Fn(func() error { return shr.Run(ctx, "cp", "-r", inDir, chartDir) }),
 		run.Fn2(os.MkdirAll, filepath.Join(chartDir, "templates"), os.FileMode(0o755)),
 		run.Meth(generate, generate.selfBootstrapJobHelm),
 		run.Meth(generate, generate.helmValuesYaml),
@@ -58,7 +58,7 @@ func (ch *Chart) build(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	return shr.New(sh.WithWorkDir(cacheDir)).Run("helm", "package", "chart")
+	return shr.New(sh.WithWorkDir(cacheDir)).Run(ctx, "helm", "package", "chart")
 }
 
 func (ch *Chart) push(ctx context.Context, _ []string) error {
@@ -72,5 +72,5 @@ func (ch *Chart) push(ctx context.Context, _ []string) error {
 
 	tarballName := fmt.Sprintf("package-operator-%s.tgz", ch.appToChartVersion(appVersion))
 	repoURL := fmt.Sprintf("oci://%s/helm-charts", imageRegistry())
-	return shr.New(sh.WithWorkDir(cacheDir)).Run("helm", "push", tarballName, repoURL)
+	return shr.New(sh.WithWorkDir(cacheDir)).Run(ctx, "helm", "push", tarballName, repoURL)
 }

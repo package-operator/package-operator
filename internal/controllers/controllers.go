@@ -169,7 +169,7 @@ func AddDynamicCacheLabel(
 	labels[constants.DynamicCacheLabel] = "True"
 	updated.SetLabels(labels)
 
-	if err := w.Patch(ctx, updated, client.MergeFrom(obj)); err != nil {
+	if err := w.Patch(ctx, updated, client.Merge); err != nil {
 		return nil, fmt.Errorf("patching dynamic cache label: %w", err)
 	}
 
