@@ -2,9 +2,9 @@ package packagemanifestvalidation
 
 import (
 	"context"
+	"slices"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/strings/slices"
 
 	"package-operator.run/internal/apis/manifests"
 )

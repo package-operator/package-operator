@@ -2,6 +2,7 @@ package objectdeployments
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -10,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/strings/slices"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 

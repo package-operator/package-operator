@@ -381,7 +381,7 @@ func TestPhaseReconciler_reconcileObject(t *testing.T) {
 			On("Get", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
 		p.accessor.
-			On("Patch", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			On("Apply", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 
 		ctx := context.Background()
