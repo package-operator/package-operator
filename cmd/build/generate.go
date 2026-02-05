@@ -46,9 +46,9 @@ func (g Generate) All(ctx context.Context) error {
 	)
 }
 
-func (Generate) code() error {
+func (Generate) code(ctx context.Context) error {
 	// Generate CRD manifests.
-	err := shr.New(sh.WithWorkDir("apis")).Run("controller-gen",
+	err := shr.New(sh.WithWorkDir("apis")).Run(ctx, "controller-gen",
 		"crd:crdVersions=v1,generateEmbeddedObjectMeta=true",
 		"paths=./core/...",
 		"output:crd:artifacts:config=../config/crds",
@@ -58,7 +58,7 @@ func (Generate) code() error {
 	}
 
 	// Generate applyconfigurations.
-	err = shr.New().Run("controller-gen",
+	err = shr.New().Run(ctx, "controller-gen",
 		"applyconfiguration",
 		"paths=./apis/core/...",
 	)
@@ -67,18 +67,18 @@ func (Generate) code() error {
 	}
 
 	// Generate DeepCopy code.
-	err = sh.New(sh.WithWorkDir("apis")).Run("controller-gen", "object", "paths=./...")
+	err = sh.New(sh.WithWorkDir("apis")).Run(ctx, "controller-gen", "object", "paths=./...")
 	if err != nil {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
-	err = shr.Run("controller-gen", "object", "paths=./internal/...")
+	err = shr.Run(ctx, "controller-gen", "object", "paths=./internal/...")
 	if err != nil {
 		return fmt.Errorf("generating deep copy methods: %w", err)
 	}
 
 	// Generate conversion methods.
-	if err := shr.Run(
+	if err := shr.Run(ctx,
 		"conversion-gen",
 		"--extra-peer-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
 		"--output-file=zz_generated.conversion.go", "./internal/apis/manifests",
@@ -112,9 +112,9 @@ func (Generate) code() error {
 	return nil
 }
 
-func (Generate) docs() error {
+func (Generate) docs(ctx context.Context) error {
 	refPath := filepath.Join("docs", "api-reference.md")
-	return shr.Bash(
+	return shr.Bash(ctx,
 		"k8s-docgen apis/core/v1alpha1 > "+refPath,
 		"echo >> "+refPath,
 		"k8s-docgen apis/manifests/v1alpha1 >> "+refPath,

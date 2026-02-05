@@ -4,6 +4,16 @@ go 1.25.3
 
 replace package-operator.run/apis => ./apis
 
+replace pkg.package-operator.run/cardboard => ../cardboard
+
+replace pkg.package-operator.run/cardboard/kubeutils => ../cardboard/kubeutils
+
+replace pkg.package-operator.run/cardboard/modules/kind => ../cardboard/modules/kind
+
+replace pkg.package-operator.run/cardboard/modules/kubeclients => ../cardboard/modules/kubeclients
+
+replace pkg.package-operator.run/cardboard/modules/oci => ../cardboard/modules/oci
+
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/bmatcuk/doublestar v1.3.4
@@ -41,11 +51,11 @@ require (
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	package-operator.run/apis v1.17.1
 	pkg.package-operator.run/boxcutter v0.10.0
-	pkg.package-operator.run/cardboard v0.0.4
-	pkg.package-operator.run/cardboard/kubeutils v0.0.4
-	pkg.package-operator.run/cardboard/modules/kind v0.0.4
-	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4
-	pkg.package-operator.run/cardboard/modules/oci v0.0.4
+	pkg.package-operator.run/cardboard v0.1.0
+	pkg.package-operator.run/cardboard/kubeutils v0.1.0
+	pkg.package-operator.run/cardboard/modules/kind v0.1.0
+	pkg.package-operator.run/cardboard/modules/kubeclients v0.1.0
+	pkg.package-operator.run/cardboard/modules/oci v0.1.0
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/kind v0.31.0

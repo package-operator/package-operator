@@ -21,8 +21,8 @@ func (ci *CI) Integration(ctx context.Context, _ []string) error {
 }
 
 // Lint runs linters in CI to check the codebase.
-func (ci *CI) Lint(_ context.Context, _ []string) error {
-	return lint.glciCheck()
+func (ci *CI) Lint(ctx context.Context, _ []string) error {
+	return lint.glciCheck(ctx)
 }
 
 // PostPush runs autofixes in CI and validates that the repo is clean afterwards.
@@ -37,12 +37,12 @@ func (ci *CI) PostPush(ctx context.Context, args []string) error {
 		return err
 	}
 
-	return lint.validateGitClean()
+	return lint.validateGitClean(ctx)
 }
 
 // Expose crane login to CI.
-func (ci *CI) RegistryLogin(_ context.Context, args []string) error {
-	return shr.Run("crane", append([]string{"auth", "login"}, args...)...)
+func (ci *CI) RegistryLogin(ctx context.Context, args []string) error {
+	return shr.Run(ctx, "crane", append([]string{"auth", "login"}, args...)...)
 }
 
 // Release builds binaries and helm chart (if not exluded with the 'images-only" arg) and releases the
@@ -108,6 +108,6 @@ func (ci *CI) Compile(ctx context.Context, args []string) error {
 }
 
 // Runs govulncheck.
-func (ci *CI) GovulnCheck(_ context.Context, _ []string) error {
-	return lint.govulnCheck()
+func (ci *CI) GovulnCheck(ctx context.Context, _ []string) error {
+	return lint.govulnCheck(ctx)
 }

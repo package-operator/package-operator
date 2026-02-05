@@ -63,7 +63,7 @@ func buildImage(ctx context.Context, name, registry, goarch string) error {
 		}
 	}
 
-	return oci.NewOCI(url, buildDir, oci.WithContainerFile("Containerfile")).Build()
+	return oci.NewOCI(url, buildDir, oci.WithContainerFile("Containerfile")).Build(ctx)
 }
 
 func pushImage(ctx context.Context, name, registry, goarch string) error {
@@ -84,7 +84,7 @@ func pushImage(ctx context.Context, name, registry, goarch string) error {
 	return oci.NewOCI(url, imgPath,
 		// push via crane, because podman does not support HTTP pushes for local dev.
 		oci.WithCranePush{},
-	).Push()
+	).Push(ctx)
 }
 
 func imageURL(registry, name, version string) string {
@@ -95,13 +95,13 @@ func imageURL(registry, name, version string) string {
 	return url
 }
 
-func version() (string, error) {
+func version(ctx context.Context) (string, error) {
 	// Use version from VERSION env if present, use "git describe" elsewise.
 	if pkoVersion := strings.TrimSpace(os.Getenv("VERSION")); pkoVersion != "" {
 		return pkoVersion, nil
 	}
 
-	version, err := shr.New(sh.WithLogger{}).Output("git", "describe", "--tags")
+	version, err := shr.New(sh.WithLogger{}).Output(ctx, "git", "describe", "--tags")
 	if err != nil {
 		return "", fmt.Errorf("git describe: %w", err)
 	}
@@ -111,8 +111,8 @@ func version() (string, error) {
 	return path.Base(strings.TrimSpace(version)), nil
 }
 
-func mustVersion() string {
-	v, err := version()
+func mustVersion(ctx context.Context) string {
+	v, err := version(ctx)
 	run.Must(err)
 	return v
 }

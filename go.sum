@@ -473,16 +473,6 @@ k8s.io/utils v0.0.0-20260108192941-914a6e750570 h1:JT4W8lsdrGENg9W+YwwdLJxklIuKW
 k8s.io/utils v0.0.0-20260108192941-914a6e750570/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 pkg.package-operator.run/boxcutter v0.10.0 h1:ToohW6jmcSHKqJJgN6cbIQ5UFG/BkYIp0mXxzfH3ZFU=
 pkg.package-operator.run/boxcutter v0.10.0/go.mod h1:uBJIZiMgUt1SaZJyRp06L6s2kqL+JLNVOts470+k8Mw=
-pkg.package-operator.run/cardboard v0.0.4 h1:a5wus35NCnpVkJmqzq1WZukLM3SOPiRoYD30k33E5nY=
-pkg.package-operator.run/cardboard v0.0.4/go.mod h1:txTwfizKr008RFlNrfa2USO5oQnPOSnkEdRJ4bb4nvQ=
-pkg.package-operator.run/cardboard/kubeutils v0.0.4 h1:rsDqBsnnqN3NaCI3yUdoePqVzJQUVxjLBY3s0wRSoW4=
-pkg.package-operator.run/cardboard/kubeutils v0.0.4/go.mod h1:Un8SWMuALmnjjPBti2L74ouCSJM27olSGodK/G1kmUk=
-pkg.package-operator.run/cardboard/modules/kind v0.0.4 h1:pjwFHk/j2Wsnfw21cfJuOKY8hN6w+48mX65kKbWIGtk=
-pkg.package-operator.run/cardboard/modules/kind v0.0.4/go.mod h1:zUzn+mq/FWIKqZc/HMRyd7fZDFPZlxoMy2sinODfVtM=
-pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4 h1:G2VUnke/EoKfIFDb52K4hqevPd4OR0QEwwi0t2dbsXA=
-pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4/go.mod h1:79YMBeCAtFrvH6NyuyZs+U6EWWoOK/7vVJdcINl2tVA=
-pkg.package-operator.run/cardboard/modules/oci v0.0.4 h1:qXVzGZjv/d0T66eVT2C1YS+hqgOWBSRaTCIrq5DkN1Y=
-pkg.package-operator.run/cardboard/modules/oci v0.0.4/go.mod h1:lbxXXbU5W8rGmYrwxsnKKFbGTKUGowa1lB7Cl/IAJkY=
 pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339 h1:FUmtfBZwLMkaMuY8veNgKANjWO+f2t4TYA7SuMRACnQ=
 pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339/go.mod h1:Bt5XABGYPxvkX0zK0OKOvGqBRbJ+aumZJS3OjXjBtOc=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 h1:hSfpvjjTQXQY2Fol2CS0QHMNs/WI1MOSGzCm1KhM5ec=
