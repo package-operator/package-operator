@@ -44,7 +44,7 @@ require (
 	pkg.package-operator.run/cardboard/modules/kind v0.1.0
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.1.0
 	pkg.package-operator.run/cardboard/modules/oci v0.1.0
-	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
+	pkg.package-operator.run/semver v1.0.0
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/kind v0.31.0
 	sigs.k8s.io/yaml v1.6.0
