@@ -27,6 +27,10 @@ updates:
         patterns:
           - pkg.package-operator.run
           - pkg.package-operator.run/cardboard/*
+      otel:
+        applies-to: version-updates
+        patterns:
+          - go.opentelemetry.io/*
     commit-message:
       prefix: "build(deps)"
   - package-ecosystem: github-actions
