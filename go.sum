@@ -485,8 +485,8 @@ pkg.package-operator.run/cardboard/modules/kubeclients v0.1.0 h1:dq7mmQ2z+c1AmhD
 pkg.package-operator.run/cardboard/modules/kubeclients v0.1.0/go.mod h1:BT/tcs5nQGdeWbD/QXywYepRy8cE5gdXgINIU4HlJOQ=
 pkg.package-operator.run/cardboard/modules/oci v0.1.0 h1:DVm17SUOO71vHCMSKeDFAOReEd/yHFVtgg0Qfbxd9u4=
 pkg.package-operator.run/cardboard/modules/oci v0.1.0/go.mod h1:OGfdvbJpdmW3yIe3va3oaNV1HyRixSFPXRMR4B/EouU=
-pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339 h1:FUmtfBZwLMkaMuY8veNgKANjWO+f2t4TYA7SuMRACnQ=
-pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339/go.mod h1:Bt5XABGYPxvkX0zK0OKOvGqBRbJ+aumZJS3OjXjBtOc=
+pkg.package-operator.run/semver v1.0.0 h1:netM9hgDzonQQtqTTlCK9vhr5OvbnjH7LyZqX2LnACI=
+pkg.package-operator.run/semver v1.0.0/go.mod h1:VCWuNN0cUEOZyn64BonXVFngl1+zCTXPAQaIcFstzuU=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 h1:hSfpvjjTQXQY2Fol2CS0QHMNs/WI1MOSGzCm1KhM5ec=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/controller-runtime v0.23.1 h1:TjJSM80Nf43Mg21+RCy3J70aj/W6KyvDtOlpKf+PupE=
