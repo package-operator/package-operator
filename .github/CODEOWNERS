@@ -1,2 +1,7 @@
 # Everything that is not owned by somebody defined via patterns below this one.
 * @package-operator/core-maintainers
+
+go.mod @package-operator/core-maintainers/dependency-maintainers
+go.sum @package-operator/core-maintainers/dependency-maintainers
+
+.github/workflows @package-operator/core-maintainers
