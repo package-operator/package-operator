@@ -45,7 +45,7 @@ func TestProvideRestConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 	defer func() {
-		require.NoError(t, os.Remove(f.Name()))
+		require.NoError(t, os.Remove(f.Name())) //nolint:gosec // G703: Safe - path is from os.CreateTemp
 	}()
 
 	t.Setenv("KUBECONFIG", f.Name())

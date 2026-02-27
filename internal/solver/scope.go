@@ -53,7 +53,7 @@ type Scope[IM InstallationData, SM ScopeData, CM CandidateData] struct {
 func (s Scope[_, SM, _]) ScopeData() SM { return s.Data }
 
 func (s Scope[IM, SM, CM]) ScopeCandidateAccessors() []CandidateAccessor[IM, SM, CM] {
-	res := []CandidateAccessor[IM, SM, CM]{}
+	res := make([]CandidateAccessor[IM, SM, CM], 0, len(s.Candidates))
 	for _, c := range s.Candidates {
 		res = append(res, c)
 	}

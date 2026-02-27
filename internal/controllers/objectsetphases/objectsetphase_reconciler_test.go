@@ -76,6 +76,7 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			t.Parallel()
 			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 			objectSetPhase.ClientObject().SetName("testPhaseOwner")
+			objectSetPhase.ClientObject().SetUID("test-uid")
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
 			uncachedClient := testutil.NewClient()
@@ -91,8 +92,8 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 
 			phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 			phaseEngine.
-				On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
-					objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+				On("Reconcile", mock.Anything, objectSetPhase.GetStatusRevision(),
+					mock.Anything, mock.Anything).
 				Return(phaseResult, nil).
 				Once()
 			phaseResult.On("GetObjects").Return([]machinery.ObjectResult{})
@@ -136,6 +137,7 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-backoff")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
 	uncachedClient := testutil.NewClient()
@@ -150,8 +152,8 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 		Return(accessor, nil)
 	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 	phaseEngine.
-		On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
-			objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+		On("Reconcile", mock.Anything, objectSetPhase.GetStatusRevision(),
+			mock.Anything, mock.Anything).
 		Return(phaseResult, controllers.NewExternalResourceNotFoundError(nil)).
 		Once()
 	phaseResult.On("IsComplete").Return(false)
@@ -181,6 +183,7 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			}
 			scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+			objectSetPhase.ClientObject().SetUID("test-uid-teardown")
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			uncachedClient := testutil.NewClient()
@@ -198,8 +201,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 
 			phaseEngine.
-				On("Teardown", mock.Anything, objectSetPhase.ClientObject(),
-					objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+				On("Teardown", mock.Anything, objectSetPhase.GetStatusRevision(),
+					mock.Anything, mock.Anything).
 				Return(phaseTeardownResult, nil)
 
 			if teardownDone {
@@ -211,8 +214,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			_, err := r.Teardown(context.Background(), objectSetPhase)
 			require.NoError(t, err)
 
-			phaseEngine.AssertCalled(t, "Teardown", mock.Anything, objectSetPhase.ClientObject(),
-				objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything)
+			phaseEngine.AssertCalled(t, "Teardown", mock.Anything, objectSetPhase.GetStatusRevision(),
+				mock.Anything, mock.Anything)
 
 			if teardownDone {
 				accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
@@ -231,6 +234,7 @@ func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-orphan")
 
 	// Add orphan finalizer
 	controllerutil.AddFinalizer(objectSetPhase.ClientObject(), "orphan")
@@ -259,6 +263,7 @@ func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-access-mgr-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	uncachedClient := testutil.NewClient()
@@ -284,6 +289,7 @@ func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-factory-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
@@ -312,6 +318,7 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-engine-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
@@ -326,7 +333,7 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 
 	expectedErr := assert.AnError
-	phaseEngine.On("Teardown", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	phaseEngine.On("Teardown", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return((*boxcuttermocks.PhaseTeardownResultMock)(nil), expectedErr)
 
 	cleanupDone, err := r.Teardown(context.Background(), objectSetPhase)
@@ -343,6 +350,7 @@ func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-free-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
@@ -356,7 +364,7 @@ func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(accessor, nil)
 	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
-	phaseEngine.On("Teardown", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	phaseEngine.On("Teardown", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(phaseTeardownResult, nil)
 	phaseTeardownResult.On("IsComplete").Return(true)
 
@@ -380,6 +388,7 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-lookup-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
@@ -403,6 +412,7 @@ func TestPhaseReconciler_Reconcile_AccessManagerError(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-access-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
@@ -430,6 +440,7 @@ func TestPhaseReconciler_Reconcile_PhaseEngineFactoryError(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-factory-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
 	uncachedClient := testutil.NewClient()
@@ -460,6 +471,7 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-generic-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
 	uncachedClient := testutil.NewClient()
@@ -474,7 +486,7 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 
 	expectedErr := assert.AnError
-	phaseEngine.On("Reconcile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	phaseEngine.On("Reconcile", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return((*boxcuttermocks.PhaseResultMock)(nil), expectedErr)
 
 	res, err := r.Reconcile(context.Background(), objectSetPhase)
@@ -496,6 +508,7 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-with-objects")
 
 	// Add an object to the phase
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{
@@ -532,8 +545,8 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 		Return(accessor, nil)
 	phaseEngineFactory.On("New", accessor).Return(phaseEngine, nil)
 	phaseEngine.
-		On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
-			objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+		On("Reconcile", mock.Anything, objectSetPhase.GetStatusRevision(),
+			mock.Anything, mock.Anything).
 		Return(phaseResult, nil).
 		Once()
 	phaseResult.On("GetObjects").Return([]machinery.ObjectResult{})
@@ -564,6 +577,7 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
+	objectSetPhase.ClientObject().SetUID("test-uid-paused")
 
 	// Set paused state
 	objectSetPhase.SetSpecPaused(true)
@@ -605,8 +619,8 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 
 	// The reconciler should pass the WithPaused option to the phase engine
 	phaseEngine.
-		On("Reconcile", mock.Anything, objectSetPhase.ClientObject(),
-			objectSetPhase.GetStatusRevision(), mock.Anything, mock.Anything).
+		On("Reconcile", mock.Anything, objectSetPhase.GetStatusRevision(),
+			mock.Anything, mock.Anything).
 		Return(phaseResult, nil).
 		Once()
 	phaseResult.On("GetObjects").Return([]machinery.ObjectResult{})
@@ -624,6 +638,7 @@ func TestMapConditions_Success(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-map-success")
 
 	// Setup phase with condition mapping
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{
@@ -691,6 +706,7 @@ func TestMapConditions_OutdatedCondition(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-map-outdated")
 
 	// Setup phase with condition mapping
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{
@@ -755,6 +771,7 @@ func TestMapConditions_UnmappedCondition(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-map-unmapped")
 
 	// Setup phase with no condition mappings
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{
@@ -813,6 +830,7 @@ func TestMapConditions_NoConditions(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-map-noconds")
 
 	// Setup phase
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{
@@ -858,6 +876,7 @@ func TestMapConditions_MultipleObjects(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
+	objectSetPhase.ClientObject().SetUID("test-uid-map-multiple")
 
 	// Setup phase with multiple objects and condition mappings
 	objectSetPhase.SetPhase(corev1alpha1.ObjectSetTemplatePhase{

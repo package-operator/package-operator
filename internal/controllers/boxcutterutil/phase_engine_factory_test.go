@@ -7,13 +7,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/openapi"
 	"pkg.package-operator.run/boxcutter/validation"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"package-operator.run/internal/testutil/managedcachemocks"
 )
@@ -43,58 +40,6 @@ type restMapperMock struct {
 	meta.RESTMapper
 }
 
-type ownerStrategyMock struct {
-	mock.Mock
-}
-
-func (m *ownerStrategyMock) SetOwnerReference(owner, obj metav1.Object) error {
-	args := m.Called(owner, obj)
-	return args.Error(0)
-}
-
-func (m *ownerStrategyMock) SetControllerReference(owner, obj metav1.Object) error {
-	args := m.Called(owner, obj)
-	return args.Error(0)
-}
-
-func (m *ownerStrategyMock) GetController(obj metav1.Object) (metav1.OwnerReference, bool) {
-	args := m.Called(obj)
-	return args.Get(0).(metav1.OwnerReference), args.Bool(1)
-}
-
-func (m *ownerStrategyMock) IsController(owner, obj metav1.Object) bool {
-	args := m.Called(owner, obj)
-	return args.Bool(0)
-}
-
-func (m *ownerStrategyMock) CopyOwnerReferences(objA, objB metav1.Object) {
-	m.Called(objA, objB)
-}
-
-func (m *ownerStrategyMock) EnqueueRequestForOwner(
-	ownerType client.Object, mapper meta.RESTMapper,
-	isController bool,
-) handler.EventHandler {
-	args := m.Called(ownerType, mapper, isController)
-	if args.Get(0) == nil {
-		return nil
-	}
-	return args.Get(0).(handler.EventHandler)
-}
-
-func (m *ownerStrategyMock) ReleaseController(obj metav1.Object) {
-	m.Called(obj)
-}
-
-func (m *ownerStrategyMock) RemoveOwner(owner, obj metav1.Object) {
-	m.Called(owner, obj)
-}
-
-func (m *ownerStrategyMock) IsOwner(owner, obj metav1.Object) bool {
-	args := m.Called(owner, obj)
-	return args.Bool(0)
-}
-
 func TestNewPhaseEngineFactory(t *testing.T) {
 	t.Parallel()
 
@@ -104,14 +49,12 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 		scheme := runtime.NewScheme()
 		discoveryClient := &discoveryClientMock{}
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		factory := NewPhaseEngineFactory(
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -124,7 +67,6 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 		assert.Equal(t, scheme, f.scheme)
 		assert.Equal(t, discoveryClient, f.discoveryClient)
 		assert.Equal(t, restMapper, f.restMapper)
-		assert.Equal(t, ownerStrategy, f.ownerStrategy)
 		assert.Equal(t, phaseValidator, f.phaseValidator)
 	})
 
@@ -133,14 +75,12 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 
 		discoveryClient := &discoveryClientMock{}
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		factory := NewPhaseEngineFactory(
 			nil,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -155,14 +95,12 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 
 		scheme := runtime.NewScheme()
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		factory := NewPhaseEngineFactory(
 			scheme,
 			nil,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -177,14 +115,12 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 
 		scheme := runtime.NewScheme()
 		discoveryClient := &discoveryClientMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		factory := NewPhaseEngineFactory(
 			scheme,
 			discoveryClient,
 			nil,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -194,41 +130,17 @@ func TestNewPhaseEngineFactory(t *testing.T) {
 		assert.Nil(t, f.restMapper)
 	})
 
-	t.Run("creates factory with nil ownerStrategy", func(t *testing.T) {
-		t.Parallel()
-
-		scheme := runtime.NewScheme()
-		discoveryClient := &discoveryClientMock{}
-		restMapper := &restMapperMock{}
-		phaseValidator := &validation.PhaseValidator{}
-
-		factory := NewPhaseEngineFactory(
-			scheme,
-			discoveryClient,
-			restMapper,
-			nil,
-			phaseValidator,
-		)
-
-		require.NotNil(t, factory)
-		f, ok := factory.(phaseEngineFactory)
-		require.True(t, ok)
-		assert.Nil(t, f.ownerStrategy)
-	})
-
 	t.Run("creates factory with nil phaseValidator", func(t *testing.T) {
 		t.Parallel()
 
 		scheme := runtime.NewScheme()
 		discoveryClient := &discoveryClientMock{}
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 
 		factory := NewPhaseEngineFactory(
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			nil,
 		)
 
@@ -249,7 +161,6 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 		discoveryClient := &discoveryClientMock{}
 		discoveryClient.On("OpenAPIV3").Return(nil)
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 		accessor := &managedcachemocks.AccessorMock{}
 
@@ -257,7 +168,6 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -274,14 +184,12 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 		discoveryClient := &discoveryClientMock{}
 		discoveryClient.On("OpenAPIV3").Return(nil)
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		factory := NewPhaseEngineFactory(
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -299,7 +207,6 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 		discoveryClient := &discoveryClientMock{}
 		discoveryClient.On("OpenAPIV3").Return(nil)
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 		accessor1 := &managedcachemocks.AccessorMock{}
 		accessor2 := &managedcachemocks.AccessorMock{}
@@ -308,7 +215,6 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 
@@ -334,14 +240,12 @@ func TestPhaseEngineFactoryInterface(t *testing.T) {
 		scheme := runtime.NewScheme()
 		discoveryClient := &discoveryClientMock{}
 		restMapper := &restMapperMock{}
-		ownerStrategy := &ownerStrategyMock{}
 		phaseValidator := &validation.PhaseValidator{}
 
 		_ = NewPhaseEngineFactory(
 			scheme,
 			discoveryClient,
 			restMapper,
-			ownerStrategy,
 			phaseValidator,
 		)
 	})
@@ -355,7 +259,7 @@ func TestPhaseEngineFactory_WithMinimalDependencies(t *testing.T) {
 
 		// Creating an engine with all nil dependencies should fail
 		// because the boxcutter engine requires a scheme
-		factory := NewPhaseEngineFactory(nil, nil, nil, nil, nil)
+		factory := NewPhaseEngineFactory(nil, nil, nil, nil)
 		accessor := &managedcachemocks.AccessorMock{}
 
 		engine, err := factory.New(accessor)

@@ -250,8 +250,8 @@ func addMissingNamespaces(
 	namespacesFromObjects, namespaceObjectsFound, usedPhases map[string]struct{},
 ) error {
 	// Create files for missing namespaces.
-	//nolint:prealloc
-	var namespaces []string
+
+	namespaces := make([]string, 0, len(namespacesFromObjects)-len(namespaceObjectsFound))
 	for nsName := range namespacesFromObjects {
 		_, ok := namespaceObjectsFound[nsName]
 		if ok {

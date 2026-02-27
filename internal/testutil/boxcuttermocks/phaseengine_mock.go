@@ -8,7 +8,6 @@ import (
 	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/validation"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/controllers/boxcutterutil"
 )
@@ -28,24 +27,22 @@ type PhaseEngineMock struct {
 
 func (m *PhaseEngineMock) Reconcile(
 	ctx context.Context,
-	owner client.Object,
 	revision int64,
 	phase types.Phase,
 	opts ...types.PhaseReconcileOption,
 ) (machinery.PhaseResult, error) {
-	args := m.Called(ctx, owner, revision, phase, opts)
+	args := m.Called(ctx, revision, phase, opts)
 	return args.Get(0).(machinery.PhaseResult),
 		args.Error(1)
 }
 
 func (m *PhaseEngineMock) Teardown(
 	ctx context.Context,
-	owner client.Object,
 	revision int64,
 	phase types.Phase,
 	opts ...types.PhaseTeardownOption,
 ) (machinery.PhaseTeardownResult, error) {
-	args := m.Called(ctx, owner, revision, phase, opts)
+	args := m.Called(ctx, revision, phase, opts)
 	return args.Get(0).(machinery.PhaseTeardownResult), args.Error(1)
 }
 

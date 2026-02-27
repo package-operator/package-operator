@@ -129,6 +129,10 @@ linters:
         - G306
         - G601
         - G602
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
   exclusions:
     generated: lax
     rules:
