@@ -199,11 +199,12 @@ func expandIfFilePattern(pattern string) ([]string, error) {
 	return []string{pattern}, nil
 }
 
-func reportGKsWithoutProbes(gksWithoutProbes []schema.GroupKind) (report string, ok bool) {
-	report = "[WARN] Some kinds don't have availability probes defined:\n"
+func reportGKsWithoutProbes(gksWithoutProbes []schema.GroupKind) (r string, ok bool) {
+	var report strings.Builder
+	report.WriteString("[WARN] Some kinds don't have availability probes defined:\n")
 	for _, gk := range gksWithoutProbes {
-		report += fmt.Sprintf("- %s\n", gk.String())
+		report.WriteString(fmt.Sprintf("- %s\n", gk.String()))
 		ok = true
 	}
-	return report, ok
+	return report.String(), ok
 }

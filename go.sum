@@ -471,8 +471,8 @@ k8s.io/utils v0.0.0-20260108192941-914a6e750570 h1:JT4W8lsdrGENg9W+YwwdLJxklIuKW
 k8s.io/utils v0.0.0-20260108192941-914a6e750570/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 package-operator.run/apis v1.19.0 h1:50DZvRQZxcZV3vLu1pSk7kKbV9p7+df9qci/jJtXXLk=
 package-operator.run/apis v1.19.0/go.mod h1:TzmM5j8qLe2vTikzljILXsK5yoCJTkty3T5yBqgGOE0=
-pkg.package-operator.run/boxcutter v0.10.0 h1:ToohW6jmcSHKqJJgN6cbIQ5UFG/BkYIp0mXxzfH3ZFU=
-pkg.package-operator.run/boxcutter v0.10.0/go.mod h1:uBJIZiMgUt1SaZJyRp06L6s2kqL+JLNVOts470+k8Mw=
+pkg.package-operator.run/boxcutter v0.11.0 h1:VhIQ7baW7ad2mFDYQ2ybk/NqZo6BX0LfO/vI0usHj9U=
+pkg.package-operator.run/boxcutter v0.11.0/go.mod h1:t/51lJTnGkpGKfNDSkycAjAeZTP214VyNIcyJOB5Nhw=
 pkg.package-operator.run/cardboard v0.1.0 h1:p06MDAa6c1e5zK7WCQSDrdXYqR/cbHj7Hm8M7yoq28o=
 pkg.package-operator.run/cardboard v0.1.0/go.mod h1:HrwVuyOqGV4BraGBcc0jk1PoU8RBhBdTVWbKa51bvIU=
 pkg.package-operator.run/cardboard/kubeutils v0.1.0 h1:IjjqfRS0c1oXGWN7Cax/Kil3pQ5EA9pOO2FGb5Aga9U=

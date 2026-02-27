@@ -89,14 +89,14 @@ func (b *block) Replace(in []byte) ([]byte, error) {
 	}
 
 	i := strings.Repeat(" ", il)
-	var replacement string
-	replacement += fmt.Sprintf("%s{{- %s }}\n", i, b.pipeline)
+	var replacement strings.Builder
+	fmt.Fprintf(&replacement, "%s{{- %s }}\n", i, b.pipeline)
 	for _, l := range bytes.Split(bytes.TrimSpace(origB), []byte("\n")) {
-		replacement += fmt.Sprintf("%s%s\n", i, l)
+		fmt.Fprintf(&replacement, "%s%s\n", i, l)
 	}
-	replacement += i + "{{- end }}\n"
+	replacement.WriteString(i + "{{- end }}\n")
 
-	return re.ReplaceAll(in, []byte(replacement)), nil
+	return re.ReplaceAll(in, []byte(replacement.String())), nil
 }
 
 func (b *block) Priority() int {

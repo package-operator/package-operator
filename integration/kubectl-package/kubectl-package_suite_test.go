@@ -110,7 +110,7 @@ const (
 func projectRoot() (string, error) {
 	var buf bytes.Buffer
 
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "--show-toplevel")
 	cmd.Stdout = &buf
 	cmd.Stderr = io.Discard
 

@@ -173,7 +173,8 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("setting KUBECONFIG env variable: %w", err)
 	}
 
-	goArgs := []string{
+	goArgs := make([]string, 0, 14+len(args))
+	goArgs = append(goArgs,
 		absGoBinPath,
 		"run",
 		"./cmd/package-operator-manager",
@@ -181,9 +182,9 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		"-enable-leader-election=true",
 		"-service-account-namespace", "default",
 		"-service-account-name", "default",
-		"-registry-host-overrides", imageRegistryHost() + "=localhost:5001",
-		"--package-operator-package-image", imageRegistry() + "/package-operator-package:" + appVersion,
-	}
+		"-registry-host-overrides", imageRegistryHost()+"=localhost:5001",
+		"--package-operator-package-image", imageRegistry()+"/package-operator-package:"+appVersion,
+	)
 	goArgs = append(goArgs, args...)
 
 	return unix.Exec(absGoBinPath, goArgs, os.Environ())

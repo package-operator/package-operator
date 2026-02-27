@@ -103,10 +103,10 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	}
 
 	apiPhase := objectSetPhase.GetPhase()
-	phaseObjects := make([]unstructured.Unstructured, 0, len(apiPhase.Objects))
+	phaseObjects := make([]client.Object, 0, len(apiPhase.Objects))
 	phaseReconcileOptions := make([]types.PhaseReconcileOption, 0, len(apiPhase.Objects))
 	for i := range apiPhase.Objects {
-		phaseObjects = append(phaseObjects, apiPhase.Objects[i].Object)
+		phaseObjects = append(phaseObjects, &apiPhase.Objects[i].Object)
 		labels := phaseObjects[i].GetLabels()
 		if labels == nil {
 			labels = map[string]string{}
@@ -125,12 +125,12 @@ func (r *objectSetPhaseReconciler) Reconcile(
 	}
 
 	result, err := phaseEngine.Reconcile(ctx,
-		objectSetPhase.ClientObject(),
 		objectSetPhase.GetStatusRevision(),
-		types.Phase{
-			Name:    apiPhase.Name,
-			Objects: phaseObjects,
-		},
+		boxcutter.NewPhaseWithOwner(
+			apiPhase.Name, phaseObjects,
+			objectSetPhase.ClientObject(),
+			r.ownerStrategy,
+		),
 		phaseReconcileOptions...,
 	)
 
@@ -223,23 +223,23 @@ func (r *objectSetPhaseReconciler) Teardown(
 		return false, err
 	}
 	apiPhase := objectSetPhase.GetPhase()
-	phaseObjects := make([]unstructured.Unstructured, len(apiPhase.Objects))
+	phaseObjects := make([]client.Object, len(apiPhase.Objects))
 	objectTearDownOptions := make([]types.PhaseTeardownOption, len(apiPhase.Objects))
 
 	for i := range apiPhase.Objects {
-		phaseObjects[i] = apiPhase.Objects[i].Object
+		phaseObjects[i] = &apiPhase.Objects[i].Object
 		objectTearDownOptions[i] = types.WithObjectTeardownOptions(
 			&apiPhase.Objects[i].Object,
 		)
 	}
 
 	result, err := phaseEngine.Teardown(ctx,
-		objectSetPhase.ClientObject(),
 		objectSetPhase.GetStatusRevision(),
-		types.Phase{
-			Name:    apiPhase.Name,
-			Objects: phaseObjects,
-		},
+		boxcutter.NewPhaseWithOwner(
+			apiPhase.Name, phaseObjects,
+			objectSetPhase.ClientObject(),
+			r.ownerStrategy,
+		),
 		objectTearDownOptions...,
 	)
 	if err != nil {

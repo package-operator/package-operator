@@ -96,7 +96,7 @@ func (l *PreviousRevisionLookup) LookupPreviousRemotePhases(
 func (l *PreviousRevisionLookup) lookupRemotePhases(
 	ref []corev1alpha1.RemotePhaseReference, gvk schema.GroupVersionKind, namespace string,
 ) []client.Object {
-	remotePhases := make([]client.Object, 0)
+	remotePhases := make([]client.Object, 0, len(ref))
 
 	var remoteGVK schema.GroupVersionKind
 	if strings.HasPrefix(gvk.Kind, "Cluster") {

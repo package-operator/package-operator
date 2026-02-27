@@ -173,7 +173,7 @@ func NewGenericObjectSetPhaseController(
 		accessManager,
 		client,
 		boxcutterutil.NewPhaseEngineFactory(
-			scheme, discoveryClient, targetRESTMapper, ownerStrategy, phaseValidator),
+			scheme, discoveryClient, targetRESTMapper, phaseValidator),
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)

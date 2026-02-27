@@ -3,6 +3,7 @@
 package kubectlpackage
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ type subCommandTestCase struct {
 func testSubCommand(subcommand string) func(tc subCommandTestCase) {
 	return func(tc subCommandTestCase) {
 		args := append([]string{subcommand}, substitutePlaceholders(tc.Args...)...)
-		cmd := exec.Command(_pluginPath, args...)
+		cmd := exec.CommandContext(context.Background(), _pluginPath, args...)
 
 		if tc.Timeout == 0 {
 			tc.Timeout = 1 * time.Second
