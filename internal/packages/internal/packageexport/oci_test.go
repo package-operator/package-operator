@@ -36,7 +36,7 @@ func TestToOCIFile(t *testing.T) { //nolint:paralleltest
 	f, err := os.CreateTemp("", "pko-*.tar.gz")
 	require.NoError(t, err)
 
-	defer func() { require.NoError(t, os.Remove(f.Name())) }()
+	defer func() { require.NoError(t, os.Remove(f.Name())) }() //nolint:gosec // G703: Safe - path is from os.CreateTemp
 	defer func() { require.NoError(t, f.Close()) }()
 
 	rawPkg := &packagetypes.RawPackage{}

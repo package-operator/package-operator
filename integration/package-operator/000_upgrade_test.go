@@ -204,7 +204,7 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 			return fmt.Errorf("creating request: %w", err)
 		}
 
-		resp, err := client.Do(req)
+		resp, err := client.Do(req) //nolint:gosec // G704: URL is from constant LatestSelfBootstrapJobURL
 		if err != nil {
 			return fmt.Errorf("getting %q: %w", url, err)
 		}
