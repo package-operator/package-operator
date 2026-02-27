@@ -167,6 +167,7 @@ func parametrizeDeploymentImages(
 	configSchema *apiextensionsv1.JSONSchemaProps,
 	imageContainer *ImageContainer,
 ) ([]parametrize.Instruction, error) {
+	//+nolint:prealloc
 	var instructions []parametrize.Instruction
 	configSchema.Properties["containers"] = apiextensionsv1.JSONSchemaProps{
 		Type: "object",
