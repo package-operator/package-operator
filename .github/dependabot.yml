@@ -29,6 +29,10 @@ updates:
         applies-to: version-updates
         patterns:
           - go.opentelemetry.io/*
+      openapi:
+        applies-to: version-updates
+        patterns:
+          - github.com/go-openapi/*
     commit-message:
       prefix: "build(deps)"
   - package-ecosystem: github-actions
