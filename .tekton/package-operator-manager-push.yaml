@@ -1,0 +1,40 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/package-operator/package-operator?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "main"
+  labels:
+    appstudio.openshift.io/application: package-operator
+    appstudio.openshift.io/component: package-operator-manager
+    pipelines.appstudio.openshift.io/type: build
+  name: package-operator-manager-on-push
+spec:
+  params:
+  - name: git-url
+    value: '{{source_url}}'
+  - name: revision
+    value: '{{revision}}'
+  - name: output-image
+    value: quay.io/redhat-user-workloads/package-operator-tenant/package-operator/package-operator-manager:{{revision}}
+  - name: dockerfile
+    value: config/images/package-operator-manager.Containerfile
+  - name: path-context
+    value: .
+  pipelineRef:
+    resolver: bundles
+    params:
+    - name: name
+      value: docker-build-oci-ta
+    - name: bundle
+      value: quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-oci-ta:devel@sha256:e906ff161eaa5361d3aba550d0841d2a082b464ffcac0dec931121d0cf7dfd09
+    - name: kind
+      value: pipeline
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
