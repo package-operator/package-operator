@@ -160,7 +160,7 @@ func (v TemplateTestValidator) runTestCase(
 		actualFilePath := filepath.Join(actualPath, path)
 
 		file := filepath.Base(fixtureFilePath)
-		diff, err := runDiff(fixtureFilePath, "FIXTURE/"+file, actualFilePath, "ACTUAL/"+file)
+		diff, err := runDiff(ctx, fixtureFilePath, "FIXTURE/"+file, actualFilePath, "ACTUAL/"+file)
 		if err != nil {
 			return err
 		}
@@ -241,7 +241,10 @@ func (e *fileNotFoundInFixturesFolderError) Error() string {
 	return fmt.Sprintf("file %s not found in fixtures folder", e.file)
 }
 
-func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
+func runDiff(
+	ctx context.Context,
+	fileA, labelA, fileB, labelB string,
+) ([]byte, error) {
 	_, fileAStatErr := os.Stat(fileA)
 	_, fileBStatErr := os.Stat(fileB)
 	if os.IsNotExist(fileAStatErr) && os.IsNotExist(fileBStatErr) {
@@ -252,7 +255,7 @@ func runDiff(fileA, labelA, fileB, labelB string) ([]byte, error) {
 	}
 
 	data, err := exec.
-		Command("diff", "-u", "--label="+labelA, "--label="+labelB, fileA, fileB).
+		CommandContext(ctx, "diff", "-u", "--label="+labelA, "--label="+labelB, fileA, fileB).
 		CombinedOutput()
 	if len(data) > 0 {
 		// diff exits with a non-zero status when the files don't match.

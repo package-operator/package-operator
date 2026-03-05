@@ -136,7 +136,7 @@ func (k *Kickstarter) getInput(ctx context.Context, input string) (
 		if err != nil {
 			return nil, fmt.Errorf("building HTTP request: %w", err)
 		}
-		resp, err := k.client.Do(req)
+		resp, err := k.client.Do(req) //nolint:gosec // G704: input validated as http(s) URL
 		if err != nil {
 			return nil, fmt.Errorf("HTTP get: %w", err)
 		}
@@ -199,11 +199,12 @@ func expandIfFilePattern(pattern string) ([]string, error) {
 	return []string{pattern}, nil
 }
 
-func reportGKsWithoutProbes(gksWithoutProbes []schema.GroupKind) (report string, ok bool) {
-	report = "[WARN] Some kinds don't have availability probes defined:\n"
+func reportGKsWithoutProbes(gksWithoutProbes []schema.GroupKind) (r string, ok bool) {
+	var report strings.Builder
+	report.WriteString("[WARN] Some kinds don't have availability probes defined:\n")
 	for _, gk := range gksWithoutProbes {
-		report += fmt.Sprintf("- %s\n", gk.String())
+		fmt.Fprintf(&report, "- %s\n", gk.String())
 		ok = true
 	}
-	return report, ok
+	return report.String(), ok
 }

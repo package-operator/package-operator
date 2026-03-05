@@ -173,7 +173,13 @@ func (ri *RepositoryIndex) ListEntries(pkgName string) []manifests.RepositoryEnt
 }
 
 func (ri *RepositoryIndex) ListAllEntries() []manifests.RepositoryEntry {
-	entries := []manifests.RepositoryEntry{}
+	// Calculate total capacity needed
+	capacity := 0
+	for _, pkgIdx := range ri.packageIndexes {
+		capacity += len(pkgIdx.ListEntries())
+	}
+
+	entries := make([]manifests.RepositoryEntry, 0, capacity)
 	for _, pkgIdx := range ri.packageIndexes {
 		entries = append(entries, pkgIdx.ListEntries()...)
 	}

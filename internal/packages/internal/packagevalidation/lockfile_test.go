@@ -118,7 +118,7 @@ func pkg(manifestImages map[string]string, lockImages map[string]LockImageTestDa
 
 	var lock *manifests.PackageManifestLock
 	if len(lockImages) > 0 {
-		var imgLock []manifests.PackageManifestLockImage
+		imgLock := make([]manifests.PackageManifestLockImage, 0, len(lockImages))
 		for key, value := range lockImages {
 			imgLock = append(imgLock, manifests.PackageManifestLockImage{
 				Name:   key,

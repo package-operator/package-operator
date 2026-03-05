@@ -42,7 +42,7 @@ type Installation[IM InstallationData, SM ScopeData, CM CandidateData] struct {
 func (i Installation[IM, _, _]) InstallationData() IM { return i.Data }
 
 func (i Installation[IM, SM, CM]) InstallationScopes() []ScopeAccessor[IM, SM, CM] {
-	res := []ScopeAccessor[IM, SM, CM]{}
+	res := make([]ScopeAccessor[IM, SM, CM], 0, len(i.Scopes))
 	for _, s := range i.Scopes {
 		res = append(res, s)
 	}

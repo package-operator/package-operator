@@ -36,7 +36,7 @@ func GetEndpointOnCluster(ctx context.Context, restConfig *rest.Config,
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec // G704: URL is constructed from restConfig.Host (Kubernetes API)
 	if err != nil {
 		return nil, err
 	}

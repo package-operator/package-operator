@@ -130,7 +130,8 @@ type pullerMock struct {
 }
 
 func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error) {
-	actualArgs := []any{ctx, ref}
+	actualArgs := make([]any, 0, 2+len(opts))
+	actualArgs = append(actualArgs, ctx, ref)
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)
 	}
