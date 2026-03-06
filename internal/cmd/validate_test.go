@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"testing"
 
+	"github.com/erdii/elegont/makewith"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -130,8 +131,7 @@ type pullerMock struct {
 }
 
 func (m *pullerMock) Pull(ctx context.Context, ref string, opts ...crane.Option) (*packages.RawPackage, error) {
-	actualArgs := make([]any, 0, 2+len(opts))
-	actualArgs = append(actualArgs, ctx, ref)
+	actualArgs := makewith.ExtraCap[any](len(opts), ctx, ref)
 	for _, opt := range opts {
 		actualArgs = append(actualArgs, opt)
 	}

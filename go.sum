@@ -70,6 +70,8 @@ github.com/docker/docker-credential-helpers v0.9.5 h1:EFNN8DHvaiK8zVqFA2DT6BjXE0
 github.com/docker/docker-credential-helpers v0.9.5/go.mod h1:v1S+hepowrQXITkEfw6o4+BMbGot02wiKpzWhGUZK6c=
 github.com/emicklei/go-restful/v3 v3.13.0 h1:C4Bl2xDndpU6nJ4bc1jXd+uTmYPVUwkD6bFY/oTyCes=
 github.com/emicklei/go-restful/v3 v3.13.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
+github.com/erdii/elegont v1.0.1 h1:jbMtVPrLcbmwj8JW/M0Tkr5dMUfB+OD+cO6re32bHBM=
+github.com/erdii/elegont v1.0.1/go.mod h1:iO4ViwTS2uASySmK8mNPcASoy1rMEowTKTGYV6AfA7A=
 github.com/erdii/matrix v0.1.0 h1:K+B8GbttpAkvRGjFq4M/pIyMY9dADTHpwu31tHDSbEE=
 github.com/erdii/matrix v0.1.0/go.mod h1:xe4iuRS3pmPfsYNQN7AgERM6AvAW/V2196+vew+kphc=
 github.com/evanphx/json-patch v5.9.11+incompatible h1:ixHHqfcGvxhWkniF1tWxBHA0yb4Z+d1UQi45df52xW8=
