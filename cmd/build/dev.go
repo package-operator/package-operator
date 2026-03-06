@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/erdii/elegont/makewith"
 	"golang.org/x/sys/unix"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -173,8 +174,7 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("setting KUBECONFIG env variable: %w", err)
 	}
 
-	goArgs := make([]string, 0, 14+len(args))
-	goArgs = append(goArgs,
+	goArgs := makewith.ExtraCap(len(args),
 		absGoBinPath,
 		"run",
 		"./cmd/package-operator-manager",
