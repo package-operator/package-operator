@@ -171,7 +171,6 @@ func NewGenericObjectSetPhaseController(
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		accessManager,
-		client,
 		boxcutterutil.NewPhaseEngineFactory(
 			scheme, discoveryClient, targetRESTMapper, phaseValidator),
 		controllers.NewPreviousRevisionLookup(
