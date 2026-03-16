@@ -9,12 +9,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"pkg.package-operator.run/boxcutter/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"package-operator.run/internal/controllers/boxcutterutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
@@ -37,9 +40,10 @@ type GenericObjectSetController struct {
 	scheme     *runtime.Scheme
 	reconciler []reconciler
 
-	recorder        metricsRecorder
-	accessManager   managedcache.ObjectBoundAccessManager[client.Object]
-	teardownHandler teardownHandler
+	recorder              metricsRecorder
+	accessManager         managedcache.ObjectBoundAccessManager[client.Object]
+	teardownHandler       teardownHandler
+	revisionEngineFactory boxcutterutil.RevisionEngineFactory
 }
 
 type reconciler interface {
@@ -61,13 +65,15 @@ func NewObjectSetController(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object], uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewObjectSet,
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSlice,
 		c, log, scheme, accessManager, uc, r,
-		restMapper,
+		restMapper, discoveryClient,
+		validation.NewNamespacedPhaseValidator(restMapper, c),
 	)
 }
 
@@ -76,13 +82,15 @@ func NewClusterObjectSetController(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object], uc client.Reader,
 	r metricsRecorder, restMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewClusterObjectSet,
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, accessManager, uc, r,
-		restMapper,
+		restMapper, discoveryClient,
+		validation.NewClusterPhaseValidator(restMapper, c),
 	)
 }
 
@@ -94,16 +102,24 @@ func newGenericObjectSetController(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object], uncachedClient client.Reader,
 	recorder metricsRecorder, restMapper meta.RESTMapper,
+	discoveryClient boxcutterutil.DiscoveryClient,
+	phaseValidator *validation.PhaseValidator,
 ) *GenericObjectSetController {
+	remotePhase := newObjectSetRemotePhaseReconciler(
+		client, uncachedClient, scheme, newObjectSetPhase)
+	pef := newRemoteEnabledPhaseEngineFactory(scheme, discoveryClient, restMapper, phaseValidator, remotePhase)
+	revisionEngineFactory := boxcutterutil.NewRevisionEngineFactory(pef, validation.NewRevisionValidator())
+
 	controller := &GenericObjectSetController{
 		newObjectSet:      newObjectSet,
 		newObjectSetPhase: newObjectSetPhase,
 
-		client:        client,
-		log:           log,
-		scheme:        scheme,
-		accessManager: accessManager,
-		recorder:      recorder,
+		client:                client,
+		log:                   log,
+		scheme:                scheme,
+		accessManager:         accessManager,
+		recorder:              recorder,
+		revisionEngineFactory: revisionEngineFactory,
 	}
 
 	phasesReconciler := newObjectSetPhasesReconciler(
@@ -121,8 +137,8 @@ func newGenericObjectSetController(
 				},
 			),
 		),
-		newObjectSetRemotePhaseReconciler(
-			client, uncachedClient, scheme, newObjectSetPhase),
+		revisionEngineFactory,
+		remotePhase,
 		controllers.NewPreviousRevisionLookup(
 			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
 				return newObjectSet(s)
