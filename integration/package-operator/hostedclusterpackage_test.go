@@ -44,6 +44,10 @@ func TestHostedClusterPackage_InstantRollout(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, hcpkg))
 	cleanupOnSuccess(ctx, t, hcpkg)
 
+	require.NoError(t,
+		Waiter.WaitForCondition(ctx, hcpkg, corev1alpha1.HostedClusterPackageAvailable, metav1.ConditionTrue),
+	)
+
 	hc := &v1beta1.HostedCluster{}
 	requireClientGet(ctx, t, "pko-hs-hc", "default", hc)
 
