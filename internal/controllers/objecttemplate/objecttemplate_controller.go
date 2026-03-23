@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"pkg.package-operator.run/boxcutter/machinery"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,11 +61,12 @@ func NewObjectTemplateController(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
+	comparator *machinery.Comparator,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, accessManager, scheme,
-		restMapper, adapters.NewGenericObjectTemplate, cfg)
+		restMapper, comparator, adapters.NewGenericObjectTemplate, cfg)
 }
 
 func NewClusterObjectTemplateController(
@@ -73,11 +75,12 @@ func NewClusterObjectTemplateController(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
+	comparator *machinery.Comparator,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
 	return newGenericObjectTemplateController(
 		client, uncachedClient, log, accessManager, scheme,
-		restMapper, adapters.NewGenericClusterObjectTemplate, cfg)
+		restMapper, comparator, adapters.NewGenericClusterObjectTemplate, cfg)
 }
 
 func newGenericObjectTemplateController(
@@ -86,6 +89,7 @@ func newGenericObjectTemplateController(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	scheme *runtime.Scheme,
 	restMapper meta.RESTMapper,
+	comparator *machinery.Comparator,
 	newObjectTemplate adapters.GenericObjectTemplateFactory,
 	cfg ControllerConfig,
 ) *GenericObjectTemplateController {
@@ -107,6 +111,7 @@ func newGenericObjectTemplateController(
 			),
 			cfg.OptionalResourceRetryInterval,
 			cfg.ResourceRetryInterval,
+			comparator,
 		),
 	}
 	controller.reconciler = []reconciler{controller.templateReconciler}

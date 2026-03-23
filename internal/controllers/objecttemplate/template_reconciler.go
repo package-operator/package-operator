@@ -19,10 +19,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/jsonpath"
+	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -43,6 +45,7 @@ type templateReconciler struct {
 	uncachedClient                client.Reader
 	accessManager                 managedcache.ObjectBoundAccessManager[client.Object]
 	preflightChecker              preflightChecker
+	comparator                    *machinery.Comparator
 	optionalResourceRetryInterval time.Duration
 	resourceRetryInterval         time.Duration
 }
@@ -55,15 +58,16 @@ func newTemplateReconciler(
 	preflightChecker preflightChecker,
 	optionalResourceRetryInterval time.Duration,
 	resourceRetryInterval time.Duration,
+	comparator *machinery.Comparator,
 ) *templateReconciler {
 	return &templateReconciler{
-		Sink: environment.NewSink(client),
-
+		Sink:                          environment.NewSink(client),
 		scheme:                        scheme,
 		client:                        client,
 		uncachedClient:                uncachedClient,
 		accessManager:                 accessManager,
 		preflightChecker:              preflightChecker,
+		comparator:                    comparator,
 		optionalResourceRetryInterval: optionalResourceRetryInterval,
 		resourceRetryInterval:         resourceRetryInterval,
 	}
@@ -76,11 +80,11 @@ func (r *templateReconciler) Reconcile(
 		err = setObjectTemplateConditionBasedOnError(objectTemplate, err)
 	}()
 
-	originalControllerOf := objectTemplate.GetStatusControllerOf()
 	localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
 	if err != nil {
 		return res, err
 	}
+
 	cache, err := r.accessManager.GetWithUser(
 		ctx,
 		constants.StaticCacheOwner(),
@@ -90,6 +94,7 @@ func (r *templateReconciler) Reconcile(
 	if err != nil {
 		return res, err
 	}
+
 	sourcesConfig := map[string]any{}
 	retryLater, err := r.getValuesFromSources(ctx, objectTemplate, sourcesConfig, cache)
 	if err != nil {
@@ -98,6 +103,7 @@ func (r *templateReconciler) Reconcile(
 		}
 		return res, fmt.Errorf("retrieving values from sources: %w", err)
 	}
+
 	// For optional resources.
 	if retryLater {
 		res.RequeueAfter = r.optionalResourceRetryInterval
@@ -110,28 +116,24 @@ func (r *templateReconciler) Reconcile(
 		return res, err
 	}
 
-	existingObj := &unstructured.Unstructured{}
-	existingObj.SetGroupVersionKind(obj.GroupVersionKind())
-	if err := cache.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); apimachineryerrors.IsNotFound(err) {
-		if err := r.handleCreation(ctx, objectTemplate.ClientObject(), obj); err != nil {
-			return res, fmt.Errorf("handling creation: %w", err)
-		}
-		return res, nil
-	} else if err != nil {
-		return res, fmt.Errorf("getting existing object: %w", err)
+	fmt.Printf("templated object:\n%s\n", obj.Object)
+
+	objectEngine := machinery.NewObjectEngine(
+		r.scheme,
+		cache,
+		cache,
+		r.comparator,
+		constants.ObjectTemplateFieldOwner,
+		constants.SystemPrefix,
+	)
+
+	objectResult, err := objectEngine.Reconcile(ctx, 1, obj, types.WithOwner(objectTemplate.ClientObject(), ownerhandling.NewNative(r.scheme)))
+	if err != nil {
+		return res, err
 	}
-	if err := updateStatusConditionsFromOwnedObject(ctx, objectTemplate, existingObj); err != nil {
+
+	if err := updateStatusConditionsFromOwnedObject(ctx, objectTemplate, objectResult.Object().(*unstructured.Unstructured)); err != nil {
 		return res, fmt.Errorf("updating status conditions from owned object: %w", err)
-	}
-
-	obj.SetOwnerReferences(existingObj.GetOwnerReferences())
-	obj.SetFinalizers(existingObj.GetFinalizers())
-	obj.SetLabels(labels.Merge(existingObj.GetLabels(), obj.GetLabels()))
-	obj.SetAnnotations(labels.Merge(existingObj.GetAnnotations(), obj.GetAnnotations()))
-
-	obj.SetResourceVersion(existingObj.GetResourceVersion())
-	if err := r.client.Update(ctx, obj); err != nil {
-		return res, fmt.Errorf("updating templated object: %w", err)
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
@@ -145,9 +147,8 @@ func (r *templateReconciler) Reconcile(
 
 	objectTemplate.SetStatusControllerOf(controllerOf)
 
-	if controllerOf != originalControllerOf {
-		// start watches for output gvk if controllerof wasn't set before
-
+	if controllerOf != objectTemplate.GetStatusControllerOf() {
+		// Start watches for output gvk if controllerof wasn't set before.
 		localObjects, err := r.aggregateLocalObjects(ctx, objectTemplate, objectTemplate.GetStatusControllerOf())
 		if err != nil {
 			return res, err
@@ -164,18 +165,6 @@ func (r *templateReconciler) Reconcile(
 	}
 
 	return res, nil
-}
-
-func (r *templateReconciler) handleCreation(ctx context.Context, owner, object client.Object) error {
-	if err := controllerutil.SetControllerReference(owner, object, r.scheme); err != nil {
-		return fmt.Errorf("setting owner reference: %w", err)
-	}
-
-	if err := r.client.Create(ctx, object); err != nil {
-		return fmt.Errorf("creating object: %w", err)
-	}
-
-	return nil
 }
 
 func (r *templateReconciler) getValuesFromSources(
@@ -225,7 +214,7 @@ func (r *templateReconciler) getSourceObject(
 		}
 
 		// Update object to ensure it is part of our cache and we get events to reconcile.
-		updatedSourceObj, err := controllers.AddDynamicCacheLabel(ctx, r.client, sourceObj)
+		updatedSourceObj, err := controllers.AddDynamicCacheLabel(ctx, cache, sourceObj)
 		if err != nil {
 			return nil, false, fmt.Errorf("patching source object for cache: %w", err)
 		}
@@ -325,6 +314,8 @@ func (r *templateReconciler) templateObject(
 		return fmt.Errorf("rendering template: %w", err)
 	}
 
+	fmt.Printf("template:\n%s\n", objectTemplate.GetTemplate())
+
 	if err := yaml.Unmarshal(renderedTemplate, object); err != nil {
 		return fmt.Errorf("unmarshalling yaml of rendered template: %w", err)
 	}
@@ -336,7 +327,7 @@ func (r *templateReconciler) templateObject(
 		return &SourceError{Source: object, Err: &preflight.Error{Violations: violations}}
 	}
 
-	if len(objectTemplate.ClientObject().GetNamespace()) > 0 {
+	if objectTemplate.ClientObject().GetNamespace() != "" {
 		object.SetNamespace(objectTemplate.ClientObject().GetNamespace())
 	}
 
