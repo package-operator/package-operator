@@ -16,6 +16,7 @@ containing basic building blocks that other auxiliary APIs can build on top of.
 * [ObjectSlice](#objectslice)
 * [ObjectTemplate](#objecttemplate)
 * [Package](#package)
+* [Repository](#repository)
 
 
 ### ClusterObjectDeployment
@@ -796,6 +797,34 @@ status:
 | `status` <br><a href="#packagestatus">PackageStatus</a> | PackageStatus defines the observed state of a Package. |
 
 
+### Repository
+
+Repository is a package repository accessible from its namespace.
+
+
+**Example**
+
+```yaml
+apiVersion: package-operator.run/v1alpha1
+kind: Repository
+metadata:
+  name: example
+  namespace: default
+spec:
+  image: nonumy
+status:
+  phase: Pending
+
+```
+
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#repositoryspec">RepositorySpec</a> | RepositorySpec specifies a repository. |
+| `status` <br><a href="#repositorystatus">RepositoryStatus</a> | RepositoryStatus defines the observed state of a Repository. |
+
+
 
 
 ---
@@ -896,6 +925,34 @@ ClusterObjectSetStatus defines the observed state of a ClusterObjectSet.
 
 Used in:
 * [ClusterObjectSet](#clusterobjectset)
+
+
+### ClusterRepository
+
+ClusterRepository is a package repository accessible from all namespaces.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ObjectMeta |  |
+| `spec` <br><a href="#repositoryspec">RepositorySpec</a> | RepositorySpec specifies a repository. |
+| `status` <br><a href="#repositorystatus">RepositoryStatus</a> | RepositoryStatus defines the observed state of a Repository. |
+
+
+Used in:
+* [ClusterRepositoryList](#clusterrepositorylist)
+
+
+### ClusterRepositoryList
+
+ClusterRepositoryList contains a list of ClusterRepository.
+
+| Field | Description |
+| ----- | ----------- |
+| `metadata` <br>metav1.ListMeta |  |
+| `items` <b>required</b><br><a href="#clusterrepository">[]ClusterRepository</a> |  |
+
+
+Used in:
 
 
 ### ConditionMapping
@@ -1479,6 +1536,36 @@ RemotePhaseReference remote phases aka ObjectSetPhase/ClusterObjectSetPhase obje
 Used in:
 * [ClusterObjectSetStatus](#clusterobjectsetstatus)
 * [ObjectSetStatus](#objectsetstatus)
+
+
+### RepositorySpec
+
+RepositorySpec specifies a repository.
+
+| Field | Description |
+| ----- | ----------- |
+| `image` <b>required</b><br>string | the image containing the contents of the repository |
+
+
+Used in:
+* [ClusterRepository](#clusterrepository)
+* [Repository](#repository)
+
+
+### RepositoryStatus
+
+RepositoryStatus defines the observed state of a Repository.
+
+| Field | Description |
+| ----- | ----------- |
+| `conditions` <br>[]metav1.Condition | Conditions is a list of status conditions ths object is in. |
+| `phase` <br><a href="#repositorystatusphase">RepositoryStatusPhase</a> | This field is not part of any API contract<br>it will go away as soon as kubectl can print conditions!<br>When evaluating object state in code, use .Conditions instead. |
+| `unpackedHash` <br>string | Hash of image + config that was successfully unpacked. |
+
+
+Used in:
+* [ClusterRepository](#clusterrepository)
+* [Repository](#repository)
 ## manifests.package-operator.run/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the v1alpha1 version of the manifests API group,
