@@ -10,21 +10,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
+	"pkg.package-operator.run/boxcutter/machinery/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"package-operator.run/internal/controllers/boxcutterutil"
+
 	"pkg.package-operator.run/boxcutter/probing"
+
+	"pkg.package-operator.run/boxcutter/managedcache"
+	"pkg.package-operator.run/boxcutter/ownerhandling"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
-	internalprobing "package-operator.run/internal/probing"
-
-	"pkg.package-operator.run/boxcutter/managedcache"
-	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
@@ -33,9 +35,10 @@ type objectSetPhasesReconciler struct {
 	scheme                  *runtime.Scheme
 	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
 	phaseReconcilerFactory  controllers.PhaseReconcilerFactory
+	revisionEngineFactory   boxcutterutil.RevisionEngineFactory
 	remotePhase             remotePhaseReconciler
 	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           ownerStrategy
+	ownerStrategy           boxcutterutil.OwnerStrategy
 	preflightChecker        phasesChecker
 	backoff                 *flowcontrol.Backoff
 }
@@ -55,6 +58,7 @@ func newObjectSetPhasesReconciler(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	phaseReconcilerFactory controllers.PhaseReconcilerFactory,
+	revisionEngineFactory boxcutterutil.RevisionEngineFactory,
 	remotePhase remotePhaseReconciler,
 	lookupPreviousRevisions lookupPreviousRevisions,
 	checker phasesChecker,
@@ -70,6 +74,7 @@ func newObjectSetPhasesReconciler(
 		scheme:                  scheme,
 		accessManager:           accessManager,
 		phaseReconcilerFactory:  phaseReconcilerFactory,
+		revisionEngineFactory:   revisionEngineFactory,
 		remotePhase:             remotePhase,
 		lookupPreviousRevisions: lookupPreviousRevisions,
 		ownerStrategy:           ownerhandling.NewNative(scheme),
@@ -185,17 +190,6 @@ func (r *objectSetPhasesReconciler) reconcile(
 ) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
 	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
 
-	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
-	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
-	}
-
-	probe, err := internalprobing.Parse(
-		ctx, objectSet.GetAvailabilityProbes())
-	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
-	}
-
 	log.Info("getting cache accessor")
 	cache, err := r.accessManager.GetWithUser(
 		ctx,
@@ -207,25 +201,26 @@ func (r *objectSetPhasesReconciler) reconcile(
 		return nil, controllers.ProbingResult{}, fmt.Errorf("getting cache: %w", err)
 	}
 
-	log.Info("getting phaseReconciler")
-	phaseReconciler := r.phaseReconcilerFactory.New(cache)
+	revisionEngine, err := r.revisionEngineFactory.New(cache)
+	if err != nil {
+		return nil, controllers.ProbingResult{}, fmt.Errorf("constructing revision engine: %w", err)
+	}
+	revision := &adapters.RevisionAdapter{ObjectSet: objectSet}
+	oo := types.WithOwner(objectSet.ClientObject(), r.ownerStrategy)
+	revision.WithReconcileOptions(oo)
+
+	reconcileResult, err := revisionEngine.Reconcile(ctx, revision)
+	if err != nil {
+		return nil, controllers.ProbingResult{}, err
+	}
+	if valErr := reconcileResult.GetValidationError(); valErr != nil {
+		return nil, controllers.ProbingResult{}, valErr
+	}
 
 	var controllerOfAll []corev1alpha1.ControlledObjectReference
-	for _, phase := range objectSet.GetSpecPhases() {
-		log.Info("reconciling phase", "name", phase.Name, "class", phase.Class)
-
-		controllerOf, probingResult, err := r.reconcilePhase(ctx, phaseReconciler, objectSet, phase, probe, previous)
-		if err != nil {
-			return nil, controllers.ProbingResult{}, err
-		}
-
-		// always gather all objects we are controller of
-		controllerOfAll = append(controllerOfAll, controllerOf...)
-
-		if !probingResult.IsZero() {
-			// break on first failing probe
-			return controllerOfAll, probingResult, nil
-		}
+	for _, phaseRes := range reconcileResult.GetPhases() {
+		cOf := boxcutterutil.GetControllerOf(r.ownerStrategy, objectSet.ClientObject(), phaseRes)
+		controllerOfAll = append(controllerOfAll, cOf...)
 	}
 
 	return controllerOfAll, controllers.ProbingResult{}, nil
@@ -274,8 +269,6 @@ func (r *objectSetPhasesReconciler) reconcileLocalPhase(
 func (r *objectSetPhasesReconciler) Teardown(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (cleanupDone bool, err error) {
-	log := logr.FromContextOrDiscard(ctx)
-
 	// objectSet is deleted with the `orphan` cascade option, so we don't delete the owned objects
 	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), "orphan") {
 		return true, nil
@@ -294,15 +287,20 @@ func (r *objectSetPhasesReconciler) Teardown(
 		return false, fmt.Errorf("getting cache: %w", err)
 	}
 
-	phaseReconciler := r.phaseReconcilerFactory.New(cache)
+	revisionEngine, err := r.revisionEngineFactory.New(cache)
+	if err != nil {
+		return false, fmt.Errorf("constructing revision engine: %w", err)
+	}
+	revision := &adapters.RevisionAdapter{ObjectSet: objectSet}
+	oo := types.WithOwner(objectSet.ClientObject(), r.ownerStrategy)
+	revision.WithTeardownOptions(oo)
 
-	for _, phase := range phases {
-		if cleanupDone, err := r.teardownPhase(ctx, phaseReconciler, objectSet, phase); err != nil {
-			return false, fmt.Errorf("error archiving phase: %w", err)
-		} else if !cleanupDone {
-			return false, nil
-		}
-		log.Info("cleanup done", "phase", phase.Name)
+	teardownResult, err := revisionEngine.Teardown(ctx, revision)
+	if err != nil {
+		return false, err
+	}
+	if !teardownResult.IsComplete() {
+		return false, nil
 	}
 
 	if err := r.accessManager.FreeWithUser(
