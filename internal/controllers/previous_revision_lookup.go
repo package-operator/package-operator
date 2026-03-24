@@ -47,9 +47,9 @@ type PreviousObjectSetFactory func(*runtime.Scheme) PreviousObjectSet
 
 func (l *PreviousRevisionLookup) Lookup(
 	ctx context.Context, owner PreviousOwner,
-) ([]PreviousObjectSet, error) {
+) ([]client.Object, error) {
 	previous := owner.GetSpecPrevious()
-	previousSets := make([]PreviousObjectSet, len(previous))
+	previousSets := make([]client.Object, len(previous))
 	for i, prev := range previous {
 		set := l.newPreviousObjectSet(l.scheme)
 		err := l.client.Get(
@@ -57,11 +57,11 @@ func (l *PreviousRevisionLookup) Lookup(
 				Name:      prev.Name,
 				Namespace: owner.ClientObject().GetNamespace(),
 			}, set.ClientObject())
-		// Previous revisions may be garbage collected so ingore not found errors
+		// Previous revisions may be garbage collected so ignore not found errors
 		if err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
-		previousSets[i] = set
+		previousSets[i] = set.ClientObject()
 	}
 	return previousSets, nil
 }
@@ -76,17 +76,18 @@ func (l *PreviousRevisionLookup) LookupPreviousRemotePhases(
 	}
 
 	for _, prev := range previousObjSets {
-		remotePhaseReferences := prev.GetStatusRemotePhases()
+		os := prev.(PreviousObjectSet)
+		remotePhaseReferences := os.GetStatusRemotePhases()
 		if len(remotePhaseReferences) == 0 {
 			continue
 		}
 
-		prevGVK, err := apiutil.GVKForObject(prev.ClientObject(), l.scheme)
+		prevGVK, err := apiutil.GVKForObject(os.ClientObject(), l.scheme)
 		if err != nil {
 			panic(err)
 		}
 
-		phases := l.lookupRemotePhases(remotePhaseReferences, prevGVK, prev.ClientObject().GetNamespace())
+		phases := l.lookupRemotePhases(remotePhaseReferences, prevGVK, os.ClientObject().GetNamespace())
 		remotePhases = append(remotePhases, phases...)
 	}
 

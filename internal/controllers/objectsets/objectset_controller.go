@@ -27,7 +27,6 @@ import (
 	"package-operator.run/internal/preflight"
 
 	"pkg.package-operator.run/boxcutter/managedcache"
-	"pkg.package-operator.run/boxcutter/ownerhandling"
 )
 
 // Generic reconciler for both ObjectSet and ClusterObjectSet objects.
@@ -125,18 +124,6 @@ func newGenericObjectSetController(
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
 		accessManager,
-		controllers.NewPhaseReconcilerFactory(
-			scheme,
-			uncachedClient,
-			ownerhandling.NewNative(scheme),
-			preflight.NewAPIExistence(restMapper,
-				preflight.List{
-					preflight.NewNoOwnerReferences(restMapper),
-					preflight.NewNamespaceEscalation(restMapper),
-					preflight.NewDryRun(client),
-				},
-			),
-		),
 		revisionEngineFactory,
 		remotePhase,
 		controllers.NewPreviousRevisionLookup(

@@ -47,21 +47,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 			Return(accessor, nil)
 		factory.On("New", accessor).Return(phaseReconciler)
 
-		// lookup := func(_ context.Context, _ controllers.PreviousOwner) (
-		//	[]controllers.PreviousObjectSet,
-		//	error,
-		// ) {
-		//	return []controllers.PreviousObjectSet{}, nil
-		//}
 		checker := &phasesCheckerMock{}
-		// objectSetPhasesReconciler := newObjectSetPhasesReconciler(
-		//	testScheme,
-		//	accessManager,
-		//	factory,
-		//	remotePhaseReconciler,
-		//	lookup,
-		//	checker,
-		//)
 
 		return &prepared{
 			accessManager:             accessManager,
