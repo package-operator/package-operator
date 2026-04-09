@@ -14,12 +14,17 @@ var (
 
 type PhaseAdapter struct {
 	Phase            corev1alpha1.ObjectSetTemplatePhase
+	ObjectSet        ObjectSetAccessor
 	ReconcileOptions []types.PhaseReconcileOption
 	TeardownOptions  []types.PhaseTeardownOption
 }
 
 func (p *PhaseAdapter) GetName() string {
 	return p.Phase.Name
+}
+
+func (p *PhaseAdapter) GetObjectSet() ObjectSetAccessor {
+	return p.ObjectSet
 }
 
 func (p *PhaseAdapter) GetObjects() []client.Object {

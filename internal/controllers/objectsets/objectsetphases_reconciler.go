@@ -2,15 +2,19 @@ package objectsets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
 	"pkg.package-operator.run/boxcutter"
+	"pkg.package-operator.run/boxcutter/machinery"
 	"pkg.package-operator.run/boxcutter/machinery/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,12 +24,11 @@ import (
 
 	"package-operator.run/internal/controllers/boxcutterutil"
 
-	"pkg.package-operator.run/boxcutter/probing"
-
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"pkg.package-operator.run/boxcutter/ownerhandling"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
@@ -87,7 +90,7 @@ type remotePhaseReconciler interface {
 	Reconcile(
 		ctx context.Context, objectSet adapters.ObjectSetAccessor,
 		phase corev1alpha1.ObjectSetTemplatePhase,
-	) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error)
+	) (machinery.PhaseResult, error)
 	Teardown(
 		ctx context.Context, objectSet adapters.ObjectSetAccessor,
 		phase corev1alpha1.ObjectSetTemplatePhase,
@@ -96,7 +99,7 @@ type remotePhaseReconciler interface {
 
 type lookupPreviousRevisions func(
 	ctx context.Context, owner controllers.PreviousOwner,
-) ([]client.Object, error)
+) ([]controllers.PreviousObjectSet, error)
 
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
@@ -119,7 +122,8 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 	controllers.DeleteMappedConditions(ctx, objectSet.GetStatusConditions())
 
-	controllerOf, probingResult, err := r.reconcile(ctx, objectSet)
+	reconcileResult, err := r.reconcile(ctx, objectSet)
+
 	if controllers.IsExternalResourceNotFound(err) {
 		id := string(objectSet.ClientObject().GetUID())
 
@@ -129,6 +133,24 @@ func (r *objectSetPhasesReconciler) Reconcile(
 			RequeueAfter: r.backoff.Get(id),
 		}, nil
 	} else if err != nil {
+		return res, err
+	}
+
+	var actualObjects []machinery.Object
+	var controllerOf []corev1alpha1.ControlledObjectReference
+	for _, phaseRes := range reconcileResult.GetPhases() {
+		for _, obj := range phaseRes.GetObjects() {
+			actualObjects = append(actualObjects, obj.Object())
+		}
+
+		if remoteRes, ok := phaseRes.(*remotePhaseResult); ok {
+			controllerOf = append(controllerOf, remoteRes.GetControllerOf()...)
+		} else {
+			controllerOf = append(controllerOf,
+				boxcutterutil.GetControllerOf(r.ownerStrategy, objectSet.ClientObject(), phaseRes)...)
+		}
+	}
+	if err = mapConditions(actualObjects, objectSet); err != nil {
 		return res, err
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
@@ -146,12 +168,12 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		meta.RemoveStatusCondition(objectSet.GetStatusConditions(), corev1alpha1.ObjectSetInTransition)
 	}
 
-	if !probingResult.IsZero() {
+	if !reconcileResult.IsComplete() {
 		meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
 			Type:               corev1alpha1.ObjectSetAvailable,
 			Status:             metav1.ConditionFalse,
 			Reason:             "ProbeFailure",
-			Message:            probingResult.String(),
+			Message:            reconcileResult.String(),
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 
@@ -187,17 +209,17 @@ func (r *objectSetPhasesReconciler) Reconcile(
 
 func (r *objectSetPhasesReconciler) reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
+) (machinery.RevisionResult, error) {
 	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
 
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("lookup previous revisions: %w", err)
+		return nil, fmt.Errorf("lookup previous revisions: %w", err)
 	}
 
 	probe, err := internalprobing.Parse(ctx, objectSet.GetAvailabilityProbes())
 	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("parsing probes: %w", err)
+		return nil, fmt.Errorf("parsing probes: %w", err)
 	}
 
 	log.Info("getting cache accessor")
@@ -208,12 +230,12 @@ func (r *objectSetPhasesReconciler) reconcile(
 		aggregateLocalObjects(objectSet),
 	)
 	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("getting cache: %w", err)
+		return nil, fmt.Errorf("getting cache: %w", err)
 	}
 
 	revisionEngine, err := r.revisionEngineFactory.New(cache)
 	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("constructing revision engine: %w", err)
+		return nil, fmt.Errorf("constructing revision engine: %w", err)
 	}
 
 	revision := &adapters.RevisionAdapter{ObjectSet: objectSet}
@@ -224,18 +246,35 @@ func (r *objectSetPhasesReconciler) reconcile(
 		var phaseOpts []types.PhaseReconcileOption
 
 		for _, phaseObj := range phase.Objects {
+			// TODO: remove namespace defaulting from PKO
+			// Default namespace to the owners namespace
+			if len(phaseObj.Object.GetNamespace()) == 0 {
+				phaseObj.Object.SetNamespace(objectSet.ClientObject().GetNamespace())
+			}
+
 			labels := phaseObj.Object.GetLabels()
 			if labels == nil {
 				labels = map[string]string{}
 			}
-			labels[constants.DynamicCacheLabel] = "True"
-			phaseObj.Object.SetLabels(labels)
+			// No need to apply dynamic cache label to ObjectSetPhases
+			if len(phase.Class) == 0 {
+				labels[constants.DynamicCacheLabel] = "True"
+				phaseObj.Object.SetLabels(labels)
+			}
+
+			collisionProtection := boxcutterutil.TranslateCollisionProtection(phaseObj.CollisionProtection)
+
+			// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
+			if len(os.Getenv(constants.ForceAdoptionEnvironmentVariable)) > 0 ||
+				labels[manifestsv1alpha1.PackageLabel] == "package-operator" {
+				collisionProtection = boxcutterutil.TranslateCollisionProtection(corev1alpha1.CollisionProtectionNone)
+			}
 
 			phaseOpts = append(phaseOpts, types.WithObjectReconcileOptions(
 				&phaseObj.Object,
-				boxcutterutil.TranslateCollisionProtection(phaseObj.CollisionProtection),
+				collisionProtection,
 				types.WithProbe(types.ProgressProbeType, probe),
-				boxcutter.WithPreviousOwners(previous),
+				boxcutter.WithPreviousOwners(previousToObjects(previous)),
 			))
 		}
 
@@ -247,63 +286,17 @@ func (r *objectSetPhasesReconciler) reconcile(
 
 	reconcileResult, err := revisionEngine.Reconcile(ctx, revision)
 	if err != nil {
-		return nil, controllers.ProbingResult{}, err
+		return nil, err
 	}
-	if valErr := reconcileResult.GetValidationError(); valErr != nil {
-		return nil, controllers.ProbingResult{}, valErr
-	}
-
-	var controllerOfAll []corev1alpha1.ControlledObjectReference
-	for _, phaseRes := range reconcileResult.GetPhases() {
-		if remoteRes, ok := phaseRes.(*remotePhaseResult); ok {
-			controllerOfAll = append(controllerOfAll, remoteRes.GetControllerOf()...)
-		} else {
-			controllerOfAll = append(controllerOfAll,
-				boxcutterutil.GetControllerOf(r.ownerStrategy, objectSet.ClientObject(), phaseRes)...)
-		}
-	}
-
-	return controllerOfAll, controllers.ProbingResult{}, nil
+	return reconcileResult, nil
 }
 
-func (r *objectSetPhasesReconciler) reconcilePhase(
-	ctx context.Context,
-	phaseReconciler controllers.PhaseReconciler,
-	objectSet adapters.ObjectSetAccessor,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
-	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	if len(phase.Class) > 0 {
-		return r.remotePhase.Reconcile(
-			ctx, objectSet, phase)
+func previousToObjects(prev []controllers.PreviousObjectSet) []client.Object {
+	objects := make([]client.Object, 0, len(prev))
+	for _, p := range prev {
+		objects = append(objects, p.ClientObject())
 	}
-	return r.reconcileLocalPhase(
-		ctx, phaseReconciler, objectSet, phase, probe, previous)
-}
-
-// Reconciles the Phase directly in-process.
-func (r *objectSetPhasesReconciler) reconcileLocalPhase(
-	ctx context.Context,
-	phaseReconciler controllers.PhaseReconciler,
-	objectSet adapters.ObjectSetAccessor,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-	probe probing.Prober,
-	previous []controllers.PreviousObjectSet,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
-	actualObjects, probingResult, err := phaseReconciler.ReconcilePhase(
-		ctx, objectSet, phase, probe, previous)
-	if err != nil {
-		return nil, probingResult, err
-	}
-
-	controllerOf, err := controllers.GetStatusControllerOf(
-		ctx, r.scheme, r.ownerStrategy,
-		objectSet.ClientObject(), actualObjects)
-	if err != nil {
-		return nil, controllers.ProbingResult{}, err
-	}
-	return controllerOf, probingResult, nil
+	return objects
 }
 
 func (r *objectSetPhasesReconciler) Teardown(
@@ -313,9 +306,6 @@ func (r *objectSetPhasesReconciler) Teardown(
 	if controllerutil.ContainsFinalizer(objectSet.ClientObject(), "orphan") {
 		return true, nil
 	}
-
-	phases := objectSet.GetSpecPhases()
-	reverse(phases) // teardown in reverse order
 
 	cache, err := r.accessManager.GetWithUser(
 		ctx,
@@ -352,25 +342,6 @@ func (r *objectSetPhasesReconciler) Teardown(
 	}
 
 	return true, nil
-}
-
-func (r *objectSetPhasesReconciler) teardownPhase(
-	ctx context.Context,
-	phaseReconciler controllers.PhaseReconciler,
-	objectSet adapters.ObjectSetAccessor,
-	phase corev1alpha1.ObjectSetTemplatePhase,
-) (cleanupDone bool, err error) {
-	if len(phase.Class) > 0 {
-		return r.remotePhase.Teardown(ctx, objectSet, phase)
-	}
-	return phaseReconciler.TeardownPhase(ctx, objectSet, phase)
-}
-
-// reverse the order of a slice.
-func reverse[T any](s []T) {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
 }
 
 // Checks if an ObjectSet is in transition.
@@ -472,14 +443,6 @@ type objectSetPhasesReconcilerOption interface {
 	ConfigureObjectSetPhasesReconciler(*objectSetPhasesReconcilerConfig)
 }
 
-type withClock struct {
-	Clock clock
-}
-
-func (w withClock) ConfigureObjectSetPhasesReconciler(c *objectSetPhasesReconcilerConfig) {
-	c.Clock = w.Clock
-}
-
 type clock interface {
 	Now() time.Time
 }
@@ -501,4 +464,81 @@ func aggregateLocalObjects(objectSet adapters.ObjectSetAccessor) []client.Object
 		}
 	}
 	return objectsInSet
+}
+
+// Adds a RemotePhaseReference if it's not already part of the slice.
+func addRemoteObjectSetPhase(
+	refs []corev1alpha1.RemotePhaseReference,
+	ref corev1alpha1.RemotePhaseReference,
+) []corev1alpha1.RemotePhaseReference {
+	for i := range refs {
+		if refs[i].Name == ref.Name {
+			refs[i] = ref
+			return refs
+		}
+	}
+	refs = append(refs, ref)
+	return refs
+}
+
+func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetAccessor) error {
+	for _, obj := range actualObjects {
+		unstructuredObj := obj.(*unstructured.Unstructured)
+
+		rawConditions, exist, err := unstructured.NestedFieldNoCopy(
+			unstructuredObj.Object, "status", "conditions")
+		if err != nil {
+			return err
+		}
+		if !exist {
+			continue
+		}
+
+		j, err := json.Marshal(rawConditions)
+		if err != nil {
+			return err
+		}
+		var objectConditions []metav1.Condition
+		if err := json.Unmarshal(j, &objectConditions); err != nil {
+			return err
+		}
+
+		var conditionMappings []corev1alpha1.ConditionMapping
+		for _, phase := range owner.GetSpecPhases() {
+			for _, objectsetobject := range phase.Objects {
+				if objectsetobject.Object.GetName() == obj.GetName() {
+					conditionMappings = objectsetobject.ConditionMappings
+				}
+			}
+		}
+
+		// Maps from object condition type to PKO condition type.
+		conditionTypeMap := map[string]string{}
+		for _, m := range conditionMappings {
+			conditionTypeMap[m.SourceType] = m.DestinationType
+		}
+		for _, condition := range objectConditions {
+			if condition.ObservedGeneration != 0 &&
+				condition.ObservedGeneration != obj.GetGeneration() {
+				// condition outdated
+				continue
+			}
+
+			destType, ok := conditionTypeMap[condition.Type]
+			if !ok {
+				// condition not mapped
+				continue
+			}
+
+			meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
+				Type:               destType,
+				Status:             condition.Status,
+				Reason:             condition.Reason,
+				Message:            condition.Message,
+				ObservedGeneration: owner.ClientObject().GetGeneration(),
+			})
+		}
+	}
+
+	return nil
 }

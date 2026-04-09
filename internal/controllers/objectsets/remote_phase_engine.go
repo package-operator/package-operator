@@ -2,9 +2,6 @@ package objectsets
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,8 +18,6 @@ import (
 var (
 	_ boxcutterutil.PhaseEngine        = (*remoteEnabledPhaseEngine)(nil)
 	_ boxcutterutil.PhaseEngineFactory = (*remoteEnabledPhaseEngineFactory)(nil)
-	_ machinery.PhaseResult            = (*remotePhaseResult)(nil)
-	_ machinery.PhaseTeardownResult    = (*remotePhaseTeardownResult)(nil)
 )
 
 type remoteEnabledPhaseEngineFactory struct {
@@ -66,7 +61,8 @@ func (r *remoteEnabledPhaseEngine) Reconcile(
 ) (machinery.PhaseResult, error) {
 	owner := getReconcileOwner(phase, opts...)
 	if hasClass(owner, phase) {
-		return r.reconcileRemotePhase(ctx, owner, phase)
+		pa := phase.(*adapters.PhaseAdapter)
+		return r.reconcileRemotePhase(ctx, pa.GetObjectSet(), phase)
 	}
 	return r.pe.Reconcile(ctx, revision, phase, opts...)
 }
@@ -142,18 +138,11 @@ func (r *remoteEnabledPhaseEngine) reconcileRemotePhase(
 			phase = p
 		}
 	}
-
-	controllerOf, probeResult, err := r.remotePhaseReconciler.Reconcile(ctx, owner, phase)
-	if err != nil {
-		return nil, err
+	if phase.Name == "" {
+		panic("boxcutter phase constructed incorrectly")
 	}
 
-	result := &remotePhaseResult{
-		name:         phase.Name,
-		failedProbes: probeResult.FailedProbes,
-		controllerOf: controllerOf,
-	}
-	return result, nil
+	return r.remotePhaseReconciler.Reconcile(ctx, owner, phase)
 }
 
 func (r *remoteEnabledPhaseEngine) teardownRemotePhase(
@@ -186,99 +175,4 @@ func hasClass(owner adapters.ObjectSetAccessor, phase types.Phase) bool {
 		}
 	}
 	return false
-}
-
-type remotePhaseResult struct {
-	name         string
-	failedProbes []string
-	controllerOf []corev1alpha1.ControlledObjectReference
-}
-
-func (r remotePhaseResult) GetName() string {
-	return r.name
-}
-
-func (r remotePhaseResult) GetValidationError() *validation.PhaseValidationError {
-	if len(r.failedProbes) == 0 {
-		return nil
-	}
-	return &validation.PhaseValidationError{
-		PhaseName:  r.name,
-		PhaseError: errors.New(r.failedProbes[0]),
-	}
-}
-
-func (r remotePhaseResult) GetObjects() []machinery.ObjectResult {
-	// TODO
-	return nil
-}
-
-func (r remotePhaseResult) GetControllerOf() []corev1alpha1.ControlledObjectReference {
-	return r.controllerOf
-}
-
-func (r remotePhaseResult) InTransition() bool {
-	return len(r.failedProbes) > 0
-}
-
-func (r remotePhaseResult) IsComplete() bool {
-	return r.failedProbes == nil
-}
-
-func (r remotePhaseResult) HasProgressed() bool {
-	// TODO: add "no status" probe fail?
-	return r.failedProbes == nil
-}
-
-func (r remotePhaseResult) String() string {
-	var out strings.Builder
-	fmt.Fprintf(&out,
-		"Phase %q\nComplete: %t\nIn Transition: %t\n",
-		r.name, r.IsComplete(), r.InTransition(),
-	)
-
-	if err := r.GetValidationError(); err != nil {
-		fmt.Fprintln(&out, "Validation Errors:")
-
-		for _, err := range err.Unwrap() {
-			fmt.Fprintf(&out, "- %s\n", err.Error())
-		}
-	}
-
-	fmt.Fprintln(&out, "ControllerOf:")
-
-	for _, ref := range r.controllerOf {
-		fmt.Fprintf(&out, "- %#v\n", ref)
-	}
-
-	return out.String()
-}
-
-type remotePhaseTeardownResult struct {
-	name        string
-	cleanupDone bool
-}
-
-func (r *remotePhaseTeardownResult) String() string {
-	var out strings.Builder
-	fmt.Fprintf(&out, "Phase %q\n", r.name)
-	return out.String()
-}
-
-func (r *remotePhaseTeardownResult) GetName() string {
-	return r.name
-}
-
-func (r *remotePhaseTeardownResult) IsComplete() bool {
-	return r.cleanupDone
-}
-
-func (r *remotePhaseTeardownResult) Gone() []types.ObjectRef {
-	// TODO
-	return nil
-}
-
-func (r *remotePhaseTeardownResult) Waiting() []types.ObjectRef {
-	// TODO
-	return nil
 }

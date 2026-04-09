@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"pkg.package-operator.run/boxcutter/machinery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,6 +58,16 @@ func (e *PhaseReconcilerError) CausedBy(reason ErrorReason) bool {
 
 // Returns true if the underlying error is because adoption has been refused.
 func IsAdoptionRefusedError(err error) bool {
+	target := &machinery.CreateCollisionError{}
+	if errors.As(err, &target) {
+		// TODO: wait for PKO-384
+		// _, err := controllers.AddDynamicCacheLabel(ctx, cache, convertToUnstructured(target.Object()))
+		// if err != nil {
+		//	return res, err
+		//}
+		return true
+	}
+
 	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
 	if errors.As(err, &prevRevisionError) {
 		return true

@@ -26,7 +26,10 @@ func (r *RevisionAdapter) GetRevisionNumber() int64 {
 func (r *RevisionAdapter) GetPhases() []types.Phase {
 	phases := make([]types.Phase, 0, len(r.ObjectSet.GetSpecPhases()))
 	for _, p := range r.ObjectSet.GetSpecPhases() {
-		phases = append(phases, &PhaseAdapter{Phase: p})
+		phases = append(phases, &PhaseAdapter{
+			Phase:     p,
+			ObjectSet: r.ObjectSet,
+		})
 	}
 	return phases
 }

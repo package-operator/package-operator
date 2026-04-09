@@ -3,15 +3,20 @@ package objectsets
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"pkg.package-operator.run/boxcutter/machinery"
+	boxcuttertypes "pkg.package-operator.run/boxcutter/machinery/types"
+	"pkg.package-operator.run/boxcutter/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -19,6 +24,11 @@ import (
 
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
+)
+
+var (
+	_ machinery.PhaseResult         = (*remotePhaseResult)(nil)
+	_ machinery.PhaseTeardownResult = (*remotePhaseTeardownResult)(nil)
 )
 
 // Reconciles ObjectSetPhase objects for the parent ObjectSet.
@@ -51,6 +61,8 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (cleanupDone bool, err error) {
+	// TODO: rewrite with PhaseTeardownResult?
+
 	log := logr.FromContextOrDiscard(ctx)
 
 	defer log.Info("teardown of remote phase", "phase", phase.Name, "cleanupDone", cleanupDone)
@@ -59,7 +71,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 		Name:      objectSetPhaseName(objectSet, phase),
 		Namespace: objectSet.ClientObject().GetNamespace(),
 	}, objectSetPhase.ClientObject())
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		// Phase is already gone -> nothing to cleanup.
 		return true, nil
 	}
@@ -97,7 +109,7 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 	}
 
 	err = r.client.Delete(ctx, objectSetPhase.ClientObject())
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		return true, nil
 	}
 	if err != nil {
@@ -111,14 +123,14 @@ func (r *objectSetRemotePhaseReconciler) Teardown(
 func (r *objectSetRemotePhaseReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 	phase corev1alpha1.ObjectSetTemplatePhase,
-) ([]corev1alpha1.ControlledObjectReference, controllers.ProbingResult, error) {
+) (machinery.PhaseResult, error) {
 	if len(phase.Class) == 0 {
 		panic("aaahoaohaioahiaohaohaoh")
 	}
 
 	desiredObjectSetPhase, err := r.desiredObjectSetPhase(objectSet, phase)
 	if err != nil {
-		return nil, controllers.ProbingResult{}, err
+		return nil, err
 	}
 
 	currentObjectSetPhase := r.newObjectSetPhase(r.scheme)
@@ -126,15 +138,15 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		ctx, client.ObjectKeyFromObject(desiredObjectSetPhase.ClientObject()),
 		currentObjectSetPhase.ClientObject(),
 	)
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		if err := r.client.Create(
 			ctx, desiredObjectSetPhase.ClientObject()); err != nil {
-			return nil, controllers.ProbingResult{}, fmt.Errorf("creating new ObjectSetPhase: %w", err)
+			return nil, fmt.Errorf("creating new ObjectSetPhase: %w", err)
 		}
 		currentObjectSetPhase = desiredObjectSetPhase
 	}
 	if err != nil {
-		return nil, controllers.ProbingResult{}, fmt.Errorf("getting existing ObjectSetPhase: %w", err)
+		return nil, fmt.Errorf("getting existing ObjectSetPhase: %w", err)
 	}
 
 	// Report ObjectSetPhase as part of this ObjectSet
@@ -162,8 +174,13 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		}
 		if err := r.client.Patch(
 			ctx, current, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
-			return nil, controllers.ProbingResult{}, fmt.Errorf("patching ObjectSetPhase: %w", err)
+			return nil, fmt.Errorf("patching ObjectSetPhase: %w", err)
 		}
+	}
+
+	phaseResult := &remotePhaseResult{
+		name:         phase.Name,
+		controllerOf: currentObjectSetPhase.GetStatusControllerOf(),
 	}
 
 	// ObjectSetPhase already exists
@@ -179,31 +196,22 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 		*currentObjectSetPhase.GetStatusConditions(),
 		corev1alpha1.ObjectSetAvailable,
 	)
-	activeObjects := currentObjectSetPhase.GetStatusControllerOf()
 	if availableCond == nil ||
 		availableCond.ObservedGeneration !=
 			currentObjectSetPhase.ClientObject().GetGeneration() {
 		// no status reported, wait longer
-		return activeObjects, controllers.ProbingResult{
-			PhaseName: phase.Name,
-			FailedProbes: []string{
-				noStatusProbeFailure,
-			},
-		}, nil
+		phaseResult.failedProbe = noStatusProbeFailure
+		return phaseResult, nil
 	}
 	if availableCond.Status == metav1.ConditionTrue {
 		// Remote Phase is Available!
-		return activeObjects, controllers.ProbingResult{}, nil
+		return phaseResult, nil
 	}
 
 	// Remote Phase is not Available!
 	// Reports its message as failed probe output.
-	return activeObjects, controllers.ProbingResult{
-		PhaseName: phase.Name,
-		FailedProbes: []string{
-			availableCond.Message,
-		},
-	}, nil
+	phaseResult.failedProbe = availableCond.Message
+	return phaseResult, nil
 }
 
 func (r *objectSetRemotePhaseReconciler) desiredObjectSetPhase(
@@ -242,17 +250,97 @@ func objectSetPhaseName(
 	return objectSet.ClientObject().GetName() + "-" + phase.Name
 }
 
-// Adds a RemotePhaseReference if it's not already part of the slice.
-func addRemoteObjectSetPhase(
-	refs []corev1alpha1.RemotePhaseReference,
-	ref corev1alpha1.RemotePhaseReference,
-) []corev1alpha1.RemotePhaseReference {
-	for i := range refs {
-		if refs[i].Name == ref.Name {
-			refs[i] = ref
-			return refs
+type remotePhaseResult struct {
+	name         string
+	failedProbe  string
+	controllerOf []corev1alpha1.ControlledObjectReference
+}
+
+func (r remotePhaseResult) GetName() string {
+	return r.name
+}
+
+func (r remotePhaseResult) GetValidationError() *validation.PhaseValidationError {
+	if len(r.failedProbe) == 0 {
+		return nil
+	}
+	return &validation.PhaseValidationError{
+		PhaseName:  r.name,
+		PhaseError: errors.New(r.failedProbe),
+	}
+}
+
+func (r remotePhaseResult) GetObjects() []machinery.ObjectResult {
+	// TODO?
+	return nil
+}
+
+func (r remotePhaseResult) GetControllerOf() []corev1alpha1.ControlledObjectReference {
+	return r.controllerOf
+}
+
+func (r remotePhaseResult) InTransition() bool {
+	return len(r.failedProbe) > 0
+}
+
+func (r remotePhaseResult) IsComplete() bool {
+	return len(r.failedProbe) == 0
+}
+
+func (r remotePhaseResult) HasProgressed() bool {
+	// TODO: add "no status" probe fail?
+	return len(r.failedProbe) == 0
+}
+
+func (r remotePhaseResult) String() string {
+	var out strings.Builder
+	fmt.Fprintf(&out,
+		"Phase %q\nComplete: %t\nIn Transition: %t\n",
+		r.name, r.IsComplete(), r.InTransition(),
+	)
+
+	if err := r.GetValidationError(); err != nil {
+		fmt.Fprintln(&out, "Validation Errors:")
+
+		for _, err := range err.Unwrap() {
+			fmt.Fprintf(&out, "- %s\n", err.Error())
 		}
 	}
-	refs = append(refs, ref)
-	return refs
+
+	fmt.Fprintln(&out, "ControllerOf:")
+
+	for _, ref := range r.controllerOf {
+		fmt.Fprintf(&out, "- %#v\n", ref)
+	}
+
+	return out.String()
+}
+
+type remotePhaseTeardownResult struct {
+	name        string
+	cleanupDone bool
+}
+
+func (r *remotePhaseTeardownResult) String() string {
+	var out strings.Builder
+	fmt.Fprintf(&out, "Phase %q\n", r.name)
+	return out.String()
+}
+
+func (r *remotePhaseTeardownResult) GetName() string {
+	return r.name
+}
+
+func (r *remotePhaseTeardownResult) IsComplete() bool {
+	return r.cleanupDone
+}
+
+func (r *remotePhaseTeardownResult) Gone() []boxcuttertypes.ObjectRef {
+	// TODO
+	return nil
+}
+
+func (r *remotePhaseTeardownResult) Waiting() []boxcuttertypes.ObjectRef {
+	// TODO
+	return nil
 }
