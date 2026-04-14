@@ -73,7 +73,8 @@ func (r *remoteEnabledPhaseEngine) Teardown(
 ) (machinery.PhaseTeardownResult, error) {
 	owner := getTeardownOwner(phase, opts...)
 	if hasClass(owner, phase) {
-		return r.teardownRemotePhase(ctx, owner, phase)
+		pa := phase.(*adapters.PhaseAdapter)
+		return r.teardownRemotePhase(ctx, pa.GetObjectSet(), phase)
 	}
 	return r.pe.Teardown(ctx, revision, phase, opts...)
 }
