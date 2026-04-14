@@ -2,7 +2,6 @@ package objectsets
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -10,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
 	"pkg.package-operator.run/boxcutter"
@@ -136,6 +134,46 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		return res, err
 	}
 
+	return res, r.updateStatus(objectSet, reconcileResult)
+}
+
+func (r *objectSetPhasesReconciler) reconcile(
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+) (machinery.RevisionResult, error) {
+	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
+
+	log.Info("getting cache accessor")
+	cache, err := r.accessManager.GetWithUser(
+		ctx,
+		constants.StaticCacheOwner(),
+		objectSet.ClientObject(),
+		aggregateLocalObjects(objectSet),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting cache: %w", err)
+	}
+
+	revisionEngine, err := r.revisionEngineFactory.New(cache)
+	if err != nil {
+		return nil, fmt.Errorf("constructing revision engine: %w", err)
+	}
+
+	revision, err := r.buildRevision(ctx, objectSet)
+	if err != nil {
+		return nil, fmt.Errorf("building revision: %w", err)
+	}
+
+	reconcileResult, err := revisionEngine.Reconcile(ctx, revision)
+	if err != nil {
+		return nil, err
+	}
+	return reconcileResult, nil
+}
+
+func (r *objectSetPhasesReconciler) updateStatus(
+	objectSet adapters.ObjectSetAccessor,
+	reconcileResult machinery.RevisionResult,
+) error {
 	var actualObjects []machinery.Object
 	var controllerOf []corev1alpha1.ControlledObjectReference
 	for _, phaseRes := range reconcileResult.GetPhases() {
@@ -150,8 +188,9 @@ func (r *objectSetPhasesReconciler) Reconcile(
 				boxcutterutil.GetControllerOf(r.ownerStrategy, objectSet.ClientObject(), phaseRes)...)
 		}
 	}
-	if err = mapConditions(actualObjects, objectSet); err != nil {
-		return res, err
+
+	if err := mapConditions(actualObjects, objectSet); err != nil {
+		return err
 	}
 	objectSet.SetStatusControllerOf(controllerOf)
 
@@ -177,7 +216,7 @@ func (r *objectSetPhasesReconciler) Reconcile(
 			ObservedGeneration: objectSet.ClientObject().GetGeneration(),
 		})
 
-		return res, nil
+		return nil
 	}
 
 	meta.SetStatusCondition(objectSet.GetStatusConditions(), metav1.Condition{
@@ -204,38 +243,21 @@ func (r *objectSetPhasesReconciler) Reconcile(
 		})
 	}
 
-	return
+	return nil
 }
 
-func (r *objectSetPhasesReconciler) reconcile(
+func (r *objectSetPhasesReconciler) buildRevision(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
-) (machinery.RevisionResult, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("objectSetPhasesReconciler")
-
+) (boxcutter.Revision, error) {
 	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
 	if err != nil {
 		return nil, fmt.Errorf("lookup previous revisions: %w", err)
 	}
+	previousObjects := previousToObjects(previous)
 
 	probe, err := internalprobing.Parse(ctx, objectSet.GetAvailabilityProbes())
 	if err != nil {
 		return nil, fmt.Errorf("parsing probes: %w", err)
-	}
-
-	log.Info("getting cache accessor")
-	cache, err := r.accessManager.GetWithUser(
-		ctx,
-		constants.StaticCacheOwner(),
-		objectSet.ClientObject(),
-		aggregateLocalObjects(objectSet),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("getting cache: %w", err)
-	}
-
-	revisionEngine, err := r.revisionEngineFactory.New(cache)
-	if err != nil {
-		return nil, fmt.Errorf("constructing revision engine: %w", err)
 	}
 
 	revision := &adapters.RevisionAdapter{ObjectSet: objectSet}
@@ -264,6 +286,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 
 			collisionProtection := boxcutterutil.TranslateCollisionProtection(phaseObj.CollisionProtection)
 
+			// Take over existing PKO objects when bootstrapping (e.g., CRDs)
 			// TODO: refactor the hardcoded PKO package name (there's another hardcoded reference in the bootstrap/init job)
 			if len(os.Getenv(constants.ForceAdoptionEnvironmentVariable)) > 0 ||
 				labels[manifestsv1alpha1.PackageLabel] == "package-operator" {
@@ -274,7 +297,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 				&phaseObj.Object,
 				collisionProtection,
 				types.WithProbe(types.ProgressProbeType, probe),
-				boxcutter.WithPreviousOwners(previousToObjects(previous)),
+				boxcutter.WithPreviousOwners(previousObjects),
 			))
 		}
 
@@ -284,11 +307,7 @@ func (r *objectSetPhasesReconciler) reconcile(
 		revision.WithReconcileOptions(types.WithPaused{})
 	}
 
-	reconcileResult, err := revisionEngine.Reconcile(ctx, revision)
-	if err != nil {
-		return nil, err
-	}
-	return reconcileResult, nil
+	return revision, nil
 }
 
 func previousToObjects(prev []controllers.PreviousObjectSet) []client.Object {
@@ -482,63 +501,10 @@ func addRemoteObjectSetPhase(
 }
 
 func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetAccessor) error {
-	for _, obj := range actualObjects {
-		unstructuredObj := obj.(*unstructured.Unstructured)
-
-		rawConditions, exist, err := unstructured.NestedFieldNoCopy(
-			unstructuredObj.Object, "status", "conditions")
-		if err != nil {
-			return err
-		}
-		if !exist {
-			continue
-		}
-
-		j, err := json.Marshal(rawConditions)
-		if err != nil {
-			return err
-		}
-		var objectConditions []metav1.Condition
-		if err := json.Unmarshal(j, &objectConditions); err != nil {
-			return err
-		}
-
-		var conditionMappings []corev1alpha1.ConditionMapping
-		for _, phase := range owner.GetSpecPhases() {
-			for _, objectsetobject := range phase.Objects {
-				if objectsetobject.Object.GetName() == obj.GetName() {
-					conditionMappings = objectsetobject.ConditionMappings
-				}
-			}
-		}
-
-		// Maps from object condition type to PKO condition type.
-		conditionTypeMap := map[string]string{}
-		for _, m := range conditionMappings {
-			conditionTypeMap[m.SourceType] = m.DestinationType
-		}
-		for _, condition := range objectConditions {
-			if condition.ObservedGeneration != 0 &&
-				condition.ObservedGeneration != obj.GetGeneration() {
-				// condition outdated
-				continue
-			}
-
-			destType, ok := conditionTypeMap[condition.Type]
-			if !ok {
-				// condition not mapped
-				continue
-			}
-
-			meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
-				Type:               destType,
-				Status:             condition.Status,
-				Reason:             condition.Reason,
-				Message:            condition.Message,
-				ObservedGeneration: owner.ClientObject().GetGeneration(),
-			})
-		}
+	var ownerObjects []corev1alpha1.ObjectSetObject
+	for _, phase := range owner.GetSpecPhases() {
+		ownerObjects = append(ownerObjects, phase.Objects...)
 	}
 
-	return nil
+	return controllers.MapConditionsToOwner(actualObjects, ownerObjects, owner)
 }
