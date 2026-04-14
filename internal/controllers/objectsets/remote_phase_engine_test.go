@@ -8,16 +8,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"pkg.package-operator.run/boxcutter/machinery/types"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"package-operator.run/internal/testutil/discoveryclientmock"
+	"package-operator.run/internal/testutil/restmappermock"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
-	"package-operator.run/internal/controllers/boxcutterutil"
 	"package-operator.run/internal/testutil/boxcuttermocks"
 )
 
@@ -180,8 +181,8 @@ func TestNewRemoteEnabledPhaseEngineFactory(t *testing.T) {
 	t.Parallel()
 
 	scheme := runtime.NewScheme()
-	discoveryClient := &mockDiscoveryClient{}
-	restMapper := &mockRESTMapper{}
+	discoveryClient := &discoveryclientmock.DiscoveryClientMock{}
+	restMapper := &restmappermock.RestMapperMock{}
 	remotePhaseReconciler := &remotePhaseReconcilerMock{}
 
 	factory := newRemoteEnabledPhaseEngineFactory(
@@ -661,14 +662,6 @@ func (m *mockPhase) GetReconcileOptions() []types.PhaseReconcileOption {
 
 func (m *mockPhase) GetTeardownOptions() []types.PhaseTeardownOption {
 	return nil
-}
-
-type mockDiscoveryClient struct {
-	boxcutterutil.DiscoveryClient
-}
-
-type mockRESTMapper struct {
-	meta.RESTMapper
 }
 
 // Test helper functions to create options with owner

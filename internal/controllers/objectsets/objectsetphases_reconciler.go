@@ -506,5 +506,5 @@ func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetAcc
 		ownerObjects = append(ownerObjects, phase.Objects...)
 	}
 
-	return controllers.MapConditionsToOwner(actualObjects, ownerObjects, owner)
+	return controllers.MapConditionsToObjectSetOrPhase(actualObjects, ownerObjects, owner)
 }

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,9 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"pkg.package-operator.run/boxcutter/machinery"
+	"pkg.package-operator.run/boxcutter/validation"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"package-operator.run/internal/preflight"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/constants"
@@ -194,15 +199,65 @@ func RemoveDynamicCacheLabel(
 	return updated, nil
 }
 
-type MappedOwner interface {
-	GetStatusConditions() *[]metav1.Condition
+type ObjectSetOrPhase interface {
 	ClientObject() client.Object
+	GetStatusConditions() *[]metav1.Condition
 }
 
-func MapConditionsToOwner(
+func UpdateObjectSetOrPhaseStatusFromError(
+	ctx context.Context, objectSetOrPhase ObjectSetOrPhase,
+	reconcileErr error, updateStatus func(ctx context.Context) error,
+) (res ctrl.Result, err error) {
+	var preflightError *preflight.Error
+	if errors.As(reconcileErr, &preflightError) {
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            preflightError.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
+	var phaseValidationError *validation.PhaseValidationError
+	if errors.As(reconcileErr, &phaseValidationError) {
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "PreflightError",
+			Message:            phaseValidationError.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
+	if IsAdoptionRefusedError(reconcileErr) {
+		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
+			Type:               corev1alpha1.ObjectSetAvailable,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+			Reason:             "CollisionDetected",
+			Message:            reconcileErr.Error(),
+		})
+		// Retry every once and a while to automatically unblock, if the conflicting resource has been deleted.
+		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
+		return res, updateStatus(ctx)
+	}
+
+	// if we don't handle the error in any special way above,
+	// just return it unchanged.
+	return res, reconcileErr
+}
+
+func MapConditionsToObjectSetOrPhase(
 	actualObjects []machinery.Object,
 	ownerObjects []corev1alpha1.ObjectSetObject,
-	owner MappedOwner,
+	objectSetOrPhase ObjectSetOrPhase,
 ) error {
 	for _, obj := range actualObjects {
 		unstructuredObj := obj.(*unstructured.Unstructured)
@@ -250,12 +305,12 @@ func MapConditionsToOwner(
 				continue
 			}
 
-			meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
+			meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
 				Type:               destType,
 				Status:             condition.Status,
 				Reason:             condition.Reason,
 				Message:            condition.Message,
-				ObservedGeneration: owner.ClientObject().GetGeneration(),
+				ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
 			})
 		}
 	}

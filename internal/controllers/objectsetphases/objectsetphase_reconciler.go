@@ -283,5 +283,5 @@ func convertToUnstructured(obj machinery.Object) *unstructured.Unstructured {
 }
 
 func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetPhaseAccessor) error {
-	return controllers.MapConditionsToOwner(actualObjects, owner.GetPhase().Objects, owner)
+	return controllers.MapConditionsToObjectSetOrPhase(actualObjects, owner.GetPhase().Objects, owner)
 }

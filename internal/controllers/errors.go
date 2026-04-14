@@ -60,19 +60,16 @@ func (e *PhaseReconcilerError) CausedBy(reason ErrorReason) bool {
 func IsAdoptionRefusedError(err error) bool {
 	target := &machinery.CreateCollisionError{}
 	if errors.As(err, &target) {
-		// TODO: wait for PKO-384
-		// _, err := controllers.AddDynamicCacheLabel(ctx, cache, convertToUnstructured(target.Object()))
-		// if err != nil {
-		//	return res, err
-		//}
 		return true
 	}
 
-	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
-	if errors.As(err, &prevRevisionError) {
-		return true
-	}
-
-	var revCollisionError *RevisionCollisionError
-	return errors.As(err, &revCollisionError)
+	// TODO
+	// var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
+	// if errors.As(err, &prevRevisionError) {
+	//	return true
+	//}
+	//
+	// var revCollisionError *RevisionCollisionError
+	//return errors.As(err, &revCollisionError)
+	return false
 }
