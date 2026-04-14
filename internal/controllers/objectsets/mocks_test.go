@@ -10,10 +10,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/internal/testutil/controllersmocks"
 )
-
-type phaseReconcilerMock = controllersmocks.PhaseReconcilerMock
 
 type remotePhaseReconcilerMock struct {
 	mock.Mock

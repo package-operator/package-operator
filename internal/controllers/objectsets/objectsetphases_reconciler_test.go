@@ -15,13 +15,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"pkg.package-operator.run/boxcutter/machinery"
+
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
 	"package-operator.run/internal/controllers"
 	"package-operator.run/internal/preflight"
-	"package-operator.run/internal/testutil/controllersmocks"
+	"package-operator.run/internal/testutil/boxcuttermocks"
 	"package-operator.run/internal/testutil/managedcachemocks"
 )
+
+const testUID = "test-UID"
 
 func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
@@ -29,9 +33,9 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	type prepared struct {
 		accessManager             *managedcachemocks.ObjectBoundAccessManagerMock[client.Object]
 		accessor                  *managedcachemocks.AccessorMock
-		factory                   *controllersmocks.PhaseReconcilerFactoryMock
+		factory                   *boxcuttermocks.RevisionEngineFactoryMock
 		checker                   *phasesCheckerMock
-		phaseReconciler           *phaseReconcilerMock
+		revisionEngine            *boxcuttermocks.RevisionEngineMock
 		remotePhaseReconciler     *remotePhaseReconcilerMock
 		objectSetPhasesReconciler *objectSetPhasesReconciler
 	}
@@ -39,24 +43,40 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 	prepare := func() *prepared {
 		accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 		accessor := &managedcachemocks.AccessorMock{}
-		factory := &controllersmocks.PhaseReconcilerFactoryMock{}
-		phaseReconciler := &phaseReconcilerMock{}
+		factory := &boxcuttermocks.RevisionEngineFactoryMock{}
+		revisionEngine := &boxcuttermocks.RevisionEngineMock{}
 		remotePhaseReconciler := &remotePhaseReconcilerMock{}
 
 		accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(accessor, nil)
-		factory.On("New", accessor).Return(phaseReconciler)
+		factory.On("New", accessor).Return(revisionEngine, nil)
 
 		checker := &phasesCheckerMock{}
 
+		lookup := func(_ context.Context, _ controllers.PreviousOwner) (
+			[]controllers.PreviousObjectSet,
+			error,
+		) {
+			return []controllers.PreviousObjectSet{}, nil
+		}
+
+		objectSetPhasesReconciler := newObjectSetPhasesReconciler(
+			testScheme,
+			accessManager,
+			factory,
+			remotePhaseReconciler,
+			lookup,
+			checker,
+		)
+
 		return &prepared{
-			accessManager:             accessManager,
-			accessor:                  accessor,
-			factory:                   factory,
-			phaseReconciler:           phaseReconciler,
-			remotePhaseReconciler:     remotePhaseReconciler,
-			checker:                   checker,
-			objectSetPhasesReconciler: nil,
+			accessManager,
+			accessor,
+			factory,
+			checker,
+			revisionEngine,
+			remotePhaseReconciler,
+			objectSetPhasesReconciler,
 		}
 	}
 
@@ -74,24 +94,28 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		}
 
 		os := &adapters.ObjectSetAdapter{}
+		os.UID = testUID
 		os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 			phase1,
 			phase2,
 		}
 
-		p.phaseReconciler.On("ReconcilePhase", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return([]client.Object{}, controllers.ProbingResult{}, nil)
-		p.remotePhaseReconciler.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
-			Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+		// Mock the revision result
+		revisionResult := &boxcuttermocks.RevisionResultMock{}
+		revisionResult.On("GetPhases").Return([]machinery.PhaseResult{})
+		revisionResult.On("IsComplete").Return(true)
+
+		p.revisionEngine.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+			Return(revisionResult, nil)
 		p.checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 		res, err := p.objectSetPhasesReconciler.Reconcile(context.Background(), os)
 		assert.Empty(t, res)
 		require.NoError(t, err)
 
-		p.phaseReconciler.AssertCalled(t, "ReconcilePhase", mock.Anything, os, phase1, mock.Anything, mock.Anything)
-		p.remotePhaseReconciler.AssertCalled(t, "Reconcile", mock.Anything, os, phase2)
-		p.checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
+		p.revisionEngine.AssertExpectations(t)
+		p.checker.AssertExpectations(t)
+		revisionResult.AssertExpectations(t)
 
 		conds := *os.GetStatusConditions()
 		require.Len(t, conds, 2)
@@ -114,14 +138,15 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		p := prepare()
 
 		os := &adapters.ObjectSetAdapter{}
+		os.UID = testUID
 		os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 			{
 				Name: "phase1",
 			},
 		}
 
-		p.phaseReconciler.On("ReconcilePhase", mock.Anything, os, os.Spec.Phases[0], mock.Anything, mock.Anything).
-			Return([]client.Object{}, controllers.ProbingResult{}, controllers.NewExternalResourceNotFoundError(nil))
+		p.revisionEngine.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+			Return((*boxcuttermocks.RevisionResultMock)(nil), controllers.NewExternalResourceNotFoundError(nil))
 		p.checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
 		res, err := p.objectSetPhasesReconciler.Reconcile(context.Background(), os)
@@ -163,23 +188,26 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 				}
 
 				os := &adapters.ObjectSetAdapter{}
+				os.UID = testUID // Required for WithOwner validation
 				os.Spec.Phases = []corev1alpha1.ObjectSetTemplatePhase{
 					phase1,
 					phase2,
 				}
 
-				p.remotePhaseReconciler.On("Teardown", mock.Anything, os, mock.Anything).
-					Return(test.firstTeardownFinish, nil).Once()
-				p.phaseReconciler.On("TeardownPhase", mock.Anything, os, mock.Anything).
-					Return(true, nil).Maybe()
+				// Mock the teardown result
+				teardownResult := &boxcuttermocks.RevisionTeardownResultMock{}
+				teardownResult.On("IsComplete").Return(test.firstTeardownFinish)
+
+				p.revisionEngine.On("Teardown", mock.Anything, mock.Anything, mock.Anything).
+					Return(teardownResult, nil)
 				p.accessManager.On("FreeWithUser", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 				done, err := p.objectSetPhasesReconciler.Teardown(context.Background(), os)
 				assert.Equal(t, test.firstTeardownFinish, done)
 				require.NoError(t, err)
-				p.remotePhaseReconciler.AssertCalled(t, "Teardown", mock.Anything, os, phase2)
+				p.revisionEngine.AssertExpectations(t)
+				teardownResult.AssertExpectations(t)
 				if test.firstTeardownFinish {
-					p.phaseReconciler.AssertCalled(t, "TeardownPhase", mock.Anything, os, phase1)
 					p.accessManager.AssertCalled(t, "FreeWithUser", mock.Anything, mock.Anything, mock.Anything)
 				} else {
 					p.accessManager.AssertNotCalled(t, "FreeWithUser", mock.Anything, mock.Anything, os)
@@ -265,44 +293,48 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
-			factory := &controllersmocks.PhaseReconcilerFactoryMock{}
-			phaseReconciler := &phaseReconcilerMock{}
+			factory := &boxcuttermocks.RevisionEngineFactoryMock{}
+			revisionEngine := &boxcuttermocks.RevisionEngineMock{}
 			remotePhaseReconciler := &remotePhaseReconcilerMock{}
 
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
-			factory.On("New", accessor).Return(phaseReconciler)
+			factory.On("New", accessor).Return(revisionEngine, nil)
 
-			// lookup := func(_ context.Context, _ controllers.PreviousOwner) (
-			//	[]controllers.PreviousObjectSet,
-			//	error,
-			// ) {
-			//	return []controllers.PreviousObjectSet{}, nil
-			//}
+			lookup := func(_ context.Context, _ controllers.PreviousOwner) (
+				[]controllers.PreviousObjectSet,
+				error,
+			) {
+				return []controllers.PreviousObjectSet{}, nil
+			}
 			checker := &phasesCheckerMock{}
 
 			clock := &clockMock{}
 
+			// Mock the revision result
+			revisionResult := &boxcuttermocks.RevisionResultMock{}
+			revisionResult.On("GetPhases").Return([]machinery.PhaseResult{})
+			revisionResult.On("IsComplete").Return(true)
+
 			clock.On("Now").Return(time.Now().Add(tc.TimeSinceAvailable))
-			phaseReconciler.On("ReconcilePhase", mock.Anything, tc.ObjectSet, mock.Anything, mock.Anything, mock.Anything).
-				Return([]client.Object{}, controllers.ProbingResult{}, nil)
-			remotePhaseReconciler.On("Reconcile", mock.Anything, tc.ObjectSet, mock.Anything, mock.Anything).
-				Return([]corev1alpha1.ControlledObjectReference{}, controllers.ProbingResult{}, nil)
+			revisionEngine.On("Reconcile", mock.Anything, mock.Anything, mock.Anything).
+				Return(revisionResult, nil)
 			checker.On("Check", mock.Anything, mock.Anything).Return([]preflight.Violation{}, nil)
 
-			// rec := newObjectSetPhasesReconciler(
-			//	testScheme,
-			//	accessManager,
-			//	factory,
-			//	remotePhaseReconciler,
-			//	lookup,
-			//	checker,
-			//	withClock{
-			//		Clock: clock,
-			//	},
-			//)
-			// _, err := rec.Reconcile(context.Background(), tc.ObjectSet)
-			// require.NoError(t, err)
+			rec := newObjectSetPhasesReconciler(
+				testScheme,
+				accessManager,
+				factory,
+				remotePhaseReconciler,
+				lookup,
+				checker,
+				withClock{
+					Clock: clock,
+				},
+			)
+			tc.ObjectSet.ClientObject().SetUID(testUID) // Required for WithOwner validation
+			_, err := rec.Reconcile(context.Background(), tc.ObjectSet)
+			require.NoError(t, err)
 
 			require.Len(t,
 				*tc.ObjectSet.GetStatusConditions(), len(tc.ExpectedConditionStatuses),
@@ -392,4 +424,14 @@ func Test_isObjectSetInTransition(t *testing.T) {
 			assert.Equal(t, test.expected, r)
 		})
 	}
+}
+
+// Mock types for testing
+
+type withClock struct {
+	Clock clock
+}
+
+func (w withClock) ConfigureObjectSetPhasesReconciler(cfg *objectSetPhasesReconcilerConfig) {
+	cfg.Clock = w.Clock
 }
