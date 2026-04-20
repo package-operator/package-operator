@@ -22,6 +22,11 @@ type AccessorMock struct {
 	mock.Mock
 }
 
+func (m *AccessorMock) UnfilteredReader() client.Reader {
+	args := m.Called()
+	return args.Get(0).(client.Reader)
+}
+
 func (m *AccessorMock) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 	args := m.Called(ctx, obj, opts)
 	return args.Error(0)
