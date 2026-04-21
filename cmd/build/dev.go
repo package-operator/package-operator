@@ -84,6 +84,20 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 	return test.Integration(ctx, false, filter)
 }
 
+// IntegrationDirect runs local integration tests in a KinD cluster without setting up the cluster first.
+func (dev *Dev) IntegrationDirect(ctx context.Context, args []string) error {
+	var filter string
+	switch len(args) {
+	case 0:
+		// nothing
+	case 1:
+		filter = args[0]
+	default:
+		return errors.New("only supports a single argument")
+	}
+	return test.IntegrationDirect(ctx, false, filter)
+}
+
 // Lint runs local linters to check the codebase.
 func (dev *Dev) Lint(ctx context.Context, _ []string) error {
 	return lint.glciCheck(ctx)

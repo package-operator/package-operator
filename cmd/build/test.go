@@ -19,11 +19,22 @@ type Test struct{}
 
 // Integration runs local integration tests in a KinD cluster.
 func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) error {
-	self := run.Meth2(t, t.Integration, jsonOutput, filter)
-	if err := mgr.ParallelDeps(ctx, self,
-		run.Fn1(bootstrap, ctx),
-	); err != nil {
-		return err
+	return t.integration(ctx, true, false, jsonOutput, filter)
+}
+
+// IntegrationDirect runs local integration tests in a KinD cluster without setting up the cluster first.
+func (t Test) IntegrationDirect(ctx context.Context, jsonOutput bool, filter string) error {
+	return t.integration(ctx, false, true, jsonOutput, filter)
+}
+
+func (t Test) integration(ctx context.Context, deps, short, jsonOutput bool, filter string) error {
+	self := run.Meth4(t, t.integration, deps, short, jsonOutput, filter)
+	if deps {
+		if err := mgr.ParallelDeps(ctx, self,
+			run.Fn1(bootstrap, ctx),
+		); err != nil {
+			return err
+		}
 	}
 
 	var f string
@@ -87,7 +98,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 
 	// standard integration tests
-	goTestCmd := t.makeGoIntTestCmd("integration", f, jsonOutput)
+	goTestCmd := t.makeGoIntTestCmd("integration", f, short, jsonOutput)
 
 	if err := os.MkdirAll(filepath.Join(cacheDir, "integration"), 0o755); err != nil {
 		return err
@@ -110,7 +121,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 		return err
 	}
 
-	goTestHypershiftCmd := t.makeGoIntTestCmd("integration_hypershift", f, jsonOutput)
+	goTestHypershiftCmd := t.makeGoIntTestCmd("integration_hypershift", f, short, jsonOutput)
 
 	if err := os.MkdirAll(filepath.Join(cacheDir, "integration"), 0o755); err != nil {
 		return err
@@ -132,7 +143,7 @@ func (t Test) Integration(ctx context.Context, jsonOutput bool, filter string) e
 	}
 }
 
-func (Test) makeGoIntTestCmd(tags string, filter string, jsonOutput bool) string {
+func (Test) makeGoIntTestCmd(tags string, filter string, short, jsonOutput bool) string {
 	args := []string{
 		"go", "test",
 		"-tags=" + tags,
@@ -143,6 +154,10 @@ func (Test) makeGoIntTestCmd(tags string, filter string, jsonOutput bool) string
 		"-failfast",
 		"-timeout=20m",
 		"-count=1",
+	}
+
+	if short {
+		args = append(args, "-short")
 	}
 
 	if jsonOutput {
