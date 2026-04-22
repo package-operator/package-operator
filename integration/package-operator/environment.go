@@ -180,7 +180,7 @@ func findPackageOperatorNamespace(ctx context.Context) string {
 	switch {
 	case meta.IsNoMatchError(err) ||
 		apimachineryerrors.IsNotFound(err) ||
-		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		errors.Is(err, &discovery.ErrGroupDiscoveryFailed{}):
 		// API not registered in cluster - must be Kubernetes cluster.
 		return "package-operator-system"
 	case err != nil:
