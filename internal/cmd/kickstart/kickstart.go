@@ -136,7 +136,7 @@ func (k *Kickstarter) getInput(ctx context.Context, input string) (
 		if err != nil {
 			return nil, fmt.Errorf("building HTTP request: %w", err)
 		}
-		resp, err := k.client.Do(req) //nolint:gosec // G704: input validated as http(s) URL
+		resp, err := k.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("HTTP get: %w", err)
 		}
