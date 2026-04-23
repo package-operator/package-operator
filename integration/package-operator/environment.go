@@ -2,11 +2,14 @@ package packageoperator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -142,6 +145,7 @@ func initClients(_ context.Context) error {
 		scheme.AddToScheme,
 		apis.AddToScheme,
 		hypershiftv1beta1.AddToScheme,
+		configv1.AddToScheme,
 	}
 	if err := AddToSchemes.AddToScheme(Scheme); err != nil {
 		return fmt.Errorf("could not load schemes: %w", err)
@@ -168,24 +172,21 @@ func initClients(_ context.Context) error {
 }
 
 func findPackageOperatorNamespace(ctx context.Context) string {
-	// discover packageOperator Namespace
-	deploymentList := &appsv1.DeploymentList{}
-	// We can't use a label-selector, because OLM is overriding the deployment labels...
-	if err := Client.List(ctx, deploymentList); err != nil {
-		panic(fmt.Errorf("listing package-operator deployments on the cluster: %w", err))
-	}
-	var packageOperatorDeployments []appsv1.Deployment
-	for _, deployment := range deploymentList.Items {
-		if deployment.Name == "package-operator-manager" {
-			packageOperatorDeployments = append(packageOperatorDeployments, deployment)
-		}
-	}
-	switch len(packageOperatorDeployments) {
-	case 0:
-		panic("no packageOperator deployment found on the cluster")
-	case 1:
-		return packageOperatorDeployments[0].Namespace
+	clusterVersion := &configv1.ClusterVersion{}
+	err := Client.Get(ctx, client.ObjectKey{
+		Name: "version",
+	}, clusterVersion)
+
+	switch {
+	case meta.IsNoMatchError(err) ||
+		apimachineryerrors.IsNotFound(err) ||
+		errors.Is(err, &discovery.ErrGroupDiscoveryFailed{}):
+		// API not registered in cluster - must be Kubernetes cluster.
+		return "package-operator-system"
+	case err != nil:
+		panic(fmt.Errorf("detecting openshift or kubernetes cluster: %w", err))
 	default:
-		panic("multiple packageOperator deployments found on the cluster")
+		// API registered in cluster - must be OpenShift cluster.
+		return "openshift-package-operator"
 	}
 }
