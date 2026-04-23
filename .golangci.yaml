@@ -151,6 +151,8 @@ linters:
         text: ((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)
       - path: integration/
         text: ((comment on exported (method|function|type|const)|should have( a package)? comment|comment should be of the form)|exported (.+) should have comment( \(or a comment on this block\))? or be unexported|package comment should be of the form "(.+)...|comment on exported (.+) should be of the form "(.+)..."|should have a package comment)
+      - path: cmd/build/
+        text: Path traversal via taint analysis
     paths:
       - internal/packages/internal/packagekickstart/rukpak
       - third_party$
