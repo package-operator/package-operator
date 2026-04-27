@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,7 +136,7 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		ImagePrefixOverrides                        string              `json:"imagePrefixOverrides"`
 		ObjectTemplateOptionalResourceRetryInterval string              `json:"objectTemplateOptionalResourceRetryInterval"`
 		ObjectTemplateResourceRetryInterval         string              `json:"objectTemplateResourceRetryInterval"`
-		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity,omitempty"`
+		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity"`
 		SubcomponentTolerations                     []corev1.Toleration `json:"subcomponentTolerations,omitempty"`
 	}
 
@@ -447,9 +448,7 @@ func (g Generate) includeInPackage(path string, outFilePath string, transform in
 			continue
 		}
 
-		for k, v := range ann {
-			annotations[k] = v
-		}
+		maps.Copy(annotations, ann)
 
 		obj.SetAnnotations(annotations)
 
@@ -541,10 +540,7 @@ func (g Generate) templateManifestFiles(ctx context.Context, templatedPackage st
 }
 
 func applyImageOverrides(images, imageOverrides map[string]string) map[string]string {
-	output := map[string]string{}
-	for k, v := range images {
-		output[k] = v
-	}
+	output := maps.Clone(images)
 
 	if imageOverrides != nil {
 		for k := range output {

@@ -1029,7 +1029,7 @@ func clusterPackageTemplate(name string) client.Object {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 

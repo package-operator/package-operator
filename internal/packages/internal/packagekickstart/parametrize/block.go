@@ -91,7 +91,7 @@ func (b *block) Replace(in []byte) ([]byte, error) {
 	i := strings.Repeat(" ", il)
 	var replacement strings.Builder
 	fmt.Fprintf(&replacement, "%s{{- %s }}\n", i, b.pipeline)
-	for _, l := range bytes.Split(bytes.TrimSpace(origB), []byte("\n")) {
+	for l := range bytes.SplitSeq(bytes.TrimSpace(origB), []byte("\n")) {
 		fmt.Fprintf(&replacement, "%s%s\n", i, l)
 	}
 	replacement.WriteString(i + "{{- end }}\n")

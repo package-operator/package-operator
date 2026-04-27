@@ -25,7 +25,8 @@ type ClusterObjectSetPhase struct {
 type ClusterObjectSetPhaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterObjectSetPhase `json:"items"`
+
+	Items []ClusterObjectSetPhase `json:"items"`
 }
 
 // ClusterObjectSetPhaseSpec defines the desired state of a ClusterObjectSetPhase.

@@ -11,9 +11,9 @@ import (
 //
 // HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 type HostedClusterPackageStatusApplyConfiguration struct {
-	// Conditions is a list of status conditions this object is in.
-	Conditions                                         []v1.ConditionApplyConfiguration `json:"conditions,omitempty"`
 	HostedClusterPackageCountsStatusApplyConfiguration `json:",inline"`
+	// Conditions is a list of status conditions this object is in.
+	Conditions []v1.ConditionApplyConfiguration `json:"conditions,omitempty"`
 	// Count of packages found by partition.
 	Partitions []HostedClusterPackagePartitionStatusApplyConfiguration `json:"partitions,omitempty"`
 	// Processing set of packages during upgrade.
@@ -24,19 +24,6 @@ type HostedClusterPackageStatusApplyConfiguration struct {
 // apply.
 func HostedClusterPackageStatus() *HostedClusterPackageStatusApplyConfiguration {
 	return &HostedClusterPackageStatusApplyConfiguration{}
-}
-
-// WithConditions adds the given value to the Conditions field in the declarative configuration
-// and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the Conditions field.
-func (b *HostedClusterPackageStatusApplyConfiguration) WithConditions(values ...*v1.ConditionApplyConfiguration) *HostedClusterPackageStatusApplyConfiguration {
-	for i := range values {
-		if values[i] == nil {
-			panic("nil value passed to WithConditions")
-		}
-		b.Conditions = append(b.Conditions, *values[i])
-	}
-	return b
 }
 
 // WithObservedGeneration sets the ObservedGeneration field in the declarative configuration to the given value
@@ -76,6 +63,19 @@ func (b *HostedClusterPackageStatusApplyConfiguration) WithUpdatedPackages(value
 // If called multiple times, the TotalPackages field is set to the value of the last call.
 func (b *HostedClusterPackageStatusApplyConfiguration) WithTotalPackages(value int32) *HostedClusterPackageStatusApplyConfiguration {
 	b.HostedClusterPackageCountsStatusApplyConfiguration.TotalPackages = &value
+	return b
+}
+
+// WithConditions adds the given value to the Conditions field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the Conditions field.
+func (b *HostedClusterPackageStatusApplyConfiguration) WithConditions(values ...*v1.ConditionApplyConfiguration) *HostedClusterPackageStatusApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithConditions")
+		}
+		b.Conditions = append(b.Conditions, *values[i])
+	}
 	return b
 }
 

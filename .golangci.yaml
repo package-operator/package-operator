@@ -7,6 +7,7 @@ linters:
   # One can't use disable and disable-all. disable-all is preferred to avoid lint failing when golangci gets updated and linters are added.
   # at the same time but it is nice to explicitly state which linters we do not want.
   #disable:
+  #  - arangolint       # Not relevant
   #  - containedctx     # Context.Context within a struct (as opposed to a func parameter) is nasty for many reasons, but actually sometimes useful.
   #  - contextcheck     # Not that useful/false positives.
   #  - cyclop           # Cyclo complexity already calculated by other linters.
@@ -21,6 +22,7 @@ linters:
   #  - gochecknoglobals # We need globals.
   #  - gochecknoinits   # We have a lot of those.
   #  - gocognit         # Not that useful/false positives.
+  #  - godoclint        # Not useful.
   #  - godox            # Not that useful/false positives.
   #  - gomoddirectives  # Not that useful/false positives.
   #  - inamedparam      # Not that useful.
@@ -29,14 +31,16 @@ linters:
   #  - mnd              # The annoy is strong.
   #  - nakedret         # Naked return good return.
   #  - nlreturn         # Could be nice in the future.
+  #  - noinlineerr      # Not useful.
   #  - nonamedreturns   # Named return good return.
   #  - recvcheck        # Could be nice in the future.
   #  - tagliatelle      # Reports issues that are not right for us.
   #  - testpackage      # Whitebox testing is fine too.
+  #  - unqueryvet       # No relevant.
   #  - usetesting       # Would be nice to have.
   #  - varnamelen       # Not that useful/false positives.
   #  - wrapcheck        # Not that useful/false positives.
-  #  - wsl              # Not that useful/false positives.
+  #  - wsl_v5           # Not that useful/false positives.
   enable:
     - asasalint
     - asciicheck
@@ -48,6 +52,7 @@ linters:
     - depguard
     - dupword
     - durationcheck
+    - embeddedstructfieldcheck
     - errcheck
     - errchkjson
     - errname
@@ -73,12 +78,14 @@ linters:
     - importas
     - ineffassign
     - intrange
+    - iotamixing
     - lll
     - loggercheck
     - maintidx
     - makezero
     - mirror
     - misspell
+    - modernize
     - musttag
     - nestif
     - nilerr

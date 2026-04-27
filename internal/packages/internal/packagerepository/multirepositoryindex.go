@@ -24,6 +24,7 @@ func NewMultiRepositoryIndex() *MultiRepositoryIndex {
 
 type Entry struct {
 	*manifests.RepositoryEntry
+
 	RepositoryName string
 }
 

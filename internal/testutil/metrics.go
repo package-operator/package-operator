@@ -25,8 +25,8 @@ func parseMetrics(metricBytes []byte) (map[string][]*io_prometheus_client.Metric
 	pfx := "package_operator_"
 
 	for name, mf := range mfs {
-		if strings.HasPrefix(name, pfx) {
-			metrics[strings.TrimPrefix(name, pfx)] = mf.GetMetric()
+		if after, ok := strings.CutPrefix(name, pfx); ok {
+			metrics[after] = mf.GetMetric()
 		}
 	}
 	return metrics, nil

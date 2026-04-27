@@ -79,8 +79,9 @@ func (os *defaultObjectSetGetter) getObjects() ([]objectIdentifier, error) {
 }
 
 type objectSetGetterMock struct {
-	objectSet *adaptermocks.ObjectSetMock
 	mock.Mock
+
+	objectSet *adaptermocks.ObjectSetMock
 }
 
 func (os *objectSetGetterMock) getActivelyReconciledObjects() []objectIdentifier {

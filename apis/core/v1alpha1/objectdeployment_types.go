@@ -71,7 +71,8 @@ type ObjectDeployment struct {
 type ObjectDeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ObjectDeployment `json:"items"`
+
+	Items []ObjectDeployment `json:"items"`
 }
 
 func init() { register(&ObjectDeployment{}, &ObjectDeploymentList{}) }

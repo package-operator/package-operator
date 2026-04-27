@@ -48,7 +48,7 @@ func (b *mergeBlock) Replace(in []byte) ([]byte, error) {
 	if _, err = fmt.Fprintf(&replacement, "%s{{- define %q }}\n", i, b.marker); err != nil {
 		return nil, err
 	}
-	for _, l := range bytes.Split(bytes.TrimSpace(origB), []byte("\n")) {
+	for l := range bytes.SplitSeq(bytes.TrimSpace(origB), []byte("\n")) {
 		if _, err = fmt.Fprintf(&replacement, "%s%s\n", i, l); err != nil {
 			return nil, err
 		}
