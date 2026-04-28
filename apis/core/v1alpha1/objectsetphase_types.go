@@ -24,7 +24,8 @@ type ObjectSetPhase struct {
 type ObjectSetPhaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ObjectSetPhase `json:"items"`
+
+	Items []ObjectSetPhase `json:"items"`
 }
 
 // ObjectSetPhaseSpec defines the desired state of a ObjectSetPhase.

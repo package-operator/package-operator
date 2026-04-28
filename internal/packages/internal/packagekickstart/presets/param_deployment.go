@@ -14,13 +14,14 @@ import (
 )
 
 type DeploymentOptions struct {
+	GenericOptions
+
 	Replicas      bool
 	Tolerations   bool
 	NodeSelectors bool
 	Images        bool
 	Resources     bool
 	Env           bool
-	GenericOptions
 }
 
 func Deployment(

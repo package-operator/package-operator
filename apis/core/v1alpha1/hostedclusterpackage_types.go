@@ -100,10 +100,11 @@ type HostedClusterPackagePartitionOrderSpec struct {
 
 // HostedClusterPackageStatus describes the status of a HostedClusterPackage.
 type HostedClusterPackageStatus struct {
+	HostedClusterPackageCountsStatus `json:",inline"`
+
 	// Conditions is a list of status conditions this object is in.
 	// +example=[{type: "Available", status: "True", reason: "Available",  message: "Latest Revision is Available."}]
-	Conditions                       []metav1.Condition `json:"conditions,omitempty"`
-	HostedClusterPackageCountsStatus `json:",inline"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Count of packages found by partition.
 	Partitions []HostedClusterPackagePartitionStatus `json:"partitions,omitempty"`
 	// Processing set of packages during upgrade.
@@ -126,9 +127,10 @@ const (
 
 // HostedClusterPackagePartitionStatus describes the status of a partition.
 type HostedClusterPackagePartitionStatus struct {
-	// Name of the partition.
-	Name                             string `json:"name"`
 	HostedClusterPackageCountsStatus `json:",inline"`
+
+	// Name of the partition.
+	Name string `json:"name"`
 }
 
 // HostedClusterPackageCountsStatus counts the status of Packages.
@@ -162,7 +164,8 @@ type HostedClusterPackageRefStatus struct {
 type HostedClusterPackageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HostedClusterPackage `json:"items"`
+
+	Items []HostedClusterPackage `json:"items"`
 }
 
 func init() { register(&HostedClusterPackage{}, &HostedClusterPackageList{}) }

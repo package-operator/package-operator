@@ -80,7 +80,7 @@ func TestPackage_simple(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
@@ -119,7 +119,7 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -157,7 +157,7 @@ func TestPackage_simpleWithoutSlices(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -180,9 +180,9 @@ func TestPackage_multi(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestMultiPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestMultiPackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 
@@ -216,9 +216,9 @@ func TestPackage_cel(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestCelPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestCelPackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 
@@ -341,7 +341,7 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImageAuthenticated,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -378,9 +378,9 @@ func TestPackage_pause(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPausePackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestPausePackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 	ctx := logr.NewContext(context.Background(), testr.New(t))

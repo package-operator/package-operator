@@ -38,6 +38,7 @@ var defaultMissingResourceRetryInterval = 30 * time.Second
 
 type templateReconciler struct {
 	*environment.Sink
+
 	scheme                        *runtime.Scheme
 	client                        client.Writer
 	uncachedClient                client.Reader

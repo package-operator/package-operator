@@ -13,6 +13,7 @@ import (
 // added by mage.
 type Info struct {
 	*debug.BuildInfo
+
 	ApplicationVersion string `json:"version"`
 }
 

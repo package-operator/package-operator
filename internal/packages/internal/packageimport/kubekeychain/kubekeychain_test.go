@@ -226,12 +226,10 @@ func TestKubernetesAuth(t *testing.T) {
 					},
 					Type: corev1.SecretTypeDockerConfigJson,
 					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(
-							fmt.Sprintf(`{"auths":{%q:{"username":%q,"password":%q,"auth":%q}}}`,
-								s,
-								username, password,
-								base64.StdEncoding.EncodeToString([]byte(username+":"+password))),
-						),
+						corev1.DockerConfigJsonKey: fmt.Appendf(nil, `{"auths":{%q:{"username":%q,"password":%q,"auth":%q}}}`,
+							s,
+							username, password,
+							base64.StdEncoding.EncodeToString([]byte(username+":"+password))),
 					},
 				}})
 				if err != nil {

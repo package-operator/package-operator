@@ -3,6 +3,7 @@ package objectdeployments
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -221,16 +222,6 @@ func Test_ArchivalReconciler(t *testing.T) {
 	})
 }
 
-// t(-_-t).
-func contains(source []int, obj int) bool {
-	for _, item := range source {
-		if item == obj {
-			return true
-		}
-	}
-	return false
-}
-
 func assertShouldNotBeArchived(t *testing.T, obj *adaptermocks.ObjectSetMock) {
 	t.Helper()
 	obj.AssertNotCalled(t, "SetSpecArchived")
@@ -363,7 +354,7 @@ func testPauseAndArchivalIntermediateRevisions(t *testing.T, alreadyPaused bool)
 	}
 
 	for revNumber, rev := range prevs {
-		if contains(expectedRevisionsToBeArchivedOrPaused, revNumber) {
+		if slices.Contains(expectedRevisionsToBeArchivedOrPaused, revNumber) {
 			assertPausedOrArchived(alreadyPaused, rev)
 		} else {
 			assertNotPausedOrArchived(alreadyPaused, rev)

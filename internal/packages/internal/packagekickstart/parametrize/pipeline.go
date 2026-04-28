@@ -33,7 +33,7 @@ func (e *pipeline) Mark(obj map[string]any) error {
 
 func (e *pipeline) Replace(in []byte) ([]byte, error) {
 	return bytes.Replace(in, []byte(e.marker),
-		[]byte(fmt.Sprintf("{{ %s }}", e.exp)), 1), nil
+		fmt.Appendf(nil, "{{ %s }}", e.exp), 1), nil
 }
 
 func (e *pipeline) Priority() int {

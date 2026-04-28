@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"strconv"
 	"strings"
@@ -660,9 +661,7 @@ func mergeKeysFrom[K comparable, V any](base, additional map[K]V) map[K]V {
 	if base == nil {
 		base = map[K]V{}
 	}
-	for k, v := range additional {
-		base[k] = v
-	}
+	maps.Copy(base, additional)
 	if len(base) == 0 {
 		return nil
 	}

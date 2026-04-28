@@ -55,7 +55,8 @@ type ClusterObjectDeployment struct {
 type ClusterObjectDeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterObjectDeployment `json:"items"`
+
+	Items []ClusterObjectDeployment `json:"items"`
 }
 
 func init() { register(&ClusterObjectDeployment{}, &ClusterObjectDeploymentList{}) }
