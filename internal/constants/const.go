@@ -19,6 +19,10 @@ const (
 	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
 	// FieldOwner name of the PKO field manager for server-side apply.
 	FieldOwner = "package-operator"
+	// ObjectTemplateFieldOwner is the name of the field manager for server-side apply used in the ObjectTemplate controller.
+	// The field owner differs to avoid removing finalizers and extra information added to objects by other PKO controllers.
+	// An example is: An ObjectTemplate contains a Package. The Package controller adds a metrics finalizer which must not be removed.
+	ObjectTemplateFieldOwner = "package-operator-objecttemplates"
 	// OwnerStrategyAnnotationKey is the k8s annotation key that denotes the owner of a resource.
 	OwnerStrategyAnnotationKey = "package-operator.run/owners"
 	// Verbosity level for Info logs that are hidden by default.
