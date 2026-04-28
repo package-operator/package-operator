@@ -57,7 +57,7 @@ func (l *PreviousRevisionLookup) Lookup(
 				Name:      prev.Name,
 				Namespace: owner.ClientObject().GetNamespace(),
 			}, set.ClientObject())
-		// Previous revisions may be garbage collected so ingore not found errors
+		// Previous revisions may be garbage collected so ignore not found errors
 		if err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}

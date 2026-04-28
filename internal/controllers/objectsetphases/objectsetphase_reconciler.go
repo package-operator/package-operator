@@ -2,7 +2,6 @@ package objectsetphases
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -284,62 +283,5 @@ func convertToUnstructured(obj machinery.Object) *unstructured.Unstructured {
 }
 
 func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetPhaseAccessor) error {
-	for _, obj := range actualObjects {
-		unstructuredObj := convertToUnstructured(obj)
-
-		rawConditions, exist, err := unstructured.NestedFieldNoCopy(
-			unstructuredObj.Object, "status", "conditions")
-		if err != nil {
-			return err
-		}
-		if !exist {
-			continue
-		}
-
-		j, err := json.Marshal(rawConditions)
-		if err != nil {
-			return err
-		}
-		var objectConditions []metav1.Condition
-		if err := json.Unmarshal(j, &objectConditions); err != nil {
-			return err
-		}
-
-		var conditionMappings []corev1alpha1.ConditionMapping
-		objectsettemplatephase := owner.GetPhase()
-		for _, objectsetobject := range objectsettemplatephase.Objects {
-			if objectsetobject.Object.GetName() == obj.GetName() {
-				conditionMappings = objectsetobject.ConditionMappings
-			}
-		}
-
-		// Maps from object condition type to PKO condition type.
-		conditionTypeMap := map[string]string{}
-		for _, m := range conditionMappings {
-			conditionTypeMap[m.SourceType] = m.DestinationType
-		}
-		for _, condition := range objectConditions {
-			if condition.ObservedGeneration != 0 &&
-				condition.ObservedGeneration != obj.GetGeneration() {
-				// condition outdated
-				continue
-			}
-
-			destType, ok := conditionTypeMap[condition.Type]
-			if !ok {
-				// condition not mapped
-				continue
-			}
-
-			meta.SetStatusCondition(owner.GetStatusConditions(), metav1.Condition{
-				Type:               destType,
-				Status:             condition.Status,
-				Reason:             condition.Reason,
-				Message:            condition.Message,
-				ObservedGeneration: owner.ClientObject().GetGeneration(),
-			})
-		}
-	}
-
-	return nil
+	return controllers.MapConditionsToObjectSetOrPhase(actualObjects, owner.GetPhase().Objects, owner)
 }

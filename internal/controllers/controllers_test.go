@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -17,6 +18,17 @@ import (
 	"package-operator.run/internal/testutil"
 	"package-operator.run/internal/testutil/ownerhandlingmocks"
 )
+
+var testScheme = runtime.NewScheme()
+
+func init() {
+	if err := corev1alpha1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+	if err := corev1.AddToScheme(testScheme); err != nil {
+		panic(err)
+	}
+}
 
 func TestEnsureFinalizer(t *testing.T) {
 	t.Parallel()
