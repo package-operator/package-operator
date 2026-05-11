@@ -36,7 +36,8 @@ type ObjectSet struct {
 type ObjectSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ObjectSet `json:"items"`
+
+	Items []ObjectSet `json:"items"`
 }
 
 // ObjectSetSpec defines the desired state of a ObjectSet.
@@ -46,17 +47,15 @@ type ObjectSetList struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.successDelaySeconds) == has(oldSelf.successDelaySeconds)) && (!has(self.successDelaySeconds) || (self.successDelaySeconds == oldSelf.successDelaySeconds))", message="successDelaySeconds is immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.revision) || (self.revision == oldSelf.revision)", message="revision is immutable"
 type ObjectSetSpec struct {
+	ObjectSetTemplateSpec `json:",inline"`
+
 	// Specifies the lifecycle state of the ObjectSet.
 	// +kubebuilder:default="Active"
 	// +kubebuilder:validation:Enum=Active;Paused;Archived
 	LifecycleState ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
 
-	// Immutable fields below
-
 	// Previous revisions of the ObjectSet to adopt objects from.
 	Previous []PreviousRevisionReference `json:"previous,omitempty"`
-
-	ObjectSetTemplateSpec `json:",inline"`
 
 	// Computed revision number, monotonically increasing.
 	Revision int64 `json:"revision,omitempty"`

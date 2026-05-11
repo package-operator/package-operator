@@ -43,9 +43,7 @@ func TestRequestManager_DelayedPull(t *testing.T) {
 	ctx := context.Background()
 	var wg sync.WaitGroup
 	for range 5 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			ff, err := r.Pull(ctx, "quay.io/test123")
 			if err != nil {
 				panic(err)
@@ -53,7 +51,7 @@ func TestRequestManager_DelayedPull(t *testing.T) {
 			if !reflect.DeepEqual(pkg, ff) {
 				panic("not equal")
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -95,9 +93,7 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 		pkgLock sync.Mutex
 	)
 	for range numRequests {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			f, err := r.Pull(ctx, "quay.io/test123")
 			if err != nil {
 				panic(err)
@@ -106,7 +102,7 @@ func TestRequestManager_DelayedRequests(t *testing.T) {
 			pkgLock.Lock()
 			defer pkgLock.Unlock()
 			pkg = append(pkg, f)
-		}()
+		})
 	}
 	wg.Wait()
 

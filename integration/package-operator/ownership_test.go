@@ -25,7 +25,7 @@ import (
 	"package-operator.run/internal/autoimpersonation/ownership"
 )
 
-var typeMetaType = reflect.TypeOf(metav1.TypeMeta{})
+var typeMetaType = reflect.TypeFor[metav1.TypeMeta]()
 
 // Test helper that uses reflection to get to the underlying struct value of a `runtime.Object`
 // and set its TypeMeta field with data acquired from the passed scheme.
@@ -74,7 +74,7 @@ func TestVerifyOwnership(t *testing.T) {
 		Spec: corev1alpha1.PackageSpec{
 			Image: SuccessTestPackageImage,
 			Config: &runtime.RawExtension{
-				Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+				Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 			},
 		},
 	}

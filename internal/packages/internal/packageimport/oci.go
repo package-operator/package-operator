@@ -84,7 +84,7 @@ func stripOCIPathPrefix(path string) (string, error) {
 }
 
 func isFilePathToBeExcluded(path string) bool {
-	for _, pathSegment := range strings.Split(
+	for pathSegment := range strings.SplitSeq(
 		path, string(filepath.Separator)) {
 		if strings.HasPrefix(pathSegment, ".") {
 			return true

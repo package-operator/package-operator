@@ -23,7 +23,8 @@ type ClusterObjectSlice struct {
 type ClusterObjectSliceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterObjectSlice `json:"items"`
+
+	Items []ClusterObjectSlice `json:"items"`
 }
 
 func init() { register(&ClusterObjectSlice{}, &ClusterObjectSliceList{}) }

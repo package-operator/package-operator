@@ -74,6 +74,7 @@ type PackageTemplateSpec struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Specification of the desired behavior of the package.
 	Spec PackageSpec `json:"spec"`
 }

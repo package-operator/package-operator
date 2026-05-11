@@ -262,6 +262,7 @@ func TestGetControllerOf(t *testing.T) {
 
 type phaseResultMock struct {
 	mock.Mock
+
 	objects []machinery.ObjectResult
 }
 
@@ -304,6 +305,7 @@ func (m *phaseResultMock) InTransition() bool {
 
 type objectResultMock struct {
 	mock.Mock
+
 	obj machinery.Object
 }
 
@@ -341,6 +343,7 @@ func (m *objectResultMock) IsPaused() bool {
 
 type objectMock struct {
 	mock.Mock
+
 	name         string
 	namespace    string
 	generateName string

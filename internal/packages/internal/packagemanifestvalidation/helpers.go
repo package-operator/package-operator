@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
@@ -142,10 +143,5 @@ func validateMapListKeysMapSet(schema *apiextensions.JSONSchemaProps, fldPath *f
 }
 
 func allowedAtRootSchema(field string) bool {
-	for _, v := range allowedFieldsAtRootSchema {
-		if field == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowedFieldsAtRootSchema, field)
 }

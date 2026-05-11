@@ -64,8 +64,8 @@ func substitutePlaceholders(args ...string) []string {
 			sfx := strings.TrimPrefix(arg, registryPlaceholder)
 
 			arg = _registryDomain + sfx
-		} else if strings.HasPrefix(arg, TempDirPlaceholder) {
-			sfx := strings.TrimPrefix(arg, TempDirPlaceholder)
+		} else if after, ok := strings.CutPrefix(arg, TempDirPlaceholder); ok {
+			sfx := after
 
 			arg = _tempDir + sfx
 		}

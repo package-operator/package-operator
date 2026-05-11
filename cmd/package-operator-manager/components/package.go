@@ -43,8 +43,8 @@ func prepareRegistryHostOverrides(log logr.Logger, flag string) map[string]strin
 
 	log.WithName("Registry").Info("registry host overrides active", "overrides", flag)
 	out := map[string]string{}
-	overrides := strings.Split(flag, ",")
-	for _, or := range overrides {
+	overrides := strings.SplitSeq(flag, ",")
+	for or := range overrides {
 		parts := strings.SplitN(or, "=", 2)
 		if len(parts) != 2 {
 			continue
@@ -61,8 +61,8 @@ func prepareImagePrefixOverrides(log logr.Logger, flag string) []imageprefix.Ove
 
 	log.WithName("ImagePrefix").Info("image prefix overrides active", "overrides", flag)
 	out := []imageprefix.Override{}
-	overrides := strings.Split(flag, ",")
-	for _, or := range overrides {
+	overrides := strings.SplitSeq(flag, ",")
+	for or := range overrides {
 		parts := strings.SplitN(or, "=", 2)
 		if len(parts) != 2 {
 			continue
