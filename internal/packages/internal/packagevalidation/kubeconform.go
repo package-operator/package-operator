@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/yannh/kubeconform/pkg/validator"
-	"k8s.io/utils/ptr"
 
 	"package-operator.run/internal/apis/manifests"
 	"package-operator.run/internal/packages/internal/packagetypes"
@@ -79,7 +78,7 @@ func runKubeconformForFile(
 			validationErrors = append(validationErrors, packagetypes.ViolationError{
 				Reason:  packagetypes.ViolationReasonKubeconform,
 				Path:    path,
-				Index:   ptr.To(i),
+				Index:   new(i),
 				Details: res.Err.Error(),
 			})
 		}

@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -847,7 +846,7 @@ func Test_defaultAdoptionChecker(t *testing.T) {
 								APIVersion: corev1alpha1.GroupVersion.String(),
 								Kind:       "ObjectSetPhase",
 								Name:       "phase-1",
-								Controller: ptr.To(true),
+								Controller: new(true),
 							},
 						},
 					},

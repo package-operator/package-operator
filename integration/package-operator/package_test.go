@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -331,7 +330,7 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 
 	require.NoError(t, Client.Apply(ctx, corev1ac.
 		ServiceAccount("package-operator", "package-operator-system").WithImagePullSecrets(
-		&corev1ac.LocalObjectReferenceApplyConfiguration{Name: ptr.To("dev-registry")},
+		&corev1ac.LocalObjectReferenceApplyConfiguration{Name: new("dev-registry")},
 	),
 		client.FieldOwner("package-operator-integration")))
 

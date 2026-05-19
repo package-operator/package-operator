@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"package-operator.run/apis/manifests/v1alpha1"
@@ -135,7 +134,7 @@ func parseObjects(
 				Reason:  packagetypes.ViolationReasonInvalidYAML,
 				Details: err.Error(),
 				Path:    path,
-				Index:   ptr.To(idx),
+				Index:   new(idx),
 				Subject: string(yamlDocument),
 			}
 			return

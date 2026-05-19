@@ -3,6 +3,7 @@ package objectdeployments
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -76,8 +77,8 @@ func (a *archiveReconciler) objectSetsToBeArchived(
 	// Sort all ObjectSets by their ascending revision number.
 	sort.Sort(objectSetsByRevisionAscending(allObjectSets))
 	objectSetsToArchive := make([]adapters.ObjectSetAccessor, 0)
-	for j := len(allObjectSets) - 1; j >= 0; j-- {
-		currentLatestRevision := allObjectSets[j]
+	for j, v := range slices.Backward(allObjectSets) {
+		currentLatestRevision := v
 
 		// Case 1:
 		// currentRevision is "Available",
