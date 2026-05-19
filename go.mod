@@ -39,7 +39,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	package-operator.run/apis v1.19.0
-	pkg.package-operator.run/boxcutter v0.11.0
+	pkg.package-operator.run/boxcutter v0.13.1
 	pkg.package-operator.run/cardboard v0.1.0
 	pkg.package-operator.run/cardboard/kubeutils v0.1.0
 	pkg.package-operator.run/cardboard/modules/kind v0.1.0
@@ -123,7 +123,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/procfs v0.19.2 // indirect
+	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
