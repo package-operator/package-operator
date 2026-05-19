@@ -8,7 +8,6 @@ import (
 	"github.com/joeycumines/go-dotnotation/dotnotation"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	"package-operator.run/internal/packages/internal/packagekickstart/parametrize"
 )
@@ -214,7 +213,7 @@ func parametrizeDeploymentNodeSelector(
 		Description: fmt.Sprintf(
 			"NodeSelector for Deployment %s/%s.",
 			obj.GetNamespace(), obj.GetName()),
-		XPreserveUnknownFields: ptr.To(true),
+		XPreserveUnknownFields: new(true),
 	}
 
 	nodeSelectorAccess := fmt.Sprintf(

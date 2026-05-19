@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"package-operator.run/internal/apis/manifests"
@@ -84,7 +83,7 @@ func (*ObjectPhaseAnnotationValidator) validate(
 		return packagetypes.ViolationError{
 			Reason: packagetypes.ViolationReasonMissingPhaseAnnotation,
 			Path:   path,
-			Index:  ptr.To(index),
+			Index:  new(index),
 		}
 	}
 	for _, phase := range manifest.Spec.Phases {
@@ -95,7 +94,7 @@ func (*ObjectPhaseAnnotationValidator) validate(
 	return packagetypes.ViolationError{
 		Reason: packagetypes.ViolationReasonPhaseNotFound,
 		Path:   path,
-		Index:  ptr.To(index),
+		Index:  new(index),
 	}
 }
 
@@ -122,7 +121,7 @@ func (v *ObjectDuplicateValidator) ValidateObjects(
 				errs = append(errs, packagetypes.ViolationError{
 					Reason: packagetypes.ViolationReasonDuplicateObject,
 					Path:   path,
-					Index:  ptr.To(idx),
+					Index:  new(idx),
 				})
 			} else {
 				visited[key] = true
@@ -157,7 +156,7 @@ func (*ObjectGVKValidator) validate(
 		return packagetypes.ViolationError{
 			Reason: packagetypes.ViolationReasonMissingGVK,
 			Path:   path,
-			Index:  ptr.To(index),
+			Index:  new(index),
 		}
 	}
 	return nil
@@ -187,7 +186,7 @@ func (*ObjectLabelsValidator) validate(
 			Reason:  packagetypes.ViolationReasonLabelsInvalid,
 			Details: errList.ToAggregate().Error(),
 			Path:    path,
-			Index:   ptr.To(index),
+			Index:   new(index),
 		}
 	}
 	return nil

@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"pkg.package-operator.run/cardboard/kubeutils/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -88,8 +87,8 @@ func TestCollisionPreventionPreventOwned(t *testing.T) {
 				Kind:               "notus",
 				Name:               "notuse",
 				APIVersion:         "3",
-				BlockOwnerDeletion: ptr.To(true),
-				Controller:         ptr.To(true),
+				BlockOwnerDeletion: new(true),
+				Controller:         new(true),
 			}},
 		},
 		Data: map[string]string{"banana": "bread"},
@@ -148,8 +147,8 @@ func TestCollisionPreventionInvalidSet(t *testing.T) {
 				Kind:               "notus",
 				Name:               "notuse",
 				APIVersion:         "3",
-				BlockOwnerDeletion: ptr.To(true),
-				Controller:         ptr.To(true),
+				BlockOwnerDeletion: new(true),
+				Controller:         new(true),
 			}},
 		},
 		Data: map[string]string{"banana": "bread"},
@@ -201,8 +200,8 @@ func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
 				Kind:               "notus",
 				Name:               "notuse",
 				APIVersion:         "3",
-				BlockOwnerDeletion: ptr.To(true),
-				Controller:         ptr.To(true),
+				BlockOwnerDeletion: new(true),
+				Controller:         new(true),
 			}},
 		},
 		Data: map[string]string{"banana": "bread"},
@@ -322,8 +321,8 @@ func TestCollisionPreventionNoneUnowned(t *testing.T) {
 				Kind:               "notus",
 				Name:               "notuse",
 				APIVersion:         "3",
-				BlockOwnerDeletion: ptr.To(true),
-				Controller:         ptr.To(true),
+				BlockOwnerDeletion: new(true),
+				Controller:         new(true),
 			}},
 		},
 		Data: map[string]string{"banana": "bread"},
@@ -563,7 +562,7 @@ func TestObjectSet_teardownObjectNotControlledAnymore(t *testing.T) {
 	// Fetch ConfigMap from API and disable the controller flag on its owner reference.
 	actualConfigMap := &corev1.ConfigMap{}
 	require.NoError(t, Client.Get(ctx, client.ObjectKeyFromObject(configMap), actualConfigMap))
-	actualConfigMap.OwnerReferences[0].Controller = ptr.To(false)
+	actualConfigMap.OwnerReferences[0].Controller = new(false)
 	require.NoError(t, Client.Update(ctx, actualConfigMap))
 
 	// Delete ObjectSet.
