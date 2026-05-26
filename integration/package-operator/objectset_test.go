@@ -5,6 +5,7 @@ package packageoperator
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,7 +75,7 @@ func TestCollisionPreventionPreventUnowned(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	assertCollisionDetected(ctx, t, objectSet)
 }
 
 func TestCollisionPreventionPreventOwned(t *testing.T) {
@@ -133,7 +135,7 @@ func TestCollisionPreventionPreventOwned(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	assertCollisionDetected(ctx, t, objectSet)
 }
 
 func TestCollisionPreventionInvalidSet(t *testing.T) {
@@ -185,7 +187,7 @@ func TestCollisionPreventionInvalidSet(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	assertCollisionDetected(ctx, t, objectSet)
 }
 
 func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
@@ -247,7 +249,7 @@ func TestCollisionPreventionIfNoControllerOwned(t *testing.T) {
 	require.NoError(t, Client.Create(ctx, objectSet))
 	cleanupOnSuccess(ctx, t, objectSet)
 
-	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	assertCollisionDetected(ctx, t, objectSet)
 }
 
 func TestCollisionPreventionIfNoControllerUnowned(t *testing.T) {
@@ -788,4 +790,13 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 		requireCondition(ctx, t, clusterObjectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionTrue)
 		assert.Equal(t, prev.Spec.Revision+1, clusterObjectSet.Spec.Revision)
 	})
+}
+
+func assertCollisionDetected(ctx context.Context, t *testing.T, objectSet *corev1alpha1.ObjectSet) {
+	t.Helper()
+
+	require.NoError(t, Waiter.WaitForCondition(ctx, objectSet, corev1alpha1.ObjectSetAvailable, metav1.ConditionFalse))
+	cond := meta.FindStatusCondition(objectSet.Status.Conditions, corev1alpha1.ObjectSetAvailable)
+	require.NotNil(t, cond)
+	assert.Contains(t, strings.ToLower(cond.Reason), "collision")
 }
