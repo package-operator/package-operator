@@ -1,6 +1,6 @@
 module package-operator.run
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -31,13 +31,13 @@ require (
 	go.uber.org/dig v1.19.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/sys v0.45.0
-	k8s.io/api v0.35.4
+	k8s.io/api v0.36.1
 	k8s.io/apiextensions-apiserver v0.35.4
-	k8s.io/apimachinery v0.35.4
+	k8s.io/apimachinery v0.36.1
 	k8s.io/apiserver v0.35.4
 	k8s.io/client-go v0.35.4
-	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4
-	k8s.io/utils v0.0.0-20260108192941-914a6e750570
+	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	package-operator.run/apis v1.19.0
 	pkg.package-operator.run/boxcutter v0.11.0
 	pkg.package-operator.run/cardboard v0.1.0
