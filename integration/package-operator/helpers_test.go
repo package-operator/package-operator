@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/controllers"
 )
 
 // assertControllerNameHasPrefix can be used to check if an object is controlled by an owner object, or if it
@@ -184,6 +185,7 @@ func defaultObjectSetRev1(cm1, cm2 *corev1.ConfigMap, namespace, class string) (
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-rev1",
 			Namespace: namespace,
+			Labels:    map[string]string{controllers.DeploymentLabel: "test-handover"},
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
 			ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
@@ -229,6 +231,7 @@ func defaultObjectSetRev2(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-rev2",
 			Namespace: namespace,
+			Labels:    map[string]string{controllers.DeploymentLabel: "test-handover"},
 		},
 		Spec: corev1alpha1.ObjectSetSpec{
 			Previous: []corev1alpha1.PreviousRevisionReference{
