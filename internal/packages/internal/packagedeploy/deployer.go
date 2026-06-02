@@ -183,15 +183,28 @@ func (l *PackageDeployer) Deploy(
 			images[packageImage.Name] = resolvedImage
 		}
 	}
+	dependencies := map[string]string{}
+	if pkg.ManifestLock != nil {
+		for _, packageImage := range pkg.ManifestLock.Spec.Dependencies {
+			replacedImage := imageprefix.Replace(packageImage.Image, l.imagePrefixOverrides)
+
+			resolvedImage, err := ImageWithDigest(replacedImage, packageImage.Digest)
+			if err != nil {
+				return err
+			}
+			dependencies[packageImage.Name] = resolvedImage
+		}
+	}
 
 	// render package instance
 	pkgInstance, err := packagerender.RenderPackageInstance(
 		ctx, pkg,
 		packagetypes.PackageRenderContext{
-			Package:     tmplCtx.Package,
-			Config:      configuration,
-			Images:      images,
-			Environment: env,
+			Package:      tmplCtx.Package,
+			Config:       configuration,
+			Images:       images,
+			Dependencies: dependencies,
+			Environment:  env,
 		}, l.packageValidators, packagevalidation.DefaultObjectValidators)
 	if err != nil {
 		setInvalidConditionBasedOnLoadError(apiPkg, err)
