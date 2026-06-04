@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -112,7 +113,7 @@ func (r *newRevisionReconciler) newObjectSetFromDeployment(
 	if newObjectSetClientObj.GetLabels() == nil {
 		newObjectSetClientObj.SetLabels(map[string]string{})
 	}
-	newObjectSetClientObj.GetLabels()[ObjectSetObjectDeploymentLabel] = objectDeployment.ClientObject().GetName()
+	newObjectSetClientObj.GetLabels()[controllers.DeploymentLabel] = objectDeployment.ClientObject().GetName()
 
 	if newObjectSetClientObj.GetAnnotations() == nil {
 		newObjectSetClientObj.SetAnnotations(map[string]string{})

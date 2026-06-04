@@ -31,13 +31,13 @@ import (
 
 // objectSetPhaseReconciler reconciles objects within a phase.
 type objectSetPhaseReconciler struct {
-	scheme                  *runtime.Scheme
-	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
-	uncachedclient          client.Client
-	phaseEngineFactory      boxcutterutil.PhaseEngineFactory
-	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           boxcutterutil.OwnerStrategy
-	backoff                 *flowcontrol.Backoff
+	scheme                       *runtime.Scheme
+	accessManager                managedcache.ObjectBoundAccessManager[client.Object]
+	uncachedclient               client.Client
+	phaseEngineFactory           boxcutterutil.PhaseEngineFactory
+	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifierFunc
+	ownerStrategy                boxcutterutil.OwnerStrategy
+	backoff                      *flowcontrol.Backoff
 }
 
 func newObjectSetPhaseReconciler(
@@ -45,7 +45,7 @@ func newObjectSetPhaseReconciler(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient client.Client,
 	phaseEngineFactory boxcutterutil.PhaseEngineFactory,
-	lookupPreviousRevisions lookupPreviousRevisions,
+	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifierFunc,
 	ownerStrategy boxcutterutil.OwnerStrategy,
 ) *objectSetPhaseReconciler {
 	var cfg objectSetPhaseReconcilerConfig
@@ -53,28 +53,28 @@ func newObjectSetPhaseReconciler(
 	cfg.Default()
 
 	return &objectSetPhaseReconciler{
-		scheme:                  scheme,
-		accessManager:           accessManager,
-		uncachedclient:          uncachedClient,
-		phaseEngineFactory:      phaseEngineFactory,
-		lookupPreviousRevisions: lookupPreviousRevisions,
-		ownerStrategy:           ownerStrategy,
-		backoff:                 cfg.GetBackoff(),
+		scheme:                       scheme,
+		accessManager:                accessManager,
+		uncachedclient:               uncachedClient,
+		phaseEngineFactory:           phaseEngineFactory,
+		lookupSiblingOwnerClassifier: lookupSiblingOwnerClassifier,
+		ownerStrategy:                ownerStrategy,
+		backoff:                      cfg.GetBackoff(),
 	}
 }
 
-type lookupPreviousRevisions func(
-	ctx context.Context, owner controllers.PreviousOwner,
-) ([]client.Object, error)
+type lookupSiblingOwnerClassifierFunc func(
+	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
+) (controllers.SiblingOwnerClassifier, error)
 
 func (r *objectSetPhaseReconciler) Reconcile(
 	ctx context.Context, objectSetPhase adapters.ObjectSetPhaseAccessor,
 ) (res ctrl.Result, err error) {
 	defer r.backoff.GC()
 	controllers.DeleteMappedConditions(ctx, objectSetPhase.GetStatusConditions())
-	previous, err := r.lookupPreviousRevisions(ctx, objectSetPhase)
+	siblingClassifier, err := r.lookupSiblingOwnerClassifier(ctx, objectSetPhase)
 	if err != nil {
-		return res, fmt.Errorf("lookup previous revisions: %w", err)
+		return res, fmt.Errorf("lookup sibling owner classifier: %w", err)
 	}
 
 	probe, err := internalprobing.Parse(
@@ -117,7 +117,7 @@ func (r *objectSetPhaseReconciler) Reconcile(
 			&apiPhase.Objects[i].Object,
 			boxcutterutil.TranslateCollisionProtection(apiPhase.Objects[i].CollisionProtection),
 			types.WithProbe(types.ProgressProbeType, probe),
-			boxcutter.WithPreviousOwners(previous),
+			boxcutter.WithSiblingOwnerClassifier(siblingClassifier),
 		))
 	}
 	if objectSetPhase.IsSpecPaused() {

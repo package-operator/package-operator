@@ -39,15 +39,12 @@ func init() {
 func TestPhaseReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
 	lookup := func(
-		_ context.Context, _ controllers.PreviousOwner,
+		_ context.Context, _ adapters.ObjectSetPhaseAccessor,
 	) (
-		[]client.Object, error, //nolint: unparam
+		controllers.SiblingOwnerClassifier, error,
 	) {
-		return previousList, nil
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	tests := []struct {
@@ -124,15 +121,12 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
 	lookup := func(
-		_ context.Context, _ controllers.PreviousOwner,
+		_ context.Context, _ adapters.ObjectSetPhaseAccessor,
 	) (
-		[]client.Object, error,
+		controllers.SiblingOwnerClassifier, error,
 	) {
-		return previousList, nil
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -178,8 +172,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-				return []client.Object{}, nil
+			lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+				return func(metav1.OwnerReference) bool { return false }, nil
 			}
 			scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -229,8 +223,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -258,8 +252,8 @@ func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -284,8 +278,8 @@ func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -313,8 +307,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -345,8 +339,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -382,7 +376,7 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	expectedErr := assert.AnError
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
 		return nil, expectedErr
 	}
 
@@ -399,15 +393,15 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 	res, err := r.Reconcile(context.Background(), objectSetPhase)
 	assert.Empty(t, res)
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "lookup previous revisions")
+	assert.ErrorContains(t, err, "lookup sibling owner classifier")
 }
 
 func TestPhaseReconciler_Reconcile_AccessManagerError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -434,8 +428,8 @@ func TestPhaseReconciler_Reconcile_PhaseEngineFactoryError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -465,8 +459,8 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -499,11 +493,8 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return previousList, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -571,8 +562,8 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
