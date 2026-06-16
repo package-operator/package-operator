@@ -79,15 +79,21 @@ func NewPhaseEngineFactory(
 }
 
 func (f phaseEngineFactory) New(accessor managedcache.Accessor) (PhaseEngine, error) {
+	var unfilteredReader client.Reader
+	if accessor != nil {
+		unfilteredReader = accessor.UnfilteredReader()
+	}
+
 	pe, err := boxcutter.NewPhaseEngine(boxcutter.RevisionEngineOptions{
-		Scheme:          f.scheme,
-		FieldOwner:      constants.FieldOwner,
-		SystemPrefix:    constants.SystemPrefix,
-		DiscoveryClient: f.discoveryClient,
-		RestMapper:      f.restMapper,
-		Writer:          accessor,
-		Reader:          accessor,
-		PhaseValidator:  f.phaseValidator,
+		Scheme:           f.scheme,
+		FieldOwner:       constants.FieldOwner,
+		SystemPrefix:     constants.SystemPrefix,
+		DiscoveryClient:  f.discoveryClient,
+		RestMapper:       f.restMapper,
+		Writer:           accessor,
+		Reader:           accessor,
+		UnfilteredReader: unfilteredReader,
+		PhaseValidator:   f.phaseValidator,
 	})
 	if err != nil {
 		return nil, err

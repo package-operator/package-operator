@@ -163,6 +163,7 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 		restMapper := &restMapperMock{}
 		phaseValidator := &validation.PhaseValidator{}
 		accessor := &managedcachemocks.AccessorMock{}
+		accessor.On("UnfilteredReader").Return(nil)
 
 		factory := NewPhaseEngineFactory(
 			scheme,
@@ -209,7 +210,9 @@ func TestPhaseEngineFactory_New(t *testing.T) {
 		restMapper := &restMapperMock{}
 		phaseValidator := &validation.PhaseValidator{}
 		accessor1 := &managedcachemocks.AccessorMock{}
+		accessor1.On("UnfilteredReader").Return(nil)
 		accessor2 := &managedcachemocks.AccessorMock{}
+		accessor2.On("UnfilteredReader").Return(nil)
 
 		factory := NewPhaseEngineFactory(
 			scheme,
@@ -261,6 +264,7 @@ func TestPhaseEngineFactory_WithMinimalDependencies(t *testing.T) {
 		// because the boxcutter engine requires a scheme
 		factory := NewPhaseEngineFactory(nil, nil, nil, nil)
 		accessor := &managedcachemocks.AccessorMock{}
+		accessor.On("UnfilteredReader").Return(nil)
 
 		engine, err := factory.New(accessor)
 
@@ -314,4 +318,34 @@ func TestDiscoveryClientInterface(t *testing.T) {
 		assert.Nil(t, result)
 		assert.Equal(t, expectedErr, err)
 	})
+}
+
+// Regression: PhaseEngineFactory must pass UnfilteredReader from the accessor
+// to boxcutter so it can read pre-existing objects not visible in the
+// label-filtered cache and evaluate collision protection properly.
+func TestPhaseEngineFactory_PassesUnfilteredReader(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	discoveryClient := &discoveryClientMock{}
+	discoveryClient.On("OpenAPIV3").Return(nil)
+	restMapper := &restMapperMock{}
+	phaseValidator := &validation.PhaseValidator{}
+	accessor := &managedcachemocks.AccessorMock{}
+
+	// UnfilteredReader must be called exactly once during factory.New().
+	accessor.On("UnfilteredReader").Return(nil).Once()
+
+	factory := NewPhaseEngineFactory(
+		scheme,
+		discoveryClient,
+		restMapper,
+		phaseValidator,
+	)
+
+	engine, err := factory.New(accessor)
+	require.NoError(t, err)
+	require.NotNil(t, engine)
+
+	accessor.AssertExpectations(t)
 }
