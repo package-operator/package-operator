@@ -27,7 +27,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/yannh/kubeconform v0.7.0
+	github.com/yannh/kubeconform v0.8.0
 	go.uber.org/dig v1.19.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/sys v0.45.0
@@ -36,7 +36,7 @@ require (
 	k8s.io/apimachinery v0.36.1
 	k8s.io/apiserver v0.36.1
 	k8s.io/client-go v0.36.1
-	k8s.io/kube-openapi v0.0.0-20260520065146-aa012df4f4af
+	k8s.io/kube-openapi v0.0.0-20260603220949-865597e52e25
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	package-operator.run/apis v1.19.0
 	pkg.package-operator.run/boxcutter v0.14.0
