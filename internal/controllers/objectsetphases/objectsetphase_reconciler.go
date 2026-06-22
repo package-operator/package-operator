@@ -133,10 +133,6 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	target := &machinery.CreateCollisionError{}
 	if errors.As(err, &target) {
-		_, err := controllers.AddDynamicCacheLabel(ctx, cache, convertToUnstructured(target.Object()))
-		if err != nil {
-			return res, err
-		}
 		id := string(objectSetPhase.ClientObject().GetUID())
 
 		r.backoff.Next(id, r.backoff.Clock.Now())
