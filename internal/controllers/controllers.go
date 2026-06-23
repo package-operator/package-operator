@@ -161,28 +161,16 @@ func AddDynamicCacheLabel(
 ) (*unstructured.Unstructured, error) {
 	updated := obj.DeepCopy()
 
-	patch := map[string]any{
-		"metadata": map[string]any{
-			"labels": map[string]string{
-				constants.DynamicCacheLabel: "True",
-			},
-		},
-	}
-	patchJSON, err := json.Marshal(patch)
-	if err != nil {
-		return nil, fmt.Errorf("marshalling dynamic cache label patch: %w", err)
-	}
-
-	if err := w.Patch(ctx, updated, client.RawPatch(types.MergePatchType, patchJSON)); err != nil {
-		return nil, fmt.Errorf("patching dynamic cache label: %w", err)
-	}
-
 	labels := updated.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
 	labels[constants.DynamicCacheLabel] = "True"
 	updated.SetLabels(labels)
+
+	if err := w.Patch(ctx, updated, client.Merge); err != nil {
+		return nil, fmt.Errorf("patching dynamic cache label: %w", err)
+	}
 
 	return updated, nil
 }
