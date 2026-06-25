@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers"
 )
 
@@ -1068,4 +1069,215 @@ func requireClientGet(ctx context.Context, t *testing.T, name, namespace string,
 			object,
 		),
 	)
+}
+
+// setControllerOwnerFunc marks an object as owned by a foreign controller
+// using the appropriate ownership mechanism (native owner refs or annotations).
+type setControllerOwnerFunc func(obj metav1.Object)
+
+func nativeControllerOwner() setControllerOwnerFunc {
+	return func(obj metav1.Object) {
+		obj.SetOwnerReferences([]metav1.OwnerReference{{
+			UID: "a", Kind: "notus", Name: "notuse", APIVersion: "3",
+			BlockOwnerDeletion: new(true), Controller: new(true),
+		}})
+	}
+}
+
+func annotationControllerOwner() setControllerOwnerFunc {
+	return func(obj metav1.Object) {
+		type ownerRef struct {
+			APIVersion string    `json:"apiVersion"`
+			Kind       string    `json:"kind"`
+			Name       string    `json:"name"`
+			Namespace  string    `json:"namespace,omitempty"`
+			UID        types.UID `json:"uid"`
+			Controller *bool     `json:"controller,omitempty"`
+		}
+		owners := []ownerRef{{
+			APIVersion: "3", Kind: "notus", Name: "notuse", UID: "a",
+			Controller: new(true),
+		}}
+		j, err := json.Marshal(owners)
+		if err != nil {
+			panic(err)
+		}
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[constants.OwnerStrategyAnnotationKey] = string(j)
+		obj.SetAnnotations(annotations)
+	}
+}
+
+func runCollisionPreventionTests(t *testing.T, namespace, class string) { //nolint:thelper
+	runCollisionPreventionTestsWithCustomHandlers(t, Client, Waiter, namespace, class, nativeControllerOwner())
+}
+
+func runCollisionPreventionTestsWithCustomHandlers(
+	t *testing.T, destClient client.Client, _ *wait.Waiter, namespace, class string,
+	setControllerOwner setControllerOwnerFunc,
+) {
+	t.Helper()
+
+	type collisionTestCase struct {
+		name                string
+		cmName              string
+		osName              string
+		existingData        map[string]string
+		existingOwned       bool
+		specOwned           bool
+		collisionProtection corev1alpha1.CollisionProtection
+		expectedAvailable   metav1.ConditionStatus
+		expectControllerOf  bool
+	}
+
+	tests := []collisionTestCase{
+		{
+			name:                "PreventUnowned",
+			cmName:              "collision-prevent-unowned-cm",
+			osName:              "collision-prevent-unowned",
+			existingData:        map[string]string{"banana": "bread"},
+			collisionProtection: corev1alpha1.CollisionProtectionPrevent,
+			expectedAvailable:   metav1.ConditionFalse,
+		},
+		{
+			name:                "PreventOwned",
+			cmName:              "collision-prevent-owned-cm",
+			osName:              "collision-prevent-owned",
+			existingData:        map[string]string{"banana": "bread"},
+			existingOwned:       true,
+			collisionProtection: corev1alpha1.CollisionProtectionPrevent,
+			expectedAvailable:   metav1.ConditionFalse,
+		},
+		{
+			name:                "InvalidSet",
+			cmName:              "collision-invalid-set-cm",
+			osName:              "collision-invalid-set",
+			specOwned:           true,
+			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+			expectedAvailable:   metav1.ConditionFalse,
+		},
+		{
+			name:                "IfNoControllerOwned",
+			cmName:              "collision-ifnocontroller-owned-cm",
+			osName:              "collision-ifnocontroller-owned",
+			existingData:        map[string]string{"banana": "bread"},
+			existingOwned:       true,
+			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+			expectedAvailable:   metav1.ConditionFalse,
+		},
+		{
+			name:                "IfNoControllerUnowned",
+			cmName:              "collision-ifnocontroller-unowned-cm",
+			osName:              "collision-ifnocontroller-unowned",
+			existingData:        map[string]string{"banana": "bread"},
+			collisionProtection: corev1alpha1.CollisionProtectionIfNoController,
+			expectedAvailable:   metav1.ConditionTrue,
+			expectControllerOf:  true,
+		},
+		{
+			name:                "NoneUnowned",
+			cmName:              "collision-none-unowned-cm",
+			osName:              "collision-none-unowned",
+			existingData:        map[string]string{"banana": "bread"},
+			existingOwned:       true,
+			collisionProtection: corev1alpha1.CollisionProtectionNone,
+			expectedAvailable:   metav1.ConditionTrue,
+			expectControllerOf:  true,
+		},
+		{
+			name:                "NoneOwned",
+			cmName:              "collision-none-owned-cm",
+			osName:              "collision-none-owned",
+			existingData:        map[string]string{"banana": "bread"},
+			collisionProtection: corev1alpha1.CollisionProtectionNone,
+			expectedAvailable:   metav1.ConditionTrue,
+			expectControllerOf:  true,
+		},
+	}
+
+	for i := range tests {
+		tc := tests[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := logr.NewContext(context.Background(), testr.New(t))
+
+			if tc.existingData != nil {
+				existing := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      tc.cmName,
+						Namespace: "default",
+					},
+					Data: tc.existingData,
+				}
+				if tc.existingOwned {
+					setControllerOwner(existing)
+				}
+				require.NoError(t, destClient.Create(ctx, existing))
+				t.Cleanup(func() {
+					_ = destClient.Delete(context.Background(), existing)
+				})
+			}
+
+			objectSetCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      tc.cmName,
+					Namespace: "default",
+				},
+				Data: map[string]string{"banana": "bread"},
+			}
+			if tc.specOwned {
+				setControllerOwner(objectSetCM)
+			}
+			cmGVK, err := apiutil.GVKForObject(objectSetCM, Scheme)
+			require.NoError(t, err)
+			objectSetCM.SetGroupVersionKind(cmGVK)
+			cmObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(objectSetCM)
+			require.NoError(t, err)
+
+			objectSet := &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      tc.osName,
+					Namespace: namespace,
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Revision: 1,
+					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+						Phases: []corev1alpha1.ObjectSetTemplatePhase{
+							{
+								Name:  "phase-1",
+								Class: class,
+								Objects: []corev1alpha1.ObjectSetObject{
+									{
+										CollisionProtection: tc.collisionProtection,
+										Object:              unstructured.Unstructured{Object: cmObj},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			require.NoError(t, Client.Create(ctx, objectSet))
+			cleanupOnSuccess(ctx, t, objectSet)
+
+			if tc.expectControllerOf {
+				expectedControllerOf := []corev1alpha1.ControlledObjectReference{
+					{Kind: "ConfigMap", Name: tc.cmName, Namespace: "default"},
+				}
+				require.NoError(t, Waiter.WaitForObject(ctx, objectSet,
+					"Waiting for .status.controllerOf to be updated",
+					func(client.Object) (bool, error) {
+						return reflect.DeepEqual(objectSet.Status.ControllerOf, expectedControllerOf), nil
+					}),
+				)
+			}
+
+			require.NoError(t, Waiter.WaitForCondition(
+				ctx, objectSet, corev1alpha1.ObjectSetAvailable, tc.expectedAvailable,
+			))
+		})
+	}
 }

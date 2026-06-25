@@ -70,6 +70,15 @@ func TestHyperShift(t *testing.T) {
 		t.SkipNow() // This test/functionality is not stable.
 		runObjectSetOrphanCascadeDeletionTestWithCustomHandlers(t, hClient, hWaiter, namespace, "hosted-cluster")
 	})
+	t.Run("CollisionPrevention", func(t *testing.T) {
+		runCollisionPreventionTestsWithCustomHandlers(
+			t,
+			hClient,
+			hWaiter,
+			namespace,
+			"hosted-cluster",
+			annotationControllerOwner())
+	})
 
 	t.Run("SubcomponentTolerationsAffinity", func(t *testing.T) {
 		type RemotePhasePkgConfig struct {
