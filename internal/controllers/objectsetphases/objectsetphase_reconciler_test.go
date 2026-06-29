@@ -76,13 +76,12 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			objectSetPhase.ClientObject().SetUID("test-uid")
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
-			uncachedClient := testutil.NewClient()
 			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 			phaseResult := &boxcuttermocks.PhaseResultMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			// TODO mock client
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+			r := newObjectSetPhaseReconciler(testScheme, accessManager,
 				phaseEngineFactory, lookup, ownerStrategy)
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
@@ -134,12 +133,11 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-backoff")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -180,12 +178,11 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 			objectSetPhase.ClientObject().SetUID("test-uid-teardown")
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-			uncachedClient := testutil.NewClient()
 			accessor := &managedcachemocks.AccessorMock{}
 			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 			phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+			r := newObjectSetPhaseReconciler(testScheme, accessManager,
 				phaseEngineFactory, lookup, ownerStrategy)
 
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -235,9 +232,8 @@ func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	cleanupDone, err := r.Teardown(context.Background(), objectSetPhase)
@@ -260,9 +256,8 @@ func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-access-mgr-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	expectedErr := assert.AnError
@@ -287,9 +282,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -316,10 +310,9 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -348,11 +341,10 @@ func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -384,10 +376,9 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	objectSetPhase.ClientObject().SetUID("test-uid-lookup-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	res, err := r.Reconcile(context.Background(), objectSetPhase)
@@ -408,10 +399,9 @@ func TestPhaseReconciler_Reconcile_AccessManagerError(t *testing.T) {
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-access-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	expectedErr := assert.AnError
@@ -437,10 +427,9 @@ func TestPhaseReconciler_Reconcile_PhaseEngineFactoryError(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-factory-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -468,11 +457,10 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-generic-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -523,13 +511,12 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -595,13 +582,12 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).

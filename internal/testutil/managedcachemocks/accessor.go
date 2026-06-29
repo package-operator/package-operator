@@ -146,5 +146,9 @@ func (m *AccessorMock) Apply(context.Context, runtime.ApplyConfiguration, ...cli
 
 func (m *AccessorMock) UnfilteredReader() client.Reader {
 	args := m.Called()
-	return args.Get(0).(client.Reader)
+	v := args.Get(0)
+	if v == nil {
+		return nil
+	}
+	return v.(client.Reader)
 }

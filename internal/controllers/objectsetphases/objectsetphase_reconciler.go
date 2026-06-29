@@ -33,7 +33,6 @@ import (
 type objectSetPhaseReconciler struct {
 	scheme                       *runtime.Scheme
 	accessManager                managedcache.ObjectBoundAccessManager[client.Object]
-	uncachedclient               client.Client
 	phaseEngineFactory           boxcutterutil.PhaseEngineFactory
 	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifierFunc
 	ownerStrategy                boxcutterutil.OwnerStrategy
@@ -43,7 +42,6 @@ type objectSetPhaseReconciler struct {
 func newObjectSetPhaseReconciler(
 	scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
-	uncachedClient client.Client,
 	phaseEngineFactory boxcutterutil.PhaseEngineFactory,
 	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifierFunc,
 	ownerStrategy boxcutterutil.OwnerStrategy,
@@ -55,7 +53,6 @@ func newObjectSetPhaseReconciler(
 	return &objectSetPhaseReconciler{
 		scheme:                       scheme,
 		accessManager:                accessManager,
-		uncachedclient:               uncachedClient,
 		phaseEngineFactory:           phaseEngineFactory,
 		lookupSiblingOwnerClassifier: lookupSiblingOwnerClassifier,
 		ownerStrategy:                ownerStrategy,
@@ -136,10 +133,6 @@ func (r *objectSetPhaseReconciler) Reconcile(
 
 	target := &machinery.CreateCollisionError{}
 	if errors.As(err, &target) {
-		_, err := controllers.AddDynamicCacheLabel(ctx, r.uncachedclient, convertToUnstructured(target.Object()))
-		if err != nil {
-			return res, err
-		}
 		id := string(objectSetPhase.ClientObject().GetUID())
 
 		r.backoff.Next(id, r.backoff.Clock.Now())

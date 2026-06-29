@@ -165,7 +165,6 @@ func AddDynamicCacheLabel(
 	if labels == nil {
 		labels = map[string]string{}
 	}
-
 	labels[constants.DynamicCacheLabel] = "True"
 	updated.SetLabels(labels)
 
