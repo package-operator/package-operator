@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -105,41 +106,63 @@ func (f *RevisionDroppedFix) reconcile(
 		return true, nil
 	}
 
-	if len(objectSet.GetSpecPrevious()) == 0 {
-		// no previous revision(s) specified, default to revision 1
-		objectSet.SetSpecRevision(1)
-	} else {
-		// Determine new revision number by inspecting previous revisions:
-		var latestPreviousRevision int64
-		for _, prev := range objectSet.GetSpecPrevious() {
-			prevObjectSet := newObjectSet(fc.Client.Scheme())
-			key := client.ObjectKey{
-				Name:      prev.Name,
-				Namespace: objectSet.ClientObject().GetNamespace(),
-			}
-			if err := fc.Client.Get(ctx, key, prevObjectSet.ClientObject()); err != nil {
-				return false, fmt.Errorf("getting previous revision: %w", err)
-			}
-
-			sr := prevObjectSet.GetSpecRevision()
-			if sr == 0 {
-				logr.FromContextOrDiscard(ctx).
-					Info("waiting for previous revision to report revision number", "object", key)
-				// retry later
-				return false, nil
-			}
-
-			if sr > latestPreviousRevision {
-				latestPreviousRevision = sr
-			}
-		}
-
-		objectSet.SetSpecRevision(latestPreviousRevision + 1)
+	latestPreviousRevision, retry, err := f.determineLatestPreviousRevision(ctx, objectSet, fc, newObjectSet)
+	if err != nil {
+		return false, err
+	} else if retry {
+		return false, nil
 	}
 
+	// Current revision is latest + 1.
+	objectSet.SetSpecRevision(latestPreviousRevision + 1)
+
+	// Update revision.
 	if err := fc.Client.Update(ctx, objectSet.ClientObject(), client.FieldOwner(constants.FieldOwner)); err != nil {
 		return false, fmt.Errorf("update revision in spec: %w", err)
 	}
 
 	return true, nil
+}
+
+// Determine new revision number by inspecting previous revisions.
+// Returns 0 if none found or if no previous revisions are listed.
+func (f *RevisionDroppedFix) determineLatestPreviousRevision(
+	ctx context.Context, objectSet adapters.ObjectSetAccessor, fc Context,
+	newObjectSet adapters.ObjectSetAccessorFactory,
+) (revision int64, retry bool, err error) {
+	if len(objectSet.GetSpecPrevious()) == 0 {
+		return 0, false, nil
+	}
+
+	var latestPreviousRevision int64
+	for _, prev := range objectSet.GetSpecPrevious() {
+		prevObjectSet := newObjectSet(fc.Client.Scheme())
+		key := client.ObjectKey{
+			Name:      prev.Name,
+			Namespace: objectSet.ClientObject().GetNamespace(),
+		}
+
+		err := fc.Client.Get(ctx, key, prevObjectSet.ClientObject())
+		if apimachineryerrors.IsNotFound(err) {
+			logr.FromContextOrDiscard(ctx).
+				Info("previous revision not found, skipping", "object", key)
+			continue
+		} else if err != nil {
+			return 0, false, fmt.Errorf("getting previous revision: %w", err)
+		}
+
+		sr := prevObjectSet.GetSpecRevision()
+		if sr == 0 {
+			logr.FromContextOrDiscard(ctx).
+				Info("waiting for previous revision to report revision number", "object", key)
+			// retry later
+			return 0, true, nil
+		}
+
+		if sr > latestPreviousRevision {
+			latestPreviousRevision = sr
+		}
+	}
+
+	return latestPreviousRevision, false, nil
 }
