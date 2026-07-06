@@ -50,7 +50,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apiextensions-apiserver v0.36.2
 	k8s.io/klog/v2 v2.140.0 // indirect
