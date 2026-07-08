@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -502,6 +504,102 @@ func TestRevisionDroppedFix_reconcile(t *testing.T) {
 			expectedSuccess: false,
 			expectedError:   true,
 			validateResult:  func(_ *testing.T, _ *corev1alpha1.ObjectSet) {},
+		},
+		{
+			name: "skips not found previous revision and sets revision to 1",
+			objectSet: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-os",
+					Namespace: "default",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Revision: 0,
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{Name: "test-os-prev"},
+					},
+				},
+			},
+			setupMock: func(c *testutil.CtrlClient, _ *corev1alpha1.ObjectSet) {
+				c.On("Scheme").Return(testScheme)
+
+				c.On("Get",
+					mock.Anything,
+					client.ObjectKey{Name: "test-os-prev", Namespace: "default"},
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+				c.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(nil)
+			},
+			expectedSuccess: true,
+			expectedError:   false,
+			validateResult: func(t *testing.T, os *corev1alpha1.ObjectSet) {
+				t.Helper()
+
+				assert.Equal(t, int64(1), os.Spec.Revision)
+			},
+		},
+		{
+			name: "skips not found previous revisions and uses revision from found ones",
+			objectSet: &corev1alpha1.ObjectSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-os",
+					Namespace: "default",
+				},
+				Spec: corev1alpha1.ObjectSetSpec{
+					Revision: 0,
+					Previous: []corev1alpha1.PreviousRevisionReference{
+						{Name: "test-os-prev-1"},
+						{Name: "test-os-prev-2"},
+						{Name: "test-os-prev-3"},
+					},
+				},
+			},
+			setupMock: func(c *testutil.CtrlClient, _ *corev1alpha1.ObjectSet) {
+				c.On("Scheme").Return(testScheme)
+
+				c.On("Get",
+					mock.Anything,
+					client.ObjectKey{Name: "test-os-prev-1", Namespace: "default"},
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+				c.On("Get",
+					mock.Anything,
+					client.ObjectKey{Name: "test-os-prev-2", Namespace: "default"},
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Run(func(args mock.Arguments) {
+						prevOS := args.Get(2).(*corev1alpha1.ObjectSet)
+						prevOS.Spec.Revision = 5
+					}).
+					Return(nil)
+
+				c.On("Get",
+					mock.Anything,
+					client.ObjectKey{Name: "test-os-prev-3", Namespace: "default"},
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(apimachineryerrors.NewNotFound(schema.GroupResource{}, ""))
+
+				c.On("Update",
+					mock.Anything,
+					mock.IsType(&corev1alpha1.ObjectSet{}),
+					mock.Anything).
+					Return(nil)
+			},
+			expectedSuccess: true,
+			expectedError:   false,
+			validateResult: func(t *testing.T, os *corev1alpha1.ObjectSet) {
+				t.Helper()
+
+				assert.Equal(t, int64(6), os.Spec.Revision)
+			},
 		},
 		{
 			name: "returns error when update fails",

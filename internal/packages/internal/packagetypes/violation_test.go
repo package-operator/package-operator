@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 )
 
 func TestViolationErrorDefault(t *testing.T) {
@@ -31,7 +30,7 @@ func TestViolationErrorDetail(t *testing.T) {
 func TestViolationErrorPath(t *testing.T) {
 	t.Parallel()
 
-	v := ViolationError{Reason: ViolationReason("cheese reason"), Path: "a/b", Index: ptr.To(4)}
+	v := ViolationError{Reason: ViolationReason("cheese reason"), Path: "a/b", Index: new(4)}
 	require.EqualError(t, v, "cheese reason in a/b idx 4")
 }
 

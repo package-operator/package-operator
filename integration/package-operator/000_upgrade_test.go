@@ -35,6 +35,14 @@ const (
 )
 
 func TestUpgrade(t *testing.T) {
+	// Skip test if short flag is active.
+	// This allows `./do dev:integrationdirect` to skip the whole test
+	// that tries to reinstall and upgrade pko in-cluster
+	// because PKO is most likely running outside of the cluster.
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 
 	require.NoError(t, deleteExistingPKO(ctx))
@@ -204,7 +212,7 @@ func createAndWaitFromHTTP(ctx context.Context, urls []string) error {
 			return fmt.Errorf("creating request: %w", err)
 		}
 
-		resp, err := client.Do(req) //nolint:gosec // G704: URL is from constant LatestSelfBootstrapJobURL
+		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("getting %q: %w", url, err)
 		}

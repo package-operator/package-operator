@@ -94,10 +94,11 @@ func (v TemplateTestValidator) runTestCase(
 	}
 
 	tmplCtx := packagetypes.PackageRenderContext{
-		Package:     testCase.Context.Package,
-		Config:      configuration,
-		Images:      generateStaticImages(pkg.Manifest),
-		Environment: testCase.Context.Environment,
+		Package:      testCase.Context.Package,
+		Config:       configuration,
+		Images:       generateStaticImages(pkg.Manifest),
+		Dependencies: generateStaticDependencies(pkg.Manifest),
+		Environment:  testCase.Context.Environment,
 	}
 	if err := packagerender.RenderTemplates(ctx, pkg, tmplCtx); err != nil {
 		return err
@@ -276,4 +277,13 @@ func generateStaticImages(manifest *manifests.PackageManifest) map[string]string
 		images[v.Name] = staticImage
 	}
 	return images
+}
+
+// generateStaticDependencies generates a static set of dependencies to be used for tests and other purposes.
+func generateStaticDependencies(manifest *manifests.PackageManifest) map[string]string {
+	dependencies := map[string]string{}
+	for _, v := range manifest.Spec.Dependencies {
+		dependencies[v.Image.Name] = staticImage
+	}
+	return dependencies
 }

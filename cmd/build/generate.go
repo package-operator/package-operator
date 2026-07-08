@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,7 +136,7 @@ func (g Generate) selfBootstrapJobLocal(context.Context) error {
 		ImagePrefixOverrides                        string              `json:"imagePrefixOverrides"`
 		ObjectTemplateOptionalResourceRetryInterval string              `json:"objectTemplateOptionalResourceRetryInterval"`
 		ObjectTemplateResourceRetryInterval         string              `json:"objectTemplateResourceRetryInterval"`
-		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity,omitempty"`
+		SubcomponentAffinity                        corev1.Affinity     `json:"subcomponentAffinity"`
 		SubcomponentTolerations                     []corev1.Toleration `json:"subcomponentTolerations,omitempty"`
 	}
 
@@ -249,38 +250,83 @@ func (g Generate) helmValuesYaml() error {
 		filepath.Join(cacheDir, "chart", "values.yaml"), []byte(values), os.ModePerm)
 }
 
-// PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
-func (g Generate) packageOperatorPackageFiles(ctx context.Context) error {
-	pkgFolder := filepath.Join("config", "packages", "package-operator")
-	images := map[string]string{
-		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
+// packageOperatorPackageAndComponentFilesWithoutOverrides generates package manifests for
+// the package-operator package and its sub-components.
+func (g Generate) packageOperatorPackageAndComponentFilesWithoutOverrides(ctx context.Context) error {
+	return g.packageOperatorPackageAndComponentFiles(ctx, "")
+}
+
+// packageOperatorPackageAndComponentFiles injects optional workload image reference overrides
+// into the package build process and generates package manifests for the package-operator package
+// and its sub-components.
+func (g Generate) packageOperatorPackageAndComponentFiles(ctx context.Context, imageOverridesPath string) error {
+	self := run.Meth1(g, g.packageOperatorPackageAndComponentFiles, imageOverridesPath)
+
+	var overrides map[string]string
+
+	if imageOverridesPath != "" {
+		fmt.Printf("using overrides from file: %s\n", imageOverridesPath) //nolint:forbidigo
+
+		b, err := os.ReadFile(imageOverridesPath)
+		if err != nil {
+			return fmt.Errorf("reading image overrides: %w", err)
+		}
+
+		overrides = map[string]string{}
+		if err := yaml.Unmarshal(b, &overrides); err != nil {
+			return fmt.Errorf("unmarshaling image overrides: %w", err)
+		}
+
+		fmt.Printf("overrides: %s\n", overrides) //nolint:forbidigo
 	}
+
+	return mgr.SerialDeps(
+		ctx, self,
+		run.Meth1(generate, generate.remotePhaseComponentFiles, overrides),
+		run.Meth1(generate, generate.hostedClusterComponentFiles, overrides),
+		run.Meth1(generate, generate.packageOperatorPackageFiles, overrides),
+	)
+}
+
+// PackageOperatorPackage: Includes all static-deployment files in the package-operator-package.
+func (g Generate) packageOperatorPackageFiles(ctx context.Context, imageOverrides map[string]string) error {
+	pkgFolder := filepath.Join("config", "packages", "package-operator")
+
 	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInPackageOperatorPackage)
 	if err != nil {
 		return err
 	}
+
+	images := applyImageOverrides(map[string]string{
+		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
+	}, imageOverrides)
+
 	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
 // Includes all static-deployment files in the remote-phase component.
-func (g Generate) remotePhaseComponentFiles(ctx context.Context) error {
+func (g Generate) remotePhaseComponentFiles(ctx context.Context, imageOverrides map[string]string) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "remote-phase")
-	images := map[string]string{
+
+	images := applyImageOverrides(map[string]string{
 		"remote-phase-manager": imageURL(imageRegistry(), "remote-phase-manager", appVersion),
-	}
+	}, imageOverrides)
+
 	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
 // Includes all static-deployment files in the hosted-cluster component.
-func (g Generate) hostedClusterComponentFiles(ctx context.Context) error {
+func (g Generate) hostedClusterComponentFiles(ctx context.Context, imageOverrides map[string]string) error {
 	pkgFolder := filepath.Join("config", "packages", "package-operator", "components", "hosted-cluster")
-	images := map[string]string{
-		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
-	}
 	err := filepath.WalkDir(filepath.Join("config", "static-deployment"), g.includeInHostedClusterComponent)
 	if err != nil {
 		return err
 	}
+
+	images := applyImageOverrides(map[string]string{
+		"package-operator-manager": imageURL(imageRegistry(), "package-operator-manager", appVersion),
+	}, imageOverrides)
+
 	return g.manifestFileFromTemplate(ctx, pkgFolder, images)
 }
 
@@ -402,9 +448,7 @@ func (g Generate) includeInPackage(path string, outFilePath string, transform in
 			continue
 		}
 
-		for k, v := range ann {
-			annotations[k] = v
-		}
+		maps.Copy(annotations, ann)
 
 		obj.SetAnnotations(annotations)
 
@@ -493,4 +537,20 @@ func (g Generate) templateManifestFiles(ctx context.Context, templatedPackage st
 	}
 
 	return err
+}
+
+func applyImageOverrides(images, imageOverrides map[string]string) map[string]string {
+	output := maps.Clone(images)
+
+	if imageOverrides != nil {
+		for k := range output {
+			// Skip empty overrides.
+			if imageOverrides[k] == "" {
+				continue
+			}
+			output[k] = imageOverrides[k]
+		}
+	}
+
+	return output
 }

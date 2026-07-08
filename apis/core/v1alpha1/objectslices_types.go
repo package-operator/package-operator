@@ -23,7 +23,8 @@ type ObjectSlice struct {
 type ObjectSliceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ObjectSlice `json:"items"`
+
+	Items []ObjectSlice `json:"items"`
 }
 
 func init() { register(&ObjectSlice{}, &ObjectSliceList{}) }

@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
@@ -80,7 +79,7 @@ func TestPackage_simple(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 	postCheck := func(ctx context.Context, t *testing.T, namespace string) {
@@ -119,7 +118,7 @@ func TestPackage_simpleWithSlices(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -157,7 +156,7 @@ func TestPackage_simpleWithoutSlices(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -180,9 +179,9 @@ func TestPackage_multi(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestMultiPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubMultiPackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestMultiPackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 
@@ -216,9 +215,9 @@ func TestPackage_cel(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestCelPackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubCelPackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestCelPackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 
@@ -331,7 +330,7 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 
 	require.NoError(t, Client.Apply(ctx, corev1ac.
 		ServiceAccount("package-operator", "package-operator-system").WithImagePullSecrets(
-		&corev1ac.LocalObjectReferenceApplyConfiguration{Name: ptr.To("dev-registry")},
+		&corev1ac.LocalObjectReferenceApplyConfiguration{Name: new("dev-registry")},
 	),
 		client.FieldOwner("package-operator-integration")))
 
@@ -341,7 +340,7 @@ func TestPackage_AuthenticatedWithServiceAccountPullSecrets(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPackageImageAuthenticated,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubImage": "%s"}`, TestStubImage)),
+			Raw: fmt.Appendf(nil, `{"testStubImage": "%s"}`, TestStubImage),
 		},
 	}
 
@@ -378,9 +377,9 @@ func TestPackage_pause(t *testing.T) {
 	spec := corev1alpha1.PackageSpec{
 		Image: SuccessTestPausePackageImage,
 		Config: &runtime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
+			Raw: fmt.Appendf(nil, `{"testStubPausePackageImage": "%s","testStubImage": "%s"}`,
 				SuccessTestPausePackageImage, TestStubImage,
-			)),
+			),
 		},
 	}
 	ctx := logr.NewContext(context.Background(), testr.New(t))

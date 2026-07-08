@@ -75,6 +75,7 @@ func NewMultiClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
+		adapters.NewObjectSetList,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, accessManager,
 		class, client,
@@ -96,6 +97,7 @@ func NewMultiClusterClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
+		adapters.NewClusterObjectSetList,
 		ownerhandling.NewAnnotation(scheme, constants.OwnerStrategyAnnotationKey),
 		log, scheme, accessManager,
 		class, client,
@@ -116,6 +118,7 @@ func NewSameClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSet,
+		adapters.NewObjectSetList,
 		ownerhandling.NewNative(scheme),
 		log, scheme, accessManager,
 		class, client,
@@ -136,6 +139,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 	return NewGenericObjectSetPhaseController(
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSet,
+		adapters.NewClusterObjectSetList,
 		ownerhandling.NewNative(scheme),
 		log, scheme, accessManager,
 		class, client,
@@ -148,6 +152,7 @@ func NewSameClusterClusterObjectSetPhaseController(
 func NewGenericObjectSetPhaseController(
 	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSet adapters.ObjectSetAccessorFactory,
+	newObjectSetList adapters.ObjectSetListAccessorFactory,
 	ownerStrategy boxcutterutil.OwnerStrategy,
 	log logr.Logger, scheme *runtime.Scheme,
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
@@ -168,16 +173,13 @@ func NewGenericObjectSetPhaseController(
 		ownerStrategy: ownerStrategy,
 		accessManager: accessManager,
 	}
+	siblingLookup := controllers.NewSiblingOwnerLookup(scheme, client, newObjectSet, newObjectSetList)
 	phaseReconciler := newObjectSetPhaseReconciler(
 		scheme,
 		accessManager,
-		client,
 		boxcutterutil.NewPhaseEngineFactory(
 			scheme, discoveryClient, targetRESTMapper, phaseValidator),
-		controllers.NewPreviousRevisionLookup(
-			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
-				return newObjectSet(s)
-			}, client).LookupPreviousRemotePhases,
+		siblingLookup.ClassifierForObjectSetPhase,
 		ownerStrategy,
 	)
 	controller.teardownHandler = phaseReconciler

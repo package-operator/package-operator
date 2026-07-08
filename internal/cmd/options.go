@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/go-logr/logr"
 )
@@ -162,7 +163,5 @@ func (w WithLabels) ConfigureBuildFromSource(c *BuildFromSourceConfig) {
 	if c.Labels == nil {
 		c.Labels = map[string]string{}
 	}
-	for k, v := range w {
-		c.Labels[k] = v
-	}
+	maps.Copy(c.Labels, w)
 }

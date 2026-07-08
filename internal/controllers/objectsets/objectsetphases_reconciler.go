@@ -440,8 +440,9 @@ func (r *objectSetPhasesReconciler) hasSurvivedDelay(objectSet adapters.ObjectSe
 }
 
 type objectSetPhasesReconcilerConfig struct {
-	Clock clock
 	controllers.BackoffConfig
+
+	Clock clock
 }
 
 func (c *objectSetPhasesReconcilerConfig) Option(opts ...objectSetPhasesReconcilerOption) {

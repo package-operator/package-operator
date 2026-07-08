@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/erdii/elegont/makewith"
 	"golang.org/x/sys/unix"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -81,6 +82,20 @@ func (dev *Dev) Integration(ctx context.Context, args []string) error {
 		return errors.New("only supports a single argument")
 	}
 	return test.Integration(ctx, false, filter)
+}
+
+// IntegrationDirect runs local integration tests in a KinD cluster without setting up the cluster first.
+func (dev *Dev) IntegrationDirect(ctx context.Context, args []string) error {
+	var filter string
+	switch len(args) {
+	case 0:
+		// nothing
+	case 1:
+		filter = args[0]
+	default:
+		return errors.New("only supports a single argument")
+	}
+	return test.IntegrationDirect(ctx, false, filter)
 }
 
 // Lint runs local linters to check the codebase.
@@ -173,8 +188,7 @@ func (dev *Dev) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("setting KUBECONFIG env variable: %w", err)
 	}
 
-	goArgs := make([]string, 0, 14+len(args))
-	goArgs = append(goArgs,
+	goArgs := makewith.ExtraCap(len(args),
 		absGoBinPath,
 		"run",
 		"./cmd/package-operator-manager",

@@ -363,6 +363,7 @@ type PackageEnvironmentHyperShiftHostedCluster struct {
 // TemplateContextPackage represents the (Cluster)Package object requesting this package content.
 type TemplateContextPackage struct {
 	TemplateContextObjectMeta `json:"metadata"`
+
 	// Image as presented via the (Cluster)Package API after admission.
 	Image string `json:"image"`
 }

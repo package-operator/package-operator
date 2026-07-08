@@ -20,7 +20,7 @@ import (
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	manifestsv1alpha1 "package-operator.run/apis/manifests/v1alpha1"
 	"package-operator.run/internal/constants"
-	"package-operator.run/internal/controllers/objectdeployments"
+	"package-operator.run/internal/controllers"
 )
 
 const (
@@ -166,7 +166,7 @@ func (init *initializer) ensurePKORevisionsPaused(ctx context.Context, pkg *core
 	err := init.client.List(
 		ctx, cosList,
 		client.MatchingLabels{
-			objectdeployments.ObjectSetObjectDeploymentLabel: "package-operator",
+			controllers.DeploymentLabel: "package-operator",
 		},
 	)
 	if err != nil {

@@ -1,0 +1,20 @@
+name: Check PR labels for merge blocker
+
+on:
+  pull_request:
+    types:
+      - opened
+      - labeled
+      - unlabeled
+
+jobs:
+  fail-on-blocked-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for do-not-merge label
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}" == "true" ]]; then
+            echo "PR labeled as do-not-merge"
+            exit 1
+          fi
+          echo "PR is allowed to merge"

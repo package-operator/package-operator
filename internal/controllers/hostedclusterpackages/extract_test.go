@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 )
 
 // TestExtractPackageTemplateFields_EnsuresNoDefaulting validates that the extraction
@@ -73,12 +72,12 @@ func TestExtractPackageTemplateFields_MatrixExhaustive(t *testing.T) {
 	// Generate all combinations using matrix library (v0.0.2+ supports nil pointers)
 	// 2*2*2*3*2*2 = 96 test cases covering all possible combinations
 	for tc := range matrix.Generate(t, TestCase{},
-		[]bool{false, true},                       // SetImage
-		[]bool{false, true},                       // SetConfig
-		[]bool{false, true},                       // SetComponent
-		[]*bool{nil, ptr.To(false), ptr.To(true)}, // Paused: nil=unset, false, true
-		[]bool{false, true},                       // SetLabels
-		[]bool{false, true},                       // SetAnnotations
+		[]bool{false, true},                 // SetImage
+		[]bool{false, true},                 // SetConfig
+		[]bool{false, true},                 // SetComponent
+		[]*bool{nil, new(false), new(true)}, // Paused: nil=unset, false, true
+		[]bool{false, true},                 // SetLabels
+		[]bool{false, true},                 // SetAnnotations
 	) {
 		pausedStr := "unset"
 		if tc.Paused != nil {

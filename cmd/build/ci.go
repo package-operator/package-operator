@@ -20,6 +20,17 @@ func (ci *CI) Integration(ctx context.Context, _ []string) error {
 	return test.Integration(ctx, true, "")
 }
 
+// GeneratePackage builds package manifests for the packag-operator package
+// and its sub-components. Can be supplied with an optional path to an image override file.
+// File content must be a yaml map with `image-name: image-address` key-value-pairs.
+func (ci *CI) GeneratePackage(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return generate.packageOperatorPackageAndComponentFilesWithoutOverrides(ctx)
+	} else {
+		return generate.packageOperatorPackageAndComponentFiles(ctx, args[0])
+	}
+}
+
 // Lint runs linters in CI to check the codebase.
 func (ci *CI) Lint(ctx context.Context, _ []string) error {
 	return lint.glciCheck(ctx)

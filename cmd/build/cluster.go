@@ -23,6 +23,7 @@ import (
 // Cluster focused targets.
 type Cluster struct {
 	*kind.Cluster
+
 	registryHostPort int32
 }
 

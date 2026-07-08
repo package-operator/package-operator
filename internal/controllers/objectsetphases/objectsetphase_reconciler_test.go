@@ -39,15 +39,12 @@ func init() {
 func TestPhaseReconciler_Reconcile(t *testing.T) {
 	t.Parallel()
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
 	lookup := func(
-		_ context.Context, _ controllers.PreviousOwner,
+		_ context.Context, _ adapters.ObjectSetPhaseAccessor,
 	) (
-		[]client.Object, error, //nolint: unparam
+		controllers.SiblingOwnerClassifier, error,
 	) {
-		return previousList, nil
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	tests := []struct {
@@ -79,13 +76,12 @@ func TestPhaseReconciler_Reconcile(t *testing.T) {
 			objectSetPhase.ClientObject().SetUID("test-uid")
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 			accessor := &managedcachemocks.AccessorMock{}
-			uncachedClient := testutil.NewClient()
 			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 			phaseResult := &boxcuttermocks.PhaseResultMock{}
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			// TODO mock client
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+			r := newObjectSetPhaseReconciler(testScheme, accessManager,
 				phaseEngineFactory, lookup, ownerStrategy)
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(accessor, nil)
@@ -124,15 +120,12 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
 	lookup := func(
-		_ context.Context, _ controllers.PreviousOwner,
+		_ context.Context, _ adapters.ObjectSetPhaseAccessor,
 	) (
-		[]client.Object, error,
+		controllers.SiblingOwnerClassifier, error,
 	) {
-		return previousList, nil
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -140,12 +133,11 @@ func TestPhaseReconciler_ReconcileBackoff(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-backoff")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -178,20 +170,19 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-				return []client.Object{}, nil
+			lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+				return func(metav1.OwnerReference) bool { return false }, nil
 			}
 			scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 			objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 			objectSetPhase.ClientObject().SetUID("test-uid-teardown")
 			ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 			accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-			uncachedClient := testutil.NewClient()
 			accessor := &managedcachemocks.AccessorMock{}
 			phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 			phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 			phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
-			r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+			r := newObjectSetPhaseReconciler(testScheme, accessManager,
 				phaseEngineFactory, lookup, ownerStrategy)
 
 			accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -229,8 +220,8 @@ func TestPhaseReconciler_Teardown(t *testing.T) {
 func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -241,9 +232,8 @@ func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	cleanupDone, err := r.Teardown(context.Background(), objectSetPhase)
@@ -258,17 +248,16 @@ func TestPhaseReconciler_Teardown_OrphanFinalizer(t *testing.T) {
 func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetUID("test-uid-access-mgr-error")
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	expectedErr := assert.AnError
@@ -284,8 +273,8 @@ func TestPhaseReconciler_Teardown_AccessManagerError(t *testing.T) {
 func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -293,9 +282,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -313,8 +301,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineFactoryError(t *testing.T) {
 func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -322,10 +310,9 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -345,8 +332,8 @@ func TestPhaseReconciler_Teardown_PhaseEngineError(t *testing.T) {
 func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	t.Parallel()
 
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -354,11 +341,10 @@ func TestPhaseReconciler_Teardown_FreeWithUserError(t *testing.T) {
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseTeardownResult := &boxcuttermocks.PhaseTeardownResultMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -382,7 +368,7 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
 	expectedErr := assert.AnError
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
 		return nil, expectedErr
 	}
 
@@ -390,34 +376,32 @@ func TestPhaseReconciler_Reconcile_LookupPreviousRevisionsError(t *testing.T) {
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	objectSetPhase.ClientObject().SetUID("test-uid-lookup-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	res, err := r.Reconcile(context.Background(), objectSetPhase)
 	assert.Empty(t, res)
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "lookup previous revisions")
+	assert.ErrorContains(t, err, "lookup sibling owner classifier")
 }
 
 func TestPhaseReconciler_Reconcile_AccessManagerError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
 	objectSetPhase.ClientObject().SetName("testPhaseOwner")
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-access-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	expectedErr := assert.AnError
@@ -434,8 +418,8 @@ func TestPhaseReconciler_Reconcile_PhaseEngineFactoryError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -443,10 +427,9 @@ func TestPhaseReconciler_Reconcile_PhaseEngineFactoryError(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-factory-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -465,8 +448,8 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -474,11 +457,10 @@ func TestPhaseReconciler_Reconcile_GenericError(t *testing.T) {
 	objectSetPhase.ClientObject().SetUID("test-uid-reconcile-generic-error")
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -499,11 +481,8 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	previousObject := adapters.NewObjectSet(scheme)
-	previousObject.ClientObject().SetName("test")
-	previousList := []client.Object{previousObject.ClientObject()}
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return previousList, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -532,13 +511,12 @@ func TestPhaseReconciler_Reconcile_WithObjects(t *testing.T) {
 
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -571,8 +549,8 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 	t.Parallel()
 
 	scheme := testutil.NewTestSchemeWithCoreV1Alpha1()
-	lookup := func(_ context.Context, _ controllers.PreviousOwner) ([]client.Object, error) {
-		return []client.Object{}, nil
+	lookup := func(_ context.Context, _ adapters.ObjectSetPhaseAccessor) (controllers.SiblingOwnerClassifier, error) {
+		return func(metav1.OwnerReference) bool { return false }, nil
 	}
 
 	objectSetPhase := adapters.NewObjectSetPhaseAccessor(scheme)
@@ -604,13 +582,12 @@ func TestPhaseReconciler_Reconcile_PausedState(t *testing.T) {
 
 	accessManager := &managedcachemocks.ObjectBoundAccessManagerMock[client.Object]{}
 	accessor := &managedcachemocks.AccessorMock{}
-	uncachedClient := testutil.NewClient()
 	phaseEngineFactory := &boxcuttermocks.PhaseEngineFactoryMock{}
 	phaseEngine := &boxcuttermocks.PhaseEngineMock{}
 	phaseResult := &boxcuttermocks.PhaseResultMock{}
 	ownerStrategy := &ownerhandlingmocks.OwnerStrategyMock{}
 
-	r := newObjectSetPhaseReconciler(testScheme, accessManager, uncachedClient,
+	r := newObjectSetPhaseReconciler(testScheme, accessManager,
 		phaseEngineFactory, lookup, ownerStrategy)
 
 	accessManager.On("GetWithUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).

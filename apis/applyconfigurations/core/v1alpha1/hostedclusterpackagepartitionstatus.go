@@ -7,23 +7,15 @@ package v1alpha1
 //
 // HostedClusterPackagePartitionStatus describes the status of a partition.
 type HostedClusterPackagePartitionStatusApplyConfiguration struct {
-	// Name of the partition.
-	Name                                               *string `json:"name,omitempty"`
 	HostedClusterPackageCountsStatusApplyConfiguration `json:",inline"`
+	// Name of the partition.
+	Name *string `json:"name,omitempty"`
 }
 
 // HostedClusterPackagePartitionStatusApplyConfiguration constructs a declarative configuration of the HostedClusterPackagePartitionStatus type for use with
 // apply.
 func HostedClusterPackagePartitionStatus() *HostedClusterPackagePartitionStatusApplyConfiguration {
 	return &HostedClusterPackagePartitionStatusApplyConfiguration{}
-}
-
-// WithName sets the Name field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Name field is set to the value of the last call.
-func (b *HostedClusterPackagePartitionStatusApplyConfiguration) WithName(value string) *HostedClusterPackagePartitionStatusApplyConfiguration {
-	b.Name = &value
-	return b
 }
 
 // WithObservedGeneration sets the ObservedGeneration field in the declarative configuration to the given value
@@ -63,5 +55,13 @@ func (b *HostedClusterPackagePartitionStatusApplyConfiguration) WithUpdatedPacka
 // If called multiple times, the TotalPackages field is set to the value of the last call.
 func (b *HostedClusterPackagePartitionStatusApplyConfiguration) WithTotalPackages(value int32) *HostedClusterPackagePartitionStatusApplyConfiguration {
 	b.HostedClusterPackageCountsStatusApplyConfiguration.TotalPackages = &value
+	return b
+}
+
+// WithName sets the Name field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Name field is set to the value of the last call.
+func (b *HostedClusterPackagePartitionStatusApplyConfiguration) WithName(value string) *HostedClusterPackagePartitionStatusApplyConfiguration {
+	b.Name = &value
 	return b
 }

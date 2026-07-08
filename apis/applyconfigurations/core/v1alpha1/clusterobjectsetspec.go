@@ -11,11 +11,11 @@ import (
 //
 // ClusterObjectSetSpec defines the desired state of a ClusterObjectSet.
 type ClusterObjectSetSpecApplyConfiguration struct {
+	ObjectSetTemplateSpecApplyConfiguration `json:",inline"`
 	// Specifies the lifecycle state of the ClusterObjectSet.
 	LifecycleState *corev1alpha1.ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
 	// Previous revisions of the ClusterObjectSet to adopt objects from.
-	Previous                                []PreviousRevisionReferenceApplyConfiguration `json:"previous,omitempty"`
-	ObjectSetTemplateSpecApplyConfiguration `json:",inline"`
+	Previous []PreviousRevisionReferenceApplyConfiguration `json:"previous,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision *int64 `json:"revision,omitempty"`
 }
@@ -24,27 +24,6 @@ type ClusterObjectSetSpecApplyConfiguration struct {
 // apply.
 func ClusterObjectSetSpec() *ClusterObjectSetSpecApplyConfiguration {
 	return &ClusterObjectSetSpecApplyConfiguration{}
-}
-
-// WithLifecycleState sets the LifecycleState field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the LifecycleState field is set to the value of the last call.
-func (b *ClusterObjectSetSpecApplyConfiguration) WithLifecycleState(value corev1alpha1.ObjectSetLifecycleState) *ClusterObjectSetSpecApplyConfiguration {
-	b.LifecycleState = &value
-	return b
-}
-
-// WithPrevious adds the given value to the Previous field in the declarative configuration
-// and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the Previous field.
-func (b *ClusterObjectSetSpecApplyConfiguration) WithPrevious(values ...*PreviousRevisionReferenceApplyConfiguration) *ClusterObjectSetSpecApplyConfiguration {
-	for i := range values {
-		if values[i] == nil {
-			panic("nil value passed to WithPrevious")
-		}
-		b.Previous = append(b.Previous, *values[i])
-	}
-	return b
 }
 
 // WithPhases adds the given value to the Phases field in the declarative configuration
@@ -78,6 +57,27 @@ func (b *ClusterObjectSetSpecApplyConfiguration) WithAvailabilityProbes(values .
 // If called multiple times, the SuccessDelaySeconds field is set to the value of the last call.
 func (b *ClusterObjectSetSpecApplyConfiguration) WithSuccessDelaySeconds(value int32) *ClusterObjectSetSpecApplyConfiguration {
 	b.ObjectSetTemplateSpecApplyConfiguration.SuccessDelaySeconds = &value
+	return b
+}
+
+// WithLifecycleState sets the LifecycleState field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the LifecycleState field is set to the value of the last call.
+func (b *ClusterObjectSetSpecApplyConfiguration) WithLifecycleState(value corev1alpha1.ObjectSetLifecycleState) *ClusterObjectSetSpecApplyConfiguration {
+	b.LifecycleState = &value
+	return b
+}
+
+// WithPrevious adds the given value to the Previous field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the Previous field.
+func (b *ClusterObjectSetSpecApplyConfiguration) WithPrevious(values ...*PreviousRevisionReferenceApplyConfiguration) *ClusterObjectSetSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithPrevious")
+		}
+		b.Previous = append(b.Previous, *values[i])
+	}
 	return b
 }
 

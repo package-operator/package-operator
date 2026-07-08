@@ -11,11 +11,11 @@ import (
 //
 // ObjectSetSpec defines the desired state of a ObjectSet.
 type ObjectSetSpecApplyConfiguration struct {
+	ObjectSetTemplateSpecApplyConfiguration `json:",inline"`
 	// Specifies the lifecycle state of the ObjectSet.
 	LifecycleState *corev1alpha1.ObjectSetLifecycleState `json:"lifecycleState,omitempty"`
 	// Previous revisions of the ObjectSet to adopt objects from.
-	Previous                                []PreviousRevisionReferenceApplyConfiguration `json:"previous,omitempty"`
-	ObjectSetTemplateSpecApplyConfiguration `json:",inline"`
+	Previous []PreviousRevisionReferenceApplyConfiguration `json:"previous,omitempty"`
 	// Computed revision number, monotonically increasing.
 	Revision *int64 `json:"revision,omitempty"`
 }
@@ -24,27 +24,6 @@ type ObjectSetSpecApplyConfiguration struct {
 // apply.
 func ObjectSetSpec() *ObjectSetSpecApplyConfiguration {
 	return &ObjectSetSpecApplyConfiguration{}
-}
-
-// WithLifecycleState sets the LifecycleState field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the LifecycleState field is set to the value of the last call.
-func (b *ObjectSetSpecApplyConfiguration) WithLifecycleState(value corev1alpha1.ObjectSetLifecycleState) *ObjectSetSpecApplyConfiguration {
-	b.LifecycleState = &value
-	return b
-}
-
-// WithPrevious adds the given value to the Previous field in the declarative configuration
-// and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the Previous field.
-func (b *ObjectSetSpecApplyConfiguration) WithPrevious(values ...*PreviousRevisionReferenceApplyConfiguration) *ObjectSetSpecApplyConfiguration {
-	for i := range values {
-		if values[i] == nil {
-			panic("nil value passed to WithPrevious")
-		}
-		b.Previous = append(b.Previous, *values[i])
-	}
-	return b
 }
 
 // WithPhases adds the given value to the Phases field in the declarative configuration
@@ -78,6 +57,27 @@ func (b *ObjectSetSpecApplyConfiguration) WithAvailabilityProbes(values ...*Obje
 // If called multiple times, the SuccessDelaySeconds field is set to the value of the last call.
 func (b *ObjectSetSpecApplyConfiguration) WithSuccessDelaySeconds(value int32) *ObjectSetSpecApplyConfiguration {
 	b.ObjectSetTemplateSpecApplyConfiguration.SuccessDelaySeconds = &value
+	return b
+}
+
+// WithLifecycleState sets the LifecycleState field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the LifecycleState field is set to the value of the last call.
+func (b *ObjectSetSpecApplyConfiguration) WithLifecycleState(value corev1alpha1.ObjectSetLifecycleState) *ObjectSetSpecApplyConfiguration {
+	b.LifecycleState = &value
+	return b
+}
+
+// WithPrevious adds the given value to the Previous field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the Previous field.
+func (b *ObjectSetSpecApplyConfiguration) WithPrevious(values ...*PreviousRevisionReferenceApplyConfiguration) *ObjectSetSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithPrevious")
+		}
+		b.Previous = append(b.Previous, *values[i])
+	}
 	return b
 }
 

@@ -22,7 +22,8 @@ type ClusterObjectTemplate struct {
 type ClusterObjectTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterObjectTemplate `json:"items"`
+
+	Items []ClusterObjectTemplate `json:"items"`
 }
 
 func init() { register(&ClusterObjectTemplate{}, &ClusterObjectTemplateList{}) }

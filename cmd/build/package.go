@@ -21,9 +21,7 @@ func buildPackage(ctx context.Context, name, registry string) error {
 
 	if name == "package-operator" {
 		deps = append(deps,
-			run.Meth(generate, generate.remotePhaseComponentFiles),
-			run.Meth(generate, generate.hostedClusterComponentFiles),
-			run.Meth(generate, generate.packageOperatorPackageFiles),
+			run.Meth(generate, generate.packageOperatorPackageAndComponentFilesWithoutOverrides),
 		)
 	} else {
 		deps = append(deps, run.Meth1(generate, generate.templateManifestFiles, name))

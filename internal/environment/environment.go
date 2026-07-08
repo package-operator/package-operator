@@ -176,7 +176,7 @@ func (m *Manager) openShiftEnvironment(ctx context.Context) (
 	switch {
 	case meta.IsNoMatchError(err) ||
 		apimachineryerrors.IsNotFound(err) ||
-		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		errors.Is(err, &discovery.ErrGroupDiscoveryFailed{}):
 		// API not registered in cluster
 		return nil, false, nil
 	case err != nil:
@@ -275,7 +275,7 @@ func (m *Manager) hyperShiftEnvironment() (
 
 	case meta.IsNoMatchError(err) ||
 		apimachineryerrors.IsNotFound(err) ||
-		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		errors.Is(err, &discovery.ErrGroupDiscoveryFailed{}):
 		// HyperShift HostedCluster API is NOT present on the cluster.
 		return nil, false, nil
 	}

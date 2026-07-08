@@ -216,7 +216,7 @@ func (pkoMgr *packageOperatorManager) probeHyperShiftIntegration(
 		}
 
 	case meta.IsNoMatchError(err) || apimachineryerrors.IsNotFound(err) ||
-		discovery.IsGroupDiscoveryFailedError(errors.Unwrap(err)):
+		errors.Is(err, &discovery.ErrGroupDiscoveryFailed{}):
 		ticker := clock.RealClock{}.NewTicker(hyperShiftPollInterval)
 		if err := pkoMgr.mgr.Add(
 			newHypershift(
