@@ -53,11 +53,11 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 
 		checker := &phasesCheckerMock{}
 
-		lookup := func(_ context.Context, _ controllers.PreviousOwner) (
-			[]controllers.PreviousObjectSet,
+		lookup := func(_ context.Context, _ adapters.ObjectSetAccessor) (
+			controllers.SiblingOwnerClassifier,
 			error,
 		) {
-			return []controllers.PreviousObjectSet{}, nil
+			return func(metav1.OwnerReference) bool { return false }, nil
 		}
 
 		objectSetPhasesReconciler := newObjectSetPhasesReconciler(
@@ -301,11 +301,11 @@ func TestObjectSetPhasesReconciler_SuccessDelay(t *testing.T) {
 				Return(accessor, nil)
 			factory.On("New", accessor).Return(revisionEngine, nil)
 
-			lookup := func(_ context.Context, _ controllers.PreviousOwner) (
-				[]controllers.PreviousObjectSet,
+			lookup := func(_ context.Context, _ adapters.ObjectSetAccessor) (
+				controllers.SiblingOwnerClassifier,
 				error,
 			) {
-				return []controllers.PreviousObjectSet{}, nil
+				return func(metav1.OwnerReference) bool { return false }, nil
 			}
 			checker := &phasesCheckerMock{}
 

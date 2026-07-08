@@ -68,6 +68,7 @@ func NewObjectSetController(
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewObjectSet,
+		adapters.NewObjectSetList,
 		adapters.NewObjectSetPhaseAccessor,
 		adapters.NewObjectSlice,
 		c, log, scheme, accessManager, uc, r,
@@ -85,6 +86,7 @@ func NewClusterObjectSetController(
 ) *GenericObjectSetController {
 	return newGenericObjectSetController(
 		adapters.NewClusterObjectSet,
+		adapters.NewClusterObjectSetList,
 		adapters.NewClusterObjectSetPhaseAccessor,
 		adapters.NewClusterObjectSlice,
 		c, log, scheme, accessManager, uc, r,
@@ -95,6 +97,7 @@ func NewClusterObjectSetController(
 
 func newGenericObjectSetController(
 	newObjectSet adapters.ObjectSetAccessorFactory,
+	newObjectSetList adapters.ObjectSetListAccessorFactory,
 	newObjectSetPhase adapters.ObjectSetPhaseFactory,
 	newObjectSlice adapters.ObjectSliceFactory,
 	client client.Client, log logr.Logger,
@@ -121,15 +124,13 @@ func newGenericObjectSetController(
 		revisionEngineFactory: revisionEngineFactory,
 	}
 
+	siblingLookup := controllers.NewSiblingOwnerLookup(scheme, client, newObjectSet, newObjectSetList)
 	phasesReconciler := newObjectSetPhasesReconciler(
 		scheme,
 		accessManager,
 		revisionEngineFactory,
 		remotePhase,
-		controllers.NewPreviousRevisionLookup(
-			scheme, func(s *runtime.Scheme) controllers.PreviousObjectSet {
-				return newObjectSet(s)
-			}, client).Lookup,
+		siblingLookup.ClassifierForObjectSet,
 		preflight.PhasesCheckerList{
 			preflight.NewObjectDuplicate(),
 		},

@@ -35,15 +35,15 @@ import (
 
 // objectSetPhasesReconciler reconciles all phases within an ObjectSet.
 type objectSetPhasesReconciler struct {
-	cfg                     objectSetPhasesReconcilerConfig
-	scheme                  *runtime.Scheme
-	accessManager           managedcache.ObjectBoundAccessManager[client.Object]
-	revisionEngineFactory   boxcutterutil.RevisionEngineFactory
-	remotePhase             remotePhaseReconciler
-	lookupPreviousRevisions lookupPreviousRevisions
-	ownerStrategy           boxcutterutil.OwnerStrategy
-	preflightChecker        phasesChecker
-	backoff                 *flowcontrol.Backoff
+	cfg                          objectSetPhasesReconcilerConfig
+	scheme                       *runtime.Scheme
+	accessManager                managedcache.ObjectBoundAccessManager[client.Object]
+	revisionEngineFactory        boxcutterutil.RevisionEngineFactory
+	remotePhase                  remotePhaseReconciler
+	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifier
+	ownerStrategy                boxcutterutil.OwnerStrategy
+	preflightChecker             phasesChecker
+	backoff                      *flowcontrol.Backoff
 }
 
 type ownerStrategy interface {
@@ -62,7 +62,7 @@ func newObjectSetPhasesReconciler(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	revisionEngineFactory boxcutterutil.RevisionEngineFactory,
 	remotePhase remotePhaseReconciler,
-	lookupPreviousRevisions lookupPreviousRevisions,
+	lookupSiblingOwnerClassifier lookupSiblingOwnerClassifier,
 	checker phasesChecker,
 	opts ...objectSetPhasesReconcilerOption,
 ) *objectSetPhasesReconciler {
@@ -72,15 +72,15 @@ func newObjectSetPhasesReconciler(
 	cfg.Default()
 
 	return &objectSetPhasesReconciler{
-		cfg:                     cfg,
-		scheme:                  scheme,
-		accessManager:           accessManager,
-		revisionEngineFactory:   revisionEngineFactory,
-		remotePhase:             remotePhase,
-		lookupPreviousRevisions: lookupPreviousRevisions,
-		ownerStrategy:           ownerhandling.NewNative(scheme),
-		preflightChecker:        checker,
-		backoff:                 cfg.GetBackoff(),
+		cfg:                          cfg,
+		scheme:                       scheme,
+		accessManager:                accessManager,
+		revisionEngineFactory:        revisionEngineFactory,
+		remotePhase:                  remotePhase,
+		lookupSiblingOwnerClassifier: lookupSiblingOwnerClassifier,
+		ownerStrategy:                ownerhandling.NewNative(scheme),
+		preflightChecker:             checker,
+		backoff:                      cfg.GetBackoff(),
 	}
 }
 
@@ -95,9 +95,9 @@ type remotePhaseReconciler interface {
 	) (cleanupDone bool, err error)
 }
 
-type lookupPreviousRevisions func(
-	ctx context.Context, owner controllers.PreviousOwner,
-) ([]controllers.PreviousObjectSet, error)
+type lookupSiblingOwnerClassifier func(
+	ctx context.Context, objectSet adapters.ObjectSetAccessor,
+) (controllers.SiblingOwnerClassifier, error)
 
 func (r *objectSetPhasesReconciler) Reconcile(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
@@ -249,11 +249,10 @@ func (r *objectSetPhasesReconciler) updateStatus(
 func (r *objectSetPhasesReconciler) buildRevision(
 	ctx context.Context, objectSet adapters.ObjectSetAccessor,
 ) (boxcutter.Revision, error) {
-	previous, err := r.lookupPreviousRevisions(ctx, objectSet)
+	siblingClassifier, err := r.lookupSiblingOwnerClassifier(ctx, objectSet)
 	if err != nil {
-		return nil, fmt.Errorf("lookup previous revisions: %w", err)
+		return nil, fmt.Errorf("lookup sibling owner classifier: %w", err)
 	}
-	previousObjects := previousToObjects(previous)
 
 	probe, err := internalprobing.Parse(ctx, objectSet.GetAvailabilityProbes())
 	if err != nil {
@@ -297,7 +296,7 @@ func (r *objectSetPhasesReconciler) buildRevision(
 				&phaseObj.Object,
 				collisionProtection,
 				types.WithProbe(types.ProgressProbeType, probe),
-				boxcutter.WithPreviousOwners(previousObjects),
+				boxcutter.WithSiblingOwnerClassifier(siblingClassifier),
 			))
 		}
 
@@ -308,14 +307,6 @@ func (r *objectSetPhasesReconciler) buildRevision(
 	}
 
 	return revision, nil
-}
-
-func previousToObjects(prev []controllers.PreviousObjectSet) []client.Object {
-	objects := make([]client.Object, 0, len(prev))
-	for _, p := range prev {
-		objects = append(objects, p.ClientObject())
-	}
-	return objects
 }
 
 func (r *objectSetPhasesReconciler) Teardown(

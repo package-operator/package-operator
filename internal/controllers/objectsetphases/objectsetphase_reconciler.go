@@ -14,7 +14,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/flowcontrol"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -268,11 +267,6 @@ func (c *objectSetPhaseReconcilerConfig) Default() {
 
 type objectSetPhaseReconcilerOption interface {
 	ConfigureObjectSetPhaseReconciler(*objectSetPhaseReconcilerConfig)
-}
-
-// Convert a  kubernetes object to an unstructured object.
-func convertToUnstructured(obj machinery.Object) *unstructured.Unstructured {
-	return obj.(*unstructured.Unstructured)
 }
 
 func mapConditions(actualObjects []machinery.Object, owner adapters.ObjectSetPhaseAccessor) error {
