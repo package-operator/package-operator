@@ -24,6 +24,34 @@ import (
 
 var errTestRemotePhaseEngine = errors.New("test error")
 
+func newOwnerWithPhase(name, class string) *adapters.ObjectSetAdapter {
+	return &adapters.ObjectSetAdapter{
+		ObjectSet: corev1alpha1.ObjectSet{
+			Spec: corev1alpha1.ObjectSetSpec{
+				ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+					Phases: []corev1alpha1.ObjectSetTemplatePhase{
+						{Name: name, Class: class},
+					},
+				},
+			},
+		},
+	}
+}
+
+func newOwnerWithLocalPhase(name string) *adapters.ObjectSetAdapter {
+	return &adapters.ObjectSetAdapter{
+		ObjectSet: corev1alpha1.ObjectSet{
+			Spec: corev1alpha1.ObjectSetSpec{
+				ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
+					Phases: []corev1alpha1.ObjectSetTemplatePhase{
+						{Name: name},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestRemoteEnabledPhaseEngineFactory_New(t *testing.T) {
 	t.Parallel()
 
@@ -91,78 +119,33 @@ func TestHasClass(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "phase with class exists",
-			owner: &adapters.ObjectSetAdapter{
-				ObjectSet: corev1alpha1.ObjectSet{
-					Spec: corev1alpha1.ObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-							Phases: []corev1alpha1.ObjectSetTemplatePhase{
-								{
-									Name:  "phase1",
-									Class: "remote",
-								},
-							},
-						},
-					},
-				},
-			},
+			name:     "phase with class exists",
+			owner:    newOwnerWithPhase("phase1", "remote"),
 			phase:    &mockPhase{name: "phase1"},
 			expected: true,
 		},
 		{
-			name: "phase without class",
-			owner: &adapters.ObjectSetAdapter{
-				ObjectSet: corev1alpha1.ObjectSet{
-					Spec: corev1alpha1.ObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-							Phases: []corev1alpha1.ObjectSetTemplatePhase{
-								{
-									Name: "phase1",
-								},
-							},
-						},
-					},
-				},
-			},
+			name:     "phase without class",
+			owner:    newOwnerWithLocalPhase("phase1"),
 			phase:    &mockPhase{name: "phase1"},
 			expected: false,
 		},
 		{
-			name: "phase with empty class",
-			owner: &adapters.ObjectSetAdapter{
-				ObjectSet: corev1alpha1.ObjectSet{
-					Spec: corev1alpha1.ObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-							Phases: []corev1alpha1.ObjectSetTemplatePhase{
-								{
-									Name:  "phase1",
-									Class: "",
-								},
-							},
-						},
-					},
-				},
-			},
+			name:     "phase with empty class",
+			owner:    newOwnerWithPhase("phase1", ""),
 			phase:    &mockPhase{name: "phase1"},
 			expected: false,
 		},
 		{
-			name: "phase not found in owner",
-			owner: &adapters.ObjectSetAdapter{
-				ObjectSet: corev1alpha1.ObjectSet{
-					Spec: corev1alpha1.ObjectSetSpec{
-						ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-							Phases: []corev1alpha1.ObjectSetTemplatePhase{
-								{
-									Name:  "phase1",
-									Class: "remote",
-								},
-							},
-						},
-					},
-				},
-			},
+			name:     "phase not found in owner",
+			owner:    newOwnerWithPhase("phase1", "remote"),
 			phase:    &mockPhase{name: "phase2"},
+			expected: false,
+		},
+		{
+			name:     "nil owner",
+			owner:    nil,
+			phase:    &mockPhase{name: "phase1"},
 			expected: false,
 		},
 	}
@@ -241,20 +224,7 @@ func TestRemoteEnabledPhaseEngine_ReconcileRemotePhase(t *testing.T) {
 			remotePhaseReconciler: mockRemotePhaseReconciler,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name:  "test-phase",
-								Class: "remote",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithPhase("test-phase", "remote")
 
 		phase := &mockPhase{name: "test-phase"}
 		expectedResult := &remotePhaseResult{name: "test-phase"}
@@ -283,20 +253,7 @@ func TestRemoteEnabledPhaseEngine_ReconcileRemotePhase(t *testing.T) {
 			remotePhaseReconciler: mockRemotePhaseReconciler,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name:  "test-phase",
-								Class: "remote",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithPhase("test-phase", "remote")
 
 		phase := &mockPhase{name: "test-phase"}
 		boxcutterPhase := corev1alpha1.ObjectSetTemplatePhase{
@@ -314,6 +271,19 @@ func TestRemoteEnabledPhaseEngine_ReconcileRemotePhase(t *testing.T) {
 		assert.Nil(t, result)
 		mockRemotePhaseReconciler.AssertExpectations(t)
 	})
+
+	t.Run("returns error when phase is missing from owner spec", func(t *testing.T) {
+		t.Parallel()
+
+		engine := &remoteEnabledPhaseEngine{}
+		owner := newOwnerWithPhase("other-phase", "remote")
+		phase := &mockPhase{name: "test-phase"}
+
+		result, err := engine.reconcileRemotePhase(context.Background(), owner, phase)
+
+		require.EqualError(t, err, `phase "test-phase" not found in owner spec`)
+		assert.Nil(t, result)
+	})
 }
 
 func TestRemoteEnabledPhaseEngine_TeardownRemotePhase(t *testing.T) {
@@ -327,20 +297,7 @@ func TestRemoteEnabledPhaseEngine_TeardownRemotePhase(t *testing.T) {
 			remotePhaseReconciler: mockRemotePhaseReconciler,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name:  "test-phase",
-								Class: "remote",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithPhase("test-phase", "remote")
 
 		phase := &mockPhase{name: "test-phase"}
 		boxcutterPhase := corev1alpha1.ObjectSetTemplatePhase{
@@ -369,20 +326,7 @@ func TestRemoteEnabledPhaseEngine_TeardownRemotePhase(t *testing.T) {
 			remotePhaseReconciler: mockRemotePhaseReconciler,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name:  "test-phase",
-								Class: "remote",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithPhase("test-phase", "remote")
 
 		phase := &mockPhase{name: "test-phase"}
 		boxcutterPhase := corev1alpha1.ObjectSetTemplatePhase{
@@ -411,20 +355,7 @@ func TestRemoteEnabledPhaseEngine_TeardownRemotePhase(t *testing.T) {
 			remotePhaseReconciler: mockRemotePhaseReconciler,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name:  "test-phase",
-								Class: "remote",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithPhase("test-phase", "remote")
 
 		phase := &mockPhase{name: "test-phase"}
 		boxcutterPhase := corev1alpha1.ObjectSetTemplatePhase{
@@ -442,6 +373,19 @@ func TestRemoteEnabledPhaseEngine_TeardownRemotePhase(t *testing.T) {
 		assert.Nil(t, result)
 		mockRemotePhaseReconciler.AssertExpectations(t)
 	})
+
+	t.Run("returns error when phase is missing from owner spec", func(t *testing.T) {
+		t.Parallel()
+
+		engine := &remoteEnabledPhaseEngine{}
+		owner := newOwnerWithPhase("other-phase", "remote")
+		phase := &mockPhase{name: "test-phase"}
+
+		result, err := engine.teardownRemotePhase(context.Background(), owner, phase)
+
+		require.EqualError(t, err, `phase "test-phase" not found in owner spec`)
+		assert.Nil(t, result)
+	})
 }
 
 func TestRemoteEnabledPhaseEngine_ReconcileLocalPhase(t *testing.T) {
@@ -455,19 +399,7 @@ func TestRemoteEnabledPhaseEngine_ReconcileLocalPhase(t *testing.T) {
 			pe: mockPhaseEngine,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name: "test-phase",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithLocalPhase("test-phase")
 
 		phase := &adapters.PhaseAdapter{
 			Phase: corev1alpha1.ObjectSetTemplatePhase{
@@ -502,19 +434,7 @@ func TestRemoteEnabledPhaseEngine_ReconcileLocalPhase(t *testing.T) {
 			pe: mockPhaseEngine,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name: "test-phase",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithLocalPhase("test-phase")
 
 		phase := &adapters.PhaseAdapter{
 			Phase: corev1alpha1.ObjectSetTemplatePhase{
@@ -552,19 +472,7 @@ func TestRemoteEnabledPhaseEngine_TeardownLocalPhase(t *testing.T) {
 			pe: mockPhaseEngine,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name: "test-phase",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithLocalPhase("test-phase")
 
 		phase := &adapters.PhaseAdapter{
 			Phase: corev1alpha1.ObjectSetTemplatePhase{
@@ -599,19 +507,7 @@ func TestRemoteEnabledPhaseEngine_TeardownLocalPhase(t *testing.T) {
 			pe: mockPhaseEngine,
 		}
 
-		owner := &adapters.ObjectSetAdapter{
-			ObjectSet: corev1alpha1.ObjectSet{
-				Spec: corev1alpha1.ObjectSetSpec{
-					ObjectSetTemplateSpec: corev1alpha1.ObjectSetTemplateSpec{
-						Phases: []corev1alpha1.ObjectSetTemplatePhase{
-							{
-								Name: "test-phase",
-							},
-						},
-					},
-				},
-			},
-		}
+		owner := newOwnerWithLocalPhase("test-phase")
 
 		phase := &adapters.PhaseAdapter{
 			Phase: corev1alpha1.ObjectSetTemplatePhase{

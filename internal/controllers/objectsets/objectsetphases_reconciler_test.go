@@ -153,6 +153,7 @@ func TestObjectSetPhasesReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, err)
 
 		p.checker.AssertCalled(t, "Check", mock.Anything, mock.Anything)
+		p.revisionEngine.AssertExpectations(t)
 		assert.Equal(t, reconcile.Result{
 			RequeueAfter: controllers.DefaultInitialBackoff,
 		}, res)
