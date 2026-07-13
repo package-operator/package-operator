@@ -58,5 +58,6 @@ func (e *PhaseReconcilerError) CausedBy(reason ErrorReason) bool {
 
 // Returns true if the underlying error is because adoption has been refused.
 func IsAdoptionRefusedError(err error) bool {
-	return errors.As(err, &machinery.CreateCollisionError{})
+	var collisionErr *machinery.CreateCollisionError
+	return errors.As(err, &collisionErr)
 }

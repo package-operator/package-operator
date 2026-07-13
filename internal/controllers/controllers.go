@@ -203,49 +203,46 @@ type ObjectSetOrPhase interface {
 	GetStatusConditions() *[]metav1.Condition
 }
 
+func setObjectSetOrPhaseUnavailable(
+	objectSetOrPhase ObjectSetOrPhase, reason, message string,
+) {
+	meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
+		Type:               corev1alpha1.ObjectSetAvailable,
+		Status:             metav1.ConditionFalse,
+		ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
+		Reason:             reason,
+		Message:            message,
+	})
+}
+
+func handleObjectSetOrPhaseStatusError(
+	ctx context.Context, objectSetOrPhase ObjectSetOrPhase,
+	reason, message string, updateStatus func(ctx context.Context) error,
+) (ctrl.Result, error) {
+	setObjectSetOrPhaseUnavailable(objectSetOrPhase, reason, message)
+	// Retry every once and a while to automatically unblock, if the underlying issue has been cleared.
+	return ctrl.Result{RequeueAfter: DefaultGlobalMissConfigurationRetry}, updateStatus(ctx)
+}
+
 func UpdateObjectSetOrPhaseStatusFromError(
 	ctx context.Context, objectSetOrPhase ObjectSetOrPhase,
 	reconcileErr error, updateStatus func(ctx context.Context) error,
 ) (res ctrl.Result, err error) {
 	var preflightError *preflight.Error
 	if errors.As(reconcileErr, &preflightError) {
-		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
-			Reason:             "PreflightError",
-			Message:            preflightError.Error(),
-		})
-		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
-		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
-		return res, updateStatus(ctx)
+		return handleObjectSetOrPhaseStatusError(
+			ctx, objectSetOrPhase, "PreflightError", preflightError.Error(), updateStatus)
 	}
 
 	var phaseValidationError *validation.PhaseValidationError
 	if errors.As(reconcileErr, &phaseValidationError) {
-		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
-			Reason:             "PreflightError",
-			Message:            phaseValidationError.Error(),
-		})
-		// Retry every once and a while to automatically unblock, if the preflight check issue has been cleared.
-		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
-		return res, updateStatus(ctx)
+		return handleObjectSetOrPhaseStatusError(
+			ctx, objectSetOrPhase, "PhaseValidationError", phaseValidationError.Error(), updateStatus)
 	}
 
 	if IsAdoptionRefusedError(reconcileErr) {
-		meta.SetStatusCondition(objectSetOrPhase.GetStatusConditions(), metav1.Condition{
-			Type:               corev1alpha1.ObjectSetAvailable,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: objectSetOrPhase.ClientObject().GetGeneration(),
-			Reason:             "CollisionDetected",
-			Message:            reconcileErr.Error(),
-		})
-		// Retry every once and a while to automatically unblock, if the conflicting resource has been deleted.
-		res.RequeueAfter = DefaultGlobalMissConfigurationRetry
-		return res, updateStatus(ctx)
+		return handleObjectSetOrPhaseStatusError(
+			ctx, objectSetOrPhase, "CollisionDetected", reconcileErr.Error(), updateStatus)
 	}
 
 	// if we don't handle the error in any special way above,
@@ -259,7 +256,10 @@ func MapConditionsToObjectSetOrPhase(
 	objectSetOrPhase ObjectSetOrPhase,
 ) error {
 	for _, obj := range actualObjects {
-		unstructuredObj := obj.(*unstructured.Unstructured)
+		unstructuredObj, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("mapping conditions: object %q is not unstructured", obj.GetName())
+		}
 
 		rawConditions, exist, err := unstructured.NestedFieldNoCopy(
 			unstructuredObj.Object, "status", "conditions")
