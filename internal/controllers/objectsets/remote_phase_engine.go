@@ -2,6 +2,7 @@ package objectsets
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,8 +61,11 @@ func (r *remoteEnabledPhaseEngine) Reconcile(
 	phase types.Phase, opts ...types.PhaseReconcileOption,
 ) (machinery.PhaseResult, error) {
 	owner := getReconcileOwner(phase, opts...)
-	if hasClass(owner, phase) {
-		pa := phase.(*adapters.PhaseAdapter)
+	if owner != nil && hasClass(owner, phase) {
+		pa, ok := phase.(*adapters.PhaseAdapter)
+		if !ok {
+			return nil, fmt.Errorf("remote phase %q is not backed by PhaseAdapter", phase.GetName())
+		}
 		return r.reconcileRemotePhase(ctx, pa.GetObjectSet(), phase)
 	}
 	return r.pe.Reconcile(ctx, revision, phase, opts...)
@@ -72,11 +76,24 @@ func (r *remoteEnabledPhaseEngine) Teardown(
 	phase types.Phase, opts ...types.PhaseTeardownOption,
 ) (machinery.PhaseTeardownResult, error) {
 	owner := getTeardownOwner(phase, opts...)
-	if hasClass(owner, phase) {
-		pa := phase.(*adapters.PhaseAdapter)
+	if owner != nil && hasClass(owner, phase) {
+		pa, ok := phase.(*adapters.PhaseAdapter)
+		if !ok {
+			return nil, fmt.Errorf("remote phase %q is not backed by PhaseAdapter", phase.GetName())
+		}
 		return r.teardownRemotePhase(ctx, pa.GetObjectSet(), phase)
 	}
 	return r.pe.Teardown(ctx, revision, phase, opts...)
+}
+
+func ownerFromObjectOwner(objOwner any) adapters.ObjectSetAccessor {
+	switch o := objOwner.(type) {
+	case *corev1alpha1.ObjectSet:
+		return &adapters.ObjectSetAdapter{ObjectSet: *o}
+	case *corev1alpha1.ClusterObjectSet:
+		return &adapters.ClusterObjectSetAdapter{ClusterObjectSet: *o}
+	}
+	return nil
 }
 
 func getReconcileOwner(phase types.Phase, opts ...types.PhaseReconcileOption) adapters.ObjectSetAccessor {
@@ -95,13 +112,7 @@ func getReconcileOwner(phase types.Phase, opts ...types.PhaseReconcileOption) ad
 		opt.ApplyToObjectReconcileOptions(&objOptions)
 	}
 
-	switch o := objOptions.Owner.(type) {
-	case *corev1alpha1.ObjectSet:
-		return &adapters.ObjectSetAdapter{ObjectSet: *o}
-	case *corev1alpha1.ClusterObjectSet:
-		return &adapters.ClusterObjectSetAdapter{ClusterObjectSet: *o}
-	}
-	return nil
+	return ownerFromObjectOwner(objOptions.Owner)
 }
 
 func getTeardownOwner(phase types.Phase, opts ...types.PhaseTeardownOption) adapters.ObjectSetAccessor {
@@ -120,27 +131,27 @@ func getTeardownOwner(phase types.Phase, opts ...types.PhaseTeardownOption) adap
 		opt.ApplyToObjectTeardownOptions(&objOptions)
 	}
 
-	switch o := objOptions.Owner.(type) {
-	case *corev1alpha1.ObjectSet:
-		return &adapters.ObjectSetAdapter{ObjectSet: *o}
-	case *corev1alpha1.ClusterObjectSet:
-		return &adapters.ClusterObjectSetAdapter{ClusterObjectSet: *o}
+	return ownerFromObjectOwner(objOptions.Owner)
+}
+
+func findSpecPhase(
+	owner adapters.ObjectSetAccessor, phaseName string,
+) (corev1alpha1.ObjectSetTemplatePhase, bool) {
+	for _, p := range owner.GetSpecPhases() {
+		if p.Name == phaseName {
+			return p, true
+		}
 	}
-	return nil
+	return corev1alpha1.ObjectSetTemplatePhase{}, false
 }
 
 func (r *remoteEnabledPhaseEngine) reconcileRemotePhase(
 	ctx context.Context, owner adapters.ObjectSetAccessor,
 	boxcutterPhase types.Phase,
 ) (machinery.PhaseResult, error) {
-	var phase corev1alpha1.ObjectSetTemplatePhase
-	for _, p := range owner.GetSpecPhases() {
-		if p.Name == boxcutterPhase.GetName() {
-			phase = p
-		}
-	}
-	if phase.Name == "" {
-		panic("boxcutter phase constructed incorrectly")
+	phase, ok := findSpecPhase(owner, boxcutterPhase.GetName())
+	if !ok {
+		return nil, fmt.Errorf("phase %q not found in owner spec", boxcutterPhase.GetName())
 	}
 
 	return r.remotePhaseReconciler.Reconcile(ctx, owner, phase)
@@ -150,11 +161,9 @@ func (r *remoteEnabledPhaseEngine) teardownRemotePhase(
 	ctx context.Context, owner adapters.ObjectSetAccessor,
 	boxcutterPhase types.Phase,
 ) (machinery.PhaseTeardownResult, error) {
-	var phase corev1alpha1.ObjectSetTemplatePhase
-	for _, p := range owner.GetSpecPhases() {
-		if p.Name == boxcutterPhase.GetName() {
-			phase = p
-		}
+	phase, ok := findSpecPhase(owner, boxcutterPhase.GetName())
+	if !ok {
+		return nil, fmt.Errorf("phase %q not found in owner spec", boxcutterPhase.GetName())
 	}
 
 	cleanupDone, err := r.remotePhaseReconciler.Teardown(ctx, owner, phase)
@@ -170,6 +179,9 @@ func (r *remoteEnabledPhaseEngine) teardownRemotePhase(
 }
 
 func hasClass(owner adapters.ObjectSetAccessor, phase types.Phase) bool {
+	if owner == nil {
+		return false
+	}
 	for _, p := range owner.GetSpecPhases() {
 		if p.Name == phase.GetName() && len(p.Class) > 0 {
 			return true

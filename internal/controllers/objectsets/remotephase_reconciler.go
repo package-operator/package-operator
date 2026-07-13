@@ -125,7 +125,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 	phase corev1alpha1.ObjectSetTemplatePhase,
 ) (machinery.PhaseResult, error) {
 	if len(phase.Class) == 0 {
-		panic("aaahoaohaioahiaohaohaoh")
+		return nil, fmt.Errorf("remote phase %q has empty class", phase.Name)
 	}
 
 	desiredObjectSetPhase, err := r.desiredObjectSetPhase(objectSet, phase)
@@ -144,8 +144,7 @@ func (r *objectSetRemotePhaseReconciler) Reconcile(
 			return nil, fmt.Errorf("creating new ObjectSetPhase: %w", err)
 		}
 		currentObjectSetPhase = desiredObjectSetPhase
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, fmt.Errorf("getting existing ObjectSetPhase: %w", err)
 	}
 
@@ -271,7 +270,8 @@ func (r remotePhaseResult) GetValidationError() *validation.PhaseValidationError
 }
 
 func (r remotePhaseResult) GetObjects() []machinery.ObjectResult {
-	// TODO?
+	// Remote phases reconcile ObjectSetPhase CRs instead of in-revision objects.
+	// Condition mapping and controller references are handled separately.
 	return nil
 }
 
@@ -336,11 +336,11 @@ func (r *remotePhaseTeardownResult) IsComplete() bool {
 }
 
 func (r *remotePhaseTeardownResult) Gone() []boxcuttertypes.ObjectRef {
-	// TODO
+	// Remote phases do not track individual object teardown progress.
 	return nil
 }
 
 func (r *remotePhaseTeardownResult) Waiting() []boxcuttertypes.ObjectRef {
-	// TODO
+	// Remote phases do not track individual object teardown progress.
 	return nil
 }
