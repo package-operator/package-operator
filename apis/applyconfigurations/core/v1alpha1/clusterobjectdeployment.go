@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ClusterObjectDeploymentApplyConfiguration represents a declarative configuration of the ClusterObjectDeployment type for use
@@ -21,13 +24,52 @@ type ClusterObjectDeploymentApplyConfiguration struct {
 
 // ClusterObjectDeployment constructs a declarative configuration of the ClusterObjectDeployment type for use with
 // apply.
-func ClusterObjectDeployment(name, namespace string) *ClusterObjectDeploymentApplyConfiguration {
+func ClusterObjectDeployment(name string) *ClusterObjectDeploymentApplyConfiguration {
 	b := &ClusterObjectDeploymentApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("ClusterObjectDeployment")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractClusterObjectDeploymentFrom extracts the applied configuration owned by fieldManager from
+// clusterObjectDeployment for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// clusterObjectDeployment must be a unmodified ClusterObjectDeployment API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectDeploymentFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectDeploymentFrom(clusterObjectDeployment *corev1alpha1.ClusterObjectDeployment, fieldManager string, subresource string) (*ClusterObjectDeploymentApplyConfiguration, error) {
+	b := &ClusterObjectDeploymentApplyConfiguration{}
+	err := managedfields.ExtractInto(clusterObjectDeployment, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ClusterObjectDeployment"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(clusterObjectDeployment.Name)
+
+	b.WithKind("ClusterObjectDeployment")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractClusterObjectDeployment extracts the applied configuration owned by fieldManager from
+// clusterObjectDeployment. If no managedFields are found in clusterObjectDeployment for fieldManager, a
+// ClusterObjectDeploymentApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// clusterObjectDeployment must be a unmodified ClusterObjectDeployment API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectDeployment provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectDeployment(clusterObjectDeployment *corev1alpha1.ClusterObjectDeployment, fieldManager string) (*ClusterObjectDeploymentApplyConfiguration, error) {
+	return ExtractClusterObjectDeploymentFrom(clusterObjectDeployment, fieldManager, "")
+}
+
+// ExtractClusterObjectDeploymentStatus extracts the applied configuration owned by fieldManager from
+// clusterObjectDeployment for the status subresource.
+func ExtractClusterObjectDeploymentStatus(clusterObjectDeployment *corev1alpha1.ClusterObjectDeployment, fieldManager string) (*ClusterObjectDeploymentApplyConfiguration, error) {
+	return ExtractClusterObjectDeploymentFrom(clusterObjectDeployment, fieldManager, "status")
 }
 
 func (b ClusterObjectDeploymentApplyConfiguration) IsApplyConfiguration() {}

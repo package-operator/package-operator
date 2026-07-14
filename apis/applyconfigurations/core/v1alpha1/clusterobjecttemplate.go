@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ClusterObjectTemplateApplyConfiguration represents a declarative configuration of the ClusterObjectTemplate type for use
@@ -23,13 +26,52 @@ type ClusterObjectTemplateApplyConfiguration struct {
 
 // ClusterObjectTemplate constructs a declarative configuration of the ClusterObjectTemplate type for use with
 // apply.
-func ClusterObjectTemplate(name, namespace string) *ClusterObjectTemplateApplyConfiguration {
+func ClusterObjectTemplate(name string) *ClusterObjectTemplateApplyConfiguration {
 	b := &ClusterObjectTemplateApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("ClusterObjectTemplate")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractClusterObjectTemplateFrom extracts the applied configuration owned by fieldManager from
+// clusterObjectTemplate for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// clusterObjectTemplate must be a unmodified ClusterObjectTemplate API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectTemplateFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectTemplateFrom(clusterObjectTemplate *corev1alpha1.ClusterObjectTemplate, fieldManager string, subresource string) (*ClusterObjectTemplateApplyConfiguration, error) {
+	b := &ClusterObjectTemplateApplyConfiguration{}
+	err := managedfields.ExtractInto(clusterObjectTemplate, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ClusterObjectTemplate"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(clusterObjectTemplate.Name)
+
+	b.WithKind("ClusterObjectTemplate")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractClusterObjectTemplate extracts the applied configuration owned by fieldManager from
+// clusterObjectTemplate. If no managedFields are found in clusterObjectTemplate for fieldManager, a
+// ClusterObjectTemplateApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// clusterObjectTemplate must be a unmodified ClusterObjectTemplate API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectTemplate provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectTemplate(clusterObjectTemplate *corev1alpha1.ClusterObjectTemplate, fieldManager string) (*ClusterObjectTemplateApplyConfiguration, error) {
+	return ExtractClusterObjectTemplateFrom(clusterObjectTemplate, fieldManager, "")
+}
+
+// ExtractClusterObjectTemplateStatus extracts the applied configuration owned by fieldManager from
+// clusterObjectTemplate for the status subresource.
+func ExtractClusterObjectTemplateStatus(clusterObjectTemplate *corev1alpha1.ClusterObjectTemplate, fieldManager string) (*ClusterObjectTemplateApplyConfiguration, error) {
+	return ExtractClusterObjectTemplateFrom(clusterObjectTemplate, fieldManager, "status")
 }
 
 func (b ClusterObjectTemplateApplyConfiguration) IsApplyConfiguration() {}

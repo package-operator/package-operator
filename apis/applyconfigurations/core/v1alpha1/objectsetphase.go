@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ObjectSetPhaseApplyConfiguration represents a declarative configuration of the ObjectSetPhase type for use
@@ -29,6 +32,47 @@ func ObjectSetPhase(name, namespace string) *ObjectSetPhaseApplyConfiguration {
 	b.WithKind("ObjectSetPhase")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractObjectSetPhaseFrom extracts the applied configuration owned by fieldManager from
+// objectSetPhase for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// objectSetPhase must be a unmodified ObjectSetPhase API object that was retrieved from the Kubernetes API.
+// ExtractObjectSetPhaseFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectSetPhaseFrom(objectSetPhase *corev1alpha1.ObjectSetPhase, fieldManager string, subresource string) (*ObjectSetPhaseApplyConfiguration, error) {
+	b := &ObjectSetPhaseApplyConfiguration{}
+	err := managedfields.ExtractInto(objectSetPhase, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ObjectSetPhase"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(objectSetPhase.Name)
+	b.WithNamespace(objectSetPhase.Namespace)
+
+	b.WithKind("ObjectSetPhase")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractObjectSetPhase extracts the applied configuration owned by fieldManager from
+// objectSetPhase. If no managedFields are found in objectSetPhase for fieldManager, a
+// ObjectSetPhaseApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// objectSetPhase must be a unmodified ObjectSetPhase API object that was retrieved from the Kubernetes API.
+// ExtractObjectSetPhase provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectSetPhase(objectSetPhase *corev1alpha1.ObjectSetPhase, fieldManager string) (*ObjectSetPhaseApplyConfiguration, error) {
+	return ExtractObjectSetPhaseFrom(objectSetPhase, fieldManager, "")
+}
+
+// ExtractObjectSetPhaseStatus extracts the applied configuration owned by fieldManager from
+// objectSetPhase for the status subresource.
+func ExtractObjectSetPhaseStatus(objectSetPhase *corev1alpha1.ObjectSetPhase, fieldManager string) (*ObjectSetPhaseApplyConfiguration, error) {
+	return ExtractObjectSetPhaseFrom(objectSetPhase, fieldManager, "status")
 }
 
 func (b ObjectSetPhaseApplyConfiguration) IsApplyConfiguration() {}

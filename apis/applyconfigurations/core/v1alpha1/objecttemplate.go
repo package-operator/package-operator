@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ObjectTemplateApplyConfiguration represents a declarative configuration of the ObjectTemplate type for use
@@ -30,6 +33,47 @@ func ObjectTemplate(name, namespace string) *ObjectTemplateApplyConfiguration {
 	b.WithKind("ObjectTemplate")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractObjectTemplateFrom extracts the applied configuration owned by fieldManager from
+// objectTemplate for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// objectTemplate must be a unmodified ObjectTemplate API object that was retrieved from the Kubernetes API.
+// ExtractObjectTemplateFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectTemplateFrom(objectTemplate *corev1alpha1.ObjectTemplate, fieldManager string, subresource string) (*ObjectTemplateApplyConfiguration, error) {
+	b := &ObjectTemplateApplyConfiguration{}
+	err := managedfields.ExtractInto(objectTemplate, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ObjectTemplate"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(objectTemplate.Name)
+	b.WithNamespace(objectTemplate.Namespace)
+
+	b.WithKind("ObjectTemplate")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractObjectTemplate extracts the applied configuration owned by fieldManager from
+// objectTemplate. If no managedFields are found in objectTemplate for fieldManager, a
+// ObjectTemplateApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// objectTemplate must be a unmodified ObjectTemplate API object that was retrieved from the Kubernetes API.
+// ExtractObjectTemplate provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectTemplate(objectTemplate *corev1alpha1.ObjectTemplate, fieldManager string) (*ObjectTemplateApplyConfiguration, error) {
+	return ExtractObjectTemplateFrom(objectTemplate, fieldManager, "")
+}
+
+// ExtractObjectTemplateStatus extracts the applied configuration owned by fieldManager from
+// objectTemplate for the status subresource.
+func ExtractObjectTemplateStatus(objectTemplate *corev1alpha1.ObjectTemplate, fieldManager string) (*ObjectTemplateApplyConfiguration, error) {
+	return ExtractObjectTemplateFrom(objectTemplate, fieldManager, "status")
 }
 
 func (b ObjectTemplateApplyConfiguration) IsApplyConfiguration() {}

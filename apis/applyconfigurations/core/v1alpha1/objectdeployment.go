@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ObjectDeploymentApplyConfiguration represents a declarative configuration of the ObjectDeployment type for use
@@ -28,6 +31,47 @@ func ObjectDeployment(name, namespace string) *ObjectDeploymentApplyConfiguratio
 	b.WithKind("ObjectDeployment")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractObjectDeploymentFrom extracts the applied configuration owned by fieldManager from
+// objectDeployment for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// objectDeployment must be a unmodified ObjectDeployment API object that was retrieved from the Kubernetes API.
+// ExtractObjectDeploymentFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectDeploymentFrom(objectDeployment *corev1alpha1.ObjectDeployment, fieldManager string, subresource string) (*ObjectDeploymentApplyConfiguration, error) {
+	b := &ObjectDeploymentApplyConfiguration{}
+	err := managedfields.ExtractInto(objectDeployment, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ObjectDeployment"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(objectDeployment.Name)
+	b.WithNamespace(objectDeployment.Namespace)
+
+	b.WithKind("ObjectDeployment")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractObjectDeployment extracts the applied configuration owned by fieldManager from
+// objectDeployment. If no managedFields are found in objectDeployment for fieldManager, a
+// ObjectDeploymentApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// objectDeployment must be a unmodified ObjectDeployment API object that was retrieved from the Kubernetes API.
+// ExtractObjectDeployment provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectDeployment(objectDeployment *corev1alpha1.ObjectDeployment, fieldManager string) (*ObjectDeploymentApplyConfiguration, error) {
+	return ExtractObjectDeploymentFrom(objectDeployment, fieldManager, "")
+}
+
+// ExtractObjectDeploymentStatus extracts the applied configuration owned by fieldManager from
+// objectDeployment for the status subresource.
+func ExtractObjectDeploymentStatus(objectDeployment *corev1alpha1.ObjectDeployment, fieldManager string) (*ObjectDeploymentApplyConfiguration, error) {
+	return ExtractObjectDeploymentFrom(objectDeployment, fieldManager, "status")
 }
 
 func (b ObjectDeploymentApplyConfiguration) IsApplyConfiguration() {}

@@ -23,6 +23,1125 @@ func Parser() *typed.Parser {
 var parserOnce sync.Once
 var parser *typed.Parser
 var schemaYAML = typed.YAMLObject(`types:
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+  map:
+    fields:
+    - name: lastTransitionTime
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: message
+      type:
+        scalar: string
+    - name: observedGeneration
+      type:
+        scalar: numeric
+    - name: reason
+      type:
+        scalar: string
+    - name: status
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ConditionStatus
+    - name: type
+      type:
+        scalar: string
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ConditionStatus
+  scalar: string
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+  map:
+    fields:
+    - name: matchExpressions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+          elementRelationship: atomic
+    - name: matchLabels
+      type:
+        map:
+          elementType:
+            scalar: string
+    elementRelationship: atomic
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelectorOperator
+  scalar: string
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement
+  map:
+    fields:
+    - name: key
+      type:
+        scalar: string
+    - name: operator
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelectorOperator
+    - name: values
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: fieldsType
+      type:
+        scalar: string
+    - name: fieldsV1
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1
+    - name: manager
+      type:
+        scalar: string
+    - name: operation
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsOperationType
+    - name: subresource
+      type:
+        scalar: string
+    - name: time
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsOperationType
+  scalar: string
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+  map:
+    fields:
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: creationTimestamp
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: deletionGracePeriodSeconds
+      type:
+        scalar: numeric
+    - name: deletionTimestamp
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: finalizers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
+    - name: generateName
+      type:
+        scalar: string
+    - name: generation
+      type:
+        scalar: numeric
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: managedFields
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+          elementRelationship: atomic
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: ownerReferences
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference
+          elementRelationship: associative
+          keys:
+          - uid
+    - name: resourceVersion
+      type:
+        scalar: string
+    - name: selfLink
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: blockOwnerDeletion
+      type:
+        scalar: boolean
+    - name: controller
+      type:
+        scalar: boolean
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+    elementRelationship: atomic
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+  scalar: untyped
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.unstructured.Unstructured
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: io.k8s.apimachinery.pkg.runtime.RawExtension
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: io.k8s.apimachinery.pkg.types.UID
+  scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectDeployment
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectDeploymentSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectDeploymentStatus
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectDeploymentSpec
+  map:
+    fields:
+    - name: paused
+      type:
+        scalar: boolean
+    - name: revisionHistoryLimit
+      type:
+        scalar: numeric
+      default: 10
+    - name: selector
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: template
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplate
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectDeploymentStatus
+  map:
+    fields:
+    - name: collisionCount
+      type:
+        scalar: numeric
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+    - name: templateHash
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSet
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectSetSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectSetStatus
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhase
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhaseSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhaseStatus
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhaseSpec
+  map:
+    fields:
+    - name: availabilityProbes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+          elementRelationship: atomic
+    - name: objects
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetObject
+          elementRelationship: atomic
+    - name: paused
+      type:
+        scalar: boolean
+    - name: previous
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.PreviousRevisionReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhaseStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSetSpec
+  map:
+    fields:
+    - name: availabilityProbes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+          elementRelationship: atomic
+    - name: lifecycleState
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetLifecycleState
+      default: Active
+    - name: phases
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplatePhase
+          elementRelationship: atomic
+    - name: previous
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.PreviousRevisionReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+    - name: successDelaySeconds
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSetStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+    - name: remotePhases
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.RemotePhaseReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectSlice
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: objects
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetObject
+          elementRelationship: atomic
+- name: run.package-operator.apis.core.v1alpha1.ClusterObjectTemplate
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateStatus
+- name: run.package-operator.apis.core.v1alpha1.ClusterPackage
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageStatus
+- name: run.package-operator.apis.core.v1alpha1.CollisionProtection
+  scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ConditionMapping
+  map:
+    fields:
+    - name: destinationType
+      type:
+        scalar: string
+    - name: sourceType
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+  map:
+    fields:
+    - name: group
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: version
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackage
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStatus
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionOrderAlphanumericAsc
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionOrderSpec
+  map:
+    fields:
+    - name: alphanumericAsc
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionOrderAlphanumericAsc
+    - name: static
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionSpec
+  map:
+    fields:
+    - name: labelKey
+      type:
+        scalar: string
+    - name: order
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionOrderSpec
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionStatus
+  map:
+    fields:
+    - name: availablePackages
+      type:
+        scalar: numeric
+    - name: name
+      type:
+        scalar: string
+    - name: observedGeneration
+      type:
+        scalar: numeric
+    - name: progressedPackages
+      type:
+        scalar: numeric
+    - name: totalPackages
+      type:
+        scalar: numeric
+    - name: updatedPackages
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageRefStatus
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageSpec
+  map:
+    fields:
+    - name: hostedClusterSelector
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: partition
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionSpec
+    - name: strategy
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategy
+      default:
+        instant: {}
+    - name: template
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageTemplateSpec
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStatus
+  map:
+    fields:
+    - name: availablePackages
+      type:
+        scalar: numeric
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: observedGeneration
+      type:
+        scalar: numeric
+    - name: partitions
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackagePartitionStatus
+          elementRelationship: atomic
+    - name: processing
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageRefStatus
+          elementRelationship: atomic
+    - name: progressedPackages
+      type:
+        scalar: numeric
+    - name: totalPackages
+      type:
+        scalar: numeric
+    - name: updatedPackages
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategy
+  map:
+    fields:
+    - name: instant
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategyInstant
+    - name: rollingUpgrade
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategyRollingUpgrade
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategyInstant
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: run.package-operator.apis.core.v1alpha1.HostedClusterPackageStrategyRollingUpgrade
+  map:
+    fields:
+    - name: maxUnavailable
+      type:
+        scalar: numeric
+      default: 1
+- name: run.package-operator.apis.core.v1alpha1.ObjectDeployment
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectDeploymentSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectDeploymentStatus
+- name: run.package-operator.apis.core.v1alpha1.ObjectDeploymentSpec
+  map:
+    fields:
+    - name: paused
+      type:
+        scalar: boolean
+    - name: revisionHistoryLimit
+      type:
+        scalar: numeric
+      default: 10
+    - name: selector
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+    - name: template
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplate
+- name: run.package-operator.apis.core.v1alpha1.ObjectDeploymentStatus
+  map:
+    fields:
+    - name: collisionCount
+      type:
+        scalar: numeric
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+    - name: templateHash
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ObjectSet
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetStatus
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetLifecycleState
+  scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetObject
+  map:
+    fields:
+    - name: collisionProtection
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.CollisionProtection
+      default: Prevent
+    - name: conditionMappings
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ConditionMapping
+          elementRelationship: atomic
+    - name: object
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.unstructured.Unstructured
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetPhase
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetPhaseSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetPhaseStatus
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetPhaseSpec
+  map:
+    fields:
+    - name: availabilityProbes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+          elementRelationship: atomic
+    - name: objects
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetObject
+          elementRelationship: atomic
+    - name: paused
+      type:
+        scalar: boolean
+    - name: previous
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.PreviousRevisionReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetPhaseStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+  map:
+    fields:
+    - name: probes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.Probe
+          elementRelationship: atomic
+    - name: selector
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ProbeSelector
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetSpec
+  map:
+    fields:
+    - name: availabilityProbes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+          elementRelationship: atomic
+    - name: lifecycleState
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetLifecycleState
+      default: Active
+    - name: phases
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplatePhase
+          elementRelationship: atomic
+    - name: previous
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.PreviousRevisionReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+    - name: successDelaySeconds
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+          elementRelationship: atomic
+    - name: remotePhases
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.RemotePhaseReference
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetTemplate
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplateSpec
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetTemplatePhase
+  map:
+    fields:
+    - name: class
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: objects
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetObject
+          elementRelationship: atomic
+    - name: slices
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: atomic
+- name: run.package-operator.apis.core.v1alpha1.ObjectSetTemplateSpec
+  map:
+    fields:
+    - name: availabilityProbes
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetProbe
+          elementRelationship: atomic
+    - name: phases
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectSetTemplatePhase
+          elementRelationship: atomic
+    - name: successDelaySeconds
+      type:
+        scalar: numeric
+- name: run.package-operator.apis.core.v1alpha1.ObjectTemplate
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateStatus
+- name: run.package-operator.apis.core.v1alpha1.ObjectTemplateSource
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: items
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateSourceItem
+          elementRelationship: atomic
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: optional
+      type:
+        scalar: boolean
+- name: run.package-operator.apis.core.v1alpha1.ObjectTemplateSourceItem
+  map:
+    fields:
+    - name: destination
+      type:
+        scalar: string
+    - name: key
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ObjectTemplateSpec
+  map:
+    fields:
+    - name: sources
+      type:
+        list:
+          elementType:
+            namedType: run.package-operator.apis.core.v1alpha1.ObjectTemplateSource
+          elementRelationship: atomic
+    - name: template
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ObjectTemplateStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: controllerOf
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ControlledObjectReference
+- name: run.package-operator.apis.core.v1alpha1.Package
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageSpec
+    - name: status
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageStatus
+- name: run.package-operator.apis.core.v1alpha1.PackageProbeKindSpec
+  map:
+    fields:
+    - name: group
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.PackageSpec
+  map:
+    fields:
+    - name: component
+      type:
+        scalar: string
+    - name: config
+      type:
+        namedType: __untyped_atomic_
+    - name: image
+      type:
+        scalar: string
+    - name: paused
+      type:
+        scalar: boolean
+- name: run.package-operator.apis.core.v1alpha1.PackageStatus
+  map:
+    fields:
+    - name: conditions
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
+          elementRelationship: atomic
+    - name: revision
+      type:
+        scalar: numeric
+    - name: unpackedHash
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.PackageTemplateSpec
+  map:
+    fields:
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageSpec
+- name: run.package-operator.apis.core.v1alpha1.PreviousRevisionReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.Probe
+  map:
+    fields:
+    - name: cel
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ProbeCELSpec
+    - name: condition
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ProbeConditionSpec
+    - name: fieldsEqual
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.ProbeFieldsEqualSpec
+- name: run.package-operator.apis.core.v1alpha1.ProbeCELSpec
+  map:
+    fields:
+    - name: message
+      type:
+        scalar: string
+    - name: rule
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ProbeConditionSpec
+  map:
+    fields:
+    - name: status
+      type:
+        scalar: string
+      default: "True"
+    - name: type
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ProbeFieldsEqualSpec
+  map:
+    fields:
+    - name: fieldA
+      type:
+        scalar: string
+    - name: fieldB
+      type:
+        scalar: string
+- name: run.package-operator.apis.core.v1alpha1.ProbeSelector
+  map:
+    fields:
+    - name: kind
+      type:
+        namedType: run.package-operator.apis.core.v1alpha1.PackageProbeKindSpec
+    - name: selector
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+- name: run.package-operator.apis.core.v1alpha1.RemotePhaseReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
 - name: __untyped_atomic_
   scalar: untyped
   list:

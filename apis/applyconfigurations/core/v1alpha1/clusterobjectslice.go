@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ClusterObjectSliceApplyConfiguration represents a declarative configuration of the ClusterObjectSlice type for use
@@ -22,13 +25,46 @@ type ClusterObjectSliceApplyConfiguration struct {
 
 // ClusterObjectSlice constructs a declarative configuration of the ClusterObjectSlice type for use with
 // apply.
-func ClusterObjectSlice(name, namespace string) *ClusterObjectSliceApplyConfiguration {
+func ClusterObjectSlice(name string) *ClusterObjectSliceApplyConfiguration {
 	b := &ClusterObjectSliceApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("ClusterObjectSlice")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractClusterObjectSliceFrom extracts the applied configuration owned by fieldManager from
+// clusterObjectSlice for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// clusterObjectSlice must be a unmodified ClusterObjectSlice API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectSliceFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectSliceFrom(clusterObjectSlice *corev1alpha1.ClusterObjectSlice, fieldManager string, subresource string) (*ClusterObjectSliceApplyConfiguration, error) {
+	b := &ClusterObjectSliceApplyConfiguration{}
+	err := managedfields.ExtractInto(clusterObjectSlice, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ClusterObjectSlice"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(clusterObjectSlice.Name)
+
+	b.WithKind("ClusterObjectSlice")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractClusterObjectSlice extracts the applied configuration owned by fieldManager from
+// clusterObjectSlice. If no managedFields are found in clusterObjectSlice for fieldManager, a
+// ClusterObjectSliceApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// clusterObjectSlice must be a unmodified ClusterObjectSlice API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectSlice provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectSlice(clusterObjectSlice *corev1alpha1.ClusterObjectSlice, fieldManager string) (*ClusterObjectSliceApplyConfiguration, error) {
+	return ExtractClusterObjectSliceFrom(clusterObjectSlice, fieldManager, "")
 }
 
 func (b ClusterObjectSliceApplyConfiguration) IsApplyConfiguration() {}

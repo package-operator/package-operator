@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ClusterPackageApplyConfiguration represents a declarative configuration of the ClusterPackage type for use
@@ -21,13 +24,52 @@ type ClusterPackageApplyConfiguration struct {
 
 // ClusterPackage constructs a declarative configuration of the ClusterPackage type for use with
 // apply.
-func ClusterPackage(name, namespace string) *ClusterPackageApplyConfiguration {
+func ClusterPackage(name string) *ClusterPackageApplyConfiguration {
 	b := &ClusterPackageApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("ClusterPackage")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractClusterPackageFrom extracts the applied configuration owned by fieldManager from
+// clusterPackage for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// clusterPackage must be a unmodified ClusterPackage API object that was retrieved from the Kubernetes API.
+// ExtractClusterPackageFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterPackageFrom(clusterPackage *corev1alpha1.ClusterPackage, fieldManager string, subresource string) (*ClusterPackageApplyConfiguration, error) {
+	b := &ClusterPackageApplyConfiguration{}
+	err := managedfields.ExtractInto(clusterPackage, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ClusterPackage"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(clusterPackage.Name)
+
+	b.WithKind("ClusterPackage")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractClusterPackage extracts the applied configuration owned by fieldManager from
+// clusterPackage. If no managedFields are found in clusterPackage for fieldManager, a
+// ClusterPackageApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// clusterPackage must be a unmodified ClusterPackage API object that was retrieved from the Kubernetes API.
+// ExtractClusterPackage provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterPackage(clusterPackage *corev1alpha1.ClusterPackage, fieldManager string) (*ClusterPackageApplyConfiguration, error) {
+	return ExtractClusterPackageFrom(clusterPackage, fieldManager, "")
+}
+
+// ExtractClusterPackageStatus extracts the applied configuration owned by fieldManager from
+// clusterPackage for the status subresource.
+func ExtractClusterPackageStatus(clusterPackage *corev1alpha1.ClusterPackage, fieldManager string) (*ClusterPackageApplyConfiguration, error) {
+	return ExtractClusterPackageFrom(clusterPackage, fieldManager, "status")
 }
 
 func (b ClusterPackageApplyConfiguration) IsApplyConfiguration() {}

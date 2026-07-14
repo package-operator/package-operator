@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ClusterObjectSetPhaseApplyConfiguration represents a declarative configuration of the ClusterObjectSetPhase type for use
@@ -23,13 +26,52 @@ type ClusterObjectSetPhaseApplyConfiguration struct {
 
 // ClusterObjectSetPhase constructs a declarative configuration of the ClusterObjectSetPhase type for use with
 // apply.
-func ClusterObjectSetPhase(name, namespace string) *ClusterObjectSetPhaseApplyConfiguration {
+func ClusterObjectSetPhase(name string) *ClusterObjectSetPhaseApplyConfiguration {
 	b := &ClusterObjectSetPhaseApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("ClusterObjectSetPhase")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractClusterObjectSetPhaseFrom extracts the applied configuration owned by fieldManager from
+// clusterObjectSetPhase for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// clusterObjectSetPhase must be a unmodified ClusterObjectSetPhase API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectSetPhaseFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectSetPhaseFrom(clusterObjectSetPhase *corev1alpha1.ClusterObjectSetPhase, fieldManager string, subresource string) (*ClusterObjectSetPhaseApplyConfiguration, error) {
+	b := &ClusterObjectSetPhaseApplyConfiguration{}
+	err := managedfields.ExtractInto(clusterObjectSetPhase, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ClusterObjectSetPhase"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(clusterObjectSetPhase.Name)
+
+	b.WithKind("ClusterObjectSetPhase")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractClusterObjectSetPhase extracts the applied configuration owned by fieldManager from
+// clusterObjectSetPhase. If no managedFields are found in clusterObjectSetPhase for fieldManager, a
+// ClusterObjectSetPhaseApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// clusterObjectSetPhase must be a unmodified ClusterObjectSetPhase API object that was retrieved from the Kubernetes API.
+// ExtractClusterObjectSetPhase provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractClusterObjectSetPhase(clusterObjectSetPhase *corev1alpha1.ClusterObjectSetPhase, fieldManager string) (*ClusterObjectSetPhaseApplyConfiguration, error) {
+	return ExtractClusterObjectSetPhaseFrom(clusterObjectSetPhase, fieldManager, "")
+}
+
+// ExtractClusterObjectSetPhaseStatus extracts the applied configuration owned by fieldManager from
+// clusterObjectSetPhase for the status subresource.
+func ExtractClusterObjectSetPhaseStatus(clusterObjectSetPhase *corev1alpha1.ClusterObjectSetPhase, fieldManager string) (*ClusterObjectSetPhaseApplyConfiguration, error) {
+	return ExtractClusterObjectSetPhaseFrom(clusterObjectSetPhase, fieldManager, "status")
 }
 
 func (b ClusterObjectSetPhaseApplyConfiguration) IsApplyConfiguration() {}

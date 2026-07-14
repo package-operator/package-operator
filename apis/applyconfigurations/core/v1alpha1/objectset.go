@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // ObjectSetApplyConfiguration represents a declarative configuration of the ObjectSet type for use
@@ -36,6 +39,47 @@ func ObjectSet(name, namespace string) *ObjectSetApplyConfiguration {
 	b.WithKind("ObjectSet")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractObjectSetFrom extracts the applied configuration owned by fieldManager from
+// objectSet for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// objectSet must be a unmodified ObjectSet API object that was retrieved from the Kubernetes API.
+// ExtractObjectSetFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectSetFrom(objectSet *corev1alpha1.ObjectSet, fieldManager string, subresource string) (*ObjectSetApplyConfiguration, error) {
+	b := &ObjectSetApplyConfiguration{}
+	err := managedfields.ExtractInto(objectSet, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.ObjectSet"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(objectSet.Name)
+	b.WithNamespace(objectSet.Namespace)
+
+	b.WithKind("ObjectSet")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractObjectSet extracts the applied configuration owned by fieldManager from
+// objectSet. If no managedFields are found in objectSet for fieldManager, a
+// ObjectSetApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// objectSet must be a unmodified ObjectSet API object that was retrieved from the Kubernetes API.
+// ExtractObjectSet provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractObjectSet(objectSet *corev1alpha1.ObjectSet, fieldManager string) (*ObjectSetApplyConfiguration, error) {
+	return ExtractObjectSetFrom(objectSet, fieldManager, "")
+}
+
+// ExtractObjectSetStatus extracts the applied configuration owned by fieldManager from
+// objectSet for the status subresource.
+func ExtractObjectSetStatus(objectSet *corev1alpha1.ObjectSet, fieldManager string) (*ObjectSetApplyConfiguration, error) {
+	return ExtractObjectSetFrom(objectSet, fieldManager, "status")
 }
 
 func (b ObjectSetApplyConfiguration) IsApplyConfiguration() {}

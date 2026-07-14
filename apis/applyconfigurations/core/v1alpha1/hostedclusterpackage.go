@@ -5,7 +5,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	internal "package-operator.run/apis/applyconfigurations/internal"
+	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 // HostedClusterPackageApplyConfiguration represents a declarative configuration of the HostedClusterPackage type for use
@@ -22,13 +25,52 @@ type HostedClusterPackageApplyConfiguration struct {
 
 // HostedClusterPackage constructs a declarative configuration of the HostedClusterPackage type for use with
 // apply.
-func HostedClusterPackage(name, namespace string) *HostedClusterPackageApplyConfiguration {
+func HostedClusterPackage(name string) *HostedClusterPackageApplyConfiguration {
 	b := &HostedClusterPackageApplyConfiguration{}
 	b.WithName(name)
-	b.WithNamespace(namespace)
 	b.WithKind("HostedClusterPackage")
 	b.WithAPIVersion("package-operator.run/v1alpha1")
 	return b
+}
+
+// ExtractHostedClusterPackageFrom extracts the applied configuration owned by fieldManager from
+// hostedClusterPackage for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// hostedClusterPackage must be a unmodified HostedClusterPackage API object that was retrieved from the Kubernetes API.
+// ExtractHostedClusterPackageFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractHostedClusterPackageFrom(hostedClusterPackage *corev1alpha1.HostedClusterPackage, fieldManager string, subresource string) (*HostedClusterPackageApplyConfiguration, error) {
+	b := &HostedClusterPackageApplyConfiguration{}
+	err := managedfields.ExtractInto(hostedClusterPackage, internal.Parser().Type("run.package-operator.apis.core.v1alpha1.HostedClusterPackage"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(hostedClusterPackage.Name)
+
+	b.WithKind("HostedClusterPackage")
+	b.WithAPIVersion("package-operator.run/v1alpha1")
+	return b, nil
+}
+
+// ExtractHostedClusterPackage extracts the applied configuration owned by fieldManager from
+// hostedClusterPackage. If no managedFields are found in hostedClusterPackage for fieldManager, a
+// HostedClusterPackageApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// hostedClusterPackage must be a unmodified HostedClusterPackage API object that was retrieved from the Kubernetes API.
+// ExtractHostedClusterPackage provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractHostedClusterPackage(hostedClusterPackage *corev1alpha1.HostedClusterPackage, fieldManager string) (*HostedClusterPackageApplyConfiguration, error) {
+	return ExtractHostedClusterPackageFrom(hostedClusterPackage, fieldManager, "")
+}
+
+// ExtractHostedClusterPackageStatus extracts the applied configuration owned by fieldManager from
+// hostedClusterPackage for the status subresource.
+func ExtractHostedClusterPackageStatus(hostedClusterPackage *corev1alpha1.HostedClusterPackage, fieldManager string) (*HostedClusterPackageApplyConfiguration, error) {
+	return ExtractHostedClusterPackageFrom(hostedClusterPackage, fieldManager, "status")
 }
 
 func (b HostedClusterPackageApplyConfiguration) IsApplyConfiguration() {}
