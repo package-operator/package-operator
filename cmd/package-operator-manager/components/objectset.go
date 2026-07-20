@@ -2,6 +2,7 @@ package components
 
 import (
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/discovery"
 	"pkg.package-operator.run/boxcutter/managedcache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,7 @@ func ProvideObjectSetController(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
+	discoveryClient discovery.DiscoveryInterface,
 ) ObjectSetController {
 	return ObjectSetController{
 		objectsets.NewObjectSetController(
@@ -29,6 +31,7 @@ func ProvideObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), accessManager, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			discoveryClient,
 		),
 	}
 }
@@ -38,6 +41,7 @@ func ProvideClusterObjectSetController(
 	accessManager managedcache.ObjectBoundAccessManager[client.Object],
 	uncachedClient UncachedClient,
 	recorder *metrics.Recorder,
+	discoveryClient discovery.DiscoveryInterface,
 ) ClusterObjectSetController {
 	return ClusterObjectSetController{
 		objectsets.NewClusterObjectSetController(
@@ -45,6 +49,7 @@ func ProvideClusterObjectSetController(
 			log.WithName("controllers").WithName("ObjectSet"),
 			mgr.GetScheme(), accessManager, uncachedClient, recorder,
 			mgr.GetRESTMapper(),
+			discoveryClient,
 		),
 	}
 }
