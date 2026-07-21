@@ -48,7 +48,7 @@ func main() {
 		mgr.RegisterGoTool(ctx, "conversion-gen", "k8s.io/code-generator/cmd/conversion-gen", "0.36.2"),
 		mgr.RegisterGoTool(ctx, "golangci-lint", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "2.12.2"),
 		mgr.RegisterGoTool(ctx, "k8s-docgen", "github.com/thetechnick/k8s-docgen", "0.6.4"),
-		mgr.RegisterGoTool(ctx, "helm", "helm.sh/helm/v3/cmd/helm", "3.21.3"),
+		mgr.RegisterGoTool(ctx, "helm", "helm.sh/helm/v4/cmd/helm", "4.2.3"),
 		mgr.RegisterGoTool(ctx, "govulncheck", "golang.org/x/vuln/cmd/govulncheck", "1.6.0"),
 		mgr.Register(&Dev{}, &CI{}),
 	)
