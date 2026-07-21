@@ -9,7 +9,7 @@ require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/erdii/elegont v1.0.1
 	github.com/erdii/matrix v0.1.0
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cel-go v0.29.2
 	github.com/google/go-containerregistry v0.21.5
