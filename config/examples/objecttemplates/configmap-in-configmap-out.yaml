@@ -1,0 +1,31 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: default
+  name: configmap-in-configmap-out-input
+data:
+  foo: bar
+  hans: wurst
+---
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectTemplate
+metadata:
+  namespace: default
+  name: configmap-in-configmap-out
+spec:
+  sources:
+  - apiVersion: v1
+    kind: ConfigMap
+    name: configmap-in-configmap-out-input
+    optional: false
+    items:
+    - key: .data
+      destination: .input
+  template: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: configmap-in-configmap-out-output
+    data:
+      config: |- {{toYAML .config | nindent 8}}

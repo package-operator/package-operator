@@ -1,0 +1,33 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: default
+  name: configmap-in-package-out-input
+data:
+  foo: bar
+  hans: wurst
+---
+apiVersion: package-operator.run/v1alpha1
+kind: ObjectTemplate
+metadata:
+  namespace: default
+  name: configmap-in-package-out
+spec:
+  sources:
+  - apiVersion: v1
+    kind: ConfigMap
+    name: configmap-in-package-out-input
+    optional: false
+    items:
+    - key: .data
+      destination: .input
+  template: |
+    apiVersion: package-operator.run/v1alpha1
+    kind: Package
+    metadata:
+      name: configmap-in-package-out-output
+    spec:
+      image: quay.io/erdii-test/config:v0.0.1
+      config:
+        example: {{toYAML .config.input | nindent 10}}
