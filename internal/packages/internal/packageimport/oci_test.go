@@ -52,7 +52,7 @@ func TestFromOCI_DotTarEntry(t *testing.T) {
 
 	labels := map[string]string{"test": "test123"}
 	layer := map[string][]byte{
-		".": []byte{},
+		".": {},
 	}
 	layer[packagetypes.OCIPathPrefix+"/file.yaml"] = []byte(`test: test`)
 	image := testutil.BuildImage(t, layer, labels)
