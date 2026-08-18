@@ -51,10 +51,11 @@ func TestFromOCI_DotTarEntry(t *testing.T) {
 	t.Parallel()
 
 	labels := map[string]string{"test": "test123"}
-	image := testutil.BuildImage(t, map[string][]byte{
+	layer := map[string][]byte{
 		".": []byte{},
-		packagetypes.OCIPathPrefix + "/file.yaml": []byte(`test: test`),
-	}, labels)
+	}
+	layer[packagetypes.OCIPathPrefix+"/file.yaml"] = []byte(`test: test`)
+	image := testutil.BuildImage(t, layer, labels)
 
 	ctx := logr.NewContext(context.Background(), testr.New(t))
 	rawPkg, err := FromOCI(ctx, image)

@@ -99,7 +99,7 @@ func appendFilesFromLayer(
 
 		data, err := io.ReadAll(tarReader)
 		if err != nil {
-			return fmt.Errorf("read file header from layer: %w", err)
+			return fmt.Errorf("read file contents from layer: %w", err)
 		}
 
 		files[pkgPath] = data
