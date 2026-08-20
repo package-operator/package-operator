@@ -22,7 +22,10 @@ func FromRegistryInCluster(
 	if err != nil {
 		return nil, fmt.Errorf("creating keychain: %w", err)
 	}
-	opts = append(opts, crane.WithAuthFromKeychain(chain))
+	// go-containerregistry v0.21.9 only treats *.localhost as HTTP. PKO rewrites
+	// pulls to *.svc.cluster.local HTTP registries (CI/kind). crane.Insecure still
+	// prefers HTTPS when the registry speaks TLS.
+	opts = append(opts, crane.WithAuthFromKeychain(chain), crane.Insecure)
 	return FromRegistry(ctx, ref, opts...)
 }
 
