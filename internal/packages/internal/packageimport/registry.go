@@ -23,8 +23,9 @@ func FromRegistryInCluster(
 		return nil, fmt.Errorf("creating keychain: %w", err)
 	}
 	// go-containerregistry v0.21.9 only treats *.localhost as HTTP. PKO rewrites
-	// pulls to *.svc.cluster.local HTTP registries (CI/kind). crane.Insecure still
-	// prefers HTTPS when the registry speaks TLS.
+	// pulls to *.svc.cluster.local HTTP registries (CI/kind). crane.Insecure sets
+	// name.Insecure so Scheme() is http (ping tries HTTPS first, then HTTP). The
+	// default transport also skips TLS certificate verification.
 	opts = append(opts, crane.WithAuthFromKeychain(chain), crane.Insecure)
 	return FromRegistry(ctx, ref, opts...)
 }
