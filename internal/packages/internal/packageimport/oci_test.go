@@ -46,3 +46,21 @@ func TestFromOCI_EmptyImage(t *testing.T) {
 	_, err := FromOCI(ctx, image)
 	require.EqualError(t, err, packagetypes.ErrEmptyPackage.Error())
 }
+
+func TestFromOCI_DotTarEntry(t *testing.T) {
+	t.Parallel()
+
+	labels := map[string]string{"test": "test123"}
+	layer := map[string][]byte{
+		".": {},
+	}
+	layer[packagetypes.OCIPathPrefix+"/file.yaml"] = []byte(`test: test`)
+	image := testutil.BuildImage(t, layer, labels)
+
+	ctx := logr.NewContext(context.Background(), testr.New(t))
+	rawPkg, err := FromOCI(ctx, image)
+	require.NoError(t, err)
+	assert.Equal(t, packagetypes.Files{
+		"file.yaml": []byte(`test: test`),
+	}, rawPkg.Files)
+}
