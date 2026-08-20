@@ -181,5 +181,7 @@ func printSavedBootstrapJobLogs() {
 		fmt.Fprintf(os.Stderr, "no captured bootstrap job logs at %s\n", path)
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n===== captured bootstrap job logs =====\n%s\n===== end captured bootstrap job logs =====\n", data)
+	fmt.Fprintln(os.Stderr, "\n===== captured bootstrap job logs =====")
+	fmt.Fprint(os.Stderr, string(data))
+	fmt.Fprintln(os.Stderr, "===== end captured bootstrap job logs =====")
 }
