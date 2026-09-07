@@ -21,7 +21,7 @@ require (
 	github.com/operator-framework/api v0.45.0
 	github.com/operator-framework/deppy v0.3.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/prometheus/client_model v0.6.2
+	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.70.1
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
