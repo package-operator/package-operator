@@ -23,10 +23,8 @@ const (
 		"Used to resolve potentially attached ImagePullSecrets."
 	leaderElectionFlagDescription = "Enable leader election for controller manager. " +
 		"Enabling this will ensure there is only one active controller manager."
-	probeAddrFlagDescription   = "The address the probe endpoint binds to."
-	versionFlagDescription     = "print version information and exit."
-	loadPackageFlagDescription = "(internal) runs the package-loader sub-component" +
-		" to load a package mounted at /package"
+	probeAddrFlagDescription     = "The address the probe endpoint binds to."
+	versionFlagDescription       = "print version information and exit."
 	selfBootstrapFlagDescription = "(internal) bootstraps Package Operator" +
 		" with Package Operator using the given Package Operator Package Image"
 	registryHostOverrides = "List of registry host overrides to change during image pulling. " +
@@ -145,7 +143,7 @@ func ProvideOptions() (opts Options, err error) {
 	flag.StringVar(
 		&subComponentTolerationsJSON, "sub-component-tolerations",
 		os.Getenv("PKO_SUB_COMPONENT_TOLERATIONS"),
-		subCmpntAffinityFlagDescription,
+		subCmpntTolerationsFlagDescription,
 	)
 	defaultLogLevel := -1
 	if lvl, err := strconv.Atoi(os.Getenv("LOG_LEVEL")); err == nil {
