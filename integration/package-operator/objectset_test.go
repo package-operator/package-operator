@@ -21,6 +21,7 @@ import (
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	"package-operator.run/internal/adapters"
+	"package-operator.run/internal/controllers"
 )
 
 func TestCollisionPrevention(t *testing.T) {
@@ -339,6 +340,9 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "previous-revision",
 				Namespace: "default",
+				Labels: map[string]string{
+					controllers.DeploymentLabel: "test-deployment",
+				},
 			},
 			Spec: corev1alpha1.ObjectSetSpec{
 				ObjectSetTemplateSpec: objectSetTemplateSpec,
@@ -371,6 +375,9 @@ func TestObjectSet_invalidPreviousReference(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "previous-revision",
 				Namespace: "default",
+				Labels: map[string]string{
+					controllers.DeploymentLabel: "test-deployment",
+				},
 			},
 			Spec: corev1alpha1.ClusterObjectSetSpec{
 				ObjectSetTemplateSpec: objectSetTemplateSpec,
