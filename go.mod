@@ -39,7 +39,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	package-operator.run/apis v1.19.0
-	pkg.package-operator.run/boxcutter v0.14.0
+	pkg.package-operator.run/boxcutter v0.15.0
 	pkg.package-operator.run/cardboard v0.1.0
 	pkg.package-operator.run/cardboard/kubeutils v0.1.0
 	pkg.package-operator.run/cardboard/modules/kind v0.1.0
