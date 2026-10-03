@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"pkg.package-operator.run/boxcutter/machinery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,11 +58,6 @@ func (e *PhaseReconcilerError) CausedBy(reason ErrorReason) bool {
 
 // Returns true if the underlying error is because adoption has been refused.
 func IsAdoptionRefusedError(err error) bool {
-	var prevRevisionError *ObjectNotOwnedByPreviousRevisionError
-	if errors.As(err, &prevRevisionError) {
-		return true
-	}
-
-	var revCollisionError *RevisionCollisionError
-	return errors.As(err, &revCollisionError)
+	var collisionErr *machinery.CreateCollisionError
+	return errors.As(err, &collisionErr)
 }
