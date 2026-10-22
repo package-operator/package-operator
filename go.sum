@@ -55,8 +55,8 @@ github.com/docker/cli v29.9.1+incompatible h1:E4YGy7TMkPk7mFsXTVUyjHxVeJdjTDfIS0
 github.com/docker/cli v29.9.1+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/docker-credential-helpers v0.9.9 h1:BkydjIgZ46JnDbqyM2p2fc63KMw6y+KHL3Em/2AGJ7w=
 github.com/docker/docker-credential-helpers v0.9.9/go.mod h1:v1S+hepowrQXITkEfw6o4+BMbGot02wiKpzWhGUZK6c=
-github.com/emicklei/go-restful/v3 v3.13.0 h1:C4Bl2xDndpU6nJ4bc1jXd+uTmYPVUwkD6bFY/oTyCes=
-github.com/emicklei/go-restful/v3 v3.13.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
+github.com/emicklei/go-restful/v3 v3.14.0 h1:6V6Ba8/5W1Z7amPinklZeCMlHBMwj53thpfxazCLMX4=
+github.com/emicklei/go-restful/v3 v3.14.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/erdii/elegont v1.0.1 h1:jbMtVPrLcbmwj8JW/M0Tkr5dMUfB+OD+cO6re32bHBM=
 github.com/erdii/elegont v1.0.1/go.mod h1:iO4ViwTS2uASySmK8mNPcASoy1rMEowTKTGYV6AfA7A=
 github.com/erdii/matrix v0.1.0 h1:K+B8GbttpAkvRGjFq4M/pIyMY9dADTHpwu31tHDSbEE=
