@@ -68,7 +68,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/docker/cli v29.9.1+incompatible // indirect
+	github.com/docker/cli v29.9.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.10 // indirect
 	github.com/emicklei/go-restful/v3 v3.14.0 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
