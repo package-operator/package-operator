@@ -25,7 +25,7 @@ require (
 	github.com/prometheus/common v0.72.1
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	github.com/yannh/kubeconform v0.8.0
 	go.uber.org/dig v1.19.0
